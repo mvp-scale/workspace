@@ -301,7 +301,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/windows": "windows.html", "/stream": "stream.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/windows": "windows.html", "/stream": "stream.html", "/cockpit": "cockpit.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 

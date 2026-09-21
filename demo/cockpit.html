@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Call cockpit · Jev Bench Console</title>
+<meta name="description" content="A real transcript replayed word by word through the loaded models, scored per person: signals that rise, hold and fade, cue cards, coaching and a 60-second history.">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<style>
+  /* Layout the shared CSS lacks. Colours come from shared tokens only (series colours are --s1 to --s8). */
+  [hidden] { display: none !important; }
+  .footer { display: none; }
+  .page.cockpit { max-width: none; padding: 8px var(--gutter) 10px; }
+  .cp { display: flex; flex-direction: column; gap: 8px; height: calc(100dvh - 42px - 18px); min-height: 620px; }
+  .cp .top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: flex-end; }
+  .cp .top h1 { font-size: 17px; }
+  .cp .sub { color: var(--text-3); font-size: 12px; }
+  @media (max-width: 1700px) { .cp .top .sub { display: none; } }
+  .cp .ctl { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-end; margin-left: auto; }
+  .cp .field select { min-width: 120px; max-width: 250px; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; font: 500 12px var(--mono); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); min-height: 30px; }
+  .pill .rec { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+  .pill.on .rec { background: var(--bad); animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; transform: scale(.8); } }
+  details.pop { position: relative; } details.pop > summary { cursor: pointer; color: var(--text-2); font-weight: 500; font-size: 12px; padding: 4px 0; }
+  details.pop > .popbody { position: absolute; z-index: 30; top: 100%; left: 0; min-width: 220px; margin-top: 4px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(0,0,0,.18); display: grid; gap: 4px; }
+  details.pop label { display: flex; gap: 6px; align-items: center; font-size: 12.5px; cursor: pointer; }
+  .notice { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 36px; overflow: hidden; align-content: flex-start; min-height: 34px; }
+  .sigchip { display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--mono); padding: 5px 4px 5px 6px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--text); white-space: nowrap; }
+  .sigchip::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c, var(--s1)); }
+  .sigchip .tr { font-weight: 500; color: var(--text-3); }
+  .sigchip .tr.warn { color: var(--warn); }
+  .sigchip button { border: 0; background: transparent; color: var(--text-3); cursor: pointer; padding: 0 3px; font-size: 14px; line-height: 1; }
+  .wadd { display: flex; gap: 6px; min-width: 0; }
+  .wadd input, .wadd select { min-width: 0; min-height: 26px; padding-top: 2px; padding-bottom: 2px; } .wadd .segmented, .wadd .btn { flex: none; } .wadd .btn { min-height: 26px; padding-top: 1px; padding-bottom: 1px; }
+  .lanehead { flex-wrap: nowrap; }
+  .pn > header { position: relative; }
+  .wnote { position: absolute; right: 12px; top: calc(100% + 2px); z-index: 25; max-width: 60%; padding: 3px 9px; font-size: 12px; color: var(--text-2); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+  .wnote:empty { display: none; }
+
+  /* Stage: lanes, conversation, rail (cues | coaching, captured), history */
+  .stage { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr); grid-template-rows: auto minmax(0, 1fr) clamp(110px, 14vh, 190px); grid-template-areas: "lanes lanes" "conv rail" "chart chart"; }
+  .pn { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .pn > header { display: flex; align-items: center; gap: 8px; padding: 8px 12px 0; min-height: 26px; }
+  .pn > header .r { margin-left: auto; font-size: 12px; color: var(--text-3); }
+  .pn > .bd { padding: 6px 12px 10px; flex: 1; min-height: 0; display: flex; min-width: 0; position: relative; }
+  .pn > .bd > * { flex: 1; min-width: 0; }
+  .lane { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; align-items: center; padding: 3px 12px; border-bottom: 1px solid var(--border); }
+  .lane:last-child { border-bottom: 0; }
+  .lane .lh b { font: 700 11px var(--mono); letter-spacing: .08em; display: block; }
+  .lane .who { font: 500 11px var(--mono); color: var(--text-3); min-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 14px; min-height: 36px; align-items: center; }
+  .sg { padding: 1px 0; min-width: 0; }
+  .sg .r1 { display: flex; align-items: center; gap: 6px; min-height: 17px; }
+  .sg .tr { font: 500 10px var(--mono); color: var(--text-3); white-space: nowrap; flex: none; } .sg .tr.warn { color: var(--warn); }
+  .sg .x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; opacity: 0; } .sg:hover .x, .sg .x:focus-visible { opacity: 1; }
+  .sg .sw { width: 8px; height: 8px; border-radius: 2px; background: var(--c); flex: none; }
+  .sg .lb { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .sg .st { margin-left: auto; width: 92px; text-align: right; font: 500 11px var(--mono); color: var(--text-2); white-space: nowrap; overflow: hidden; flex: none; }
+  .sg .r2 { display: flex; align-items: center; gap: 6px; }
+  .sg .mt { position: relative; height: 6px; flex: 1; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+  .sg .mt i { position: absolute; inset: 0; background: var(--c); transform-origin: left; transform: scaleX(0); }
+  .sg .mt b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); opacity: .55; }
+  .sg .pc { font: 500 11px var(--mono); color: var(--text-2); min-width: 30px; text-align: right; }
+  .sg.quiet { opacity: .7; } .lane.us .mt { border-style: dashed; }
+
+  .glide { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); }
+  .glide > .track { will-change: transform; padding-top: 8px; }
+  .msg { display: flex; gap: 8px; margin: 9px 0; align-items: flex-end; } .msg.us { flex-direction: row-reverse; }
+  .av { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--text-3); color: var(--bg); font: 600 10.5px var(--mono); display: grid; place-items: center; }
+  .msg.us .av { background: var(--accent); color: var(--accent-text); }
+  .bub { max-width: min(82%, 640px); padding: 7px 12px 8px; border-radius: 16px 16px 16px 5px; background: var(--surface-2); border: 1px solid var(--border); font-size: clamp(14px, 0.4vw + 11px, 17px); line-height: 1.65; }
+  .msg.us .bub { border-radius: 16px 16px 5px 16px; background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+  .who2 { display: flex; gap: 8px; font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); line-height: 1.4; } .who2 .ts { font: 500 10.5px var(--mono); }
+  .txt { position: relative; } .txt .ghost { visibility: hidden; user-select: none; padding-right: 8px; } .txt .words { position: absolute; left: 0; top: 0; width: 100%; }
+  .w { display: inline-block; animation: wordin .26s ease-out both; } @keyframes wordin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .w.out { color: var(--text-3); }
+  .caret { display: inline-block; width: 0; height: 1.05em; position: relative; vertical-align: text-bottom; } .caret::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: var(--accent); animation: caret 1s steps(2) infinite; } @keyframes caret { 50% { opacity: 0; } }
+  .ph { background: color-mix(in srgb, var(--c) 17%, transparent); box-shadow: inset 0 -2px 0 var(--c); border-radius: 3px; margin: 0 -2px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .readnote { font-size: 11px; color: var(--text-3); padding: 0 12px 8px; }
+
+  .rail { grid-area: rail; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 150px; }
+  .stackroot { position: relative; overflow: hidden; }
+  .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 4px 8px 5px; background: var(--surface); height: 46px; overflow: hidden; }
+  .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); } .moment.cool .q { color: var(--text-3); }
+  .moment .mh { display: flex; align-items: center; gap: 6px; height: 20px; min-width: 0; }
+  .moment .code { font: 600 10.5px var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border-strong); }
+  .moment .q { font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .moment .age { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); white-space: nowrap; }
+  .moment .ft { display: flex; align-items: center; gap: 2px; height: 16px; min-width: 0; margin-top: 1px; }
+  .moment .n { font-size: 11.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; margin-right: auto; }
+  .moment .btn { font-size: 11px; padding: 0 5px; line-height: 14px; min-height: 0; }
+  .moment .hold { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); } .moment .hold i { display: block; height: 100%; background: var(--c); transform-origin: left; }
+  .scroll { overflow: auto; min-height: 0; }
+  .bt { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 2px 0 4px; }
+  .split { position: relative; height: 9px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+  .split i { position: absolute; top: 0; bottom: 0; width: 100%; } .split .th { left: 0; background: var(--text-3); transform-origin: left; transform: scaleX(.5); } .split .me { right: 0; background: var(--accent); transform-origin: right; transform: scaleX(.5); }
+  .bl { font: 500 11px var(--mono); color: var(--text-2); margin: 4px 0 6px; min-height: 14px; } .tip { font-size: 12.5px; min-height: 18px; }
+  .ck { display: grid; grid-template-columns: 16px 1fr auto auto; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; align-items: center; }
+  .ck .g { font: 700 12px var(--mono); color: var(--text-3); } .ck.done .g { color: var(--good); } .ck .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .ck button { border: 0; background: transparent; color: var(--text-3); cursor: pointer; }
+  .mrow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-bottom: 4px; }
+  .mrow .l { font-size: 12px; color: var(--text-3); } .mrow .segmented button { padding: 3px 8px; }
+  .mbtn { display: inline-flex; gap: 6px; align-items: baseline; }
+  .mbtn small { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .est { font: 500 11px var(--mono); color: var(--text-2); }
+  .tabs2 { display: flex; gap: 2px; margin-top: 6px; border-bottom: 1px solid var(--border); }
+  .tabs2 button { border: 0; background: transparent; padding: 4px 10px; font: inherit; font-size: 12.5px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs2 button[aria-selected=true] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+  .lst { flex: 1; min-height: 0; overflow: auto; margin-top: 4px; }
+  .li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .li .ts { font: 500 11px var(--mono); color: var(--text-3); }
+  .li .q { color: var(--text-2); overflow-wrap: anywhere; } .li.pend { opacity: .55; }
+  .chartwrap { position: relative; flex: 1; min-height: 0; padding: 4px 10px 8px; } .chartwrap canvas { position: absolute; inset: 4px 10px 8px; width: calc(100% - 20px); height: calc(100% - 12px); }
+  .key { display: inline-flex; gap: 14px; font-size: 12px; color: var(--text-2); margin-left: auto; } .key i { display: inline-block; width: 22px; border-top: 2px solid var(--text-2); vertical-align: middle; margin-right: 6px; } .key i.d { border-top-style: dashed; }
+  .fmore { position: absolute; right: 12px; bottom: 6px; font: 500 11px var(--mono); color: var(--text-3); background: var(--surface); padding: 0 4px; }
+  .tabsbar { display: none; }
+  @media (max-width: 1000px) {
+    .cp { height: calc(100dvh - 42px - 18px); }
+    .cp .ctl { margin-left: 0; }
+    .stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "x"; }
+    .stage > [data-pane] { grid-area: x; display: none; }
+    .stage[data-tab="talk"] > [data-pane="talk"], .stage[data-tab="signals"] > [data-pane="signals"], .stage[data-tab="cues"] > [data-pane="cues"], .stage[data-tab="history"] > [data-pane="history"] { display: flex; flex-direction: column; }
+    .stage[data-tab="cues"] > [data-pane="cues"] { overflow: auto; }
+    .cols { grid-template-columns: 1fr; flex: 0 0 auto; }
+    .tabsbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+    .tabsbar button { border: 0; background: transparent; padding: 10px 4px; font: inherit; font-size: 12px; color: var(--text-3); border-top: 2px solid transparent; cursor: pointer; }
+    .tabsbar button[aria-selected=true] { color: var(--text); border-top-color: var(--text); font-weight: 600; }
+  }
+  @media (max-width: 560px) { .lane { grid-template-columns: 1fr; gap: 2px; } .bub { max-width: 92%; } .cp .top .sub { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .w, .caret::after, .pill.on .rec { animation: none; } }
+</style>
+</head>
+<body>
+<main class="page cockpit"><div id="app"></div></main>
+<script>
+(() => {
+  const { el, fmt, api, toast, copy, download } = Jev;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const mmss = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+  const words = (s) => String(s).split(/\s+/).filter(Boolean);
+  const SENT_END = /[.!?…]["')\]]*$/;
+  const HOLD = 30, MAXSIG = 8, CONC = 3, PER_Q = 110;
+  const SPEEDS = [["0.5", "0.5x"], ["1", "1x"], ["2", "2x"], ["4", "4x"], ["30", "Max"]];
+  const WINS = ["w5", "w10", "w20", "w40", "s1", "s2", "s3"];
+  const winName = (s) => `last ${s.slice(1)} ${{ w: "word", s: "sentence" }[s[0]]}${s.slice(1) === "1" ? "" : "s"}`;
+  const cvar = (slot) => `--c:var(--s${(slot % 8) + 1})`;
+  const short = (n) => String(n).replace(/ \(.*\)/, "");
+  const initials = (n) => { const w = short(n).trim().split(/\s+/); return ((w[0][0] || "") + (w[1] ? w[1][0] : w[0][1] || "")).toUpperCase(); };
+  let TARIFF = 0.042;
+
+  /* Nine validated question sets, eleven detectors. `scope` says what text the detector was validated on: one person's words, or a whole dialogue. */
+  const QSETS = { manipulation: "manipulation_dialogue", phishing: "phishing", sarcasm: "sarcasm_isarcasm", threat: "threat_civil", anger: "emotion_anger", fear: "emotion_fear", politeness: "politeness_deference", darkpatterns: "darkpatterns", persuasion: "persuasion_appeals" };
+  const PERSP = [
+    { id: "manipulation", ab: "Man", name: "Manipulation", q: "manipulation", read: "noul", scope: "call", about: "Does one speaker try to manipulate the other? Validated on whole dialogues, so it reads the whole call, not one person." },
+    { id: "phishing", ab: "Dec", name: "Deceptive request", q: "phishing", read: "noul", scope: "person", about: "Is the text trying to get credentials or money through deception?" },
+    { id: "sarcasm", ab: "Sar", name: "Sarcasm", q: "sarcasm", read: "noul", scope: "person", about: "Does the speaker mean the opposite of the literal words?" },
+    { id: "threat", ab: "Thr", name: "Threat", q: "threat", read: "noul", scope: "person", about: "Does the text threaten to harm the listener?", caveat: "The threat set has label noise, so treat its accuracy as a rough guide." },
+    { id: "anger", ab: "Ang", name: "Anger", q: "anger", read: "noul", scope: "person", about: "Does the text express anger?" },
+    { id: "fear", ab: "Fea", name: "Fear", q: "fear", read: "noul", scope: "person", about: "Does the text express fear or nervousness?" },
+    { id: "politeness", ab: "Pol", name: "Politeness", q: "politeness", read: "noul", scope: "person", about: "Is the speaker polite and deferential to the person addressed?" },
+    { id: "urgency", ab: "Urg", name: "Urgency", q: "darkpatterns", read: "urgency", scope: "person", about: "P(urgency) from the dark-pattern question: a deadline pushing a quick decision.", caveat: "Validated on short shopping-site text." },
+    { id: "scarcity", ab: "Sca", name: "Scarcity", q: "darkpatterns", read: "scarcity", scope: "person", about: "P(scarcity) from the dark-pattern question: something may run out.", caveat: "Validated on short shopping-site text." },
+    { id: "social_proof", ab: "Soc", name: "Social proof", q: "darkpatterns", read: "social_proof", scope: "person", about: "P(social_proof) from the dark-pattern question: what others did or said.", caveat: "Validated on short shopping-site text." },
+    { id: "persuasion", ab: "Per", name: "Persuasive move", q: "persuasion", read: "appeal", scope: "person", about: "1 minus P(none) from the persuasion-appeal question.", caveat: "Validated on donation appeals to a charity; other contexts are outside what was measured." },
+  ];
+  const P_BY = Object.fromEntries(PERSP.map(p => [p.id, p]));
+  const DEFAULTS = [["anger", "them"], ["fear", "them"], ["urgency", "them"], ["threat", "them"], ["politeness", "us"], ["anger", "us"], ["urgency", "us"], ["manipulation", "call"]];
+
+  const S = { src: null, dlg: null, us: new Set(), model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "live", armed: false, playing: false, t: 0, done: false, sigs: [], seq: 0, notice: "", tab: "flag" };
+  let D = null, T = null, W = [], DUR = 0, ptr = 0, raf = 0, last = performance.now(), runner = null, ui = {}, QS = {}, QALL = {}, EVENTS = [], sideCache = {};
+  const C = new Map(), CPS = [], FLAGS = [], LAGS = {}, QUEUE = [], LOGW = [], rows = [], peopleSpans = {}, cards = [];
+  let active = 0, ctl = null, failed = 0, pending = 0, maxPending = 0, moSeq = 0, nextSample = 0, checksDone = 0, pre = null, cpN = 0;
+  let glide = null, stack = null, chart = null, curSpk = null;
+  const kv = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  /* ---------- transcript, timeline ---------- */
+  function makeTranscript(turns, meta) {
+    const ts = turns.map(t => ({ speaker: String(t.speaker), text: words(t.text).join(" "), words: words(t.text) }));
+    return { turns: ts, meta, speakers: [...new Set(ts.map(t => t.speaker))] };
+  }
+  function parsePaste(text) {
+    const turns = [];
+    for (const raw of text.split(/\n/)) {
+      const line = raw.trim(); if (!line) continue;
+      const m = line.match(/^([^:]{1,40}):\s*(.*)$/);
+      if (m) { if (m[2].trim()) turns.push({ speaker: m[1].trim(), text: m[2].trim() }); }
+      else if (turns.length) turns[turns.length - 1].text += " " + line; else turns.push({ speaker: "Speaker", text: line });
+    }
+    return turns;
+  }
+  function currentTranscript() {
+    if (S.src === "paste") return makeTranscript(parsePaste(S.paste), { kind: "paste", title: "Pasted text" });
+    if (S.src === "dlg") { const d = D.dialogues.find(x => x.id === S.dlg) || D.dialogues[0]; return makeTranscript(d.turns, { kind: "dialogue", title: "Library dialogue " + d.id, d }); }
+    const s = D.scenes.find(x => x.slug === S.src) || D.scenes[0]; return makeTranscript(s.turns, { kind: "scene", title: s.title, s });
+  }
+  /* The timeline is what a live speech-to-text source would produce: words with a speaker and a time. Replay generates it at about 150 words a minute. */
+  function buildTimeline() {
+    W = []; let t = 0.05;
+    T.turns.forEach((tu, i) => {
+      tu.t0 = t;
+      tu.words.forEach((w, k) => { W.push({ i, k, w, spk: tu.speaker, t }); t += 0.18 + 0.045 * w.replace(/\W/g, "").length; if (/[,;]$/.test(w)) t += 0.1; if (SENT_END.test(w)) t += 0.35; });
+      tu.t1 = t; t += 0.8;
+    });
+    DUR = t;
+    const ev = (T.meta.s && T.meta.s.documented_events) || [];
+    EVENTS = ev.map((e, n) => ({ n: n + 1, t: (T.turns[e.turn_index] || T.turns[0]).t0, turn: e.turn_index, what: e.what_happened, quote: e.evidence_quote, url: e.evidence_source_url }));
+  }
+  const sideOf = (spk) => S.us.has(spk) ? "us" : "them";
+
+  /* ---------- signals ---------- */
+  function freeSlot() { const used = new Set(S.sigs.filter(s => !s.kp).map(s => s.slot)); let i = 0; while (used.has(i)) i++; return i; }
+  const laneSigs = () => S.sigs.filter(s => !s.kp);
+  function newSig(o) { return { key: o.key, pid: o.pid || null, side: o.side, scope: o.scope, label: o.label, ab: o.ab, slot: o.slot ?? 0, q: o.q, read: o.read || "noul", custom: !!o.custom, kp: !!o.kp, about: o.about || "", caveat: o.caveat || "", latest: 0, marks: [], disp: 0, lastFire: -1e9, above: null, hist: [], n: 0, done: false, doneAt: 0 }; }
+  function addDetector(pid, side, quiet) {
+    const p = P_BY[pid]; if (!p) return false; if (p.scope === "call") side = "call";
+    const key = `${pid}@${side}`;
+    if (S.sigs.some(s => s.key === key)) { if (!quiet) toast(`${p.name} is already on the ${side.toUpperCase()} side.`); return false; }
+    if (laneSigs().length >= MAXSIG) { if (!quiet) toast(`${MAXSIG} is the most that stay readable. Remove one first.`); return false; }
+    S.sigs.push(newSig({ key, pid, side, scope: p.scope, label: p.name, ab: p.ab, slot: freeSlot(), q: p.q, read: p.read, about: p.about, caveat: p.caveat })); return true;
+  }
+  const codeOf = (text) => { const ws = text.toUpperCase().replace(/[^A-Z ]/g, "").split(/\s+/).filter(w => w.length > 2); return (ws.length >= 3 ? ws.slice(0, 3).map(w => w[0]).join("") : ws.length === 2 ? ws[0][0] + ws[1].slice(0, 2) : (ws[0] || "XXX").slice(0, 3)).slice(0, 3) || "XXX"; };
+  function addCustom(text, side, kp) {
+    text = text.trim(); if (!text) return false;
+    if (!kp && laneSigs().length >= MAXSIG) { toast(`${MAXSIG} is the most that stay readable. Remove one first.`); return false; }
+    const key = "c" + (++S.seq);
+    QALL[key] = { type: "noul", instructions: kp ? `Does the speaker say or clearly convey this: ${text}` : `Does the speaker's text match this description: ${text}`, criteria: { true: `The text matches: ${text}`, false: `The text does not match: ${text}` } };
+    S.sigs.push(newSig({ key, side: kp ? "us" : side, scope: "person", label: text.length > 24 ? text.slice(0, 23) + "…" : text, ab: codeOf(text), slot: kp ? 0 : freeSlot(), q: key, custom: true, kp: !!kp, about: text })); return true;
+  }
+  function removeSig(key) { S.sigs = S.sigs.filter(s => s.key !== key); renderLanes(); renderKp(); afterConfig(); }
+  const sigsFor = (chk) => S.sigs.filter(s => chk.scope === "call" ? s.scope === "call" : (s.scope === "person" && (s.side === chk.side || (s.kp && chk.side === "us"))));
+
+  /* Trust: measured accuracy of the detector on its own validation set, for the selected model. Custom sentences have none. */
+  const wilson = (k, n, z = 1.96) => { const p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - m) / d, (c + m) / d]; };
+  function trust(sg) {
+    if (sg.custom) return { text: sg.kp ? "unvalidated" : "unvalidated", warn: true, title: "Your own wording: no validation set exists, so there is no measured accuracy. Treat it as a hint." };
+    const set = D.sets[QSETS[sg.q]], res = set && set.results && set.results[S.model];
+    const cav = sg.caveat ? " " + sg.caveat : "";
+    if (!res || !Object.keys(res).length) return { text: "not measured", warn: true, title: `No published results for this model on the ${QSETS[sg.q]} set.${cav}` };
+    const rs = Object.values(res), n = rs.length, k = rs.filter(r => r.correct).length, chance = 1 / (set.items[0].labels.length || 2), ci = wilson(k, n), near = ci[0] <= chance && chance <= ci[1];
+    return { text: `acc ${fmt.pct(k / n, 0)}${near ? ", near chance" : ""}`, warn: near, title: `${k} of ${n} correct on the ${QSETS[sg.q]} validation set. 95% interval ${fmt.pct(ci[0], 0)} to ${fmt.pct(ci[1], 0)}; chance is ${fmt.pct(chance, 0)}.${near ? " The interval includes chance." : ""}${cav} Per-person windows are new: the set was validated on whole texts.` };
+  }
+
+  /* ---------- windows and the checkpoint runner (shared by live playback and precompute) ---------- */
+  function personWindow(ws, spec) {
+    const kind = spec[0], n = parseInt(spec.slice(1), 10);
+    if (kind === "w") return ws.slice(-n).join(" ");
+    return ws.join(" ").trim().split(/(?<=[.!?…])\s+/).filter(Boolean).slice(-n).join(" ");
+  }
+  function callWindow(flat, spec) {
+    const kind = spec[0], n = parseInt(spec.slice(1), 10), take = kind === "w" ? n : n * 40, tail = flat.slice(-take);
+    let out = [], prev = null; for (const x of tail) { if (x.spk !== prev) { out.push(`${x.spk}:`); prev = x.spk; } out.push(x.w); }
+    const txt = out.join(" "); return kind === "w" ? txt : txt.split(/(?<=[.!?…])\s+/).filter(Boolean).slice(-n).join(" ");
+  }
+  function makeRunner() {
+    const R = { people: {}, flat: [], dsince: 0, prev: null };
+    const trig = (since, end, turnEnd) => S.cp === "words" ? since >= S.n : ((end || turnEnd) && since >= 3) || since >= 12;
+    R.feed = (wd) => {
+      const p = (R.people[wd.spk] ||= { words: [], since: 0, k0: 0, i0: -1 }), end = SENT_END.test(wd.w), turnEnd = wd.k === T.turns[wd.i].words.length - 1;
+      if (wd.k === 0 || (R.prev && R.prev.spk === wd.spk && R.prev.i === wd.i && R.prev.end)) { p.k0 = wd.k; p.i0 = wd.i; }
+      R.prev = { spk: wd.spk, i: wd.i, end }; p.words.push(wd.w); R.flat.push({ spk: wd.spk, w: wd.w }); p.since++; R.dsince++;
+      const out = [];
+      if (trig(p.since, end, turnEnd)) {
+        p.since = 0; const side = sideOf(wd.spk), chk = { scope: "person", spk: wd.spk, side, i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, state: personWindow(p.words, S.win) };
+        chk.qids = [...new Set(sigsFor(chk).map(s => s.q))]; if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
+      }
+      if (trig(R.dsince, end, turnEnd)) {
+        R.dsince = 0; const chk = { scope: "call", spk: wd.spk, side: "call", i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, state: callWindow(R.flat, S.win) };
+        chk.qids = [...new Set(sigsFor(chk).map(s => s.q))]; if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
+      }
+      return out;
+    };
+    return R;
+  }
+
+  /* ---------- calling the server ---------- */
+  const ckey = (state) => S.model + "\u0001" + state;
+  const rec = (state) => { const k = ckey(state); if (!C.has(k)) C.set(k, { answers: {}, err: null }); return C.get(k); };
+  const isHosted = () => !!(Jev.status() || {})[S.model]?.hosted;
+  const isUp = () => Jev.isUp(S.model);
+  const missing = (chk) => { const r = C.get(ckey(chk.state)); return chk.qids.filter(q => !(r && r.answers[q])); };
+  async function fetchState(state, qids, signal) {
+    const r0 = rec(state), miss = qids.filter(q => !r0.answers[q]); if (!miss.length) return 0;
+    const t0 = performance.now();
+    const res = await api("/api/batch", { method: "POST", headers: { "Content-Type": "application/json" }, signal, body: JSON.stringify({ backend: S.model, items: [{ state, questions: Object.fromEntries(miss.map(q => [q, QALL[q]])) }] }) });
+    const r = Array.isArray(res) ? res[0] : null; if (!r || r.error) throw new Error((r && r.error) || "No result returned");
+    Object.assign(r0.answers, r.answers || {}); if (miss.some(q => !r0.answers[q])) throw new Error("Missing answer in response");
+    return performance.now() - t0;
+  }
+  function readSig(sg, ans) {
+    if (!ans) return null;
+    if (sg.custom || sg.read === "noul") { const v = Number(ans.noul); return Number.isFinite(v) ? { score: v } : null; }
+    const pr = ans.probabilities; if (!pr) return null;
+    if (sg.read === "appeal") { let top = null, tp = -1; for (const [k, v] of Object.entries(pr)) if (k !== "none" && v > tp) { top = k; tp = v; } return { score: clamp(1 - (pr.none ?? 0), 0, 1), label: top }; }
+    const v = pr[sg.read]; return Number.isFinite(v) ? { score: v, label: ans.choice } : null;
+  }
+  function submit(chk) {
+    chk.n = ++cpN; chk.t = S.t; chk.wall = performance.now(); chk.model = S.model; CPS.push(chk);
+    if (!missing(chk).length) { apply(chk, 0); return; }
+    QUEUE.push(chk); pending = QUEUE.length + active; maxPending = Math.max(maxPending, pending); pump();
+  }
+  function pump() {
+    while (active < CONC && QUEUE.length) {
+      const chk = QUEUE.shift(); active++; ctl = ctl || new AbortController(); const c = ctl;
+      fetchState(chk.state, chk.qids, c.signal).then(() => { if (!c.signal.aborted && chk.model === S.model) apply(chk, performance.now() - chk.wall); })
+        .catch(e => { if (!c.signal.aborted) { failed++; ui.err && (ui.err.textContent = `A check failed: ${e.message}`); } })
+        .finally(() => { if (ctl === c) { active--; pending = QUEUE.length + active; pump(); } });
+    }
+  }
+  function apply(chk, lagMs) {
+    checksDone++; if (lagMs) (LAGS[S.model] ||= []).push(lagMs); const r = C.get(ckey(chk.state)); chk.answers = {};
+    for (const sg of sigsFor(chk)) {
+      const ans = r && r.answers[sg.q], v = readSig(sg, ans); if (!v) continue; chk.answers[sg.key] = v.score;
+      sg.n++; sg.latest = v.score; sg.marks.push({ t: S.t, p: v.score }); if (sg.marks.length > 60) sg.marks.shift();
+      if (v.score >= S.gate) fire(sg, chk, v);
+    }
+  }
+
+  /* ---------- level, hold, fire ---------- */
+  const env = (p, age) => age < 0 ? 0 : age <= HOLD ? p * (1 - 0.25 * age / HOLD) : p * 0.75 * Math.exp(-(age - HOLD) / 12);
+  function tickSigs(dt) {
+    const k = 1 - Math.exp(-dt / 0.18);
+    for (const sg of S.sigs) {
+      let tgt = 0; for (const m of sg.marks) tgt = Math.max(tgt, env(m.p, S.t - m.t));
+      sg.disp += (tgt - sg.disp) * k; if (sg.disp >= S.gate && sg.above == null) sg.above = S.t; else if (sg.disp < S.gate - 0.05) sg.above = null;
+    }
+    if (S.playing) while (nextSample <= S.t) { for (const sg of S.sigs) { if (sg.kp) continue; sg.hist.push([nextSample, sg.disp]); if (sg.hist.length > 700) sg.hist.shift(); } nextSample += 0.2; }
+  }
+  function fire(sg, chk, v) {
+    sg.lastFire = S.t;
+    const quote = T.turns[chk.i].words.slice(chk.k0, chk.k + 1).join(" "), fl = { id: ++moSeq, sig: sg.key, label: sg.label, spk: chk.spk, side: chk.side, t: S.t, p: v.score, quote, i: chk.i, model: S.model };
+    FLAGS.push(fl);
+    if (sg.kp) { if (!sg.done) { sg.done = true; sg.doneAt = S.t; renderKp(); } return; }
+    highlight(chk, sg, v.score);
+    if (chk.side === "us") { addLog(fl); return; }
+    const c = cards.find(x => x.sig === sg.key && x.spk === chk.spk && S.t - x.t < 12);
+    if (c) { c.n++; c.t = S.t; c.p = v.score; c.q.textContent = "“" + quote.replace(/[.,!?;:]+$/, "") + "”"; c.cnt.textContent = "×" + c.n; c.note.textContent = `${short(chk.spk)} · ${Math.round(v.score * 100)}%`; }
+    else newCard(sg, chk, fl);
+    addLog(fl);
+  }
+  function highlight(chk, sg, p) {
+    const row = rows[chk.i]; if (!row) return; const a = row.spans[chk.k0], b = row.spans[chk.k]; if (!a || !b) return;
+    let wrap = a.parentNode.classList && a.parentNode.classList.contains("ph") ? a.parentNode : null;
+    if (wrap && b.parentNode === wrap) { /* sentence already covered */ }
+    else if (wrap && b.parentNode === wrap.parentNode) { for (let n = wrap.nextSibling; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; } }
+    else if (!wrap && a.parentNode === b.parentNode) { wrap = el("span", { class: "ph", style: cvar(sg.slot) }); a.parentNode.insertBefore(wrap, a); for (let n = a; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; } }
+    else return;
+    const line = `${sg.label} ${Math.round(p * 100)}% (${Jev.codeOf(S.model)})`, cur = wrap.getAttribute("title") || ""; if (!cur.includes(sg.label + " ")) wrap.setAttribute("title", cur ? cur + "\n" + line : line);
+  }
+
+  /* ---------- absolutely stacked cards: moved by transform so neighbours never reflow ---------- */
+  function Stack(root, gap) {
+    const items = []; root.classList.add("stackroot");
+    const layout = () => { let y = 0; for (const it of items) { if (it.leaving) continue; it.h = it.el.offsetHeight; it.ty = y; y += it.h + gap; } };
+    new ResizeObserver(layout).observe(root);
+    const api2 = {
+      items,
+      add(node) { node.style.cssText += ";position:absolute;left:0;right:0;top:0;opacity:0;will-change:transform,opacity"; root.append(node); const it = { el: node, h: node.offsetHeight, y: -(node.offsetHeight + gap), ty: 0, o: 0, leaving: false }; items.unshift(it); layout(); return it; },
+      remove(it) { it.leaving = true; it.ty = it.y - 12; setTimeout(() => { const i = items.indexOf(it); if (i >= 0) items.splice(i, 1); it.el.remove(); layout(); }, 420); layout(); },
+      clear() { items.splice(0).forEach(it => it.el.remove()); },
+      hidden() { const H = root.clientHeight; return items.filter(it => !it.leaving && it.ty + it.h > H + 2).length; },
+      frame(dt) { const k = 1 - Math.exp(-dt / 0.17), H = root.clientHeight; for (const it of items) { it.y += (it.ty - it.y) * k; const want = it.leaving ? 0 : it.ty + it.h > H + 2 ? 0 : 1; it.o += (want - it.o) * k * 1.3; it.el.style.transform = `translate3d(0,${it.y.toFixed(1)}px,0)`; it.el.style.opacity = it.o.toFixed(3); } },
+    };
+    return api2;
+  }
+  function newCard(sg, chk, fl) {
+    const bar = el("i"), age = el("span", { class: "age" }, "00:00 ago"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
+    const q = el("span", { class: "q", text: "“" + fl.quote.replace(/[.,!?;:]+$/, "") + "”" }), note = el("span", { class: "n", text: `${short(chk.spk)} · ${Math.round(fl.p * 100)}%` }), cnt = el("span", { class: "mute small" });
+    const node = el("article", { class: "moment", style: cvar(sg.slot), "data-flag": fl.id },
+      el("div", { class: "mh" }, el("span", { class: "code", text: sg.ab }), cnt, q, age), el("div", { class: "ft" }, note, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" })), el("div", { class: "hold", "aria-hidden": "true" }, bar));
+    const card = { sig: sg.key, spk: chk.spk, t: S.t, p: fl.p, n: 1, el: node, bar, age, q, note, cnt, pinned: false, last: "", it: null };
+    pin.addEventListener("click", () => { card.pinned = !card.pinned; pin.setAttribute("aria-pressed", String(card.pinned)); pin.textContent = card.pinned ? "Pinned" : "Pin"; });
+    card.it = stack.add(node); cards.push(card);
+  }
+  function tickCards() {
+    for (const c of cards) {
+      const a = S.t - c.t, hot = a < HOLD || c.pinned; c.bar.style.transform = `scaleX(${c.pinned ? 1 : clamp(1 - a / HOLD, 0, 1).toFixed(3)})`;
+      const txt = mmss(a) + " ago"; if (txt !== c.last) { c.age.textContent = txt; c.last = txt; } if (c.el.classList.contains("cool") === hot) c.el.classList.toggle("cool", !hot);
+    }
+    const n = stack.hidden(), t = n ? `+${n} earlier` : ""; if (ui.more.textContent !== t) ui.more.textContent = t;
+  }
+
+  /* ---------- glide: the thread moves by transform, never by scrollTop ---------- */
+  function Glide(view, track) {
+    let y = 0, tgt = 0, dirty = true; const ro = new ResizeObserver(() => { dirty = true; }); ro.observe(track); ro.observe(view);
+    return { dirty() { dirty = true; }, reset() { y = 0; tgt = 0; track.style.transform = ""; dirty = true; },
+      frame(dt) { if (dirty) { tgt = Math.max(0, track.offsetHeight - view.clientHeight + 6); dirty = false; } y += (tgt - y) * (1 - Math.exp(-dt / 0.25)); if (Math.abs(tgt - y) < 0.05) y = tgt; track.style.transform = `translate3d(0,${(-y).toFixed(2)}px,0)`; window.__glideY = { g: y }; } };
+  }
+
+  /* ---------- the thread ---------- */
+  const readAll = () => { for (const k in peopleSpans) { const a = peopleSpans[k], lim = Math.max(0, a.length - (S.win[0] === "w" ? parseInt(S.win.slice(1), 10) : parseInt(S.win.slice(1), 10) * 20)); a.forEach((sp, i) => sp.classList.toggle("out", i < lim)); } };
+  function onWord(wd) {
+    let row = rows[wd.i];
+    if (!row) {
+      const tu = T.turns[wd.i], sd = sideOf(tu.speaker), wordsEl = el("div", { class: "words" }); if (ui.caret.parentNode) ui.caret.remove();
+      row = { spans: [], words: wordsEl, el: el("div", { class: "msg " + sd }, el("div", { class: "av", "aria-hidden": "true", text: initials(tu.speaker) }, ),
+        el("div", { class: "bub" }, el("div", { class: "who2" }, el("span", { text: short(tu.speaker) }), el("span", { class: "ts", text: mmss(tu.t0) })), el("div", { class: "txt" }, el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
+      rows[wd.i] = row; ui.track.append(row.el); curSpk = tu.speaker;
+      for (const k of ["them", "us"]) if (ui["who-" + k]) ui["who-" + k].textContent = k === sd ? "● " + short(tu.speaker) : "";
+    }
+    const sp = el("span", { class: "w", text: wd.w }); row.spans[wd.k] = sp; row.words.append(document.createTextNode(wd.k ? " " : ""), sp, ui.caret); glide.dirty();
+    (peopleSpans[wd.spk] ||= []).push(sp);
+    const lim = Math.max(0, peopleSpans[wd.spk].length - (S.win[0] === "w" ? parseInt(S.win.slice(1), 10) : parseInt(S.win.slice(1), 10) * 20)); if (lim > 0) peopleSpans[wd.spk][lim - 1].classList.add("out");
+    LOGW.push({ t: wd.t, side: sideOf(wd.spk) });
+    for (const chk of runner.feed(wd)) submit(chk);
+  }
+
+  /* ---------- lanes and chips ---------- */
+  let lanes = {};
+  function renderLanes() {
+    ui.lanebox.replaceChildren(); lanes = {};
+    for (const side of ["them", "us", "call"]) {
+      const list = laneSigs().filter(s => s.side === side); if (!list.length && side === "call") continue;
+      const strip = el("div", { class: "strip" }), who = el("div", { class: "who" });
+      ui["who-" + side] = who;
+      ui.lanebox.append(el("div", { class: "lane " + side }, el("div", { class: "lh" }, el("b", { text: side === "call" ? "CALL" : side.toUpperCase() }), who), strip));
+      for (const sg of list) {
+        const t = trust(sg), st = el("span", { class: "st" }), bar = el("i"), pc = el("span", { class: "pc", text: "0%" });
+        const node = el("div", { class: "sg quiet", style: cvar(sg.slot), title: `${sg.about} (${sg.side === "us" ? "our words" : sg.side === "call" ? "the whole call" : "their words"}) · ${t.text}` },
+          el("div", { class: "r1" }, el("span", { class: "sw" }), el("span", { class: "lb", text: sg.label }), el("span", { class: "tr" + (t.warn ? " warn" : ""), title: t.title, text: t.text }), st, el("button", { class: "x", type: "button", "aria-label": "Remove " + sg.label, onclick: () => removeSig(sg.key), text: "×" })),
+          el("div", { class: "r2" }, el("div", { class: "mt", role: "img", "aria-label": sg.label + " level" }, bar, el("b", { style: `left:${S.gate * 100}%` })), pc));
+        lanes[sg.key] = { sg, node, st, bar, pc, gate: node.querySelector(".mt b"), c: {} }; strip.append(node);
+      }
+    }
+  }
+  function updateLanes() {
+    for (const k in lanes) {
+      const L = lanes[k], sg = L.sg, a = S.t - sg.lastFire;
+      const st = sg.above != null ? "▲ HIGH " + mmss(S.t - sg.above) : !sg.n ? "– WAITING" : a < 4 ? "● LIVE" : a <= HOLD ? "◐ HOLD " + mmss(a) : sg.disp > 0.2 ? "○ FADING" : "– QUIET";
+      if (L.c.st !== st) { L.st.textContent = st; L.c.st = st; }
+      const pc = Math.round(sg.disp * 100) + "%"; if (L.c.pc !== pc) { L.pc.textContent = pc; L.c.pc = pc; }
+      L.bar.style.transform = `scaleX(${clamp(sg.disp, 0, 1).toFixed(3)})`; const q = sg.disp < 0.2; if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
+      if (L.c.g !== S.gate) { L.gate.style.left = S.gate * 100 + "%"; L.c.g = S.gate; }
+    }
+  }
+  function renderKp() {
+    ui.kp.replaceChildren(...S.sigs.filter(s => s.kp).map(sg => el("div", { class: "ck" + (sg.done ? " done" : ""), title: "Unvalidated: your own wording" }, el("span", { class: "g", text: sg.done ? "✓" : "○" }), el("span", { text: sg.about }), el("span", { class: "ts", text: sg.done ? mmss(sg.doneAt) : "" }), el("button", { type: "button", "aria-label": "Remove key point", onclick: () => removeSig(sg.key), text: "×" }))));
+    const n = S.sigs.filter(s => s.kp), d = n.filter(s => s.done).length; ui.kprog.textContent = n.length ? `${d} of ${n.length} covered` : "";
+  }
+  function afterConfig() { renderModels(); refreshEst(); }
+
+  /* ---------- log, documented events ---------- */
+  function addLog(fl) {
+    const li = el("div", { class: "li", "data-flag": fl.id }, el("span", { class: "ts", text: mmss(fl.t) }), el("div", {}, el("b", { text: fl.label }), ` · ${short(fl.spk)} · ${Math.round(fl.p * 100)}%`, el("div", { class: "q", text: "“" + fl.quote + "”" })));
+    ui.log.append(li); if (S.tab === "flag") ui.lst.scrollTop = ui.lst.scrollHeight;
+  }
+  function renderEvents() {
+    ui.evs.replaceChildren(...(EVENTS.length ? EVENTS.map(e => el("div", { class: "li", id: "ev" + e.n }, el("span", { class: "ts", text: mmss(e.t) }), el("div", {}, el("b", { text: `E${e.n}` }), " ", e.what, el("div", { class: "q", text: "“" + (e.quote.length > 220 ? e.quote.slice(0, 219) + "…" : e.quote) + "”" }), el("a", { href: e.url, target: "_blank", rel: "noopener", text: "source" })))) : [el("p", { class: "small muted", text: "No documented events for this source. Documented events come from cited sources, not from us." })]));
+  }
+  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); ui.log.hidden = t !== "flag"; ui.evs.hidden = t !== "ev"; }
+
+  /* ---------- chart: x is call time; solid = their words, dashed = ours ---------- */
+  function Chart(canvas) {
+    const ctx = canvas.getContext("2d"); let W_ = 0, H_ = 0, dpr = 1, css = {}, cols = [], cAt = 0, mx = null;
+    new ResizeObserver(() => { dpr = devicePixelRatio || 1; W_ = canvas.clientWidth; H_ = canvas.clientHeight; canvas.width = W_ * dpr; canvas.height = H_ * dpr; }).observe(canvas);
+    canvas.addEventListener("mousemove", (e) => { mx = e.clientX - canvas.getBoundingClientRect().left; }); canvas.addEventListener("mouseleave", () => { mx = null; });
+    const read = () => { const cs = getComputedStyle(document.documentElement); cols = [1, 2, 3, 4, 5, 6, 7, 8].map(i => cs.getPropertyValue("--s" + i).trim());
+      css = { line: cs.getPropertyValue("--border").trim(), t2: cs.getPropertyValue("--text-2").trim(), t3: cs.getPropertyValue("--text-3").trim(), surf: cs.getPropertyValue("--surface").trim(), ink: cs.getPropertyValue("--text").trim(), mono: cs.getPropertyValue("--mono").trim() }; };
+    const at = (s, tt) => { if (!s.length) return 0; let lo = 0, hi = s.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (s[m][0] < tt) lo = m + 1; else hi = m; } return s[lo][1]; };
+    return { draw() {
+      if (!W_ || !H_) return; if (performance.now() - cAt > 500) { read(); cAt = performance.now(); }
+      const win = 60, t = S.t, pad = { l: 34, r: 48, t: 8, b: 18 }, pw = W_ - pad.l - pad.r, ph = H_ - pad.t - pad.b, x = (tt) => pad.l + pw - ((t - tt) / win) * pw, y = (v) => pad.t + ph * (1 - v);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W_, H_); ctx.lineWidth = 1; ctx.font = `10px ${css.mono}`; ctx.textBaseline = "middle";
+      ctx.strokeStyle = css.line; ctx.fillStyle = css.t3; for (const v of [0, 0.5, 1]) { ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y(v)) + .5); ctx.lineTo(W_ - pad.r, Math.round(y(v)) + .5); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(Math.round(v * 100) + "%", pad.l - 6, y(v)); }
+      ctx.strokeStyle = css.ink; ctx.globalAlpha = .5; ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y(S.gate)) + .5); ctx.lineTo(W_ - pad.r, Math.round(y(S.gate)) + .5); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = css.t2; ctx.textAlign = "left"; ctx.fillText("alert", pad.l + 4, y(S.gate) + 8);
+      ctx.textBaseline = "top"; ctx.fillStyle = css.t3; ctx.textAlign = "center"; for (let tt = Math.max(0, Math.ceil((t - win) / 15) * 15); tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W_ - pad.r - 34) ctx.fillText(mmss(tt), xx, H_ - pad.b + 4); } ctx.textAlign = "right"; ctx.fillText("now", W_ - pad.r, H_ - pad.b + 4);
+      ctx.save(); ctx.beginPath(); ctx.rect(pad.l, 0, pw + 1, H_); ctx.clip();
+      for (const e of EVENTS) { if (e.t < t - win || e.t > t) continue; const xx = Math.round(x(e.t)) + .5; ctx.strokeStyle = css.t2; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, H_ - pad.b); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = css.t2; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("E" + e.n, xx + 3, pad.t + 1); }
+      const labels = [];
+      for (const sg of laneSigs()) {
+        const col = cols[sg.slot % 8] || "#888", pts = []; for (const p of sg.hist) if (p[0] >= t - win - 1) pts.push([x(p[0]), y(p[1])]); pts.push([x(t), y(sg.disp)]); if (pts.length < 2) continue;
+        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round"; const path = new Path2D(); path.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length - 1; i++) path.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2); path.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+        ctx.setLineDash(sg.side === "us" ? [5, 4] : []); ctx.stroke(path); ctx.setLineDash([]); labels.push({ sg, col, yy: y(sg.disp), xx: x(t) });
+      }
+      ctx.restore(); labels.sort((a, b) => a.yy - b.yy); let prev = -99; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      for (const l of labels) { ctx.fillStyle = css.surf; ctx.beginPath(); ctx.arc(l.xx, l.yy, 6, 0, 7); ctx.fill(); ctx.fillStyle = l.col; ctx.beginPath(); ctx.arc(l.xx, l.yy, 4, 0, 7); ctx.fill(); const ly = Math.max(l.yy, prev + 11); prev = ly; ctx.fillStyle = css.t2; ctx.fillText(l.sg.ab, l.xx + 9, ly); }
+      if (mx != null && mx > pad.l && mx < W_ - pad.r) {
+        const tt = t - ((W_ - pad.r - mx) / pw) * win; ctx.strokeStyle = css.t3; ctx.beginPath(); ctx.moveTo(mx + .5, pad.t); ctx.lineTo(mx + .5, H_ - pad.b); ctx.stroke();
+        const rs = laneSigs().map(sg => ({ id: (sg.side === "us" ? "US " : "") + sg.ab, v: at(sg.hist, tt), slot: sg.slot })).sort((a, b) => b.v - a.v).slice(0, 8), bw = 100, bh = 18 + rs.length * 13, bx = mx > W_ / 2 ? mx - bw - 8 : mx + 8;
+        ctx.fillStyle = css.surf; ctx.strokeStyle = css.line; ctx.beginPath(); ctx.roundRect(bx, pad.t + 2, bw, bh, 5); ctx.fill(); ctx.stroke(); ctx.textBaseline = "top"; ctx.textAlign = "left"; ctx.fillStyle = css.t3; ctx.fillText(mmss(tt), bx + 7, pad.t + 6);
+        rs.forEach((r, i) => { const yy = pad.t + 20 + i * 13; ctx.fillStyle = cols[r.slot % 8]; ctx.fillRect(bx + 7, yy + 2, 8, 8); ctx.fillStyle = css.t2; ctx.fillText(`${r.id} ${Math.round(r.v * 100)}%`, bx + 19, yy); });
+      }
+    } };
+  }
+
+  /* ---------- coaching: talk share and pace come from the clock, not a model ---------- */
+  let balNext = 0, balC = {};
+  function updateBalance() {
+    if (performance.now() < balNext) return; balNext = performance.now() + 250;
+    let th = 0, me = 0; const lo = S.t - 60; for (let k = LOGW.length - 1; k >= 0 && LOGW[k].t >= lo; k--) LOGW[k].side === "us" ? me++ : th++;
+    const tot = th + me, sh = tot ? me / tot : 0, span = Math.max(10, Math.min(60, S.t)), wpm = (n) => Math.round(n * 60 / span);
+    ui.thI.style.transform = `scaleX(${tot ? (1 - sh).toFixed(3) : .5})`; ui.meI.style.transform = `scaleX(${tot ? sh.toFixed(3) : .5})`;
+    const a = tot ? `THEM ${Math.round((1 - sh) * 100)}% · US ${Math.round(sh * 100)}%` : "waiting for speech", b = tot ? `THEM ${wpm(th)} wpm · US ${wpm(me)} wpm` : "", c = tot < 20 ? "Listening." : sh > .65 ? "We are doing most of the talking. Ask a question." : sh < .25 ? "They are doing most of the talking. Listen for cues." : "Balanced.";
+    if (balC.a !== a) { ui.bl1.textContent = a; balC.a = a; } if (balC.b !== b) { ui.bl2.textContent = b; balC.b = b; } if (balC.c !== c) { ui.tip.textContent = c; balC.c = c; }
+  }
+
+  /* ---------- run control ---------- */
+  function resetRun() {
+    if (ctl) ctl.abort(); ctl = null; QUEUE.length = 0; active = 0; pending = 0; failed = 0; checksDone = 0; maxPending = 0; if (ui.err) ui.err.textContent = "";
+    S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; cpN = 0; CPS.length = 0; FLAGS.length = 0; LOGW.length = 0; cards.length = 0; moSeq = 0; rows.length = 0;
+    for (const k in peopleSpans) delete peopleSpans[k];
+    for (const sg of S.sigs) { sg.latest = 0; sg.marks = []; sg.disp = 0; sg.lastFire = -1e9; sg.above = null; sg.hist = []; sg.n = 0; sg.done = false; }
+    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); renderLanes(); renderKp(); renderEvents(); }
+    for (const k of ["them", "us"]) if (ui["who-" + k]) ui["who-" + k].textContent = "";
+  }
+  function rebuild() { T = currentTranscript(); buildTimeline(); if (!S.us.size || ![...S.us].every(u => T.speakers.includes(u))) S.us = new Set(T.speakers.slice(0, 1)); refreshUs(); resetRun(); writeHash(); updatePlay(); refreshEst(); }
+  const speedF = () => Number(S.speed);
+  function play() { if (S.done) { resetRun(); } S.playing = true; last = performance.now(); updatePlay(); }
+  function pause() { S.playing = false; updatePlay(); }
+  function finish() { S.done = true; S.playing = false; updatePlay(); }
+
+  const est = (list) => { let tok = 0; for (const c of list) tok += PER_Q * c.qids.length + 2 * words(c.state).length; return tok; };
+  function dryRun() { const R = makeRunner(), out = []; for (const wd of W) out.push(...R.feed(wd)); return out; }
+  const money = (x) => x < 0.01 ? "$" + x.toFixed(5) : x < 10 ? "$" + x.toFixed(3) : "$" + x.toFixed(2);
+  function refreshEst() {
+    if (!ui.est || !T) return; const nq = new Set(S.sigs.map(s => s.q)).size, tok = nq * PER_Q + 2 * (S.win[0] === "w" ? parseInt(S.win.slice(1), 10) : parseInt(S.win.slice(1), 10) * 15), perMin = S.cp === "sentence" ? 13 : Math.round(150 / S.n);
+    ui.est.textContent = `~${tok} tokens a check · ${isHosted() ? "about " + money(tok * perMin * 2 * TARIFF / 1e6) + " per call minute (two people)" : "free: runs on this machine"}`;
+  }
+  function showConfirm(list) {
+    const tok = est(list), cost = tok * TARIFF / 1e6;
+    ui.confirm.replaceChildren(el("div", { class: "callout warn notice" }, el("span", {}, el("strong", { text: `${Jev.codeOf(S.model)} is hosted and billed per token. ` }), `This run makes about ${list.length} checks, roughly ${tok.toLocaleString("en-US")} input tokens, about ${money(cost)} at the tariff. Continue?`),
+      el("button", { class: "btn primary", type: "button", onclick: () => { S.armed = true; ui.confirm.replaceChildren(); onPlay(); }, text: "Confirm and play" }), el("button", { class: "btn", type: "button", onclick: () => ui.confirm.replaceChildren(), text: "Cancel" })));
+  }
+  async function precompute(list, signal) {
+    const uniq = new Map(); for (const c of list) { const k = c.state; const cur = uniq.get(k) || { state: k, qids: new Set() }; c.qids.forEach(q => cur.qids.add(q)); uniq.set(k, cur); }
+    const todo = [...uniq.values()].filter(u => [...u.qids].some(q => !(C.get(ckey(u.state)) || { answers: {} }).answers[q])); pre = { done: 0, total: todo.length, failed: 0 }; renderStatus();
+    let idx = 0; await Promise.all(Array.from({ length: CONC }, async () => { while (idx < todo.length && !signal.aborted) { const u = todo[idx++]; try { await fetchState(u.state, [...u.qids], signal); } catch (e) { if (signal.aborted) return; pre.failed++; } pre.done++; renderStatus(); } }));
+    const p = pre; pre = null; renderStatus(); return p;
+  }
+  async function onPlay() {
+    if (S.playing) { pause(); return; }
+    if (!isUp()) { toast(`${Jev.codeOf(S.model)} is not loaded right now. Choose a loaded model.`); return; }
+    const list = dryRun(), needy = list.filter(c => missing(c).length);
+    if (S.mode === "replay" && needy.length) {
+      if (isHosted() && !S.armed) { showConfirm(needy); return; }
+      ctl = ctl || new AbortController(); const c = ctl, r = await precompute(needy, c.signal); if (c.signal.aborted) return; if (r.failed) toast(`${r.failed} call${r.failed > 1 ? "s" : ""} failed; those checks will be retried while playing.`);
+    } else if (S.mode === "live" && isHosted() && !S.armed) { showConfirm(list); return; }
+    play();
+  }
+  function renderStatus() {
+    const box = ui.status; if (!box) return;
+    if (pre) { box.replaceChildren(el("span", { text: `Precomputing ${Jev.codeOf(S.model)}: ${pre.done} of ${pre.total}` + (pre.failed ? `, ${pre.failed} failed` : "") }), el("button", { class: "btn", type: "button", onclick: () => { if (ctl) ctl.abort(); ctl = null; pre = null; renderStatus(); }, text: "Cancel" })); return; }
+    box.replaceChildren();
+  }
+  function updatePlay() {
+    if (!ui.play) return; const hosted = isHosted();
+    ui.play.textContent = S.playing ? "Pause" : S.done ? "Replay" : S.t > 0 ? "Resume" : S.mode === "replay" ? "Precompute and play" : hosted && !S.armed ? "Play live (hosted, paid)" : "Play";
+  }
+
+  /* ---------- model chips, settings ---------- */
+  const p50 = (a) => { if (!a || !a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  function renderModels() {
+    if (!ui.models) return; const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up);
+    ui.models.replaceChildren(...up.map(id => { const l = p50(LAGS[id]); return el("button", { type: "button", "aria-pressed": String(id === S.model), title: `${Jev.codeOf(id)} = ${Jev.nameOf(id)}${st[id].hosted ? " (hosted, paid)" : ""}${st[id].identity_ok === false ? " — does not match its label" : ""}`, onclick: () => setModel(id) },
+      el("span", { class: "mbtn" }, Jev.codeOf(id), st[id].hosted ? el("small", { text: "paid" }) : null, l ? el("small", { text: Math.round(l) + " ms" }) : null)); }));
+    ui.mstate.replaceChildren(); const s = st[S.model] || {};
+    if (!s.up) ui.mstate.append(el("span", { class: "badge bad", role: "alert", text: `${Jev.codeOf(S.model)} is not loaded` }));
+    else if (s.identity_ok === false) ui.mstate.append(el("span", { class: "badge warn", text: "identity does not match its label" }));
+    else ui.mstate.append(el("span", { class: "badge " + (s.hosted ? "warn" : "good"), text: s.hosted ? "hosted (paid)" : "loaded" }), el("span", { class: "small muted", text: (s.identity || "") + (s.gpu_mb ? ` · ${(s.gpu_mb / 1024).toFixed(1)} GiB` : "") }));
+  }
+  function setModel(id) { if (id === S.model) return; S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderLanes(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
+  function bestWindow() {
+    const e = D.study && Object.values(D.study).find(x => x && String(x.backend).toLowerCase().replace("jev (typesafe)", "jev") === S.model);
+    if (e && e.windows) { const c = WINS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
+    return "w20";
+  }
+  function refreshWinSeg() { ui.winSeg.replaceChildren(...WINS.map(w => el("button", { type: "button", "aria-pressed": String(w === S.win), title: winName(w), onclick: () => { S.win = w; S.winTouched = true; resetRun(); refreshWinSeg(); readAll(); writeHash(); refreshEst(); }, text: w[0] === "w" ? w.slice(1) + "w" : w.slice(1) + "s" }))); ui.readnote.textContent = `Bright text is what the model reads: the ${winName(S.win)} of each person.`; }
+  function refreshUs() { ui.usBody.replaceChildren(...T.speakers.map(sp => { const c = el("input", { type: "checkbox", onchange: () => { c.checked ? S.us.add(sp) : S.us.delete(sp); if (!S.us.size) { S.us.add(sp); c.checked = true; } resetRun(); refreshUs(); writeHash(); } }); c.checked = S.us.has(sp); return el("label", {}, c, sp); })); ui.usSum.textContent = `Us: ${[...S.us].map(short).join(", ")}`; }
+
+  /* ---------- hash and export ---------- */
+  function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return Object.fromEntries([...p.entries()]); }
+  function writeHash() { const p = new URLSearchParams(); p.set("src", S.src); if (S.src === "dlg") p.set("dlg", S.dlg); p.set("model", S.model); p.set("win", S.win); p.set("cp", S.cp); p.set("n", S.n); p.set("gate", S.gate); p.set("speed", S.speed); p.set("mode", S.mode); p.set("us", [...S.us].join("|")); history.replaceState(null, "", "#" + p.toString()); }
+  function exportData() {
+    return { exported: new Date().toISOString(), note: "Per-person windows; scores are model probabilities, not verdicts.", settings: { model: S.model, window: S.win, checkpoints: S.cp, n: S.n, alert_at: S.gate, mode: S.mode, us: [...S.us] }, source: T.meta.title,
+      signals: S.sigs.map(s => ({ key: s.key, label: s.label, side: s.side, custom: s.custom, question: QALL[s.q] ? QALL[s.q].instructions : s.q })), checks: CPS.map(c => ({ n: c.n, t: +c.t.toFixed(2), speaker: c.spk, side: c.side, scope: c.scope, state: c.state, scores: c.answers || null })), flags: FLAGS, lag_ms_p50: Object.fromEntries(Object.entries(LAGS).map(([k, v]) => [k, Math.round(p50(v))])), failed_checks: failed };
+  }
+
+  /* ---------- boot ---------- */
+  async function loadAll() {
+    const ids = [...new Set(Object.values(QSETS))]; await Jev.ready;
+    const [scenes, dlg, study, models, ...sets] = await Promise.all([api("/api/scenes"), api("/api/dialogues"), api("/api/window-study").catch(() => ({})), api("/api/models").catch(() => null), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
+    try { const j = models && models.models.find(m => m.id === "jev"), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
+    return { scenes, dialogues: dlg.dialogues || [], study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
+  }
+  function init(data) {
+    D = data; Object.entries(QSETS).forEach(([q, set]) => { QS[q] = D.sets[set].items[0].question; QALL[q] = QS[q]; });
+    const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up), h = readHash();
+    if (!up.length) return el("div", { class: "stack" }, Jev.empty("No backend is up", "Every model backend is unreachable right now. Start one, then check again."));
+    S.model = up.includes(h.model) ? h.model : up.includes("kev-4b") ? "kev-4b" : up.find(k => !st[k].hosted) || up[0];
+    const srcs = [...D.scenes.map(s => s.slug), "dlg", "paste"]; S.src = srcs.includes(h.src) ? h.src : (D.scenes.find(s => s.slug.startsWith("apollo")) || D.scenes[0] || { slug: "dlg" }).slug;
+    S.dlg = D.dialogues.some(d => d.id === h.dlg) ? h.dlg : D.dialogues[0] && D.dialogues[0].id; if (S.src === "dlg" && !S.dlg) S.src = "paste";
+    if (WINS.includes(h.win)) { S.win = h.win; S.winTouched = true; } else S.win = bestWindow();
+    if (h.cp === "words" || h.cp === "sentence") S.cp = h.cp; if (h.n && Number.isFinite(+h.n)) S.n = clamp(Math.round(+h.n), 3, 20); if (h.gate && Number.isFinite(+h.gate)) S.gate = clamp(+h.gate, 0.3, 0.95);
+    if (SPEEDS.some(([v]) => v === h.speed)) S.speed = h.speed; if (h.mode === "replay" || h.mode === "live") S.mode = h.mode; if (h.us) S.us = new Set(h.us.split("|").filter(Boolean));
+    S.paste = kv.get("cockpit.paste") || "";
+    for (const [pid, side] of DEFAULTS) addDetector(pid, side, true);
+    T = currentTranscript(); buildTimeline(); if (!S.us.size || ![...S.us].every(u => T.speakers.includes(u))) S.us = new Set(T.speakers.slice(0, 1));
+    return build();
+  }
+  function build() {
+    const srcSel = el("select", { id: "src", "aria-label": "Transcript", onchange: () => { S.src = srcSel.value; rebuild(); refreshSrcPanels(); } },
+      el("optgroup", { label: "Real scenes (cited)" }, D.scenes.map(s => el("option", { value: s.slug, text: s.title + (s.control ? " [control]" : "") }))),
+      el("optgroup", { label: "Other sources" }, el("option", { value: "dlg", text: `Conversation library (${D.dialogues.length})` }), el("option", { value: "paste", text: "Pasted text" }))); srcSel.value = S.src;
+    const dlgSel = el("select", { id: "dlg", "aria-label": "Library dialogue", onchange: () => { S.dlg = dlgSel.value; rebuild(); } }, D.dialogues.map((d, k) => el("option", { value: d.id, text: `${k + 1}. ${d.id.replace("mmwin-", "")} · ${d.turns.length} turns` }))); dlgSel.value = S.dlg;
+    ui.dlgField = el("div", { class: "field" }, el("label", { for: "dlg", text: "Dialogue (label hidden)" }), dlgSel);
+    const ta = el("textarea", { id: "paste", rows: 3, "aria-label": "Pasted text", placeholder: "Agent: Hello, this is your bank.\nCaller: Who is this?" }); ta.value = S.paste; let tt; ta.addEventListener("input", () => { S.paste = ta.value; kv.set("cockpit.paste", S.paste); clearTimeout(tt); tt = setTimeout(() => { if (S.src === "paste") rebuild(); }, 400); });
+    ui.pasteField = el("div", { class: "field", style: "flex:1 1 320px" }, el("label", { for: "paste", text: 'Transcript, one "Speaker: text" per line' }), ta);
+    ui.usSum = el("summary"); ui.usBody = el("div", { class: "popbody" }); ui.us = el("details", { class: "pop" }, ui.usSum, ui.usBody);
+    ui.play = el("button", { class: "btn primary", type: "button", id: "play", onclick: onPlay }, "Play");
+    const speed = el("div", { class: "segmented", role: "group", "aria-label": "Playback speed" }, SPEEDS.map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.speed === v), "data-s": v, text: t, onclick: () => { S.speed = v; speed.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === v))); writeHash(); } })));
+    const mode = el("div", { class: "segmented", role: "group", "aria-label": "Mode" }, [["replay", "Replay"], ["live", "Live"]].map(([k, t]) => el("button", { type: "button", "aria-pressed": String(S.mode === k), "data-m": k, text: t, title: k === "replay" ? "Precompute every check first; playback is then instant and free to repeat." : "Call at each check as playback reaches it and measure the lag.", onclick: () => { S.mode = k; S.armed = false; mode.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === k))); writeHash(); updatePlay(); } })));
+    ui.clock = el("span", { class: "num", text: "00:00" }); ui.pill = el("span", { class: "pill" }, el("span", { class: "rec" }), "LIVE ", ui.clock); ui.behind = el("span", { class: "small muted", role: "status" });
+    ui.confirm = el("div", { role: "status" }); ui.status = el("div", { class: "notice small", role: "status" }); ui.err = el("span", { class: "small err", role: "alert" });
+    const top = el("div", { class: "top" }, el("div", {}, el("h1", { text: "Call cockpit" }), el("p", { class: "sub", text: "A transcript replayed word by word, scored per person. Signals rise, hold and fade so there is time to react." })),
+      el("div", { class: "ctl" }, el("div", { class: "field" }, el("label", { for: "src", text: "Transcript" }), srcSel), ui.dlgField, ui.us, el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Mode" }), mode),
+        ui.play, el("button", { class: "btn", type: "button", onclick: () => { resetRun(); updatePlay(); }, text: "Restart" }), el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Speed" }), speed), ui.pill,
+        el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-${Date.now()}.json`, JSON.stringify(exportData(), null, 1), "application/json"), text: "Export" }), el("button", { class: "btn", type: "button", onclick: () => copy(location.href), text: "Copy link" })));
+    const note = el("details", { class: "callout warn" }, el("summary", {}, el("strong", { text: "Technique signals, not verdicts." }), " Probabilities, not reasons. Read the caveats"),
+      el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy; custom sentences are unvalidated. Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model." }));
+    /* signals header: add a detector or your own sentence */
+    ui.wnote = el("div", { class: "wnote", role: "status" }); let wt = 0, wside = "them";
+    const say = (t) => { ui.wnote.textContent = t; clearTimeout(wt); wt = setTimeout(() => { ui.wnote.textContent = ""; }, 4500); };
+    const input = el("input", { type: "text", id: "watch-in", placeholder: "Write what to watch for, or pick a detector", "aria-label": "What to watch for", style: "flex:1 1 220px" });
+    const pick = el("select", { "aria-label": "Detector", id: "watch-pick", style: "flex:0 1 150px" }, el("option", { value: "", text: "Detector…" }), PERSP.map(p => el("option", { value: p.id, text: p.name + (p.scope === "call" ? " (whole call)" : "") })));
+    const sideSeg = el("span", { class: "segmented", role: "group", "aria-label": "Whose words" }); const drawSide = () => sideSeg.replaceChildren(...[["them", "Them"], ["us", "Us"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(v === wside), onclick: () => { wside = v; drawSide(); }, text: t }))); drawSide();
+    const add = () => { let ok = false; if (pick.value) { ok = addDetector(pick.value, wside); pick.value = ""; } else if (input.value.trim()) { ok = addCustom(input.value, wside, false); if (ok) input.value = ""; } else return say("Pick a detector or write a sentence."); if (ok) { renderLanes(); afterConfig(); say("Added. It starts scoring at the next check; your own sentences are unvalidated."); } };
+    input.addEventListener("keydown", e => { if (e.key === "Enter") add(); });
+    ui.lanebox = el("div");
+    ui.lanes = el("section", { class: "pn", "data-pane": "signals", style: "grid-area:lanes" }, el("header", { class: "lanehead" }, el("h4", { text: "Signals" }), el("div", { class: "wadd", style: "margin-left:auto;flex:1 1 auto;max-width:640px" }, input, pick, sideSeg, el("button", { class: "btn", type: "button", onclick: add, text: "Add" })), ui.wnote), ui.lanebox);
+    /* conversation */
+    ui.track = el("div", { class: "track" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" });
+    const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.readnote);
+    /* rail */
+    ui.moms = el("div", { id: "moms" }); ui.more = el("span", { class: "r" });
+    const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), ui.more), el("div", { class: "bd" }, ui.moms));
+    ui.thI = el("i", { class: "th" }); ui.meI = el("i", { class: "me" }); ui.bl1 = el("div", { class: "bl num" }); ui.bl2 = el("div", { class: "bl num" }); ui.tip = el("div", { class: "tip" }); ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" });
+    const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addCustom(kpIn.value, "us", true); kpIn.value = ""; renderKp(); afterConfig(); } } });
+    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" })), el("div", { class: "bd scroll", style: "display:block" }, el("div", { class: "bt", text: "Talk share, last 60 s" }), el("div", { class: "split" }, ui.thI, ui.meI), ui.bl1, el("div", { class: "bt", text: "Pace" }), ui.bl2, ui.tip,
+      el("div", { class: "bt", style: "margin-top:8px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
+    ui.models = el("span", { class: "segmented", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("span", { class: "row", style: "gap:6px" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per person" });
+    const cadSeg = el("span", { class: "segmented", role: "group", "aria-label": "How often to score" }); const nIn = el("input", { type: "number", min: "3", max: "20", step: "1", "aria-label": "Words between checks", style: "width:56px;min-height:28px", onchange: () => { S.n = clamp(Math.round(+nIn.value) || 5, 3, 20); nIn.value = S.n; resetRun(); writeHash(); refreshEst(); } }); nIn.value = S.n; nIn.hidden = S.cp !== "words";
+    const drawCad = () => { cadSeg.replaceChildren(...[["sentence", "sentence"], ["words", "N words"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.cp === v), onclick: () => { S.cp = v; nIn.hidden = v !== "words"; drawCad(); resetRun(); writeHash(); refreshEst(); }, text: t }))); }; drawCad();
+    const gate = el("input", { type: "range", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Alert at", style: "width:110px;min-height:24px", oninput: () => { S.gate = +gate.value; gv.textContent = S.gate.toFixed(2); writeHash(); } }); gate.value = S.gate; const gv = el("strong", { text: S.gate.toFixed(2) });
+    ui.est = el("div", { class: "est" }); ui.log = el("div"); ui.evs = el("div", { hidden: true }); ui.lst = el("div", { class: "lst" }, ui.log, ui.evs); ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged so far"], ["ev", "What actually happened"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k), text: t })));
+    const cap = el("section", { class: "pn", style: "flex:0 0 clamp(236px,27vh,320px)" }, el("header", {}, el("h4", { text: "Captured so far" }), ui.mstate),
+      el("div", { class: "bd", style: "display:flex;flex-direction:column;overflow:hidden" }, el("div", { class: "mrow" }, ui.models), el("div", { class: "mrow" }, el("span", { class: "l", text: "Window" }), ui.winSeg, el("span", { class: "l", text: "Check every" }), cadSeg, nIn), el("div", { class: "mrow" }, el("span", { class: "l" }, "Alert at ", gv), gate, ui.est, ui.behind), ui.err, ui.tabs, ui.lst));
+    const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap);
+    const chartCv = el("canvas"); const hist = el("section", { class: "pn", "data-pane": "history", style: "grid-area:chart" }, el("header", {}, el("h4", { text: "Last 60 seconds" }), el("span", { class: "key" }, el("span", {}, el("i"), "Them"), el("span", {}, el("i", { class: "d" }), "Us"), EVENTS.length ? el("span", { text: "E = documented event" }) : null)), el("div", { class: "chartwrap" }, chartCv));
+    ui.stage = el("main", { class: "stage", "data-tab": "talk" }, ui.lanes, conv, rail, hist);
+    const tabsbar = el("nav", { class: "tabsbar", "aria-label": "Sections" }, [["talk", "Talk"], ["signals", "Signals"], ["cues", "Cues"], ["history", "History"]].map(([k, t]) => el("button", { type: "button", "data-t": k, "aria-selected": String(k === "talk"), text: t, onclick: () => { ui.stage.dataset.tab = k; tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === k))); } })));
+    const root = el("div", { class: "cp" }, top, note, ui.confirm, ui.status, ui.stage, tabsbar);
+    ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; window.refreshSrcPanels = () => { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; };
+    top.append(ui.pasteField); ui.pasteField.hidden = S.src !== "paste";
+    glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 6); chart = Chart(chartCv);
+    runner = makeRunner(); renderLanes(); renderKp(); renderEvents(); renderModels(); refreshWinSeg(); refreshUs(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
+    Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
+    document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
+    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { S, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
+    return root;
+  }
+  window.refreshSrcPanels = () => {};
+  function frame(now) {
+    raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
+    tickSigs(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateLanes(); updateBalance(); chart.draw();
+    const c = mmss(S.t); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
+    const b = pending ? `${pending} check${pending > 1 ? "s" : ""} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
+  }
+  Jev.mount(document.getElementById("app"), loadAll, init);
+})();
+</script>
+</body>
+</html>

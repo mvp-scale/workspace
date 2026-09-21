@@ -27,7 +27,7 @@ Model logs: `tail -f logs/kev-4b.log` (also `semif`, `so1`, `laya`, `verdict`). 
 
 | Page | URL / file |
 |---|---|
-| Console: Leaderboard, Compare, Scenarios, Text windows, Call monitor, How they work, Report | http://127.0.0.1:8100 `/`, `/compare`, `/scenarios`, `/windows`, `/stream`, `/models`, `/report` |
+| Console: Leaderboard, Compare, Scenarios, Text windows, Call monitor, **Call cockpit (new, wired to the models)**, How they work, Report | http://127.0.0.1:8100 `/`, `/compare`, `/scenarios`, `/windows`, `/stream`, `/cockpit`, `/models`, `/report` |
 | Mock-ups index (4 pages, spec in `SPEC.md`) | `demo/mockups/index.html` |
 | Call cockpit variations A, B, C (spec in `cockpit-variants/SPEC.md`). **A is the chosen one** | `demo/mockups/cockpit-variants/index.html`, `a-lanes-tabs.html` |
 
@@ -61,6 +61,8 @@ python3 demo/vram.py                                          # measure GPU memo
 ```
 
 ## 6. Where things stand
+
+- **`/cockpit` is built and running** (`demo/cockpit.html`): Cockpit C layout on the console's own style, per-person windows, KEV4B by default. Adding a route needs a demo-server restart (`kill` it, then the start command in section 2). Not yet in: scrubber and step, a facts extractor, live speech-to-text (the source is an interface: words with speaker and time), narrowed phrase highlights (highlights mark the whole scored sentence).
 
 - Real Call monitor (`demo/stream.html`) is unchanged. Mock-ups and specs are committed locally.
 - Next step agreed: wire Cockpit A to the local models (KEV4B default), per-person windows, replay real transcripts, measure latency and quality. Open decisions: how to highlight (whole scored sentence vs narrowed phrase), how to capture facts, whether to keep `/stream` beside a new cockpit page. Gap analysis is in the last message of the session `demo-wip`.
