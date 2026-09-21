@@ -146,10 +146,10 @@
   .tabs2 button .n { margin-left: 5px; font: 500 10.5px var(--mono); color: var(--text-3); } .tabs2 button[aria-selected=true] .n { color: var(--text-2); }
   .tabpane.col { display: flex; flex-direction: column; gap: 6px; }
   .sec { display: flex; justify-content: space-between; align-items: baseline; }
-  .fl { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .fl { border-left: 4px solid var(--c); padding: 4px 8px 5px; margin: 4px 0; background: var(--surface); border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: var(--radius-sm); }
   .fl .ts, .evx .ts { font: 500 11px var(--mono); color: var(--text-3); padding-top: 1px; }
-  .fl .fh { display: flex; align-items: center; gap: 6px; font-size: 12.5px; } .fl .ic { color: var(--c); display: grid; place-items: center; }
-  .fl .vc, .fl .cnt { font: 600 10.5px var(--mono); color: var(--text-2); } .fl .vc { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; } .fl .pc { font: 600 11px var(--mono); margin-left: auto; }
+  .fl .fh { display: flex; align-items: center; gap: 7px; font-size: 12.5px; } .fl .ic { color: var(--c); display: grid; place-items: center; }
+  .fl .vc, .fl .cnt { font: 600 10.5px var(--mono); color: var(--text-2); } .fl .vc { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; } .fl .pc { font: 600 11px var(--mono); margin-left: auto; } .fl .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
   .fl .q { color: var(--text-2); font-size: 12.5px; overflow-wrap: anywhere; }
   .drow { display: grid; grid-template-columns: 22px auto auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .drow .ic { color: var(--c); display: grid; place-items: center; } .drow .small { text-align: right; }
   .libchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
@@ -169,6 +169,8 @@
   .evx { padding: 6px 0; border-bottom: 1px solid var(--border); } .evx .eh { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; font-size: 13px; }
   .evx .er { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 0 48px; } .evx .lbl { font-size: 11px; color: var(--text-3); }
   .drow button.x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; } .drow button.x:hover { color: var(--bad); }
+  .moment .sup { display: inline-flex; align-items: center; gap: 2px; font: 600 11px var(--mono); color: var(--text-3); flex: none; }
+  .moment.shifted { opacity: .7; }
 </style>
 </head>
 <body>
@@ -416,13 +418,14 @@
   }
 
   /* ---------- level, hold, fire ---------- */
-  const env = (p, age) => age < 0 ? 0 : age <= HOLD ? p * (1 - 0.25 * age / HOLD) : p * 0.75 * Math.exp(-(age - HOLD) / 12);
+  const env = (p, age) => age < 0 ? 0 : age <= 8 ? p : p * Math.exp(-(age - 8) / 6);
+  const vis = (x) => x >= S.gate ? x : 0;
   function tickDets(dt) {
     const k = 1 - Math.exp(-dt / 0.18), sample = S.playing && nextSample <= S.t;
     for (const d of S.dets) {
       let best = 0, who = null, lf = -1e9;
       for (const spk in d.st) {
-        const st = d.st[spk]; let tgt = 0; for (const m of st.marks) tgt = Math.max(tgt, env(m.p, S.t - m.t)); st.disp += (tgt - st.disp) * k;
+        const st = d.st[spk], m = st.marks[st.marks.length - 1], tgt = m ? env(m.p, S.t - m.t) : 0; st.disp += (tgt - st.disp) * k;
         if (st.disp > best) { best = st.disp; who = spk; } if (st.lastFire > lf) lf = st.lastFire;
       }
       const a = d.agg; a.disp = best; a.who = who; a.lastFire = lf; a.n = Object.values(d.st).reduce((s, x) => s + x.n, 0);
@@ -435,7 +438,8 @@
     const quote = T.turns[chk.i].words.slice(chk.k0, chk.k + 1).join(" "), fl = { id: ++moSeq, det: d.key, label: d.label, icon: d.icon, slot: d.slot, spk: who, at: chk.spk, t: S.t, p: v.score, quote, i: chk.i, model: S.model };
     FLAGS.push(fl); highlight(chk, d, v.score); addLog(fl); renderHits(who);
     if (d.scope !== "call" && isCoach(chk.spk)) return;
-    const c = cards.find(x => x.det === d.key && x.spk === who && S.t - x.t < 12);
+    for (const o of cards) if (o.spk === who && o.det !== d.key && !o.pinned && !o.shifted) { o.shifted = true; o.t = Math.min(o.t, S.t - (HOLD - 4)); o.el.classList.add("shifted"); o.sup.replaceChildren("→", iconEl(d.icon, 12)); o.sup.title = `Shifting to ${d.label}`; o.sup.hidden = false; }
+    const c = cards.find(x => x.det === d.key && x.spk === who && !x.shifted && S.t - x.t < 12);
     if (c) { c.n++; c.t = S.t; c.p = v.score; c.cnt.textContent = "×" + c.n; c.pc.textContent = Math.round(v.score * 100) + "%"; }
     else newCard(d, chk, fl, who);
   }
@@ -465,15 +469,16 @@
   }
   function newCard(d, chk, fl, who) {
     const bar = el("i"), age = el("span", { class: "age" }, "00:00"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
-    const cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: Math.round(fl.p * 100) + "%" }), whoEl = el("span", { class: "who", title: lab(who), text: who === "_call" ? "ALL" : code(who) });
+    const cnt = el("span", { class: "cnt" }), sup = el("span", { class: "sup", hidden: true }), pc = el("span", { class: "pc", text: Math.round(fl.p * 100) + "%" }), whoEl = el("span", { class: "who", title: lab(who), text: who === "_call" ? "ALL" : code(who) });
     const node = el("article", { class: "moment", style: cvar(d.slot), title: `${d.label}: ${d.about}`, "data-flag": fl.id },
-      el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), who === "_call" ? null : whoEl, cnt, pc, age, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" }), el("div", { class: "hold", "aria-hidden": "true" }, bar));
-    const card = { det: d.key, spk: who, t: S.t, p: fl.p, n: 1, el: node, bar, age, cnt, pc, who: whoEl, pinned: false, last: "", it: null };
+      el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), who === "_call" ? null : whoEl, cnt, sup, pc, age, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" }), el("div", { class: "hold", "aria-hidden": "true" }, bar));
+    const card = { det: d.key, spk: who, t: S.t, p: fl.p, n: 1, el: node, bar, age, cnt, pc, sup, who: whoEl, pinned: false, shifted: false, last: "", it: null };
     pin.addEventListener("click", () => { card.pinned = !card.pinned; pin.setAttribute("aria-pressed", String(card.pinned)); pin.textContent = card.pinned ? "Pinned" : "Pin"; });
     card.it = stack.add(node); cards.push(card);
   }
   function tickCards() {
-    for (const c of cards) {
+    for (const c of [...cards]) {
+      if (!c.pinned && S.t - c.t >= HOLD + 5) { stack.remove(c.it); cards.splice(cards.indexOf(c), 1); continue; }
       const a = S.t - c.t, hot = a < HOLD || c.pinned; c.bar.style.transform = `scaleX(${c.pinned ? 1 : clamp(1 - a / HOLD, 0, 1).toFixed(3)})`;
       const txt = mmss(a); if (txt !== c.last) { c.age.textContent = txt; c.last = txt; } if (c.el.classList.contains("cool") === hot) c.el.classList.toggle("cool", !hot);
     }
@@ -523,8 +528,8 @@
   function updateDets() {
     for (const k in DCH) {
       const L = DCH[k], a = L.d.agg;
-      L.bar.style.transform = `scaleX(${clamp(a.disp, 0, 1).toFixed(3)})`;
-      const hot = a.disp >= S.gate, q = a.disp < 0.2; if (L.c.h !== hot) { L.node.classList.toggle("hot", hot); L.c.h = hot; } if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
+      const shown = vis(a.disp); L.bar.style.transform = `scaleX(${clamp(shown, 0, 1).toFixed(3)})`;
+      const hot = shown > 0, q = shown === 0; if (L.c.h !== hot) { L.node.classList.toggle("hot", hot); L.c.h = hot; } if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
     }
   }
   function renderPeople() {
@@ -556,7 +561,7 @@
     const key = fl.det + "|" + fl.spk, r = LOGROW[key], pct = Math.round(fl.p * 100) + "%";
     if (r && S.t - r.t < 12) { r.n++; r.t = S.t; r.cnt.textContent = "×" + r.n; r.pc.textContent = pct; r.ts.textContent = mmss(S.t); r.q.textContent = "“" + fl.quote + "”"; return; }
     const ts = el("span", { class: "ts", text: mmss(fl.t) }), cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: pct }), q = el("div", { class: "q", text: "“" + fl.quote + "”" });
-    const row = el("div", { class: "fl", style: cvar(fl.slot), "data-flag": fl.id }, ts, el("div", {}, el("div", { class: "fh" }, el("span", { class: "ic" }, iconEl(fl.icon, 14)), el("b", { text: fl.label }), el("span", { class: "vc", title: lab(fl.spk), text: fl.spk === "_call" ? "ALL" : code(fl.spk) }), pc, cnt), q));
+    const row = el("div", { class: "fl", style: cvar(fl.slot), "data-flag": fl.id }, el("div", { class: "fh" }, el("span", { class: "ic" }, iconEl(fl.icon, 16)), el("b", { text: fl.label }), el("span", { class: "vc", title: lab(fl.spk), text: fl.spk === "_call" ? "ALL" : code(fl.spk) }), cnt, pc, ts), q);
     LOGROW[key] = { t: fl.t, n: 1, ts, cnt, pc, q }; ui.log.prepend(row); ui.pane_flag.scrollTop = 0;
   }
   function renderEvents() {
@@ -611,8 +616,8 @@
         const y0 = pad.t + r * rh; ctx.fillStyle = css.surf2; ctx.fillRect(pad.l, y0 + 1, pw, rh - 2);
         if (byDet) {
           const col = cols[it.slot % 8], h = it.agg.hist; ctx.fillStyle = col;
-          for (let i = 0; i < h.length; i++) { if (h[i][0] < t - win - 1) continue; const x0 = x(h[i][0]), x1 = i + 1 < h.length ? x(h[i + 1][0]) : x(t), lv = h[i][1]; if (lv < 0.03) continue; ctx.globalAlpha = 0.1 + 0.9 * Math.min(1, lv); ctx.fillRect(x0, y0 + 1, Math.max(1, x1 - x0 + 0.6), rh - 2); if (lv >= S.gate) { ctx.globalAlpha = 1; ctx.fillRect(x0, y0 + 1, Math.max(1, x1 - x0 + 0.6), Math.min(2, rh - 2)); } }
-          ctx.globalAlpha = 0.1 + 0.9 * Math.min(1, it.agg.disp); ctx.fillRect(x(t) - 3, y0 + 1, 3, rh - 2); ctx.globalAlpha = 1;
+          for (let i = 0; i < h.length; i++) { if (h[i][0] < t - win - 1) continue; const x0 = x(h[i][0]), x1 = i + 1 < h.length ? x(h[i + 1][0]) : x(t), lv = h[i][1]; if (lv < S.gate) continue; ctx.globalAlpha = 0.35 + 0.65 * Math.min(1, (lv - S.gate) / Math.max(0.05, 1 - S.gate)); ctx.fillRect(x0, y0 + 1, Math.max(1, x1 - x0 + 0.6), rh - 2); }
+          if (it.agg.disp >= S.gate) { ctx.globalAlpha = 0.35 + 0.65 * Math.min(1, (it.agg.disp - S.gate) / Math.max(0.05, 1 - S.gate)); ctx.fillRect(x(t) - 3, y0 + 1, 3, rh - 2); } ctx.globalAlpha = 1;
         }
       });
       if (!byDet) for (const f of FLAGS) { if (f.t < t - win || f.t > t) continue; const r = list.indexOf(f.spk); if (r < 0) continue; const y0 = pad.t + r * rh, col = cols[f.slot % 8]; if (rh >= 11) drawIcon(ctx, f.icon, x(f.t) - 6, y0 + (rh - 11) / 2, 11, col); else { ctx.fillStyle = col; ctx.fillRect(x(f.t) - 1.5, y0 + 1, 3, rh - 2); } }
@@ -622,7 +627,7 @@
       ctx.textBaseline = "top"; ctx.fillStyle = css.t3; ctx.font = `10px ${css.mono}`; ctx.textAlign = "center"; for (let tt = Math.max(0, Math.ceil((t - win) / 15) * 15); tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W_ - pad.r - 30) ctx.fillText(mmss(tt), xx, pad.t + plotH + 3); } ctx.textAlign = "right"; ctx.fillText("now", W_ - pad.r, pad.t + plotH + 3);
       if (mx != null && mx > pad.l && mx < W_ - pad.r && my > pad.t && my < pad.t + plotH) {
         const r = Math.floor((my - pad.t) / rh), it = list[r], tt = t - ((W_ - pad.r - mx) / pw) * win; ctx.strokeStyle = css.t3; ctx.beginPath(); ctx.moveTo(mx + .5, pad.t); ctx.lineTo(mx + .5, pad.t + plotH); ctx.stroke();
-        if (byDet) { const s = at(it.agg.hist, tt), near = FLAGS.filter(f => f.det === it.key && Math.abs(f.t - tt) < 4).pop(); tipBox([`${it.label}${it.scope === "call" ? " (whole call)" : ""}`, s ? `${s[2] ? lab(s[2]) + " · " : ""}${Math.round(s[1] * 100)}% at ${mmss(tt)}` : `at ${mmss(tt)}`, ...(near ? [`“${near.quote}”`] : [])], mx, my, W_); }
+        if (byDet) { const s = at(it.agg.hist, tt), near = FLAGS.filter(f => f.det === it.key && Math.abs(f.t - tt) < 4).pop(); tipBox([`${it.label}${it.scope === "call" ? " (whole call)" : ""}`, s && s[1] >= S.gate ? `${s[2] ? lab(s[2]) + " · " : ""}${Math.round(s[1] * 100)}% at ${mmss(tt)}` : `below the threshold at ${mmss(tt)}`, ...(near ? [`“${near.quote}”`] : [])], mx, my, W_); }
         else { const near = FLAGS.filter(f => f.spk === it && Math.abs(x(f.t) - mx) < 8).pop(); tipBox([it === "_call" ? "Whole call" : lab(it), ...(near ? [`${near.label} ${Math.round(near.p * 100)}% at ${mmss(near.t)}`, `“${near.quote}”`] : [`no hit near ${mmss(tt)}`])], mx, my, W_); }
       }
     } };
@@ -639,8 +644,8 @@
   function pickAction() {
     const m = coachMetrics(), G = S.gate, a = hotOf("anger", false), th = hotOf("threat", false), f = hotOf("fear", false), u = hotOf("urgency", false), ac = hotOf("anger", true), w = a.v >= th.v ? a : th;
     const A = (key, prio, head, horizon, text, why, tone) => ({ key, prio, head, horizon, text, why, tone });
-    if (w.v >= G) return A("deesc", 1, "DE-ESCALATE", 20, `Lower your voice and pace. Acknowledge what ${lab(w.who)} said before you answer.`, `${code(w.who)} is above the alert level on ${a.v >= th.v ? "anger" : "threat"}.`, "caution");
-    if (ac.v >= G) return A("steady", 2, "STEADY YOUR TONE", 15, "Take a breath. Shorter sentences, lower pitch, no interrupting.", `${code(S.coach)} is above the alert level on anger.`, "caution");
+    if (w.v >= G) return A("deesc", 1, "DE-ESCALATE", 20, `Lower your voice and pace. Acknowledge what ${lab(w.who)} said before you answer.`, `${code(w.who)} is over the threshold on ${a.v >= th.v ? "anger" : "threat"}.`, "caution");
+    if (ac.v >= G) return A("steady", 2, "STEADY YOUR TONE", 15, "Take a breath. Shorter sentences, lower pitch, no interrupting.", `${code(S.coach)} is over the threshold on anger.`, "caution");
     if (callHot("manipulation") >= G) return A("hold", 3, "DON'T BE RUSHED", 30, "Pause before you agree. Ask exactly what is being asked and what happens if you wait.", "The call reads as pressure or manipulation.", "notice");
     if (u.v >= G) return A("urg", 3, "SLOW IT DOWN", 30, "Don't let the deadline set your pace. Ask for time, or for it in writing.", `${code(u.who)} is pushing urgency.`, "notice");
     if (f.v >= G) return A("reassure", 4, "REASSURE", 20, `Speak calmly and confirm what happens next for ${lab(f.who)}.`, `${code(f.who)} sounds anxious.`, "notice");
@@ -648,7 +653,7 @@
     if (m.wpm != null && m.wpm > 170) return A("pace", 6, "SLOW DOWN", 15, "You are speaking fast. Pause between points.", `${code(S.coach)} is at about ${m.wpm} words a minute.`, "notice");
     if (m.share != null && m.ot >= 25 && m.share < 0.2) return A("charge", 7, "TAKE CHARGE", 20, "You have said little. Summarise where things stand and steer to the next step.", `${code(S.coach)} spoke ${Math.round(m.share * 100)}% of the last 30 s.`, "calm");
     const kp = S.kps.find(k => !k.done); if (kp) return A("cover", 8, "COVER NEXT", 30, kp.text, "The next key point not yet made.", "calm");
-    return A("listen0", 9, "LISTEN", 15, "Nothing needs action. Listen for the next cue.", "No detector is above the alert level.", "calm");
+    return A("listen0", 9, "LISTEN", 15, "Nothing needs action. Listen for the next cue.", "No detector is over the threshold.", "calm");
   }
   let coachNext = 0, coachCur = null, coachC = {};
   function paintCoach(a, elapsed) {
@@ -828,11 +833,11 @@
     ui.models = el("div", { class: "models", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("div", { class: "mstat small muted" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per voice" }); ui.winHelp = el("div", { class: "help" });
     const cadSeg = el("span", { class: "segmented", role: "group", "aria-label": "How often to score" }); const nIn = el("input", { type: "number", min: "3", max: "20", step: "1", "aria-label": "Words between checks", style: "width:56px;min-height:28px", onchange: () => { S.n = clamp(Math.round(+nIn.value) || 5, 3, 20); nIn.value = S.n; resetRun(); writeHash(); refreshEst(); } }); nIn.value = S.n; nIn.hidden = S.cp !== "words";
     const drawCad = () => { cadSeg.replaceChildren(...[["sentence", "sentence"], ["words", "N words"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.cp === v), onclick: () => { S.cp = v; nIn.hidden = v !== "words"; drawCad(); resetRun(); writeHash(); refreshEst(); }, text: t }))); }; drawCad();
-    const gv = el("div", { class: "bigval num", text: Math.round(S.gate * 100) + "%" }); const gate = el("input", { type: "range", class: "bigslider", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Alert at", oninput: () => { S.gate = +gate.value; gv.textContent = Math.round(S.gate * 100) + "%"; writeHash(); } }); gate.value = S.gate;
+    const gv = el("div", { class: "bigval num", text: Math.round(S.gate * 100) + "%" }); const gate = el("input", { type: "range", class: "bigslider", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Minimum threshold", oninput: () => { S.gate = +gate.value; gv.textContent = Math.round(S.gate * 100) + "%"; writeHash(); } }); gate.value = S.gate;
     const dimCb = el("input", { type: "checkbox", id: "dim", onchange: () => { S.showWin = dimCb.checked; ui.track.classList.toggle("showwin", S.showWin); ui.readnote.hidden = !S.showWin; } });
     ui.est = el("div", { class: "est" });
     ui.pane_set = el("div", { class: "tabpane", hidden: true }, el("div", { class: "bt", text: "Model" }), ui.models, ui.mstate,
-      el("div", { class: "twocol" }, el("div", {}, el("div", { class: "bt", text: "Alert level" }), gv, gate, el("div", { class: "help", text: "A detector is flagged when it reaches this. Lower means more cues." })),
+      el("div", { class: "twocol" }, el("div", {}, el("div", { class: "bt", text: "Minimum threshold" }), gv, gate, el("div", { class: "help", text: "A detector shows and flags only at or above this. Everything below is ignored." })),
         el("div", {}, el("div", { class: "bt", text: "What the model reads" }), ui.winSeg, ui.winHelp, el("div", { class: "mrow", style: "margin-top:8px" }, el("span", { class: "l", text: "Check every" }), cadSeg, nIn))),
       el("div", { class: "foot" }, ui.est, el("label", { class: "chk" }, dimCb, "Dim older text"), ui.behind, ui.err));
     /* request: what exactly is sent */
@@ -845,7 +850,7 @@
     const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap);
     /* history */
     const chartCv = el("canvas"); const viewSeg = el("span", { class: "segmented", role: "group", "aria-label": "History view" }, [["det", "By detector"], ["person", "By person"]].map(([k, t]) => el("button", { type: "button", "data-v": k, "aria-pressed": String(S.view === k), text: t, onclick: () => { S.view = k; viewSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === k))); } })));
-    const hist = el("section", { class: "pn", "data-pane": "history", style: "grid-area:chart" }, el("header", {}, el("h4", { text: "Last 60 seconds" }), viewSeg, el("span", { class: "key r" }, "Brighter = higher. Bright edge = above the alert level. Hover for who and what." + (EVENTS.length ? " E = documented event." : ""))), el("div", { class: "chartwrap" }, chartCv));
+    const hist = el("section", { class: "pn", "data-pane": "history", style: "grid-area:chart" }, el("header", {}, el("h4", { text: "Last 60 seconds" }), viewSeg, el("span", { class: "key r" }, "Shown only at or above the minimum threshold; brighter is higher. Hover for who and what." + (EVENTS.length ? " E = documented event." : ""))), el("div", { class: "chartwrap" }, chartCv));
     ui.stage = el("main", { class: "stage", "data-tab": "talk" }, toppn, conv, rail, hist);
     ui.tabsbar = el("nav", { class: "tabsbar", "aria-label": "Sections" }, [["talk", "Talk"], ["signals", "Signals"], ["cues", "Cues"], ["history", "History"]].map(([k, t]) => el("button", { type: "button", "data-t": k, "aria-selected": String(k === "talk"), text: t, onclick: () => { ui.stage.dataset.tab = k; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === k))); } })));
     const root = el("div", { class: "cp" }, top, note, ui.confirm, ui.status, ui.stage, ui.tabsbar);
