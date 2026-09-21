@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report · Jev Bench Console</title>
+<meta name="description" content="Typed decision models: local benchmark report on the public JevBench tiers, RTX 5090, 2026-09-20.">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<style>
+  /* Report layout only: numbered sections, reading width, code blocks, print wrapping. */
+  .report { counter-reset: sec; }
+  .report .section > header h2::before { counter-increment: sec; content: counter(sec) ". "; color: var(--text-3); font-weight: 500; }
+  .prose { max-width: 78ch; } .prose > * + * { margin-top: 12px; }
+  .prose ul { margin: 0; padding-left: 20px; } .prose li + li { margin-top: 6px; }
+  .rec h4 { margin-bottom: 4px; } .rec .pick { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin-bottom: 8px; }
+  .rec p + p { margin-top: 8px; } .rec .rule { color: var(--text-3); font-size: 13px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .codeblock { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .codeblock > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  .codeblock pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 13px/1.6 var(--mono); }
+  .codeblock pre:focus-visible { outline-offset: -2px; }
+  @media print {
+    .report .section { break-inside: auto; }
+    .table-wrap { overflow: visible; }
+    table.data { font-size: 9pt; }
+    table.data th, table.data td { white-space: normal; padding: 4px 6px; }
+    table.data thead th { position: static; }
+    table.data tr { break-inside: avoid; }
+    .codeblock pre { white-space: pre-wrap; overflow: visible; }
+    .segmented { display: none; }
+  }
+</style>
+</head>
+<body>
+<main class="page report">
+  <div class="page-head">
+    <div>
+      <h1>Typed decision models: local benchmark report</h1>
+      <p>Nine typed decision models run on the public JevBench tiers on one machine. Every number below is computed from the stored run results when the page loads, so the report stays consistent when runs are added.</p>
+      <div class="facts"><span class="badge">Dated 2026-09-20</span><span class="badge">NVIDIA RTX 5090 (32 GB)</span><span class="badge">Public tiers only</span></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="export-csv" type="button">Export CSV</button>
+      <button class="btn" id="export-json" type="button">Export JSON</button>
+      <button class="btn primary" id="print" type="button">Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div id="body" aria-live="polite"></div>
+
+  <section class="section" aria-labelledby="repro-h">
+    <header><div><h2 id="repro-h">Reproduce</h2><p class="small">Run from the repository root. Each script skips a run whose output folder already exists under <code>data/bench</code>; delete the folder to run it again.</p></div></header>
+    <div class="stack" id="repro"></div>
+  </section>
+</main>
+
+<script>
+const { el, fmt, mount, load, sortable, download, csv, copy, empty } = Jev;
+const TIERS = ["easy", "original", "hard"];
+const TOLERANCES = [5, 10, 15, 20];
+let DATA, TOL = 10, TIER_FILTER = "all";
+
+/* ---------- pure computation (no DOM) ---------- */
+const pts = (v, d = 1) => (v * 100).toFixed(d);
+const sortBy = (list, key, dir = 1) => [...list].sort((a, b) => (key(a) - key(b)) * dir);
+const nameOf = (r) => r.info.name;
+const list = (names) => names.length < 2 ? names.join("") : names.length === 2 ? names.join(" and ") : names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const hardN = (rows) => rows.find(r => r.tiers.hard?.n)?.tiers.hard.n ?? 0;
+/* Rough 95% half-width for a difference between two accuracies (unpaired, normal approximation). */
+const halfWidth = (pa, na, pb = null, nb = null) => 1.96 * Math.sqrt(pa * (1 - pa) / na + (pb == null ? 0 : pb * (1 - pb) / nb));
+/* Parameter count in millions from a fact-sheet string such as "4B", "0.8B", "about 400M", "421M"; null when unknown. */
+function paramsM(s) {
+  const m = /([\d.]+)\s*([BM])/i.exec(s || "");
+  return m ? parseFloat(m[1]) * (m[2].toUpperCase() === "B" ? 1000 : 1) : null;
+}
+const fmtParams = (r) => r.info.params || "unknown size";
+const totalDecisions = (rows) => TIERS.reduce((n, t) => n + (rows.find(r => r.tiers[t]?.n)?.tiers[t].n || 0), 0);
+
+function analyse(all) {
+  const rows = sortBy(all.filter(r => TIERS.every(t => r.tiers[t])), r => r.mean_accuracy, -1);
+  if (!rows.length) return null;
+  const leader = rows[0], second = rows[1] || null;
+  const open = rows.filter(r => r.info.open), hosted = rows.filter(r => !r.info.open);
+  const bestOpen = open[0] || null, bestHosted = hosted[0] || null;
+  const speedOf = (r) => r.tiers.hard.p50_s, eceOf = (r) => r.tiers.hard.ece;
+  const bySpeed = sortBy(rows, speedOf), byEce = sortBy(rows, eceOf);
+  const frontier = bySpeed.filter(r => !rows.some(o => o !== r && speedOf(o) <= speedOf(r) && o.mean_accuracy >= r.mean_accuracy && (speedOf(o) < speedOf(r) || o.mean_accuracy > r.mean_accuracy)));
+  const hardDrops = rows.map(r => r.tiers.easy.accuracy - r.tiers.hard.accuracy).sort((a, b) => a - b);
+  const medianDrop = (hardDrops[Math.floor((hardDrops.length - 1) / 2)] + hardDrops[Math.ceil((hardDrops.length - 1) / 2)]) / 2;
+  return {
+    rows, leader, second, open, hosted, bestOpen, bestHosted, bySpeed, byEce, frontier, medianDrop, speedOf, eceOf,
+    fastest: bySpeed[0], slowest: bySpeed[bySpeed.length - 1], bestEce: byEce[0], worstEce: byEce[byEce.length - 1],
+    easyPerfect: rows.filter(r => r.tiers.easy.accuracy === 1),
+    highEce: rows.filter(r => eceOf(r) > 0.2),
+    n: hardN(rows),
+  };
+}
+/* Models whose mean accuracy is within `tol` points of the leader. */
+const within = (a, tol) => a.rows.filter(r => (a.leader.mean_accuracy - r.mean_accuracy) * 100 <= tol + 1e-9);
+function smallest(a, tol) {
+  const known = within(a, tol).filter(r => paramsM(r.info.params) != null);
+  return sortBy(known, r => paramsM(r.info.params) * 1000 - r.mean_accuracy)[0] || null;
+}
+function fastestWithin(a, tol) { return sortBy(within(a, tol), a.speedOf)[0]; }
+
+function noiseVerdict(diff, half) {
+  return Math.abs(diff) > half ? "larger than" : "not larger than";
+}
+
+function summary(a) {
+  const { leader, bestOpen, fastest, slowest, bestEce, worstEce, rows } = a;
+  const out = [];
+  out.push(`${nameOf(leader)} has the highest mean accuracy on the public tiers at ${pts(leader.mean_accuracy)}%, averaged over the easy, original and hard tiers (${totalDecisions(rows)} decisions per model).`);
+  if (bestOpen && bestOpen !== leader) out.push(`The best open model run locally is ${nameOf(bestOpen)} at ${pts(bestOpen.mean_accuracy)}%, ${pts(leader.mean_accuracy - bestOpen.mean_accuracy)} points behind ${nameOf(leader)}; on the hard tier the gap is ${pts(leader.tiers.hard.accuracy - bestOpen.tiers.hard.accuracy)} points.`);
+  else if (bestOpen) out.push(`${nameOf(bestOpen)} is also the best open model.`);
+  out.push(`Median hard-tier latency runs from ${fmt.ms(fastest.tiers.hard.p50_s)} (${nameOf(fastest)}) to ${fmt.ms(slowest.tiers.hard.p50_s)} (${nameOf(slowest)}), but the models were served in different ways, so these are not like-for-like.`);
+  out.push(`Calibration is uneven: hard-tier ECE runs from ${fmt.num(bestEce.tiers.hard.ece)} (${nameOf(bestEce)}, lower is better) to ${fmt.num(worstEce.tiers.hard.ece)} (${nameOf(worstEce)}).`);
+  out.push(`With ${a.n} hard decisions, differences of a few points are within sampling noise (see Limitations).`);
+  return out.join(" ");
+}
+
+function findings(a, tol) {
+  const { leader, second, bestOpen, bestHosted, rows } = a;
+  const cards = [];
+  {
+    const t = leader.tiers;
+    let body = `Rule: highest mean of the three tier accuracies. Easy ${pts(t.easy.accuracy)}%, original ${pts(t.original.accuracy)}%, hard ${pts(t.hard.accuracy)}%.`;
+    if (second) {
+      const dm = (leader.mean_accuracy - second.mean_accuracy) * 100, dh = (t.hard.accuracy - second.tiers.hard.accuracy) * 100;
+      const h = halfWidth(t.hard.accuracy, a.n, second.tiers.hard.accuracy, a.n) * 100;
+      body += ` ${nameOf(second)} is next at ${pts(second.mean_accuracy)}%, ${dm.toFixed(1)} points behind; the hard-tier gap of ${dh.toFixed(1)} points is ${noiseVerdict(dh, h)} the rough ±${h.toFixed(1)} point noise.`;
+    }
+    cards.push(["Accuracy leader", `${pts(leader.mean_accuracy)}%`, nameOf(leader), body]);
+  }
+  if (bestOpen && bestHosted) {
+    const dm = (bestHosted.mean_accuracy - bestOpen.mean_accuracy) * 100, dh = (bestHosted.tiers.hard.accuracy - bestOpen.tiers.hard.accuracy) * 100;
+    const h = halfWidth(bestHosted.tiers.hard.accuracy, a.n, bestOpen.tiers.hard.accuracy, a.n) * 100;
+    cards.push(["Best open model versus hosted", `${Math.abs(dm).toFixed(1)} pts`, `${nameOf(bestOpen)} against ${nameOf(bestHosted)}`,
+      `${nameOf(bestOpen)} (${fmtParams(bestOpen)}) scores ${pts(bestOpen.mean_accuracy)}% mean against ${pts(bestHosted.mean_accuracy)}% for the hosted ${nameOf(bestHosted)}. On the hard tier the difference is ${dh.toFixed(1)} points, ${noiseVerdict(dh, h)} the rough ±${h.toFixed(1)} point noise. Only one hosted model was run.`]);
+  }
+  {
+    const t = leader.tiers;
+    cards.push(["Hard tier versus easy tier", `${pts(a.medianDrop, 0)} pts`, "median drop from easy to hard, across models",
+      `${a.easyPerfect.length} of ${rows.length} models score 100% on the easy tier, so it does not separate them. On the hard tier scores range from ${pts(Math.min(...rows.map(r => r.tiers.hard.accuracy)))}% to ${pts(Math.max(...rows.map(r => r.tiers.hard.accuracy)))}%. Even ${nameOf(leader)} falls from ${pts(t.easy.accuracy)}% to ${pts(t.hard.accuracy)}%.`]);
+  }
+  {
+    const rank = a.byEce.indexOf(leader) + 1;
+    cards.push(["Calibration", fmt.num(a.bestEce.tiers.hard.ece), `lowest hard-tier ECE: ${nameOf(a.bestEce)}`,
+      `Rule: lowest expected calibration error on the hard tier. ${plural(a.highEce.length, "model has", "models have")} an ECE above 0.200, worst being ${nameOf(a.worstEce)} at ${fmt.num(a.worstEce.tiers.hard.ece)} with ${pts(a.worstEce.tiers.hard.accuracy)}% accuracy. ${nameOf(leader)} ranks ${rank} of ${rows.length} at ${fmt.num(leader.tiers.hard.ece)}.`]);
+  }
+  {
+    const f = a.frontier, ratio = a.leader.tiers.hard.p50_s / a.fastest.tiers.hard.p50_s;
+    cards.push(["Speed against accuracy", `${f.length} of ${rows.length}`, "models on the accuracy and latency frontier",
+      `Rule: a model is on the frontier if no other model is both at least as fast (hard-tier median) and at least as accurate (mean). Frontier: ${list(f.map(nameOf))}. ${nameOf(a.fastest)} is ${ratio.toFixed(0)} times faster than ${nameOf(leader)} at ${pts(a.fastest.mean_accuracy)}% mean accuracy. Serving differs across models, so read this as indicative.`]);
+  }
+  {
+    const s = smallest(a, tol), n = within(a, tol).length;
+    cards.push([`Smallest model within ${tol} points`, s ? fmtParams(s) : "None", s ? nameOf(s) : "no model with a known size",
+      s ? `Rule: among models within ${tol} points of the leader's mean accuracy (${plural(n, "model", "models")} qualify, including the leader), the fewest parameters. ${nameOf(s)} is ${pts(leader.mean_accuracy - s.mean_accuracy)} points behind. Models with unpublished sizes (${list(a.rows.filter(r => paramsM(r.info.params) == null).map(nameOf)) || "none"}) cannot be ranked by size.`
+        : `No model within ${tol} points of the leader has a published parameter count.`]);
+  }
+  return cards;
+}
+
+function recommendations(a, tol) {
+  const { leader, second, bestOpen, fastest, bestEce, rows } = a;
+  const recs = [];
+  {
+    let trade = `${leader.info.open ? "Open model." : `Hosted: ${leader.info.price || "pricing not on the fact sheet"}; latency includes the network.`}`;
+    if (second) {
+      const dh = (leader.tiers.hard.accuracy - second.tiers.hard.accuracy) * 100;
+      const h = halfWidth(leader.tiers.hard.accuracy, a.n, second.tiers.hard.accuracy, a.n) * 100;
+      trade += ` ${nameOf(second)} is ${((leader.mean_accuracy - second.mean_accuracy) * 100).toFixed(1)} points behind on mean accuracy; on the hard tier that is ${dh.toFixed(1)} points against a rough ±${h.toFixed(1)}, so ${Math.abs(dh) > h ? "the lead is likely real" : "treat it as close"}.`;
+    }
+    recs.push(["Best accuracy", nameOf(leader), "Rule: highest mean accuracy across the three tiers.", trade]);
+  }
+  {
+    const f = fastestWithin(a, tol);
+    let trade = `Median ${fmt.ms(fastest.tiers.hard.p50_s)} and p95 ${fmt.ms(fastest.tiers.hard.p95_s)} on the hard tier, at ${pts(fastest.mean_accuracy)}% mean accuracy (${pts(leader.mean_accuracy - fastest.mean_accuracy)} points below the leader). Served as ${fastest.info.served_as || "unknown"}.`;
+    if (f && f !== fastest) trade += ` If accuracy matters, the fastest model within ${tol} points of the leader is ${nameOf(f)} at ${fmt.ms(f.tiers.hard.p50_s)}.`;
+    recs.push(["Lowest latency", nameOf(fastest), "Rule: lowest hard-tier median latency.", trade]);
+  }
+  {
+    recs.push(["Best calibrated", nameOf(bestEce), "Rule: lowest hard-tier ECE.",
+      `ECE ${fmt.num(bestEce.tiers.hard.ece)}, Brier ${fmt.num(bestEce.tiers.hard.brier)}, hard accuracy ${pts(bestEce.tiers.hard.accuracy)}%. ECE measures honesty of confidence, not correctness, and is noisy at ${a.n} decisions${second && a.byEce[1] ? `; ${nameOf(a.byEce[1])} is next at ${fmt.num(a.byEce[1].tiers.hard.ece)}, ${Math.abs(a.byEce[1].tiers.hard.ece - bestEce.tiers.hard.ece) < 0.05 ? "close enough that the order could flip" : "a clear step behind"}` : ""}.`]);
+  }
+  if (bestOpen) {
+    const gap = (leader.mean_accuracy - bestOpen.mean_accuracy) * 100;
+    recs.push(["Self-hosted, no per-call cost", nameOf(bestOpen), "Rule: highest mean accuracy among open-weight models.",
+      `${gap > 0 ? `${gap.toFixed(1)} points behind the leader on mean accuracy.` : "Matches the leader."} You supply the hardware and operation: measured here as ${bestOpen.info.served_as || "unknown"} on the RTX 5090. Licence: ${bestOpen.info.licence || "not recorded"}. No per-call fee, but GPU time and integration effort are not free.`]);
+  }
+  {
+    const s = smallest(a, tol);
+    recs.push(["Smallest footprint", s ? nameOf(s) : "No answer", `Rule: fewest parameters among models within ${tol} points of the leader's mean accuracy.`,
+      s ? `${fmtParams(s)} parameters, ${pts(s.mean_accuracy)}% mean accuracy. Parameter count is a proxy: memory use was not measured here, and hosted models have no published size. Change the tolerance above to see how the answer moves.`
+        : "No qualifying model has a published parameter count. Widen the tolerance above."]);
+  }
+  return recs;
+}
+
+/* Long-form results: one row per model and tier. */
+function resultRows(a) {
+  return a.rows.flatMap(r => TIERS.map(t => ({ model: nameOf(r), id: r.id, tier: t, n: r.tiers[t].n, accuracy: r.tiers[t].accuracy, ece: r.tiers[t].ece, brier: r.tiers[t].brier, p50_s: r.tiers[t].p50_s, p95_s: r.tiers[t].p95_s, schema_validity: r.tiers[t].schema_validity, served_as: r.info.served_as || null })));
+}
+function serving(a) {
+  const groups = [["Hosted over HTTPS", (s) => /^HTTP, api\./i.test(s)], ["Local HTTP server", (s) => /^HTTP/i.test(s)], ["In-process on CPU", (s) => /CPU/i.test(s)], ["In-process", () => true]];
+  const out = groups.map(([label]) => [label, []]);
+  for (const r of a.rows) { const s = r.info.served_as || ""; const i = groups.findIndex(([, test]) => test(s)); out[i][1].push(nameOf(r)); }
+  return out.filter(([, names]) => names.length);
+}
+
+/* ---------- rendering ---------- */
+const section = (id, title, sub, ...kids) => el("section", { class: "section", "aria-labelledby": id }, el("header", {}, el("div", {}, el("h2", { id, text: title }), sub ? el("p", { class: "small", text: sub }) : null)), ...kids);
+const findingCard = ([label, value, who, body]) => el("div", { class: "card kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), el("div", { class: "model-name", text: who }), el("p", { class: "muted small", style: "margin-top:8px", text: body }));
+const recCard = ([need, pick, rule, trade]) => el("div", { class: "card rec" }, el("h4", { text: need }), el("div", { class: "pick", text: pick }), el("p", { class: "rule", text: rule }), el("p", { class: "muted", text: trade }));
+
+function resultsTable(a) {
+  const rows = resultRows(a).filter(r => TIER_FILTER === "all" || r.tier === TIER_FILTER);
+  const head = [["Model", "text"], ["Tier", "text"], ["Decisions", "num"], ["Accuracy", "num"], ["ECE", "num"], ["Median", "num"], ["p95", "num"], ["Schema validity", "num"]];
+  const t = el("table", { class: "data" },
+    el("caption", { class: "sr-only", text: "Results by model and tier: accuracy, ECE, median and p95 latency, schema validity" }),
+    el("thead", {}, el("tr", {}, head.map(([h, s], i) => el("th", { scope: "col", "data-sort": s, class: i >= 2 ? "num" : null, text: h })))),
+    el("tbody", {}, rows.map(r => el("tr", {},
+      el("td", { "data-value": r.model, class: "model-name", text: r.model }),
+      el("td", { "data-value": TIERS.indexOf(r.tier), text: r.tier[0].toUpperCase() + r.tier.slice(1) }),
+      el("td", { class: "num", "data-value": r.n, text: r.n }),
+      el("td", { class: "num", "data-value": r.accuracy, text: fmt.pct(r.accuracy) }),
+      el("td", { class: "num", "data-value": r.ece ?? "", text: fmt.num(r.ece) }),
+      el("td", { class: "num", "data-value": r.p50_s ?? "", text: fmt.ms(r.p50_s) }),
+      el("td", { class: "num", "data-value": r.p95_s ?? "", text: fmt.ms(r.p95_s) }),
+      el("td", { class: "num", "data-value": r.schema_validity ?? "", text: fmt.pct(r.schema_validity) })))));
+  sortable(t);
+  return el("div", { class: "table-wrap" }, t);
+}
+
+function methodology(a, tiers) {
+  const info = Object.fromEntries((tiers || []).map(t => [t.id, t]));
+  const tierItems = TIERS.map(t => {
+    const n = a.rows.find(r => r.tiers[t]?.n)?.tiers[t].n;
+    return el("li", {}, el("strong", { text: `${info[t]?.label || t} (${n ?? "?"} decisions). ` }), info[t]?.note || "");
+  });
+  const metric = (title, body) => el("div", { class: "card" }, el("h3", { text: title }), el("p", { class: "muted", text: body }));
+  return section("method-h", "Methodology", "What was run and how each number is defined.",
+    el("div", { class: "grid cols-2" },
+      el("div", { class: "card prose" }, el("h3", { text: "Tiers" }), el("ul", {}, tierItems), el("p", { class: "muted small", text: "Datasets are frozen public files. Expected labels never change after a run." })),
+      el("div", { class: "card prose" }, el("h3", { text: "How models were run" }),
+        el("ul", {}, serving(a).map(([label, names]) => el("li", {}, el("strong", { text: `${label}: ` }), list(names)))),
+        el("p", { class: "muted small", text: "HTTP servers add request handling and, for the hosted model, the network. In-process models skip both. Verdict ran on CPU. Latency is therefore not like-for-like across models." }))),
+    el("div", { class: "grid cols-2", style: "margin-top:16px" },
+      metric("Accuracy", "The share of decisions where the model's most probable option (argmax of its native probability distribution) matches the frozen expected label exactly. No partial credit."),
+      metric("ECE (expected calibration error)", "Predictions are grouped into 10 equal-width bins by confidence in the chosen answer. ECE is the size-weighted average gap between confidence and actual accuracy in each bin. 0 is perfect; lower is better."),
+      metric("Median and p95 latency", "Wall-clock time per decision as measured by the harness: the middle value, and the value 95% of decisions finish within. Raw measurements, no adjustment."),
+      metric("Schema validity", "The share of responses that were well-formed answers for the requested typed schema. Invalid responses are counted as failures, not repaired.")),
+    el("div", { class: "callout", style: "margin-top:16px" }, el("strong", { text: "Run discipline. " }), "Each model ran one at a time on the GPU to avoid memory contention. Each decision was a single call with no retries and no fallback to another model. Runs were serial."));
+}
+
+function limitations(a) {
+  const ns = TIERS.map(t => a.rows.find(r => r.tiers[t]?.n)?.tiers[t].n).filter(Boolean);
+  const p = a.leader.tiers.hard.accuracy;
+  const items = [
+    `Public tiers only. This is not the official JevBench Score: it has no held-out hard decisions, no judge tier, and no cost or calibration-fidelity axes.`,
+    `Small samples: ${list(ns.map(String))} decisions. On the ${a.n}-decision hard tier the rough 95% binomial half-width is ±${(halfWidth(0.5, a.n) * 100).toFixed(1)} points at 50% accuracy and ±${(halfWidth(p, a.n) * 100).toFixed(1)} points at ${nameOf(a.leader)}'s ${pts(p)}%. The tiers with fewer decisions are noisier still. Gaps smaller than this should not be read as rankings.`,
+    `One hardware setup: a single RTX 5090 (32 GB) and one host. Results on other GPUs or under concurrent load may differ.`,
+    `${a.hosted.length ? `${list(a.hosted.map(nameOf))} ${a.hosted.length === 1 ? "was" : "were"} measured over the network, so its latency includes the round trip.` : "No hosted model was included."}`,
+    `${a.rows.some(r => /CPU/i.test(r.info.served_as || "")) ? `${list(a.rows.filter(r => /CPU/i.test(r.info.served_as || "")).map(nameOf))} ran on CPU, so its latency says little about its GPU speed.` : "All models ran on the GPU or over the network."}`,
+    `Models ran at the settings each author's adapter uses (for example option order). Other settings could change scores; one model is documented as sensitive to option order.`,
+    `A single run per model and tier. Run-to-run variation was not measured.`,
+  ];
+  return section("limits-h", "Limitations", "Read these before forwarding the numbers.", el("div", { class: "card prose" }, el("ul", {}, items.map(t => el("li", { text: t })))));
+}
+
+function render(d) {
+  DATA = d;
+  const a = analyse(d.rows);
+  if (!a) return empty("No complete results", "Run a benchmark on every tier to generate the report.");
+  DATA.analysis = a;
+  const findGrid = el("div", { class: "grid cols-3" }), recGrid = el("div", { class: "grid cols-3" });
+  const seg = el("div", { class: "segmented", role: "group", "aria-label": "Accuracy tolerance in points" }, TOLERANCES.map(v => el("button", { type: "button", "data-tol": v, onclick: () => setTol(v), text: `${v} pts` })));
+  const setTol = (v) => {
+    TOL = v; [...seg.children].forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.tol === v)));
+    findGrid.replaceChildren(...findings(a, v).map(findingCard)); recGrid.replaceChildren(...recommendations(a, v).map(recCard));
+  };
+  const tableBox = el("div"), tierSeg = el("div", { class: "segmented", role: "group", "aria-label": "Filter by tier" },
+    ["all", ...TIERS].map(v => el("button", { type: "button", "data-tier": v, onclick: () => showTier(v), text: v === "all" ? "All tiers" : v[0].toUpperCase() + v.slice(1) })));
+  const showTier = (v) => { TIER_FILTER = v; [...tierSeg.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tier === v))); tableBox.replaceChildren(resultsTable(a)); };
+  const frag = document.createDocumentFragment();
+  frag.append(
+    section("summary-h", "Executive summary", null, el("div", { class: "card prose" }, el("p", { text: summary(a) }))),
+    el("section", { class: "section", "aria-labelledby": "find-h" },
+      el("header", {}, el("div", {}, el("h2", { id: "find-h", text: "Key findings" }), el("p", { class: "small", text: "Each finding states its rule. The tolerance control applies to the size-based finding and to the recommendations." })), seg), findGrid),
+    el("section", { class: "section", "aria-labelledby": "rec-h" },
+      el("header", {}, el("div", {}, el("h2", { id: "rec-h", text: "Recommendations by need" }), el("p", { class: "small", text: "Each pick comes from a stated rule, not a judgement call. Where the margin is inside the noise, the text says so." }))), recGrid,
+      el("div", { class: "callout warn", style: "margin-top:16px" }, el("strong", { text: "Close calls. " }), `With ${a.n} hard decisions, the rough 95% half-width is about ±${(halfWidth(0.5, a.n) * 100).toFixed(0)} points. Treat neighbouring models as tied unless the text above says otherwise.`)),
+    el("section", { class: "section", "aria-labelledby": "res-h" },
+      el("header", {}, el("div", {}, el("h2", { id: "res-h", text: "Results" }), el("p", { class: "small", text: "All models across all tiers. Click a column heading to sort. Latency is not like-for-like (see Methodology)." })), tierSeg), tableBox),
+    methodology(a, d.tiers), limitations(a));
+  setTol(TOL); showTier(TIER_FILTER);
+  return frag;
+}
+
+/* ---------- reproduce ---------- */
+const COMMANDS = [
+  ["1. Install the open models (one isolated venv each)", "./dev-bench-setup.sh                 # or: ./dev-bench-setup.sh laya verdict semif so1"],
+  ["2. Run the HTTP-served models (jeff, kev, hosted Jev)", "# jeff (:8000) and kev (:8009, :8010, :8011) servers must be running; jev needs TYPESAFE_API_KEY\nset -a; . .env; set +a\ndemo/bench.sh original easy hard      # or: MODELS=kev-4b demo/bench.sh hard"],
+  ["3. Run the in-process models, one at a time", "demo/bench-batch.sh laya verdict semif so1   # TIERS=\"hard\" to change tiers"],
+  ["4. Start the console", "TYPESAFE_API_KEY=... python3 demo/server.py   # then open http://127.0.0.1:8100/report"],
+];
+document.getElementById("repro").replaceChildren(...COMMANDS.map(([title, cmd]) => el("div", { class: "codeblock" },
+  el("header", {}, el("strong", { text: title }), el("button", { class: "btn", type: "button", "aria-label": `Copy command: ${title}`, onclick: () => copy(cmd), text: "Copy" })),
+  el("pre", { tabindex: "0", "aria-label": title }, el("code", { text: cmd })))));
+
+/* ---------- wiring ---------- */
+mount(document.getElementById("body"), load, render);
+const ready = (fn) => () => DATA?.analysis ? fn(DATA.analysis) : Jev.toast("Results are still loading");
+document.getElementById("export-csv").onclick = ready((a) => download("jev-bench-report-results.csv", csv([Object.keys(resultRows(a)[0]), ...resultRows(a).map(r => Object.values(r))]), "text/csv"));
+document.getElementById("export-json").onclick = ready((a) => download("jev-bench-report-results.json", JSON.stringify({ date: "2026-09-20", hardware: "NVIDIA RTX 5090 (32 GB)", results: resultRows(a) }, null, 2), "application/json"));
+document.getElementById("print").onclick = () => window.print();
+</script>
+</body>
+</html>

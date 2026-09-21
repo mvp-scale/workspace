@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How they work · Jev Bench Console</title>
+<meta name="description" content="How each typed decision model turns a state and a question into a probability for every option, and how it performed in our benchmark.">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  /* Layout the shared CSS lacks: pipeline diagram, benchmark rows, fact lists. Colours come from shared tokens only. */
+  .model { scroll-margin-top: 72px; }
+  .model + .model { margin-top: 48px; }
+  .model[hidden], .jump a[hidden] { display: none; }
+  .model > header h2 { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+  .model > header h2 .vendor { font-size: 14px; font-weight: 500; color: var(--text-3); }
+  .jump { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+  table.data.fam-table th, table.data.fam-table td { white-space: normal; vertical-align: top; min-width: 0; }
+  table.data.fam-table td:first-child { min-width: 140px; }
+  .bullets { margin: 0; padding-left: 20px; }
+  .bullets li + li { margin-top: 6px; }
+  .flow { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .flow li { display: flex; align-items: center; gap: 8px; flex: 1 1 140px; min-width: 0; }
+  .flow .node { flex: 1; min-width: 0; align-self: stretch; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13px; overflow-wrap: anywhere; }
+  .flow .node strong { display: block; font-weight: 600; }
+  .flow .node span { display: block; color: var(--text-3); font-size: 12px; margin-top: 2px; }
+  .flow .node.opaque { border-style: dashed; }
+  .flow .node.out { border-color: var(--accent); background: var(--accent-soft); }
+  .flow .arrow { color: var(--text-3); flex: none; }
+  .flow li:last-child .arrow { display: none; }
+  .bench { display: grid; grid-template-columns: minmax(84px, auto) 1fr; gap: 10px 16px; align-items: center; }
+  .bench .meter { min-width: 0; }
+  .facts { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 6px 16px; margin: 0; }
+  .facts dt { color: var(--text-3); font-size: 13px; }
+  .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 32px; }
+  .stats dt { color: var(--text-3); font-size: 13px; }
+  .stats dd { margin: 0; font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) {
+    .flow { flex-direction: column; }
+    .flow li { flex-direction: column; align-items: stretch; flex-basis: auto; }
+    .flow .arrow { align-self: center; transform: rotate(90deg); }
+    .bench, .facts { grid-template-columns: 1fr; gap: 4px; }
+    .bench .label { margin-top: 8px; }
+  }
+  @media print {
+    .jump, .toolbar .segmented { display: none; }
+    .model { break-inside: avoid; }
+  }
+</style>
+<script src="/static/app.js"></script>
+</head>
+<body>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>How they work</h1>
+      <p>Nine typed decision models, and what each one does between receiving a decision and returning probabilities. Everything here comes from each model's own repository or model card. Where a fact is not published, we say so instead of guessing.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="print" type="button">Print</button>
+    </div>
+  </div>
+
+  <section class="section" aria-labelledby="what-h" style="margin-top:0">
+    <header><div><h2 id="what-h">What a typed decision model is</h2></div></header>
+    <p class="muted" style="max-width:80ch">A typed decision model takes a piece of state and a typed question with a fixed set of options, and returns a probability for every option. It never writes prose: the answer is the distribution itself, so software can act on it, threshold it, or check how well calibrated it is.</p>
+    <div class="callout" style="margin-top:16px">
+      <strong>Three question types.</strong> In the TypeSafe <code>/v1/systemone</code> format a question is one of <code>choice</code> (pick one of several options), <code>score</code> (the options are points on a scale) or <code>noul</code> (a yes or no question, answered as the probability of yes). Every model below is called with the same three types.
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="fam-h">
+    <header>
+      <div><h2 id="fam-h">Four architecture families</h2><p class="small">Grouped from each model's fact sheet. No family generates text.</p></div>
+    </header>
+    <div id="families"></div>
+  </section>
+
+  <section class="section" aria-labelledby="models-h">
+    <header>
+      <div><h2 id="models-h">Model by model</h2><p class="small">Ordered by mean accuracy in our benchmark, best first.</p></div>
+    </header>
+    <div id="models"></div>
+  </section>
+</main>
+
+<script>
+const { el, fmt, mount, load, meter, empty } = Jev;
+const TIERS = ["easy", "original", "hard"];
+
+/* Families are defined by what the fact sheet says; membership and size are derived per model. */
+const hasLora = (m) => /lora/i.test(m.base || "");
+const FAMILIES = [
+  { key: "hosted", label: "Hosted API", group: "hosted", test: (m) => /hosted/i.test(m.kind),
+    reads: "A hosted model behind an HTTPS endpoint. Its internals are not published.",
+    scores: "The endpoint returns a probability for every option.",
+    generates: "Not documented. The response is probabilities, not prose.",
+    node: { reader: ["Hosted model", "Internals not published"], readout: null } },
+  { key: "logits", label: "Decoder LLM read via logits", group: "decoder", test: (m) => /decoder/i.test(m.kind) && !hasLora(m),
+    reads: "A frozen decoder-only LLM, used as a classifier.",
+    scores: "Each option gets an answer letter. One forward pass, then a softmax over the logits of the declared letters.",
+    generates: "None.",
+    node: { reader: ["Decoder LLM, frozen", "One forward pass"], readout: "Logits of the answer letters, softmax" } },
+  { key: "pointer", label: "Decoder LLM with LoRA and pointer head", group: "decoder", test: (m) => /decoder/i.test(m.kind) && hasLora(m),
+    reads: "A LoRA-tuned causal LM, run prefill-only.",
+    scores: "A learned pointer head reads hidden states at option-boundary tokens and scores each option.",
+    generates: "None.",
+    node: { reader: ["LoRA-tuned decoder", "Prefill only"], readout: "Pointer head at option-boundary tokens" } },
+  { key: "encoder", label: "Encoder classifier", group: "encoder", test: (m) => /encoder/i.test(m.kind),
+    reads: "An encoder reads the state, question and options together in one pass.",
+    scores: "A classification head over the options. Normalised sigmoids, or a softmax over option markers, depending on the model.",
+    generates: "None.",
+    node: { reader: ["Encoder", "One pass"], readout: "Classification head over the options" } },
+];
+const familyOf = (m) => FAMILIES.find(f => f.test(m));
+
+const FILTERS = [["all", "All", () => true], ["hosted", "Hosted", (m) => familyOf(m)?.group === "hosted"],
+  ["decoder", "Decoder", (m) => familyOf(m)?.group === "decoder"], ["encoder", "Encoder", (m) => familyOf(m)?.group === "encoder"]];
+
+/* "4B", "0.8B", "421M", "about 400M" -> millions, for ordering only. */
+const millions = (p) => { const m = /([\d.]+)\s*([BM])/i.exec(p || ""); return m ? parseFloat(m[1]) * (m[2].toUpperCase() === "B" ? 1000 : 1) : null; };
+function sizeRange(members) {
+  const sized = members.filter(m => millions(m.params) != null).sort((a, b) => millions(a.params) - millions(b.params));
+  if (!sized.length) return members.map(m => m.size_note).find(Boolean) || "Not published";
+  const lo = sized[0].params, hi = sized[sized.length - 1].params;
+  return lo === hi ? lo : `${lo} to ${hi}`;
+}
+
+function familyTable(models) {
+  const rows = FAMILIES.map(f => ({ f, members: models.filter(f.test) }));
+  if (!rows.some(r => r.members.length)) return empty("No models yet", "The model fact sheet is empty.");
+  const t = el("table", { class: "data fam-table" },
+    el("caption", { class: "sr-only", text: "Architecture families and how each scores options" }),
+    el("thead", {}, el("tr", {}, ["Family", "Models", "What reads the input", "How options are scored", "Text generated", "Size"].map(h => el("th", { scope: "col", text: h })))),
+    el("tbody", {}, rows.filter(r => r.members.length).map(({ f, members }) => el("tr", {},
+      el("th", { scope: "row", class: "model-name", text: f.label }),
+      el("td", {}, members.map((m, i) => [i ? ", " : null, el("a", { href: `#${m.id}`, text: m.name })])),
+      el("td", { text: f.reads }), el("td", { text: f.scores }), el("td", { text: f.generates }), el("td", { text: sizeRange(members) })))));
+  return el("div", { class: "table-wrap" }, t);
+}
+
+function flow(m) {
+  const f = familyOf(m);
+  if (!f) return null;
+  const step = (cls, title, sub) => el("li", {}, el("div", { class: `node ${cls}`.trim() }, el("strong", { text: title }), sub ? el("span", { text: sub }) : null), el("span", { class: "arrow", "aria-hidden": "true", text: "→" }));
+  const [readerTitle, readerSub] = f.node.reader;
+  const nodes = [step("", "State + question", "Typed options")];
+  if (f.node.readout) {
+    nodes.push(step("", readerTitle, m.base || readerSub), step("", "Readout", f.node.readout));
+  } else {
+    nodes.push(step("opaque", readerTitle, m.interface || readerSub));
+  }
+  nodes.push(step("out", "Probabilities", "One per option, no text"));
+  return el("ol", { class: "flow", "aria-label": `Pipeline for ${m.name}` }, nodes);
+}
+
+function latencyNote(m) {
+  const s = m.served_as || "";
+  if (/^HTTP/i.test(s)) return "Called over HTTP, so latency includes the network and server round trip.";
+  if (/cpu/i.test(s)) return "Run in-process on CPU, so its latency is not comparable with the GPU models.";
+  if (/^in-process/i.test(s)) return "Run in-process with no network hop, so its latency is lower than a like-for-like HTTP call would be.";
+  return null;
+}
+
+function benchmark(r, m) {
+  if (!r) return empty("Not benchmarked", "This model has no results in the local leaderboard yet.");
+  const hard = r.tiers.hard || {};
+  const note = latencyNote(m);
+  return el("div", { class: "stack" },
+    el("div", { class: "bench" }, TIERS.flatMap(t => {
+      const tier = r.tiers[t];
+      return [el("div", { class: "label" }, el("div", { class: "model-name", text: t[0].toUpperCase() + t.slice(1) }), el("div", { class: "model-sub", text: tier ? `${tier.n} decisions` : "not run" })),
+        tier ? meter(tier.accuracy, `${t} tier accuracy ${fmt.pct(tier.accuracy)}`) : el("span", { class: "subtle", text: "–" })];
+    })),
+    el("dl", { class: "stats" },
+      el("div", {}, el("dt", { text: "Hard-tier calibration error" }), el("dd", { text: fmt.num(hard.ece) })),
+      el("div", {}, el("dt", { text: "Median latency, hard tier" }), el("dd", { text: fmt.ms(hard.p50_s) }))),
+    note ? el("p", { class: "small muted", text: note }) : null);
+}
+
+function externalLink(url) {
+  return el("a", { href: url, target: "_blank", rel: "noopener", text: url.replace(/^https?:\/\//, "") });
+}
+
+function details(m) {
+  const items = [["Licence", m.licence], ["Interface", m.interface], ["Base", m.base], ["Size", m.params ? null : m.size_note], ["Price", m.price]]
+    .filter(([, v]) => v);
+  return el("dl", { class: "facts" },
+    items.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]),
+    m.repo ? [el("dt", { text: "Source" }), el("dd", {}, externalLink(m.repo))] : null);
+}
+
+function modelSection(m, r, rank) {
+  const badges = [
+    el("span", { class: m.open ? "badge good" : "badge", text: m.open ? "Open" : "Closed" }),
+    m.params ? el("span", { class: "badge", text: m.params }) : null,
+    m.served_as ? el("span", { class: "badge accent", text: m.served_as }) : null,
+  ];
+  const published = m.public_score != null || m.public_rank != null
+    ? el("p", { class: "small muted", text: `Published by JevBench, not measured here: v1.2 public score ${m.public_score != null ? m.public_score : "not listed"}${m.public_rank != null ? `, rank ${m.public_rank}` : ""}.` })
+    : null;
+  return el("section", { class: "section model", id: m.id, "data-id": m.id, "aria-labelledby": `${m.id}-h` },
+    el("header", {},
+      el("div", {},
+        el("h2", { id: `${m.id}-h` }, m.name, el("span", { class: "vendor", text: m.vendor }), rank ? el("span", { class: "badge", text: `Ranked #${rank} in our runs` }) : null),
+        el("div", { class: "row", style: "margin-top:8px" }, badges))),
+    el("div", { class: "grid cols-2" },
+      el("div", { class: "card" }, el("h3", { text: "How it works" }),
+        el("ul", { class: "bullets" }, (m.how || []).map(h => el("li", { text: h }))),
+        el("h4", { style: "margin-top:20px", text: "Pipeline" }),
+        el("div", { style: "margin-top:8px" }, flow(m))),
+      el("div", { class: "card" }, el("h3", { text: "In our benchmark" }),
+        benchmark(r, m), published,
+        el("h4", { style: "margin-top:20px", text: "Details" }),
+        el("div", { style: "margin-top:8px" }, details(m)))));
+}
+
+function modelsView(d) {
+  const byId = Object.fromEntries(d.rows.map(r => [r.id, r]));
+  const ordered = [...d.rows.map(r => d.models.find(m => m.id === r.id)).filter(Boolean), ...d.models.filter(m => !byId[m.id])];
+  if (!ordered.length) return empty("No models", "The model fact sheet is empty.");
+  const seg = el("div", { class: "segmented", role: "group", "aria-label": "Filter by kind" });
+  const jump = el("nav", { class: "jump", "aria-label": "Jump to a model" }, ordered.map(m => el("a", { href: `#${m.id}`, "data-id": m.id, text: m.name })));
+  const none = el("div", { hidden: true }, empty("No models match", "Choose another kind."));
+  const sections = ordered.map((m, i) => modelSection(m, byId[m.id], byId[m.id] ? i + 1 : null));
+  const setFilter = (key) => {
+    const test = FILTERS.find(f => f[0] === key)[2];
+    let shown = 0;
+    ordered.forEach((m, i) => { const on = test(m); sections[i].hidden = !on; jump.children[i].hidden = !on; if (on) shown++; });
+    [...seg.children].forEach(b => b.setAttribute("aria-pressed", b.dataset.key === key));
+    none.hidden = shown > 0;
+    seg.dataset.key = key;
+  };
+  FILTERS.forEach(([key, label, test]) => {
+    const n = ordered.filter(test).length;
+    seg.append(el("button", { type: "button", "data-key": key, onclick: () => setFilter(key), text: `${label} (${n})` }));
+  });
+  /* A hash pointing at a model hidden by the filter resets the filter, then scrolls to it. */
+  const reveal = () => {
+    let id; try { id = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+    const target = id && sections.find(s => s.id === id);
+    if (!target) return;
+    if (target.hidden) setFilter("all");
+    target.scrollIntoView();
+  };
+  window.addEventListener("hashchange", reveal);
+  setFilter("all");
+  requestAnimationFrame(reveal);
+  return el("div", { class: "stack" }, el("div", { class: "toolbar" }, seg), jump, none, ...sections);
+}
+
+mount(document.getElementById("families"), load, (d) => familyTable(d.models));
+mount(document.getElementById("models"), load, modelsView);
+document.getElementById("print").onclick = () => window.print();
+</script>
+</body>
+</html>

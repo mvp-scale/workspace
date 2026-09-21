@@ -49,9 +49,13 @@ Use `systemctl restart|status kev kev-proxy jeff` and `tail` the logs. Torch is 
 
 ## Demo
 
-`demo/server.py` (stdlib only) serves a page at `http://127.0.0.1:8100` with two parts: a table of benchmark runs read from `data/bench/*/summary.json`, and a live compare that sends one question to jeff (:8000), kev (:8009) and hosted Jev at api.typesafe.ai. Start with `TYPESAFE_API_KEY=... python3 demo/server.py`; without the key the hosted column reports an error. The key is used server-side only, and the server binds to `127.0.0.1` unless `DEMO_HOST` is set.
+`demo/server.py` (stdlib only) serves a four-page console at `http://127.0.0.1:8100`: Leaderboard (`/`), Live compare (`/compare`), How they work (`/models`) and Report (`/report`). Start with `set -a; . ./.env; set +a; python3 demo/server.py`; without `TYPESAFE_API_KEY` the hosted column reports an error. The key is used server-side only, and the server binds to `127.0.0.1` unless `DEMO_HOST` is set.
 
-Benchmark runs for the local servers go under `data/bench/` (outside the jevbench repo, as its runner requires), via `jevbench.cli run --adapter typesafe --endpoint <url>`.
+- Pages share `demo/static/app.css` (design tokens, components) and `demo/static/app.js` (`window.Jev` helpers, injected nav). Use those rather than page-local styles. Pages build DOM with `Jev.el` and `textContent`; never `innerHTML` with data.
+- `demo/models.json` is the fact sheet for each model (mechanism, size, licence, how it was served). Unknown fields are `null`; don't add claims that aren't in a model's own repo or card.
+- APIs: `/api/leaderboard` (aggregated from `data/bench/*/summary.json`), `/api/models`, `/api/status`, `POST /api/compare`. Live compare only covers models served over HTTP (jeff :8000, kev-0.5b :8009, kev-0.8b :8011, kev-4b :8010, hosted Jev).
+
+Benchmarking: `dev-bench-setup.sh` installs each in-process model in its own venv under `models/` (gitignored). `demo/bench.sh` runs the HTTP-served models and `demo/bench-batch.sh` runs `laya verdict semif so1` one at a time; both write `data/bench/<model>-<tier>/` and skip runs that exist. Run one model on the GPU at a time: running several together caused CUDA out-of-memory failures on the hard tier. `semif_direct` needs a pinned commit `--revision` (handled in `bench-batch.sh`).
 
 ## Architecture (the parts that span files)
 

@@ -54,6 +54,54 @@ def results():
     return out
 
 
+def leaderboard():
+    """One row per model, with every tier that has a finished run."""
+    models = {}
+    for p in sorted(BENCH.glob("*/summary.json")):
+        model, _, tier = p.parent.name.rpartition("-")
+        s = json.loads(p.read_text())
+        lat = s.get("latency") or {}
+        models.setdefault(model, {"id": model, "tiers": {}})["tiers"][tier] = {
+            "accuracy": s["accuracy"], "n": s["n_planned"], "attempted": s["n_attempted"],
+            "ece": (s.get("ece") or {}).get("ece"), "brier": s.get("brier_mean"),
+            "p50_s": lat.get("p50_s"), "p95_s": lat.get("p95_s"),
+            "schema_validity": s["schema_validity"], "ordinal_mae": s.get("ordinal_mae"),
+            "families": {k: v["accuracy"] for k, v in s["per_family"].items()},
+        }
+    out = []
+    for m in models.values():
+        accs = [t["accuracy"] for t in m["tiers"].values()]
+        m["mean_accuracy"] = sum(accs) / len(accs)
+        m["complete"] = all(t["attempted"] == t["n"] for t in m["tiers"].values())
+        out.append(m)
+    return sorted(out, key=lambda m: -m["mean_accuracy"])
+
+
+def status():
+    """Reachability of each compare backend, checked in parallel with a short timeout."""
+    def ping(item):
+        name, cfg = item
+        if name.startswith("jev") and not cfg["key"]:
+            return name, {"up": False, "reason": "No API key configured"}
+        headers = {"Authorization": f"Bearer {cfg['key']}"} if cfg["key"] else {}
+        for path in ("/healthz", "/v1/models"):
+            try:
+                with urllib.request.urlopen(urllib.request.Request(cfg["url"].rstrip("/") + path, headers=headers), timeout=2):
+                    return name, {"up": True}
+            except urllib.error.HTTPError as e:
+                if e.code < 500 and e.code != 404 and e.code != 401:
+                    return name, {"up": True}
+            except Exception as e:
+                reason = type(e).__name__
+        return name, {"up": False, "reason": "Not reachable"}
+    with ThreadPoolExecutor(len(BACKENDS)) as ex:
+        return dict(ex.map(ping, BACKENDS.items()))
+
+
+PAGES = {"/": "index.html", "/compare": "compare.html", "/models": "models.html", "/report": "report.html"}
+TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         raw = body if isinstance(body, bytes) else json.dumps(body).encode()
@@ -64,11 +112,24 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self):
-        if self.path == "/":
-            self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
-        elif self.path == "/api/results":
+        path = self.path.split("?")[0].rstrip("/") or "/"
+        if path in PAGES and (HERE / PAGES[path]).exists():
+            self._send(200, (HERE / PAGES[path]).read_bytes(), "text/html; charset=utf-8")
+        elif path.startswith("/static/"):
+            f = (HERE / path.lstrip("/")).resolve()
+            if f.is_file() and HERE / "static" in f.parents:
+                self._send(200, f.read_bytes(), TYPES.get(f.suffix, "application/octet-stream"))
+            else:
+                self._send(404, {"error": "not found"})
+        elif path == "/api/leaderboard":
+            self._send(200, leaderboard())
+        elif path == "/api/models":
+            self._send(200, json.loads((HERE / "models.json").read_text()))
+        elif path == "/api/status":
+            self._send(200, status())
+        elif path == "/api/results":
             self._send(200, results())
-        elif self.path == "/api/backends":
+        elif path == "/api/backends":
             self._send(200, {n: {"url": c["url"], "has_key": bool(c["key"]) or not n.startswith("jev")} for n, c in BACKENDS.items()})
         else:
             self._send(404, {"error": "not found"})
