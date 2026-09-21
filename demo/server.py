@@ -153,6 +153,52 @@ def window_study():
     return {f.stem: json.loads(f.read_text()) for f in sorted(d.glob("*.json"))} if d.is_dir() else {}
 
 
+def vram():
+    """Measured GPU memory per model (demo/vram.py). steady = the most a running server needed under load."""
+    f = HERE / "vram.json"
+    if not f.is_file():
+        return {"models": {}}
+    d = json.loads(f.read_text())
+    for m in d["models"].values():
+        m["steady_peak_mb"] = m.get("gpu_workload_peak_mb", m["gpu_peak_mb"])
+        m["startup_peak_mb"] = m["gpu_peak_mb"]
+    return d
+
+
+def probe_runs():
+    """{model: {set: {item id: result}}} from the stored published-set runs."""
+    out = {}
+    for d in sorted(PROBE_RUNS.glob("*/results.jsonl")):
+        run = d.parent.name
+        for s in (f.stem for f in PROBES.glob("*.jsonl")):
+            if run.endswith("-" + s):
+                out.setdefault(run[: -len(s) - 1], {})[s] = {r["task_id"]: r for r in read_jsonl(d) if r.get("ok")}
+    return out
+
+
+def probe_macro():
+    """Mean accuracy per model over the published sets, and the sets each ran."""
+    return {m: {"macro": sum(sum(r["correct"] for r in rs.values()) / len(rs) for rs in sets.values()) / len(sets), "n_sets": len(sets)} for m, sets in probe_runs().items() if sets}
+
+
+def probe_agreement():
+    """How often two models give the same answer on the same published items."""
+    runs = probe_runs()
+    models = sorted(runs)
+    matrix = {a: {} for a in models}
+    for a in models:
+        for b in models:
+            same = n = 0
+            for s, ra in runs[a].items():
+                for i, r in ra.items():
+                    o = runs[b].get(s, {}).get(i)
+                    if o is not None:
+                        n += 1
+                        same += r.get("predicted") == o.get("predicted")
+            matrix[a][b] = same / n if n else None
+    return {"models": models, "agreement": matrix}
+
+
 def leaderboard():
     """One row per model, with every tier that has a finished run."""
     models = {}
@@ -234,6 +280,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, probe_detail(dict(x.split("=", 1) for x in q.split("&") if "=" in x).get("set", "")))
             except KeyError:
                 self._send(404, {"error": "unknown set"})
+        elif path == "/api/vram":
+            self._send(200, vram())
+        elif path == "/api/probe-macro":
+            self._send(200, probe_macro())
+        elif path == "/api/agreement":
+            self._send(200, probe_agreement())
         elif path == "/api/scenes":
             self._send(200, scenes())
         elif path == "/api/dialogues":

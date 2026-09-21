@@ -1,0 +1,111 @@
+{
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "gpu_total_mb": 32607,
+  "measured": "2026-09-21",
+  "method": "nvidia-smi per-process memory (includes the CUDA context) sampled every 0.2 s while the model handles long single-question inputs and the 9-question battery (served models) or the 80-item websec set (in-process models). loaded = after load and warm-up; peak = maximum seen.",
+  "models": {
+    "jeff": {
+      "kind": "server",
+      "load_s": 13.0,
+      "gpu_loaded_mb": 3069,
+      "gpu_peak_mb": 9760,
+      "gpu_workload_peak_mb": 9760,
+      "cpu_rss_peak_mb": 4143,
+      "workload_s": 8.5
+    },
+    "kev-0.5b": {
+      "kind": "server",
+      "load_s": 7.0,
+      "gpu_loaded_mb": 2632,
+      "gpu_peak_mb": 2744,
+      "gpu_workload_peak_mb": 2744,
+      "cpu_rss_peak_mb": 2976,
+      "workload_s": 4.9
+    },
+    "kev-0.8b": {
+      "kind": "server",
+      "load_s": 9.0,
+      "gpu_loaded_mb": 3658,
+      "gpu_peak_mb": 4630,
+      "gpu_workload_peak_mb": 4630,
+      "cpu_rss_peak_mb": 11497,
+      "workload_s": 9.7
+    },
+    "kev-4b": {
+      "kind": "server",
+      "load_s": 15.0,
+      "gpu_loaded_mb": 17156,
+      "gpu_peak_mb": 19482,
+      "gpu_workload_peak_mb": 19482,
+      "cpu_rss_peak_mb": 31898,
+      "workload_s": 32.1
+    },
+    "semif": {
+      "kind": "in-process",
+      "load_s": 11.7,
+      "gpu_loaded_mb": 8842,
+      "gpu_peak_mb": 8842,
+      "gpu_workload_peak_mb": 8842,
+      "cpu_rss_peak_mb": 8580,
+      "workload_s": 20.1,
+      "items": 80
+    },
+    "so1": {
+      "kind": "in-process",
+      "load_s": 6.2,
+      "gpu_loaded_mb": 8822,
+      "gpu_peak_mb": 8822,
+      "gpu_workload_peak_mb": 8822,
+      "cpu_rss_peak_mb": 8347,
+      "workload_s": 14.2,
+      "items": 80
+    },
+    "laya": {
+      "kind": "in-process",
+      "load_s": 9.0,
+      "gpu_loaded_mb": 2743,
+      "gpu_peak_mb": 3154,
+      "gpu_workload_peak_mb": 3154,
+      "cpu_rss_peak_mb": 3056,
+      "workload_s": 13.4,
+      "items": 80
+    },
+    "verdict": {
+      "kind": "in-process",
+      "load_s": 6.2,
+      "gpu_loaded_mb": 0,
+      "gpu_peak_mb": 0,
+      "gpu_workload_peak_mb": 0,
+      "cpu_rss_peak_mb": 1623,
+      "workload_s": 46.1,
+      "items": 80
+    },
+    "kev-4b-bf16": {
+      "kind": "server",
+      "load_s": 14.0,
+      "gpu_loaded_mb": 8700,
+      "gpu_peak_mb": 18188,
+      "gpu_workload_peak_mb": 10024,
+      "cpu_rss_peak_mb": 28280,
+      "workload_s": 12.5
+    },
+    "kev-0.8b-bf16": {
+      "kind": "server",
+      "load_s": 9.0,
+      "gpu_loaded_mb": 2106,
+      "gpu_peak_mb": 4090,
+      "gpu_workload_peak_mb": 2760,
+      "cpu_rss_peak_mb": 12124,
+      "workload_s": 7.4
+    },
+    "kev-0.5b-bf16": {
+      "kind": "server",
+      "load_s": 7.0,
+      "gpu_loaded_mb": 1596,
+      "gpu_peak_mb": 2632,
+      "gpu_workload_peak_mb": 1722,
+      "cpu_rss_peak_mb": 2735,
+      "workload_s": 4.9
+    }
+  }
+}
