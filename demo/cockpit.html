@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Call cockpit · Jev Bench Console</title>
-<meta name="description" content="A real transcript replayed word by word through the loaded models, one colour per diarized speaker: per-person signals that rise, hold and fade, cue cards for everyone else, and coaching for the person you pick.">
+<meta name="description" content="A real transcript replayed word by word through the loaded models. Detectors have a colour and an icon; each person's own window is scored, and person cards show which detectors they hit. Signals rise, hold and fade, with a heat-strip history and the exact request sent to the model.">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
 <style>
-  /* Layout the shared CSS lacks. Colours come from shared tokens only (speaker colours are --s1 to --s8, a ninth speaker is neutral). */
+  /* Layout the shared CSS lacks. Colours come from shared tokens only (detector colours are --s1 to --s8; icons tell detectors apart beyond that). */
   [hidden] { display: none !important; }
   .footer { display: none; }
   .page.cockpit { max-width: none; padding: 8px var(--gutter) 10px; }
-  .cp { display: flex; flex-direction: column; gap: 8px; height: calc(100dvh - 42px - 18px); min-height: 620px; }
+  .cp { display: flex; flex-direction: column; gap: 8px; height: calc(100dvh - 42px - 18px); min-height: 800px; }
   .cp .top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: flex-end; }
   .cp .top h1 { font-size: 17px; }
   .cp .sub { color: var(--text-3); font-size: 12px; }
@@ -24,55 +24,57 @@
   .pill.on .rec { background: var(--bad); animation: breathe 1.6s ease-in-out infinite; }
   @keyframes breathe { 50% { opacity: .35; transform: scale(.8); } }
   .notice { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
-  .chk { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-2); min-height: 30px; cursor: pointer; }
-  .spknote { font-size: 12px; color: var(--text-3); white-space: nowrap; }
-  .wadd { display: flex; gap: 6px; min-width: 0; }
-  .wadd input, .wadd select { min-width: 0; min-height: 26px; padding-top: 2px; padding-bottom: 2px; } .wadd .segmented, .wadd .btn { flex: none; } .wadd .btn { min-height: 26px; padding-top: 1px; padding-bottom: 1px; }
-  .wnote { position: absolute; right: 12px; top: calc(100% + 2px); z-index: 25; max-width: 60%; padding: 3px 9px; font-size: 12px; color: var(--text-2); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
-  .wnote:empty { display: none; }
+  .chk { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-2); cursor: pointer; }
 
-  /* Stage: signals per person, conversation, rail (cues | coaching, captured), history */
-  .stage { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr); grid-template-rows: auto minmax(0, 1fr) clamp(110px, 14vh, 190px); grid-template-areas: "lanes lanes" "conv rail" "chart chart"; }
   .pn { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-  .pn > header { display: flex; align-items: center; gap: 8px; padding: 8px 12px 0; min-height: 26px; position: relative; }
+  .pn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 12px 0; min-height: 26px; position: relative; }
   .pn > header .r { margin-left: auto; font-size: 12px; color: var(--text-3); }
   .pn > .bd { padding: 6px 12px 10px; flex: 1; min-height: 0; display: flex; min-width: 0; position: relative; }
   .pn > .bd > * { flex: 1; min-width: 0; }
-  #lanebox { min-height: 100px; max-height: clamp(130px, 20vh, 190px); overflow: auto; }
-  .lane { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: center; padding: 3px 12px 3px 9px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; }
-  .lane:last-child { border-bottom: 0; }
-  .lane.speaking { border-left-color: var(--c); background: color-mix(in srgb, var(--c) 6%, transparent); }
-  .lane .lh { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
-  .lane .lh b { font-size: 12px; font-weight: 650; white-space: nowrap; }
-  .pdot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--text-3)); flex: none; }
-  .lane .rt { font: 500 10px var(--mono); color: var(--accent); }
-  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 14px; min-height: 36px; align-items: center; }
-  .sg { padding: 1px 0; min-width: 0; }
-  .sg .r1 { display: flex; align-items: center; gap: 6px; min-height: 17px; }
-  .sg .lb { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .sg .tr { font: 500 10px var(--mono); color: var(--text-3); white-space: nowrap; flex: none; } .sg .tr.warn { color: var(--warn); }
-  .sg .st { margin-left: auto; width: 92px; text-align: right; font: 500 11px var(--mono); color: var(--text-2); white-space: nowrap; overflow: hidden; flex: none; }
-  .sg .x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; opacity: 0; } .sg:hover .x, .sg .x:focus-visible { opacity: 1; }
-  .sg .r2 { display: flex; align-items: center; gap: 6px; }
-  .sg .mt { position: relative; height: 6px; flex: 1; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
-  .sg .mt i { position: absolute; inset: 0; background: var(--c); transform-origin: left; transform: scaleX(0); }
-  .sg .mt b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); opacity: .55; }
-  .sg .pc { font: 500 11px var(--mono); color: var(--text-2); min-width: 30px; text-align: right; }
-  .sg.quiet { opacity: .7; }
-  .lane.coach .mt { border-style: dashed; }
+
+  /* Detectors and people */
+  .stage { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr); grid-template-rows: auto minmax(0, 1fr) clamp(146px, 17vh, 220px); grid-template-areas: "top top" "conv rail" "chart chart"; }
+  .toppn { padding: 6px 12px 8px; display: grid; gap: 6px; grid-area: top; }
+  .trow { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+  .trow h4 { padding-top: 6px; }
+  .dets { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; max-height: 94px; overflow: auto; min-height: 40px; }
+  .dchip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 1px 6px; align-items: center; width: 158px; padding: 3px 6px 3px 8px; border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: 6px; background: var(--surface); position: relative; }
+  .dchip.custom { border-style: dashed; border-left-style: solid; }
+  .dchip .ic { grid-row: 1 / 3; color: var(--c); display: grid; place-items: center; }
+  .dchip .nm { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .dchip .stt { font: 500 10px var(--mono); color: var(--text-2); white-space: nowrap; text-align: right; }
+  .dchip .r2 { grid-column: 2 / 4; display: flex; align-items: center; gap: 5px; }
+  .dchip .mt { position: relative; height: 5px; flex: 1; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+  .dchip .mt i { position: absolute; inset: 0; background: var(--c); transform-origin: left; transform: scaleX(0); }
+  .dchip .mt b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); opacity: .55; }
+  .dchip .pc { font: 500 10px var(--mono); color: var(--text-2); min-width: 26px; text-align: right; }
+  .dchip .q { position: absolute; top: -6px; right: -4px; font: 700 10px var(--mono); color: var(--warn); background: var(--surface); border: 1px solid var(--warn); border-radius: 99px; width: 14px; height: 14px; display: grid; place-items: center; line-height: 1; }
+  .dchip.quiet { opacity: .72; }
+  .people { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; min-height: 52px; }
+  .pcard { flex: 0 0 auto; width: 206px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px 4px; background: var(--surface-2); }
+  .pcard.speaking { border-color: var(--accent); background: var(--accent-soft); }
+  .pcard .h1 { display: flex; align-items: center; gap: 6px; min-height: 20px; }
+  .pnum { width: 18px; height: 18px; border-radius: 50%; background: var(--text-2); color: var(--bg); font: 700 10.5px var(--mono); display: grid; place-items: center; flex: none; }
+  .pcard .rt { font: 500 10px var(--mono); color: var(--accent); margin-left: auto; }
+  .pcard b { font-size: 12px; font-weight: 650; }
+  .hits { display: flex; gap: 3px; flex-wrap: wrap; min-height: 20px; }
+  .hit { display: inline-flex; align-items: center; gap: 3px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+  .hit svg { color: var(--c); } .hit .t { font: 500 10px var(--mono); color: var(--text-2); }
+  .hit.cool { opacity: .5; }
+  .nohit { font-size: 11px; color: var(--text-3); }
 
   .glide { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); }
   .glide > .track { will-change: transform; padding-top: 8px; }
   .msg { display: flex; gap: 8px; margin: 9px 0; align-items: flex-end; } .msg.coach { flex-direction: row-reverse; }
-  .av { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--c); margin-bottom: 6px; }
-  .bub { max-width: min(82%, 640px); padding: 7px 12px 8px; border-radius: 14px 14px 14px 5px; background: var(--surface-2); border: 1px solid var(--border); border-left: 4px solid var(--c); font-size: clamp(14px, 0.4vw + 11px, 17px); line-height: 1.65; }
-  .msg.coach .bub { border-radius: 14px 14px 5px 14px; border-left: 1px solid var(--border); border-right: 4px solid var(--c); background: var(--accent-soft); }
+  .msg .pnum { margin-bottom: 6px; }
+  .bub { max-width: min(82%, 640px); padding: 7px 12px 8px; border-radius: 14px 14px 14px 5px; background: var(--surface-2); border: 1px solid var(--border); font-size: clamp(14px, 0.4vw + 11px, 17px); line-height: 1.65; }
+  .msg.coach .bub { border-radius: 14px 14px 5px 14px; background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
   .who2 { display: flex; gap: 8px; font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); line-height: 1.4; } .who2 .ts { font: 500 10.5px var(--mono); }
   .txt { position: relative; } .txt .ghost { visibility: hidden; user-select: none; padding-right: 8px; } .txt .words { position: absolute; left: 0; top: 0; width: 100%; }
   .w { display: inline-block; animation: wordin .26s ease-out both; } @keyframes wordin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   .w.out { color: var(--text-3); }
   .caret { display: inline-block; width: 0; height: 1.05em; position: relative; vertical-align: text-bottom; } .caret::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: var(--accent); animation: caret 1s steps(2) infinite; } @keyframes caret { 50% { opacity: 0; } }
-  .ph { background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px 0 var(--c); border-radius: 3px; margin: 0 -2px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .ph { background: color-mix(in srgb, var(--c) 22%, transparent); box-shadow: inset 0 -2px 0 var(--c); border-radius: 3px; margin: 0 -2px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .readnote { font-size: 11px; color: var(--text-3); padding: 0 12px 8px; }
 
   .rail { grid-area: rail; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
@@ -81,7 +83,7 @@
   .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 4px 8px 5px; background: var(--surface); height: 46px; overflow: hidden; }
   .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); } .moment.cool .q { color: var(--text-3); }
   .moment .mh { display: flex; align-items: center; gap: 6px; height: 20px; min-width: 0; }
-  .moment .code { font: 600 10.5px var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border-strong); white-space: nowrap; max-width: 46%; overflow: hidden; text-overflow: ellipsis; }
+  .moment .ic { color: var(--c); display: grid; place-items: center; flex: none; }
   .moment .q { font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .moment .age { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); white-space: nowrap; }
   .moment .ft { display: flex; align-items: center; gap: 2px; height: 16px; min-width: 0; margin-top: 1px; }
@@ -91,39 +93,51 @@
   .scroll { overflow: auto; min-height: 0; }
   .bt { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 2px 0 4px; }
   .split { position: relative; height: 9px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
-  .split i { position: absolute; top: 0; bottom: 0; width: 100%; } .split .th { left: 0; background: var(--text-3); transform-origin: left; transform: scaleX(.5); } .split .me { right: 0; background: var(--c, var(--accent)); transform-origin: right; transform: scaleX(.5); }
+  .split i { position: absolute; top: 0; bottom: 0; width: 100%; } .split .th { left: 0; background: var(--text-3); transform-origin: left; transform: scaleX(.5); } .split .me { right: 0; background: var(--accent); transform-origin: right; transform: scaleX(.5); }
   .bl { font: 500 11px var(--mono); color: var(--text-2); margin: 4px 0 6px; min-height: 14px; } .tip { font-size: 12.5px; min-height: 18px; }
   .ck { display: grid; grid-template-columns: 16px 1fr auto auto; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; align-items: center; }
   .ck .g { font: 700 12px var(--mono); color: var(--text-3); } .ck.done .g { color: var(--good); } .ck .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
   .ck button { border: 0; background: transparent; color: var(--text-3); cursor: pointer; }
   .rf { font-size: 12px; color: var(--text-2); padding: 2px 0; overflow-wrap: anywhere; }
-  .mrow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-bottom: 4px; }
-  .mrow .l { font-size: 12px; color: var(--text-3); } .mrow .segmented button { padding: 3px 8px; }
-  .mbtn { display: inline-flex; gap: 6px; align-items: baseline; }
-  .mbtn small { font: 500 10.5px var(--mono); color: var(--text-3); }
-  .est { font: 500 11px var(--mono); color: var(--text-2); }
-  .tabs2 { display: flex; gap: 2px; margin-top: 6px; border-bottom: 1px solid var(--border); }
-  .tabs2 button { border: 0; background: transparent; padding: 4px 10px; font: inherit; font-size: 12.5px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+
+  /* Tabbed card */
+  .tabs2 { display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 8px; flex-wrap: wrap; }
+  .tabs2 button { border: 0; background: transparent; padding: 6px 9px; font: inherit; font-size: 12.5px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
   .tabs2 button[aria-selected=true] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
-  .lst { flex: 1; min-height: 0; overflow: auto; margin-top: 4px; }
+  .tabpane { padding: 8px 12px 10px; overflow: auto; flex: 1; min-height: 0; }
+  .mrow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-bottom: 6px; }
+  .mrow .l { font-size: 12px; color: var(--text-3); } .mrow .segmented button { padding: 3px 8px; }
+  .mbtn { display: inline-flex; gap: 6px; align-items: baseline; } .mbtn small { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .est { font: 500 11px var(--mono); color: var(--text-2); }
   .li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .li .ts { font: 500 11px var(--mono); color: var(--text-3); }
-  .li .q { color: var(--text-2); overflow-wrap: anywhere; }
-  .chartwrap { position: relative; flex: 1; min-height: 0; padding: 4px 10px 8px; } .chartwrap canvas { position: absolute; inset: 4px 10px 8px; width: calc(100% - 20px); height: calc(100% - 12px); }
-  .key { display: inline-flex; gap: 14px; font-size: 12px; color: var(--text-2); align-items: center; } .key i { display: inline-block; width: 22px; border-top: 2px solid var(--text-2); vertical-align: middle; margin-right: 6px; } .key i.d { border-top-style: dashed; }
+  .li .q { color: var(--text-2); overflow-wrap: anywhere; } .li .ic { display: inline-block; vertical-align: -2px; margin-right: 4px; color: var(--c); }
+  .drow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .drow .ic { color: var(--c); display: grid; place-items: center; } .drow .ex { color: var(--text-3); font-size: 11.5px; overflow-wrap: anywhere; }
+  .drow button.x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 15px; }
+  .dform { display: grid; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .dform label { font-size: 12px; font-weight: 500; color: var(--text-2); display: grid; gap: 2px; }
+  .icons { display: flex; flex-wrap: wrap; gap: 4px; }
+  .icons button { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 5px; padding: 3px; cursor: pointer; color: var(--text-2); display: grid; place-items: center; }
+  .icons button[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  pre.req { margin: 6px 0 0; padding: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 11.5px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: none; }
+  .chartwrap { position: relative; flex: 1; min-height: 0; padding: 2px 10px 6px; } .chartwrap canvas { position: absolute; inset: 2px 10px 6px; width: calc(100% - 20px); height: calc(100% - 8px); }
+  .key { font-size: 12px; color: var(--text-2); }
   .tabsbar { display: none; }
-  @media (max-width: 1000px) {
+  @media (max-width: 1100px) {
+    .cp { min-height: 0; }
     .cp .ctl { margin-left: 0; }
     .stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "x"; }
     .stage > [data-pane] { grid-area: x; display: none; }
     .stage[data-tab="talk"] > [data-pane="talk"], .stage[data-tab="signals"] > [data-pane="signals"], .stage[data-tab="cues"] > [data-pane="cues"], .stage[data-tab="history"] > [data-pane="history"] { display: flex; flex-direction: column; }
+    .stage[data-tab="signals"] > [data-pane="signals"] { display: grid; align-content: start; overflow: auto; }
     .stage[data-tab="cues"] > [data-pane="cues"] { overflow: auto; }
-    #lanebox { max-height: none; flex: 1; }
+    .dets { max-height: none; }
     .cols { grid-template-columns: 1fr; flex: 0 0 auto; }
     .tabsbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
     .tabsbar button { border: 0; background: transparent; padding: 10px 4px; font: inherit; font-size: 12px; color: var(--text-3); border-top: 2px solid transparent; cursor: pointer; }
     .tabsbar button[aria-selected=true] { color: var(--text); border-top-color: var(--text); font-weight: 600; }
   }
-  @media (max-width: 560px) { .lane { grid-template-columns: 1fr; gap: 2px; } .bub { max-width: 92%; } .cp .top .sub { display: none; } }
+  @media (max-width: 560px) { .trow { grid-template-columns: 1fr; } .bub { max-width: 92%; } .cp .top .sub { display: none; } }
   @media (prefers-reduced-motion: reduce) { .w, .caret::after, .pill.on .rec { animation: none; } }
 </style>
 </head>
@@ -136,48 +150,70 @@
   const mmss = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
   const words = (s) => String(s).split(/\s+/).filter(Boolean);
   const SENT_END = /[.!?…]["')\]]*$/;
-  const HOLD = 30, MAXROLE = 6, CONC = 3, PER_Q = 110, LIVE_STREAMS = 4;
+  const HOLD = 30, MAXDET = 20, CONC = 3, PER_Q = 110, LIVE_STREAMS = 4, HITS = 6;
   const SPEEDS = [["0.5", "0.5x"], ["1", "1x"], ["2", "2x"], ["4", "4x"], ["30", "Max"]];
   const WINS = ["w5", "w10", "w20", "w40", "s1", "s2", "s3"];
   const winName = (s) => `last ${s.slice(1)} ${{ w: "word", s: "sentence" }[s[0]]}${s.slice(1) === "1" ? "" : "s"}`;
   const short = (n) => String(n).replace(/ \(.*\)/, "");
+  const cvar = (slot) => `--c:var(--s${(slot % 8) + 1})`;
   let TARIFF = 0.042;
+
+  /* ---------- icons: a small object palette. Colour says which detector family, the icon says which detector ---------- */
+  const circ = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+  const ICONS = {
+    flame: "M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3 2-4 .3 1.2 1 2 1.8 2C11 8.5 11.5 5.5 12 3z", alert: "M12 4 3 20h18L12 4z|M12 10v4|M12 17v.5", clock: circ(12, 12, 9) + "|M12 7v5l3.5 2",
+    shield: "M12 3l8 3v6c0 4.5-3.2 7.5-8 9-4.8-1.5-8-4.5-8-9V6l8-3z|M12 8v5|M12 16v.5", heart: "M12 20s-8-4.8-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.2 12 20 12 20z",
+    mask: "M4 6c4-2 12-2 16 0v5c0 4.5-3.5 8-8 8s-8-3.5-8-8V6z|M8 11h2|M14 11h2|M9 15c1.5 1.2 4.5 1.2 6 0", hook: "M12 3v11a4 4 0 1 1-4-4|M9 5h6",
+    smile: circ(12, 12, 9) + "|M8 14.5c2 1.5 6 1.5 8 0|M9 9.5h.5|M14.5 9.5h.5", box: "M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5v-9z|M3 7.5l9 4.5 9-4.5|M12 12v9",
+    users: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z|M3 20c0-3.2 2.7-5 6-5s6 1.8 6 5|M16 5.5a3 3 0 0 1 0 5.5|M18 15.3c2 .6 3.3 2 3.3 4.7", megaphone: "M3 10v4l11 5V5L3 10z|M14 8c3 0 5 1.5 5 4s-2 4-5 4|M6 14.5l1.2 5h3l-1-4.2",
+    coin: circ(12, 12, 9) + "|M12 7v10|M9.5 9.5c0-1.2 1.2-2 2.5-2s2.5.8 2.5 2c0 3-5 1.8-5 4.5 0 1.2 1.2 2 2.5 2s2.5-.8 2.5-2", check: circ(12, 12, 9) + "|M8 12.5l3 3 5-6",
+    help: circ(12, 12, 9) + "|M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7|M12 17v.5", flag: "M5 21V4|M5 4h12l-2.5 4L17 12H5", star: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z",
+    bell: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2z|M10 21h4", lock: "M6 11h12v9H6z|M8.5 11V8a3.5 3.5 0 0 1 7 0v3", eye: "M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z|" + circ(12, 12, 3),
+    bolt: "M13 2L4 14h7l-1 8 9-12h-7l1-8z", key: circ(8, 15, 4) + "|M11 12l9-9|M16 7l3 3", chat: "M4 5h16v11H9l-5 4V5z", target: circ(12, 12, 9) + "|" + circ(12, 12, 4.5),
+  };
+  const ICON_NAMES = Object.keys(ICONS), NS = "http://www.w3.org/2000/svg", P2D = {};
+  function iconEl(name, size = 15) {
+    const s = document.createElementNS(NS, "svg"); for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) s.setAttribute(k, v);
+    for (const d of (ICONS[name] || ICONS.flag).split("|")) { const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); s.append(p); } return s;
+  }
+  function drawIcon(ctx, name, x, y, size, color) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(size / 24, size / 24); ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const d of (ICONS[name] || ICONS.flag).split("|")) { const k = name + d; ctx.stroke(P2D[k] ||= new Path2D(d)); } ctx.restore();
+  }
 
   /* Nine validated question sets, eleven detectors. `scope` says what text the detector was validated on: one person's words, or a whole dialogue. */
   const QSETS = { manipulation: "manipulation_dialogue", phishing: "phishing", sarcasm: "sarcasm_isarcasm", threat: "threat_civil", anger: "emotion_anger", fear: "emotion_fear", politeness: "politeness_deference", darkpatterns: "darkpatterns", persuasion: "persuasion_appeals" };
   const PERSP = [
-    { id: "manipulation", ab: "Man", name: "Manipulation", q: "manipulation", read: "noul", scope: "call", about: "Does one speaker try to manipulate the other? Validated on whole dialogues, so it reads the whole call, not one person." },
-    { id: "phishing", ab: "Dec", name: "Deceptive request", q: "phishing", read: "noul", scope: "person", about: "Is the text trying to get credentials or money through deception?" },
-    { id: "sarcasm", ab: "Sar", name: "Sarcasm", q: "sarcasm", read: "noul", scope: "person", about: "Does the speaker mean the opposite of the literal words?" },
-    { id: "threat", ab: "Thr", name: "Threat", q: "threat", read: "noul", scope: "person", about: "Does the text threaten to harm the listener?", caveat: "The threat set has label noise, so treat its accuracy as a rough guide." },
-    { id: "anger", ab: "Ang", name: "Anger", q: "anger", read: "noul", scope: "person", about: "Does the text express anger?" },
-    { id: "fear", ab: "Fea", name: "Fear", q: "fear", read: "noul", scope: "person", about: "Does the text express fear or nervousness?" },
-    { id: "politeness", ab: "Pol", name: "Politeness", q: "politeness", read: "noul", scope: "person", about: "Is the speaker polite and deferential to the person addressed?" },
-    { id: "urgency", ab: "Urg", name: "Urgency", q: "darkpatterns", read: "urgency", scope: "person", about: "P(urgency) from the dark-pattern question: a deadline pushing a quick decision.", caveat: "Validated on short shopping-site text." },
-    { id: "scarcity", ab: "Sca", name: "Scarcity", q: "darkpatterns", read: "scarcity", scope: "person", about: "P(scarcity) from the dark-pattern question: something may run out.", caveat: "Validated on short shopping-site text." },
-    { id: "social_proof", ab: "Soc", name: "Social proof", q: "darkpatterns", read: "social_proof", scope: "person", about: "P(social_proof) from the dark-pattern question: what others did or said.", caveat: "Validated on short shopping-site text." },
-    { id: "persuasion", ab: "Per", name: "Persuasive move", q: "persuasion", read: "appeal", scope: "person", about: "1 minus P(none) from the persuasion-appeal question.", caveat: "Validated on donation appeals to a charity; other contexts are outside what was measured." },
+    { id: "manipulation", icon: "mask", name: "Manipulation", q: "manipulation", read: "noul", scope: "call", about: "Does one speaker try to manipulate the other? Validated on whole dialogues, so it reads the whole call, not one person." },
+    { id: "phishing", icon: "hook", name: "Deceptive request", q: "phishing", read: "noul", scope: "person", about: "Is the text trying to get credentials or money through deception?" },
+    { id: "sarcasm", icon: "smile", name: "Sarcasm", q: "sarcasm", read: "noul", scope: "person", about: "Does the speaker mean the opposite of the literal words?" },
+    { id: "threat", icon: "shield", name: "Threat", q: "threat", read: "noul", scope: "person", about: "Does the text threaten to harm the listener?", caveat: "The threat set has label noise, so treat its accuracy as a rough guide." },
+    { id: "anger", icon: "flame", name: "Anger", q: "anger", read: "noul", scope: "person", about: "Does the text express anger?" },
+    { id: "fear", icon: "alert", name: "Fear", q: "fear", read: "noul", scope: "person", about: "Does the text express fear or nervousness?" },
+    { id: "politeness", icon: "heart", name: "Politeness", q: "politeness", read: "noul", scope: "person", about: "Is the speaker polite and deferential to the person addressed?" },
+    { id: "urgency", icon: "clock", name: "Urgency", q: "darkpatterns", read: "urgency", scope: "person", about: "P(urgency) from the dark-pattern question: a deadline pushing a quick decision.", caveat: "Validated on short shopping-site text." },
+    { id: "scarcity", icon: "box", name: "Scarcity", q: "darkpatterns", read: "scarcity", scope: "person", about: "P(scarcity) from the dark-pattern question: something may run out.", caveat: "Validated on short shopping-site text." },
+    { id: "social_proof", icon: "users", name: "Social proof", q: "darkpatterns", read: "social_proof", scope: "person", about: "P(social_proof) from the dark-pattern question: what others did or said.", caveat: "Validated on short shopping-site text." },
+    { id: "persuasion", icon: "megaphone", name: "Persuasive move", q: "persuasion", read: "appeal", scope: "person", about: "1 minus P(none) from the persuasion-appeal question.", caveat: "Validated on donation appeals to a charity; other contexts are outside what was measured." },
   ];
   const P_BY = Object.fromEntries(PERSP.map(p => [p.id, p]));
-  /* Signals belong to a role: everyone else (cue cards), the coached person (coaching), or the whole call. */
-  const DEFAULTS = [["anger", "others"], ["fear", "others"], ["urgency", "others"], ["threat", "others"], ["politeness", "coach"], ["anger", "coach"], ["urgency", "coach"], ["manipulation", "call"]];
-  const ROLE_NAME = { others: "everyone else", coach: "the coached person", call: "the whole call" };
+  const DEFAULTS = ["anger", "fear", "urgency", "threat", "politeness", "manipulation", "persuasion", "sarcasm"];
 
-  const S = { src: null, dlg: null, coach: null, names: false, model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "live", armed: false, playing: false, t: 0, done: false, sigs: [], seq: 0, tab: "flag", chartSig: null };
+  const S = { src: null, dlg: null, coach: null, names: false, model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "live", armed: false, playing: false, t: 0, done: false, dets: [], kps: [], seq: 0, tab: "flag", view: "det", reqSel: "latest" };
   let D = null, T = null, W = [], DUR = 0, ptr = 0, raf = 0, last = performance.now(), runner = null, ui = {}, QS = {}, QALL = {}, EVENTS = [], SP = { list: [], by: {} };
-  const C = new Map(), CPS = [], FLAGS = [], LAGS = {}, QUEUE = [], LOGW = [], rows = [], peopleSpans = {}, cards = [], SPOKE = [];
-  let active = 0, ctl = null, failed = 0, pending = 0, maxPending = 0, moSeq = 0, nextSample = 0, checksDone = 0, pre = null, cpN = 0, glide = null, stack = null, chart = null, curSpk = null, LROWS = {};
+  const C = new Map(), CPS = [], FLAGS = [], LAGS = {}, QUEUE = [], LOGW = [], rows = [], peopleSpans = {}, cards = [], SPOKE = [], PC = {};
+  let active = 0, ctl = null, failed = 0, pending = 0, maxPending = 0, moSeq = 0, nextSample = 0, checksDone = 0, pre = null, cpN = 0, glide = null, stack = null, chart = null, curSpk = null;
   const kv = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
-  /* ---------- speakers: diarization gives ids, not names, so each is "Person N" with one colour ---------- */
+  /* ---------- speakers: diarization gives ids, not names, so each is "Person N" ---------- */
   function buildSpeakers() {
     SP = { list: [], by: {} };
-    T.speakers.forEach((name, i) => { const n = i + 1, p = { name, n, label: `Person ${n}`, css: n <= 8 ? `var(--s${n})` : "var(--text-3)" }; SP.list.push(p); SP.by[name] = p; });
+    T.speakers.forEach((name, i) => { const p = { name, n: i + 1, label: `Person ${i + 1}` }; SP.list.push(p); SP.by[name] = p; });
     if (window.__cockpit) window.__cockpit.SP = SP;
   }
-  const lab = (spk) => S.names ? short(spk) : (SP.by[spk] ? SP.by[spk].label : spk);
-  const pcss = (spk) => `--c:${SP.by[spk] ? SP.by[spk].css : "var(--text-3)"}`;
-  const roleOf = (spk) => spk === S.coach ? "coach" : "others";
+  const lab = (spk) => spk === "_call" ? "Whole call" : S.names ? short(spk) : (SP.by[spk] ? SP.by[spk].label : spk);
+  const numOf = (spk) => SP.by[spk] ? SP.by[spk].n : "?";
+  const isCoach = (spk) => spk === S.coach;
 
   /* ---------- transcript, timeline ---------- */
   function makeTranscript(turns, meta) {
@@ -212,38 +248,42 @@
     EVENTS = ev.map((e, n) => ({ n: n + 1, t: (T.turns[e.turn_index] || T.turns[0]).t0, turn: e.turn_index, what: e.what_happened, quote: e.evidence_quote, url: e.evidence_source_url }));
   }
 
-  /* ---------- signals: a definition per role, a state per person ---------- */
-  const newState = () => ({ latest: 0, marks: [], disp: 0, lastFire: -1e9, above: null, hist: [], n: 0 });
-  const cs = (sg, spk) => sg.st[spk] ||= newState();
-  const stFor = (sg, spk) => cs(sg, sg.scope === "call" ? "_call" : spk);
-  function newSig(o) { return { key: o.key, pid: o.pid || null, role: o.role, scope: o.scope, label: o.label, ab: o.ab, q: o.q, read: o.read || "noul", custom: !!o.custom, kp: !!o.kp, about: o.about || "", caveat: o.caveat || "", st: {}, done: false, doneAt: 0 }; }
-  const laneDefs = (role) => S.sigs.filter(s => !s.kp && s.role === role);
-  function addDetector(pid, role, quiet) {
-    const p = P_BY[pid]; if (!p) return false; if (p.scope === "call") role = "call";
-    const key = `${pid}@${role}`;
-    if (S.sigs.some(s => s.key === key)) { if (!quiet) toast(`${p.name} is already on for ${ROLE_NAME[role]}.`); return false; }
-    if (laneDefs(role).length >= MAXROLE) { if (!quiet) toast(`${MAXROLE} is the most per role that stay readable. Remove one first.`); return false; }
-    S.sigs.push(newSig({ key, pid, role, scope: p.scope, label: p.name, ab: p.ab, q: p.q, read: p.read, about: p.about, caveat: p.caveat })); return true;
+  /* ---------- detectors: one definition each, a state per person ---------- */
+  const newState = () => ({ latest: 0, marks: [], disp: 0, lastFire: -1e9, above: null, n: 0 });
+  const cs = (d, spk) => d.st[spk] ||= newState();
+  const stFor = (d, spk) => cs(d, d.scope === "call" ? "_call" : spk);
+  const freeSlot = () => { const used = S.dets.map(d => d.slot); let i = S.dets.length; return i; };
+  function newDet(o) { return { key: o.key, pid: o.pid || null, label: o.label, icon: o.icon, slot: o.slot, scope: o.scope || "person", q: o.q, read: o.read || "noul", custom: !!o.custom, about: o.about || "", example: o.example || "", caveat: o.caveat || "", st: {}, agg: { disp: 0, above: null, lastFire: -1e9, who: null, n: 0, hist: [] } }; }
+  function addLibrary(pid, quiet) {
+    const p = P_BY[pid]; if (!p) return false;
+    if (S.dets.some(d => d.pid === pid)) { if (!quiet) toast(`${p.name} is already on.`); return false; }
+    if (S.dets.length >= MAXDET) { if (!quiet) toast(`${MAXDET} detectors is the most. Remove one first.`); return false; }
+    S.dets.push(newDet({ key: pid, pid, label: p.name, icon: p.icon, slot: S.dets.length, scope: p.scope, q: p.q, read: p.read, about: p.about, caveat: p.caveat })); return true;
   }
-  const codeOf = (text) => { const ws = text.toUpperCase().replace(/[^A-Z ]/g, "").split(/\s+/).filter(w => w.length > 2); return (ws.length >= 3 ? ws.slice(0, 3).map(w => w[0]).join("") : ws.length === 2 ? ws[0][0] + ws[1].slice(0, 2) : (ws[0] || "XXX").slice(0, 3)).slice(0, 3) || "XXX"; };
-  function addCustom(text, role, kp) {
-    text = text.trim(); if (!text) return false;
-    if (!kp && laneDefs(role).length >= MAXROLE) { toast(`${MAXROLE} is the most per role that stay readable. Remove one first.`); return false; }
+  function addCustom(name, what, example, icon, scope) {
+    name = name.trim(); what = what.trim(); example = example.trim();
+    if (!name || !what) { toast("Give it a name and say what it should detect."); return false; }
+    if (S.dets.length >= MAXDET) { toast(`${MAXDET} detectors is the most. Remove one first.`); return false; }
     const key = "c" + (++S.seq);
-    QALL[key] = { type: "noul", instructions: kp ? `Does the speaker say or clearly convey this: ${text}` : `Does the speaker's text match this description: ${text}`, criteria: { true: `The text matches: ${text}`, false: `The text does not match: ${text}` } };
-    S.sigs.push(newSig({ key, role: kp ? "coach" : role, scope: "person", label: text.length > 24 ? text.slice(0, 23) + "…" : text, ab: codeOf(text), q: key, custom: true, kp: !!kp, about: text })); return true;
+    QALL[key] = { type: "noul", instructions: `Does the text match this description: ${what}`, criteria: { true: `The text matches: ${what}.${example ? ` Example: "${example}"` : ""}`, false: `The text does not match: ${what}` } };
+    S.dets.push(newDet({ key, label: name.length > 22 ? name.slice(0, 21) + "…" : name, icon: icon || ICON_NAMES[(S.dets.length * 5 + 3) % ICON_NAMES.length], slot: S.dets.length, scope, q: key, custom: true, about: what, example })); return true;
   }
-  function removeSig(key) { S.sigs = S.sigs.filter(s => s.key !== key); if (S.chartSig === key) S.chartSig = null; renderLanes(); renderKp(); refreshChartSel(); afterConfig(); }
-  const sigsFor = (chk) => S.sigs.filter(s => chk.scope === "call" ? s.scope === "call" : (s.scope === "person" && s.role === chk.role));
+  function addKeyPoint(text) {
+    text = text.trim(); if (!text) return false; const key = "k" + (++S.seq);
+    QALL[key] = { type: "noul", instructions: `Does the speaker say or clearly convey this: ${text}`, criteria: { true: `The text matches: ${text}`, false: `The text does not match: ${text}` } };
+    S.kps.push({ key, q: key, text, done: false, doneAt: 0 }); return true;
+  }
+  function removeDet(key) { S.dets = S.dets.filter(d => d.key !== key); renderDets(); renderDetTab(); renderPeople(); afterConfig(); }
+  const detsFor = (chk) => S.dets.filter(d => d.scope === (chk.scope === "call" ? "call" : "person"));
 
-  /* Trust: measured accuracy of the detector on its own validation set, for the selected model. Custom sentences have none. */
+  /* Trust: measured accuracy of the detector on its own validation set, for the selected model. Custom detectors have none. */
   const wilson = (k, n, z = 1.96) => { const p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - m) / d, (c + m) / d]; };
-  function trust(sg) {
-    if (sg.custom) return { text: "unvalidated", warn: true, title: "Your own wording: no validation set exists, so there is no measured accuracy. Treat it as a hint." };
-    const set = D.sets[QSETS[sg.q]], res = set && set.results && set.results[S.model], cav = sg.caveat ? " " + sg.caveat : "";
-    if (!res || !Object.keys(res).length) return { text: "not measured", warn: true, title: `No published results for this model on the ${QSETS[sg.q]} set.${cav}` };
+  function trust(d) {
+    if (d.custom) return { text: "unvalidated", warn: true, title: "Your own wording: no validation set exists, so there is no measured accuracy. Treat it as a hint." };
+    const set = D.sets[QSETS[d.q]], res = set && set.results && set.results[S.model], cav = d.caveat ? " " + d.caveat : "";
+    if (!res || !Object.keys(res).length) return { text: "not measured", warn: true, title: `No published results for this model on the ${QSETS[d.q]} set.${cav}` };
     const rs = Object.values(res), n = rs.length, k = rs.filter(r => r.correct).length, chance = 1 / (set.items[0].labels.length || 2), ci = wilson(k, n), near = ci[0] <= chance && chance <= ci[1];
-    return { text: `acc ${fmt.pct(k / n, 0)}${near ? ", near chance" : ""}`, warn: near, title: `${k} of ${n} correct on the ${QSETS[sg.q]} validation set. 95% interval ${fmt.pct(ci[0], 0)} to ${fmt.pct(ci[1], 0)}; chance is ${fmt.pct(chance, 0)}.${near ? " The interval includes chance." : ""}${cav} Per-person windows are new: the set was validated on whole texts.` };
+    return { text: `acc ${fmt.pct(k / n, 0)}${near ? ", near chance" : ""}`, warn: near, title: `${k} of ${n} correct on the ${QSETS[d.q]} validation set. 95% interval ${fmt.pct(ci[0], 0)} to ${fmt.pct(ci[1], 0)}; chance is ${fmt.pct(chance, 0)}.${near ? " The interval includes chance." : ""}${cav} Per-person windows are new: the set was validated on whole texts.` };
   }
 
   /* ---------- windows and the checkpoint runner (shared by live playback and precompute) ---------- */
@@ -257,6 +297,7 @@
     let out = [], prev = null; for (const x of tail) { if (x.spk !== prev) { out.push(`${SP.by[x.spk] ? SP.by[x.spk].label : x.spk}:`); prev = x.spk; } out.push(x.w); }
     const txt = out.join(" "); return kind === "w" ? txt : txt.split(/(?<=[.!?…])\s+/).filter(Boolean).slice(-n).join(" ");
   }
+  const qidsFor = (chk) => [...new Set([...detsFor(chk).map(d => d.q), ...(chk.scope === "person" && isCoach(chk.spk) ? S.kps.map(k => k.q) : [])])];
   function makeRunner() {
     const R = { people: {}, flat: [], dsince: 0, prev: null };
     const trig = (since, end, turnEnd) => S.cp === "words" ? since >= S.n : ((end || turnEnd) && since >= 3) || since >= 12;
@@ -266,16 +307,33 @@
       R.prev = { spk: wd.spk, i: wd.i, end }; p.words.push(wd.w); R.flat.push({ spk: wd.spk, w: wd.w }); p.since++; R.dsince++;
       const out = [];
       if (trig(p.since, end, turnEnd)) {
-        p.since = 0; const chk = { scope: "person", spk: wd.spk, role: roleOf(wd.spk), i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, state: personWindow(p.words, S.win) };
-        chk.qids = [...new Set(sigsFor(chk).map(s => s.q))]; if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
+        p.since = 0; const chk = { scope: "person", spk: wd.spk, i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, state: personWindow(p.words, S.win) };
+        chk.qids = qidsFor(chk); if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
       }
       if (trig(R.dsince, end, turnEnd)) {
-        R.dsince = 0; const chk = { scope: "call", spk: wd.spk, role: "call", i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, state: callWindow(R.flat, S.win) };
-        chk.qids = [...new Set(sigsFor(chk).map(s => s.q))]; if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
+        R.dsince = 0; const chk = { scope: "call", spk: wd.spk, i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, state: callWindow(R.flat, S.win) };
+        chk.qids = qidsFor(chk); if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
       }
       return out;
     };
     return R;
+  }
+
+  /* ---------- the request: exactly what is sent to the model's POST /v1/systemone ---------- */
+  const sysBody = (state, qids) => ({ state, model: "jev-latest", questions: Object.fromEntries(qids.map(q => [q, QALL[q]])) });
+  function validateReq(b) {
+    const p = [];
+    if (!(typeof b.state === "string" ? b.state.trim() : b.state && typeof b.state === "object")) p.push("state must be a non-empty string, object or array");
+    if (typeof b.model !== "string" || !b.model) p.push("model must be a string");
+    const qs = b.questions; if (!qs || typeof qs !== "object" || !Object.keys(qs).length) p.push("questions must be a non-empty object");
+    else for (const [k, q] of Object.entries(qs)) {
+      if (!["noul", "choice", "score"].includes(q.type)) { p.push(`${k}: type must be noul, choice or score`); continue; }
+      if (q.instructions != null && !["string", "object"].includes(typeof q.instructions)) p.push(`${k}: instructions must be a string, object or array`);
+      if (q.type === "noul" && q.criteria && !(typeof q.criteria === "object" && ("true" in q.criteria || "false" in q.criteria))) p.push(`${k}: noul criteria needs true and/or false`);
+      if (q.type === "choice" && !(q.criteria && typeof q.criteria === "object" && Object.keys(q.criteria).length >= 1 && Object.keys(q.criteria).length <= 255)) p.push(`${k}: choice criteria needs 1 to 255 options`);
+      if (q.type === "score" && !(Array.isArray(q.criteria) && q.criteria.length >= 1)) p.push(`${k}: score criteria needs a list of levels`);
+    }
+    return p;
   }
 
   /* ---------- calling the server ---------- */
@@ -291,15 +349,15 @@
     Object.assign(r0.answers, r.answers || {}); if (miss.some(q => !r0.answers[q])) throw new Error("Missing answer in response");
     return 1;
   }
-  function readSig(sg, ans) {
+  function readDet(d, ans) {
     if (!ans) return null;
-    if (sg.custom || sg.read === "noul") { const v = Number(ans.noul); return Number.isFinite(v) ? { score: v } : null; }
+    if (d.custom || d.read === "noul") { const v = Number(ans.noul); return Number.isFinite(v) ? { score: v } : null; }
     const pr = ans.probabilities; if (!pr) return null;
-    if (sg.read === "appeal") { let top = null, tp = -1; for (const [k, v] of Object.entries(pr)) if (k !== "none" && v > tp) { top = k; tp = v; } return { score: clamp(1 - (pr.none ?? 0), 0, 1), label: top }; }
-    const v = pr[sg.read]; return Number.isFinite(v) ? { score: v, label: ans.choice } : null;
+    if (d.read === "appeal") { let top = null, tp = -1; for (const [k, v] of Object.entries(pr)) if (k !== "none" && v > tp) { top = k; tp = v; } return { score: clamp(1 - (pr.none ?? 0), 0, 1), label: top }; }
+    const v = pr[d.read]; return Number.isFinite(v) ? { score: v, label: ans.choice } : null;
   }
   function submit(chk) {
-    chk.n = ++cpN; chk.t = S.t; chk.wall = performance.now(); chk.model = S.model; CPS.push(chk);
+    chk.n = ++cpN; chk.t = S.t; chk.wall = performance.now(); chk.model = S.model; chk.req = sysBody(chk.state, chk.qids); CPS.push(chk); if (S.tab === "req") renderReq();
     if (!missing(chk).length) { apply(chk, 0); return; }
     QUEUE.push(chk); pending = QUEUE.length + active; maxPending = Math.max(maxPending, pending); pump();
   }
@@ -313,43 +371,47 @@
   }
   function apply(chk, lagMs) {
     checksDone++; if (lagMs) (LAGS[S.model] ||= []).push(lagMs); const r = C.get(ckey(chk.state)); chk.answers = {};
-    for (const sg of sigsFor(chk)) {
-      const v = readSig(sg, r && r.answers[sg.q]); if (!v) continue; chk.answers[sg.key] = v.score;
-      const st = stFor(sg, chk.spk); st.n++; st.latest = v.score; st.marks.push({ t: S.t, p: v.score }); if (st.marks.length > 60) st.marks.shift();
-      if (v.score >= S.gate) fire(sg, chk, v);
+    for (const d of detsFor(chk)) {
+      const v = readDet(d, r && r.answers[d.q]); if (!v) continue; chk.answers[d.key] = v.score;
+      const st = stFor(d, chk.spk); st.n++; st.latest = v.score; st.marks.push({ t: S.t, p: v.score }); if (st.marks.length > 60) st.marks.shift();
+      if (v.score >= S.gate) fire(d, chk, v);
     }
-    if (chk.scope === "person" && chk.role === "coach") for (const sg of S.sigs.filter(s => s.kp)) {
-      const v = readSig(sg, r && r.answers[sg.q]); if (v && v.score >= S.gate && !sg.done) { sg.done = true; sg.doneAt = S.t; renderKp(); }
-    }
+    if (chk.scope === "person" && isCoach(chk.spk)) for (const k of S.kps) { const v = readDet({ custom: true }, r && r.answers[k.q]); if (v && v.score >= S.gate && !k.done) { k.done = true; k.doneAt = S.t; renderKp(); } }
+    if (S.tab === "req") renderReq();
   }
 
   /* ---------- level, hold, fire ---------- */
   const env = (p, age) => age < 0 ? 0 : age <= HOLD ? p * (1 - 0.25 * age / HOLD) : p * 0.75 * Math.exp(-(age - HOLD) / 12);
-  function tickSigs(dt) {
+  function tickDets(dt) {
     const k = 1 - Math.exp(-dt / 0.18), sample = S.playing && nextSample <= S.t;
-    for (const sg of S.sigs) for (const spk in sg.st) {
-      const st = sg.st[spk]; let tgt = 0; for (const m of st.marks) tgt = Math.max(tgt, env(m.p, S.t - m.t));
-      st.disp += (tgt - st.disp) * k; if (st.disp >= S.gate && st.above == null) st.above = S.t; else if (st.disp < S.gate - 0.05) st.above = null;
+    for (const d of S.dets) {
+      let best = 0, who = null, lf = -1e9;
+      for (const spk in d.st) {
+        const st = d.st[spk]; let tgt = 0; for (const m of st.marks) tgt = Math.max(tgt, env(m.p, S.t - m.t)); st.disp += (tgt - st.disp) * k;
+        if (st.disp > best) { best = st.disp; who = spk; } if (st.lastFire > lf) lf = st.lastFire;
+      }
+      const a = d.agg; a.disp = best; a.who = who; a.lastFire = lf; a.n = Object.values(d.st).reduce((s, x) => s + x.n, 0);
+      if (a.disp >= S.gate && a.above == null) a.above = S.t; else if (a.disp < S.gate - 0.05) a.above = null;
     }
-    if (sample) while (nextSample <= S.t) { for (const sg of S.sigs) for (const spk in sg.st) { const st = sg.st[spk]; st.hist.push([nextSample, st.disp]); if (st.hist.length > 700) st.hist.shift(); } nextSample += 0.2; }
+    if (sample) while (nextSample <= S.t) { for (const d of S.dets) { d.agg.hist.push([nextSample, d.agg.disp, d.agg.who]); if (d.agg.hist.length > 700) d.agg.hist.shift(); } nextSample += 0.2; }
   }
-  function fire(sg, chk, v) {
-    const st = stFor(sg, chk.spk); st.lastFire = S.t;
-    const quote = T.turns[chk.i].words.slice(chk.k0, chk.k + 1).join(" "), fl = { id: ++moSeq, sig: sg.key, label: sg.label, spk: chk.spk, role: chk.role, t: S.t, p: v.score, quote, i: chk.i, model: S.model };
-    FLAGS.push(fl); highlight(chk, sg, v.score); addLog(fl);
-    if (chk.role === "coach") { renderRecent(); return; }
-    const c = cards.find(x => x.sig === sg.key && x.spk === chk.spk && S.t - x.t < 12);
+  function fire(d, chk, v) {
+    const st = stFor(d, chk.spk); st.lastFire = S.t; const who = d.scope === "call" ? "_call" : chk.spk;
+    const quote = T.turns[chk.i].words.slice(chk.k0, chk.k + 1).join(" "), fl = { id: ++moSeq, det: d.key, label: d.label, icon: d.icon, slot: d.slot, spk: who, at: chk.spk, t: S.t, p: v.score, quote, i: chk.i, model: S.model };
+    FLAGS.push(fl); highlight(chk, d, v.score); addLog(fl); renderHits(who);
+    if (d.scope !== "call" && isCoach(chk.spk)) { renderRecent(); return; }
+    const c = cards.find(x => x.det === d.key && x.spk === who && S.t - x.t < 12);
     if (c) { c.n++; c.t = S.t; c.p = v.score; c.q.textContent = "“" + quote.replace(/[.,!?;:]+$/, "") + "”"; c.cnt.textContent = "×" + c.n; c.note.textContent = cardNote(c); }
-    else newCard(sg, chk, fl);
+    else newCard(d, chk, fl, who);
   }
-  function highlight(chk, sg, p) {
+  function highlight(chk, d, p) {
     const row = rows[chk.i]; if (!row) return; const a = row.spans[chk.k0], b = row.spans[chk.k]; if (!a || !b) return;
     let wrap = a.parentNode.classList && a.parentNode.classList.contains("ph") ? a.parentNode : null;
     if (wrap && b.parentNode === wrap) { /* sentence already covered */ }
     else if (wrap && b.parentNode === wrap.parentNode) { for (let n = wrap.nextSibling; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; } }
-    else if (!wrap && a.parentNode === b.parentNode) { wrap = el("span", { class: "ph", style: pcss(chk.spk) }); a.parentNode.insertBefore(wrap, a); for (let n = a; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; } }
+    else if (!wrap && a.parentNode === b.parentNode) { wrap = el("span", { class: "ph", style: cvar(d.slot) }); a.parentNode.insertBefore(wrap, a); for (let n = a; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; } }
     else return;
-    const line = `${sg.label} ${Math.round(p * 100)}% (${Jev.codeOf(S.model)})`, cur = wrap.getAttribute("title") || ""; if (!cur.includes(sg.label + " ")) wrap.setAttribute("title", cur ? cur + "\n" + line : line);
+    const line = `${d.label} ${Math.round(p * 100)}% (${Jev.codeOf(S.model)})`, cur = wrap.getAttribute("title") || ""; if (!cur.includes(d.label + " ")) wrap.setAttribute("title", cur ? cur + "\n" + line : line);
   }
 
   /* ---------- absolutely stacked cards: moved by transform so neighbours never reflow; they roll on, hold, then fold away ---------- */
@@ -366,13 +428,13 @@
       frame(dt) { const k = 1 - Math.exp(-dt / 0.17), H = root.clientHeight; for (const it of items) { it.y += (it.ty - it.y) * k; const want = it.leaving ? 0 : it.ty + it.h > H + 2 ? 0 : 1; it.o += (want - it.o) * k * 1.3; it.el.style.transform = `translate3d(0,${it.y.toFixed(1)}px,0)`; it.el.style.opacity = it.o.toFixed(3); } },
     };
   }
-  const cardNote = (c) => `${c.call ? "Whole call" : lab(c.spk)} · ${mmss(c.t)} · ${Math.round(c.p * 100)}%`;
-  function newCard(sg, chk, fl) {
+  const cardNote = (c) => `${lab(c.spk)} · ${mmss(c.t)} · ${Math.round(c.p * 100)}%`;
+  function newCard(d, chk, fl, who) {
     const bar = el("i"), age = el("span", { class: "age" }, "00:00 ago"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
     const q = el("span", { class: "q", text: "“" + fl.quote.replace(/[.,!?;:]+$/, "") + "”" }), note = el("span", { class: "n" }), cnt = el("span", { class: "subtle small" });
-    const call = sg.scope === "call", node = el("article", { class: "moment", style: call ? "--c:var(--text-3)" : pcss(chk.spk), "data-flag": fl.id },
-      el("div", { class: "mh" }, el("span", { class: "code", text: sg.label }), cnt, q, age), el("div", { class: "ft" }, note, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" })), el("div", { class: "hold", "aria-hidden": "true" }, bar));
-    const card = { sig: sg.key, spk: chk.spk, call, t: S.t, p: fl.p, n: 1, el: node, bar, age, q, note, cnt, pinned: false, last: "", it: null };
+    const node = el("article", { class: "moment", style: cvar(d.slot), title: `${d.label}: ${d.about}`, "data-flag": fl.id },
+      el("div", { class: "mh" }, el("span", { class: "ic" }, iconEl(d.icon, 15)), el("b", { class: "small", text: d.label }), cnt, q, age), el("div", { class: "ft" }, note, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" })), el("div", { class: "hold", "aria-hidden": "true" }, bar));
+    const card = { det: d.key, spk: who, t: S.t, p: fl.p, n: 1, el: node, bar, age, q, note, cnt, pinned: false, last: "", it: null };
     note.textContent = cardNote(card);
     pin.addEventListener("click", () => { card.pinned = !card.pinned; pin.setAttribute("aria-pressed", String(card.pinned)); pin.textContent = card.pinned ? "Pinned" : "Pin"; });
     card.it = stack.add(node); cards.push(card);
@@ -396,14 +458,14 @@
   const winWords = () => S.win[0] === "w" ? parseInt(S.win.slice(1), 10) : parseInt(S.win.slice(1), 10) * 20;
   const readAll = () => { for (const k in peopleSpans) { const a = peopleSpans[k], lim = Math.max(0, a.length - winWords()); a.forEach((sp, i) => sp.classList.toggle("out", i < lim)); } };
   function onWord(wd) {
-    if (!SPOKE.includes(wd.spk)) { SPOKE.push(wd.spk); renderLanes(); }
+    if (!SPOKE.includes(wd.spk)) { SPOKE.push(wd.spk); renderPeople(); }
     let row = rows[wd.i];
     if (!row) {
       const tu = T.turns[wd.i], wordsEl = el("div", { class: "words" }); if (ui.caret.parentNode) ui.caret.remove();
-      row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (roleOf(tu.speaker) === "coach" ? " coach" : ""), style: pcss(tu.speaker) }, el("div", { class: "av", "aria-hidden": "true" }),
+      row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (isCoach(tu.speaker) ? " coach" : "") }, el("div", { class: "pnum", "aria-hidden": "true", text: numOf(tu.speaker) }),
         el("div", { class: "bub" }, el("div", { class: "who2" }, el("span", { "data-lab-spk": tu.speaker, title: tu.speaker, text: lab(tu.speaker) }), el("span", { class: "ts", text: mmss(tu.t0) })), el("div", { class: "txt" }, el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
       rows[wd.i] = row; ui.track.append(row.el); curSpk = tu.speaker;
-      for (const k in LROWS) LROWS[k].node.classList.toggle("speaking", k === tu.speaker);
+      for (const k in PC) PC[k].node.classList.toggle("speaking", k === tu.speaker);
     }
     const sp = el("span", { class: "w", text: wd.w }); row.spans[wd.k] = sp; row.words.append(document.createTextNode(wd.k ? " " : ""), sp, ui.caret); glide.dirty();
     (peopleSpans[wd.spk] ||= []).push(sp);
@@ -412,97 +474,111 @@
     for (const chk of runner.feed(wd)) submit(chk);
   }
 
-  /* ---------- signals per person ---------- */
-  function renderLanes() {
-    ui.lanebox.replaceChildren(); LROWS = {};
-    const build = (spk) => {
-      const call = spk === "_call", defs = call ? laneDefs("call") : laneDefs(roleOf(spk)), strip = el("div", { class: "strip" }), cells = {};
-      for (const sg of defs) {
-        const t = trust(sg), st = el("span", { class: "st" }), bar = el("i"), pc = el("span", { class: "pc", text: "0%" });
-        const node = el("div", { class: "sg quiet", style: call ? "--c:var(--text-2)" : pcss(spk), title: `${sg.about} (${ROLE_NAME[sg.role]}) · ${t.text}` },
-          el("div", { class: "r1" }, el("span", { class: "lb", text: sg.label }), el("span", { class: "tr" + (t.warn ? " warn" : ""), title: t.title, text: t.text }), st, el("button", { class: "x", type: "button", "aria-label": `Remove ${sg.label} for ${ROLE_NAME[sg.role]}`, onclick: () => removeSig(sg.key), text: "×" })),
-          el("div", { class: "r2" }, el("div", { class: "mt", role: "img", "aria-label": sg.label + " level" }, bar, el("b", { style: `left:${S.gate * 100}%` })), pc));
-        cells[sg.key] = { sg, node, st, bar, pc, gate: node.querySelector(".mt b"), c: {} }; strip.append(node);
-      }
-      const node = el("div", { class: "lane " + (call ? "call" : roleOf(spk)) + (curSpk === spk ? " speaking" : ""), style: call ? "--c:var(--text-2)" : pcss(spk) },
-        el("div", { class: "lh" }, call ? el("b", { text: "Whole call" }) : [el("span", { class: "pdot", "aria-hidden": "true" }), el("b", { "data-lab-spk": spk, title: spk, text: lab(spk) }), roleOf(spk) === "coach" ? el("span", { class: "rt", text: "coached" }) : null]), strip);
-      LROWS[spk] = { node, cells }; ui.lanebox.append(node);
-    };
-    for (const spk of SPOKE) build(spk); if (laneDefs("call").length) build("_call");
-    if (!SPOKE.length && !laneDefs("call").length) ui.lanebox.append(el("p", { class: "small muted", style: "padding:8px 12px", text: "Each person who speaks gets a row here, in their own colour." }));
+  /* ---------- detectors bar and person cards ---------- */
+  let DCH = {};
+  function renderDets() {
+    ui.dets.replaceChildren(); DCH = {};
+    for (const d of S.dets) {
+      const t = trust(d), stt = el("span", { class: "stt" }), bar = el("i"), pc = el("span", { class: "pc", text: "0%" });
+      const node = el("div", { class: "dchip quiet" + (d.custom ? " custom" : ""), style: cvar(d.slot), title: `${d.label}\n${d.about}\n${d.scope === "call" ? "Reads the whole call." : "Scored on each person's own window."}\n${t.text}` },
+        el("span", { class: "ic" }, iconEl(d.icon, 18)), el("span", { class: "nm", text: d.label }), stt, el("div", { class: "r2" }, el("div", { class: "mt", role: "img", "aria-label": d.label + " level" }, bar, el("b", { style: `left:${S.gate * 100}%` })), pc),
+        t.warn ? el("span", { class: "q", title: t.title, text: "?" }) : null);
+      DCH[d.key] = { d, node, stt, bar, pc, gate: node.querySelector(".mt b"), c: {} }; ui.dets.append(node);
+    }
+    if (!S.dets.length) ui.dets.append(el("span", { class: "small muted", style: "padding-top:6px", text: "No detectors yet. Add one." }));
   }
-  function updateLanes() {
-    for (const k in LROWS) for (const key in LROWS[k].cells) {
-      const L = LROWS[k].cells[key], sg = L.sg, st = cs(sg, k === "_call" ? "_call" : k), a = S.t - st.lastFire;
-      const txt = st.above != null ? "▲ HIGH " + mmss(S.t - st.above) : !st.n ? "– WAITING" : a < 4 ? "● LIVE" : a <= HOLD ? "◐ HOLD " + mmss(a) : st.disp > 0.2 ? "○ FADING" : "– QUIET";
-      if (L.c.st !== txt) { L.st.textContent = txt; L.c.st = txt; }
-      const pc = Math.round(st.disp * 100) + "%"; if (L.c.pc !== pc) { L.pc.textContent = pc; L.c.pc = pc; }
-      L.bar.style.transform = `scaleX(${clamp(st.disp, 0, 1).toFixed(3)})`; const q = st.disp < 0.2; if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
+  function updateDets() {
+    for (const k in DCH) {
+      const L = DCH[k], a = L.d.agg, age = S.t - a.lastFire;
+      const txt = a.above != null ? "▲ " + mmss(S.t - a.above) : !a.n ? "wait" : age < 4 ? "● live" : age <= HOLD ? "◐ " + mmss(age) : a.disp > 0.2 ? "○ fade" : "– quiet";
+      if (L.c.st !== txt) { L.stt.textContent = txt; L.c.st = txt; }
+      const pc = Math.round(a.disp * 100) + "%"; if (L.c.pc !== pc) { L.pc.textContent = pc; L.c.pc = pc; }
+      L.bar.style.transform = `scaleX(${clamp(a.disp, 0, 1).toFixed(3)})`; const q = a.disp < 0.2; if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
       if (L.c.g !== S.gate) { L.gate.style.left = S.gate * 100 + "%"; L.c.g = S.gate; }
     }
   }
+  function renderPeople() {
+    ui.people.replaceChildren(); for (const k in PC) delete PC[k];
+    const list = [...SPOKE, ...(S.dets.some(d => d.scope === "call") ? ["_call"] : [])];
+    for (const spk of list) {
+      const hits = el("div", { class: "hits" }), call = spk === "_call";
+      const node = el("div", { class: "pcard" + (curSpk === spk ? " speaking" : ""), title: call ? "Detectors that read the whole call" : `${lab(spk)}${S.names ? "" : " (" + spk + ")"}` },
+        el("div", { class: "h1" }, call ? el("span", { class: "pnum", "aria-hidden": "true", text: "∑" }) : el("span", { class: "pnum", "aria-hidden": "true", text: numOf(spk) }), el("b", { "data-lab-spk": spk, text: lab(spk) }), isCoach(spk) && !call ? el("span", { class: "rt", text: "coached" }) : null), hits);
+      PC[spk] = { node, hits }; ui.people.append(node); renderHits(spk);
+    }
+    if (!list.length) ui.people.append(el("span", { class: "small muted", style: "padding-top:4px", text: "Each person who speaks gets a card. Detector hits appear on it." }));
+  }
+  function renderHits(spk) {
+    const P = PC[spk]; if (!P) return; const fl = FLAGS.filter(f => f.spk === spk).slice(-HITS).reverse();
+    P.hits.replaceChildren(...(fl.length ? fl.map(f => el("span", { class: "hit", style: cvar(f.slot), "data-t": f.t, title: `${f.label} ${Math.round(f.p * 100)}% at ${mmss(f.t)}${spk === "_call" ? ` (heard on ${lab(f.at)})` : ""}\n“${f.quote}”` }, iconEl(f.icon, 12), el("span", { class: "t", text: mmss(f.t) }))) : [el("span", { class: "nohit", text: "no hits yet" })]));
+  }
+  function tickHits() { for (const k in PC) PC[k].hits.querySelectorAll(".hit").forEach(h => h.classList.toggle("cool", S.t - (+h.dataset.t) > HOLD)); }
   function renderKp() {
-    ui.kp.replaceChildren(...S.sigs.filter(s => s.kp).map(sg => el("div", { class: "ck" + (sg.done ? " done" : ""), title: "Unvalidated: your own wording" }, el("span", { class: "g", text: sg.done ? "✓" : "○" }), el("span", { text: sg.about }), el("span", { class: "ts", text: sg.done ? mmss(sg.doneAt) : "" }), el("button", { type: "button", "aria-label": "Remove key point", onclick: () => removeSig(sg.key), text: "×" }))));
-    const n = S.sigs.filter(s => s.kp), d = n.filter(s => s.done).length; ui.kprog.textContent = n.length ? `${d} of ${n.length} covered` : "";
+    ui.kp.replaceChildren(...S.kps.map(k => el("div", { class: "ck" + (k.done ? " done" : ""), title: "Unvalidated: your own wording" }, el("span", { class: "g", text: k.done ? "✓" : "○" }), el("span", { text: k.text }), el("span", { class: "ts", text: k.done ? mmss(k.doneAt) : "" }), el("button", { type: "button", "aria-label": "Remove key point", onclick: () => { S.kps = S.kps.filter(x => x !== k); renderKp(); afterConfig(); }, text: "×" }))));
+    const d = S.kps.filter(x => x.done).length; ui.kprog.textContent = S.kps.length ? `${d} of ${S.kps.length} covered` : "";
   }
   function renderRecent() {
-    const fl = FLAGS.filter(f => f.role === "coach").slice(-3).reverse();
+    const fl = FLAGS.filter(f => f.spk === S.coach).slice(-3).reverse();
     ui.rf.replaceChildren(...(fl.length ? fl.map(f => el("div", { class: "rf" }, `${mmss(f.t)} · ${f.label} ${Math.round(f.p * 100)}% · “${f.quote.length > 60 ? f.quote.slice(0, 59) + "…" : f.quote}”`)) : [el("div", { class: "rf subtle", text: "Nothing flagged on this person yet." })]));
   }
   function afterConfig() { renderModels(); refreshEst(); }
 
-  /* ---------- log, documented events ---------- */
+  /* ---------- tabbed card ---------- */
   function addLog(fl) {
-    const li = el("div", { class: "li", "data-flag": fl.id, style: pcss(fl.spk) }, el("span", { class: "ts", text: mmss(fl.t) }), el("div", {}, el("span", { class: "pdot", style: "display:inline-block;margin-right:6px" }), el("b", { text: fl.label }), ` · ${lab(fl.spk)} · ${Math.round(fl.p * 100)}%`, el("div", { class: "q", text: "“" + fl.quote + "”" })));
-    ui.log.append(li); if (S.tab === "flag") ui.lst.scrollTop = ui.lst.scrollHeight;
+    const li = el("div", { class: "li", "data-flag": fl.id, style: cvar(fl.slot) }, el("span", { class: "ts", text: mmss(fl.t) }), el("div", {}, el("span", { class: "ic" }, iconEl(fl.icon, 13)), el("b", { text: fl.label }), ` · ${lab(fl.spk)} · ${Math.round(fl.p * 100)}%`, el("div", { class: "q", text: "“" + fl.quote + "”" })));
+    ui.log.append(li); if (S.tab === "flag") ui.pane_flag.scrollTop = ui.pane_flag.scrollHeight;
   }
   function renderEvents() {
     ui.evs.replaceChildren(...(EVENTS.length ? EVENTS.map(e => el("div", { class: "li", id: "ev" + e.n }, el("span", { class: "ts", text: mmss(e.t) }), el("div", {}, el("b", { text: `E${e.n}` }), " ", e.what, el("div", { class: "q", text: "“" + (e.quote.length > 220 ? e.quote.slice(0, 219) + "…" : e.quote) + "”" }), el("a", { href: e.url, target: "_blank", rel: "noopener", text: "source" })))) : [el("p", { class: "small muted", text: "No documented events for this source. Documented events come from cited sources, not from us." })]));
   }
-  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); ui.log.hidden = t !== "flag"; ui.evs.hidden = t !== "ev"; }
-
-  /* ---------- chart: one signal, one line per person in the person's colour (dashed for the coached person) ---------- */
-  const chartKeys = () => { const seen = new Set(), out = []; for (const s of S.sigs) { if (s.kp) continue; const k = s.pid || s.key; if (!seen.has(k)) { seen.add(k); out.push([k, s.label]); } } return out; };
-  function refreshChartSel() { const ks = chartKeys(); if (!ks.some(([k]) => k === S.chartSig)) S.chartSig = ks.length ? ks[0][0] : null; ui.chartSel.replaceChildren(...ks.map(([k, l]) => el("option", { value: k, text: l }))); ui.chartSel.value = S.chartSig || ""; }
-  function chartSeries() {
-    const defs = S.sigs.filter(s => !s.kp && (s.pid || s.key) === S.chartSig); if (!defs.length) return [];
-    const out = []; for (const sg of defs) {
-      if (sg.scope === "call") { const st = cs(sg, "_call"); out.push({ id: "call", short: "Call", col: -1, samples: st.hist, live: st.disp, dash: null }); continue; }
-      for (const spk of SPOKE) { if (roleOf(spk) !== sg.role) continue; const st = cs(sg, spk), p = SP.by[spk]; out.push({ id: spk, short: "P" + p.n, col: p.n <= 8 ? p.n - 1 : -1, samples: st.hist, live: st.disp, dash: sg.role === "coach" ? [5, 4] : null }); }
-    }
-    return out;
+  let formIcon = "";
+  function renderDetTab() {
+    ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow", style: cvar(d.slot) }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("div", {}, el("b", { text: d.label }), " ", el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("div", { class: "ex", text: d.about + (d.example ? ` Example: “${d.example}”` : "") })), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each person" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: () => removeDet(d.key), text: "×" })); }));
+    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)); ui.libSel.replaceChildren(el("option", { value: "", text: left.length ? "Add a validated detector…" : "All validated detectors are on" }), left.map(p => el("option", { value: p.id, text: p.name + (p.scope === "call" ? " (whole call)" : "") }))); ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
   }
+  function renderReq() {
+    if (!ui.reqPre || !CPS.length) { if (ui.reqPre) { ui.reqPre.textContent = "No checks yet. Press Play; each check sent to the model appears here exactly as sent."; ui.reqBadge.replaceChildren(); ui.reqSelEl.replaceChildren(); } return; }
+    const last30 = CPS.slice(-30).reverse(); if (ui.reqSelEl.childElementCount !== last30.length + 1 || S.reqSel === "latest") ui.reqSelEl.replaceChildren(el("option", { value: "latest", text: "latest check" }), ...last30.map(c => el("option", { value: c.n, text: `#${c.n} · ${mmss(c.t)} · ${c.scope === "call" ? "whole call" : lab(c.spk)}` }))); ui.reqSelEl.value = S.reqSel;
+    const chk = S.reqSel === "latest" ? CPS[CPS.length - 1] : CPS.find(c => c.n === +S.reqSel) || CPS[CPS.length - 1], body = chk.req, probs = validateReq(body);
+    ui.reqPre.textContent = JSON.stringify(body, null, 2); ui.reqBadge.replaceChildren(probs.length ? el("span", { class: "badge bad", text: `${probs.length} problem${probs.length > 1 ? "s" : ""}: ${probs.join("; ")}` }) : el("span", { class: "badge good", text: "well formed" }), el("span", { class: "small muted", text: ` ${Object.keys(body.questions).length} question${Object.keys(body.questions).length > 1 ? "s" : ""}, ${words(body.state).length} words of state${chk.answers ? ", answered" : ""}` }));
+    ui.reqCur = chk;
+  }
+  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); for (const k of ["flag", "det", "set", "req", "ev"]) ui["pane_" + k].hidden = k !== t; if (t === "req") renderReq(); if (t === "det") renderDetTab(); }
+
+  /* ---------- history: heat strip of every detector, or ticks per person ---------- */
   function Chart(canvas) {
-    const ctx = canvas.getContext("2d"); let W_ = 0, H_ = 0, dpr = 1, css = {}, cols = [], cAt = 0, mx = null;
+    const ctx = canvas.getContext("2d"); let W_ = 0, H_ = 0, dpr = 1, css = {}, cols = [], cAt = 0, mx = null, my = null;
     new ResizeObserver(() => { dpr = devicePixelRatio || 1; W_ = canvas.clientWidth; H_ = canvas.clientHeight; canvas.width = W_ * dpr; canvas.height = H_ * dpr; }).observe(canvas);
-    canvas.addEventListener("mousemove", (e) => { mx = e.clientX - canvas.getBoundingClientRect().left; }); canvas.addEventListener("mouseleave", () => { mx = null; });
-    const read = () => { const cs_ = getComputedStyle(document.documentElement); cols = [1, 2, 3, 4, 5, 6, 7, 8].map(i => cs_.getPropertyValue("--s" + i).trim());
-      css = { line: cs_.getPropertyValue("--border").trim(), t2: cs_.getPropertyValue("--text-2").trim(), t3: cs_.getPropertyValue("--text-3").trim(), surf: cs_.getPropertyValue("--surface").trim(), ink: cs_.getPropertyValue("--text").trim(), mono: cs_.getPropertyValue("--mono").trim() }; };
-    const at = (s, tt) => { if (!s.length) return 0; let lo = 0, hi = s.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (s[m][0] < tt) lo = m + 1; else hi = m; } return s[lo][1]; };
-    const colOf = (s) => s.col < 0 ? css.t2 : cols[s.col % 8];
+    canvas.addEventListener("mousemove", (e) => { const r = canvas.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }); canvas.addEventListener("mouseleave", () => { mx = my = null; });
+    const read = () => { const c_ = getComputedStyle(document.documentElement); cols = [1, 2, 3, 4, 5, 6, 7, 8].map(i => c_.getPropertyValue("--s" + i).trim());
+      css = { line: c_.getPropertyValue("--border").trim(), t2: c_.getPropertyValue("--text-2").trim(), t3: c_.getPropertyValue("--text-3").trim(), surf: c_.getPropertyValue("--surface").trim(), surf2: c_.getPropertyValue("--surface-2").trim(), ink: c_.getPropertyValue("--text").trim(), mono: c_.getPropertyValue("--mono").trim() }; };
+    const at = (s, tt) => { if (!s.length) return null; let lo = 0, hi = s.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (s[m][0] < tt) lo = m + 1; else hi = m; } return s[lo]; };
+    const tipBox = (lines, x, y, W2) => { ctx.font = `11px ${css.mono}`; const w = Math.min(320, Math.max(...lines.map(l => ctx.measureText(l).width)) + 16), h = lines.length * 14 + 8, bx = x > W2 / 2 ? x - w - 10 : x + 12, by = clamp(y - h / 2, 2, H_ - h - 2);
+      ctx.fillStyle = css.surf; ctx.strokeStyle = css.line; ctx.beginPath(); ctx.roundRect(bx, by, w, h, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = css.ink; ctx.textAlign = "left"; ctx.textBaseline = "top"; lines.forEach((l, i) => ctx.fillText(l.length > 44 ? l.slice(0, 43) + "…" : l, bx + 8, by + 5 + i * 14)); };
     return { draw() {
       if (!W_ || !H_) return; if (performance.now() - cAt > 500) { read(); cAt = performance.now(); }
-      const win = 60, t = S.t, pad = { l: 34, r: 40, t: 8, b: 18 }, pw = W_ - pad.l - pad.r, ph = H_ - pad.t - pad.b, x = (tt) => pad.l + pw - ((t - tt) / win) * pw, y = (v) => pad.t + ph * (1 - v);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W_, H_); ctx.lineWidth = 1; ctx.font = `10px ${css.mono}`; ctx.textBaseline = "middle";
-      ctx.strokeStyle = css.line; ctx.fillStyle = css.t3; for (const v of [0, 0.5, 1]) { ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y(v)) + .5); ctx.lineTo(W_ - pad.r, Math.round(y(v)) + .5); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(Math.round(v * 100) + "%", pad.l - 6, y(v)); }
-      ctx.strokeStyle = css.ink; ctx.globalAlpha = .5; ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y(S.gate)) + .5); ctx.lineTo(W_ - pad.r, Math.round(y(S.gate)) + .5); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = css.t2; ctx.textAlign = "left"; ctx.fillText("alert", pad.l + 4, y(S.gate) + 8);
-      ctx.textBaseline = "top"; ctx.fillStyle = css.t3; ctx.textAlign = "center"; for (let tt = Math.max(0, Math.ceil((t - win) / 15) * 15); tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W_ - pad.r - 34) ctx.fillText(mmss(tt), xx, H_ - pad.b + 4); } ctx.textAlign = "right"; ctx.fillText("now", W_ - pad.r, H_ - pad.b + 4);
+      const win = 60, t = S.t, pad = { l: 104, r: 10, t: 4, b: 16 }, pw = W_ - pad.l - pad.r, x = (tt) => pad.l + pw - ((t - tt) / win) * pw;
+      const byDet = S.view === "det", list = byDet ? S.dets : [...SPOKE, ...(S.dets.some(d => d.scope === "call") ? ["_call"] : [])], n = Math.max(list.length, 1), rh = clamp((H_ - pad.t - pad.b) / n, 4, 26), plotH = rh * list.length;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W_, H_); ctx.textBaseline = "middle";
+      if (!list.length) { ctx.fillStyle = css.t3; ctx.font = `12px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(byDet ? "Add a detector to see its history." : "Each person appears here once they speak.", pad.l, H_ / 2); return; }
       ctx.save(); ctx.beginPath(); ctx.rect(pad.l, 0, pw + 1, H_); ctx.clip();
-      for (const e of EVENTS) { if (e.t < t - win || e.t > t) continue; const xx = Math.round(x(e.t)) + .5; ctx.strokeStyle = css.t2; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, H_ - pad.b); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = css.t2; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("E" + e.n, xx + 3, pad.t + 1); }
-      const ss = chartSeries(), labels = [];
-      for (const s of ss) {
-        const col = colOf(s), pts = []; for (const p of s.samples) if (p[0] >= t - win - 1) pts.push([x(p[0]), y(p[1])]); pts.push([x(t), y(s.live)]); if (pts.length < 2) continue;
-        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round"; const path = new Path2D(); path.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length - 1; i++) path.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2); path.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-        ctx.setLineDash(s.dash || []); ctx.stroke(path); ctx.setLineDash([]); labels.push({ s, col, yy: y(s.live), xx: x(t) });
-      }
-      ctx.restore(); labels.sort((a, b) => a.yy - b.yy); let prev = -99; ctx.textBaseline = "middle"; ctx.textAlign = "left";
-      for (const l of labels) { ctx.fillStyle = css.surf; ctx.beginPath(); ctx.arc(l.xx, l.yy, 6, 0, 7); ctx.fill(); ctx.fillStyle = l.col; ctx.beginPath(); ctx.arc(l.xx, l.yy, 4, 0, 7); ctx.fill(); const ly = Math.max(l.yy, prev + 11); prev = ly; ctx.fillStyle = css.t2; ctx.fillText(l.s.short, l.xx + 9, ly); }
-      if (mx != null && mx > pad.l && mx < W_ - pad.r) {
-        const tt = t - ((W_ - pad.r - mx) / pw) * win; ctx.strokeStyle = css.t3; ctx.beginPath(); ctx.moveTo(mx + .5, pad.t); ctx.lineTo(mx + .5, H_ - pad.b); ctx.stroke();
-        const rs = ss.map(s => ({ id: s.short, v: at(s.samples, tt), col: colOf(s) })).sort((a, b) => b.v - a.v).slice(0, 9), bw = 84, bh = 18 + rs.length * 13, bx = mx > W_ / 2 ? mx - bw - 8 : mx + 8;
-        ctx.fillStyle = css.surf; ctx.strokeStyle = css.line; ctx.beginPath(); ctx.roundRect(bx, pad.t + 2, bw, bh, 5); ctx.fill(); ctx.stroke(); ctx.textBaseline = "top"; ctx.textAlign = "left"; ctx.fillStyle = css.t3; ctx.fillText(mmss(tt), bx + 7, pad.t + 6);
-        rs.forEach((r, i) => { const yy = pad.t + 20 + i * 13; ctx.fillStyle = r.col; ctx.fillRect(bx + 7, yy + 2, 8, 8); ctx.fillStyle = css.t2; ctx.fillText(`${r.id} ${Math.round(r.v * 100)}%`, bx + 19, yy); });
+      list.forEach((it, r) => {
+        const y0 = pad.t + r * rh; ctx.fillStyle = css.surf2; ctx.fillRect(pad.l, y0 + 1, pw, rh - 2);
+        if (byDet) {
+          const col = cols[it.slot % 8], h = it.agg.hist; ctx.fillStyle = col;
+          for (let i = 0; i < h.length; i++) { if (h[i][0] < t - win - 1) continue; const x0 = x(h[i][0]), x1 = i + 1 < h.length ? x(h[i + 1][0]) : x(t), lv = h[i][1]; if (lv < 0.03) continue; ctx.globalAlpha = 0.1 + 0.9 * Math.min(1, lv); ctx.fillRect(x0, y0 + 1, Math.max(1, x1 - x0 + 0.6), rh - 2); if (lv >= S.gate) { ctx.globalAlpha = 1; ctx.fillRect(x0, y0 + 1, Math.max(1, x1 - x0 + 0.6), Math.min(2, rh - 2)); } }
+          ctx.globalAlpha = 0.1 + 0.9 * Math.min(1, it.agg.disp); ctx.fillRect(x(t) - 3, y0 + 1, 3, rh - 2); ctx.globalAlpha = 1;
+        }
+      });
+      if (!byDet) for (const f of FLAGS) { if (f.t < t - win || f.t > t) continue; const r = list.indexOf(f.spk); if (r < 0) continue; const y0 = pad.t + r * rh, col = cols[f.slot % 8]; if (rh >= 11) drawIcon(ctx, f.icon, x(f.t) - 6, y0 + (rh - 11) / 2, 11, col); else { ctx.fillStyle = col; ctx.fillRect(x(f.t) - 1.5, y0 + 1, 3, rh - 2); } }
+      for (const e of EVENTS) { if (e.t < t - win || e.t > t) continue; const xx = Math.round(x(e.t)) + .5; ctx.strokeStyle = css.ink; ctx.globalAlpha = .55; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, pad.t + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = css.t2; ctx.font = `10px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("E" + e.n, xx + 3, pad.t + 1); }
+      ctx.restore();
+      ctx.textBaseline = "middle"; list.forEach((it, r) => { const y0 = pad.t + r * rh; if (byDet) { const col = cols[it.slot % 8]; if (rh >= 7) drawIcon(ctx, it.icon, 4, y0 + (rh - Math.min(rh - 1, 14)) / 2, Math.min(rh - 1, 14), col); if (rh >= 10) { ctx.fillStyle = css.t2; ctx.font = `10px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it.label.length > 13 ? it.label.slice(0, 12) + "…" : it.label, 22, y0 + rh / 2); } } else if (rh >= 9) { ctx.fillStyle = css.t2; ctx.font = `10.5px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it === "_call" ? "Whole call" : "P" + numOf(it), 6, y0 + rh / 2); } });
+      ctx.textBaseline = "top"; ctx.fillStyle = css.t3; ctx.font = `10px ${css.mono}`; ctx.textAlign = "center"; for (let tt = Math.max(0, Math.ceil((t - win) / 15) * 15); tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W_ - pad.r - 30) ctx.fillText(mmss(tt), xx, pad.t + plotH + 3); } ctx.textAlign = "right"; ctx.fillText("now", W_ - pad.r, pad.t + plotH + 3);
+      if (mx != null && mx > pad.l && mx < W_ - pad.r && my > pad.t && my < pad.t + plotH) {
+        const r = Math.floor((my - pad.t) / rh), it = list[r], tt = t - ((W_ - pad.r - mx) / pw) * win; ctx.strokeStyle = css.t3; ctx.beginPath(); ctx.moveTo(mx + .5, pad.t); ctx.lineTo(mx + .5, pad.t + plotH); ctx.stroke();
+        if (byDet) { const s = at(it.agg.hist, tt), near = FLAGS.filter(f => f.det === it.key && Math.abs(f.t - tt) < 4).pop(); tipBox([`${it.label}${it.scope === "call" ? " (whole call)" : ""}`, s ? `${s[2] ? lab(s[2]) + " · " : ""}${Math.round(s[1] * 100)}% at ${mmss(tt)}` : `at ${mmss(tt)}`, ...(near ? [`“${near.quote}”`] : [])], mx, my, W_); }
+        else { const near = FLAGS.filter(f => f.spk === it && Math.abs(x(f.t) - mx) < 8).pop(); tipBox([it === "_call" ? "Whole call" : lab(it), ...(near ? [`${near.label} ${Math.round(near.p * 100)}% at ${mmss(near.t)}`, `“${near.quote}”`] : [`no hit near ${mmss(tt)}`])], mx, my, W_); }
       }
     } };
   }
@@ -524,18 +600,15 @@
     if (ctl) ctl.abort(); ctl = null; QUEUE.length = 0; active = 0; pending = 0; failed = 0; checksDone = 0; maxPending = 0; if (ui.err) ui.err.textContent = "";
     S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; cpN = 0; CPS.length = 0; FLAGS.length = 0; LOGW.length = 0; cards.length = 0; moSeq = 0; rows.length = 0; SPOKE.length = 0; curSpk = null;
     for (const k in peopleSpans) delete peopleSpans[k];
-    for (const sg of S.sigs) { sg.st = {}; sg.done = false; sg.doneAt = 0; }
-    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); renderLanes(); renderKp(); renderEvents(); renderRecent(); }
+    for (const d of S.dets) { d.st = {}; d.agg = { disp: 0, above: null, lastFire: -1e9, who: null, n: 0, hist: [] }; } for (const k of S.kps) { k.done = false; k.doneAt = 0; }
+    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); renderPeople(); renderKp(); renderEvents(); renderRecent(); if (S.tab === "req") renderReq(); }
   }
   function refreshCoach() {
     ui.coachSel.replaceChildren(...SP.list.map(p => el("option", { value: p.name, text: S.names ? `${p.label} · ${short(p.name)}` : p.label }))); ui.coachSel.value = S.coach;
     const n = SP.list.length; ui.spkNote.textContent = `${n} speaker${n > 1 ? "s" : ""}` + (n > LIVE_STREAMS ? ` · the planned live model separates ${LIVE_STREAMS} at once` : "");
-    ui.meI.style.setProperty("--c", SP.by[S.coach] ? SP.by[S.coach].css : "var(--accent)");
   }
   function rebuild() { T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0]; refreshCoach(); resetRun(); writeHash(); updatePlay(); refreshEst(); }
-  function relabel() {
-    document.querySelectorAll("[data-lab-spk]").forEach(e => { e.textContent = lab(e.dataset.labSpk); }); refreshCoach(); renderLanes(); cards.forEach(c => { c.note.textContent = cardNote(c); }); writeHash();
-  }
+  function relabel() { document.querySelectorAll("[data-lab-spk]").forEach(e => { e.textContent = lab(e.dataset.labSpk); }); refreshCoach(); cards.forEach(c => { c.note.textContent = cardNote(c); }); writeHash(); }
   const speedF = () => Number(S.speed);
   function play() { if (S.done) resetRun(); S.playing = true; last = performance.now(); updatePlay(); }
   function pause() { S.playing = false; updatePlay(); }
@@ -545,7 +618,7 @@
   function dryRun() { const R = makeRunner(), out = []; for (const wd of W) out.push(...R.feed(wd)); return out; }
   const money = (x) => x < 0.01 ? "$" + x.toFixed(5) : x < 10 ? "$" + x.toFixed(3) : "$" + x.toFixed(2);
   function refreshEst() {
-    if (!ui.est || !T) return; const nq = new Set(S.sigs.map(s => s.q)).size, tok = nq * PER_Q + 2 * winWords(), perMin = S.cp === "sentence" ? 13 : Math.round(150 / S.n);
+    if (!ui.est || !T) return; const nq = new Set(S.dets.filter(d => d.scope === "person").map(d => d.q)).size, tok = nq * PER_Q + 2 * winWords(), perMin = S.cp === "sentence" ? 13 : Math.round(150 / S.n);
     ui.est.textContent = `~${tok} tokens a check · ${isHosted() ? "about " + money(tok * perMin * 2 * TARIFF / 1e6) + " per call minute (two people)" : "free: runs on this machine"}`;
   }
   function showConfirm(list) {
@@ -590,7 +663,7 @@
     else if (s.identity_ok === false) ui.mstate.append(el("span", { class: "badge warn", text: "identity does not match its label" }));
     else ui.mstate.append(el("span", { class: "badge " + (s.hosted ? "warn" : "good"), text: s.hosted ? "hosted (paid)" : "loaded" }), el("span", { class: "small muted", text: (s.identity || "") + (s.gpu_mb ? ` · ${(s.gpu_mb / 1024).toFixed(1)} GiB` : "") }));
   }
-  function setModel(id) { if (id === S.model) return; S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderLanes(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
+  function setModel(id) { if (id === S.model) return; S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderDets(); renderDetTab(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
   function bestWindow() {
     const e = D.study && Object.values(D.study).find(x => x && String(x.backend).toLowerCase().replace("jev (typesafe)", "jev") === S.model);
     if (e && e.windows) { const c = WINS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
@@ -602,8 +675,10 @@
   function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return Object.fromEntries([...p.entries()]); }
   function writeHash() { const p = new URLSearchParams(); p.set("src", S.src); if (S.src === "dlg") p.set("dlg", S.dlg); p.set("model", S.model); p.set("win", S.win); p.set("cp", S.cp); p.set("n", S.n); p.set("gate", S.gate); p.set("speed", S.speed); p.set("mode", S.mode); if (S.coach) p.set("coach", S.coach); if (S.names) p.set("names", "1"); history.replaceState(null, "", "#" + p.toString()); }
   function exportData() {
-    return { exported: new Date().toISOString(), note: "Per-person windows; scores are model probabilities, not verdicts. Speakers are diarized ids (Person N); source names are in speakers.", settings: { model: S.model, window: S.win, checkpoints: S.cp, n: S.n, alert_at: S.gate, mode: S.mode, coached: SP.by[S.coach] && SP.by[S.coach].label }, source: T.meta.title, speakers: SP.list.map(p => ({ label: p.label, source_name: p.name })),
-      signals: S.sigs.map(s => ({ key: s.key, label: s.label, role: s.role, custom: s.custom, question: QALL[s.q] ? QALL[s.q].instructions : s.q })), checks: CPS.map(c => ({ n: c.n, t: +c.t.toFixed(2), person: SP.by[c.spk] && SP.by[c.spk].label, role: c.role, scope: c.scope, state: c.state, scores: c.answers || null })), flags: FLAGS.map(f => ({ ...f, person: SP.by[f.spk] && SP.by[f.spk].label })), lag_ms_p50: Object.fromEntries(Object.entries(LAGS).map(([k, v]) => [k, Math.round(p50(v))])), failed_checks: failed };
+    return { exported: new Date().toISOString(), note: "Per-person windows; scores are model probabilities, not verdicts. Speakers are diarized ids (Person N). Each request is exactly what is sent to the model's POST /v1/systemone.", settings: { model: S.model, window: S.win, checkpoints: S.cp, n: S.n, alert_at: S.gate, mode: S.mode, coached: SP.by[S.coach] && SP.by[S.coach].label }, source: T.meta.title, speakers: SP.list.map(p => ({ label: p.label, source_name: p.name })),
+      detectors: S.dets.map(d => ({ key: d.key, label: d.label, icon: d.icon, scope: d.scope, custom: d.custom, question: QALL[d.q] ? QALL[d.q].instructions : d.q })),
+      requests: CPS.map(c => ({ n: c.n, t: +c.t.toFixed(2), person: c.scope === "call" ? "whole call" : SP.by[c.spk] && SP.by[c.spk].label, well_formed: validateReq(c.req).length === 0, request: c.req, scores: c.answers || null })),
+      flags: FLAGS.map(f => ({ ...f, person: f.spk === "_call" ? "whole call" : SP.by[f.spk] && SP.by[f.spk].label })), lag_ms_p50: Object.fromEntries(Object.entries(LAGS).map(([k, v]) => [k, Math.round(p50(v))])), failed_checks: failed };
   }
 
   /* ---------- boot ---------- */
@@ -624,7 +699,7 @@
     if (h.cp === "words" || h.cp === "sentence") S.cp = h.cp; if (h.n && Number.isFinite(+h.n)) S.n = clamp(Math.round(+h.n), 3, 20); if (h.gate && Number.isFinite(+h.gate)) S.gate = clamp(+h.gate, 0.3, 0.95);
     if (SPEEDS.some(([v]) => v === h.speed)) S.speed = h.speed; if (h.mode === "replay" || h.mode === "live") S.mode = h.mode; S.names = h.names === "1"; S.coach = h.coach || null;
     S.paste = kv.get("cockpit.paste") || "";
-    for (const [pid, role] of DEFAULTS) addDetector(pid, role, true);
+    for (const id of DEFAULTS) addLibrary(id, true);
     T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0];
     return build();
   }
@@ -636,67 +711,80 @@
     ui.dlgField = el("div", { class: "field" }, el("label", { for: "dlg", text: "Dialogue (label hidden)" }), dlgSel);
     const ta = el("textarea", { id: "paste", rows: 3, "aria-label": "Pasted text", placeholder: "Agent: Hello, this is your bank.\nCaller: Who is this?" }); ta.value = S.paste; let tt; ta.addEventListener("input", () => { S.paste = ta.value; kv.set("cockpit.paste", S.paste); clearTimeout(tt); tt = setTimeout(() => { if (S.src === "paste") rebuild(); }, 400); });
     ui.pasteField = el("div", { class: "field", style: "flex:1 1 320px" }, el("label", { for: "paste", text: 'Transcript, one "Speaker: text" per line' }), ta);
-    ui.spkNote = el("span", { class: "spknote" });
+    ui.spkNote = el("span", { class: "small subtle", style: "align-self:center" });
     ui.play = el("button", { class: "btn primary", type: "button", id: "play", onclick: onPlay }, "Play");
     const speed = el("div", { class: "segmented", role: "group", "aria-label": "Playback speed" }, SPEEDS.map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.speed === v), "data-s": v, text: t, onclick: () => { S.speed = v; speed.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === v))); writeHash(); } })));
     const mode = el("div", { class: "segmented", role: "group", "aria-label": "Mode" }, [["replay", "Replay"], ["live", "Live"]].map(([k, t]) => el("button", { type: "button", "aria-pressed": String(S.mode === k), "data-m": k, text: t, title: k === "replay" ? "Precompute every check first; playback is then instant and free to repeat." : "Call at each check as playback reaches it and measure the lag.", onclick: () => { S.mode = k; S.armed = false; mode.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === k))); writeHash(); updatePlay(); } })));
     const namesCb = el("input", { type: "checkbox", id: "names", onchange: () => { S.names = namesCb.checked; relabel(); } }); namesCb.checked = S.names;
     ui.clock = el("span", { class: "num", text: "00:00" }); ui.pill = el("span", { class: "pill" }, el("span", { class: "rec" }), "LIVE ", ui.clock); ui.behind = el("span", { class: "small muted", role: "status" });
     ui.confirm = el("div", { role: "status" }); ui.status = el("div", { class: "notice small", role: "status" }); ui.err = el("span", { class: "small err", role: "alert" });
-    const top = el("div", { class: "top" }, el("div", {}, el("h1", { text: "Call cockpit" }), el("p", { class: "sub", text: "One colour per speaker. Signals rise, hold and fade so there is time to react." })),
+    const top = el("div", { class: "top" }, el("div", {}, el("h1", { text: "Call cockpit" }), el("p", { class: "sub", text: "Detectors have a colour and an icon. Signals rise, hold and fade so there is time to react." })),
       el("div", { class: "ctl" }, el("div", { class: "field" }, el("label", { for: "src", text: "Transcript" }), srcSel), ui.dlgField, el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Mode" }), mode),
         ui.play, el("button", { class: "btn", type: "button", onclick: () => { resetRun(); updatePlay(); }, text: "Restart" }), el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Speed" }), speed), ui.pill,
         el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-${Date.now()}.json`, JSON.stringify(exportData(), null, 1), "application/json"), text: "Export" }), el("button", { class: "btn", type: "button", onclick: () => copy(location.href), text: "Copy link" })));
     const note = el("details", { class: "callout warn" }, el("summary", {}, el("strong", { text: "Technique signals, not verdicts." }), " Probabilities, not reasons. Read the caveats"),
-      el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy; custom sentences are unvalidated. Speakers are diarized ids, so they are shown as Person N with a colour. Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model." }));
-    /* signals header: add a detector or your own sentence for a role */
-    ui.wnote = el("div", { class: "wnote", role: "status" }); let wt = 0, wrole = "others";
-    const say = (t) => { ui.wnote.textContent = t; clearTimeout(wt); wt = setTimeout(() => { ui.wnote.textContent = ""; }, 4500); };
-    const input = el("input", { type: "text", id: "watch-in", placeholder: "Write what to watch for, or pick a detector", "aria-label": "What to watch for", style: "flex:1 1 220px" });
-    const pick = el("select", { "aria-label": "Detector", id: "watch-pick", style: "flex:0 1 150px" }, el("option", { value: "", text: "Detector…" }), PERSP.map(p => el("option", { value: p.id, text: p.name + (p.scope === "call" ? " (whole call)" : "") })));
-    const roleSeg = el("span", { class: "segmented", role: "group", "aria-label": "Watch whom" }); const drawRole = () => roleSeg.replaceChildren(...[["others", "Everyone else"], ["coach", "Coached"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(v === wrole), onclick: () => { wrole = v; drawRole(); }, text: t }))); drawRole();
-    const add = () => { let ok = false; if (pick.value) { ok = addDetector(pick.value, wrole); pick.value = ""; } else if (input.value.trim()) { ok = addCustom(input.value, wrole, false); if (ok) input.value = ""; } else return say("Pick a detector or write a sentence."); if (ok) { renderLanes(); refreshChartSel(); afterConfig(); say("Added. It starts scoring at the next check; your own sentences are unvalidated."); } };
-    input.addEventListener("keydown", e => { if (e.key === "Enter") add(); });
-    ui.lanebox = el("div", { id: "lanebox" });
-    ui.lanes = el("section", { class: "pn", "data-pane": "signals", style: "grid-area:lanes" }, el("header", {}, el("h4", { text: "Signals per person" }), ui.spkNote, el("div", { class: "wadd", style: "margin-left:auto;flex:1 1 auto;max-width:700px" }, input, pick, roleSeg, el("button", { class: "btn", type: "button", onclick: add, text: "Add" })), ui.wnote), ui.lanebox);
+      el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy in the Detectors tab; your own detectors are unvalidated (marked ?). Speakers are diarized ids, so they are shown as Person N. Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model. The Request tab shows exactly what is sent to the model." }));
+    /* top: detectors bar and person cards */
+    ui.dets = el("div", { class: "dets", id: "dets" }); ui.people = el("div", { class: "people", id: "people" });
+    const addBtn = el("button", { class: "btn", type: "button", id: "add-det", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dname.focus(), 50); }, text: "+ Add" });
+    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, ui.spkNote, addBtn)), el("div", { class: "trow" }, el("h4", { text: "People" }), ui.people, el("span")));
     /* conversation */
     ui.track = el("div", { class: "track" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" });
     const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.readnote);
-    /* rail: cue cards for everyone else, coaching for the person you pick */
+    /* rail: cue cards for everyone else, coaching for the person you pick, tabbed card */
     ui.moms = el("div", { id: "moms" }); ui.more = el("span", { class: "r" });
     const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), el("span", { class: "subtle small", text: "everyone else" }), ui.more), el("div", { class: "bd" }, ui.moms));
     ui.thI = el("i", { class: "th" }); ui.meI = el("i", { class: "me" }); ui.bl1 = el("div", { class: "bl num" }); ui.bl2 = el("div", { class: "bl num" }); ui.tip = el("div", { class: "tip" }); ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" }); ui.rf = el("div");
-    const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addCustom(kpIn.value, "coach", true); kpIn.value = ""; renderKp(); afterConfig(); } } });
+    const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addKeyPoint(kpIn.value); kpIn.value = ""; renderKp(); afterConfig(); } } });
     ui.coachSel = el("select", { id: "coach", "aria-label": "Who do you want to coach?", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.coach = ui.coachSel.value; resetRun(); refreshCoach(); writeHash(); updatePlay(); } });
-    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", style: "min-height:0", title: "Diarization gives ids, not names. Show the source's own speaker names instead." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, el("div", { class: "bt", text: "Talk share, last 60 s" }), el("div", { class: "split" }, ui.thI, ui.meI), ui.bl1, el("div", { class: "bt", text: "Pace" }), ui.bl2, ui.tip,
+    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Diarization gives ids, not names. Show the source's own speaker names instead." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, el("div", { class: "bt", text: "Talk share, last 60 s" }), el("div", { class: "split" }, ui.thI, ui.meI), ui.bl1, el("div", { class: "bt", text: "Pace" }), ui.bl2, ui.tip,
       el("div", { class: "bt", style: "margin-top:8px", text: "Recent flags on this person" }), ui.rf, el("div", { class: "bt", style: "margin-top:8px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
+    /* tabs: Flagged | Detectors | Settings | Request | Events */
+    ui.log = el("div"); ui.pane_flag = el("div", { class: "tabpane" }, ui.log);
+    ui.dlist = el("div"); ui.dcount = el("span", { class: "small muted" }); ui.libSel = el("select", { id: "lib-sel", "aria-label": "Add a validated detector", style: "flex:1" });
+    ui.dname = el("input", { type: "text", id: "det-name", placeholder: "Name, e.g. Budget mentioned", "aria-label": "Detector name" }); const dwhat = el("textarea", { id: "det-what", rows: 2, placeholder: "What should it detect? e.g. The speaker states a price, budget or amount of money.", "aria-label": "What should it detect" }); const dex = el("input", { type: "text", id: "det-example", placeholder: "An example that should trigger it, e.g. Our budget is around forty thousand.", "aria-label": "Example" });
+    let dscope = "person"; const scopeSeg = el("span", { class: "segmented", role: "group", "aria-label": "Applies to" }); const drawScope = () => scopeSeg.replaceChildren(...[["person", "Each person"], ["call", "Whole call"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(v === dscope), onclick: () => { dscope = v; drawScope(); }, text: t }))); drawScope();
+    const iconBox = el("div", { class: "icons", role: "group", "aria-label": "Icon" }); const drawIcons = () => iconBox.replaceChildren(...ICON_NAMES.map(n => el("button", { type: "button", title: n, "aria-label": "Icon " + n, "aria-pressed": String(n === formIcon), onclick: () => { formIcon = formIcon === n ? "" : n; drawIcons(); } }, iconEl(n, 16)))); drawIcons();
+    const doAdd = () => { if (ui.libSel.value) { if (addLibrary(ui.libSel.value)) { ui.libSel.value = ""; renderDets(); renderDetTab(); renderPeople(); afterConfig(); ui.dmsg.textContent = "Added. It starts scoring at the next check."; } return; } if (addCustom(ui.dname.value, dwhat.value, dex.value, formIcon, dscope)) { ui.dname.value = ""; dwhat.value = ""; dex.value = ""; formIcon = ""; drawIcons(); renderDets(); renderDetTab(); renderPeople(); afterConfig(); ui.dmsg.textContent = "Added. Your own detectors are unvalidated (marked ?)."; } };
+    ui.dmsg = el("span", { class: "small muted", role: "status" });
+    ui.pane_det = el("div", { class: "tabpane", hidden: true }, el("div", { style: "display:flex;justify-content:space-between" }, el("span", { class: "bt", text: "Detectors" }), ui.dcount), ui.dlist,
+      el("div", { class: "dform" }, el("div", { class: "bt", text: "Add a detector" }), el("div", { style: "display:flex;gap:6px" }, ui.libSel, el("button", { class: "btn", type: "button", onclick: doAdd, text: "Add" })), el("div", { class: "small subtle", text: "or describe your own:" }),
+        el("label", {}, "Name", ui.dname), el("label", {}, "What should it detect?", dwhat), el("label", {}, "An example that should trigger it", dex), el("label", {}, "Applies to", scopeSeg), el("label", {}, "Icon (optional)", iconBox), el("div", { style: "display:flex;gap:8px;align-items:center" }, el("button", { class: "btn primary", type: "button", id: "det-add", onclick: doAdd, text: "Add detector" }), ui.dmsg)));
     ui.models = el("span", { class: "segmented", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("span", { class: "row", style: "gap:6px" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per person" });
     const cadSeg = el("span", { class: "segmented", role: "group", "aria-label": "How often to score" }); const nIn = el("input", { type: "number", min: "3", max: "20", step: "1", "aria-label": "Words between checks", style: "width:56px;min-height:28px", onchange: () => { S.n = clamp(Math.round(+nIn.value) || 5, 3, 20); nIn.value = S.n; resetRun(); writeHash(); refreshEst(); } }); nIn.value = S.n; nIn.hidden = S.cp !== "words";
     const drawCad = () => { cadSeg.replaceChildren(...[["sentence", "sentence"], ["words", "N words"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.cp === v), onclick: () => { S.cp = v; nIn.hidden = v !== "words"; drawCad(); resetRun(); writeHash(); refreshEst(); }, text: t }))); }; drawCad();
-    const gate = el("input", { type: "range", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Alert at", style: "width:110px;min-height:24px", oninput: () => { S.gate = +gate.value; gv.textContent = S.gate.toFixed(2); writeHash(); } }); gate.value = S.gate; const gv = el("strong", { text: S.gate.toFixed(2) });
-    ui.est = el("div", { class: "est" }); ui.log = el("div"); ui.evs = el("div", { hidden: true }); ui.lst = el("div", { class: "lst" }, ui.log, ui.evs); ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged so far"], ["ev", "What actually happened"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k), text: t })));
-    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(236px,27vh,320px);min-height:170px" }, el("header", {}, el("h4", { text: "Captured so far" }), ui.mstate),
-      el("div", { class: "bd", style: "display:flex;flex-direction:column;overflow:hidden" }, el("div", { class: "mrow" }, ui.models), el("div", { class: "mrow" }, el("span", { class: "l", text: "Window" }), ui.winSeg, el("span", { class: "l", text: "Check every" }), cadSeg, nIn), el("div", { class: "mrow" }, el("span", { class: "l" }, "Alert at ", gv), gate, ui.est, ui.behind), ui.err, ui.tabs, ui.lst));
+    const gate = el("input", { type: "range", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Alert at", style: "width:120px;min-height:24px", oninput: () => { S.gate = +gate.value; gv.textContent = S.gate.toFixed(2); writeHash(); } }); gate.value = S.gate; const gv = el("strong", { text: S.gate.toFixed(2) });
+    ui.est = el("div", { class: "est" });
+    ui.pane_set = el("div", { class: "tabpane", hidden: true }, el("div", { class: "bt", text: "Model" }), el("div", { class: "mrow" }, ui.models, ui.mstate), el("div", { class: "bt", text: "What each model reads" }), el("div", { class: "mrow" }, el("span", { class: "l", text: "Window per person" }), ui.winSeg), el("div", { class: "mrow" }, el("span", { class: "l", text: "Check every" }), cadSeg, nIn),
+      el("div", { class: "bt", text: "Alert" }), el("div", { class: "mrow" }, el("span", { class: "l" }, "Alert at ", gv), gate), ui.est, ui.behind, ui.err);
+    ui.reqPre = el("pre", { class: "req", tabindex: "0", "aria-label": "Request body" }); ui.reqBadge = el("div", { class: "row", style: "gap:6px;margin-top:6px" }); ui.reqSelEl = el("select", { "aria-label": "Which check", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.reqSel = ui.reqSelEl.value; renderReq(); } });
+    ui.pane_req = el("div", { class: "tabpane", hidden: true }, el("div", { class: "small muted", text: "Exactly what is sent to the model's POST /v1/systemone for a check. The demo server wraps checks in /api/batch and sends only the questions not already answered." }),
+      el("div", { class: "mrow", style: "margin-top:6px" }, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy request" }), el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all requests" })), ui.reqBadge, ui.reqPre);
+    ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, el("div", { class: "small muted", text: "What actually happened, from cited sources, for comparison with the detectors." }), ui.evs);
+    ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["ev", "Events"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k), text: t })));
+    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(236px,29vh,340px);min-height:170px" }, el("header", {}, el("h4", { text: "Captured so far" })), ui.tabs, ui.pane_flag, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_ev);
     const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap);
-    ui.chartSel = el("select", { id: "chart-sig", "aria-label": "Signal shown in the chart", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.chartSig = ui.chartSel.value; } });
-    const chartCv = el("canvas"); const hist = el("section", { class: "pn", "data-pane": "history", style: "grid-area:chart" }, el("header", {}, el("h4", { text: "Last 60 seconds" }), ui.chartSel, el("span", { class: "key", style: "margin-left:auto" }, el("span", {}, el("i"), "one line per person"), el("span", {}, el("i", { class: "d" }), "coached person"), EVENTS.length ? el("span", { text: "E = documented event" }) : null)), el("div", { class: "chartwrap" }, chartCv));
-    ui.stage = el("main", { class: "stage", "data-tab": "talk" }, ui.lanes, conv, rail, hist);
-    const tabsbar = el("nav", { class: "tabsbar", "aria-label": "Sections" }, [["talk", "Talk"], ["signals", "Signals"], ["cues", "Cues"], ["history", "History"]].map(([k, t]) => el("button", { type: "button", "data-t": k, "aria-selected": String(k === "talk"), text: t, onclick: () => { ui.stage.dataset.tab = k; tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === k))); } })));
-    const root = el("div", { class: "cp" }, top, note, ui.confirm, ui.status, ui.stage, tabsbar);
+    /* history */
+    const chartCv = el("canvas"); const viewSeg = el("span", { class: "segmented", role: "group", "aria-label": "History view" }, [["det", "By detector"], ["person", "By person"]].map(([k, t]) => el("button", { type: "button", "data-v": k, "aria-pressed": String(S.view === k), text: t, onclick: () => { S.view = k; viewSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === k))); } })));
+    const hist = el("section", { class: "pn", "data-pane": "history", style: "grid-area:chart" }, el("header", {}, el("h4", { text: "Last 60 seconds" }), viewSeg, el("span", { class: "key r" }, "Brighter = higher. Bright edge = above the alert level. Hover for who and what." + (EVENTS.length ? " E = documented event." : ""))), el("div", { class: "chartwrap" }, chartCv));
+    ui.stage = el("main", { class: "stage", "data-tab": "talk" }, toppn, conv, rail, hist);
+    ui.tabsbar = el("nav", { class: "tabsbar", "aria-label": "Sections" }, [["talk", "Talk"], ["signals", "Signals"], ["cues", "Cues"], ["history", "History"]].map(([k, t]) => el("button", { type: "button", "data-t": k, "aria-selected": String(k === "talk"), text: t, onclick: () => { ui.stage.dataset.tab = k; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === k))); } })));
+    const root = el("div", { class: "cp" }, top, note, ui.confirm, ui.status, ui.stage, ui.tabsbar);
     window.refreshSrcPanels = () => { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; }; window.refreshSrcPanels();
     top.append(ui.pasteField);
     glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 6); chart = Chart(chartCv);
-    runner = makeRunner(); refreshCoach(); refreshChartSel(); renderLanes(); renderKp(); renderRecent(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
+    runner = makeRunner(); refreshCoach(); renderDets(); renderDetTab(); renderPeople(); renderKp(); renderRecent(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
     Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
     document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
     last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { S, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
     return root;
   }
   window.refreshSrcPanels = () => {};
+  let hitTick = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
-    tickSigs(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateLanes(); updateBalance(); chart.draw();
+    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateBalance(); chart.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); }
     const c = mmss(S.t); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
     const b = pending ? `${pending} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
   }
