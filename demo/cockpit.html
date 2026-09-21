@@ -78,15 +78,16 @@
   .rail { grid-area: rail; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
   .cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 130px; }
   .stackroot { position: relative; overflow: hidden; }
-  .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 4px 8px 5px; background: var(--surface); height: 46px; overflow: hidden; }
-  .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); } .moment.cool .q { color: var(--text-3); }
-  .moment .mh { display: flex; align-items: center; gap: 6px; height: 20px; min-width: 0; }
+  .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 0 6px 0 8px; background: var(--surface); height: 34px; overflow: hidden; display: flex; align-items: center; gap: 7px; }
+  .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); }
   .moment .ic { color: var(--c); display: grid; place-items: center; flex: none; }
-  .moment .q { font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .moment .age { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); white-space: nowrap; }
-  .moment .ft { display: flex; align-items: center; gap: 2px; height: 16px; min-width: 0; margin-top: 1px; }
-  .moment .n { font-size: 11.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; margin-right: auto; }
-  .moment .btn { font-size: 11px; padding: 0 5px; line-height: 14px; min-height: 0; }
+  .moment .nm { font-weight: 650; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .moment .who { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 66px; flex: 0 1 auto; }
+  .moment .pc { font: 600 11px var(--mono); color: var(--text); flex: none; }
+  .moment .cnt { font: 500 10.5px var(--mono); color: var(--text-3); flex: none; }
+  .moment .age { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); white-space: nowrap; flex: none; }
+  .moment .btn { font-size: 11px; padding: 0 4px; line-height: 16px; min-height: 0; flex: none; }
+  .moment.cool .nm { color: var(--text-2); font-weight: 500; }
   .moment .hold { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); } .moment .hold i { display: block; height: 100%; background: var(--c); transform-origin: left; }
   .scroll { overflow: auto; min-height: 0; }
   .bt { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 2px 0 4px; }
@@ -399,7 +400,7 @@
     FLAGS.push(fl); highlight(chk, d, v.score); addLog(fl); renderHits(who);
     if (d.scope !== "call" && isCoach(chk.spk)) { renderRecent(); return; }
     const c = cards.find(x => x.det === d.key && x.spk === who && S.t - x.t < 12);
-    if (c) { c.n++; c.t = S.t; c.p = v.score; c.q.textContent = "“" + quote.replace(/[.,!?;:]+$/, "") + "”"; c.cnt.textContent = "×" + c.n; c.note.textContent = cardNote(c); }
+    if (c) { c.n++; c.t = S.t; c.p = v.score; c.cnt.textContent = "×" + c.n; c.pc.textContent = Math.round(v.score * 100) + "%"; }
     else newCard(d, chk, fl, who);
   }
   function highlight(chk, d, p) {
@@ -426,21 +427,19 @@
       frame(dt) { const k = 1 - Math.exp(-dt / 0.17), H = root.clientHeight; for (const it of items) { it.y += (it.ty - it.y) * k; const want = it.leaving ? 0 : it.ty + it.h > H + 2 ? 0 : 1; it.o += (want - it.o) * k * 1.3; it.el.style.transform = `translate3d(0,${it.y.toFixed(1)}px,0)`; it.el.style.opacity = it.o.toFixed(3); } },
     };
   }
-  const cardNote = (c) => `${lab(c.spk)} · ${mmss(c.t)} · ${Math.round(c.p * 100)}%`;
   function newCard(d, chk, fl, who) {
-    const bar = el("i"), age = el("span", { class: "age" }, "00:00 ago"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
-    const q = el("span", { class: "q", text: "“" + fl.quote.replace(/[.,!?;:]+$/, "") + "”" }), note = el("span", { class: "n" }), cnt = el("span", { class: "subtle small" });
+    const bar = el("i"), age = el("span", { class: "age" }, "00:00"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
+    const cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: Math.round(fl.p * 100) + "%" }), whoEl = el("span", { class: "who", "data-lab-spk": who, text: lab(who) });
     const node = el("article", { class: "moment", style: cvar(d.slot), title: `${d.label}: ${d.about}`, "data-flag": fl.id },
-      el("div", { class: "mh" }, el("span", { class: "ic" }, iconEl(d.icon, 15)), el("b", { class: "small", text: d.label }), cnt, q, age), el("div", { class: "ft" }, note, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" })), el("div", { class: "hold", "aria-hidden": "true" }, bar));
-    const card = { det: d.key, spk: who, t: S.t, p: fl.p, n: 1, el: node, bar, age, q, note, cnt, pinned: false, last: "", it: null };
-    note.textContent = cardNote(card);
+      el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), whoEl, cnt, pc, age, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" }), el("div", { class: "hold", "aria-hidden": "true" }, bar));
+    const card = { det: d.key, spk: who, t: S.t, p: fl.p, n: 1, el: node, bar, age, cnt, pc, who: whoEl, pinned: false, last: "", it: null };
     pin.addEventListener("click", () => { card.pinned = !card.pinned; pin.setAttribute("aria-pressed", String(card.pinned)); pin.textContent = card.pinned ? "Pinned" : "Pin"; });
     card.it = stack.add(node); cards.push(card);
   }
   function tickCards() {
     for (const c of cards) {
       const a = S.t - c.t, hot = a < HOLD || c.pinned; c.bar.style.transform = `scaleX(${c.pinned ? 1 : clamp(1 - a / HOLD, 0, 1).toFixed(3)})`;
-      const txt = mmss(a) + " ago"; if (txt !== c.last) { c.age.textContent = txt; c.last = txt; } if (c.el.classList.contains("cool") === hot) c.el.classList.toggle("cool", !hot);
+      const txt = mmss(a); if (txt !== c.last) { c.age.textContent = txt; c.last = txt; } if (c.el.classList.contains("cool") === hot) c.el.classList.toggle("cool", !hot);
     }
     const n = stack.hidden(), t = n ? `+${n} earlier` : ""; if (ui.more.textContent !== t) ui.more.textContent = t;
   }
@@ -603,7 +602,7 @@
     const n = SP.list.length; ui.spkNote.textContent = `${n} speaker${n > 1 ? "s" : ""}` + (n > LIVE_STREAMS ? ` · the planned live model separates ${LIVE_STREAMS} at once` : "");
   }
   function rebuild() { T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0]; refreshCoach(); resetRun(); writeHash(); updatePlay(); refreshEst(); }
-  function relabel() { document.querySelectorAll("[data-lab-spk]").forEach(e => { e.textContent = lab(e.dataset.labSpk); }); refreshCoach(); cards.forEach(c => { c.note.textContent = cardNote(c); }); writeHash(); }
+  function relabel() { document.querySelectorAll("[data-lab-spk]").forEach(e => { e.textContent = lab(e.dataset.labSpk); }); refreshCoach(); writeHash(); }
   const speedF = () => Number(S.speed);
   function play() { if (S.done) resetRun(); S.playing = true; last = performance.now(); updatePlay(); }
   function pause() { S.playing = false; updatePlay(); }
@@ -728,7 +727,7 @@
     const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.readnote);
     /* rail: cue cards for everyone else, coaching for the person you pick, tabbed card */
     ui.moms = el("div", { id: "moms" }); ui.more = el("span", { class: "r" });
-    const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), el("span", { class: "subtle small", text: "everyone else" }), ui.more), el("div", { class: "bd" }, ui.moms));
+    const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), ui.more), el("div", { class: "bd" }, ui.moms));
     ui.thI = el("i", { class: "th" }); ui.meI = el("i", { class: "me" }); ui.bl1 = el("div", { class: "bl num" }); ui.bl2 = el("div", { class: "bl num" }); ui.tip = el("div", { class: "tip" }); ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" }); ui.rf = el("div");
     const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addKeyPoint(kpIn.value); kpIn.value = ""; renderKp(); afterConfig(); } } });
     ui.coachSel = el("select", { id: "coach", "aria-label": "Who do you want to coach?", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.coach = ui.coachSel.value; resetRun(); refreshCoach(); writeHash(); updatePlay(); } });
@@ -767,7 +766,7 @@
     const root = el("div", { class: "cp" }, top, note, ui.confirm, ui.status, ui.stage, ui.tabsbar);
     window.refreshSrcPanels = () => { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; }; window.refreshSrcPanels();
     top.append(ui.pasteField);
-    glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 6); chart = Chart(chartCv);
+    glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 4); chart = Chart(chartCv);
     runner = makeRunner(); refreshCoach(); renderDets(); renderDetTab(); renderPeople(); renderKp(); renderRecent(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
     Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
     document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
