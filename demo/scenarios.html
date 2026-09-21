@@ -70,6 +70,7 @@
   .txt.clamp { max-height: 4.5em; overflow: hidden; }
   
   .txtwrap .btn { min-height: 20px; padding: 0 6px; font-size: 12px; }
+  th.fam { text-align: center; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   td.idc { max-width: 170px; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
   td.conf { min-width: 150px; }
   .qline { color: var(--text-3); font-size: 11.5px; margin-bottom: 3px; }
@@ -239,7 +240,7 @@ mount(document.getElementById("root"), async () => {
     for (const p of PROBES) {
       const m = meta(p.id);
       if (m.group !== last) { last = m.group; rail.append(el("h4", { text: m.group })); og = el("optgroup", { label: m.group }); select.append(og); }
-      rail.append(link(p.id, m.name, `${p.n} · ${nClasses(p)} cl`));
+      { const a = link(p.id, m.name, ""); a.title = `${p.n} items, ${nClasses(p)} classes`; rail.append(a); }
       og.append(el("option", { value: p.id, text: `${m.name} (${p.n})`, selected: ST.set === p.id }));
     }
   };
@@ -282,6 +283,8 @@ function renderOverview(details) {
   let above = 0, below = 0, within = 0;
   for (const m of mids) for (const x of sets) { const s = cell[m][x.p.id]; if (!s) continue; const c = chance(x.p); if (s.lo > c) above++; else if (s.hi < c) below++; else within++; }
 
+  const fam = []; for (const x of sets) { const g = meta(x.p.id).group; if (fam.length && fam[fam.length - 1][0] === g) fam[fam.length - 1][1]++; else fam.push([g, 1]); }
+  const headG = el("tr", { class: "famrow" }, el("th", { colspan: 3, text: "" }), fam.map(([g, k]) => el("th", { colspan: k, class: "fam", text: g })));
   const head1 = el("tr", {}, el("th", { "data-sort": "text", text: "Model" }), el("th", { "data-sort": "num", text: "Macro avg" }), el("th", { "data-sort": "num", text: "Sets run" }),
     sets.map(x => el("th", { "data-sort": "num", title: `${meta(x.p.id).name}: ${x.p.n} items, ${nClasses(x.p)} classes`, text: meta(x.p.id).short })));
   const head2 = el("tr", {}, el("th", { text: "n · chance" }), el("th", { text: "mean chance" }), el("th", { text: "" }),
@@ -300,7 +303,7 @@ function renderOverview(details) {
           el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title, text: pc(s.acc) }));
       }));
   }));
-  const table = el("table", { class: "data heat" }, el("thead", {}, head1, head2), body);
+  const table = el("table", { class: "data heat" }, el("thead", {}, headG, head1, head2), body);
   Jev.sortable(table);
   const exportCsv = () => {
     const h = ["model", "macro_accuracy", "sets_run"]; for (const x of sets) h.push(`${x.p.id}_acc`, `${x.p.id}_ci95_lo`, `${x.p.id}_ci95_hi`, `${x.p.id}_n`);
