@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mock 3 - Intake board</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 1.6fr); gap: 14px; align-items: start; }
+  .tr { height: 70vh; overflow-y: auto; padding: 12px 14px; scroll-behavior: smooth; }
+  .ln { margin-bottom: 10px; } .ln .words { font-size: 15px; }
+  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .slot { --h: 210; padding: 12px; min-height: 108px; border-top: 4px solid var(--line); transition: border-color .3s, background .3s; }
+  .slot.on { border-top-color: hsl(var(--h) 65% 50%); background: color-mix(in srgb, hsl(var(--h) 80% 50%) 6%, var(--panel)); }
+  .slot .k { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
+  .slot .v { margin-top: 8px; font-size: 15px; min-height: 22px; }
+  .slot .need { color: var(--mute); font-size: 12px; font-style: italic; }
+  .slot.on .need { display: none; }
+  .slot.flash { animation: flash .9s ease-out; }
+  @keyframes flash { from { box-shadow: 0 0 0 3px hsl(var(--h) 70% 55% / .6); } to { box-shadow: var(--shadow); } }
+  .meter { padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .meter .track { flex: 1; height: 12px; background: var(--line); border-radius: 6px; overflow: hidden; }
+  .meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, #3aa876, #f5b301, #e5484d); background-size: 300px 100%; transition: width .5s ease; }
+  .lvl { font: 700 13px var(--mono); min-width: 88px; text-align: right; }
+  .hist { margin-top: 10px; font-size: 12px; color: var(--mute); }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .tr { height: 36vh; } }
+</style></head>
+<body><div class="wrap">
+  <div class="top"><a href="index.html">&larr; Mock-ups</a><h1>3. Intake board (emergency, support, sales qualifying)</h1><span class="sp"></span><span id="pick"></span><span id="ctl"></span></div>
+  <div id="banner"></div>
+  <div class="grid">
+    <div class="panel tr" id="tr" aria-live="polite"></div>
+    <div>
+      <div class="panel meter"><b>Attention</b><div class="track"><div class="fill" id="fill"></div></div><span class="lvl" id="lvl">CALM</span></div>
+      <div class="slots" id="slots"></div>
+      <div class="hist">A slot is one thing you asked to pull out. Grey and italic means nothing has been heard yet, so it is still worth asking. The attention level is the strongest recent signal, shown as a level rather than a number.</div>
+    </div>
+  </div>
+</div>
+<script src="apollo.js"></script><script src="data.js"></script><script src="mock.js"></script>
+<script>
+const { h } = Mock;
+let scn, player, line, recent;
+const tr = document.getElementById("tr"), slotsEl = document.getElementById("slots");
+
+function slotEl(w) {
+  return h("div", { class: "panel slot", id: "s-" + w.code, style: Mock.chipStyle(w.hue) },
+    h("div", { class: "k" }, h("span", { class: "code", style: Mock.chipStyle(w.hue) }, w.code), w.label, h("span", { class: "mute small", style: "margin-left:auto", id: "c-" + w.code }, "")),
+    h("div", { class: "v" }, h("span", { class: "need", id: "v-" + w.code }, "Not heard yet")));
+}
+function setAttention(p) {
+  document.getElementById("fill").style.width = Math.round(p * 100) + "%";
+  document.getElementById("lvl").textContent = p >= 0.85 ? "HIGH" : p >= 0.6 ? "ELEVATED" : "CALM";
+}
+function load(s) {
+  if (player) player.restart();
+  scn = s; recent = [];
+  document.getElementById("banner").replaceChildren(Mock.mockBanner(scn));
+  tr.replaceChildren(); setAttention(0.05); slotsEl.replaceChildren(...scn.watch.map(slotEl));
+  player = Mock.Player(scn, {
+    reset() { tr.replaceChildren(); setAttention(0.05); slotsEl.replaceChildren(...scn.watch.map(slotEl)); recent = []; },
+    turn(i, t) { line = h("div", { class: "ln" }, h("div", { class: "spk" }, t.speaker), h("div", { class: "words" })); tr.append(line); },
+    word(i, k, w) { line.lastChild.append(h("span", { class: "w", id: `w${i}_${k}` }, (k ? " " : "") + w)); tr.scrollTop = tr.scrollHeight; },
+    mark(m, i) {
+      const hue = Mock.hueOf(scn, m.code);
+      for (let k = m.from; k < m.to; k++) { const el = document.getElementById(`w${i}_${k}`); if (el) { el.classList.add("hl"); el.style.setProperty("--h", hue); } }
+      const slot = document.getElementById("s-" + m.code);
+      if (slot) {
+        slot.classList.add("on"); slot.classList.remove("flash"); void slot.offsetWidth; slot.classList.add("flash");
+        const v = slot.querySelector(".v"); v.replaceChildren(m.fact ? h("b", null, m.fact[1]) : m.note, m.fact ? h("div", { class: "small mute" }, m.note) : null);
+        document.getElementById("c-" + m.code).textContent = Mock.conf(m.p);
+      }
+      recent.push(m.p); setAttention(Math.max(...recent.slice(-3)));
+    },
+  });
+  document.getElementById("ctl").replaceChildren(Mock.controls(player));
+}
+document.getElementById("pick").append(Mock.scenarioPicker(Mock.byId("dispatch"), load));
+load(Mock.byId("dispatch"));
+</script></body></html>
