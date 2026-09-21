@@ -52,7 +52,7 @@
   .pcard { flex: 0 0 auto; width: 206px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px 4px; background: var(--surface-2); }
   .pcard.speaking { border-color: var(--accent); background: var(--accent-soft); }
   .pcard .h1 { display: flex; align-items: center; gap: 6px; min-height: 20px; }
-  .pnum { width: 18px; height: 18px; border-radius: 50%; background: var(--text-2); color: var(--bg); font: 700 10.5px var(--mono); display: grid; place-items: center; flex: none; }
+  .pnum { min-width: 22px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--text-2); color: var(--bg); font: 700 10.5px var(--mono); display: grid; place-items: center; flex: none; }
   .pcard .rt { font: 500 10px var(--mono); color: var(--accent); margin-left: auto; }
   .pcard b { font-size: 12px; font-weight: 650; }
   .hits { display: flex; gap: 3px; flex-wrap: wrap; min-height: 20px; }
@@ -76,13 +76,13 @@
   .readnote { font-size: 11px; color: var(--text-3); padding: 0 12px 8px; }
 
   .rail { grid-area: rail; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
-  .cols { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 130px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 190px; }
   .stackroot { position: relative; overflow: hidden; }
   .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 0 6px 0 8px; background: var(--surface); height: 34px; overflow: hidden; display: flex; align-items: center; gap: 7px; }
   .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); }
   .moment .ic { color: var(--c); display: grid; place-items: center; flex: none; }
   .moment .nm { font-weight: 650; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
-  .moment .who { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 66px; flex: 0 1 auto; }
+  .moment .who { font: 700 11px var(--mono); color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; flex: none; }
   .moment .pc { font: 600 11px var(--mono); color: var(--text); flex: none; }
   .moment .cnt { font: 500 10.5px var(--mono); color: var(--text-3); flex: none; }
   .moment .age { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); white-space: nowrap; flex: none; }
@@ -90,6 +90,13 @@
   .moment.cool .nm { color: var(--text-2); font-weight: 500; }
   .moment .hold { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); } .moment .hold i { display: block; height: 100%; background: var(--c); transform-origin: left; }
   .scroll { overflow: auto; min-height: 0; }
+  .cnote { border-left: 5px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-sm); padding: 10px 12px; display: grid; gap: 6px; }
+  .cnote.caution { border-left-color: var(--bad); background: var(--bad-soft); } .cnote.notice { border-left-color: var(--warn); background: var(--warn-soft); }
+  .cwin { display: flex; justify-content: space-between; font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
+  .chead { font-size: clamp(22px, 1.9vw, 28px); font-weight: 780; letter-spacing: -.02em; line-height: 1.05; }
+  .ctext { font-size: 15px; line-height: 1.35; font-weight: 500; }
+  .cwhy { font-size: 12px; color: var(--text-2); min-height: 16px; }
+  .ctimer .trk { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--text) 14%, transparent); overflow: hidden; } .ctimer .trk i { display: block; height: 100%; background: var(--text); transform-origin: left; }
   .bt { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 2px 0 4px; }
   .split { position: relative; height: 9px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
   .split i { position: absolute; top: 0; bottom: 0; width: 100%; } .split .th { left: 0; background: var(--text-3); transform-origin: left; transform: scaleX(.5); } .split .me { right: 0; background: var(--accent); transform-origin: right; transform: scaleX(.5); }
@@ -207,11 +214,14 @@
   /* ---------- speakers: diarization gives ids, not names, so each is "Person N" ---------- */
   function buildSpeakers() {
     SP = { list: [], by: {} };
-    T.speakers.forEach((name, i) => { const p = { name, n: i + 1, label: `Person ${i + 1}` }; SP.list.push(p); SP.by[name] = p; });
+    T.speakers.forEach((name, i) => { const p = { name, n: i + 1, label: `V${i + 1}` }; SP.list.push(p); SP.by[name] = p; });
     if (window.__cockpit) window.__cockpit.SP = SP;
   }
-  const lab = (spk) => spk === "_call" ? "Whole call" : S.names ? spk : (SP.by[spk] ? SP.by[spk].label : spk);
   const numOf = (spk) => SP.by[spk] ? SP.by[spk].n : "?";
+  const code = (spk) => spk === "_call" ? "Call" : "V" + numOf(spk);
+  const namesKnown = () => !!T && T.meta.kind !== "dialogue";
+  const nm = (spk) => S.names && namesKnown() ? spk : "";
+  const lab = (spk) => spk === "_call" ? "Whole call" : nm(spk) || code(spk);
   const isCoach = (spk) => spk === S.coach;
 
   /* ---------- transcript, timeline ---------- */
@@ -293,7 +303,7 @@
   }
   function callWindow(flat, spec) {
     const kind = spec[0], n = parseInt(spec.slice(1), 10), take = kind === "w" ? n : n * 40, tail = flat.slice(-take);
-    let out = [], prev = null; for (const x of tail) { if (x.spk !== prev) { out.push(`${lab(x.spk)}:`); prev = x.spk; } out.push(x.w); }
+    let out = [], prev = null; for (const x of tail) { if (x.spk !== prev) { out.push(`${x.spk}:`); prev = x.spk; } out.push(x.w); }
     const txt = out.join(" "); return kind === "w" ? txt : txt.split(/(?<=[.!?…])\s+/).filter(Boolean).slice(-n).join(" ");
   }
   const qidsFor = (chk) => [...new Set([...detsFor(chk).map(d => d.q), ...(chk.scope === "person" && isCoach(chk.spk) ? S.kps.map(k => k.q) : [])])];
@@ -398,7 +408,7 @@
     const st = stFor(d, chk.spk); st.lastFire = S.t; const who = d.scope === "call" ? "_call" : chk.spk;
     const quote = T.turns[chk.i].words.slice(chk.k0, chk.k + 1).join(" "), fl = { id: ++moSeq, det: d.key, label: d.label, icon: d.icon, slot: d.slot, spk: who, at: chk.spk, t: S.t, p: v.score, quote, i: chk.i, model: S.model };
     FLAGS.push(fl); highlight(chk, d, v.score); addLog(fl); renderHits(who);
-    if (d.scope !== "call" && isCoach(chk.spk)) { renderRecent(); return; }
+    if (d.scope !== "call" && isCoach(chk.spk)) return;
     const c = cards.find(x => x.det === d.key && x.spk === who && S.t - x.t < 12);
     if (c) { c.n++; c.t = S.t; c.p = v.score; c.cnt.textContent = "×" + c.n; c.pc.textContent = Math.round(v.score * 100) + "%"; }
     else newCard(d, chk, fl, who);
@@ -429,9 +439,9 @@
   }
   function newCard(d, chk, fl, who) {
     const bar = el("i"), age = el("span", { class: "age" }, "00:00"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
-    const cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: Math.round(fl.p * 100) + "%" }), whoEl = el("span", { class: "who", "data-lab-spk": who, text: lab(who) });
+    const cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: Math.round(fl.p * 100) + "%" }), whoEl = el("span", { class: "who", title: lab(who), text: who === "_call" ? "ALL" : code(who) });
     const node = el("article", { class: "moment", style: cvar(d.slot), title: `${d.label}: ${d.about}`, "data-flag": fl.id },
-      el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), whoEl, cnt, pc, age, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" }), el("div", { class: "hold", "aria-hidden": "true" }, bar));
+      el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), who === "_call" ? null : whoEl, cnt, pc, age, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" }), el("div", { class: "hold", "aria-hidden": "true" }, bar));
     const card = { det: d.key, spk: who, t: S.t, p: fl.p, n: 1, el: node, bar, age, cnt, pc, who: whoEl, pinned: false, last: "", it: null };
     pin.addEventListener("click", () => { card.pinned = !card.pinned; pin.setAttribute("aria-pressed", String(card.pinned)); pin.textContent = card.pinned ? "Pinned" : "Pin"; });
     card.it = stack.add(node); cards.push(card);
@@ -459,8 +469,8 @@
     let row = rows[wd.i];
     if (!row) {
       const tu = T.turns[wd.i], wordsEl = el("div", { class: "words" }); if (ui.caret.parentNode) ui.caret.remove();
-      row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (isCoach(tu.speaker) ? " coach" : "") }, el("div", { class: "pnum", "aria-hidden": "true", text: numOf(tu.speaker) }),
-        el("div", { class: "bub" }, el("div", { class: "who2" }, el("span", { "data-lab-spk": tu.speaker, title: tu.speaker, text: lab(tu.speaker) }), el("span", { class: "ts", text: mmss(tu.t0) })), el("div", { class: "txt" }, el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
+      row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (isCoach(tu.speaker) ? " coach" : "") }, el("div", { class: "pnum", "aria-hidden": "true", text: code(tu.speaker) }),
+        el("div", { class: "bub" }, el("div", { class: "who2" }, el("span", { "data-nm-spk": tu.speaker, title: tu.speaker, text: nm(tu.speaker) }), el("span", { class: "ts", text: mmss(tu.t0) })), el("div", { class: "txt" }, el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
       rows[wd.i] = row; ui.track.append(row.el); curSpk = tu.speaker;
       for (const k in PC) PC[k].node.classList.toggle("speaking", k === tu.speaker);
     }
@@ -496,11 +506,11 @@
     const list = [...SPOKE, ...(S.dets.some(d => d.scope === "call") ? ["_call"] : [])];
     for (const spk of list) {
       const hits = el("div", { class: "hits" }), call = spk === "_call";
-      const node = el("div", { class: "pcard" + (curSpk === spk ? " speaking" : ""), title: call ? "Detectors that read the whole call" : `${lab(spk)}${S.names ? "" : " (" + spk + ")"}` },
-        el("div", { class: "h1" }, call ? el("span", { class: "pnum", "aria-hidden": "true", text: "∑" }) : el("span", { class: "pnum", "aria-hidden": "true", text: numOf(spk) }), el("b", { "data-lab-spk": spk, text: lab(spk) }), isCoach(spk) && !call ? el("span", { class: "rt", text: "coached" }) : null), hits);
+      const node = el("div", { class: "pcard" + (curSpk === spk ? " speaking" : ""), title: call ? "Detectors that read the whole call" : `${code(spk)} (${spk})` },
+        el("div", { class: "h1" }, call ? el("span", { class: "pnum", "aria-hidden": "true", text: "∑" }) : el("span", { class: "pnum", "aria-hidden": "true", text: code(spk) }), call ? el("b", { text: "Whole call" }) : el("b", { "data-nm-spk": spk, text: nm(spk) }), isCoach(spk) && !call ? el("span", { class: "rt", text: "coached" }) : null), hits);
       PC[spk] = { node, hits }; ui.people.append(node); renderHits(spk);
     }
-    if (!list.length) ui.people.append(el("span", { class: "small muted", style: "padding-top:4px", text: "Each person who speaks gets a card. Detector hits appear on it." }));
+    if (!list.length) ui.people.append(el("span", { class: "small muted", style: "padding-top:4px", text: "Each voice that speaks gets a card. Detector hits appear on it." }));
   }
   function renderHits(spk) {
     const P = PC[spk]; if (!P) return; const fl = FLAGS.filter(f => f.spk === spk).slice(-HITS).reverse();
@@ -510,10 +520,6 @@
   function renderKp() {
     ui.kp.replaceChildren(...S.kps.map(k => el("div", { class: "ck" + (k.done ? " done" : ""), title: "Unvalidated: your own wording" }, el("span", { class: "g", text: k.done ? "✓" : "○" }), el("span", { text: k.text }), el("span", { class: "ts", text: k.done ? mmss(k.doneAt) : "" }), el("button", { type: "button", "aria-label": "Remove key point", onclick: () => { S.kps = S.kps.filter(x => x !== k); renderKp(); afterConfig(); }, text: "×" }))));
     const d = S.kps.filter(x => x.done).length; ui.kprog.textContent = S.kps.length ? `${d} of ${S.kps.length} covered` : "";
-  }
-  function renderRecent() {
-    const fl = FLAGS.filter(f => f.spk === S.coach).slice(-3).reverse();
-    ui.rf.replaceChildren(...(fl.length ? fl.map(f => el("div", { class: "rf" }, `${mmss(f.t)} · ${f.label} ${Math.round(f.p * 100)}% · “${f.quote.length > 60 ? f.quote.slice(0, 59) + "…" : f.quote}”`)) : [el("div", { class: "rf subtle", text: "Nothing flagged on this person yet." })]));
   }
   function afterConfig() { renderModels(); refreshEst(); }
 
@@ -567,7 +573,7 @@
       if (!byDet) for (const f of FLAGS) { if (f.t < t - win || f.t > t) continue; const r = list.indexOf(f.spk); if (r < 0) continue; const y0 = pad.t + r * rh, col = cols[f.slot % 8]; if (rh >= 11) drawIcon(ctx, f.icon, x(f.t) - 6, y0 + (rh - 11) / 2, 11, col); else { ctx.fillStyle = col; ctx.fillRect(x(f.t) - 1.5, y0 + 1, 3, rh - 2); } }
       for (const e of EVENTS) { if (e.t < t - win || e.t > t) continue; const xx = Math.round(x(e.t)) + .5; ctx.strokeStyle = css.ink; ctx.globalAlpha = .55; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, pad.t + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = css.t2; ctx.font = `10px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("E" + e.n, xx + 3, pad.t + 1); }
       ctx.restore();
-      ctx.textBaseline = "middle"; list.forEach((it, r) => { const y0 = pad.t + r * rh; if (byDet) { const col = cols[it.slot % 8]; if (rh >= 7) drawIcon(ctx, it.icon, 4, y0 + (rh - Math.min(rh - 1, 14)) / 2, Math.min(rh - 1, 14), col); if (rh >= 10) { ctx.fillStyle = css.t2; ctx.font = `10px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it.label.length > 13 ? it.label.slice(0, 12) + "…" : it.label, 22, y0 + rh / 2); } } else if (rh >= 9) { ctx.fillStyle = css.t2; ctx.font = `10.5px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it === "_call" ? "Whole call" : "P" + numOf(it), 6, y0 + rh / 2); } });
+      ctx.textBaseline = "middle"; list.forEach((it, r) => { const y0 = pad.t + r * rh; if (byDet) { const col = cols[it.slot % 8]; if (rh >= 7) drawIcon(ctx, it.icon, 4, y0 + (rh - Math.min(rh - 1, 14)) / 2, Math.min(rh - 1, 14), col); if (rh >= 10) { ctx.fillStyle = css.t2; ctx.font = `10px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it.label.length > 13 ? it.label.slice(0, 12) + "…" : it.label, 22, y0 + rh / 2); } } else if (rh >= 9) { ctx.fillStyle = css.t2; ctx.font = `10.5px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it === "_call" ? "Whole call" : code(it), 6, y0 + rh / 2); } });
       ctx.textBaseline = "top"; ctx.fillStyle = css.t3; ctx.font = `10px ${css.mono}`; ctx.textAlign = "center"; for (let tt = Math.max(0, Math.ceil((t - win) / 15) * 15); tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W_ - pad.r - 30) ctx.fillText(mmss(tt), xx, pad.t + plotH + 3); } ctx.textAlign = "right"; ctx.fillText("now", W_ - pad.r, pad.t + plotH + 3);
       if (mx != null && mx > pad.l && mx < W_ - pad.r && my > pad.t && my < pad.t + plotH) {
         const r = Math.floor((my - pad.t) / rh), it = list[r], tt = t - ((W_ - pad.r - mx) / pw) * win; ctx.strokeStyle = css.t3; ctx.beginPath(); ctx.moveTo(mx + .5, pad.t); ctx.lineTo(mx + .5, pad.t + plotH); ctx.stroke();
@@ -577,32 +583,57 @@
     } };
   }
 
-  /* ---------- coaching: the coached person against everyone else. Talk share and pace come from the clock, not a model ---------- */
-  let balNext = 0, balC = {};
-  function updateBalance() {
-    if (performance.now() < balNext) return; balNext = performance.now() + 250;
-    let me = 0, ot = 0; const lo = S.t - 60; for (let k = LOGW.length - 1; k >= 0 && LOGW[k].t >= lo; k--) LOGW[k].spk === S.coach ? me++ : ot++;
-    const tot = me + ot, sh = tot ? me / tot : 0, span = Math.max(10, Math.min(60, S.t)), wpm = (n) => Math.round(n * 60 / span), who = lab(S.coach);
-    ui.thI.style.transform = `scaleX(${tot ? (1 - sh).toFixed(3) : .5})`; ui.meI.style.transform = `scaleX(${tot ? sh.toFixed(3) : .5})`;
-    const a = tot ? `${who} ${Math.round(sh * 100)}% · everyone else ${Math.round((1 - sh) * 100)}%` : "waiting for speech", b = tot ? `${who} ${wpm(me)} wpm · everyone else ${wpm(ot)} wpm combined` : "";
-    const c = tot < 20 ? "Listening." : sh > .65 ? `${who} is doing most of the talking. Ask a question.` : sh < .25 ? "Everyone else is doing most of the talking. Listen for cues." : "Balanced.";
-    if (balC.a !== a) { ui.bl1.textContent = a; balC.a = a; } if (balC.b !== b) { ui.bl2.textContent = b; balC.b = b; } if (balC.c !== c) { ui.tip.textContent = c; balC.c = c; }
+  /* ---------- coaching: plain rules on measured signals (the clock and the detectors), not a model. One instruction at a time, with a time horizon ---------- */
+  function coachMetrics() {
+    const lo = S.t - 30, lo2 = S.t - 20; let me = 0, ot = 0, m2 = 0;
+    for (let k = LOGW.length - 1; k >= 0 && LOGW[k].t >= lo; k--) { const mine = LOGW[k].spk === S.coach; mine ? me++ : ot++; if (mine && LOGW[k].t >= lo2) m2++; }
+    return { me, ot, share: me + ot ? me / (me + ot) : null, wpm: S.t >= 12 ? m2 * 3 : null };
+  }
+  const hotOf = (pid, coached) => { let v = 0, who = null; for (const d of S.dets) { if (d.pid !== pid || d.scope !== "person") continue; for (const spk in d.st) { if ((spk === S.coach) !== coached) continue; const x = d.st[spk].disp; if (x > v) { v = x; who = spk; } } } return { v, who }; };
+  const callHot = (pid) => { const d = S.dets.find(x => x.pid === pid && x.scope === "call"); return d ? d.agg.disp : 0; };
+  function pickAction() {
+    const m = coachMetrics(), G = S.gate, a = hotOf("anger", false), th = hotOf("threat", false), f = hotOf("fear", false), u = hotOf("urgency", false), ac = hotOf("anger", true), w = a.v >= th.v ? a : th;
+    const A = (key, prio, head, horizon, text, why, tone) => ({ key, prio, head, horizon, text, why, tone });
+    if (w.v >= G) return A("deesc", 1, "DE-ESCALATE", 20, `Lower your voice and pace. Acknowledge what ${lab(w.who)} said before you answer.`, `${code(w.who)} is above the alert level on ${a.v >= th.v ? "anger" : "threat"}.`, "caution");
+    if (ac.v >= G) return A("steady", 2, "STEADY YOUR TONE", 15, "Take a breath. Shorter sentences, lower pitch, no interrupting.", `${code(S.coach)} is above the alert level on anger.`, "caution");
+    if (callHot("manipulation") >= G) return A("hold", 3, "DON'T BE RUSHED", 30, "Pause before you agree. Ask exactly what is being asked and what happens if you wait.", "The call reads as pressure or manipulation.", "notice");
+    if (u.v >= G) return A("urg", 3, "SLOW IT DOWN", 30, "Don't let the deadline set your pace. Ask for time, or for it in writing.", `${code(u.who)} is pushing urgency.`, "notice");
+    if (f.v >= G) return A("reassure", 4, "REASSURE", 20, `Speak calmly and confirm what happens next for ${lab(f.who)}.`, `${code(f.who)} sounds anxious.`, "notice");
+    if (m.share != null && m.me + m.ot >= 15 && m.share > 0.65) return A("listen", 5, "LISTEN", 30, "You have done most of the talking. Ask one open question, then let them finish.", `${code(S.coach)} spoke ${Math.round(m.share * 100)}% of the last 30 s.`, "calm");
+    if (m.wpm != null && m.wpm > 170) return A("pace", 6, "SLOW DOWN", 15, "You are speaking fast. Pause between points.", `${code(S.coach)} is at about ${m.wpm} words a minute.`, "notice");
+    if (m.share != null && m.ot >= 25 && m.share < 0.2) return A("charge", 7, "TAKE CHARGE", 20, "You have said little. Summarise where things stand and steer to the next step.", `${code(S.coach)} spoke ${Math.round(m.share * 100)}% of the last 30 s.`, "calm");
+    const kp = S.kps.find(k => !k.done); if (kp) return A("cover", 8, "COVER NEXT", 30, kp.text, "The next key point not yet made.", "calm");
+    return A("listen0", 9, "LISTEN", 15, "Nothing needs action. Listen for the next cue.", "No detector is above the alert level.", "calm");
+  }
+  let coachNext = 0, coachCur = null, coachC = {};
+  function paintCoach(a, elapsed) {
+    const key = a.head + a.text + a.why + a.tone; if (coachC.key !== key) { ui.cHead.textContent = a.head; ui.cText.textContent = a.text; ui.cWhy.textContent = a.why; ui.cBox.className = "cnote " + a.tone; coachC.key = key; }
+    const left = a.horizon ? Math.max(0, a.horizon - elapsed) : 0, win = a.horizon ? `next ${a.horizon} s` : "", lt = a.horizon ? `${Math.ceil(left)} s left` : "";
+    if (coachC.win !== win) { ui.cWin.textContent = win; coachC.win = win; } if (coachC.lt !== lt) { ui.cLeft.textContent = lt; coachC.lt = lt; } ui.cBar.style.transform = `scaleX(${a.horizon ? (left / a.horizon).toFixed(3) : 0})`;
+  }
+  function updateCoach() {
+    if (performance.now() < coachNext) return; coachNext = performance.now() + 400;
+    if (!S.playing && S.t === 0) { coachCur = null; paintCoach({ head: "READY", text: "Press Play. Coaching starts when speech does.", why: "", tone: "calm", horizon: 0 }, 0); return; }
+    if (S.done) { paintCoach({ head: "CALL ENDED", text: "Press Replay to run it again.", why: "", tone: "calm", horizon: 0 }, 0); return; }
+    const want = pickAction(), c = coachCur, over = !c || S.t < c.since || S.t - c.since >= c.horizon;
+    if (!c || over || want.prio < c.prio) coachCur = { ...want, since: S.t }; else if (want.key === c.key) { c.text = want.text; c.why = want.why; }
+    paintCoach(coachCur, S.t - coachCur.since);
   }
 
   /* ---------- run control ---------- */
   function resetRun() {
     if (ctl) ctl.abort(); ctl = null; QUEUE.length = 0; active = 0; pending = 0; failed = 0; checksDone = 0; maxPending = 0; if (ui.err) ui.err.textContent = "";
-    S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; cpN = 0; CPS.length = 0; FLAGS.length = 0; LOGW.length = 0; cards.length = 0; moSeq = 0; rows.length = 0; SPOKE.length = 0; curSpk = null;
+    coachCur = null; S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; cpN = 0; CPS.length = 0; FLAGS.length = 0; LOGW.length = 0; cards.length = 0; moSeq = 0; rows.length = 0; SPOKE.length = 0; curSpk = null;
     for (const k in peopleSpans) delete peopleSpans[k];
     for (const d of S.dets) { d.st = {}; d.agg = { disp: 0, above: null, lastFire: -1e9, who: null, n: 0, hist: [] }; } for (const k of S.kps) { k.done = false; k.doneAt = 0; }
-    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); renderPeople(); renderKp(); renderEvents(); renderRecent(); if (S.tab === "req") renderReq(); }
+    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); renderPeople(); renderKp(); renderEvents(); if (S.tab === "req") renderReq(); }
   }
   function refreshCoach() {
-    ui.coachSel.replaceChildren(...SP.list.map(p => el("option", { value: p.name, text: S.names ? p.name : p.label }))); ui.coachSel.value = S.coach;
+    ui.coachSel.replaceChildren(...SP.list.map(p => el("option", { value: p.name, text: nm(p.name) ? `${p.label} · ${p.name}` : p.label }))); ui.coachSel.value = S.coach; if (ui.namesCb) { ui.namesCb.disabled = !namesKnown(); ui.namesCb.parentNode.style.opacity = namesKnown() ? 1 : .45; }
     const n = SP.list.length; ui.spkNote.textContent = `${n} speaker${n > 1 ? "s" : ""}` + (n > LIVE_STREAMS ? ` · the planned live model separates ${LIVE_STREAMS} at once` : "");
   }
   function rebuild() { T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0]; refreshCoach(); resetRun(); writeHash(); updatePlay(); refreshEst(); }
-  function relabel() { document.querySelectorAll("[data-lab-spk]").forEach(e => { e.textContent = lab(e.dataset.labSpk); }); refreshCoach(); writeHash(); }
+  function relabel() { document.querySelectorAll("[data-nm-spk]").forEach(e => { e.textContent = nm(e.dataset.nmSpk); }); refreshCoach(); renderPeople(); writeHash(); }
   const speedF = () => Number(S.speed);
   function play() { if (S.done) resetRun(); S.playing = true; last = performance.now(); updatePlay(); }
   function pause() { S.playing = false; updatePlay(); }
@@ -663,7 +694,7 @@
     if (e && e.windows) { const c = WINS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
     return "w20";
   }
-  function refreshWinSeg() { ui.winSeg.replaceChildren(...WINS.map(w => el("button", { type: "button", "aria-pressed": String(w === S.win), title: winName(w), onclick: () => { S.win = w; S.winTouched = true; resetRun(); refreshWinSeg(); readAll(); writeHash(); refreshEst(); }, text: w[0] === "w" ? w.slice(1) + "w" : w.slice(1) + "s" }))); ui.readnote.textContent = `Bright text is what the model reads: the ${winName(S.win)} of each person.`; }
+  function refreshWinSeg() { ui.winSeg.replaceChildren(...WINS.map(w => el("button", { type: "button", "aria-pressed": String(w === S.win), title: winName(w), onclick: () => { S.win = w; S.winTouched = true; resetRun(); refreshWinSeg(); readAll(); writeHash(); refreshEst(); }, text: w[0] === "w" ? w.slice(1) + "w" : w.slice(1) + "s" }))); ui.readnote.textContent = `Bright text is what the model reads: the ${winName(S.win)} of each voice.`; }
 
   /* ---------- hash and export ---------- */
   function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return Object.fromEntries([...p.entries()]); }
@@ -709,7 +740,7 @@
     ui.play = el("button", { class: "btn primary", type: "button", id: "play", onclick: onPlay }, "Play");
     const speed = el("div", { class: "segmented", role: "group", "aria-label": "Playback speed" }, SPEEDS.map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.speed === v), "data-s": v, text: t, onclick: () => { S.speed = v; speed.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === v))); writeHash(); } })));
     const mode = el("div", { class: "segmented", role: "group", "aria-label": "Mode" }, [["replay", "Replay"], ["live", "Live"]].map(([k, t]) => el("button", { type: "button", "aria-pressed": String(S.mode === k), "data-m": k, text: t, title: k === "replay" ? "Precompute every check first; playback is then instant and free to repeat." : "Call at each check as playback reaches it and measure the lag.", onclick: () => { S.mode = k; S.armed = false; mode.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === k))); writeHash(); updatePlay(); } })));
-    const namesCb = el("input", { type: "checkbox", id: "names", onchange: () => { S.names = namesCb.checked; relabel(); } }); namesCb.checked = S.names;
+    const namesCb = el("input", { type: "checkbox", id: "names", onchange: () => { S.names = namesCb.checked; relabel(); } }); namesCb.checked = S.names; ui.namesCb = namesCb;
     ui.clock = el("span", { class: "num", text: "00:00" }); ui.pill = el("span", { class: "pill" }, el("span", { class: "rec" }), "LIVE ", ui.clock); ui.behind = el("span", { class: "small muted", role: "status" });
     ui.confirm = el("div", { role: "status" }); ui.status = el("div", { class: "notice small", role: "status" }); ui.err = el("span", { class: "small err", role: "alert" });
     const top = el("div", { class: "top" }, el("div", {}, el("h1", { text: "Call cockpit" }), el("p", { class: "sub", text: "Detectors have a colour and an icon. Signals rise, hold and fade so there is time to react." })),
@@ -717,22 +748,23 @@
         ui.play, el("button", { class: "btn", type: "button", onclick: () => { resetRun(); updatePlay(); }, text: "Restart" }), el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Speed" }), speed), ui.pill,
         el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-${Date.now()}.json`, JSON.stringify(exportData(), null, 1), "application/json"), text: "Export" }), el("button", { class: "btn", type: "button", onclick: () => copy(location.href), text: "Copy link" })));
     const note = el("details", { class: "callout warn" }, el("summary", {}, el("strong", { text: "Technique signals, not verdicts." }), " Probabilities, not reasons. Read the caveats"),
-      el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy in the Detectors tab; your own detectors are unvalidated (marked ?). Speakers are diarized ids, so they are shown as Person N. Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model. The Request tab shows exactly what is sent to the model." }));
+      el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy in the Detectors tab; your own detectors are unvalidated (marked ?). Speakers are diarized voices, shown as V1, V2 (names only for scripted scenes). Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model. The Request tab shows exactly what is sent to the model." }));
     /* top: detectors bar and person cards */
     ui.dets = el("div", { class: "dets", id: "dets" }); ui.people = el("div", { class: "people", id: "people" });
     const addBtn = el("button", { class: "btn", type: "button", id: "add-det", title: "Add a detector", "aria-label": "Add a detector", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dname.focus(), 50); }, text: "+" });
-    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, addBtn)), el("div", { class: "trow" }, el("h4", { text: "People" }), ui.people, el("span")));
+    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, addBtn)), el("div", { class: "trow" }, el("h4", { text: "Voices" }), ui.people, el("span")));
     /* conversation */
     ui.track = el("div", { class: "track" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" });
     const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.readnote);
     /* rail: cue cards for everyone else, coaching for the person you pick, tabbed card */
     ui.moms = el("div", { id: "moms" }); ui.more = el("span", { class: "r" });
     const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), ui.more), el("div", { class: "bd" }, ui.moms));
-    ui.thI = el("i", { class: "th" }); ui.meI = el("i", { class: "me" }); ui.bl1 = el("div", { class: "bl num" }); ui.bl2 = el("div", { class: "bl num" }); ui.tip = el("div", { class: "tip" }); ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" }); ui.rf = el("div");
+    ui.cHead = el("div", { class: "chead", text: "READY" }); ui.cText = el("div", { class: "ctext" }); ui.cWhy = el("div", { class: "cwhy" }); ui.cBar = el("i"); ui.cLeft = el("span", { class: "num" }); ui.cWin = el("span"); ui.cBox = el("div", { class: "cnote calm", role: "status", "aria-live": "polite", title: "Plain rules on the clock and the detectors (talk share, pace, alerts). Not a model." });
+    ui.cBox.append(el("div", { class: "cwin" }, ui.cWin, ui.cLeft), ui.cHead, ui.cText, el("div", { class: "ctimer", "aria-hidden": "true" }, el("div", { class: "trk" }, ui.cBar)), ui.cWhy);
+    ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" });
     const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addKeyPoint(kpIn.value); kpIn.value = ""; renderKp(); afterConfig(); } } });
     ui.coachSel = el("select", { id: "coach", "aria-label": "Who do you want to coach?", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.coach = ui.coachSel.value; resetRun(); refreshCoach(); writeHash(); updatePlay(); } });
-    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Real scenes are scripted, so their speakers are known and shown by name. Untick to see them as diarized ids (Person N), which is what live speech-to-text will give." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, el("div", { class: "bt", text: "Talk share, last 60 s" }), el("div", { class: "split" }, ui.thI, ui.meI), ui.bl1, el("div", { class: "bt", text: "Pace" }), ui.bl2, ui.tip,
-      el("div", { class: "bt", style: "margin-top:8px", text: "Recent flags on this person" }), ui.rf, el("div", { class: "bt", style: "margin-top:8px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
+    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Real scenes are scripted, so their speakers are known and shown by name. Untick to see only voice codes (V1, V2), which is what live speech-to-text will give." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, ui.cBox, el("div", { class: "bt", style: "margin-top:10px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
     /* tabs: Flagged | Detectors | Settings | Request | Events */
     ui.log = el("div"); ui.pane_flag = el("div", { class: "tabpane" }, ui.log);
     ui.dlist = el("div"); ui.dcount = el("span", { class: "small muted" }); ui.libSel = el("select", { id: "lib-sel", "aria-label": "Add a validated detector", style: "flex:1" });
@@ -756,7 +788,7 @@
       el("div", { class: "mrow", style: "margin-top:6px" }, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy request" }), el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all requests" })), ui.reqBadge, ui.reqPre);
     ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, el("div", { class: "small muted", text: "What actually happened, from cited sources, for comparison with the detectors." }), ui.evs);
     ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["ev", "Events"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k), text: t })));
-    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(236px,29vh,340px);min-height:170px" }, el("header", {}, el("h4", { text: "Captured so far" })), ui.tabs, ui.pane_flag, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_ev);
+    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(190px,22vh,290px);min-height:150px" }, el("header", {}, el("h4", { text: "Captured so far" })), ui.tabs, ui.pane_flag, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_ev);
     const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap);
     /* history */
     const chartCv = el("canvas"); const viewSeg = el("span", { class: "segmented", role: "group", "aria-label": "History view" }, [["det", "By detector"], ["person", "By person"]].map(([k, t]) => el("button", { type: "button", "data-v": k, "aria-pressed": String(S.view === k), text: t, onclick: () => { S.view = k; viewSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === k))); } })));
@@ -767,7 +799,7 @@
     window.refreshSrcPanels = () => { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; }; window.refreshSrcPanels();
     top.append(ui.pasteField);
     glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 4); chart = Chart(chartCv);
-    runner = makeRunner(); refreshCoach(); renderDets(); renderDetTab(); renderPeople(); renderKp(); renderRecent(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
+    runner = makeRunner(); refreshCoach(); renderDets(); renderDetTab(); renderPeople(); renderKp(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
     Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
     document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
     last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { S, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
@@ -778,7 +810,7 @@
   function frame(now) {
     raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
-    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateBalance(); chart.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); }
+    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); }
     const c = mmss(S.t); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
     const b = pending ? `${pending} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
   }
