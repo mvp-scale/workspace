@@ -110,22 +110,18 @@
   .tabs2 { display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 8px; flex-wrap: wrap; }
   .tabs2 button { border: 0; background: transparent; padding: 6px 9px; font: inherit; font-size: 12.5px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
   .tabs2 button[aria-selected=true] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
-  .tabpane { padding: 8px 12px 10px; overflow: auto; flex: 1; min-height: 0; }
+  .tabpane { padding: 6px 12px 8px; overflow: auto; flex: 1; min-height: 0; }
   .mrow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-bottom: 6px; }
   .mrow .l { font-size: 12px; color: var(--text-3); } .mrow .segmented button { padding: 3px 8px; }
   .mbtn { display: inline-flex; gap: 6px; align-items: baseline; } .mbtn small { font: 500 10.5px var(--mono); color: var(--text-3); }
   .est { font: 500 11px var(--mono); color: var(--text-2); }
   .li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .li .ts { font: 500 11px var(--mono); color: var(--text-3); }
   .li .q { color: var(--text-2); overflow-wrap: anywhere; } .li .ic { display: inline-block; vertical-align: -2px; margin-right: 4px; color: var(--c); }
-  .drow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
-  .drow .ic { color: var(--c); display: grid; place-items: center; } .drow .ex { color: var(--text-3); font-size: 11.5px; overflow-wrap: anywhere; }
-  .drow button.x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 15px; }
   .dform { display: grid; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
   .dform label { font-size: 12px; font-weight: 500; color: var(--text-2); display: grid; gap: 2px; }
   .icons { display: flex; flex-wrap: wrap; gap: 4px; }
   .icons button { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 5px; padding: 3px; cursor: pointer; color: var(--text-2); display: grid; place-items: center; }
   .icons button[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-  pre.req { margin: 6px 0 0; padding: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 11.5px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: none; }
   .chartwrap { position: relative; flex: 1; min-height: 0; padding: 2px 10px 6px; } .chartwrap canvas { position: absolute; inset: 2px 10px 6px; width: calc(100% - 20px); height: calc(100% - 8px); }
   .key { font-size: 12px; color: var(--text-2); }
   .tabsbar { display: none; }
@@ -145,6 +141,34 @@
   }
   @media (max-width: 560px) { .trow { grid-template-columns: 1fr; } .bub { max-width: 92%; } .cp .top .sub { display: none; } }
   @media (prefers-reduced-motion: reduce) { .w, .caret::after, .pill.on .rec { animation: none; } }
+
+  /* Tab panes: one job each */
+  .tabs2 button .n { margin-left: 5px; font: 500 10.5px var(--mono); color: var(--text-3); } .tabs2 button[aria-selected=true] .n { color: var(--text-2); }
+  .tabpane.col { display: flex; flex-direction: column; gap: 6px; }
+  .sec { display: flex; justify-content: space-between; align-items: baseline; }
+  .fl { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .fl .ts, .evx .ts { font: 500 11px var(--mono); color: var(--text-3); padding-top: 1px; }
+  .fl .fh { display: flex; align-items: center; gap: 6px; font-size: 12.5px; } .fl .ic { color: var(--c); display: grid; place-items: center; }
+  .fl .vc, .fl .cnt { font: 600 10.5px var(--mono); color: var(--text-2); } .fl .vc { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; } .fl .pc { font: 600 11px var(--mono); margin-left: auto; }
+  .fl .q { color: var(--text-2); font-size: 12.5px; overflow-wrap: anywhere; }
+  .drow { display: grid; grid-template-columns: 22px auto auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .drow .ic { color: var(--c); display: grid; place-items: center; } .drow .small { text-align: right; }
+  .libchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .libchip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; padding: 4px 9px; border: 1px dashed var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text-2); cursor: pointer; } .libchip:hover { border-style: solid; color: var(--text); background: var(--surface-2); }
+  .dnew { margin-top: 10px; } .dnew > summary { cursor: pointer; font-weight: 600; font-size: 12.5px; color: var(--accent); }
+  .frow { display: flex; gap: 14px; flex-wrap: wrap; }
+  .models { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .mbig { display: inline-flex; align-items: baseline; gap: 6px; font: inherit; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; } .mbig b { font: 700 13px var(--mono); } .mbig small { font: 500 10.5px var(--mono); color: var(--text-3); } .mbig small.paid { color: var(--warn); }
+  .mbig[aria-checked=true] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .mstat { display: flex; align-items: center; gap: 4px; min-height: 18px; margin-bottom: 4px; }
+  .twocol { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
+  .bigval { font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; } .bigslider { width: 100%; min-height: 24px; margin: 2px 0; }
+  .help { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .reqbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .reqhead { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+  pre.req { flex: 1; min-height: 60px; overflow: auto; margin: 0; }
+  .evx { padding: 6px 0; border-bottom: 1px solid var(--border); } .evx .eh { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; font-size: 13px; }
+  .evx .er { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 0 48px; } .evx .lbl { font-size: 11px; color: var(--text-3); }
+  .drow button.x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; } .drow button.x:hover { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -526,26 +550,45 @@
   function afterConfig() { renderModels(); refreshEst(); }
 
   /* ---------- tabbed card ---------- */
+  /* ---------- tabs. Each has one job: Flagged = what just happened. Detectors = what I am watching for. Settings = the levers. Request = what is sent. Events = did the detectors catch what really happened ---------- */
+  let LOGROW = {};
   function addLog(fl) {
-    const li = el("div", { class: "li", "data-flag": fl.id, style: cvar(fl.slot) }, el("span", { class: "ts", text: mmss(fl.t) }), el("div", {}, el("span", { class: "ic" }, iconEl(fl.icon, 13)), el("b", { text: fl.label }), ` · ${lab(fl.spk)} · ${Math.round(fl.p * 100)}%`, el("div", { class: "q", text: "“" + fl.quote + "”" })));
-    ui.log.append(li); if (S.tab === "flag") ui.pane_flag.scrollTop = ui.pane_flag.scrollHeight;
+    const key = fl.det + "|" + fl.spk, r = LOGROW[key], pct = Math.round(fl.p * 100) + "%";
+    if (r && S.t - r.t < 12) { r.n++; r.t = S.t; r.cnt.textContent = "×" + r.n; r.pc.textContent = pct; r.ts.textContent = mmss(S.t); r.q.textContent = "“" + fl.quote + "”"; return; }
+    const ts = el("span", { class: "ts", text: mmss(fl.t) }), cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: pct }), q = el("div", { class: "q", text: "“" + fl.quote + "”" });
+    const row = el("div", { class: "fl", style: cvar(fl.slot), "data-flag": fl.id }, ts, el("div", {}, el("div", { class: "fh" }, el("span", { class: "ic" }, iconEl(fl.icon, 14)), el("b", { text: fl.label }), el("span", { class: "vc", title: lab(fl.spk), text: fl.spk === "_call" ? "ALL" : code(fl.spk) }), pc, cnt), q));
+    LOGROW[key] = { t: fl.t, n: 1, ts, cnt, pc, q }; ui.log.prepend(row); ui.pane_flag.scrollTop = 0;
   }
   function renderEvents() {
-    ui.evs.replaceChildren(...(EVENTS.length ? EVENTS.map(e => el("div", { class: "li", id: "ev" + e.n }, el("span", { class: "ts", text: mmss(e.t) }), el("div", {}, el("b", { text: `E${e.n}` }), " ", e.what, el("div", { class: "q", text: "“" + (e.quote.length > 220 ? e.quote.slice(0, 219) + "…" : e.quote) + "”" }), el("a", { href: e.url, target: "_blank", rel: "noopener", text: "source" })))) : [el("p", { class: "small muted", text: "No documented events for this source. Documented events come from cited sources, not from us." })]));
+    ui.evs.replaceChildren(...(EVENTS.length ? EVENTS.map(e => {
+      let res;
+      if (S.t < e.t) res = el("span", { class: "small muted", text: "Not reached yet" });
+      else {
+        const seen = new Map(); for (const f of FLAGS) if (f.t >= e.t - 2 && f.t <= e.t + 25) { const k = f.det + f.spk; if (!seen.has(k)) seen.set(k, f); }
+        res = seen.size ? el("div", { class: "hits" }, ...[...seen.values()].map(f => el("span", { class: "hit", style: cvar(f.slot), title: `${f.label} on ${lab(f.spk)}, ${Math.round(f.p * 100)}%, ${f.t >= e.t ? Math.round(f.t - e.t) + " s after" : Math.round(e.t - f.t) + " s before"} the event` }, iconEl(f.icon, 12), el("span", { class: "t", text: `${f.spk === "_call" ? "ALL" : code(f.spk)} ${f.t >= e.t ? "+" : "−"}${Math.abs(Math.round(f.t - e.t))}s` }))))
+          : el("span", { class: "small", text: S.t < e.t + 25 ? "Nothing flagged yet…" : "No detector flagged it" });
+      }
+      return el("div", { class: "evx" }, el("div", { class: "eh" }, el("span", { class: "ts", text: mmss(e.t) }), el("b", { text: `E${e.n} ${e.what}`, title: "“" + e.quote + "”" })), el("div", { class: "er" }, el("span", { class: "lbl", text: "Flagged within 25 s" }), res, el("a", { class: "small", href: e.url, target: "_blank", rel: "noopener", text: "source" })));
+    }) : [el("p", { class: "muted small", text: "Only real scenes have documented events, from cited sources. Pick one to see whether the detectors caught what actually happened." })]));
   }
   let formIcon = "";
   function renderDetTab() {
-    ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow", style: cvar(d.slot) }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("div", {}, el("b", { text: d.label }), " ", el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("div", { class: "ex", text: d.about + (d.example ? ` Example: “${d.example}”` : "") })), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each person" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: () => removeDet(d.key), text: "×" })); }));
-    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)); ui.libSel.replaceChildren(el("option", { value: "", text: left.length ? "Add a validated detector…" : "All validated detectors are on" }), ...left.map(p => el("option", { value: p.id, text: p.name + (p.scope === "call" ? " (whole call)" : "") }))); ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
+    ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow", style: cvar(d.slot), title: d.about + (d.example ? ` Example: “${d.example}”` : "") }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each voice" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: () => removeDet(d.key), text: "×" })); }));
+    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id));
+    ui.dlib.replaceChildren(...(left.length ? left.map(p => el("button", { class: "libchip", type: "button", title: p.about, onclick: () => { if (addLibrary(p.id)) { renderDets(); renderDetTab(); renderPeople(); afterConfig(); } } }, iconEl(p.icon, 14), p.name)) : [el("span", { class: "small muted", text: "All validated detectors are on." })]));
+    ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
   }
   function renderReq() {
-    if (!ui.reqPre || !CPS.length) { if (ui.reqPre) { ui.reqPre.textContent = "No checks yet. Press Play; each check sent to the model appears here exactly as sent."; ui.reqBadge.replaceChildren(); ui.reqSelEl.replaceChildren(); } return; }
-    const last30 = CPS.slice(-30).reverse(); if (ui.reqSelEl.childElementCount !== last30.length + 1 || S.reqSel === "latest") ui.reqSelEl.replaceChildren(el("option", { value: "latest", text: "latest check" }), ...last30.map(c => el("option", { value: c.n, text: `#${c.n} · ${mmss(c.t)} · ${c.scope === "call" ? "whole call" : lab(c.spk)}` }))); ui.reqSelEl.value = S.reqSel;
-    const chk = S.reqSel === "latest" ? CPS[CPS.length - 1] : CPS.find(c => c.n === +S.reqSel) || CPS[CPS.length - 1], body = chk.req, probs = validateReq(body);
-    ui.reqPre.textContent = JSON.stringify(body, null, 2); ui.reqBadge.replaceChildren(probs.length ? el("span", { class: "badge bad", text: `${probs.length} problem${probs.length > 1 ? "s" : ""}: ${probs.join("; ")}` }) : el("span", { class: "badge good", text: "well formed" }), el("span", { class: "small muted", text: ` ${Object.keys(body.questions).length} question${Object.keys(body.questions).length > 1 ? "s" : ""}, ${words(body.state).length} words of state${chk.answers ? ", answered" : ""}` }));
+    if (!ui.reqPre) return;
+    if (!CPS.length) { ui.reqPre.textContent = "No checks yet. Press Play; each check sent to the model appears here exactly as sent."; ui.reqBadge.replaceChildren(el("span", { class: "badge", text: "waiting" })); ui.reqSelEl.replaceChildren(); ui.reqCur = null; return; }
+    const last30 = CPS.slice(-30).reverse(); if (ui.reqSelEl.childElementCount !== last30.length + 1 || S.reqSel === "latest") ui.reqSelEl.replaceChildren(el("option", { value: "latest", text: "latest" }), ...last30.map(c => el("option", { value: c.n, text: `#${c.n} · ${mmss(c.t)} · ${c.scope === "call" ? "call" : code(c.spk)}` }))); ui.reqSelEl.value = S.reqSel;
+    const chk = S.reqSel === "latest" ? CPS[CPS.length - 1] : CPS.find(c => c.n === +S.reqSel) || CPS[CPS.length - 1], body = chk.req, probs = validateReq(body), nq = Object.keys(body.questions).length;
+    ui.reqPre.textContent = JSON.stringify(body, null, 2);
+    ui.reqBadge.replaceChildren(probs.length ? el("span", { class: "badge bad", text: `${probs.length} problem${probs.length > 1 ? "s" : ""}: ${probs.join("; ")}` }) : el("span", { class: "badge good", text: "Well formed" }), el("span", { class: "small muted", text: `check #${chk.n} · ${chk.scope === "call" ? "whole call" : code(chk.spk)} · ${mmss(chk.t)} · ${nq} question${nq > 1 ? "s" : ""} · ${words(body.state).length} words${chk.answers ? " · answered" : ""}` }));
     ui.reqCur = chk;
   }
-  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); for (const k of ["flag", "det", "set", "req", "ev"]) ui["pane_" + k].hidden = k !== t; if (t === "req") renderReq(); if (t === "det") renderDetTab(); }
+  function updateTabs() { const n = { flag: FLAGS.length, det: S.dets.length, ev: EVENTS.length }; ui.tabs.querySelectorAll(".n").forEach(e => { const v = n[e.dataset.n]; const t = v ? String(v) : ""; if (e.textContent !== t) e.textContent = t; }); }
+  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); for (const k of ["flag", "det", "set", "req", "ev"]) ui["pane_" + k].hidden = k !== t; if (t === "req") renderReq(); if (t === "det") renderDetTab(); if (t === "ev") renderEvents(); }
 
   /* ---------- history: heat strip of every detector, or ticks per person ---------- */
   function Chart(canvas) {
@@ -628,7 +671,7 @@
     coachCur = null; S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; cpN = 0; CPS.length = 0; FLAGS.length = 0; LOGW.length = 0; cards.length = 0; moSeq = 0; rows.length = 0; SPOKE.length = 0; curSpk = null;
     for (const k in peopleSpans) delete peopleSpans[k];
     for (const d of S.dets) { d.st = {}; d.agg = { disp: 0, above: null, lastFire: -1e9, who: null, n: 0, hist: [] }; } for (const k of S.kps) { k.done = false; k.doneAt = 0; }
-    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); renderPeople(); renderKp(); renderEvents(); if (S.tab === "req") renderReq(); }
+    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); LOGROW = {}; renderPeople(); renderKp(); renderEvents(); if (S.tab === "req") renderReq(); }
   }
   function refreshCoach() {
     ui.coachSel.replaceChildren(...SP.list.map(p => el("option", { value: p.name, text: nm(p.name) ? `${p.label} · ${p.name}` : p.label }))); ui.coachSel.value = S.coach; if (ui.namesCb) { ui.namesCb.disabled = !namesKnown(); ui.namesCb.parentNode.style.opacity = namesKnown() ? 1 : .45; }
@@ -683,12 +726,9 @@
   const p50 = (a) => { if (!a || !a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
   function renderModels() {
     if (!ui.models) return; const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up);
-    ui.models.replaceChildren(...up.map(id => { const l = p50(LAGS[id]); return el("button", { type: "button", "aria-pressed": String(id === S.model), title: `${Jev.codeOf(id)} = ${Jev.nameOf(id)}${st[id].hosted ? " (hosted, paid)" : ""}${st[id].identity_ok === false ? " — does not match its label" : ""}`, onclick: () => setModel(id) },
-      el("span", { class: "mbtn" }, Jev.codeOf(id), st[id].hosted ? el("small", { text: "paid" }) : null, l ? el("small", { text: Math.round(l) + " ms" }) : null)); }));
-    ui.mstate.replaceChildren(); const s = st[S.model] || {};
-    if (!s.up) ui.mstate.append(el("span", { class: "badge bad", role: "alert", text: `${Jev.codeOf(S.model)} is not loaded` }));
-    else if (s.identity_ok === false) ui.mstate.append(el("span", { class: "badge warn", text: "identity does not match its label" }));
-    else ui.mstate.append(el("span", { class: "badge " + (s.hosted ? "warn" : "good"), text: s.hosted ? "hosted (paid)" : "loaded" }), el("span", { class: "small muted", text: (s.identity || "") + (s.gpu_mb ? ` · ${(s.gpu_mb / 1024).toFixed(1)} GiB` : "") }));
+    ui.models.replaceChildren(...up.map(id => { const l = p50(LAGS[id]); return el("button", { type: "button", role: "radio", class: "mbig", "aria-checked": String(id === S.model), "aria-pressed": String(id === S.model), title: `${Jev.codeOf(id)} = ${Jev.nameOf(id)}${st[id].hosted ? " (hosted, paid)" : ""}${st[id].identity_ok === false ? " — does not match its label" : ""}`, onclick: () => setModel(id) },
+      el("b", { text: Jev.codeOf(id) }), st[id].hosted ? el("small", { class: "paid", text: "paid" }) : null, l ? el("small", { text: Math.round(l) + " ms" }) : null); }));
+    const s = st[S.model] || {}; ui.mstate.replaceChildren(el("span", { class: "dot " + (s.up ? "up" : "down"), "aria-hidden": "true" }), s.up ? (s.hosted ? "Hosted, billed per token." : `Loaded · ${s.identity || ""}${s.gpu_mb ? ` · ${(s.gpu_mb / 1024).toFixed(1)} GiB` : ""}`) : `${Jev.codeOf(S.model)} is not loaded`, s.identity_ok === false ? " · identity does not match its label" : "");
   }
   function setModel(id) { if (id === S.model) return; S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderDets(); renderDetTab(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
   function bestWindow() {
@@ -696,7 +736,7 @@
     if (e && e.windows) { const c = WINS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
     return "w20";
   }
-  function refreshWinSeg() { ui.winSeg.replaceChildren(...WINS.map(w => el("button", { type: "button", "aria-pressed": String(w === S.win), title: winName(w), onclick: () => { S.win = w; S.winTouched = true; resetRun(); refreshWinSeg(); readAll(); writeHash(); refreshEst(); }, text: w[0] === "w" ? w.slice(1) + "w" : w.slice(1) + "s" }))); ui.readnote.textContent = `Bright text is what the model reads: the ${winName(S.win)} of each voice.`; }
+  function refreshWinSeg() { ui.winSeg.replaceChildren(...WINS.map(w => el("button", { type: "button", "aria-pressed": String(w === S.win), title: winName(w), onclick: () => { S.win = w; S.winTouched = true; resetRun(); refreshWinSeg(); readAll(); writeHash(); refreshEst(); }, text: w[0] === "w" ? w.slice(1) + "w" : w.slice(1) + "s" }))); ui.readnote.textContent = `Bright text is what the model reads: the ${winName(S.win)} of each voice.`; ui.winHelp.textContent = `Reads each voice's ${winName(S.win)}.`; }
 
   /* ---------- hash and export ---------- */
   function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return Object.fromEntries([...p.entries()]); }
@@ -769,29 +809,32 @@
     const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Real scenes are scripted, so their speakers are known and shown by name. Untick to see only voice codes (V1, V2), which is what live speech-to-text will give." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, ui.cBox, el("div", { class: "bt", style: "margin-top:10px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
     /* tabs: Flagged | Detectors | Settings | Request | Events */
     ui.log = el("div"); ui.pane_flag = el("div", { class: "tabpane" }, ui.log);
-    ui.dlist = el("div"); ui.dcount = el("span", { class: "small muted" }); ui.libSel = el("select", { id: "lib-sel", "aria-label": "Add a validated detector", style: "flex:1" });
-    ui.dname = el("input", { type: "text", id: "det-name", placeholder: "Name, e.g. Budget mentioned", "aria-label": "Detector name" }); const dwhat = el("textarea", { id: "det-what", rows: 2, placeholder: "What should it detect? e.g. The speaker states a price, budget or amount of money.", "aria-label": "What should it detect" }); const dex = el("input", { type: "text", id: "det-example", placeholder: "An example that should trigger it, e.g. Our budget is around forty thousand.", "aria-label": "Example" });
-    let dscope = "person"; const scopeSeg = el("span", { class: "segmented", role: "group", "aria-label": "Applies to" }); const drawScope = () => scopeSeg.replaceChildren(...[["person", "Each person"], ["call", "Whole call"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(v === dscope), onclick: () => { dscope = v; drawScope(); }, text: t }))); drawScope();
+    ui.dlist = el("div"); ui.dlib = el("div", { class: "libchips" }); ui.dcount = el("span", { class: "small muted" });
+    ui.dname = el("input", { type: "text", id: "det-name", placeholder: "Name, e.g. Budget mentioned", "aria-label": "Detector name" }); const dwhat = el("textarea", { id: "det-what", rows: 2, placeholder: "What should it detect? e.g. The speaker states a price, budget or amount of money.", "aria-label": "What should it detect" }); const dex = el("input", { type: "text", id: "det-example", placeholder: "An example that should trigger it", "aria-label": "Example" });
+    let dscope = "person"; const scopeSeg = el("span", { class: "segmented", role: "group", "aria-label": "Applies to" }); const drawScope = () => scopeSeg.replaceChildren(...[["person", "Each voice"], ["call", "Whole call"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(v === dscope), onclick: () => { dscope = v; drawScope(); }, text: t }))); drawScope();
     const iconBox = el("div", { class: "icons", role: "group", "aria-label": "Icon" }); const drawIcons = () => iconBox.replaceChildren(...ICON_NAMES.map(n => el("button", { type: "button", title: n, "aria-label": "Icon " + n, "aria-pressed": String(n === formIcon), onclick: () => { formIcon = formIcon === n ? "" : n; drawIcons(); } }, iconEl(n, 16)))); drawIcons();
-    const doAdd = () => { if (ui.libSel.value) { if (addLibrary(ui.libSel.value)) { ui.libSel.value = ""; renderDets(); renderDetTab(); renderPeople(); afterConfig(); ui.dmsg.textContent = "Added. It starts scoring at the next check."; } return; } if (addCustom(ui.dname.value, dwhat.value, dex.value, formIcon, dscope)) { ui.dname.value = ""; dwhat.value = ""; dex.value = ""; formIcon = ""; drawIcons(); renderDets(); renderDetTab(); renderPeople(); afterConfig(); ui.dmsg.textContent = "Added. Your own detectors are unvalidated (marked ?)."; } };
     ui.dmsg = el("span", { class: "small muted", role: "status" });
-    ui.pane_det = el("div", { class: "tabpane", hidden: true }, el("div", { style: "display:flex;justify-content:space-between" }, el("span", { class: "bt", text: "Detectors" }), ui.dcount), ui.dlist,
-      el("div", { class: "dform" }, el("div", { class: "bt", text: "Add a detector" }), el("div", { style: "display:flex;gap:6px" }, ui.libSel, el("button", { class: "btn", type: "button", onclick: doAdd, text: "Add" })), el("div", { class: "small subtle", text: "or describe your own:" }),
-        el("label", {}, "Name", ui.dname), el("label", {}, "What should it detect?", dwhat), el("label", {}, "An example that should trigger it", dex), el("label", {}, "Applies to", scopeSeg), el("label", {}, "Icon (optional)", iconBox), el("div", { style: "display:flex;gap:8px;align-items:center" }, el("button", { class: "btn primary", type: "button", id: "det-add", onclick: doAdd, text: "Add detector" }), ui.dmsg)));
-    ui.models = el("span", { class: "segmented", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("span", { class: "row", style: "gap:6px" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per person" });
+    const doAdd = () => { if (addCustom(ui.dname.value, dwhat.value, dex.value, formIcon, dscope)) { ui.dname.value = ""; dwhat.value = ""; dex.value = ""; formIcon = ""; drawIcons(); renderDets(); renderDetTab(); renderPeople(); afterConfig(); ui.dmsg.textContent = "Added. Your own detectors are unvalidated (dashed outline)."; } };
+    ui.dnew = el("details", { class: "dnew" }, el("summary", { text: "Create your own detector" }), el("div", { class: "dform" }, el("label", {}, "Name", ui.dname), el("label", {}, "What should it detect?", dwhat), el("label", {}, "An example that should trigger it", dex), el("div", { class: "frow" }, el("label", {}, "Applies to", scopeSeg), el("label", {}, "Icon (optional)", iconBox)), el("div", { style: "display:flex;gap:8px;align-items:center" }, el("button", { class: "btn primary", type: "button", id: "det-add", onclick: doAdd, text: "Add detector" }), ui.dmsg)));
+    ui.pane_det = el("div", { class: "tabpane", hidden: true }, el("div", { class: "sec" }, el("span", { class: "bt", text: "Watching for" }), ui.dcount), ui.dlist, el("div", { class: "bt", style: "margin-top:10px", text: "Add a validated detector" }), ui.dlib, ui.dnew);
+    /* settings: the levers, in order of how often they are changed */
+    ui.models = el("div", { class: "models", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("div", { class: "mstat small muted" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per voice" }); ui.winHelp = el("div", { class: "help" });
     const cadSeg = el("span", { class: "segmented", role: "group", "aria-label": "How often to score" }); const nIn = el("input", { type: "number", min: "3", max: "20", step: "1", "aria-label": "Words between checks", style: "width:56px;min-height:28px", onchange: () => { S.n = clamp(Math.round(+nIn.value) || 5, 3, 20); nIn.value = S.n; resetRun(); writeHash(); refreshEst(); } }); nIn.value = S.n; nIn.hidden = S.cp !== "words";
     const drawCad = () => { cadSeg.replaceChildren(...[["sentence", "sentence"], ["words", "N words"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.cp === v), onclick: () => { S.cp = v; nIn.hidden = v !== "words"; drawCad(); resetRun(); writeHash(); refreshEst(); }, text: t }))); }; drawCad();
-    const gate = el("input", { type: "range", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Alert at", style: "width:120px;min-height:24px", oninput: () => { S.gate = +gate.value; gv.textContent = S.gate.toFixed(2); writeHash(); } }); gate.value = S.gate; const gv = el("strong", { text: S.gate.toFixed(2) });
-    ui.est = el("div", { class: "est" });
+    const gv = el("div", { class: "bigval num", text: Math.round(S.gate * 100) + "%" }); const gate = el("input", { type: "range", class: "bigslider", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Alert at", oninput: () => { S.gate = +gate.value; gv.textContent = Math.round(S.gate * 100) + "%"; writeHash(); } }); gate.value = S.gate;
     const dimCb = el("input", { type: "checkbox", id: "dim", onchange: () => { S.showWin = dimCb.checked; ui.track.classList.toggle("showwin", S.showWin); ui.readnote.hidden = !S.showWin; } });
-    ui.pane_set = el("div", { class: "tabpane", hidden: true }, el("div", { class: "bt", text: "Model" }), el("div", { class: "mrow" }, ui.models, ui.mstate), el("div", { class: "bt", text: "What each model reads" }), el("div", { class: "mrow" }, el("span", { class: "l", text: "Window per person" }), ui.winSeg), el("div", { class: "mrow" }, el("span", { class: "l", text: "Check every" }), cadSeg, nIn),
-      el("div", { class: "bt", text: "Alert" }), el("div", { class: "mrow" }, el("span", { class: "l" }, "Alert at ", gv), gate), el("div", { class: "bt", text: "Conversation" }), el("label", { class: "chk" }, dimCb, "Dim older text, to show what the model reads"), ui.est, ui.behind, ui.err);
-    ui.reqPre = el("pre", { class: "req", tabindex: "0", "aria-label": "Request body" }); ui.reqBadge = el("div", { class: "row", style: "gap:6px;margin-top:6px" }); ui.reqSelEl = el("select", { "aria-label": "Which check", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.reqSel = ui.reqSelEl.value; renderReq(); } });
-    ui.pane_req = el("div", { class: "tabpane", hidden: true }, el("div", { class: "small muted", text: "Exactly what is sent to the model's POST /v1/systemone for a check. The demo server wraps checks in /api/batch and sends only the questions not already answered." }),
-      el("div", { class: "mrow", style: "margin-top:6px" }, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy request" }), el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all requests" })), ui.reqBadge, ui.reqPre);
-    ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, el("div", { class: "small muted", text: "What actually happened, from cited sources, for comparison with the detectors." }), ui.evs);
-    ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["ev", "Events"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k), text: t })));
-    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(176px,20vh,270px);min-height:140px" }, el("header", {}, el("h4", { text: "Captured so far" })), ui.tabs, ui.pane_flag, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_ev);
+    ui.est = el("div", { class: "est" });
+    ui.pane_set = el("div", { class: "tabpane", hidden: true }, el("div", { class: "bt", text: "Model" }), ui.models, ui.mstate,
+      el("div", { class: "twocol" }, el("div", {}, el("div", { class: "bt", text: "Alert level" }), gv, gate, el("div", { class: "help", text: "A detector is flagged when it reaches this. Lower means more cues." })),
+        el("div", {}, el("div", { class: "bt", text: "What the model reads" }), ui.winSeg, ui.winHelp, el("div", { class: "mrow", style: "margin-top:8px" }, el("span", { class: "l", text: "Check every" }), cadSeg, nIn))),
+      el("div", { class: "foot" }, ui.est, el("label", { class: "chk" }, dimCb, "Dim older text"), ui.behind, ui.err));
+    /* request: what exactly is sent */
+    ui.reqPre = el("pre", { class: "req", tabindex: "0", "aria-label": "Request body" }); ui.reqBadge = el("div", { class: "reqhead" }); ui.reqSelEl = el("select", { "aria-label": "Which check", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.reqSel = ui.reqSelEl.value; renderReq(); } });
+    ui.pane_req = el("div", { class: "tabpane col", hidden: true }, el("div", { class: "reqbar" }, ui.reqBadge, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy" }), el("button", { class: "btn", type: "button", title: "Every check as sent, with its scores", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all" })), el("div", { class: "small muted mono" }, "POST /v1/systemone"), ui.reqPre);
+    /* events: did the detectors catch what really happened */
+    ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, ui.evs);
+    ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["ev", "Events"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k) }, t, el("span", { class: "n", "data-n": k }))));
+    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(232px,27vh,330px);min-height:200px" }, ui.tabs, ui.pane_flag, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_ev);
     const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap);
     /* history */
     const chartCv = el("canvas"); const viewSeg = el("span", { class: "segmented", role: "group", "aria-label": "History view" }, [["det", "By detector"], ["person", "By person"]].map(([k, t]) => el("button", { type: "button", "data-v": k, "aria-pressed": String(S.view === k), text: t, onclick: () => { S.view = k; viewSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === k))); } })));
@@ -809,11 +852,11 @@
     return root;
   }
   window.refreshSrcPanels = () => {};
-  let hitTick = 0;
+  let hitTick = 0, tabTick = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
-    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); }
+    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); if (S.tab === "ev") renderEvents(); }
     const c = mmss(S.t); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
     const b = pending ? `${pending} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
   }
