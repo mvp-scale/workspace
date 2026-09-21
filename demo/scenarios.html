@@ -71,6 +71,14 @@
   
   .txtwrap .btn { min-height: 20px; padding: 0 6px; font-size: 12px; }
   th.fam { text-align: center; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  table.heat { width: auto; } table.heat td.cell { padding: 0; width: 44px; min-width: 44px; height: 28px; border: 1px solid var(--surface); }
+  table.heat td.cell a { height: 28px; }
+  table.heat td.cell.na { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border) 4px 5px); }
+  table.heat td.macro { border-right: 2px solid var(--border); }
+  table.heat th.vh { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; height: 110px; text-align: left; padding: 6px 2px; font-size: 11.5px; }
+  table.heat th.fam { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); text-align: center; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+  .scale { display: flex; align-items: center; gap: 0; margin-top: 10px; font-size: 11.5px; color: var(--text-3); }
+  .scale i { width: 32px; height: 14px; display: block; border: 1px solid var(--surface); } .scale span { padding: 0 8px; } .scale .mid { margin-left: 12px; }
   td.idc { max-width: 170px; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
   td.conf { min-width: 150px; }
   .qline { color: var(--text-3); font-size: 11.5px; margin-bottom: 3px; }
@@ -215,6 +223,9 @@ function textBlock(item, code, showQ) {
   }
   return wrap;
 }
+const STEPS = [-3, -2, -1, 0, 1, 2, 3], STEP_MIX = { "-3": 60, "-2": 38, "-1": 18, "0": 0, "1": 18, "2": 38, "3": 62 };
+const stepOf = (acc, chance) => Math.max(-3, Math.min(3, Math.round((acc >= chance ? (acc - chance) / (1 - chance) : -(chance - acc) / chance) * 4)));
+const stepBg = (i) => i === 0 ? "var(--surface-2)" : `color-mix(in srgb, var(${i > 0 ? "--good" : "--bad"}) ${STEP_MIX[i]}%, var(--surface))`;
 const heatBg = (acc, chance) => {
   if (acc >= chance) return `color-mix(in srgb, var(--good) ${Math.round(clamp01((acc - chance) / (1 - chance)) * 42)}%, transparent)`;
   return `color-mix(in srgb, var(--bad) ${Math.round(clamp01((chance - acc) / chance) * 42 + 8)}%, transparent)`;
@@ -284,26 +295,23 @@ function renderOverview(details) {
   for (const m of mids) for (const x of sets) { const s = cell[m][x.p.id]; if (!s) continue; const c = chance(x.p); if (s.lo > c) above++; else if (s.hi < c) below++; else within++; }
 
   const fam = []; for (const x of sets) { const g = meta(x.p.id).group; if (fam.length && fam[fam.length - 1][0] === g) fam[fam.length - 1][1]++; else fam.push([g, 1]); }
-  const headG = el("tr", { class: "famrow" }, el("th", { colspan: 3, text: "" }), fam.map(([g, k]) => el("th", { colspan: k, class: "fam", text: g })));
-  const head1 = el("tr", {}, el("th", { "data-sort": "text", text: "Model" }), el("th", { "data-sort": "num", text: "Macro avg" }), el("th", { "data-sort": "num", text: "Sets run" }),
-    sets.map(x => el("th", { "data-sort": "num", title: `${meta(x.p.id).name}: ${x.p.n} items, ${nClasses(x.p)} classes`, text: meta(x.p.id).short })));
-  const head2 = el("tr", {}, el("th", { text: "n · chance" }), el("th", { text: "mean chance" }), el("th", { text: "" }),
-    sets.map(x => el("th", { text: `${x.p.n} · ${pc(chance(x.p))}` })));
+  const headG = el("tr", { class: "famrow" }, el("th", { colspan: 2, text: "" }), fam.map(([g, k]) => el("th", { colspan: k, class: "fam", title: g, text: "" })));
+  const head1 = el("tr", {}, el("th", { "data-sort": "text", text: "Model" }), el("th", { "data-sort": "num", class: "vh", title: "Average over all sets the model ran", text: "Average" }),
+    sets.map(x => el("th", { "data-sort": "num", class: "vh", title: `${meta(x.p.id).name}: ${x.p.n} items, ${nClasses(x.p)} classes, chance ${pc(chance(x.p))}`, text: meta(x.p.id).short })));
   const body = el("tbody", {}, ordered.map(m => {
     const mm = M[m];
     return el("tr", {},
       el("td", { "data-value": Jev.codeOf(m) }, el("div", { class: "model-name" }, mtagLive(m))),
-      el("td", { class: "num", "data-value": mm ? mm.acc : -1, title: mm ? `Unweighted mean of per-set accuracy over ${mm.k} set(s); mean chance ${pc(mm.ch)}` : "not run", text: mm ? pc(mm.acc, 1) : "not run" }),
-      el("td", { class: "num", "data-value": mm ? mm.k : 0, text: mm ? `${mm.k}/${sets.length}` : "0" }),
+      el("td", { class: "cell macro" + (mm ? "" : " na"), "data-value": mm ? mm.acc : -1, style: mm ? `background:${stepBg(stepOf(mm.acc, mm.ch))}` : "", title: mm ? `Average over ${mm.k} of ${sets.length} sets: ${pc(mm.acc, 1)} (mean chance ${pc(mm.ch)}). Unweighted, so models that ran fewer sets are not directly comparable.` : "not run" }),
       sets.map(x => {
         const s = cell[m][x.p.id], c = chance(x.p);
-        if (!s) return el("td", { class: "cell na", "data-value": -1, text: "not run", title: `${modelName(m)} has no results on ${meta(x.p.id).name}` });
+        if (!s) return el("td", { class: "cell na", "data-value": -1, title: `${modelName(m)} has no results on ${meta(x.p.id).name}` });
         const title = `${modelName(m)} on ${meta(x.p.id).name}: ${s.k}/${s.n} correct = ${pc(s.acc, 1)}; Wilson 95% interval ${pc(s.lo, 1)} to ${pc(s.hi, 1)}; chance ${pc(c, 1)}`;
-        return el("td", { class: "cell" + (s.hi < c ? " below" : ""), "data-value": s.acc, style: `background:${heatBg(s.acc, c)}`, title },
-          el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title, text: pc(s.acc) }));
+        return el("td", { class: "cell" + (s.hi < c ? " below" : ""), "data-value": s.acc, style: `background:${stepBg(stepOf(s.acc, c))}`, title },
+          el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title }));
       }));
   }));
-  const table = el("table", { class: "data heat" }, el("thead", {}, headG, head1, head2), body);
+  const table = el("table", { class: "data heat" }, el("thead", {}, headG, head1), body);
   Jev.sortable(table);
   const exportCsv = () => {
     const h = ["model", "macro_accuracy", "sets_run"]; for (const x of sets) h.push(`${x.p.id}_acc`, `${x.p.id}_ci95_lo`, `${x.p.id}_ci95_hi`, `${x.p.id}_n`);
@@ -314,10 +322,11 @@ function renderOverview(details) {
   const wrap = el("div", { class: "stack" },
     el("section", { class: "section", style: "margin-top:0", "aria-labelledby": "ov-h" },
       el("header", {}, el("div", {}, el("h2", { id: "ov-h", text: "All sets: accuracy by model" }),
-        el("p", { class: "small", text: "Cell colour shows accuracy relative to chance (green above, red below); red text means the whole 95% interval is below chance. Hover or focus a cell for the interval. Click a cell to open that model on that set." })),
+        el("p", { class: "small", text: "Colour shows how far above or below chance each model is. Hover a cell for the numbers and interval; click it to open that model on that set." })),
         el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: exportCsv, text: "Export CSV" }))),
       ordered.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any set."),
-      el("p", { class: "legend", style: "margin-top:6px", text: `Macro avg is the unweighted mean of per-set accuracy over the sets a model ran, so models with fewer sets are not directly comparable. Intervals are Wilson 95% (approximate). Of ${above + below + within} model-by-set cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.${failed ? ` ${failed} set(s) failed to load.` : ""}` })));
+      el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
+      el("p", { class: "legend", style: "margin-top:6px", text: `Intervals are Wilson 95% (approximate). Of ${above + below + within} model-by-set cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.${failed ? ` ${failed} set(s) failed to load.` : ""}` })));
   return wrap;
 }
 
