@@ -52,7 +52,7 @@
   .pcard { flex: 0 0 auto; width: 206px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px 4px; background: var(--surface-2); }
   .pcard.speaking { border-color: var(--accent); background: var(--accent-soft); }
   .pcard .h1 { display: flex; align-items: center; gap: 6px; min-height: 20px; }
-  .pnum { min-width: 22px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--text-2); color: var(--bg); font: 700 10.5px var(--mono); display: grid; place-items: center; flex: none; }
+  .pnum { min-width: 22px; height: 18px; padding: 0 5px; border-radius: 9px; background: color-mix(in srgb, var(--v, var(--text-2)) 30%, var(--surface)); border: 1px solid var(--v, var(--text-2)); color: var(--text); font: 700 10.5px var(--mono); display: grid; place-items: center; flex: none; }
   .pcard .rt { font: 500 10px var(--mono); color: var(--accent); margin-left: auto; }
   .pcard b { font-size: 12px; font-weight: 650; }
   .hits { display: flex; gap: 3px; flex-wrap: wrap; min-height: 20px; }
@@ -63,20 +63,20 @@
 
   .glide { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); }
   .glide > .track { will-change: transform; padding-top: 8px; }
-  .msg { display: flex; gap: 8px; margin: 9px 0; align-items: flex-end; } .msg.coach { flex-direction: row-reverse; }
-  .msg .pnum { margin-bottom: 6px; }
-  .bub { max-width: min(82%, 640px); padding: 7px 12px 8px; border-radius: 14px 14px 14px 5px; background: var(--surface-2); border: 1px solid var(--border); font-size: clamp(14px, 0.4vw + 11px, 17px); line-height: 1.65; }
-  .msg.coach .bub { border-radius: 14px 14px 5px 14px; background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
-  .who2 { display: flex; gap: 8px; font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); line-height: 1.4; } .who2 .ts { font: 500 10.5px var(--mono); }
+  .msg { display: flex; margin: 5px 0; --v: var(--text-2); } .msg.coach { justify-content: flex-end; }
+  .bub { max-width: min(88%, 680px); padding: 4px 10px 6px; border-radius: 12px 12px 12px 4px; background: color-mix(in srgb, var(--v) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--v) 30%, var(--border)); font-size: clamp(14px, 0.4vw + 11px, 17px); line-height: 1.55; }
+  .msg.coach .bub { border-radius: 12px 12px 4px 12px; }
+  .meta { display: flex; align-items: center; gap: 6px; font: 500 10.5px var(--mono); color: var(--text-3); line-height: 1.6; } .meta .pnum { height: 15px; min-width: 20px; font-size: 10px; }
+  .meta .nmx { font-family: var(--font); font-weight: 600; letter-spacing: .02em; color: var(--text-2); }
   .txt { position: relative; } .txt .ghost { visibility: hidden; user-select: none; padding-right: 8px; } .txt .words { position: absolute; left: 0; top: 0; width: 100%; }
   .w { display: inline-block; animation: wordin .26s ease-out both; } @keyframes wordin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .w.out { color: var(--text-3); }
+  .showwin .w.out { color: var(--text-3); }
   .caret { display: inline-block; width: 0; height: 1.05em; position: relative; vertical-align: text-bottom; } .caret::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: var(--accent); animation: caret 1s steps(2) infinite; } @keyframes caret { 50% { opacity: 0; } }
-  .ph { background: color-mix(in srgb, var(--c) 22%, transparent); box-shadow: inset 0 -2px 0 var(--c); border-radius: 3px; margin: 0 -2px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-  .readnote { font-size: 11px; color: var(--text-3); padding: 0 12px 8px; }
+  .ph { box-shadow: inset 0 -2px 0 var(--c); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .readnote { font-size: 11px; color: var(--text-3); padding: 0 12px 6px; }
 
   .rail { grid-area: rail; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
-  .cols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 190px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 210px; }
   .stackroot { position: relative; overflow: hidden; }
   .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 0 6px 0 8px; background: var(--surface); height: 34px; overflow: hidden; display: flex; align-items: center; gap: 7px; }
   .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); }
@@ -90,11 +90,11 @@
   .moment.cool .nm { color: var(--text-2); font-weight: 500; }
   .moment .hold { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); } .moment .hold i { display: block; height: 100%; background: var(--c); transform-origin: left; }
   .scroll { overflow: auto; min-height: 0; }
-  .cnote { border-left: 5px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-sm); padding: 10px 12px; display: grid; gap: 6px; }
+  .cnote { border-left: 5px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-sm); padding: 8px 10px; display: grid; gap: 4px; }
   .cnote.caution { border-left-color: var(--bad); background: var(--bad-soft); } .cnote.notice { border-left-color: var(--warn); background: var(--warn-soft); }
   .cwin { display: flex; justify-content: space-between; font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
   .chead { font-size: clamp(22px, 1.9vw, 28px); font-weight: 780; letter-spacing: -.02em; line-height: 1.05; }
-  .ctext { font-size: 15px; line-height: 1.35; font-weight: 500; }
+  .ctext { font-size: 14px; line-height: 1.3; font-weight: 500; }
   .cwhy { font-size: 12px; color: var(--text-2); min-height: 16px; }
   .ctimer .trk { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--text) 14%, transparent); overflow: hidden; } .ctimer .trk i { display: block; height: 100%; background: var(--text); transform-origin: left; }
   .bt { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 2px 0 4px; }
@@ -205,7 +205,7 @@
   const P_BY = Object.fromEntries(PERSP.map(p => [p.id, p]));
   const DEFAULTS = ["anger", "fear", "urgency", "threat", "politeness", "manipulation", "persuasion", "sarcasm"];
 
-  const S = { src: null, dlg: null, coach: null, names: false, model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "live", armed: false, playing: false, t: 0, done: false, dets: [], kps: [], seq: 0, tab: "flag", view: "det", reqSel: "latest" };
+  const S = { showWin: false, src: null, dlg: null, coach: null, names: false, model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "live", armed: false, playing: false, t: 0, done: false, dets: [], kps: [], seq: 0, tab: "flag", view: "det", reqSel: "latest" };
   let D = null, T = null, W = [], DUR = 0, ptr = 0, raf = 0, last = performance.now(), runner = null, ui = {}, QS = {}, QALL = {}, EVENTS = [], SP = { list: [], by: {} };
   const C = new Map(), CPS = [], FLAGS = [], LAGS = {}, QUEUE = [], LOGW = [], rows = [], peopleSpans = {}, cards = [], SPOKE = [], PC = {};
   let active = 0, ctl = null, failed = 0, pending = 0, maxPending = 0, moSeq = 0, nextSample = 0, checksDone = 0, pre = null, cpN = 0, glide = null, stack = null, chart = null, curSpk = null;
@@ -221,6 +221,8 @@
   const code = (spk) => spk === "_call" ? "Call" : "V" + numOf(spk);
   const namesKnown = () => !!T && T.meta.kind !== "dialogue";
   const nm = (spk) => S.names && namesKnown() ? spk : "";
+  const OTHER_SLOTS = [2, 3, 4, 5, 6, 7, 8, 1];
+  const vcol = (spk) => { if (isCoach(spk)) return "var(--accent)"; const others = SP.list.filter(p => p.name !== S.coach), i = others.findIndex(p => p.name === spk); return i < 0 ? "var(--text-2)" : `var(--s${OTHER_SLOTS[i % 8]})`; };
   const lab = (spk) => spk === "_call" ? "Whole call" : nm(spk) || code(spk);
   const isCoach = (spk) => spk === S.coach;
 
@@ -469,8 +471,8 @@
     let row = rows[wd.i];
     if (!row) {
       const tu = T.turns[wd.i], wordsEl = el("div", { class: "words" }); if (ui.caret.parentNode) ui.caret.remove();
-      row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (isCoach(tu.speaker) ? " coach" : "") }, el("div", { class: "pnum", "aria-hidden": "true", text: code(tu.speaker) }),
-        el("div", { class: "bub" }, el("div", { class: "who2" }, el("span", { "data-nm-spk": tu.speaker, title: tu.speaker, text: nm(tu.speaker) }), el("span", { class: "ts", text: mmss(tu.t0) })), el("div", { class: "txt" }, el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
+      row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (isCoach(tu.speaker) ? " coach" : ""), style: `--v:${vcol(tu.speaker)}` },
+        el("div", { class: "bub" }, el("div", { class: "meta" }, el("span", { class: "pnum", "aria-hidden": "true", text: code(tu.speaker) }), el("span", { class: "nmx", "data-nm-spk": tu.speaker, title: tu.speaker, text: nm(tu.speaker) }), el("span", { text: mmss(tu.t0) })), el("div", { class: "txt" }, el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
       rows[wd.i] = row; ui.track.append(row.el); curSpk = tu.speaker;
       for (const k in PC) PC[k].node.classList.toggle("speaking", k === tu.speaker);
     }
@@ -506,7 +508,7 @@
     const list = [...SPOKE, ...(S.dets.some(d => d.scope === "call") ? ["_call"] : [])];
     for (const spk of list) {
       const hits = el("div", { class: "hits" }), call = spk === "_call";
-      const node = el("div", { class: "pcard" + (curSpk === spk ? " speaking" : ""), title: call ? "Detectors that read the whole call" : `${code(spk)} (${spk})` },
+      const node = el("div", { class: "pcard" + (curSpk === spk ? " speaking" : ""), style: call ? "" : `--v:${vcol(spk)}`, title: call ? "Detectors that read the whole call" : `${code(spk)} (${spk})` },
         el("div", { class: "h1" }, call ? el("span", { class: "pnum", "aria-hidden": "true", text: "∑" }) : el("span", { class: "pnum", "aria-hidden": "true", text: code(spk) }), call ? el("b", { text: "Whole call" }) : el("b", { "data-nm-spk": spk, text: nm(spk) }), isCoach(spk) && !call ? el("span", { class: "rt", text: "coached" }) : null), hits);
       PC[spk] = { node, hits }; ui.people.append(node); renderHits(spk);
     }
@@ -781,14 +783,15 @@
     const drawCad = () => { cadSeg.replaceChildren(...[["sentence", "sentence"], ["words", "N words"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.cp === v), onclick: () => { S.cp = v; nIn.hidden = v !== "words"; drawCad(); resetRun(); writeHash(); refreshEst(); }, text: t }))); }; drawCad();
     const gate = el("input", { type: "range", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Alert at", style: "width:120px;min-height:24px", oninput: () => { S.gate = +gate.value; gv.textContent = S.gate.toFixed(2); writeHash(); } }); gate.value = S.gate; const gv = el("strong", { text: S.gate.toFixed(2) });
     ui.est = el("div", { class: "est" });
+    const dimCb = el("input", { type: "checkbox", id: "dim", onchange: () => { S.showWin = dimCb.checked; ui.track.classList.toggle("showwin", S.showWin); ui.readnote.hidden = !S.showWin; } });
     ui.pane_set = el("div", { class: "tabpane", hidden: true }, el("div", { class: "bt", text: "Model" }), el("div", { class: "mrow" }, ui.models, ui.mstate), el("div", { class: "bt", text: "What each model reads" }), el("div", { class: "mrow" }, el("span", { class: "l", text: "Window per person" }), ui.winSeg), el("div", { class: "mrow" }, el("span", { class: "l", text: "Check every" }), cadSeg, nIn),
-      el("div", { class: "bt", text: "Alert" }), el("div", { class: "mrow" }, el("span", { class: "l" }, "Alert at ", gv), gate), ui.est, ui.behind, ui.err);
+      el("div", { class: "bt", text: "Alert" }), el("div", { class: "mrow" }, el("span", { class: "l" }, "Alert at ", gv), gate), el("div", { class: "bt", text: "Conversation" }), el("label", { class: "chk" }, dimCb, "Dim older text, to show what the model reads"), ui.est, ui.behind, ui.err);
     ui.reqPre = el("pre", { class: "req", tabindex: "0", "aria-label": "Request body" }); ui.reqBadge = el("div", { class: "row", style: "gap:6px;margin-top:6px" }); ui.reqSelEl = el("select", { "aria-label": "Which check", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.reqSel = ui.reqSelEl.value; renderReq(); } });
     ui.pane_req = el("div", { class: "tabpane", hidden: true }, el("div", { class: "small muted", text: "Exactly what is sent to the model's POST /v1/systemone for a check. The demo server wraps checks in /api/batch and sends only the questions not already answered." }),
       el("div", { class: "mrow", style: "margin-top:6px" }, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy request" }), el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all requests" })), ui.reqBadge, ui.reqPre);
     ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, el("div", { class: "small muted", text: "What actually happened, from cited sources, for comparison with the detectors." }), ui.evs);
     ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["ev", "Events"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k), text: t })));
-    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(190px,22vh,290px);min-height:150px" }, el("header", {}, el("h4", { text: "Captured so far" })), ui.tabs, ui.pane_flag, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_ev);
+    const cap = el("section", { class: "pn", style: "flex:0 1 clamp(176px,20vh,270px);min-height:140px" }, el("header", {}, el("h4", { text: "Captured so far" })), ui.tabs, ui.pane_flag, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_ev);
     const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap);
     /* history */
     const chartCv = el("canvas"); const viewSeg = el("span", { class: "segmented", role: "group", "aria-label": "History view" }, [["det", "By detector"], ["person", "By person"]].map(([k, t]) => el("button", { type: "button", "data-v": k, "aria-pressed": String(S.view === k), text: t, onclick: () => { S.view = k; viewSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === k))); } })));
@@ -798,7 +801,7 @@
     const root = el("div", { class: "cp" }, top, note, ui.confirm, ui.status, ui.stage, ui.tabsbar);
     window.refreshSrcPanels = () => { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; }; window.refreshSrcPanels();
     top.append(ui.pasteField);
-    glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 4); chart = Chart(chartCv);
+    ui.readnote.hidden = true; glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 4); chart = Chart(chartCv);
     runner = makeRunner(); refreshCoach(); renderDets(); renderDetTab(); renderPeople(); renderKp(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
     Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
     document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
