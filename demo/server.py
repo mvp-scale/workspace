@@ -8,6 +8,8 @@ The TypeSafe key stays server-side. Binds to 127.0.0.1 by default; set DEMO_HOST
 import hashlib
 import json
 import os
+import re
+import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -17,12 +19,16 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 BENCH = Path(os.environ.get("BENCH_DIR", HERE.parent / "data" / "bench"))
-BACKENDS = {
+BACKENDS = {  # keyed by the same model ids as the leaderboard, best first; codes and names live in models.json
+    "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": os.environ.get("TYPESAFE_API_KEY", ""), "hosted": True},
+    "semif": {"url": os.environ.get("SEMIF_URL", "http://127.0.0.1:8012"), "key": ""},
+    "kev-4b": {"url": os.environ.get("KEV4_URL", "http://127.0.0.1:8010"), "key": ""},
+    "so1": {"url": os.environ.get("SO1_URL", "http://127.0.0.1:8013"), "key": ""},
+    "laya": {"url": os.environ.get("LAYA_URL", "http://127.0.0.1:8014"), "key": ""},
+    "kev-0.8b": {"url": os.environ.get("KEV08_URL", "http://127.0.0.1:8011"), "key": ""},
     "jeff": {"url": os.environ.get("JEFF_URL", "http://127.0.0.1:8000"), "key": os.environ.get("JEFF_API_KEYS", "devkey").split(",")[0]},
     "kev-0.5b": {"url": os.environ.get("KEV05_URL", "http://127.0.0.1:8009"), "key": ""},
-    "kev-0.8b": {"url": os.environ.get("KEV08_URL", "http://127.0.0.1:8011"), "key": ""},
-    "kev-4b": {"url": os.environ.get("KEV4_URL", "http://127.0.0.1:8010"), "key": ""},
-    "jev (typesafe)": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": os.environ.get("TYPESAFE_API_KEY", "")},
+    "verdict": {"url": os.environ.get("VERDICT_URL", "http://127.0.0.1:8015"), "key": ""},
 }
 
 
@@ -222,25 +228,77 @@ def leaderboard():
     return sorted(out, key=lambda m: -m["mean_accuracy"])
 
 
+_status_cache = (0.0, None)
+
+
+def _model_facts():
+    return {m["id"]: m for m in json.loads((HERE / "models.json").read_text())["models"]}
+
+
+def _listening_pids():
+    """{port: pid} of local listeners, so a loaded model can be tied to its process."""
+    try:
+        out = subprocess.run(["ss", "-ltnpH"], capture_output=True, text=True, timeout=3).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    pids = {}
+    for line in out.splitlines():
+        m = re.search(r":(\d+)\s+\S+\s+users:\(\(\"[^\"]*\",pid=(\d+)", line)
+        if m:
+            pids[int(m.group(1))] = int(m.group(2))
+    return pids
+
+
+def _gpu_mb_by_pid():
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    return {int(a): int(b) for a, b in (ln.split(",") for ln in out.strip().splitlines() if "," in ln)}
+
+
+def _rss_mb(pid):
+    try:
+        return int(re.search(r"VmRSS:\s+(\d+)", Path(f"/proc/{pid}/status").read_text()).group(1)) // 1024
+    except (OSError, AttributeError):
+        return None
+
+
 def status():
-    """Reachability of each compare backend, checked in parallel with a short timeout."""
+    """What is actually loaded, checked live. Identity comes from the running server, not from our label, so a port serving
+    something unexpected is flagged instead of trusted. Cached for two seconds."""
+    global _status_cache
+    if time.time() - _status_cache[0] < 2 and _status_cache[1] is not None:
+        return _status_cache[1]
+    facts, ports, gpu = _model_facts(), _listening_pids(), _gpu_mb_by_pid()
+
     def ping(item):
         name, cfg = item
-        if name.startswith("jev") and not cfg["key"]:
-            return name, {"up": False, "reason": "No API key configured"}
+        f = facts.get(name, {})
+        base = {"code": f.get("code"), "name": f.get("name", name), "hosted": bool(cfg.get("hosted")), "params": f.get("params")}
+        if cfg.get("hosted"):
+            if not cfg["key"]:
+                return name, {**base, "up": False, "reason": "No API key configured", "identity": None}
+            return name, {**base, "up": True, "identity": "hosted API (api.typesafe.ai)", "identity_ok": True, "gpu_mb": 0}
         headers = {"Authorization": f"Bearer {cfg['key']}"} if cfg["key"] else {}
-        for path in ("/healthz", "/v1/models"):
+        for path in ("/v1/models", "/healthz"):
             try:
-                with urllib.request.urlopen(urllib.request.Request(cfg["url"].rstrip("/") + path, headers=headers), timeout=2):
-                    return name, {"up": True}
-            except urllib.error.HTTPError as e:
-                if e.code < 500 and e.code != 404 and e.code != 401:
-                    return name, {"up": True}
-            except Exception as e:
-                reason = type(e).__name__
-        return name, {"up": False, "reason": "Not reachable"}
+                with urllib.request.urlopen(urllib.request.Request(cfg["url"].rstrip("/") + path, headers=headers), timeout=2) as r:
+                    body = json.load(r)
+            except Exception:
+                continue
+            m = (body.get("models") or [{}])[0] if isinstance(body, dict) else {}
+            said = " ".join(str(m.get(k, "")) for k in ("id", "base", "run")) or json.dumps(body)
+            port = int(cfg["url"].rsplit(":", 1)[-1].strip("/")) if cfg["url"].rsplit(":", 1)[-1].strip("/").isdigit() else None
+            pid = ports.get(port)
+            return name, {**base, "up": True, "identity": m.get("base") or said.strip(), "identity_ok": f.get("verify", "").lower() in said.lower() if f.get("verify") else None,
+                          "gpu_mb": gpu.get(pid, 0) if pid else None, "cpu_mb": _rss_mb(pid) if pid else None, "pid": pid}
+        return name, {**base, "up": False, "reason": "Not loaded", "identity": None}
+
     with ThreadPoolExecutor(len(BACKENDS)) as ex:
-        return dict(ex.map(ping, BACKENDS.items()))
+        result = dict(ex.map(ping, BACKENDS.items()))
+    _status_cache = (time.time(), result)
+    return result
 
 
 PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/windows": "windows.html", "/stream": "stream.html", "/models": "models.html", "/report": "report.html"}
@@ -323,9 +381,10 @@ class Handler(BaseHTTPRequestHandler):
             body = {"state": req["state"], "model": "jev-latest", "questions": {"decision": req["question"]}}
         except (ValueError, KeyError):
             return self._send(400, {"error": "need JSON {state, question}"})
+        up = {n: v.get("up") for n, v in status().items()}
         with ThreadPoolExecutor(len(BACKENDS)) as ex:
-            futs = [ex.submit(call, n, c, body) for n, c in BACKENDS.items()]
-            self._send(200, [f.result() for f in futs])
+            futs = [ex.submit(call, n, c, body) if up.get(n) else None for n, c in BACKENDS.items()]
+            self._send(200, [f.result() if f else {"backend": n, "error": "Not loaded"} for f, n in zip(futs, BACKENDS)])
 
     def log_message(self, *a):
         pass
@@ -333,5 +392,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     host, port = os.environ.get("DEMO_HOST", "127.0.0.1"), int(os.environ.get("DEMO_PORT", "8100"))
-    print(f"demo on http://{host}:{port}  (typesafe key: {'set' if BACKENDS['jev (typesafe)']['key'] else 'MISSING'})")
+    print(f"demo on http://{host}:{port}  (typesafe key: {'set' if BACKENDS['jev']['key'] else 'MISSING'})")
     ThreadingHTTPServer((host, port), Handler).serve_forever()

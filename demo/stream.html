@@ -127,13 +127,16 @@
 
   const CHUNK = 100;              // items per /api/batch request; the server allows at most 400
   const MAX_CALLS = 1500;         // page-side guard against a runaway paste or many windows
-  const HOSTED = "jev (typesafe)";
   const SPIKE = 0.3, WPM = 150, MAX_WINS = 3, LIVE_CONC = 2;
   const WINDOWS = ["w5", "w10", "w20", "w40", "s1", "s2", "s3", "t1", "t2", "full"];
   const SPEEDS = ["0.5", "1", "2", "4", "instant"];
   const POLICIES = [["smart", "Smart (default)"], ["sentence", "Each sentence end"], ["words", "Every N words"], ["adaptive", "Adaptive screen"]];
   const POL_ROWS = [["sentence", "Each sentence end"], ["words", "Every N words"], ["every", "Every word"], ["smart", "Smart"], ["adaptive", "Adaptive screen"]];
-  const modelId = (b) => b === HOSTED ? "jev" : b;
+  /* Old names (URL hashes, stored window-study results) map to the current model ids. */
+  const OLD_NAMES = { "jev (typesafe)": "jev", "jev-typesafe": "jev" };
+  const canon = (b) => OLD_NAMES[String(b || "").toLowerCase()] || b;
+  const mc = (id) => Jev.codeOf(id);
+  const mn = (id) => `${Jev.codeOf(id)} ${Jev.nameOf(id)}`;
   const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   let TARIFF = { perM: 0.042, source: "constant $0.042 per million input tokens (public Jev tariff); /api/models could not be parsed" };
 
@@ -163,7 +166,7 @@
   let PLAN_TEXT = "", stageScrolled = false, logKey = "", logVis = 0, costT = 0, gaugeT = 0;
   const C = new Map();            // model + state -> {answers, err, calls:[{tin,tout,lat,cached,nq,nw}]}
   const ckey = (state) => S.model + "\u0001" + state;
-  const LIVE = { lags: [], calls: 0, cached: 0, tokens: 0, q: [], active: 0, pend: new Set(), ctl: null };
+  const LIVE = { lags: [], calls: 0, cached: 0, tokens: 0, rep: 0, q: [], active: 0, pend: new Set(), ctl: null };
 
   /* ---------- storage / hash ---------- */
   const kv = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
@@ -251,7 +254,8 @@
   const clip = (s, n = 140) => s.length > n ? s.slice(0, n - 1) + "…" : s;
   const money = (x) => x == null ? "–" : x < 0.01 ? "$" + x.toFixed(5) : x < 10 ? "$" + x.toFixed(3) : "$" + x.toFixed(2);
   const num0 = (x) => x == null ? "–" : Math.round(x).toLocaleString("en-US");
-  const isHosted = () => S.model === HOSTED;
+  const isHosted = () => !!(Jev.status() || {})[S.model]?.hosted;
+  const isUp = () => Jev.isUp(S.model);
 
   /* ---------- scoring, trust ---------- */
   function read(p, ans) {
@@ -263,14 +267,14 @@
   }
   const wilson = (k, n, z = 1.96) => { const p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - m) / d, (c + m) / d]; };
   function trust(p) {
-    const set = D.sets[PSET(p)], res = set && set.results && set.results[modelId(S.model)]; if (!res) return null;
+    const set = D.sets[PSET(p)], res = set && set.results && set.results[S.model]; if (!res) return null;
     const rows = Object.values(res); if (!rows.length) return null;
     const n = rows.length, correct = rows.filter(r => r.correct).length, chance = 1 / (set.items[0].labels.length || 2), ci = wilson(correct, n);
     return { n, correct, acc: correct / n, chance, ci, near: ci[0] <= chance && chance <= ci[1] };
   }
   function trustChip(p) {
     const t = trust(p), cav = p.caveat ? " " + p.caveat : "";
-    if (!t) return el("span", { class: "badge", text: "not measured for this model", title: `No published results for ${S.model} on the ${PSET(p)} set.${cav}` });
+    if (!t) return el("span", { class: "badge", text: "not measured for this model", title: `No published results for ${mn(S.model)} on the ${PSET(p)} set.${cav}` });
     return el("span", { class: "badge " + (t.near ? "warn" : "accent"), title: `${t.correct} of ${t.n} correct on the ${PSET(p)} validation set. 95% Wilson interval ${fmt.pct(t.ci[0], 0)} to ${fmt.pct(t.ci[1], 0)}; chance level is ${fmt.pct(t.chance, 0)}.${t.near ? " The interval includes chance." : ""}${cav}` },
       `accuracy ${fmt.pct(t.acc, 0)}, n=${t.n}` + (t.near ? ", near chance" : ""));
   }
@@ -325,7 +329,7 @@
 
   /* ---------- calling the server: one requester used by Replay precompute and by Live ---------- */
   async function fetchStates(states, signal, onProg) {
-    const out = { n: 0, cached: 0, tokens: 0, failed: 0 }, backend = S.model;
+    const out = { n: 0, cached: 0, tokens: 0, rep: 0, failed: 0 }, backend = S.model;
     for (let round = 0; round < 3; round++) {
       const pend = pendingOf(states); if (!pend.length || signal.aborted) break;
       onProg && onProg("total", pend.length);
@@ -342,8 +346,10 @@
             if (!r || r.error) { o.err = (r && r.error) || "No result returned"; failed++; return; }
             Object.assign(o.answers, r.answers || {}); o.err = null;
             const u = (r.extras && r.extras.response) || {}, tin = Number(u["usage.input_tokens"]), tout = Number(u["usage.output_tokens"]);
-            o.calls.push({ tin: Number.isFinite(tin) ? tin : null, tout: Number.isFinite(tout) ? tout : null, lat: r.latency_ms, cached: !!r.cached, nq: x.miss.length, nw: words(x.st).length });
-            out.n++; if (r.cached) out.cached++; else if (Number.isFinite(tin)) out.tokens += tin;
+            /* Some servers report 0 (nominal) instead of a count: that is "not reported", never a real zero. */
+            const okIn = u["usage.input_tokens"] != null && Number.isFinite(tin) && tin > 0, okOut = u["usage.output_tokens"] != null && Number.isFinite(tout) && tout > 0;
+            o.calls.push({ tin: okIn ? tin : null, tout: okOut ? tout : null, lat: r.latency_ms, cached: !!r.cached, nq: x.miss.length, nw: words(x.st).length });
+            out.n++; if (r.cached) out.cached++; else if (okIn) { out.tokens += tin; out.rep++; }
             if (x.miss.some(q => !o.answers[q])) { o.err = "Missing answer in response"; failed++; }
           });
         } catch (e) {
@@ -367,7 +373,7 @@
   function setBusy() { if (ui.busy) ui.busy.disabled = S.running; }
 
   /* Live: at each checkpoint reached during playback, call now (at most LIVE_CONC at once) and measure the lag. */
-  const liveAllowed = () => S.mode === "live" && (!isHosted() || S.armed);
+  const liveAllowed = () => S.mode === "live" && isUp() && (!isHosted() || S.armed);
   function enqueueLive(i) {
     if (!liveAllowed() || LIVE.pend.has(i) || !pendingOf(statesAt(i)).length) return;
     if (!LIVE.ctl) LIVE.ctl = new AbortController();
@@ -378,12 +384,12 @@
       const job = LIVE.q.shift(); LIVE.active++; const ctl = LIVE.ctl;
       fetchStates(statesAt(job.i), ctl.signal).then(res => {
         if (ctl.signal.aborted) return;
-        LIVE.pend.delete(job.i); LIVE.lags.push(performance.now() - job.t); LIVE.calls += res.n; LIVE.cached += res.cached; LIVE.tokens += res.tokens;
+        LIVE.pend.delete(job.i); LIVE.lags.push(performance.now() - job.t); LIVE.calls += res.n; LIVE.cached += res.cached; LIVE.tokens += res.tokens; LIVE.rep += res.rep;
         rescore(); paintCp(job.i); if (job.i <= shownCp) { syncLog(); scheduleGauges(); } updateChip(); updateWlabel(); scheduleCost();
-      }).finally(() => { LIVE.active--; pumpLive(); });
+      }).finally(() => { if (LIVE.ctl === ctl) { LIVE.active--; pumpLive(); } });
     }
   }
-  function resetLive() { if (LIVE.ctl) LIVE.ctl.abort(); LIVE.ctl = null; LIVE.q = []; LIVE.active = 0; LIVE.pend = new Set(); LIVE.lags = []; LIVE.calls = 0; LIVE.cached = 0; LIVE.tokens = 0; }
+  function resetLive() { if (LIVE.ctl) LIVE.ctl.abort(); LIVE.ctl = null; LIVE.q = []; LIVE.active = 0; LIVE.pend = new Set(); LIVE.lags = []; LIVE.calls = 0; LIVE.cached = 0; LIVE.tokens = 0; LIVE.rep = 0; }
 
   /* ---------- cost and real time ---------- */
   function callStats() {
@@ -393,6 +399,7 @@
     const q = withTok.reduce((a, c) => a + c.nq, 0), perQ = q ? withTok.reduce((a, c) => a + Math.max(0, c.tin - 2 * c.nw), 0) / q : null;
     return { all, fresh, avgTok: withTok.length ? withTok.reduce((a, c) => a + c.tin, 0) / withTok.length : null, perQ,
       totTok: fresh.reduce((a, c) => a + (c.tin || 0), 0), totOut: fresh.reduce((a, c) => a + (c.tout || 0), 0),
+      freshTok: fresh.filter(c => c.tin != null).length, freshOut: fresh.filter(c => c.tout != null).length,
       avgLat: lat.length ? lat.reduce((a, b) => a + b, 0) / lat.length : null, p95: lat.length ? lat[Math.min(lat.length - 1, Math.ceil(0.95 * lat.length) - 1)] : null };
   }
   const perQuestion = (cs) => cs.perQ != null ? cs.perQ : 110;
@@ -416,15 +423,16 @@
     if (!T.total) return box.replaceChildren(empty("No transcript", "Choose a source or paste some text."));
     const cs = callStats(), hosted = isHosted(), kids = [];
     const kpi = (label, value, note) => el("div", { class: "card kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), note ? el("div", { class: "note", text: note }) : null);
+    kids.push(el("p", { class: "small" }, "Model: ", Jev.tag(S.model), hosted ? " · hosted, paid" : " · local, compute only"));
     if (PLAN_TEXT) kids.push(el("p", { class: "small muted", text: PLAN_TEXT }));
     if (!cs.all.length) kids.push(el("p", { class: "muted", text: "No calls measured for this text yet. Run the precompute, or play in Live mode; the figures below are then read from the actual responses (usage.input_tokens and latency of each call)." }));
     else {
       kids.push(el("div", { class: "grid cols-4" },
         kpi("Calls", `${cs.fresh.length} fresh`, `${cs.all.length - cs.fresh.length} repeats served from the server cache`),
-        kpi("Input tokens per call", cs.avgTok == null ? "–" : num0(cs.avgTok), cs.perQ == null ? "" : `about ${num0(cs.perQ)} per question plus 2 per window word`),
+        kpi("Input tokens per call", cs.avgTok == null ? "not reported" : num0(cs.avgTok), cs.avgTok == null ? `${mc(S.model)}'s server returned no input token count` : cs.perQ == null ? "" : `about ${num0(cs.perQ)} per question plus 2 per window word`),
         kpi("Latency per call", cs.avgLat == null ? "–" : `${Math.round(cs.avgLat)} ms`, cs.p95 == null ? "" : `p95 ${Math.round(cs.p95)} ms (server side, fresh calls)`),
-        kpi("Tokens this run", num0(cs.totTok), `${num0(cs.totOut)} output tokens (output is free at the Jev tariff)`),
-        kpi(hosted ? "Hosted cost this run" : "Cost", hosted ? money(cs.totTok * TARIFF.perM / 1e6) : "Compute only", hosted ? `${TARIFF.perM} per million input tokens` : `no per-call fee; the same tokens would cost ${money(cs.totTok * TARIFF.perM / 1e6)} hosted`)));
+        kpi("Tokens this run", !cs.fresh.length ? "0" : cs.freshTok ? num0(cs.totTok) : "not reported", !cs.fresh.length ? "no fresh calls; everything came from the server cache" : (cs.freshTok && cs.freshTok < cs.fresh.length ? `${cs.fresh.length - cs.freshTok} of ${cs.fresh.length} fresh calls reported no count; ` : "") + (cs.freshOut ? `${num0(cs.totOut)} output tokens as reported` + (hosted ? " (output is free at the hosted tariff)" : "") : "output tokens not reported")),
+        kpi(hosted ? "Hosted cost this run" : "Cost", hosted ? (!cs.fresh.length ? money(0) : cs.freshTok ? money(cs.totTok * TARIFF.perM / 1e6) : "not reported") : "Compute only", hosted ? `$${TARIFF.perM} per million input tokens` : !cs.fresh.length ? "no per-call fee" : cs.freshTok ? `no per-call fee; the same tokens would cost ${money(cs.totTok * TARIFF.perM / 1e6)} on the hosted ${mc("jev")} tariff` : "no per-call fee; token counts not reported, so no hosted equivalent")));
     }
     const gap = spacingSec(), lat = cs.avgLat != null ? cs.avgLat / 1000 : null;
     kids.push(el("div", { class: "callout" }, el("strong", { text: "Real-time headroom. " }),
@@ -440,9 +448,9 @@
         el("thead", {}, el("tr", {}, ["Policy", "Calls, this text", "Tokens, this text", "Calls per min", "Tokens per min", "Hosted $ per min", "1,000 live calls × 1 h: calls", "tokens", "hosted $"].map(h => el("th", { scope: "col", text: h })))), tb)),
       el("ul", { class: "small muted", style: "margin:8px 0 0;padding-left:18px" },
         el("li", { text: "Replay precompute sends items in parallel batches (the server runs up to 8 at once), so its latencies overstate a single call; Live mode measures calls one or two at a time." }),
-        el("li", { text: "What dominates cost is the number of questions in the battery: about 1,000 tokens of question text against about 2 tokens per window word. A 10-word and a 40-word window cost about the same, so choose the window for accuracy (see \"Which window? (measured)\" below)." }),
-        el("li", { text: "The levers are how often you call (the checkpoint policy) and how many questions you ask (turn perspectives off, or use the adaptive screen). On local kev backends latency also grows with the number of questions." }),
-        el("li", { text: hosted ? "This is the hosted backend: input tokens are billed at the public tariff, output is free, and repeats served from the server cache are not charged here." : "Local backends have no per-call fee (compute only); the dollar columns show what the same tokens would cost on the hosted Jev tariff." })));
+        el("li", { text: "What dominates cost is the number of questions in the battery, not the window length: question text is far larger than a short window, so a 10-word and a 40-word window cost about the same. Choose the window for accuracy (see \"Which window? (measured)\" below)." }),
+        el("li", { text: "The levers are how often you call (the checkpoint policy) and how many questions you ask (turn perspectives off, or use the adaptive screen). On local models latency can also grow with the number of questions." }),
+        el("li", { text: hosted ? `This is the hosted model (${mc(S.model)}): input tokens are billed at the public tariff, output is free, and repeats served from the server cache are not charged here.` : `${mc(S.model)} runs locally with no per-call fee (compute only); the dollar columns are a reference for what the same tokens would cost on the hosted ${mc("jev")} tariff. Models that report no token count (${["so1", "verdict"].map(mc).join(", ")}) show "not reported" in the measured figures; the projection then uses the reference of about 110 tokens per question.` })));
     box.replaceChildren(...kids.filter(Boolean)); updateChip();
   }
 
@@ -460,9 +468,9 @@
     const ta = el("textarea", { id: "paste", rows: 5, "aria-label": "Pasted text", placeholder: "Agent: Hello, this is your bank.\nCaller: Who is this?\n…" }); ta.value = S.paste;
     let tt; ta.addEventListener("input", () => { S.paste = ta.value; clearTimeout(tt); tt = setTimeout(() => { if (S.src === "paste") changeSource(); }, 300); });
     ui.pasteField = el("div", { class: "field", style: "flex:1 1 100%" }, el("label", { for: "paste", text: "Transcript, one \"Speaker: text\" per line" }), ta);
-    const modelSel = el("select", { id: "model", onchange: () => { S.model = modelSel.value; resetLive(); if (!S.winTouched) S.wins = [bestWindow()]; refreshWin(); recompute(); afterChange(true); } },
-      Object.entries(D.status).filter(([, v]) => v.up).map(([k]) => el("option", { value: k, text: k + (k === HOSTED ? " (paid)" : "") })));
-    modelSel.value = S.model;
+    const modelSel = el("select", { id: "model", onchange: () => { S.model = modelSel.value; S.notice = ""; S.down = false; resetLive(); if (!S.winTouched) S.wins = [bestWindow()]; refreshWin(); recompute(); afterChange(true); renderActive(); } });
+    ui.modelSel = modelSel; Jev.modelSelect(modelSel, { prefer: "semif", value: S.model }); modelSel.value = S.model;
+    S.down = !isUp(); Jev.onStatus(onStatus);
     ui.winSel = el("select", { id: "winsel", onchange: () => { const w = ui.winSel.value; S.wins = [w, ...S.wins.filter(x => x !== w)].slice(0, MAX_WINS); S.winTouched = true; S.evWin = 0; refreshWin(); recompute(); afterChange(true); } },
       WINDOWS.map(w => el("option", { value: w, text: `${w}: ${winName(w)}` })));
     ui.cmpBody = el("div", { class: "pill-row", role: "group", "aria-label": "Compare windows" });
@@ -472,7 +480,8 @@
     ui.nField = el("div", { class: "field" }, el("label", { for: "n", text: "N words" }), nIn); ui.nField.hidden = S.cp !== "words";
     const mode = el("div", { class: "segmented", role: "group", "aria-label": "Mode" }, [["replay", "Replay"], ["live", "Live"]].map(([k, t]) => el("button", { type: "button", "aria-pressed": String(S.mode === k), "data-m": k, text: t,
       title: k === "replay" ? "Precompute every checkpoint first; playback is instant and free to repeat." : "Call at each checkpoint as playback reaches it and measure the lag.",
-      onclick: () => { S.mode = k; S.armed = false; resetLive(); mode.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === k))); afterChange(true); } })));
+      onclick: () => { setMode(k); afterChange(true); } })));
+    ui.modeSeg = mode;
     const speed = el("div", { class: "segmented", role: "group", "aria-label": "Playback speed" }, SPEEDS.map(s => el("button", { type: "button", "aria-pressed": String(S.speed === s), "data-s": s, text: s === "instant" ? "Instant" : s + "x",
       onclick: () => { S.speed = s; speed.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === s))); writeHash(); if (S.playing) { pause(); play(); } scheduleCost(); } })));
     ui.play = el("button", { class: "btn primary", type: "button", id: "play", onclick: onPlay }, "Play");
@@ -489,7 +498,8 @@
         el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Mode" }), mode), buildPersp()),
       ui.pasteField);
     refreshWin(); refreshSrcPanels();
-    return el("section", { class: "card ctl noprint", "aria-label": "Controls" }, ui.busy,
+    ui.active = el("div", { class: "row", style: "gap:4px 10px;flex-wrap:wrap", "aria-label": "Active model" }); renderActive();
+    return el("section", { class: "card ctl noprint", "aria-label": "Controls" }, ui.busy, ui.active,
       el("div", { class: "crow" }, ui.play, el("button", { class: "btn", type: "button", onclick: () => { pause(); resetLive(); seek(0); }, text: "Restart" }),
         el("button", { class: "btn", type: "button", onclick: () => { pause(); seek(S.pos + 1); }, text: "Step" }),
         el("button", { class: "btn", type: "button", onclick: () => { pause(); const n = cps.find(c => c.pos > S.pos); seek(n ? n.pos : T.total); }, text: "Next checkpoint" }),
@@ -497,6 +507,26 @@
         el("div", { class: "field", style: "min-width:150px;flex:0 1 200px" }, el("label", { for: "gate" }, "Gate ", gv, " (flag at or above)"), gate),
         ui.readout, ui.runLine, ui.chip),
       ui.scrub);
+  }
+  function setMode(k) { S.mode = k; S.armed = false; resetLive(); ui.modeSeg && ui.modeSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === k))); }
+  /* The active model: code chip plus name, loaded state, memory and identity, kept current by Jev.onStatus. */
+  function renderActive() {
+    const box = ui.active; if (!box) return;
+    const s = (Jev.status() || {})[S.model] || {}, up = !!s.up, kids = [Jev.tag(S.model)];
+    kids.push(el("span", { class: "badge " + (up ? (s.hosted ? "warn" : "good") : "bad"), text: up ? (s.hosted ? "Loaded, hosted (paid)" : "Loaded") : (s.reason || "Not loaded") }));
+    if (up) kids.push(el("span", { class: "small muted", text: s.hosted ? "no local memory" : s.gpu_mb ? `${(s.gpu_mb / 1024).toFixed(1)} GiB GPU in use` : `CPU only${s.cpu_mb ? ", " + (s.cpu_mb / 1024).toFixed(1) + " GiB RAM" : ""}` }),
+      el("span", { class: "small muted", text: (s.identity || "identity unknown") + (s.identity_ok === false ? " (does not match its label)" : "") }));
+    if (!up) kids.push(el("span", { class: "small err", role: "alert", text: `${mc(S.model)} is not loaded right now, so it cannot score anything. Live mode is stopped; choose a loaded model. Finished results stay visible.` }));
+    if (S.notice) kids.push(el("span", { class: "small muted", role: "status", text: S.notice }));
+    box.replaceChildren(...kids);
+  }
+  function onStatus() {
+    if (!T || !ui.active) return;
+    const down = !isUp(), was = S.down; S.down = down;
+    if (ui.modelSel) ui.modelSel.value = S.model;
+    if (down && !was) { const live = S.mode === "live"; pause(); resetLive(); S.armed = false; if (live) setMode("replay"); toast(`${mc(S.model)} stopped being loaded.` + (live ? " Live mode was stopped." : "")); afterChange(false); }
+    else if (down !== was) afterChange(false);
+    renderActive(); renderRunLine();
   }
   function refreshSrcPanels() { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; }
   function refreshWin() {
@@ -512,7 +542,7 @@
     ui.cmpSum.textContent = S.wins.length > 1 ? `Compare (${S.wins.length} windows)` : "Compare";
   }
   function bestWindow() {
-    const e = D.study && Object.values(D.study).find(x => x && x.backend === S.model);
+    const e = D.study && Object.values(D.study).find(x => x && canon(x.backend) === S.model);
     if (e && e.windows) { const c = WINDOWS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
     return "w20";
   }
@@ -526,16 +556,16 @@
     const failed = pend.filter(x => (C.get(ckey(x.st)) || {}).err).length, adaptive = S.cp === "adaptive";
     if (S.running && S.progress) {
       const p = S.progress;
-      kids.push(el("div", { role: "status", style: "min-width:220px;flex:1 1 220px" }, `Calling ${S.model}: ${p.done} of ${p.total} done` + (p.failed ? `, ${p.failed} failed` : ""), meter(p.total ? p.done / p.total : 0, `${p.done} of ${p.total} calls`)),
+      kids.push(el("div", { role: "status", style: "min-width:220px;flex:1 1 220px" }, `Calling ${mc(S.model)}: ${p.done} of ${p.total} done` + (p.failed ? `, ${p.failed} failed` : ""), meter(p.total ? p.done / p.total : 0, `${p.done} of ${p.total} calls`)),
         el("button", { class: "btn", type: "button", onclick: () => abortCtl && abortCtl.abort(), text: "Cancel" }));
     } else {
-      const est = `${total} call${total === 1 ? "" : "s"} for ${cps.length} checkpoints × ${S.wins.length} window${S.wins.length > 1 ? "s" : ""}, ${qs.length} question${qs.length === 1 ? "" : "s"} each${adaptive ? " (adaptive: screen first, follow-ups when it fires)" : ""}; about ${num0(tok || estTokens(UNIQ.map(st => ({ st, miss: qs })), cs))} input tokens${hosted ? ", about " + money((tok || 0) * TARIFF.perM / 1e6) + " hosted" : ", compute only"}`;
+      const est = `${total} call${total === 1 ? "" : "s"} for ${cps.length} checkpoints × ${S.wins.length} window${S.wins.length > 1 ? "s" : ""}, ${qs.length} question${qs.length === 1 ? "" : "s"} each${adaptive ? " (adaptive: screen first, follow-ups when it fires)" : ""}; about ${num0(tok || estTokens(UNIQ.map(st => ({ st, miss: qs })), cs))} input tokens (estimate)${hosted ? ", about " + money((tok || 0) * TARIFF.perM / 1e6) + " hosted" : ", compute only"}`;
       PLAN_TEXT = S.mode === "live" ? `Planned, Live: ${est}, spread over the call.` : `Planned, Replay: ${est}. ${total - pend.length} already done.`; scheduleCost();
       if (S.mode === "live") { /* the plan is in the cost panel */ }
       else {
-        const label = !T.total ? "No transcript" : !qs.length ? "Turn on a perspective" : total > MAX_CALLS ? "Too many calls" : !pend.length ? "All checkpoints computed" :
+        const down = !isUp(), label = down ? "Model not loaded" : !T.total ? "No transcript" : !qs.length ? "Turn on a perspective" : total > MAX_CALLS ? "Too many calls" : !pend.length ? "All checkpoints computed" :
           (hosted && S.armed) ? `Confirm: run ${pend.length} hosted calls` : (failed && failed === pend.length ? `Retry ${failed} failed` : `Precompute ${pend.length} call${pend.length === 1 ? "" : "s"}`) + (hosted ? " (hosted, paid)" : "");
-        kids.push(el("button", { class: "btn primary", id: "run", type: "button", title: PLAN_TEXT, disabled: (!T.total || !qs.length || !pend.length || total > MAX_CALLS) ? "" : null, onclick: () => { if (hosted && !S.armed) { S.armed = true; renderRunLine(); ui.runLine.querySelector("#run")?.focus(); } else run(); }, text: label }),
+        kids.push(el("button", { class: "btn primary", id: "run", type: "button", title: PLAN_TEXT, disabled: (down || !T.total || !qs.length || !pend.length || total > MAX_CALLS) ? "" : null, onclick: () => { if (hosted && !S.armed) { S.armed = true; renderRunLine(); ui.runLine.querySelector("#run")?.focus(); } else run(); }, text: label }),
           failed ? el("span", { class: "badge bad", text: `${failed} failed` }) : null);
         if (total > MAX_CALLS) kids.push(el("span", { class: "small err", text: `More than ${MAX_CALLS} calls: shorten the text, use fewer windows or coarser checkpoints.` }));
       }
@@ -549,11 +579,12 @@
     if (S.mode !== "live") return;
     const cost = LIVE.tokens * TARIFF.perM / 1e6, lag = LIVE.lags.length ? LIVE.lags.reduce((a, b) => a + b, 0) / LIVE.lags.length / 1000 : null, gap = spacingSec();
     const behind = lag != null && gap != null && S.speed !== "instant" && lag > gap;
-    ui.chip.append(...[el("span", { class: "badge accent", text: `Live: ${lag == null ? "no result yet" : lag.toFixed(1) + " s behind"}, ${LIVE.calls} call${LIVE.calls === 1 ? "" : "s"}, about ${num0(LIVE.tokens)} tokens` + (isHosted() ? `, about ${money(cost)} hosted` : ", compute only") }),
+    ui.chip.append(...[el("span", { class: "badge accent", text: `Live: ${lag == null ? "no result yet" : lag.toFixed(1) + " s behind"}, ${LIVE.calls} call${LIVE.calls === 1 ? "" : "s"}, ` + (LIVE.rep ? `about ${num0(LIVE.tokens)} tokens` : "tokens not reported") + (isHosted() ? (LIVE.rep ? `, about ${money(cost)} hosted` : "") : ", compute only") }),
       behind ? el("span", { class: "badge warn", text: "falling behind" }) : null].filter(Boolean));
   }
   function onPlay() {
     if (S.playing) return pause();
+    if (S.mode === "live" && !isUp()) return toast(`${mc(S.model)} is not loaded. Live needs a loaded model; choose another or use Replay.`);
     if (S.mode === "live" && isHosted() && !S.armed) { S.armed = true; updatePlayBtn(); return toast("Hosted live run: each checkpoint costs a fraction of a cent. Press Play again to confirm."); }
     play();
   }
@@ -855,13 +886,13 @@
         el("thead", {}, el("tr", {}, ["#", "Where", "What happened, with the source's own words", "Strongest scores within that turn", "Strongest in the neighbouring turns"].map(h => el("th", { scope: "col", text: h })))), tb)) : el("p", { class: "muted", text: "This scene has no documented events." })].filter(Boolean));
   }
   function renderStudy() {
-    const box = ui.study, keys = D.study ? Object.values(D.study).filter(x => x && x.windows) : [], e = keys.find(x => x.backend === S.model);
+    const box = ui.study, keys = D.study ? Object.values(D.study).filter(x => x && x.windows) : [], e = keys.find(x => canon(x.backend) === S.model);
     const note = el("p", { class: "small muted", text: "Measured on 200 labelled dialogues and one perspective, manipulation. The label is dialogue-level (not localised to a turn), so this compares how well each window raises an alarm somewhere in a dialogue, not whether it fires at the right moment. AUC is the chance that a manipulative dialogue outscores an ordinary one (0.5 is chance); the bracket is a bootstrap 95% interval. \"AUC max\" scores each dialogue by its highest reading, \"AUC end\" by its last." });
-    if (!e) return box.replaceChildren(note, empty("No window study for " + S.model, keys.length ? "Stored for: " + keys.map(x => x.backend).join(", ") + "." : "No window-study results are stored yet (an experiment may still be running). Until then the default window is w20."));
+    if (!e) return box.replaceChildren(note, empty("No window study for " + mn(S.model), keys.length ? "Stored for: " + keys.map(x => mn(canon(x.backend))).join(", ") + "." : "No window-study results are stored yet (an experiment may still be running). Until then the default window is w20."));
     const rows = Object.entries(e.windows).filter(([, v]) => Number.isFinite(v.auc_max)).sort((a, b) => b[1].auc_max - a[1].auc_max);
     const tb = el("tbody", {}, rows.map(([w, v]) => el("tr", {}, el("th", { scope: "row", text: w }), el("td", { class: "num", text: v.auc_max.toFixed(3) }), el("td", { class: "num", text: v.auc_max_ci ? `[${v.auc_max_ci[0].toFixed(3)}, ${v.auc_max_ci[1].toFixed(3)}]` : "–" }),
       el("td", { class: "num", text: fmt.num(v.auc_end, 3) }), el("td", {}, WINDOWS.includes(w) ? el("button", { class: "btn noprint", type: "button", onclick: () => { S.wins = [w]; S.winTouched = true; S.evWin = 0; refreshWin(); recompute(); afterChange(true); }, text: "Use " + w }) : el("span", { class: "subtle", text: "not offered here" })))));
-    box.replaceChildren(note, el("p", { class: "small" }, `Model ${S.model}, ${e.n_dialogues ?? "?"} dialogues. Best by AUC max: `, el("strong", { text: rows.length ? rows[0][0] : "n/a" }), "."),
+    box.replaceChildren(note, el("p", { class: "small" }, "Model ", Jev.tag(S.model), `, ${e.n_dialogues ?? "?"} dialogues. Best by AUC max: `, el("strong", { text: rows.length ? rows[0][0] : "n/a" }), "."),
       el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("caption", { class: "sr-only", text: "Window study results" }),
         el("thead", {}, el("tr", {}, ["Window", "AUC max", "95% interval", "AUC end", ""].map(h => el("th", { scope: "col", text: h })))), tb)));
   }
@@ -898,14 +929,14 @@
 
   /* ---------- export, trace ---------- */
   const questionsFor = (miss) => Object.fromEntries(miss.map(q => [q, QS[q]]));
-  function callFor(state) { const rec = C.get(ckey(state)); return { request: { backend: S.model, items: [{ state, questions: questionsFor(needQ(state)) }] }, response: rec ? (rec.err && !Object.keys(rec.answers).length ? { error: rec.err } : { answers: rec.answers, calls: rec.calls }) : null }; }
+  function callFor(state) { const rec = C.get(ckey(state)); return { backend_code: mc(S.model), request: { backend: S.model, items: [{ state, questions: questionsFor(needQ(state)) }] }, response: rec ? (rec.err && !Object.keys(rec.answers).length ? { error: rec.err } : { answers: rec.answers, calls: rec.calls }) : null }; }
   function traceNow() { const ci = Math.max(0, curCp()); return { note: "Requests as they would be sent to /api/batch (they travel in chunks with other states), with the stored response.", position: posLabel(S.pos), checkpoint: ci + 1, windows: S.wins.map(w => ({ window: w, ...callFor(CS[w][ci]) })) }; }
   function exportData() {
     const s = T.meta.kind === "scene" ? T.meta.s : null, cs = callStats();
     return { generated: new Date().toISOString(), note: "Technique signals, not verdicts. Models return probabilities, not reasons.",
       source: { kind: T.meta.kind, title: T.meta.title, url: s && s.source_url, public_domain_basis: s && s.public_domain_basis, control: s ? !!s.control : null, dataset_label: T.meta.kind === "dialogue" ? { manipulative: T.meta.d.manipulative, technique: T.meta.d.technique, vulnerability: T.meta.d.vulnerability, scope: T.meta.d.label_scope } : null, documented_events: s ? s.documented_events : null },
-      model: S.model, mode: S.mode, windows: S.wins, checkpoint_policy: S.cp, checkpoint_n: S.n, screen: S.cp === "adaptive" ? [...S.screen] : null, gate: S.gate, spike: SPIKE, words: T.total, turns: T.turns.map(t => ({ speaker: t.speaker, text: t.text })),
-      cost: { fresh_calls: cs.fresh.length, repeat_calls: cs.all.length - cs.fresh.length, avg_input_tokens: cs.avgTok, total_input_tokens: cs.totTok, avg_latency_ms: cs.avgLat, p95_latency_ms: cs.p95, tariff_per_million_input_tokens_usd: TARIFF.perM, tariff_source: TARIFF.source, live_lags_ms: LIVE.lags },
+      model: S.model, model_code: mc(S.model), model_name: Jev.nameOf(S.model), hosted: isHosted(), mode: S.mode, windows: S.wins, checkpoint_policy: S.cp, checkpoint_n: S.n, screen: S.cp === "adaptive" ? [...S.screen] : null, gate: S.gate, spike: SPIKE, words: T.total, turns: T.turns.map(t => ({ speaker: t.speaker, text: t.text })),
+      cost: { fresh_calls: cs.fresh.length, repeat_calls: cs.all.length - cs.fresh.length, avg_input_tokens: cs.avgTok, total_input_tokens: cs.freshTok ? cs.totTok : null, input_tokens_note: cs.freshTok ? null : "not reported by this model", avg_latency_ms: cs.avgLat, p95_latency_ms: cs.p95, tariff_per_million_input_tokens_usd: TARIFF.perM, tariff_source: TARIFF.source, live_lags_ms: LIVE.lags },
       perspectives: PERSP.map(p => { const t = trust(p); return { id: p.id, name: p.name, on: S.on.has(p.id), question_id: p.q, set: PSET(p), question: QS[p.q], read: p.read, validation: t ? { correct: t.correct, n: t.n, accuracy: t.acc, wilson95: t.ci, chance: t.chance, near_chance: t.near } : null }; }),
       checkpoints: cps.map((cp, i) => ({ index: i + 1, word: cp.pos, turn: cp.turn + 1, scores: Object.fromEntries(S.wins.map(w => [w, { state: CS[w][i], values: Object.fromEntries(PERSP.filter(p => S.on.has(p.id)).map(p => [p.id, M[w][i][p.id] || null])) }])) })),
       events: EV.map(e => ({ word: e.pos, window: e.win, perspective: e.pid, score: e.score, delta: e.delta, crossed_gate: e.cross, spike: e.spike, evidence_window: e.text })),
@@ -916,16 +947,19 @@
   /* ---------- boot ---------- */
   async function loadAll() {
     const ids = [...new Set(Object.values(QSETS))];
-    const [status, scenes, dlg, study, models, ...sets] = await Promise.all([api("/api/status"), api("/api/scenes"), api("/api/dialogues"), api("/api/window-study").catch(() => ({})), api("/api/models").catch(() => null), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
+    await Jev.ready;
+    const [scenes, dlg, study, models, ...sets] = await Promise.all([api("/api/scenes"), api("/api/dialogues"), api("/api/window-study").catch(() => ({})), api("/api/models").catch(() => null), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
     try { const j = models && models.models.find(m => m.id === "jev"), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = { perM: Number(m[1]), source: `$${m[1]} per million input tokens, output free (the Jev tariff stated in /api/models)` }; } catch {}
-    return { status, scenes, dialogues: dlg.dialogues || [], study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
+    return { scenes, dialogues: dlg.dialogues || [], study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
   }
   function init(data) {
     D = data; Object.entries(QSETS).forEach(([q, set]) => { QS[q] = D.sets[set].items[0].question; });
-    const up = Object.entries(D.status).filter(([, v]) => v.up).map(([k]) => k), h = readHash();
+    const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up), h = readHash();
     if (!up.length) return el("div", { class: "stack" }, empty("No backend is up", "Every model backend is unreachable right now. Start one, then check again."), el("p", { style: "text-align:center" }, el("button", { class: "btn", type: "button", onclick: boot, text: "Check again" })));
     if (!D.scenes.length && !D.dialogues.length) return empty("No sources", "The server returned no scenes or dialogues.");
-    S.model = up.includes(h.model) ? h.model : up.includes("kev-4b") ? "kev-4b" : up[0];
+    const want = canon(h.model), dflt = up.includes("semif") ? "semif" : up.find(k => !st[k].hosted) || up[0];
+    if (want && up.includes(want)) S.model = want;
+    else { S.model = dflt; if (h.model) S.notice = `The linked model ${st[want] ? mc(want) + " is" : "is unknown or"} not loaded, so ${mc(dflt)} is selected instead.`; }
     const srcs = [...D.scenes.map(s => s.slug), "dlg", "paste"];
     S.src = srcs.includes(h.src) ? h.src : (D.scenes.find(s => s.slug.startsWith("nixon")) || D.scenes[0] || { slug: "dlg" }).slug;
     S.dlg = D.dialogues.some(d => d.id === h.dlg) ? h.dlg : D.dialogues[0] && D.dialogues[0].id;

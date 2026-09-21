@@ -57,7 +57,12 @@
     <div class="actions"><button class="btn" id="print" type="button">Print</button></div>
   </div>
 
-  <section class="section" style="margin-top:0" aria-labelledby="big-h">
+  <section class="section" style="margin-top:0" aria-labelledby="codes-h">
+    <header><div><h2 id="codes-h">Model codes</h2><p class="small" id="codes-rule">Every model has a code of at most six characters: family letters plus a size. B means billions of parameters and H means hundreds of millions, so KEV4B is a 4 billion parameter model and LAYA4H one of about 400 million. The table shows what is loaded in memory right now.</p></div></header>
+    <div id="codes"></div>
+  </section>
+
+  <section class="section" aria-labelledby="big-h">
     <header><div><h2 id="big-h">The big picture</h2><p class="small">A decision model reads a situation and a question with fixed options, and returns a probability for every option. It never writes prose, so software can act on the numbers directly.</p></div></header>
     <div class="card scroll-x" id="hero"></div>
     <div class="grid cols-3" style="margin-top:10px" id="parts"></div>
@@ -196,8 +201,19 @@ function dEncoder() {
   return svg(520, 150, "An encoder lets every token see every other, then a head scores the option markers", txt(6, 12, "every token sees every other, both directions", "s"),
     [[0, 3], [1, 5], [2, 7], [3, 6], [0, 7], [4, 5]].map(([a, b]) => arc(a, b)), out,
     [2, 4, 6].map(i => arrow(cs[i], 64, cs[i], 84)), box(6, 86, 380, 26), txt(196, 103, "encoder output at each marker → head → one score per option", "t", "middle"),
-    txt(6, 138, "‹m› = option marker · jeff: sigmoid + temperature 3.2 · Laya: softmax over markers", "s"));
+    txt(6, 138, `‹m› = option marker · ${Jev.codeOf('jeff')}: sigmoid + temperature 3.2 · ${Jev.codeOf('laya')}: softmax over markers`, "s"));
 }
+
+/* ---------- Naming helpers: {id} tokens in prose become code + name tags ---------- */
+const nameRe = () => { const ms = Object.entries(Jev.status() || {}).map(([id]) => [id, Jev.nameOf(id)]).filter(([, n]) => n && n.length > 3).sort((x, y) => y[1].length - x[1].length);
+  const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); return { ms, re: ms.length ? new RegExp(`(\\{[\\w.-]+\\}|(?<![\\w-])(?:${ms.map(m => esc(m[1])).join("|")})(?![\\w-]))`, "g") : /(\{[\w.-]+\})/g }; };
+/* Prose: {id} tokens and any registry display name become code + name tags. */
+const rich = (str) => { const { ms, re } = nameRe(); return String(str).split(re).map(p => { if (/^\{[\w.-]+\}$/.test(p)) return Jev.tag(p.slice(1, -1)); const m = ms.find(x => x[1] === p); return m ? Jev.tag(m[0]) : p; }); };
+const rtext = (str) => String(str).replace(/\{([\w.-]+)\}/g, (_, id) => `${Jev.codeOf(id)} ${Jev.nameOf(id)}`);
+const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
+const liveText = (id) => { const s = (Jev.status() || {})[id]; if (!s) return "Status unknown"; return s.up ? (s.hosted ? "Loaded now, hosted" : `Loaded now, ${s.gpu_mb ? gib(s.gpu_mb) : "CPU"}`) : "Not loaded"; };
+const liveChip = (id) => { const c = el("span", { class: "badge", "data-live": id }); const f = () => { const up = Jev.isUp(id); c.className = "badge" + (up ? " good" : ""); c.textContent = liveText(id); }; f(); Jev.onStatus(f); return c; };
+const identLine = (id) => { const p = el("p", { class: "small muted", "data-ident": id }); const f = () => { const s = (Jev.status() || {})[id]; p.hidden = !(s && s.up && s.identity); p.textContent = s && s.identity ? `Running as: ${s.identity}` : ""; }; f(); Jev.onStatus(f); return p; };
 
 /* ---------- Content ---------- */
 const short = (b) => (b || "").split(/ \+ | \(/)[0];
@@ -223,15 +239,15 @@ const STEPS = [
 const SAUCES = [
   { fam: "logits", title: "1 · Read the model's own answer-letter scores", diagrams: [dLogits],
     lead: "Give each option a letter and ask a large language model to answer. Instead of letting it write, look at the scores it assigns to the letters A, B and C as its next word, ignore every other word, and turn those three into probabilities.",
-    points: [["No training.", "The base model is frozen, so any capable LLM can become a decision model."], ["One pass.", "All options are scored together from a single forward pass; nothing is generated."], ["The catch.", "It is limited to what the frozen model already knows and is sensitive to option order: JevBench measured 21% versus 72% on answer-judging items for open-alternative-jev when the order was reversed."]] },
+    points: [["No training.", "The base model is frozen, so any capable LLM can become a decision model."], ["One pass.", "All options are scored together from a single forward pass; nothing is generated."], ["The catch.", "It is limited to what the frozen model already knows and is sensitive to option order: JevBench measured 21% versus 72% on answer-judging items for {so1} when the order was reversed."]] },
   { fam: "pointer", title: "2 · Teach the model to point at the answer", diagrams: [dPointer, dMask],
     lead: "Mark where each option starts with a boundary token. A small learned head reads the model's vectors at those tokens and scores each option, so the answer is a pointer into the input, not a word to generate. The LLM is lightly tuned with LoRA (small trainable adapter layers) and the head is trained with log loss on labelled decisions.",
-    points: [["Shared reading.", "On attention-only backbones a block-causal mask lets several questions share one copy of the state in one pass while stopping them seeing each other."], ["Hybrid backbones.", "kev 4B and 0.8B use Qwen3.5 hybrid (Gated DeltaNet) layers, which can't use that packed mask, so each question is read as its own row."], ["The catch.", "It needs labelled training data and a training run; the result depends on that recipe."]] },
+    points: [["Shared reading.", "On attention-only backbones a block-causal mask lets several questions share one copy of the state in one pass while stopping them seeing each other."], ["Hybrid backbones.", "{kev-4b} and {kev-0.8b} use Qwen3.5 hybrid (Gated DeltaNet) layers, which can't use that packed mask, so each question is read as its own row."], ["The catch.", "It needs labelled training data and a training run; the result depends on that recipe."]] },
   { fam: "encoder", title: "3 · Read everything at once, in both directions", diagrams: [dEncoder],
     lead: "An encoder isn't built to write text. Every token can attend to every other, so the state, the question and the options are read together. A head turns the vectors at option markers into one score per option.",
-    points: [["Small and cheap.", "These models are 151M to about 400M parameters here, against billions for the LLM-based approaches."], ["Same idea, different heads.", "jeff applies a sigmoid per option, scaled by a temperature of 3.2. Laya takes a softmax over its markers. Verdict adds an abstention slot that the benchmark drops."], ["The catch.", "Less world knowledge than a multi-billion-parameter LLM, and Laya truncates each question to 512 tokens."]] },
+    points: [["Small and cheap.", "These models are 151M to about 400M parameters here, against billions for the LLM-based approaches."], ["Same idea, different heads.", "{jeff} applies a sigmoid per option, scaled by a temperature of 3.2. {laya} takes a softmax over its markers. {verdict} adds an abstention slot that the benchmark drops."], ["The catch.", "Less world knowledge than a multi-billion-parameter LLM, and {laya} truncates each question to 512 tokens."]] },
   { fam: "hosted", title: "4 · Hosted: a black box with a known interface", diagrams: [],
-    lead: "TypeSafe's Jev is reached over an HTTPS API and its internals aren't published. We can describe only what it takes and returns: the state and typed questions go in, and a probability for every option comes out. It is priced per input token ($0.042 per million, output free, about 950 input tokens per decision in JevBench).",
+    lead: "TypeSafe's {jev} is reached over an HTTPS API and its internals aren't published. We can describe only what it takes and returns: the state and typed questions go in, and a probability for every option comes out. It is priced per input token ($0.042 per million, output free, about 950 input tokens per decision in JevBench).",
     points: [] },
 ];
 
@@ -239,13 +255,13 @@ const SAUCES = [
 const range = (vals, f) => { const v = vals.filter(x => x != null); if (!v.length) return "–"; const lo = Math.min(...v), hi = Math.max(...v); return lo === hi ? f(lo) : `${f(lo)} – ${f(hi)}`; };
 const famRows = (rows, fam) => rows.filter(r => r.info.family === fam);
 const usedBy = (rows, fam) => { const rs = famRows(rows, fam); if (!rs.length) return null;
-  return el("div", { class: "used" }, el("span", { text: "Used by" }), rs.map(r => el("a", { class: "badge", href: `#${r.id}`, text: r.info.name })),
+  return el("div", { class: "used" }, el("span", { text: "Used by" }), rs.map(r => el("a", { class: "badge", href: `#${r.id}` }, Jev.tag(r.id))),
     el("span", { text: `· in our runs: ${range(rs.map(r => r.mean_accuracy), v => fmt.pct(v, 0))} mean accuracy, ${range(rs.map(r => r.tiers.hard?.p50_s), fmt.ms)} median` })); };
 
 function sauces(d) {
   return el("div", {}, SAUCES.map(s => el("article", { class: "card sauce" },
-    el("div", {}, el("h3", { text: s.title }), el("p", { class: "lead", text: s.lead }),
-      s.points.length ? el("ul", { class: "facts-list" }, s.points.map(([b, t]) => el("li", {}, el("b", { text: b + " " }), t))) : null, usedBy(d.rows, s.fam)),
+    el("div", {}, el("h3", { text: s.title }), el("p", { class: "lead" }, rich(s.lead)),
+      s.points.length ? el("ul", { class: "facts-list" }, s.points.map(([b, t]) => el("li", {}, el("b", { text: b + " " }), rich(t)))) : null, usedBy(d.rows, s.fam)),
     s.diagrams.length ? el("div", { class: "diagrams" }, s.diagrams.map(f => f())) : null)));
 }
 function famTable(d) {
@@ -253,7 +269,7 @@ function famTable(d) {
   return el("div", { class: "table-wrap" }, el("table", { class: "data fam" }, el("caption", { class: "sr-only", text: "Results by technique" }),
     el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { scope: "col", class: i > 1 && i < 6 ? "num" : null, text: h })))),
     el("tbody", {}, Object.entries(FAM).map(([k, f]) => { const rs = famRows(d.rows, k); if (!rs.length) return null;
-      return el("tr", {}, el("td", { class: "model-name", text: f.name }), el("td", { text: rs.map(r => r.info.name).join(", ") }),
+      return el("tr", {}, el("td", { class: "model-name", text: f.name }), el("td", {}, rs.map((r, i) => [i ? " " : null, Jev.tag(r.id)])),
         el("td", { class: "num", text: range(rs.map(r => r.mean_accuracy), v => fmt.pct(v, 1)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.accuracy), v => fmt.pct(v, 1)) }),
         el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.ece), v => fmt.num(v)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.p50_s), fmt.ms) }),
         el("td", { text: [...new Set(rs.map(r => r.info.params).filter(Boolean))].join(", ") || "not published" })); }))));
@@ -268,13 +284,13 @@ function card(r, rank) {
   const tier = (id, label) => el("div", { class: "r" }, el("span", { text: label }), t[id] ? meter(t[id].accuracy, `${label} accuracy ${fmt.pct(t[id].accuracy)}`) : el("span", { class: "subtle", text: "not run" }));
   const facts = [["Licence", m.licence], ["Interface", m.interface], ["Base", m.base], ["Price", m.price], ["Published", m.public_score != null ? `JevBench v1.2 score ${m.public_score}, rank ${m.public_rank} (published by JevBench, not measured here)` : null]].filter(f => f[1]);
   return el("article", { class: "card model", id: m.id },
-    el("h3", {}, m.name, el("span", { class: "vendor", text: m.vendor })),
-    el("div", { class: "tags" }, el("span", { class: `badge ${m.open ? "good" : ""}`, text: m.open ? "Open" : "Closed" }), m.params ? el("span", { class: "badge", text: m.params }) : null,
+    el("h3", {}, Jev.tag(m.id), el("span", { class: "vendor", text: m.vendor })),
+    el("div", { class: "tags" }, liveChip(m.id), el("span", { class: `badge ${m.open ? "good" : ""}`, text: m.open ? "Open" : "Closed" }), m.params ? el("span", { class: "badge", text: m.params }) : null,
       el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: `Ranked #${rank} in our runs` })),
-    el("p", { class: "sauce-line", text: m.sauce }), flow(m),
+    identLine(m.id), el("p", { class: "sauce-line" }, rich(m.sauce)), flow(m),
     el("div", { class: "bench" }, tier("easy", "Easy"), tier("original", "Original"), tier("hard", "Hard")),
     el("div", { class: "stats" }, el("span", {}, "Hard ECE ", el("b", { text: fmt.num(hard.ece) })), el("span", {}, "Median ", el("b", { text: fmt.ms(hard.p50_s) })), el("span", {}, "Mean ", el("b", { text: fmt.pct(r.mean_accuracy) }))),
-    el("details", { class: "more" }, el("summary", { text: "How it works, in detail" }), el("ul", {}, m.how.map(h => el("li", { text: h }))),
+    el("details", { class: "more" }, el("summary", { text: "How it works, in detail" }), el("ul", {}, m.how.map(h => el("li", {}, rich(h)))),
       el("dl", { class: "facts" }, facts.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]), m.repo ? [el("dt", { text: "Source" }), el("dd", {}, el("a", { href: m.repo, target: "_blank", rel: "noopener", text: m.repo.replace(/^https?:\/\//, "") }))] : null)));
 }
 
@@ -282,7 +298,7 @@ function cards(d) {
   const grid = document.getElementById("cards"), jump = document.getElementById("jump"), seg = document.getElementById("filter");
   const cs = d.rows.map((r, i) => card(r, i + 1));
   grid.replaceChildren(...cs);
-  jump.replaceChildren(...d.rows.map(r => el("a", { href: `#${r.id}`, text: r.info.name })));
+  jump.replaceChildren(...d.rows.map(r => el("a", { href: `#${r.id}`, title: `${Jev.codeOf(r.id)} = ${Jev.nameOf(r.id)}` }, Jev.tag(r.id))));
   const fams = ["all", ...Object.keys(FAM)].filter(f => f === "all" || famRows(d.rows, f).length);
   const set = (f) => { [...seg.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === f)));
     d.rows.forEach((r, i) => { const on = f === "all" || r.info.family === f; cs[i].hidden = !on; jump.children[i].hidden = !on; }); };
@@ -292,12 +308,22 @@ function cards(d) {
   window.addEventListener("hashchange", reveal); if (location.hash) reveal();
 }
 
+function codesTable(d) {
+  const st = Jev.status() || {}, ids = d.models.map(m => m.id);
+  const wrap = el("div", { class: "table-wrap" }, el("table", { class: "data fam" }, el("caption", { class: "sr-only", text: "Model codes" }),
+    el("thead", {}, el("tr", {}, ["Code", "Name", "Size", "How it is served", "State"].map(h => el("th", { scope: "col", text: h })))),
+    el("tbody", {}, d.models.map(m => el("tr", {}, el("td", {}, el("span", { class: "mcode", text: Jev.codeOf(m.id) })), el("td", { text: Jev.nameOf(m.id) }), el("td", { text: m.params || (st[m.id]?.hosted ? "not published" : "–") }),
+      el("td", { text: m.served_as || (st[m.id]?.hosted ? "hosted API" : "–") }), el("td", {}, liveChip(m.id)))))));
+  return wrap;
+}
 globalDefs();
 document.getElementById("print").onclick = () => window.print();
+Jev.ready.then(() => {
 document.getElementById("hero").replaceChildren(dHero());
 document.getElementById("parts").replaceChildren(...PARTS.map(([h, p], i) => el("div", { class: "card" }, el("h3", { text: `${i + 1}. ${h}` }), el("p", { class: "muted", style: "margin-top:4px", text: p }))));
 document.getElementById("steps").replaceChildren(...STEPS.map(([h, p, f], i) => el("div", { class: "card step" }, el("h3", {}, el("span", { class: "n", text: i + 1 }), h), el("p", { text: p }), f())));
-mount(document.getElementById("sauces"), load, (d) => { document.getElementById("famtable").replaceChildren(famTable(d)); cards(d); return sauces(d); });
+mount(document.getElementById("sauces"), load, (d) => { document.getElementById("codes").replaceChildren(codesTable(d)); document.getElementById("famtable").replaceChildren(famTable(d)); cards(d); return sauces(d); });
+});
 </script>
 </body>
 </html>

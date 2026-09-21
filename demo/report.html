@@ -14,6 +14,7 @@
   .prose { max-width: 78ch; } .prose > * + * { margin-top: 12px; }
   .prose ul { margin: 0; padding-left: 20px; } .prose li + li { margin-top: 6px; }
   .rec h4 { margin-bottom: 4px; } .rec .pick { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin-bottom: 8px; }
+  .rec .pick .mtag { white-space: normal; flex-wrap: wrap; gap: 2px 8px; }
   .rec p + p { margin-top: 8px; } .rec .rule { color: var(--text-3); font-size: 13px; }
   .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .codeblock { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
@@ -64,7 +65,12 @@ let DATA, TOL = 10, TIER_FILTER = "all";
 /* ---------- pure computation (no DOM) ---------- */
 const pts = (v, d = 1) => (v * 100).toFixed(d);
 const sortBy = (list, key, dir = 1) => [...list].sort((a, b) => (key(a) - key(b)) * dir);
-const nameOf = (r) => r.info.name;
+/* Computed sentences carry model tokens (id inside corner brackets); rich() turns them into code + name tags, plain() into "CODE Name" text. */
+const nameOf = (r) => `\u27E6${r.id}\u27E7`;
+const TOK = /\u27E6([^\u27E7]+)\u27E7/g;
+const rich = (str) => String(str).split(/(\u27E6[^\u27E7]+\u27E7)/).map(p => { const m = /^\u27E6([^\u27E7]+)\u27E7$/.exec(p); return m ? Jev.tag(m[1]) : p; });
+const plain = (str) => String(str).replace(TOK, (_, id) => `${Jev.codeOf(id)} ${Jev.nameOf(id)}`);
+const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
 const list = (names) => names.length < 2 ? names.join("") : names.length === 2 ? names.join(" and ") : names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const hardN = (rows) => rows.find(r => r.tiers.hard?.n)?.tiers.hard.n ?? 0;
@@ -202,7 +208,7 @@ function recommendations(a, tol) {
 
 /* Long-form results: one row per model and tier. */
 function resultRows(a) {
-  return a.rows.flatMap(r => TIERS.map(t => ({ model: nameOf(r), id: r.id, tier: t, n: r.tiers[t].n, accuracy: r.tiers[t].accuracy, ece: r.tiers[t].ece, brier: r.tiers[t].brier, p50_s: r.tiers[t].p50_s, p95_s: r.tiers[t].p95_s, schema_validity: r.tiers[t].schema_validity, served_as: r.info.served_as || null })));
+  return a.rows.flatMap(r => TIERS.map(t => ({ model: plain(nameOf(r)), id: r.id, tier: t, n: r.tiers[t].n, accuracy: r.tiers[t].accuracy, ece: r.tiers[t].ece, brier: r.tiers[t].brier, p50_s: r.tiers[t].p50_s, p95_s: r.tiers[t].p95_s, schema_validity: r.tiers[t].schema_validity, served_as: r.info.served_as || null })));
 }
 function serving(a) {
   const groups = [["Hosted over HTTPS", (s) => /^HTTP, api\./i.test(s)], ["Local HTTP server", (s) => /^HTTP/i.test(s)], ["In-process on CPU", (s) => /CPU/i.test(s)], ["In-process", () => true]];
@@ -213,8 +219,8 @@ function serving(a) {
 
 /* ---------- rendering ---------- */
 const section = (id, title, sub, ...kids) => el("section", { class: "section", "aria-labelledby": id }, el("header", {}, el("div", {}, el("h2", { id, text: title }), sub ? el("p", { class: "small", text: sub }) : null)), ...kids);
-const findingCard = ([label, value, who, body]) => el("div", { class: "card kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), el("div", { class: "model-name", text: who }), el("p", { class: "muted small", style: "margin-top:8px", text: body }));
-const recCard = ([need, pick, rule, trade]) => el("div", { class: "card rec" }, el("h4", { text: need }), el("div", { class: "pick", text: pick }), el("p", { class: "rule", text: rule }), el("p", { class: "muted", text: trade }));
+const findingCard = ([label, value, who, body]) => el("div", { class: "card kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), el("div", { class: "model-name" }, rich(who)), el("p", { class: "muted small", style: "margin-top:8px" }, rich(body)));
+const recCard = ([need, pick, rule, trade]) => el("div", { class: "card rec" }, el("h4", { text: need }), el("div", { class: "pick" }, rich(pick)), el("p", { class: "rule" }, rich(rule)), el("p", { class: "muted" }, rich(trade)));
 
 function resultsTable(a) {
   const rows = resultRows(a).filter(r => TIER_FILTER === "all" || r.tier === TIER_FILTER);
@@ -223,7 +229,7 @@ function resultsTable(a) {
     el("caption", { class: "sr-only", text: "Results by model and tier: accuracy, ECE, median and p95 latency, schema validity" }),
     el("thead", {}, el("tr", {}, head.map(([h, s], i) => el("th", { scope: "col", "data-sort": s, class: i >= 2 ? "num" : null, text: h })))),
     el("tbody", {}, rows.map(r => el("tr", {},
-      el("td", { "data-value": r.model, class: "model-name", text: r.model }),
+      el("td", { "data-value": r.model, class: "model-name" }, rich(`\u27E6${r.id}\u27E7`)),
       el("td", { "data-value": TIERS.indexOf(r.tier), text: r.tier[0].toUpperCase() + r.tier.slice(1) }),
       el("td", { class: "num", "data-value": r.n, text: r.n }),
       el("td", { class: "num", "data-value": r.accuracy, text: fmt.pct(r.accuracy) }),
@@ -235,6 +241,20 @@ function resultsTable(a) {
   return el("div", { class: "table-wrap" }, t);
 }
 
+/* Which models are loaded right now and how the codes map; generated from Jev.status(), refreshed live. */
+function liveCard(a) {
+  const box = el("div", { class: "card prose", style: "margin-top:16px" });
+  const draw = () => {
+    const st = Jev.status() || {}, ids = Object.keys(st), up = ids.filter(id => st[id].up), down = ids.filter(id => !st[id].up);
+    const used = up.reduce((n, id) => n + (st[id].gpu_mb || 0), 0);
+    const tags = (l) => l.map((id, i) => [i ? " " : null, Jev.tag(id)]);
+    box.replaceChildren(el("h3", { text: "Models loaded right now" }),
+      el("p", {}, `At the time you opened this page ${up.length} of ${ids.length} models were loaded in memory (${gib(used)} of GPU memory in use): `, tags(up), down.length ? [". Not loaded: ", tags(down)] : null, ". Results above come from stored runs, so a model can appear in them without being loaded now."),
+      el("p", { class: "muted small" }, "How codes map: family letters plus size, at most six characters; B means billions of parameters and H means hundreds of millions. ",
+        ids.map((id, i) => [i ? "; " : null, el("span", { class: "mcode", text: Jev.codeOf(id) }), " = ", Jev.nameOf(id), st[id].params ? ` (${st[id].params})` : ""])));
+  };
+  draw(); Jev.onStatus(draw); return box;
+}
 function methodology(a, tiers) {
   const info = Object.fromEntries((tiers || []).map(t => [t.id, t]));
   const tierItems = TIERS.map(t => {
@@ -246,13 +266,14 @@ function methodology(a, tiers) {
     el("div", { class: "grid cols-2" },
       el("div", { class: "card prose" }, el("h3", { text: "Tiers" }), el("ul", {}, tierItems), el("p", { class: "muted small", text: "Datasets are frozen public files. Expected labels never change after a run." })),
       el("div", { class: "card prose" }, el("h3", { text: "How models were run" }),
-        el("ul", {}, serving(a).map(([label, names]) => el("li", {}, el("strong", { text: `${label}: ` }), list(names)))),
-        el("p", { class: "muted small", text: "HTTP servers add request handling and, for the hosted model, the network. In-process models skip both. Verdict ran on CPU. Latency is therefore not like-for-like across models." }))),
+        el("ul", {}, serving(a).map(([label, names]) => el("li", {}, el("strong", { text: `${label}: ` }), rich(list(names))))),
+        el("p", { class: "muted small" }, rich("HTTP servers add request handling and, for the hosted model, the network. In-process models skip both. \u27E6verdict\u27E7 ran on CPU. Latency is therefore not like-for-like across models.")))),
     el("div", { class: "grid cols-2", style: "margin-top:16px" },
       metric("Accuracy", "The share of decisions where the model's most probable option (argmax of its native probability distribution) matches the frozen expected label exactly. No partial credit."),
       metric("ECE (expected calibration error)", "Predictions are grouped into 10 equal-width bins by confidence in the chosen answer. ECE is the size-weighted average gap between confidence and actual accuracy in each bin. 0 is perfect; lower is better."),
       metric("Median and p95 latency", "Wall-clock time per decision as measured by the harness: the middle value, and the value 95% of decisions finish within. Raw measurements, no adjustment."),
       metric("Schema validity", "The share of responses that were well-formed answers for the requested typed schema. Invalid responses are counted as failures, not repaired.")),
+    liveCard(a),
     el("div", { class: "callout", style: "margin-top:16px" }, el("strong", { text: "Run discipline. " }), "Each model ran one at a time on the GPU to avoid memory contention. Each decision was a single call with no retries and no fallback to another model. Runs were serial."));
 }
 
@@ -268,7 +289,7 @@ function limitations(a) {
     `Models ran at the settings each author's adapter uses (for example option order). Other settings could change scores; one model is documented as sensitive to option order.`,
     `A single run per model and tier. Run-to-run variation was not measured.`,
   ];
-  return section("limits-h", "Limitations", "Read these before forwarding the numbers.", el("div", { class: "card prose" }, el("ul", {}, items.map(t => el("li", { text: t })))));
+  return section("limits-h", "Limitations", "Read these before forwarding the numbers.", el("div", { class: "card prose" }, el("ul", {}, items.map(t => el("li", {}, rich(t))))));
 }
 
 function render(d) {
@@ -287,7 +308,7 @@ function render(d) {
   const showTier = (v) => { TIER_FILTER = v; [...tierSeg.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tier === v))); tableBox.replaceChildren(resultsTable(a)); };
   const frag = document.createDocumentFragment();
   frag.append(
-    section("summary-h", "Executive summary", null, el("div", { class: "card prose" }, el("p", { text: summary(a) }))),
+    section("summary-h", "Executive summary", null, el("div", { class: "card prose" }, el("p", {}, rich(summary(a))))),
     el("section", { class: "section", "aria-labelledby": "find-h" },
       el("header", {}, el("div", {}, el("h2", { id: "find-h", text: "Key findings" }), el("p", { class: "small", text: "Each finding states its rule. The tolerance control applies to the size-based finding and to the recommendations." })), seg), findGrid),
     el("section", { class: "section", "aria-labelledby": "rec-h" },
@@ -303,7 +324,7 @@ function render(d) {
 /* ---------- reproduce ---------- */
 const COMMANDS = [
   ["1. Install the open models (one isolated venv each)", "./dev-bench-setup.sh                 # or: ./dev-bench-setup.sh laya verdict semif so1"],
-  ["2. Run the HTTP-served models (jeff, kev, hosted Jev)", "# jeff (:8000) and kev (:8009, :8010, :8011) servers must be running; jev needs TYPESAFE_API_KEY\nset -a; . .env; set +a\ndemo/bench.sh original easy hard      # or: MODELS=kev-4b demo/bench.sh hard"],
+  ["2. Run the HTTP-served models (JEFF4H, the KEV models, hosted JEV113)", "# jeff (:8000) and kev (:8009, :8010, :8011) servers must be running; jev needs TYPESAFE_API_KEY\nset -a; . .env; set +a\ndemo/bench.sh original easy hard      # or: MODELS=kev-4b demo/bench.sh hard"],
   ["3. Run the in-process models, one at a time", "demo/bench-batch.sh laya verdict semif so1   # TIERS=\"hard\" to change tiers"],
   ["4. Start the console", "TYPESAFE_API_KEY=... python3 demo/server.py   # then open http://127.0.0.1:8100/report"],
 ];
@@ -312,7 +333,7 @@ document.getElementById("repro").replaceChildren(...COMMANDS.map(([title, cmd]) 
   el("pre", { tabindex: "0", "aria-label": title }, el("code", { text: cmd })))));
 
 /* ---------- wiring ---------- */
-mount(document.getElementById("body"), load, render);
+mount(document.getElementById("body"), async () => { await Jev.ready; return load(); }, render);
 const ready = (fn) => () => DATA?.analysis ? fn(DATA.analysis) : Jev.toast("Results are still loading");
 document.getElementById("export-csv").onclick = ready((a) => download("jev-bench-report-results.csv", csv([Object.keys(resultRows(a)[0]), ...resultRows(a).map(r => Object.values(r))]), "text/csv"));
 document.getElementById("export-json").onclick = ready((a) => download("jev-bench-report-results.json", JSON.stringify({ date: "2026-09-20", hardware: "NVIDIA RTX 5090 (32 GB)", results: resultRows(a) }, null, 2), "application/json"));

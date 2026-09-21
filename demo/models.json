@@ -23,7 +23,9 @@
       "public_rank": 1,
       "repo": "https://docs.typesafe.ai",
       "family": "hosted",
-      "sauce": "Not published. Only the interface is known: state and typed questions go in, a probability for every option comes out."
+      "sauce": "Not published. Only the interface is known: state and typed questions go in, a probability for every option comes out.",
+      "code": "JEV113",
+      "verify": "jev-1.13"
     },
     {
       "id": "semif",
@@ -47,7 +49,9 @@
       "public_rank": 2,
       "repo": "https://github.com/TheoLeeCJ/openjev",
       "family": "logits",
-      "sauce": "No training at all. Label the options A, B, C, run a frozen LLM once, and read how strongly it wants to write each letter next."
+      "sauce": "No training at all. Label the options A, B, C, run a frozen LLM once, and read how strongly it wants to write each letter next.",
+      "code": "SEMIF4",
+      "verify": "semif"
     },
     {
       "id": "so1",
@@ -71,7 +75,9 @@
       "public_rank": 6,
       "repo": "https://github.com/ikermoel/open-alternative-jev",
       "family": "logits",
-      "sauce": "The same letter-logit idea on a frozen LLM, scoring each question on its own. It is sensitive to the order of the options."
+      "sauce": "The same letter-logit idea on a frozen LLM, scoring each question on its own. It is sensitive to the order of the options.",
+      "code": "OAJEV4",
+      "verify": "so1"
     },
     {
       "id": "kev-4b",
@@ -95,7 +101,9 @@
       "public_rank": null,
       "repo": "https://github.com/jaredpalmer/kev",
       "family": "pointer",
-      "sauce": "A small learned pointer head, plus LoRA tuning of the LLM, teaches the model to point at the right option's boundary token."
+      "sauce": "A small learned pointer head, plus LoRA tuning of the LLM, teaches the model to point at the right option's boundary token.",
+      "code": "KEV4B",
+      "verify": "qwen3.5-4b-base"
     },
     {
       "id": "kev-0.8b",
@@ -118,7 +126,9 @@
       "public_rank": null,
       "repo": "https://github.com/jaredpalmer/kev",
       "family": "pointer",
-      "sauce": "The same pointer-head recipe on a smaller backbone; hybrid layers mean each question is read as its own row."
+      "sauce": "The same pointer-head recipe on a smaller backbone; hybrid layers mean each question is read as its own row.",
+      "code": "KEV8H",
+      "verify": "qwen3.5-0.8b"
     },
     {
       "id": "kev-0.5b",
@@ -141,7 +151,9 @@
       "public_rank": null,
       "repo": "https://github.com/jaredpalmer/kev",
       "family": "pointer",
-      "sauce": "The one attention-only kev, so several questions can share the state in one pass while a block-causal mask keeps them apart."
+      "sauce": "The one attention-only kev, so several questions can share the state in one pass while a block-causal mask keeps them apart.",
+      "code": "KEV5H",
+      "verify": "qwen2.5-0.5b"
     },
     {
       "id": "jeff",
@@ -166,7 +178,9 @@
       "public_rank": 10,
       "repo": "https://github.com/logan-markewich/jeff",
       "family": "encoder",
-      "sauce": "An encoder reads the state, question and options together in both directions, then scores each option with a sigmoid, temperature-scaled by 3.2."
+      "sauce": "An encoder reads the state, question and options together in both directions, then scores each option with a sigmoid, temperature-scaled by 3.2.",
+      "code": "JEFF4H",
+      "verify": "gliformer"
     },
     {
       "id": "laya",
@@ -190,7 +204,9 @@
       "public_rank": 5,
       "repo": "https://huggingface.co/convaiinnovations/laya",
       "family": "encoder",
-      "sauce": "A marker is placed before every option; a head reads the encoder's output at each marker and takes a softmax over them."
+      "sauce": "A marker is placed before every option; a head reads the encoder's output at each marker and takes a softmax over them.",
+      "code": "LAYA4H",
+      "verify": "laya"
     },
     {
       "id": "verdict",
@@ -214,7 +230,9 @@
       "public_rank": null,
       "repo": "https://github.com/Heman10x-NGU/openJev-verdict-2.0",
       "family": "encoder",
-      "sauce": "Adds an abstention slot, so the model can say the evidence is insufficient. The benchmark drops that slot and renormalises."
+      "sauce": "Adds an abstention slot, so the model can say the evidence is insufficient. The benchmark drops that slot and renormalises.",
+      "code": "VERD2H",
+      "verify": "verdict"
     }
   ],
   "tiers": [
@@ -233,5 +251,6 @@
       "label": "Hard",
       "note": "Reasoning-heavy decisions written and cross-reviewed by two frontier models before any system ran."
     }
-  ]
+  ],
+  "code_rule": "Family letters plus size. B = billions of parameters, H = hundreds of millions (KEV8H is 0.8B, VERD2H is 151M). Jev's digits are its version, 1.13. Codes are at most six characters and appear in the same form on every page."
 }

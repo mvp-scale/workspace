@@ -108,6 +108,16 @@ table.data th button:hover { color: var(--text); } table.data th[aria-sort] butt
 .badge.bad { color: var(--bad); background: var(--bad-soft); border-color: transparent; } .badge.accent { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: var(--text-3); margin-right: 6px; } .dot.up { background: var(--good); } .dot.down { background: var(--bad); }
 
+/* Model codes and the site-wide models panel */
+.mtag { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.mcode { font-family: var(--mono); font-size: 0.86em; font-weight: 600; letter-spacing: .02em; padding: 0 5px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+.mname { color: var(--text); }
+.models-btn { gap: 8px; } .models-btn .dot { margin: 0; }
+.models-panel { position: absolute; top: 46px; right: var(--gutter); width: min(760px, calc(100vw - 24px)); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: 0 10px 32px rgba(0,0,0,.18); z-index: 40; padding: 12px 14px; }
+.models-panel h3 { margin-bottom: 2px; } .models-panel .note { color: var(--text-3); font-size: 12px; margin-top: 8px; }
+.models-panel table { margin-top: 8px; } .models-panel td.dim { color: var(--text-3); }
+.opt-off { color: var(--text-3); }
+
 /* States */
 .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: var(--radius-sm); min-height: 16px; }
 @keyframes shimmer { to { background-position: -200% 0; } }

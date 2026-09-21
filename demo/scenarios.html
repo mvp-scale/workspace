@@ -32,7 +32,7 @@
   table.heat thead tr + tr th { top: 0; position: static; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-3); font-size: 11px; text-align: center; }
   /* Model strip */
   .strip { display: grid; gap: 2px; }
-  .mrow { display: grid; grid-template-columns: 150px minmax(0, 1fr) 200px; gap: 12px; align-items: center; width: 100%; text-align: left; font: inherit; color: inherit; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 4px 8px; cursor: pointer; }
+  .mrow { display: grid; grid-template-columns: 220px minmax(0, 1fr) 200px; gap: 12px; align-items: center; width: 100%; text-align: left; font: inherit; color: inherit; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 4px 8px; cursor: pointer; }
   .mrow:hover { background: var(--surface-2); }
   .mrow[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
   .mrow .val { font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--text-2); }
@@ -161,7 +161,11 @@ function hashFor(over = {}) {
   return "#" + p.toString();
 }
 const replaceHash = () => { try { history.replaceState(null, "", hashFor()); } catch {} };
-const modelName = (id) => (INFO[id] && INFO[id].name) || id;
+/* Plain "CODE Name" for titles, aria labels and exports; live dot + tag for visible names. */
+const modelName = (id) => `${Jev.codeOf(id)} ${Jev.nameOf(id)}`;
+const liveDot = (id) => { const d = el("span", { class: "dot", "data-live": id, role: "img" }); const f = () => { const up = Jev.isUp(id); d.className = "dot " + (up ? "up" : "down"); d.title = up ? "Loaded now: can also be run live" : "Not loaded now"; d.setAttribute("aria-label", d.title); }; f(); Jev.onStatus(f); return d; };
+const mtagLive = (id, o) => el("span", { style: "display:inline-flex;align-items:baseline" }, liveDot(id), Jev.tag(id, o));
+const mtagShort = (id) => el("span", { class: "mtag", title: modelName(id) }, liveDot(id), el("span", { class: "mcode", text: Jev.codeOf(id) }));
 
 /* ---------- data ---------- */
 const detailCache = new Map();
@@ -217,6 +221,7 @@ const heatBg = (acc, chance) => {
 
 /* ---------- boot ---------- */
 mount(document.getElementById("root"), async () => {
+  await Jev.ready;
   const [probes, models] = await Promise.all([api("/api/probes"), api("/api/models")]);
   return { probes, models: models.models || [] };
 }, ({ probes, models }) => {
@@ -284,7 +289,7 @@ function renderOverview(details) {
   const body = el("tbody", {}, ordered.map(m => {
     const mm = M[m];
     return el("tr", {},
-      el("td", {}, el("div", { class: "model-name", text: modelName(m) }), el("div", { class: "model-sub", text: m })),
+      el("td", { "data-value": Jev.codeOf(m) }, el("div", { class: "model-name" }, mtagLive(m))),
       el("td", { class: "num", "data-value": mm ? mm.acc : -1, title: mm ? `Unweighted mean of per-set accuracy over ${mm.k} set(s); mean chance ${pc(mm.ch)}` : "not run", text: mm ? pc(mm.acc, 1) : "not run" }),
       el("td", { class: "num", "data-value": mm ? mm.k : 0, text: mm ? `${mm.k}/${sets.length}` : "0" }),
       sets.map(x => {
@@ -350,7 +355,7 @@ function renderSet(probe, d) {
       const s = stats[id];
       return el("button", { class: "mrow", type: "button", "aria-pressed": String(ST.model === id), onclick: () => { ST.model = id; ST.page = 0; replaceHash(); redraw(); },
         title: `${modelName(id)}: ${s.k}/${s.n} correct, Wilson 95% ${pc(s.lo, 1)} to ${pc(s.hi, 1)}` },
-        el("span", {}, el("span", { class: "model-name", text: modelName(id) }), s.n < d.items.length ? el("div", { class: "model-sub", text: `partial: ${s.n} of ${d.items.length} items` }) : null),
+        el("span", {}, el("span", { class: "model-name" }, mtagLive(id)), s.n < d.items.length ? el("div", { class: "model-sub", text: `partial: ${s.n} of ${d.items.length} items` }) : null),
         el("span", { class: "ci", "aria-hidden": "true" }, el("span", { class: "rng", style: `left:${s.lo * 100}%;width:${(s.hi - s.lo) * 100}%` }), el("span", { class: "pt", style: `left:${s.acc * 100}%` }), el("span", { class: "ch", style: `left:${ch * 100}%` })),
         el("span", { class: "val" }, el("b", { text: pc(s.acc, 1) }), ` (${pc(s.lo)} to ${pc(s.hi)})`, s.pair ? ` · pair ${pc(s.pair.acc)}` : ""));
     }));
@@ -380,7 +385,7 @@ function renderSet(probe, d) {
     const bandTable = el("table", { class: "data wrap" }, el("thead", {}, el("tr", {}, el("th", { text: "Confidence" }), el("th", { class: "num", text: "n" }), el("th", { class: "num", text: "Mean conf." }), el("th", { text: "Accuracy" }))),
       el("tbody", {}, bins.map((b, i) => b.n ? el("tr", {}, el("td", { text: `${(i / 10).toFixed(1)} to ${((i + 1) / 10).toFixed(1)}` }), el("td", { class: "num", text: b.n }), el("td", { class: "num", text: (b.conf / b.n).toFixed(2) }),
         el("td", { title: `${b.ok} of ${b.n} correct${b.n < 5 ? " (very few items, treat as noise)" : ""}`, style: "min-width:150px" }, Jev.meter(b.ok / b.n, `${pc(b.ok / b.n)} accurate, n=${b.n}`))) : null)));
-    const cmCard = el("div", { class: "card" }, el("h3", { text: `Confusion matrix: ${modelName(id)}` }),
+    const cmCard = el("div", { class: "card" }, el("h3", {}, "Confusion matrix: ", Jev.tag(id)),
       el("p", { class: "small muted", text: "Rows are the true label, columns what the model said. The diagonal (green) is correct; red cells are the mistakes. Recall is the share of each true class found." }),
       el("div", { class: "table-wrap", style: "margin-top:8px" }, cm),
       el("h4", { style: "margin-top:12px", text: "Reliability by confidence band" }), el("div", { class: "table-wrap", style: "margin-top:6px" }, bandTable));
@@ -420,7 +425,7 @@ function renderSet(probe, d) {
       sentence, svgBox,
       el("p", { class: "legend", text: "Curve: accuracy on the top-k most confident items for every k. It is noisy at low coverage where few items remain. A curve that stays above the dashed chance line and falls as coverage grows means confidence is informative; a flat curve means it is not." }),
       );
-    detail.replaceChildren(el("div", { class: "row" }, el("h2", { text: `Selected: ${modelName(id)}` }), badge(`${s.k}/${s.n} correct`, "accent"),
+    detail.replaceChildren(el("div", { class: "row" }, el("h2", {}, "Selected: ", mtagLive(id)), badge(`${s.k}/${s.n} correct`, "accent"),
       s.pair ? badge(`pair accuracy ${pc(s.pair.acc)}`, "", `${s.pair.both} of ${s.pair.total} matched pairs both right`) : null, el("span", { class: "spacer" }),
       el("div", { class: "actions" }, el("button", { class: "btn", type: "button", text: "Export CSV", onclick: () => exportItems(false) }), el("button", { class: "btn", type: "button", text: "Export JSON", onclick: () => exportItems(true) }))),
       el("div", { class: "grid cols-2", style: "align-items:stretch" }, cmCard, calCard));
@@ -430,7 +435,7 @@ function renderSet(probe, d) {
     const id = ST.model, s = stats[id], labels = d.items[0].labels || [];
     const recs = s.rows.map(r => ({ item: r.item.id, group: r.item.group, expected: r.item.expected, predicted: r.pred, correct: r.ok, confidence: r.conf, latency_s: r.latency, probs: r.probs }));
     const base = `scenario-${probe.id}-${id}`;
-    if (json) Jev.download(base + ".json", JSON.stringify({ set: probe.id, model: id, accuracy: s.acc, wilson95: [s.lo, s.hi], n: s.n, items: recs }, null, 2), "application/json");
+    if (json) Jev.download(base + ".json", JSON.stringify({ set: probe.id, model: id, model_label: modelName(id), accuracy: s.acc, wilson95: [s.lo, s.hi], n: s.n, items: recs }, null, 2), "application/json");
     else Jev.download(base + ".csv", Jev.csv([["item", "group", "expected", "predicted", "correct", "confidence", "latency_s", ...labels.map(l => "p_" + l)], ...recs.map(r => [r.item, r.group ?? "", r.expected, r.predicted, r.correct, r.confidence, r.latency_s, ...labels.map(l => r.probs[l] ?? "")])]), "text/csv");
   };
 
@@ -487,7 +492,7 @@ function renderSet(probe, d) {
       body = list.length ? el("div", { class: "table-wrap" }, el("table", { class: "data wrap" }, el("thead", {}, el("tr", {}, ["Item", "Text", "Expected", "Predicted", "Confidence"].map(h => el("th", { text: h })))), el("tbody", {}, tr)))
         : empty("No items match", ST.filter === "conf" ? "No confident errors at this threshold. Lower the slider to widen the net." : "Nothing matches this filter.");
     }
-    explorer.replaceChildren(el("header", {}, el("div", {}, el("h2", { id: "ex-h", text: `Item explorer: ${modelName(ST.model)}` }), el("p", { class: "small", text: "Every item this model answered. Confident errors use the threshold from the slider above." }))), controls, ...[note, el("div", { style: "margin-top:8px" }, body), pg].filter(Boolean));
+    explorer.replaceChildren(el("header", {}, el("div", {}, el("h2", { id: "ex-h" }, "Item explorer: ", mtagLive(ST.model)), el("p", { class: "small", text: "Every item this model answered. Confident errors use the threshold from the slider above." }))), controls, ...[note, el("div", { style: "margin-top:8px" }, body), pg].filter(Boolean));
     if (refocus === true) { const i = explorer.querySelector("input[type=search]"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   };
   const redraw = () => { drawStrip(); drawDetail(); drawExplorer(); };

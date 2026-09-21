@@ -74,6 +74,61 @@
       root.dataset.theme = dark ? "light" : "dark"; try { localStorage.setItem("theme", root.dataset.theme); } catch {}
     }, text: "Theme" });
   }
+
+  /* ---- Models: one registry, one naming scheme (codes from models.json), live status from /api/status ---- */
+  let FACTS = {}, ORDER = [], STATUS = null, RULE = "";
+  const subs = new Set();
+  const refreshStatus = async () => { try { STATUS = await api("/api/status"); ORDER = Object.keys(STATUS); subs.forEach(f => f(STATUS)); } catch { /* keep the last known status */ } };
+  const ready = (async () => {
+    try { const m = await api("/api/models"); m.models.forEach(x => { FACTS[x.id] = x; }); RULE = m.code_rule || ""; } catch { /* ids are shown instead */ }
+    await refreshStatus();
+  })();
+  setInterval(refreshStatus, 10000);
+  const codeOf = (id) => FACTS[id]?.code || STATUS?.[id]?.code || id;
+  const nameOf = (id) => FACTS[id]?.name || STATUS?.[id]?.name || id;
+  const isUp = (id) => !!STATUS?.[id]?.up;
+  /* Code chip plus full name. Use {name:false} where space is tight; the code alone is always enough because the panel maps it. */
+  const tag = (id, o = {}) => el("span", { class: "mtag", title: `${codeOf(id)} = ${nameOf(id)}` }, el("span", { class: "mcode", text: codeOf(id) }), o.name === false ? null : el("span", { class: "mname", text: nameOf(id) }));
+  const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
+  /* Fills a <select> from live status: loaded models first (with memory), the rest listed disabled. Refreshes itself. */
+  function modelSelect(sel, o = {}) {
+    const fill = () => {
+      const st = STATUS || {}, ids = ORDER.length ? ORDER : Object.keys(FACTS), cur = sel.value || o.value;
+      const label = (id) => { const s = st[id] || {}, bits = [codeOf(id), nameOf(id)]; if (s.hosted) bits.push("hosted, paid"); else if (s.up) bits.push(s.gpu_mb ? gib(s.gpu_mb) : "CPU"); return bits.join(" · "); };
+      const up = ids.filter(id => st[id]?.up), down = ids.filter(id => !st[id]?.up);
+      sel.replaceChildren(el("optgroup", { label: `Loaded now (${up.length})` }, up.map(id => el("option", { value: id, text: label(id) }))),
+        down.length && !o.onlyLoaded ? el("optgroup", { label: "Not loaded" }, down.map(id => el("option", { value: id, disabled: true, class: "opt-off", text: `${label(id)} (not loaded)` }))) : null);
+      const want = up.includes(cur) ? cur : up.includes(o.prefer) ? o.prefer : up[0];
+      if (want) sel.value = want;
+    };
+    fill(); subs.add(fill); ready.then(fill); return fill;
+  }
+  /* The "Models 5/9" button and its panel: which models are loaded right now, what each code means, memory in use. */
+  function modelsControl() {
+    const dot = el("span", { class: "dot", "aria-hidden": "true" }), count = el("span", { text: "Models" });
+    const btn = el("button", { class: "btn ghost models-btn", type: "button", "aria-expanded": "false", "aria-controls": "models-panel" }, dot, count);
+    const panel = el("div", { class: "models-panel", id: "models-panel", hidden: true, role: "region", "aria-label": "Models and codes" });
+    const render = () => {
+      const st = STATUS || {}, ids = ORDER.length ? ORDER : Object.keys(FACTS), up = ids.filter(id => st[id]?.up);
+      const used = up.reduce((n, id) => n + (st[id].gpu_mb || 0), 0);
+      dot.className = "dot " + (up.length ? "up" : "down"); count.textContent = `Models ${up.length}/${ids.length || "–"}`;
+      panel.replaceChildren(el("h3", { text: `Loaded now: ${up.length} of ${ids.length}` }),
+        el("p", { class: "small muted", text: `${gib(used)} of GPU memory in use. Status is checked live from each running server, so this list cannot drift from what is really in memory.` }),
+        el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ["Code", "Model", "Size", "State", "GPU", "Loaded as"].map(h => el("th", { scope: "col", text: h })))),
+          el("tbody", {}, ids.map(id => { const s = st[id] || {};
+            return el("tr", {}, el("td", {}, el("span", { class: "mcode", text: codeOf(id) })), el("td", { text: nameOf(id) }), el("td", { class: "dim", text: FACTS[id]?.params || "–" }),
+              el("td", {}, el("span", { class: `dot ${s.up ? "up" : "down"}`, "aria-hidden": "true" }), s.up ? "Loaded" : (s.reason || "Not loaded")),
+              el("td", { class: "dim", text: s.hosted ? "hosted" : s.up ? (s.gpu_mb ? gib(s.gpu_mb) : "CPU") : "–" }),
+              el("td", { class: "dim", text: s.up ? (s.identity || "") + (s.identity_ok === false ? "  (does not match its label)" : "") : "" })); })))),
+        el("p", { class: "note", text: RULE }));
+    };
+    btn.addEventListener("click", () => { const open = panel.hidden; panel.hidden = !open; btn.setAttribute("aria-expanded", String(open)); if (open) refreshStatus(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !panel.hidden) { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); btn.focus(); } });
+    document.addEventListener("click", (e) => { if (!panel.hidden && !panel.contains(e.target) && !btn.contains(e.target)) { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } });
+    subs.add(render); ready.then(render);
+    return [btn, panel];
+  }
+
   /* Header + footer shell, injected once so every page shares one source of truth. */
   function shell() {
     const path = location.pathname.replace(/\/$/, "") || "/";
@@ -82,7 +137,7 @@
       el("header", { class: "topbar" }, el("div", { class: "topbar-inner" },
         el("a", { class: "brand", href: "/" }, "Jev Bench ", el("span", { text: "Console" })),
         el("nav", { class: "nav", "aria-label": "Primary" }, NAV.map(([h, t]) => el("a", { href: h, "aria-current": h === path ? "page" : null, text: t }))),
-        theme())));
+        ...modelsControl(), theme())));
     document.body.append(el("footer", { class: "footer" }, el("div", { class: "footer-inner" },
       el("span", { text: "Runs on this machine's RTX 5090 with the public JevBench tiers." }),
       el("span", {}, "Benchmark harness: ", el("a", { href: "https://github.com/fstandhartinger/jevbench", text: "JevBench" })))));
@@ -95,6 +150,6 @@
     return { rows: rows.map(r => ({ ...r, info: info[r.id] || { id: r.id, name: r.id } })), models: meta.models, tiers: meta.tiers };
   }).catch(e => { cache = null; throw e; });
 
-  window.Jev = { el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  window.Jev = { ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();

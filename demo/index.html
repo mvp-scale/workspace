@@ -45,7 +45,7 @@
     </header>
     <div id="table"></div>
     <div class="callout warn" style="margin-top:16px">
-      <strong>Read latency with care.</strong> jeff, kev and Jev were called over HTTP; SemIf, open-alternative-jev, Laya and Verdict were run in-process, and Verdict ran on CPU. The tiers have 48 to 111 decisions each, so gaps of a few points are within noise. These are the public tiers only, not the official JevBench Score.
+      <strong>Read latency with care.</strong> These latencies were measured when JEFF4H, KEV5H, KEV8H, KEV4B and JEV113 were called over HTTP and SEMIF4, OAJEV4, LAYA4H and VERD2H ran in-process (VERD2H on CPU). All of the loaded models are now served over HTTP, so live latencies include a little request overhead. The tiers have 48 to 111 decisions each, so gaps of a few points are within noise. These are the public tiers only, not the official JevBench Score.
     </div>
   </section>
 
@@ -85,9 +85,9 @@ function kpis(rows) {
   const decisions = TIERS.reduce((n, t) => n + (best?.tiers[t]?.n || 0), 0);
   const card = (label, value, note) => el("div", { class: "card kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), el("div", { class: "note", text: note }));
   return [
-    card("Most accurate", best.info.name, `${fmt.pct(best.mean_accuracy)} mean across tiers`),
-    card("Fastest", speed.info.name, `${fmt.ms(speed.tiers.hard.p50_s)} median on the hard tier`),
-    card("Best calibrated", calibrated.info.name, `${fmt.num(calibrated.tiers.hard.ece)} expected calibration error on hard`),
+    card("Most accurate", best.info.name, `${Jev.codeOf(best.id)} · ${fmt.pct(best.mean_accuracy)} mean across tiers`),
+    card("Fastest", speed.info.name, `${Jev.codeOf(speed.id)} · ${fmt.ms(speed.tiers.hard.p50_s)} median on the hard tier`),
+    card("Best calibrated", calibrated.info.name, `${Jev.codeOf(calibrated.id)} · ${fmt.num(calibrated.tiers.hard.ece)} expected calibration error on hard`),
     card("Coverage", `${complete.length} models`, `${decisions} decisions each across ${TIERS.length} tiers`),
   ];
 }
@@ -103,7 +103,7 @@ function table(rows, x) {
       const acc = (tier) => el("td", { class: "num", "data-value": r.tiers[tier]?.accuracy ?? "", text: fmt.pct(r.tiers[tier]?.accuracy) });
       return el("tr", {},
         el("td", { class: "rank", "data-value": i + 1, text: i + 1 }),
-        el("td", { "data-value": r.info.name }, el("span", { class: "model-name" }, el("a", { href: `/models#${r.id}`, text: r.info.name })), el("span", { class: "model-sub", style: "margin-left:8px", text: [r.info.params, r.info.kind].filter(Boolean).join(" · ") })),
+        el("td", { "data-value": r.info.name }, el("span", { class: `dot ${Jev.isUp(r.id) ? "up" : ""}`, title: Jev.isUp(r.id) ? "Loaded now" : "Not loaded now", "aria-label": Jev.isUp(r.id) ? "Loaded now" : "Not loaded now" }), el("span", { class: "model-name" }, el("a", { href: `/models#${r.id}` }, Jev.tag(r.id))), el("span", { class: "model-sub", style: "margin-left:8px", text: [r.info.params, r.info.kind].filter(Boolean).join(" · ") })),
         el("td", { "data-value": r.mean_accuracy, style: "min-width:200px" }, meter(r.mean_accuracy)),
         acc("easy"), acc("original"), acc("hard"),
         el("td", { class: "num", "data-value": hard.ece ?? "", text: fmt.num(hard.ece) }),
@@ -130,9 +130,9 @@ function scatter(rows) {
              s("text", { transform: `translate(12 ${H / 2}) rotate(-90)`, "text-anchor": "middle", fill: "var(--text-2)", "font-size": 11 }, "Hard-tier accuracy"));
   pts.forEach((p, i) => {
     const cx = X(p.tiers.hard.p50_s), cy = Y(p.tiers.hard.accuracy), g = s("g", {});
-    g.append(s("title", {}, `${p.info.name}: ${fmt.pct(p.tiers.hard.accuracy)} accuracy, ${fmt.ms(p.tiers.hard.p50_s)} median`),
+    g.append(s("title", {}, `${Jev.codeOf(p.id)} ${p.info.name}: ${fmt.pct(p.tiers.hard.accuracy)} accuracy, ${fmt.ms(p.tiers.hard.p50_s)} median`),
              s("circle", { cx, cy, r: 5, fill: i === 0 ? "var(--accent)" : "var(--surface)", stroke: "var(--accent)", "stroke-width": 2 }),
-             s("text", { x: cx + 10, y: cy + 4, fill: "var(--text)", "font-size": 11.5 }, p.info.name));
+             s("text", { x: cx + 10, y: cy + 4, fill: "var(--text)", "font-size": 11.5 }, Jev.codeOf(p.id)));
     svg.append(g);
   });
   return svg;
@@ -144,13 +144,13 @@ function families(rows, tier) {
   const cell = (v) => el("td", { class: "num", style: v == null ? "" : `background:color-mix(in srgb, var(--accent) ${Math.round(v * 38)}%, transparent)`, text: fmt.pct(v, 0) });
   const t = el("table", { class: "data" }, el("caption", { class: "sr-only", text: `Accuracy by decision family, ${TIER_LABEL[tier]} tier` }),
     el("thead", {}, el("tr", {}, [el("th", { scope: "col", text: "Model" }), ...fams.map(f => el("th", { scope: "col", class: "num", text: f.replace(/_/g, " ") }))])),
-    el("tbody", {}, rows.filter(r => r.tiers[tier]).map(r => el("tr", {}, [el("td", { class: "model-name", text: r.info.name }), ...fams.map(f => cell(r.tiers[tier].families[f]))]))));
+    el("tbody", {}, rows.filter(r => r.tiers[tier]).map(r => el("tr", {}, [el("td", { class: "model-name" }, Jev.tag(r.id)), ...fams.map(f => cell(r.tiers[tier].families[f]))]))));
   return el("div", { class: "table-wrap" }, t);
 }
 
 function exportRows(rows) {
-  return [["model", "mean_accuracy", ...TIERS.flatMap(t => [`${t}_accuracy`, `${t}_ece`, `${t}_p50_s`])],
-    ...rows.map(r => [r.info.name, r.mean_accuracy.toFixed(4), ...TIERS.flatMap(t => [r.tiers[t]?.accuracy?.toFixed(4), r.tiers[t]?.ece?.toFixed(4), r.tiers[t]?.p50_s?.toFixed(4)])])];
+  return [["code", "model", "mean_accuracy", ...TIERS.flatMap(t => [`${t}_accuracy`, `${t}_ece`, `${t}_p50_s`])],
+    ...rows.map(r => [Jev.codeOf(r.id), r.info.name, r.mean_accuracy.toFixed(4), ...TIERS.flatMap(t => [r.tiers[t]?.accuracy?.toFixed(4), r.tiers[t]?.ece?.toFixed(4), r.tiers[t]?.p50_s?.toFixed(4)])])];
 }
 
 const LOCAL = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "semif", "so1", "laya", "verdict"];
@@ -184,14 +184,14 @@ function fit(rows, x) {
     const sel = LOCAL.filter(id => st.on.has(id)), total = sel.reduce((n, id) => n + (memOf(id, x, st.bf16)?.steady || 0), 0), over = total > cap;
     const chips = el("div", { class: "chips" }, LOCAL.map(id => { const m = memOf(id, x, st.bf16);
       return el("button", { type: "button", class: "chip", "aria-pressed": String(st.on.has(id)), onclick: () => { st.on.has(id) ? st.on.delete(id) : st.on.add(id); draw(); } },
-        info[id]?.name || id, el("span", { class: "gb", text: m.steady ? gbOf(m.steady).toFixed(1) + " GiB" : "CPU" }), el("span", { class: "acc", text: fmt.pct(macro(id), 0) })); }));
+        Jev.tag(id), el("span", { class: "gb", text: m.steady ? gbOf(m.steady).toFixed(1) + " GiB" : "CPU" }), el("span", { class: "acc", text: fmt.pct(macro(id), 0) })); }));
     const tints = [88, 68, 50, 34, 78, 58, 42, 28];
     const bar = el("div", { class: "gpu-bar", role: "img", "aria-label": `${gbOf(total).toFixed(1)} of ${gbOf(cap).toFixed(1)} GiB used by the selected models` },
-      sel.map((id, i) => { const m = memOf(id, x, st.bf16); return m.steady ? el("div", { class: "gpu-seg", title: `${info[id]?.name || id}: ${gbOf(m.steady).toFixed(1)} GiB`, style: `width:${Math.min(100, m.steady / cap * 100)}%;background:color-mix(in srgb, var(--accent) ${tints[i % tints.length]}%, var(--surface-2))`, text: info[id]?.name || id }) : null; }));
+      sel.map((id, i) => { const m = memOf(id, x, st.bf16); return m.steady ? el("div", { class: "gpu-seg", title: `${Jev.codeOf(id)} ${info[id]?.name || id}: ${gbOf(m.steady).toFixed(1)} GiB`, style: `width:${Math.min(100, m.steady / cap * 100)}%;background:color-mix(in srgb, var(--accent) ${tints[i % tints.length]}%, var(--surface-2))`, text: Jev.codeOf(id) }) : null; }));
     const spare = cap - total, startup = sel.map(id => ({ id, m: memOf(id, x, st.bf16) })).sort((a, b) => b.m.startup - a.m.startup)[0];
     const summary = el("div", { class: "stack" },
       el("p", {}, el("strong", { text: `${gbOf(total).toFixed(1)} of ${gbOf(cap).toFixed(1)} GiB` }), over ? el("span", { class: "gpu-over", text: `  over by ${gbOf(-spare).toFixed(1)} GiB: this will run out of memory` }) : ` used, ${gbOf(spare).toFixed(1)} GiB spare`, `. ${sel.length} local model${sel.length === 1 ? "" : "s"}, plus hosted Jev if you want it (no GPU).`),
-      startup && startup.m.startup > startup.m.steady * 1.2 ? el("p", { class: "small muted", text: `Start ${info[startup.id]?.name || startup.id} first: it needs ${gbOf(startup.m.startup).toFixed(1)} GiB for a few seconds while loading before it settles at ${gbOf(startup.m.steady).toFixed(1)} GiB.` }) : null,
+      startup && startup.m.startup > startup.m.steady * 1.2 ? el("p", { class: "small muted", text: `Start ${Jev.codeOf(startup.id)} (${info[startup.id]?.name || startup.id}) first: it needs ${gbOf(startup.m.startup).toFixed(1)} GiB for a few seconds while loading before it settles at ${gbOf(startup.m.steady).toFixed(1)} GiB.` }) : null,
       el("p", { class: "small muted", text: "The safe budget is the sum of each model's peak. Their peaks rarely coincide, which is why an over-budget mix can seem fine until a long input arrives; that is what caused the earlier out-of-memory failures." }));
     left.replaceChildren(el("div", { class: "card stack" }, el("h3", { text: "Models" }), chips,
       el("div", { class: "row" }, el("div", { class: "segmented", role: "group", "aria-label": "kev precision" },
@@ -206,14 +206,14 @@ function fit(rows, x) {
     right.replaceChildren(el("div", { class: "card stack" }, el("h3", { text: "Do they answer alike?" }),
       el("p", { class: "small muted", text: "Share of published-set items where two models give the same answer. The more alike, the less a second one adds." }),
       pairs.length ? el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ["Pair", "Same answer"].map((h, i) => el("th", { scope: "col", class: i ? "num" : null, text: h })))),
-        el("tbody", {}, pairs.slice(0, 12).map(([a, b, v]) => el("tr", {}, el("td", { text: `${info[a]?.name || a} · ${info[b]?.name || b}` }), el("td", { class: `num${v >= 0.75 ? " agree-hi" : ""}`, text: fmt.pct(v, 0) })))))) : Jev.empty("Select two or more models", "Agreement appears here."),
+        el("tbody", {}, pairs.slice(0, 12).map(([a, b, v]) => el("tr", {}, el("td", {}, Jev.tag(a, { name: false }), " · ", Jev.tag(b, { name: false })), el("td", { class: `num${v >= 0.75 ? " agree-hi" : ""}`, text: fmt.pct(v, 0) })))))) : Jev.empty("Select two or more models", "Agreement appears here."),
       pairs.length ? el("p", { class: "small muted", text: "Highlighted pairs agree on 75% or more. On two-way questions two random models already agree about half the time, so 50% means unrelated." }) : null));
   };
   draw(); return root;
 }
 
 const kpiRoot = document.getElementById("kpis");
-mount(document.getElementById("table"), () => Promise.all([load(), extra()]).then(([d, x]) => ({ ...d, x })), (d) => {
+mount(document.getElementById("table"), () => Promise.all([load(), extra(), Jev.ready]).then(([d, x]) => ({ ...d, x })), (d) => {
   DATA = d;
   document.getElementById("fit").replaceChildren(fit(d.rows, d.x));
   kpiRoot.append(...kpis(d.rows)); kpiRoot.removeAttribute("aria-busy");

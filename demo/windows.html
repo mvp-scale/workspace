@@ -81,7 +81,10 @@
 
   const CHUNK = 100;            // items per /api/batch request; the server allows at most 400
   const MAX_CALLS = 1500;       // page-side guard against a runaway paste
-  const HOSTED = "jev (typesafe)";
+  const OLD_IDS = { "jev (typesafe)": "jev" };   // ids in links and saved state from before the registry
+  const isHosted = (id) => !!Jev.status()?.[id]?.hosted;
+  const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
+  const memText = (s) => !s ? "" : s.hosted ? "hosted, paid, no local memory" : s.gpu_mb ? `${gib(s.gpu_mb)} GPU memory` : "CPU only";
   const DETS = [
     { id: "manipulation", name: "Manipulation", set: "manipulation_dialogue", type: "noul", about: "Does one speaker try to manipulate another for their own benefit? Validated on dialogues." },
     { id: "sarcasm", name: "Sarcasm / irony", set: "sarcasm_isarcasm", type: "noul", about: "Does the speaker mean the opposite of the literal words?" },
@@ -91,7 +94,6 @@
   ];
   const SCALES = [["sentence", "Sentence alone"], ["window", "Window (+2 before)"], ["paragraph", "Paragraph"], ["lift", "Context lift"]];
   const SCALE_NAME = { sentence: "sentence", window: "window", paragraph: "paragraph", lift: "context lift" };
-  const modelId = (b) => b === HOSTED ? "jev" : b;
 
   const S = {
     src: "gettysburg-address", model: null, on: new Set(), gate: 0.8, scale: "window", runScales: new Set(["sentence", "window", "paragraph"]),
@@ -104,7 +106,7 @@
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
-    return { src: p.get("src"), model: p.get("model"), det: p.get("det"), gate: p.get("gate"), scale: p.get("scale"), dlg: p.get("dlg") };
+    const m = p.get("model"); return { src: p.get("src"), model: m && OLD_IDS[m] || m, det: p.get("det"), gate: p.get("gate"), scale: p.get("scale"), dlg: p.get("dlg") };
   }
   function writeHash() {
     const p = new URLSearchParams();
@@ -160,7 +162,7 @@
   const qsig = (dets) => dets.map(d => d.id).join("|");
   const keyOf = (state, dets) => S.model + "\u0001" + qsig(dets) + "\u0001" + state;
   function trust(d) {
-    const set = D.sets[d.set], res = set && set.results && set.results[modelId(S.model)];
+    const set = D.sets[d.set], res = set && set.results && set.results[S.model];
     if (!res) return null;
     const rows = Object.values(res); if (!rows.length) return null;
     const correct = rows.filter(r => r.correct).length, n = rows.length, acc = correct / n, chance = 1 / (set.items[0].labels.length || 1);
@@ -168,7 +170,7 @@
   }
   function trustChip(d) {
     const t = trust(d);
-    if (!t) return el("span", { class: "badge", text: "not measured for this model", title: "No published results for " + S.model + " on the " + d.set + " set." });
+    if (!t) return el("span", { class: "badge", text: "not measured for this model", title: "No published results for " + Jev.codeOf(S.model) + " on the " + d.set + " set." });
     const near = t.acc < t.chance + 0.1;
     return el("span", { class: "badge " + (near ? "warn" : "accent"), title: `${t.correct} of ${t.n} correct on ${d.set}. Guessing a class uniformly would score ${fmt.pct(t.chance, 0)}.${near ? " Within 10 points of guessing." : ""}` },
       `measured ${fmt.pct(t.acc, 0)} on ${t.n} published items` + (near ? " (near chance)" : ""));
@@ -238,21 +240,38 @@
       el("optgroup", { label: "Other sources" },
         el("option", { value: "conversation", text: "Conversation replay" }), el("option", { value: "growth", text: "Growth copy" }), el("option", { value: "paste", text: "Paste your own text" })));
     srcSel.value = S.src;
-    const modelSel = el("select", { id: "model", onchange: () => { S.model = modelSel.value; S.armed = false; refreshDetectors(); afterChange(); } },
-      Object.entries(D.status).filter(([, v]) => v.up).map(([k]) => el("option", { value: k, text: k })));
+    const modelSel = el("select", { id: "model", onchange: () => { S.model = modelSel.value; S.armed = false; S.notice = null; refreshDetectors(); refreshModelCard(); afterChange(); } });
+    Jev.modelSelect(modelSel, { prefer: "semif", value: S.model, onlyLoaded: false });
     modelSel.value = S.model;
+    const modelCard = el("div", { class: "small muted", id: "model-card", "aria-live": "polite" }), modelNote = el("p", { class: "hint", id: "model-note" });
     const srcPanel = el("div", { class: "stack" });
     const detBox = el("div", {});
-    ui = { srcSel, modelSel, srcPanel, detBox, runBar: el("div", { class: "stack" }), rows: {} };
+    ui = { srcSel, modelSel, modelCard, modelNote, srcPanel, detBox, runBar: el("div", { class: "stack" }), rows: {} };
     const box = el("div", { class: "side noprint" },
       el("div", { class: "card stack" }, el("h3", { text: "Source" }), el("div", { class: "field" }, el("label", { for: "src", text: "Text to analyse" }), srcSel), srcPanel),
       el("div", { class: "card stack" }, el("h3", { text: "Model" }),
-        el("div", { class: "field" }, el("label", { for: "model", text: "Backend (only ones that are up)" }), modelSel,
-          el("p", { class: "hint", text: "Defaults to the strongest available: jev (typesafe) if up, else kev-4b." }))),
+        el("div", { class: "field" }, el("label", { for: "model", text: "Model (loaded ones are listed first)" }), modelSel, modelCard, modelNote,
+          el("p", { class: "hint", text: "Defaults to SemIf (SEMIF4) when it is loaded, otherwise the first loaded model. Models that are not loaded cannot be run. The hosted model is paid per call." }))),
       el("div", { class: "card" }, el("h3", { text: "Detectors" }), el("p", { class: "small muted", style: "margin:4px 0 6px", text: "Each question is the exact wording from the published labelled set, so the measured accuracy applies to the question, not necessarily to your text." }), detBox),
       el("div", { class: "card stack" }, el("h3", { text: "Run" }), ui.runBar));
-    refreshSourcePanel(); buildDetectors(); refreshRunBar();
+    refreshSourcePanel(); buildDetectors(); refreshRunBar(); refreshModelCard();
+    Jev.onStatus(syncModel);
     return box;
+  }
+  /* Identity line and memory of the selected model, straight from live status. */
+  function refreshModelCard() {
+    if (!ui.modelCard) return;
+    const s = Jev.status()?.[S.model];
+    ui.modelCard.replaceChildren(Jev.tag(S.model), el("div", { text: s ? (s.up ? `Loaded as ${s.identity || "unknown"}${s.identity_ok === false ? " (does not match its label)" : ""} · ${memText(s)}` : `Not loaded${s.reason && s.reason !== "Not loaded" ? ": " + s.reason : ""}`) : "Status unavailable" }));
+    ui.modelNote.textContent = S.notice || "";
+  }
+  /* Called on every status refresh: keep the picker, the selected model and the run bar honest. */
+  function syncModel() {
+    if (!ui.modelSel) return;
+    let want = ui.modelSel.value;
+    if (want !== S.model && isHosted(want)) { const free = Object.keys(Jev.status()).find(id => Jev.isUp(id) && !isHosted(id)); if (free) { ui.modelSel.value = free; want = free; } }   // never fall back to a paid model silently
+    if (want && want !== S.model && Jev.isUp(want)) { S.model = want; S.armed = false; S.notice = `${Jev.codeOf(S.model)} was selected because the previous model is no longer loaded.`; refreshDetectors(); afterChange(); }
+    refreshModelCard(); refreshRunBar();
   }
   function buildDetectors() {
     ui.detBox.replaceChildren(...DETS.map(d => {
@@ -302,7 +321,7 @@
   }
   function refreshRunBar() {
     const bar = ui.runBar; if (!bar) return;
-    const dets = activeDets(), all = planStates(), pend = pendingStates(), hosted = S.model === HOSTED;
+    const dets = activeDets(), all = planStates(), pend = pendingStates(), hosted = isHosted(S.model);
     const kids = [];
     if (S.src !== "conversation") kids.push(el("div", { class: "field" }, el("span", { class: "sr-only", text: "Scales to run" }),
       el("div", { class: "pill-row", role: "group", "aria-label": "Scales to run" }, ["sentence", "window", "paragraph"].map(sc => {
@@ -311,13 +330,13 @@
       }))));
     if (S.running && S.progress) {
       const p = S.progress;
-      kids.push(el("div", { role: "status" }, `Calling ${S.model}: ${p.done} of ${p.total} done` + (p.failed ? `, ${p.failed} failed` : ""), meter(p.done / p.total, `${p.done} of ${p.total} calls`)),
+      kids.push(el("div", { role: "status" }, `Calling ${Jev.codeOf(S.model)} (${Jev.nameOf(S.model)}): ${p.done} of ${p.total} done` + (p.failed ? `, ${p.failed} failed` : ""), meter(p.done / p.total, `${p.done} of ${p.total} calls`)),
         el("button", { class: "btn", type: "button", onclick: () => abortCtl && abortCtl.abort(), text: "Cancel" }));
     } else {
       const label = !dets.length ? "Turn on a detector" : !all.length ? "Nothing to run" : all.length > MAX_CALLS ? "Too many calls" : !pend.length ? "All results are in" :
         (hosted && S.armed) ? `Confirm: run ${pend.length} hosted calls` : `Run ${pend.length} call${pend.length === 1 ? "" : "s"}` + (hosted ? " (hosted, paid)" : "");
       kids.push(el("p", { class: "small muted" }, `${all.length} model call${all.length === 1 ? "" : "s"} planned (${all.length - pend.length} already done), each with ${dets.length} question${dets.length === 1 ? "" : "s"}, sent in requests of up to ${CHUNK} calls (server cap 400).`));
-      if (hosted) kids.push(el("div", { class: "callout warn" }, el("strong", { text: "Hosted backend. " }), `Each call costs real money (a fraction of a cent). This run makes up to ${pend.length} calls; identical repeats are cached by the server.`));
+      if (hosted) kids.push(el("div", { class: "callout warn" }, el("strong", { text: `Hosted model ${Jev.codeOf(S.model)}. ` }), `Each call costs real money (a fraction of a cent). This run makes up to ${pend.length} calls; identical repeats are cached by the server.`));
       if (all.length > MAX_CALLS) kids.push(el("p", { class: "field-error small", style: "color:var(--bad)", text: `More than ${MAX_CALLS} calls: shorten the text or turn scales off.` }));
       kids.push(el("div", { class: "row" },
         el("button", { class: "btn primary", id: "run", type: "button", disabled: (!dets.length || !pend.length || all.length > MAX_CALLS) ? "" : null, onclick: () => { if (hosted && !S.armed) { S.armed = true; refreshRunBar(); ui.runBar.querySelector("#run")?.focus(); } else run(); }, text: label }),
@@ -499,7 +518,7 @@
 
   /* ---------- export ---------- */
   function exportData() {
-    const dets = activeDets(), base = { generated: new Date().toISOString(), source: S.src, model: S.model, gate: S.gate, scale: S.scale, note: "Technique signals, not verdicts about anyone's intent or honesty.",
+    const dets = activeDets(), base = { generated: new Date().toISOString(), source: S.src, model: S.model, model_code: Jev.codeOf(S.model), model_name: Jev.nameOf(S.model), gate: S.gate, scale: S.scale, note: "Technique signals, not verdicts about anyone's intent or honesty.",
       detectors: dets.map(d => { const t = trust(d); return { id: d.id, name: d.name, set: d.set, type: d.type, question: d.question, validation: t ? { correct: t.correct, n: t.n, accuracy: t.acc, uniformGuess: t.chance } : null }; }) };
     if (S.src === "conversation") {
       const it = D.items.find(x => x.id === S.dlg), turns = it ? dialogueTurns(it) : [], d = DETS[0];
@@ -513,16 +532,18 @@
   /* ---------- boot ---------- */
   async function loadAll() {
     const ids = [...new Set(DETS.map(d => d.set))];
-    const [status, speeches, ...sets] = await Promise.all([api("/api/status"), api("/api/speeches"), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
-    return { status, speeches, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
+    await Jev.ready;
+    const [status, speeches, ...sets] = await Promise.all([Promise.resolve(Jev.status()), api("/api/speeches"), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
+    return { status: Jev.status() || status, speeches, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
   }
   function init(data) {
     D = { ...data, items: data.sets.manipulation_dialogue.items.filter(it => it.state.includes("\n")) };
     if (!D.items.length) D.items = data.sets.manipulation_dialogue.items;
     DETS.forEach(d => { const s = D.sets[d.set]; d.question = s && s.items[0] ? s.items[0].question : null; });
     const up = Object.entries(D.status).filter(([, v]) => v.up).map(([k]) => k), h = readHash();
-    if (!up.length) return el("div", { class: "stack" }, empty("No backend is up", "Every model backend is unreachable right now. Start one, then check again."), el("p", { style: "text-align:center" }, el("button", { class: "btn", type: "button", onclick: boot, text: "Check again" })));
-    S.model = up.includes(h.model) ? h.model : up.includes(HOSTED) ? HOSTED : up.includes("kev-4b") ? "kev-4b" : up[0];
+    if (!up.length) return el("div", { class: "stack" }, empty("No model is loaded", "Every model is unloaded or unreachable right now. Load one, then check again."), el("p", { style: "text-align:center" }, el("button", { class: "btn", type: "button", onclick: boot, text: "Check again" })));
+    S.model = up.includes(h.model) ? h.model : up.includes("semif") ? "semif" : up.find(id => !isHosted(id)) || up[0];
+    S.notice = h.model && !up.includes(h.model) ? `The model in this link is not loaded, so ${Jev.nameOf(S.model)} (${Jev.codeOf(S.model)}) is selected instead.` : null;
     const validSrc = ["conversation", "growth", "paste", ...D.speeches.map(s => s.slug)];
     S.src = validSrc.includes(h.src) ? h.src : (D.speeches[0] ? D.speeches[0].slug : "paste");
     S.on = new Set(h.det != null ? h.det.split(",").filter(x => DETS.some(d => d.id === x)) : DETS.filter(d => !d.off).map(d => d.id));
