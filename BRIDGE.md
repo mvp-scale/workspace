@@ -2,6 +2,27 @@
 
 Written 2026-09-21 at the end of a long session. Read `CLAUDE.md` too (commands, architecture, gotchas); this file is the narrative and the next task.
 
+## Starter prompt for the next session (paste this)
+
+```
+Read /workspace/BRIDGE.md and /workspace/CLAUDE.md first. Then verify the state before touching anything:
+run `demo/lineup.sh status`, `curl -s localhost:8100/api/status` (start the demo server per CLAUDE.md if it is down),
+and `git status`. Report in a few lines what is loaded and whether the tree is clean.
+
+The task is to rework the Call monitor (demo/stream.html). It works but is not fluid enough. Do not start coding.
+1. Ask me for one concrete moment that feels wrong (which model, which scene, what I expected).
+2. Install Playwright/Chromium as BRIDGE.md describes and MEASURE the current behaviour on a loaded local model
+   (SEMIF4 and KEV4B, never the hosted JEV113): time from Play to first scored cell, per-checkpoint result lag
+   p50/p95, and playback smoothness on the Nixon-Haldeman scene. Show me the numbers.
+3. Propose a plan that says where the fluidity is lost (scheduling, transport, server, rendering) and what each
+   change should buy in those numbers. Wait for my go before implementing.
+
+Constraints: no spending on the hosted model from scripts; never restart demo/server.py while an experiment runs
+through it; put a timeout on every wait and check `ps` for stray loops afterwards; keep the honest framing, trust
+chips, documented-events comparison and hosted-call confirmation; show models through Jev.tag/Jev.codeOf only;
+commit locally when done (there is no remote).
+```
+
 ## Git state (read this first)
 
 - `/workspace` is a small git repo with **local commits only. There is no remote; nothing has been pushed to GitHub.** Latest: `61d229d`. `git log` is the history; the nested repos `kev/`, `jeff/`, `jevbench/` and `data/`, `models/`, `logs/`, `.env` are git-ignored.
