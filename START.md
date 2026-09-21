@@ -62,7 +62,7 @@ python3 demo/vram.py                                          # measure GPU memo
 
 ## 6. Where things stand
 
-- **`/cockpit` is built and running** (`demo/cockpit.html`): Cockpit C layout on the console's own style, per-person windows, KEV4B by default. Adding a route needs a demo-server restart (`kill` it, then the start command in section 2). Not yet in: scrubber and step, a facts extractor, live speech-to-text (the source is an interface: words with speaker and time), narrowed phrase highlights (highlights mark the whole scored sentence).
+- **`/cockpit` is built and running** (`demo/cockpit.html`): Cockpit C layout on the console's own style, diarized speakers ("Person N", one colour each, up to nine), per-person windows, pick one person to coach, everyone else in the cue cards, KEV4B by default. Adding a route needs a demo-server restart (`kill` it, then the start command in section 2). Not yet in: scrubber and step, a facts extractor, live speech-to-text (the source is an interface: words with speaker and time), narrowed phrase highlights (highlights mark the whole scored sentence).
 
 - Real Call monitor (`demo/stream.html`) is unchanged; whether `/cockpit` replaces it is still open. Mock-ups and specs are committed locally.
 - Open decisions: narrowed phrase highlights vs whole sentence, a facts extractor, a scrubber and step. Standoff-state idea for spans: `docs/typesafe_standoff_pattern.md` (awareness only, not adopted).
