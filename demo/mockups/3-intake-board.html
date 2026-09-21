@@ -1,77 +1,110 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mock 3 - Intake board</title>
+<title>Intake board</title>
 <link rel="stylesheet" href="mock.css">
 <style>
-  .grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 1.6fr); gap: 14px; align-items: start; }
-  .tr { height: 70vh; overflow-y: auto; padding: 12px 14px; scroll-behavior: smooth; }
-  .ln { margin-bottom: 10px; } .ln .words { font-size: 15px; }
-  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-  .slot { --h: 210; padding: 12px; min-height: 108px; border-top: 4px solid var(--line); transition: border-color .3s, background .3s; }
-  .slot.on { border-top-color: hsl(var(--h) 65% 50%); background: color-mix(in srgb, hsl(var(--h) 80% 50%) 6%, var(--panel)); }
+  .top2 { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 12px; margin-bottom: 12px; }
+  .att { padding: 14px 16px; display: grid; gap: 8px; align-content: center; }
+  .att .big { font: 600 30px/1 var(--mono); letter-spacing: .02em; }
+  .att .sub { font-size: 12px; color: var(--ink-3); }
+  .attbar { height: 10px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; position: relative; }
+  .attbar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; transform: scaleX(0); border-radius: 5px; }
+  .attbar b { position: absolute; left: 65%; top: 0; bottom: 0; width: 2px; background: var(--act); opacity: .5; }
+  #ch { height: 132px; }
+  .main { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 12px; }
+  .tr { height: 520px; padding: 0 16px; }
+  #view { height: 100%; }
+  .ln { padding: 8px 0; font-size: 16px; }
+  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-content: start; }
+  .slot { position: relative; height: 158px; padding: 12px 14px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 6px; overflow: hidden; }
   .slot .k { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
-  .slot .v { margin-top: 8px; font-size: 15px; min-height: 22px; }
-  .slot .need { color: var(--mute); font-size: 12px; font-style: italic; }
-  .slot.on .need { display: none; }
-  .slot.flash { animation: flash .9s ease-out; }
-  @keyframes flash { from { box-shadow: 0 0 0 3px hsl(var(--h) 70% 55% / .6); } to { box-shadow: var(--shadow); } }
-  .meter { padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
-  .meter .track { flex: 1; height: 12px; background: var(--line); border-radius: 6px; overflow: hidden; }
-  .meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, #3aa876, #f5b301, #e5484d); background-size: 300px 100%; transition: width .5s ease; }
-  .lvl { font: 700 13px var(--mono); min-width: 88px; text-align: right; }
-  .hist { margin-top: 10px; font-size: 12px; color: var(--mute); }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .tr { height: 36vh; } }
+  .slot .k .st { margin-left: auto; font: 500 11px var(--mono); color: var(--ink-2); }
+  .slot .v { font-size: 15px; line-height: 1.35; overflow: hidden; min-height: 0; }
+  .slot .v .now { font-weight: 600; display: block; }
+  .slot .v .prev { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot .v .need { color: var(--ink-3); font-style: italic; font-size: 13px; }
+  .slot .ago { font: 500 11px var(--mono); color: var(--ink-3); min-height: 15px; }
+  .slot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--c); opacity: 0; pointer-events: none; }
+  .slot.flash::after { animation: flash 1.1s ease-out; }
+  @keyframes flash { from { opacity: .9; } to { opacity: 0; } }
+  .slot.empty { border-style: dashed; }
+  .hint { font-size: 12px; color: var(--ink-3); margin-top: 10px; }
+  @media (max-width: 1000px) { .top2, .main { grid-template-columns: 1fr; } .tr { height: 320px; } }
 </style></head>
 <body><div class="wrap">
-  <div class="top"><a href="index.html">&larr; Mock-ups</a><h1>3. Intake board (emergency, support, sales qualifying)</h1><span class="sp"></span><span id="pick"></span><span id="ctl"></span></div>
+  <div class="bar"><a class="back" href="index.html">&larr; Mock-ups</a><h1>Intake board</h1><span class="sp"></span><span id="pick"></span><span id="pill"></span><span id="ctl"></span></div>
   <div id="banner"></div>
-  <div class="grid">
-    <div class="panel tr" id="tr" aria-live="polite"></div>
-    <div>
-      <div class="panel meter"><b>Attention</b><div class="track"><div class="fill" id="fill"></div></div><span class="lvl" id="lvl">CALM</span></div>
-      <div class="slots" id="slots"></div>
-      <div class="hist">A slot is one thing you asked to pull out. Grey and italic means nothing has been heard yet, so it is still worth asking. The attention level is the strongest recent signal, shown as a level rather than a number.</div>
-    </div>
+  <div id="wbar"></div>
+  <div class="top2">
+    <section class="panel att"><h2 style="margin:0;font:600 11px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)">Attention</h2><div class="big" id="attv">CALM</div><div class="attbar"><i id="attb"></i><b></b></div><div class="sub" id="atts">Strongest signal right now</div></section>
+    <section class="panel"><header><h2>Attention over the last 60 seconds</h2></header><div class="body"><div class="chart" id="ch"><canvas></canvas></div></div></section>
+  </div>
+  <div class="main">
+    <section class="panel"><header><h2>Transcript</h2></header><div class="tr"><div class="glide" id="view"><div class="track" id="track"></div></div></div></section>
+    <div><div class="slots" id="slots"></div><div class="hint">Each card is one thing you asked to pull out. A dashed card means it has not been heard yet, so it may still be worth asking. Cards keep the last value and how long ago it was heard.</div></div>
   </div>
 </div>
 <script src="apollo.js"></script><script src="data.js"></script><script src="mock.js"></script>
 <script>
-const { h } = Mock;
-let scn, player, line, recent;
-const tr = document.getElementById("tr"), slotsEl = document.getElementById("slots");
-
-function slotEl(w) {
-  return h("div", { class: "panel slot", id: "s-" + w.code, style: Mock.chipStyle(w.hue) },
-    h("div", { class: "k" }, h("span", { class: "code", style: Mock.chipStyle(w.hue) }, w.code), w.label, h("span", { class: "mute small", style: "margin-left:auto", id: "c-" + w.code }, "")),
-    h("div", { class: "v" }, h("span", { class: "need", id: "v-" + w.code }, "Not heard yet")));
-}
-function setAttention(p) {
-  document.getElementById("fill").style.width = Math.round(p * 100) + "%";
-  document.getElementById("lvl").textContent = p >= 0.85 ? "HIGH" : p >= 0.6 ? "ELEVATED" : "CALM";
-}
-function load(s) {
-  if (player) player.restart();
-  scn = s; recent = [];
-  document.getElementById("banner").replaceChildren(Mock.mockBanner(scn));
-  tr.replaceChildren(); setAttention(0.05); slotsEl.replaceChildren(...scn.watch.map(slotEl));
-  player = Mock.Player(scn, {
-    reset() { tr.replaceChildren(); setAttention(0.05); slotsEl.replaceChildren(...scn.watch.map(slotEl)); recent = []; },
-    turn(i, t) { line = h("div", { class: "ln" }, h("div", { class: "spk" }, t.speaker), h("div", { class: "words" })); tr.append(line); },
-    word(i, k, w) { line.lastChild.append(h("span", { class: "w", id: `w${i}_${k}` }, (k ? " " : "") + w)); tr.scrollTop = tr.scrollHeight; },
-    mark(m, i) {
-      const hue = Mock.hueOf(scn, m.code);
-      for (let k = m.from; k < m.to; k++) { const el = document.getElementById(`w${i}_${k}`); if (el) { el.classList.add("hl"); el.style.setProperty("--h", hue); } }
-      const slot = document.getElementById("s-" + m.code);
-      if (slot) {
-        slot.classList.add("on"); slot.classList.remove("flash"); void slot.offsetWidth; slot.classList.add("flash");
-        const v = slot.querySelector(".v"); v.replaceChildren(m.fact ? h("b", null, m.fact[1]) : m.note, m.fact ? h("div", { class: "small mute" }, m.note) : null);
-        document.getElementById("c-" + m.code).textContent = Mock.conf(m.p);
-      }
-      recent.push(m.p); setAttention(Math.max(...recent.slice(-3)));
-    },
+const { h, mmss } = Mock;
+let S;
+function load(scn) {
+  if (S) S.destroy();
+  for (const id of ["track", "slots", "wbar", "banner", "pill", "ctl"]) document.getElementById(id).replaceChildren();
+  const cv = document.querySelector("#ch canvas"), fresh = cv.cloneNode(); cv.replaceWith(fresh);
+  S = Mock.Session(scn);
+  document.getElementById("banner").append(Mock.Banner(scn));
+  document.getElementById("pill").append(Mock.LivePill(S));
+  document.getElementById("ctl").append(Mock.Controls(S));
+  Mock.WatchEditor(S, document.getElementById("wbar"));
+  Mock.Transcript(S, document.getElementById("view"), document.getElementById("track"), {
+    build(i, tu) { const words = h("div", { class: "ln" }); return { words, el: h("div", null, h("div", { class: "spk" }, tu.speaker), words) }; },
   });
-  document.getElementById("ctl").replaceChildren(Mock.controls(player));
+  /* slots */
+  let cards = {}; const store = {}; const G = { Live: "● LIVE", Holding: "◐ HOLDING", Fading: "○ FADING", Quiet: "– QUIET" };
+  const render = (code) => {
+    const c = cards[code], hist = store[code] || []; if (!c) return;
+    if (!hist.length) { c.v.replaceChildren(h("span", { class: "need" }, "Not heard yet")); c.el.classList.add("empty"); return; }
+    const m = hist[0], rows = [h("span", { class: "now", "data-flag": m.id }, m.fact ? m.fact[1] : "“" + m.quote.replace(/[.,!?;:]+$/, "") + "”")];
+    if (hist[1]) rows.push(h("span", { class: "prev", "data-flag": hist[1].id }, "earlier: " + (hist[1].fact ? hist[1].fact[1] : hist[1].note)));
+    c.v.replaceChildren(...rows); c.el.classList.remove("empty");
+  };
+  const build = () => {
+    cards = {}; const box = document.getElementById("slots"); box.replaceChildren();
+    for (const w of S.watch) {
+      const v = h("div", { class: "v" }), ago = h("div", { class: "ago" }), st = h("span", { class: "st" }, "– QUIET");
+      const bar = h("i"), meter = h("div", { class: "meter" }, bar, h("b"));
+      const el = h("div", { class: "panel slot empty", style: Mock.cvar(w.slot), title: w.prompt }, h("div", { class: "k" }, h("span", { class: "code" }, w.code), w.label, st), v, meter, ago);
+      cards[w.code] = { el, v, ago, st, bar, cache: {} }; box.append(el); render(w.code);
+    }
+  };
+  build(); S.onWatch(build); S.onReset(() => { for (const k in store) delete store[k]; build(); });
+  S.onFire((m) => {
+    const c = cards[m.code]; if (!c) return; (store[m.code] = store[m.code] || []).unshift(m); store[m.code].length = Math.min(2, store[m.code].length);
+    render(m.code); c.el.classList.remove("flash"); void c.el.offsetWidth; c.el.classList.add("flash");
+  });
+  S.onFrame(() => {
+    let top = 0, topCode = null;
+    for (const w of S.watch) {
+      const c = cards[w.code]; if (!c) continue; const sg = S.sig[w.code];
+      c.bar.style.transform = `scaleX(${Mock.clamp(sg.disp, 0, 1).toFixed(3)})`;
+      const st = G[S.stateOf(w.code)], ago = (store[w.code] || []).length ? "heard " + mmss(S.t - sg.lastFire) + " ago" : "";
+      if (c.cache.st !== st) { c.st.textContent = st; c.cache.st = st; }
+      if (c.cache.ago !== ago) { c.ago.textContent = ago; c.cache.ago = ago; }
+      if (sg.disp > top) { top = sg.disp; topCode = w.code; }
+    }
+    const lvl = top >= 0.85 ? "HIGH" : top >= Mock.ACT ? "ELEVATED" : "CALM", el = document.getElementById("attv");
+    if (el.textContent !== lvl) el.textContent = lvl;
+    document.getElementById("attb").style.transform = `scaleX(${Mock.clamp(top, 0, 1).toFixed(3)})`;
+    const t = topCode && top >= Mock.ACT ? `Driven by ${topCode}` : "Strongest signal right now"; const sEl = document.getElementById("atts"); if (sEl.textContent !== t) sEl.textContent = t;
+  });
+  /* attention series = max level across signals */
+  const att = []; let nx = 0;
+  S.onReset(() => { att.length = 0; nx = 0; });
+  S.onFrame(() => { if (!S.playing) return; while (nx <= S.t) { let m = 0; for (const w of S.watch) m = Math.max(m, S.hist[w.code] && S.hist[w.code].length ? S.hist[w.code][S.hist[w.code].length - 1][1] : 0); att.push([nx, m]); if (att.length > 700) att.shift(); nx += 0.2; } });
+  Mock.Chart(S, fresh, { window: 60, series: () => { let m = 0; for (const w of S.watch) m = Math.max(m, S.levelOf(w.code)); return [{ id: "ATT", short: "attn", slot: -1, samples: att, live: m, area: true }]; } });
+  S.start();
 }
-document.getElementById("pick").append(Mock.scenarioPicker(Mock.byId("dispatch"), load));
+document.getElementById("pick").append(Mock.Picker(Mock.byId("dispatch"), load));
 load(Mock.byId("dispatch"));
 </script></body></html>

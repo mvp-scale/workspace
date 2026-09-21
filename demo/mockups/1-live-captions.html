@@ -1,87 +1,66 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mock 1 - Live captions</title>
+<title>Live captions</title>
 <link rel="stylesheet" href="mock.css">
 <style>
-  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: start; }
-  .stage { padding: 6px 0; height: 66vh; overflow-y: auto; scroll-behavior: smooth; }
-  .row { display: grid; grid-template-columns: 110px minmax(0, 1fr) 150px; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-  .row.live { background: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
-  .txt { font-size: 19px; line-height: 1.55; }
-  .margin { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-  .note { font-size: 12px; color: var(--mute); line-height: 1.3; }
-  .tag { display: flex; flex-direction: column; gap: 2px; animation: pop .25s ease-out; }
-  .side { padding: 14px; position: sticky; top: 12px; }
-  .side h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--mute); margin: 0 0 8px; }
-  .add { display: grid; gap: 6px; margin-top: 12px; }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr; } .side { position: static; } }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 12px; align-items: start; }
+  .left { display: grid; gap: 12px; min-width: 0; }
+  .caps { height: 520px; padding: 0 16px; }
+  #view { height: 100%; }
+  .row { display: grid; grid-template-columns: 116px minmax(0, 1fr) 180px; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .txt { font-size: 20px; line-height: 1.5; }
+  .margin { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; padding-top: 3px; }
+  .tag { display: grid; gap: 1px; animation: tagin .45s cubic-bezier(.2, .8, .2, 1) both; }
+  @keyframes tagin { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+  .tag .n { font-size: 12px; line-height: 1.3; color: var(--ink-2); }
+  .tag .cf { font: 500 10px var(--mono); color: var(--ink-3); letter-spacing: .05em; text-transform: uppercase; margin-left: 4px; }
+  #sigs { min-height: 372px; }
+  #moms { height: 368px; }
+  #ch { height: 190px; }
+  @media (max-width: 1000px) { .main { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr; gap: 4px; } .caps { height: 340px; } }
 </style></head>
 <body><div class="wrap">
-  <div class="top"><a href="index.html">&larr; Mock-ups</a><h1>1. Live captions with a margin</h1><span class="sp"></span><span id="pick"></span><span id="ctl"></span></div>
+  <div class="bar"><a class="back" href="index.html">&larr; Mock-ups</a><h1>Live captions</h1><span class="sp"></span><span id="pick"></span><span id="pill"></span><span id="ctl"></span></div>
   <div id="banner"></div>
-  <div class="grid">
-    <div class="panel stage" id="stage" aria-live="polite"></div>
-    <aside class="panel side">
-      <h2>Watching for</h2>
-      <div id="legend"></div>
-      <div class="add">
-        <label class="small mute" for="np">Add something to watch for. Written as a plain sentence, it becomes a question for Jev.</label>
-        <input id="np" type="text" placeholder="e.g. Anyone agreeing to a deadline">
-        <button class="btn" id="addb">Add to watch list</button>
-        <div class="small mute" id="addnote"></div>
-      </div>
+  <div id="wbar"></div>
+  <div class="main">
+    <div class="left">
+      <section class="panel"><header><h2>Transcript</h2></header><div class="caps"><div class="glide" id="view"><div class="track" id="track"></div></div></div></section>
+      <section class="panel"><header><h2>Last 60 seconds</h2></header><div class="body"><div class="chart" id="ch"><canvas></canvas></div></div></section>
+    </div>
+    <aside class="left">
+      <section class="panel"><header><h2>Signals</h2></header><div class="body" id="sigs"></div></section>
+      <section class="panel"><header><h2>Flagged moments</h2><span class="mute" style="margin-left:auto;font-size:12px" id="more"></span></header><div class="body"><div id="moms"></div></div></section>
     </aside>
   </div>
 </div>
 <script src="apollo.js"></script><script src="data.js"></script><script src="mock.js"></script>
 <script>
 const { h } = Mock;
-let scn, player, counts, custom = 0;
-const stage = document.getElementById("stage"), legend = document.getElementById("legend");
-let row, txt, marginBox, caret;
-
-function codeFrom(s) {
-  const c = s.toUpperCase().replace(/[^A-Z ]/g, "").split(/\s+/).filter((w) => w.length > 2).map((w) => w[0]).join("");
-  return (c + "XXX").slice(0, 3);
-}
-function drawLegend() {
-  legend.replaceChildren(...scn.watch.map((w) => h("div", { class: "legend-row", title: w.prompt },
-    h("span", { class: "code", style: Mock.chipStyle(w.hue) }, w.code), h("span", null, w.label),
-    h("span", { class: "n", id: "n-" + w.code }, String(counts[w.code] || 0)))));
-}
-function load(s) {
-  if (player) player.restart();
-  scn = { ...s, watch: [...s.watch] }; counts = {}; stage.replaceChildren();
-  document.getElementById("banner").replaceChildren(Mock.mockBanner(scn));
-  drawLegend();
-  player = Mock.Player(scn, {
-    reset() { stage.replaceChildren(); counts = {}; drawLegend(); },
-    turn(i, t) {
-      caret && caret.remove();
-      if (row) row.classList.remove("live");
-      txt = h("div", { class: "txt words" }); marginBox = h("div", { class: "margin" });
-      caret = h("span", { class: "caret" });
-      row = h("div", { class: "row live" }, h("div", { class: "spk" }, t.speaker), txt, marginBox);
-      stage.append(row);
+let S;
+function load(scn) {
+  if (S) S.destroy();
+  for (const id of ["track", "sigs", "moms", "wbar", "banner", "pill", "ctl"]) document.getElementById(id).replaceChildren();
+  const cv = document.querySelector("#ch canvas"), fresh = cv.cloneNode(); cv.replaceWith(fresh);
+  S = Mock.Session(scn);
+  document.getElementById("banner").append(Mock.Banner(scn));
+  document.getElementById("pill").append(Mock.LivePill(S));
+  document.getElementById("ctl").append(Mock.Controls(S));
+  Mock.WatchEditor(S, document.getElementById("wbar"));
+  Mock.Transcript(S, document.getElementById("view"), document.getElementById("track"), {
+    build(i, tu) {
+      const words = h("div", { class: "txt" }), margin = h("div", { class: "margin" });
+      return { words, margin, el: h("div", { class: "row" }, h("div", { class: "spk" }, tu.speaker), words, margin) };
     },
-    word(i, k, w) { const s = h("span", { class: "w", id: `w${i}_${k}` }, (k ? " " : "") + w); txt.append(s, caret); stage.scrollTop = stage.scrollHeight; },
-    mark(m, i) {
-      const hue = Mock.hueOf(scn, m.code);
-      for (let k = m.from; k < m.to; k++) { const el = document.getElementById(`w${i}_${k}`); if (el) { el.classList.add("hl"); el.style.setProperty("--h", hue); } }
-      marginBox.append(h("div", { class: "tag" }, h("span", null, h("span", { class: "code", style: Mock.chipStyle(hue) }, m.code), " ", h("span", { class: "small mute" }, Mock.conf(m.p))), h("span", { class: "note" }, m.note)));
-      counts[m.code] = (counts[m.code] || 0) + 1;
-      const n = document.getElementById("n-" + m.code); if (n) n.textContent = counts[m.code];
+    tag(m, item) {
+      return h("div", { class: "tag", "data-flag": m.id }, h("span", null, h("span", { class: "code", style: Mock.cvar(item.slot) }, m.code), h("span", { class: "cf" }, m.p >= 0.85 ? "strong" : m.p >= 0.65 ? "likely" : "weak")), h("span", { class: "n" }, m.note));
     },
-    done() { caret && caret.remove(); },
   });
-  document.getElementById("ctl").replaceChildren(Mock.controls(player));
+  Mock.Signals(S, document.getElementById("sigs"));
+  Mock.Moments(S, document.getElementById("moms"), { more: document.getElementById("more") });
+  Mock.Chart(S, fresh, { window: 60 });
+  S.start();
 }
-document.getElementById("pick").append(Mock.scenarioPicker(Mock.byId("meeting"), load));
-document.getElementById("addb").addEventListener("click", () => {
-  const inp = document.getElementById("np"), v = inp.value.trim(); if (!v) return;
-  const code = codeFrom(v) + (custom ? custom : ""); custom++;
-  scn.watch.push({ code, label: v, prompt: v, hue: (custom * 67 + 30) % 360 }); inp.value = ""; drawLegend();
-  document.getElementById("addnote").textContent = `Added ${code}. In the mock nothing fires for it; when wired, it would be scored by Jev on each checkpoint.`;
-});
+document.getElementById("pick").append(Mock.Picker(Mock.byId("meeting"), load));
 load(Mock.byId("meeting"));
 </script></body></html>

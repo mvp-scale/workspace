@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Call monitor mock-ups</title><link rel="stylesheet" href="mock.css">
-<style>.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}.c{padding:16px;display:block;color:inherit;text-decoration:none}.c:hover{border-color:var(--accent)}.c h2{margin:0 0 6px;font-size:16px}.c p{margin:0;color:var(--mute);font-size:14px}.k{font:600 11px var(--mono);color:var(--accent)}</style></head>
+<style>.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}.c{padding:16px 18px;display:block;color:inherit;text-decoration:none}.c:hover{border-color:var(--ink-3)}.c h2{margin:4px 0 6px;font-size:16px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:600}.c p{margin:0;color:var(--ink-2);font-size:14px}.k{font:600 11px var(--mono);color:var(--ink-3);letter-spacing:.06em}.lead{max-width:70ch;color:var(--ink-2);margin:0 0 14px}</style></head>
 <body><div class="wrap">
-<div class="top"><h1>Call monitor: four mock-ups</h1></div>
-<div class="banner"><b>MOCK-UPS.</b> They simulate a live call with scripted playback. No audio, no speech-to-text and no model calls; every tag is scripted. Apollo 13 is a real NASA transcript; every other script is invented for layout. Open the files directly, or serve <code>demo/mockups/</code> with any static server.</div>
+<div class="bar"><h1>Call monitor: four mock-ups</h1></div>
+<p class="lead">A live call, replayed as a rolling transcript. What Jev detects is a level over time: it rises, holds for at least 30 seconds so a person can react, then fades. Each page shows the same idea in a different working style. Press Play, or the space bar.</p>
+<div class="banner"><b>MOCK-UP</b> Scripted playback: no audio, no speech-to-text, no model calls, every tag scripted. Apollo 13 is a real NASA transcript; the other scripts are invented for layout. Requirements and measured results are in <a href="SPEC.md">SPEC.md</a>.</div>
 <div class="cards">
-<a class="c panel" href="1-live-captions.html"><div class="k">1 · MEETING</div><h2>Live captions with a margin</h2><p>Reads like live captioning. Each line gets short-code tags in a side margin and highlights in the text. Add your own watch item in a sentence.</p></a>
-<a class="c panel" href="2-call-cockpit.html"><div class="k">2 · SALES / SUPPORT</div><h2>Call cockpit</h2><p>Waveform, chat-style transcript, live cue cards, a "captured so far" sheet and pre-wired playbooks you can switch between.</p></a>
-<a class="c panel" href="3-intake-board.html"><div class="k">3 · 911 / TRIAGE</div><h2>Intake board</h2><p>Each thing you want pulled out is a slot that fills as it is heard; empty slots show what is still worth asking. Attention level on top.</p></a>
-<a class="c panel" href="4-pipeline-lab.html"><div class="k">4 · LAB</div><h2>Pipeline lab</h2><p>Audio, speech-to-text, window and models as a visible pipeline. Choose the trailing window and cadence; compare local models with the hosted one side by side, with lag.</p></a>
+<a class="c panel" href="1-live-captions.html"><div class="k">MEETING</div><h2>Live captions</h2><p>Big captions with a tag margin, a signals panel with state and "high for" timers, flagged moments and a 60-second chart.</p></a>
+<a class="c panel" href="2-call-cockpit.html"><div class="k">SALES / SUPPORT</div><h2>Call cockpit</h2><p>Waveform, chat-style conversation, a signal strip, cue cards that stay hot for 30 seconds, and a captured-so-far sheet.</p></a>
+<a class="c panel" href="3-intake-board.html"><div class="k">911 / TRIAGE</div><h2>Intake board</h2><p>Each thing to pull out is a card that fills as it is heard and keeps its last value and age. An attention level rolls on top.</p></a>
+<a class="c panel" href="4-pipeline-lab.html"><div class="k">LAB</div><h2>Pipeline lab</h2><p>Audio, speech to text, window and models as a moving pipeline. Choose window and cadence; see three models' raw answers lag behind the held signal.</p></a>
 </div></div></body></html>

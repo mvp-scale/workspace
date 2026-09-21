@@ -1,93 +1,65 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mock 2 - Call cockpit</title>
+<title>Call cockpit</title>
 <link rel="stylesheet" href="mock.css">
 <style>
-  .head { display: flex; align-items: center; gap: 14px; padding: 10px 14px; margin-bottom: 12px; }
-  .head canvas { flex: 1; min-width: 80px; }
-  .grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 14px; align-items: start; }
-  .chat { height: 64vh; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
-  .bub { max-width: 88%; padding: 9px 13px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); font-size: 16px; }
-  .bub.r { align-self: flex-end; background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
-  .rail { display: grid; gap: 12px; }
-  .box { padding: 12px 14px; }
-  .box h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--mute); margin: 0 0 8px; }
-  .cues { display: grid; gap: 8px; max-height: 300px; overflow-y: auto; }
-  .cue { --h: 210; border-left: 4px solid hsl(var(--h) 65% 50%); background: var(--bg); border-radius: 8px; padding: 8px 10px; animation: pop .3s ease-out; }
-  .cue b { display: block; font-size: 14px; }
-  .cue span { font-size: 12px; color: var(--mute); }
-  table.f { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.f td { padding: 5px 0; border-bottom: 1px dashed var(--line); vertical-align: top; } table.f td:first-child { color: var(--mute); width: 40%; }
-  .pb { display: flex; gap: 6px; flex-wrap: wrap; }
-  .pb .btn[aria-pressed=true] { background: var(--accent); color: #fff; border-color: var(--accent); }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .wavebar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 8px 14px; margin-bottom: 12px; }
+  .stripwrap { padding: 4px 14px; margin-bottom: 12px; }
+  .main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 12px; margin-bottom: 12px; }
+  .chat { height: 640px; padding: 0 14px; }
+  #view { height: 100%; }
+  .bub { margin: 10px 0; max-width: 86%; padding: 10px 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); font-size: 17px; line-height: 1.5; }
+  .bub.r { margin-left: auto; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+  .rail { display: grid; gap: 12px; align-content: start; }
+  #moms { height: 368px; }
+  #facts { height: 170px; }
+  .fact { display: grid; grid-template-columns: 42% 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; background: var(--surface); }
+  .fact span:first-child { color: var(--ink-3); }
+  .bottom { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  #ch { height: 190px; }
+  @media (max-width: 1000px) { .main { grid-template-columns: 1fr; } .chat { height: 340px; } .wavebar { grid-template-columns: 1fr; } }
 </style></head>
 <body><div class="wrap">
-  <div class="top"><a href="index.html">&larr; Mock-ups</a><h1>2. Call cockpit</h1><span class="sp"></span><span id="ctl"></span></div>
+  <div class="bar"><a class="back" href="index.html">&larr; Mock-ups</a><h1>Call cockpit</h1><span class="sp"></span><span id="pick"></span><span id="pill"></span><span id="ctl"></span></div>
   <div id="banner"></div>
-  <div class="panel head"><span class="dot" id="rec"></span><b id="clock" class="mono">00:00</b><canvas class="wave" id="wave"></canvas><span class="small mute">audio (simulated)</span></div>
-  <div class="grid">
-    <div class="panel chat" id="chat" aria-live="polite"></div>
+  <div class="panel wavebar"><span class="mute" style="font-size:12px">Audio (simulated)</span><canvas class="wave" id="wave"></canvas><span class="mute mono" style="font-size:12px" id="who"></span></div>
+  <div id="wbar"></div>
+  <section class="panel stripwrap" aria-label="Signal levels"><div class="strip" id="sigs" style="padding:0"></div></section>
+  <div class="main">
+    <section class="panel"><header><h2>Conversation</h2></header><div class="chat"><div class="glide" id="view"><div class="track" id="track"></div></div></div></section>
     <div class="rail">
-      <div class="panel box"><h2>Playbook (pre-wired)</h2><div class="pb" id="pb"></div><div class="small mute" style="margin-top:8px" id="pbnote"></div></div>
-      <div class="panel box"><h2>Cue cards, live</h2><div class="cues" id="cues"><span class="small mute">Nothing yet. Cards appear as the call reveals something worth knowing.</span></div></div>
-      <div class="panel box"><h2>Captured so far</h2><table class="f"><tbody id="facts"></tbody></table><div class="small mute" id="nofacts">Empty.</div></div>
-      <div class="panel box"><h2>Change what to pull out</h2>
-        <textarea id="ask" rows="2" placeholder="Describe it in a sentence: 'Tell me whenever they mention a budget'"></textarea>
-        <div style="display:flex;gap:8px;margin-top:6px;align-items:center"><button class="btn" id="askb">Apply</button><span class="small mute" id="asknote"></span></div>
-        <div class="chips" id="watch" style="margin-top:8px"></div>
-      </div>
+      <section class="panel"><header><h2>Cue cards</h2><span class="mute" style="margin-left:auto;font-size:12px" id="more"></span></header><div class="body"><div id="moms"></div></div></section>
+      <section class="panel"><header><h2>Captured so far</h2></header><div class="body"><div id="facts"></div></div></section>
     </div>
   </div>
+  <section class="panel"><header><h2>Last 60 seconds</h2></header><div class="body"><div class="chart" id="ch"><canvas></canvas></div></div></section>
 </div>
 <script src="apollo.js"></script><script src="data.js"></script><script src="mock.js"></script>
 <script>
 const { h } = Mock;
-let scn, player, wave, bub, seconds = 0, tick, side = {};
-const chat = document.getElementById("chat"), cues = document.getElementById("cues"), facts = document.getElementById("facts");
-wave = Mock.Wave(document.getElementById("wave"));
-
-function drawWatch() {
-  document.getElementById("watch").replaceChildren(...scn.watch.map((w) => h("span", { class: "code", style: Mock.chipStyle(w.hue), title: w.prompt }, `${w.code} ${w.label}`)));
-}
-function drawPlaybooks() {
-  const box = document.getElementById("pb");
-  box.replaceChildren(...Mock.all().filter((s) => s.id !== "apollo").map((s) => h("button", { class: "btn", "aria-pressed": String(s.id === scn.id), onclick: () => load(s) }, s.title.replace(/ \(invented script\)/, ""))),
-    h("button", { class: "btn", "aria-pressed": String(scn.id === "apollo"), onclick: () => load(Mock.byId("apollo")) }, "Apollo 13 (real)"));
-  document.getElementById("pbnote").textContent = "Each playbook is a saved set of prompts with codes. Switching it swaps the watch list.";
-}
-function load(s) {
-  if (player) player.restart();
-  scn = s; seconds = 0; clearInterval(tick); document.getElementById("clock").textContent = "00:00";
-  document.getElementById("banner").replaceChildren(Mock.mockBanner(scn));
-  chat.replaceChildren(); cues.replaceChildren(); facts.replaceChildren(); document.getElementById("nofacts").hidden = false;
-  drawWatch(); drawPlaybooks();
-  const first = scn.turns[0].speaker;
-  player = Mock.Player(scn, {
-    reset() { chat.replaceChildren(); cues.replaceChildren(); facts.replaceChildren(); document.getElementById("nofacts").hidden = false; },
-    turn(i, t) { bub = h("div", { class: "bub" + (t.speaker !== first ? " r" : "") }, h("div", { class: "spk" }, t.speaker), h("div", { class: "words" })); chat.append(bub); },
-    word(i, k, w) { const s = h("span", { class: "w", id: `w${i}_${k}` }, (k ? " " : "") + w); bub.lastChild.append(s); wave.pulse(); chat.scrollTop = chat.scrollHeight; },
-    mark(m, i) {
-      const hue = Mock.hueOf(scn, m.code);
-      for (let k = m.from; k < m.to; k++) { const el = document.getElementById(`w${i}_${k}`); if (el) { el.classList.add("hl"); el.style.setProperty("--h", hue); } }
-      cues.prepend(h("div", { class: "cue", style: Mock.chipStyle(hue) }, h("b", null, h("span", { class: "code", style: Mock.chipStyle(hue) }, m.code), " ", m.note), h("span", null, `${Mock.conf(m.p)} signal`)));
-      if (m.fact) {
-        document.getElementById("nofacts").hidden = true;
-        facts.append(h("tr", null, h("td", null, m.fact[0]), h("td", null, m.fact[1])));
-      }
-    },
-    done() { clearInterval(tick); document.getElementById("rec").style.animation = "none"; },
+let S;
+function load(scn) {
+  if (S) S.destroy();
+  for (const id of ["track", "sigs", "moms", "facts", "wbar", "banner", "pill", "ctl"]) document.getElementById(id).replaceChildren();
+  const cv = document.querySelector("#ch canvas"), fresh = cv.cloneNode(); cv.replaceWith(fresh);
+  const wv = document.getElementById("wave"), wf = wv.cloneNode(); wv.replaceWith(wf);
+  S = Mock.Session(scn); const first = scn.turns[0].speaker;
+  document.getElementById("banner").append(Mock.Banner(scn));
+  document.getElementById("pill").append(Mock.LivePill(S));
+  document.getElementById("ctl").append(Mock.Controls(S));
+  Mock.Wave(S, wf); Mock.WatchEditor(S, document.getElementById("wbar"));
+  const who = document.getElementById("who"); S.onTurn((i, tu) => { who.textContent = "speaking: " + tu.speaker; }); S.onReset(() => { who.textContent = ""; });
+  Mock.Transcript(S, document.getElementById("view"), document.getElementById("track"), {
+    build(i, tu) { const words = h("div"); return { words, el: h("div", { class: "bub" + (tu.speaker !== first ? " r" : "") }, h("div", { class: "spk" }, tu.speaker), words) }; },
   });
-  document.getElementById("ctl").replaceChildren(Mock.controls(player));
-  document.getElementById("ctl").firstChild.firstChild.addEventListener("click", () => {
-    clearInterval(tick); if (!player.state.paused) tick = setInterval(() => { seconds++; document.getElementById("clock").textContent = String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0"); }, 1000);
-  });
+  Mock.Signals(S, document.getElementById("sigs"));
+  Mock.Moments(S, document.getElementById("moms"), { more: document.getElementById("more") });
+  const fs = Mock.Stack(S, document.getElementById("facts"), 0);
+  S.onFire((m) => { if (m.fact) fs.add(h("div", { class: "fact", "data-flag": m.id }, h("span", null, m.fact[0]), h("b", null, m.fact[1]))); });
+  S.onReset(() => fs.clear());
+  Mock.Chart(S, fresh, { window: 60 });
+  S.start();
 }
-document.getElementById("askb").addEventListener("click", () => {
-  const v = document.getElementById("ask").value.trim(); if (!v) return;
-  const code = (v.toUpperCase().replace(/[^A-Z ]/g, "").split(/\s+/).filter((x) => x.length > 3).map((x) => x[0]).join("") + "XXX").slice(0, 3);
-  scn.watch.push({ code, label: v.slice(0, 28), prompt: v, hue: (scn.watch.length * 61 + 20) % 360 }); drawWatch();
-  document.getElementById("ask").value = ""; document.getElementById("asknote").textContent = `Added ${code}. Mock: nothing fires yet.`;
-});
+document.getElementById("pick").append(Mock.Picker(Mock.byId("sales"), load));
 load(Mock.byId("sales"));
 </script></body></html>
