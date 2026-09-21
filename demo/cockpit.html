@@ -211,7 +211,7 @@
     T.speakers.forEach((name, i) => { const p = { name, n: i + 1, label: `Person ${i + 1}` }; SP.list.push(p); SP.by[name] = p; });
     if (window.__cockpit) window.__cockpit.SP = SP;
   }
-  const lab = (spk) => spk === "_call" ? "Whole call" : S.names ? short(spk) : (SP.by[spk] ? SP.by[spk].label : spk);
+  const lab = (spk) => spk === "_call" ? "Whole call" : S.names ? spk : (SP.by[spk] ? SP.by[spk].label : spk);
   const numOf = (spk) => SP.by[spk] ? SP.by[spk].n : "?";
   const isCoach = (spk) => spk === S.coach;
 
@@ -294,7 +294,7 @@
   }
   function callWindow(flat, spec) {
     const kind = spec[0], n = parseInt(spec.slice(1), 10), take = kind === "w" ? n : n * 40, tail = flat.slice(-take);
-    let out = [], prev = null; for (const x of tail) { if (x.spk !== prev) { out.push(`${SP.by[x.spk] ? SP.by[x.spk].label : x.spk}:`); prev = x.spk; } out.push(x.w); }
+    let out = [], prev = null; for (const x of tail) { if (x.spk !== prev) { out.push(`${lab(x.spk)}:`); prev = x.spk; } out.push(x.w); }
     const txt = out.join(" "); return kind === "w" ? txt : txt.split(/(?<=[.!?…])\s+/).filter(Boolean).slice(-n).join(" ");
   }
   const qidsFor = (chk) => [...new Set([...detsFor(chk).map(d => d.q), ...(chk.scope === "person" && isCoach(chk.spk) ? S.kps.map(k => k.q) : [])])];
@@ -604,7 +604,7 @@
     runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); renderPeople(); renderKp(); renderEvents(); renderRecent(); if (S.tab === "req") renderReq(); }
   }
   function refreshCoach() {
-    ui.coachSel.replaceChildren(...SP.list.map(p => el("option", { value: p.name, text: S.names ? `${p.label} · ${short(p.name)}` : p.label }))); ui.coachSel.value = S.coach;
+    ui.coachSel.replaceChildren(...SP.list.map(p => el("option", { value: p.name, text: S.names ? p.name : p.label }))); ui.coachSel.value = S.coach;
     const n = SP.list.length; ui.spkNote.textContent = `${n} speaker${n > 1 ? "s" : ""}` + (n > LIVE_STREAMS ? ` · the planned live model separates ${LIVE_STREAMS} at once` : "");
   }
   function rebuild() { T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0]; refreshCoach(); resetRun(); writeHash(); updatePlay(); refreshEst(); }
@@ -673,7 +673,7 @@
 
   /* ---------- hash and export ---------- */
   function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return Object.fromEntries([...p.entries()]); }
-  function writeHash() { const p = new URLSearchParams(); p.set("src", S.src); if (S.src === "dlg") p.set("dlg", S.dlg); p.set("model", S.model); p.set("win", S.win); p.set("cp", S.cp); p.set("n", S.n); p.set("gate", S.gate); p.set("speed", S.speed); p.set("mode", S.mode); if (S.coach) p.set("coach", S.coach); if (S.names) p.set("names", "1"); history.replaceState(null, "", "#" + p.toString()); }
+  function writeHash() { const p = new URLSearchParams(); p.set("src", S.src); if (S.src === "dlg") p.set("dlg", S.dlg); p.set("model", S.model); p.set("win", S.win); p.set("cp", S.cp); p.set("n", S.n); p.set("gate", S.gate); p.set("speed", S.speed); p.set("mode", S.mode); if (S.coach) p.set("coach", S.coach); p.set("names", S.names ? "1" : "0"); history.replaceState(null, "", "#" + p.toString()); }
   function exportData() {
     return { exported: new Date().toISOString(), note: "Per-person windows; scores are model probabilities, not verdicts. Speakers are diarized ids (Person N). Each request is exactly what is sent to the model's POST /v1/systemone.", settings: { model: S.model, window: S.win, checkpoints: S.cp, n: S.n, alert_at: S.gate, mode: S.mode, coached: SP.by[S.coach] && SP.by[S.coach].label }, source: T.meta.title, speakers: SP.list.map(p => ({ label: p.label, source_name: p.name })),
       detectors: S.dets.map(d => ({ key: d.key, label: d.label, icon: d.icon, scope: d.scope, custom: d.custom, question: QALL[d.q] ? QALL[d.q].instructions : d.q })),
@@ -697,7 +697,7 @@
     S.dlg = D.dialogues.some(d => d.id === h.dlg) ? h.dlg : D.dialogues[0] && D.dialogues[0].id; if (S.src === "dlg" && !S.dlg) S.src = "paste";
     if (WINS.includes(h.win)) { S.win = h.win; S.winTouched = true; } else S.win = bestWindow();
     if (h.cp === "words" || h.cp === "sentence") S.cp = h.cp; if (h.n && Number.isFinite(+h.n)) S.n = clamp(Math.round(+h.n), 3, 20); if (h.gate && Number.isFinite(+h.gate)) S.gate = clamp(+h.gate, 0.3, 0.95);
-    if (SPEEDS.some(([v]) => v === h.speed)) S.speed = h.speed; if (h.mode === "replay" || h.mode === "live") S.mode = h.mode; S.names = h.names === "1"; S.coach = h.coach || null;
+    if (SPEEDS.some(([v]) => v === h.speed)) S.speed = h.speed; if (h.mode === "replay" || h.mode === "live") S.mode = h.mode; S.names = h.names !== "0"; S.coach = h.coach || null;
     S.paste = kv.get("cockpit.paste") || "";
     for (const id of DEFAULTS) addLibrary(id, true);
     T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0];
@@ -737,7 +737,7 @@
     ui.thI = el("i", { class: "th" }); ui.meI = el("i", { class: "me" }); ui.bl1 = el("div", { class: "bl num" }); ui.bl2 = el("div", { class: "bl num" }); ui.tip = el("div", { class: "tip" }); ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" }); ui.rf = el("div");
     const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addKeyPoint(kpIn.value); kpIn.value = ""; renderKp(); afterConfig(); } } });
     ui.coachSel = el("select", { id: "coach", "aria-label": "Who do you want to coach?", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.coach = ui.coachSel.value; resetRun(); refreshCoach(); writeHash(); updatePlay(); } });
-    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Diarization gives ids, not names. Show the source's own speaker names instead." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, el("div", { class: "bt", text: "Talk share, last 60 s" }), el("div", { class: "split" }, ui.thI, ui.meI), ui.bl1, el("div", { class: "bt", text: "Pace" }), ui.bl2, ui.tip,
+    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Real scenes are scripted, so their speakers are known and shown by name. Untick to see them as diarized ids (Person N), which is what live speech-to-text will give." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, el("div", { class: "bt", text: "Talk share, last 60 s" }), el("div", { class: "split" }, ui.thI, ui.meI), ui.bl1, el("div", { class: "bt", text: "Pace" }), ui.bl2, ui.tip,
       el("div", { class: "bt", style: "margin-top:8px", text: "Recent flags on this person" }), ui.rf, el("div", { class: "bt", style: "margin-top:8px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
     /* tabs: Flagged | Detectors | Settings | Request | Events */
     ui.log = el("div"); ui.pane_flag = el("div", { class: "tabpane" }, ui.log);
