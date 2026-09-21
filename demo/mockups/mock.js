@@ -18,7 +18,7 @@
   const mmss = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
   const norm = (w) => w.replace(/^[.…\[]+|[.,!?;:…\]]+$/g, "");
   const ACT = 0.65, HOLD = 30, MAXW = 6;
-  const cvar = (slot) => `--c:var(--s${(slot % 6) + 1})`;
+  const cvar = (slot) => `--c:var(--s${(slot % 8) + 1})`;
 
   const all = () => [window.MockApollo, ...window.MockScenarios].filter(Boolean);
   const byId = (id) => all().find((s) => s.id === id) || all()[0];
@@ -61,14 +61,16 @@
     const S = {
       scn, turns, duration: tt, t: 0, playing: false, speed: 1, done: false,
       watch: scn.watch.map((w, i) => ({ ...w, slot: i })), sig: {}, hist: {}, moments: [], seq: 0,
-      _frame: [], _watch: [], _fire: [], _reset: [], _turn: [], _word: [],
+      _frame: [], _watch: [], _fire: [], _reset: [], _turn: [], _word: [], _settings: [], log: [],
+      model: null, lag: 0, win: 20, cadence: "phrase", max: MAXW,
       onFrame(f) { S._frame.push(f); }, onWatch(f) { S._watch.push(f); }, onFire(f) { S._fire.push(f); }, onReset(f) { S._reset.push(f); },
-      onTurn(f) { S._turn.push(f); }, onWord(f) { S._word.push(f); },
+      onTurn(f) { S._turn.push(f); }, onWord(f) { S._word.push(f); }, onSettings(f) { S._settings.push(f); },
+      sideOf(spk) { return (scn.us || []).includes(spk) ? "us" : "them"; },
     };
     const newSig = (item) => ({ item, marks: [], disp: 0.05, lastFire: -1e9, peak: 0, above: null, lastMoment: null });
     const initSigs = () => { S.sig = {}; S.hist = {}; S.watch.forEach((w) => { S.sig[w.code] = newSig(w); S.hist[w.code] = []; }); };
     initSigs();
-    let ptr = 0, nextSample = 0, last = performance.now();
+    let ptr = 0, nextSample = 0, last = performance.now(); const queue = [];
 
     const base = (item, t) => 0.05 + 0.025 * Math.sin(t * 0.8 + item.slot * 2.1) + 0.015 * Math.sin(t * 1.9 + item.slot);
     function target(sg, t) {
@@ -93,15 +95,22 @@
       sg.marks.push(mo); sg.lastFire = S.t; sg.peak = m.p; sg.lastMoment = mo; S.moments.push(mo);
       S._fire.forEach((f) => f(mo));
     }
+    function schedule(m, i, k) {
+      let at = S.t;
+      if (S.cadence === "sentence") { const tu = turns[i]; let k2 = k; while (k2 < tu.words.length - 1 && !/[.!?…]$|\]$/.test(tu.words[k2])) k2++; at = tu.wt[k2]; }
+      else if (S.cadence === "w5") { const gb = Math.min(flat.length - 1, Math.ceil(ptr / 5) * 5 - 1); at = flat[Math.max(gb, ptr - 1)].t; }
+      at += S.lag;
+      if (at <= S.t) fire(m); else { queue.push({ m, at }); queue.sort((a, b) => a.at - b.at); }
+    }
     function reveal(upto) {
       while (ptr < flat.length && flat[ptr].t <= upto) {
-        const { i, k, w } = flat[ptr++]; const tu = turns[i];
+        const { i, k, w, t: wtime } = flat[ptr++]; const tu = turns[i]; S.log.push({ t: wtime, i });
         if (k === 0) S._turn.forEach((f) => f(i, tu));
         S._word.forEach((f) => f(i, k, w, tu));
-        for (const m of tu.marks) if (m.to === k + 1 && S.sig[m.code]) fire(m);
+        for (const m of tu.marks) if (m.to === k + 1 && S.sig[m.code]) schedule(m, i, k);
         const nw = norm(w).toLowerCase();
-        for (const item of S.watch) if (item.custom && item.kw.some((q) => nw.startsWith(q)) && S.t - S.sig[item.code].lastFire > 6)
-          fire({ turn: i, from: k, to: k + 1, code: item.code, p: 0.72, note: "Keyword match (mock heuristic, not a model)" });
+        for (const item of S.watch) if (item.custom && (!item.side || S.sideOf(tu.speaker) === item.side) && item.kw.some((q) => nw.startsWith(q)) && S.t - S.sig[item.code].lastFire > 6)
+          schedule({ turn: i, from: k, to: k + 1, code: item.code, p: 0.72, note: "Keyword match (mock heuristic, not a model)" }, i, k);
       }
     }
     function frame(now) {
@@ -109,6 +118,7 @@
       const dt = Math.min(0.1, (now - last) / 1000); last = now;
       if (S.playing) {
         S.t += dt * S.speed; reveal(S.t);
+        while (queue.length && queue[0].at <= S.t) fire(queue.shift().m);
         if (!S.done && ptr >= flat.length && S.t > S.duration) { S.done = true; S.playing = false; cb.done && cb.done(); }
       }
       const kk = 1 - Math.exp(-dt / 0.18);
@@ -126,16 +136,20 @@
     S.pause = () => { S.playing = false; };
     S.toggle = () => { S.playing ? S.pause() : S.play(); return S.playing; };
     S.restart = () => {
-      S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; S.moments = []; S.seq = 0;
+      S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; S.moments = []; S.seq = 0; queue.length = 0; S.log.length = 0;
       S.watch = scn.watch.map((w, i) => ({ ...w, slot: i })); initSigs(); S._reset.forEach((f) => f()); S._watch.forEach((f) => f());
     };
     S.setSpeed = (x) => { S.speed = x; };
-    S.addWatch = (text) => {
+    const chg = () => S._settings.forEach((f) => f());
+    S.setModel = (id, lag) => { S.model = id; S.lag = lag; chg(); };
+    S.setWin = (n) => { S.win = n; chg(); };
+    S.setCadence = (c) => { S.cadence = c; chg(); };
+    S.addWatch = (text, o) => {
       text = text.trim(); if (!text) return { ok: false, msg: "Write what to watch for." };
-      if (S.watch.length >= MAXW) return { ok: false, msg: `Six is the most that stay readable. Remove one first.` };
+      if (S.watch.length >= S.max) return { ok: false, msg: `${S.max} is the most that stay readable. Remove one first.` };
       const used = new Set(S.watch.map((w) => w.slot)); let slot = 0; while (used.has(slot)) slot++;
       const code = codeOf(text, new Set(S.watch.map((w) => w.code)));
-      const item = { code, label: text.length > 26 ? text.slice(0, 25) + "…" : text, prompt: text, slot, custom: true, kw: kwOf(text) };
+      const item = { code, label: text.length > 26 ? text.slice(0, 25) + "…" : text, prompt: text, slot, custom: true, kw: kwOf(text), side: (o && o.side) || undefined };
       S.watch.push(item); S.sig[code] = newSig(item); S.hist[code] = []; S._watch.forEach((f) => f());
       return { ok: true, item };
     };
@@ -193,15 +207,23 @@
   /* ------------------------------------------------------------- Moments */
   /* Flagged moments: each stays hot for HOLD sim seconds, then cools but stays until dismissed. */
   function Moments(S, root, opt) {
-    opt = opt || {}; const st = Stack(S, root, 8); const cards = [];
+    opt = opt || {}; const st = Stack(S, root, opt.gap == null ? 8 : opt.gap); const cards = [];
+    const lead = (m) => (opt.speaker ? S.turns[m.turn].speaker.replace(/ \(.*\)/, "") + " · " : "") + (m.p >= 0.85 ? "strong · " : m.p >= 0.65 ? "likely · " : "weak · ") + m.note;
+    const quote = (m) => "“" + m.quote.replace(/[.,!?;:]+$/, "") + "”";
     S.onFire((m) => {
       const item = S.watch.find((w) => w.code === m.code) || { slot: 0 };
+      if (opt.filter && !opt.filter(m, item)) return;
+      if (opt.merge) {
+        const c = cards.find((c) => c.m.code === m.code && S.t - c.m.t < opt.merge);
+        if (c) { c.n++; c.m = m; c.q.textContent = quote(m); c.note.textContent = lead(m); c.cnt.textContent = "×" + c.n; c.el.setAttribute("data-flag", c.el.getAttribute("data-flag") + " " + m.id); return; }
+      }
       const bar = h("i"), age = h("span", { class: "age num" }, "0:00 ago"), pin = h("button", { class: "btn ghost", "aria-pressed": "false" }, "Pin");
+      const q = h("span", { class: "q" }, quote(m)), note = h("span", { class: "n" }, lead(m)), cnt = h("span", { class: "cnt" });
       const el = h("article", { class: "moment", style: cvar(item.slot), "data-flag": m.id },
-        h("div", { class: "hd" }, h("span", { class: "code" }, m.code), h("span", { class: "q" }, "“" + m.quote.replace(/[.,!?;:]+$/, "") + "”"), age),
-        h("div", { class: "ft" }, h("span", { class: "n" }, (m.p >= 0.85 ? "strong · " : m.p >= 0.65 ? "likely · " : "weak · ") + m.note), pin, h("button", { class: "btn ghost", onclick: () => dismiss(card) }, "Done")),
+        h("div", { class: "mh" }, h("span", { class: "code" }, m.code), cnt, q, age),
+        h("div", { class: "ft" }, note, pin, h("button", { class: "btn ghost", onclick: () => dismiss(card) }, "Done")),
         h("div", { class: "hold", "aria-hidden": "true" }, bar));
-      const card = { m, el, bar, age, pinned: false, lastAge: "", it: null };
+      const card = { m, n: 1, el, bar, age, q, note, cnt, pinned: false, lastAge: "", it: null };
       pin.addEventListener("click", () => { card.pinned = !card.pinned; pin.setAttribute("aria-pressed", String(card.pinned)); el.classList.toggle("pinned", card.pinned); pin.textContent = card.pinned ? "Pinned" : "Pin"; });
       card.it = st.add(el); cards.push(card);
     });
@@ -220,14 +242,14 @@
   }
 
   /* ------------------------------------------------------------- Signals */
-  function Signals(S, root) {
-    let rows = {};
+  function Signals(S, root, opt) {
+    let rows = {}; const flt = (opt && opt.filter) || (() => true);
     const G = { Live: "●", Holding: "◐", Fading: "○", Quiet: "–" };
     function build() {
       rows = {}; root.replaceChildren();
-      for (const w of S.watch) {
+      for (const w of S.watch.filter(flt)) {
         const bar = h("i"), st = h("span", { class: "st num" }), foot = h("span"), pct = h("span", { class: "num" }, "5%");
-        const el = h("div", { class: "sig quiet", style: cvar(w.slot), title: w.prompt },
+        const el = h("div", { class: "sig quiet", style: cvar(w.slot), title: w.prompt, "data-side": w.side || null },
           h("div", { class: "top" }, h("span", { class: "code" }, w.code), h("span", { class: "lab" }, w.label), st),
           h("div", { class: "meter", role: "img", "aria-label": w.label + " level" }, bar, h("b")),
           h("div", { class: "foot" }, foot, pct));
@@ -236,7 +258,7 @@
     }
     build(); S.onWatch(build);
     S.onFrame(() => {
-      for (const w of S.watch) {
+      for (const w of S.watch.filter(flt)) {
         const r = rows[w.code], sg = S.sig[w.code]; if (!r) continue;
         r.bar.style.transform = `scaleX(${clamp(sg.disp, 0, 1).toFixed(3)})`;
         const stt = S.stateOf(w.code), hf = S.highFor(w.code);
@@ -262,7 +284,7 @@
     const ro = new ResizeObserver(() => { dpr = devicePixelRatio || 1; W = canvas.clientWidth; H = canvas.clientHeight; canvas.width = W * dpr; canvas.height = H * dpr; }); ro.observe(canvas);
     canvas.addEventListener("mousemove", (e) => { mx = e.clientX - canvas.getBoundingClientRect().left; });
     canvas.addEventListener("mouseleave", () => { mx = null; });
-    const readCss = () => { const cs = getComputedStyle(document.documentElement); colors = [1, 2, 3, 4, 5, 6].map((i) => cs.getPropertyValue("--s" + i).trim());
+    const readCss = () => { const cs = getComputedStyle(document.documentElement); colors = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => cs.getPropertyValue("--s" + i).trim());
       css = { line: cs.getPropertyValue("--line").trim(), ink2: cs.getPropertyValue("--ink-2").trim(), ink3: cs.getPropertyValue("--ink-3").trim(), surf: cs.getPropertyValue("--surface").trim(), act: cs.getPropertyValue("--act").trim(), ink: cs.getPropertyValue("--ink").trim(), mono: cs.getPropertyValue("--mono").trim() }; };
     const at = (s, tt) => { let lo = 0, hi = s.length - 1; if (!s.length) return 0; while (lo < hi) { const m = (lo + hi) >> 1; if (s[m][0] < tt) lo = m + 1; else hi = m; } return s[lo][1]; };
     S.onFrame(() => {
@@ -275,12 +297,12 @@
       ctx.strokeStyle = css.act; ctx.globalAlpha = .5; ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y(ACT)) + .5); ctx.lineTo(W - pad.r, Math.round(y(ACT)) + .5); ctx.stroke(); ctx.globalAlpha = 1;
       ctx.textAlign = "right"; ctx.fillStyle = css.ink; ctx.fillText("act", pad.l - 6, y(ACT));
       ctx.textBaseline = "top"; ctx.fillStyle = css.ink3; ctx.textAlign = "center";
-      for (let tt = Math.ceil((t - win) / 15) * 15; tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W - pad.r - 34) ctx.fillText(mmss(tt), xx, H - pad.b + 5); }
+      for (let tt = Math.max(0, Math.ceil((t - win) / 15) * 15); tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W - pad.r - 34) ctx.fillText(mmss(tt), xx, H - pad.b + 5); }
       ctx.textAlign = "right"; ctx.fillText("now", W - pad.r, H - pad.b + 5);
       ctx.save(); ctx.beginPath(); ctx.rect(pad.l, 0, pw + 1, H); ctx.clip();
       const ss = series(), labels = [];
       for (const s of ss) {
-        const dim = (S.focus && S.focus !== s.id) ? 0.22 : 1, col = s.slot < 0 ? css.ink : (colors[s.slot % 6] || "#888"), pts = [];
+        const dim = (S.focus && S.focus !== s.id) ? 0.22 : 1, col = s.slot < 0 ? css.ink : (colors[s.slot % 8] || "#888"), pts = [];
         for (const p of s.samples) if (p[0] >= t - win - 1) pts.push([x(p[0]), y(p[1])]);
         pts.push([x(t), y(s.live)]); if (pts.length < 2) continue;
         ctx.globalAlpha = dim; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round";
@@ -288,7 +310,7 @@
         for (let i = 1; i < pts.length - 1; i++) path.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
         path.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
         if (s.area || S.focus === s.id) { const a = new Path2D(path); a.lineTo(pts[pts.length - 1][0], y(0)); a.lineTo(pts[0][0], y(0)); ctx.globalAlpha = dim * 0.1; ctx.fillStyle = col; ctx.fill(a); ctx.globalAlpha = dim; }
-        ctx.stroke(path); labels.push({ s, col, dim, yy: y(s.live), xx: x(t) });
+        ctx.setLineDash(s.dash || []); ctx.stroke(path); ctx.setLineDash([]); labels.push({ s, col, dim, yy: y(s.live), xx: x(t) });
       }
       ctx.restore(); ctx.globalAlpha = 1;
       labels.sort((a, b) => a.yy - b.yy); let prev = -99; ctx.textBaseline = "middle"; ctx.textAlign = "left";
@@ -302,7 +324,7 @@
         const rows = ss.map((s) => ({ id: s.short || s.id, v: at(s.samples, tt), slot: s.slot })).sort((a, b) => b.v - a.v).slice(0, 6), bw = 104, bh = 18 + rows.length * 14;
         const bx = mx > W / 2 ? mx - bw - 8 : mx + 8; ctx.fillStyle = css.surf; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(bx, pad.t + 2, bw, bh, 6); ctx.fill(); ctx.stroke();
         ctx.textBaseline = "top"; ctx.fillStyle = css.ink3; ctx.textAlign = "left"; ctx.fillText(mmss(tt), bx + 8, pad.t + 7);
-        rows.forEach((r, i) => { const yy = pad.t + 21 + i * 14; ctx.fillStyle = r.slot < 0 ? css.ink : colors[r.slot % 6]; ctx.fillRect(bx + 8, yy + 2, 8, 8); ctx.fillStyle = css.ink2; ctx.fillText(`${r.id}  ${Math.round(r.v * 100)}%`, bx + 21, yy); });
+        rows.forEach((r, i) => { const yy = pad.t + 21 + i * 14; ctx.fillStyle = r.slot < 0 ? css.ink : colors[r.slot % 8]; ctx.fillRect(bx + 8, yy + 2, 8, 8); ctx.fillStyle = css.ink2; ctx.fillText(`${r.id}  ${Math.round(r.v * 100)}%`, bx + 21, yy); });
       }
     });
     return { series };
@@ -321,7 +343,13 @@
     });
     S.onFire((m) => {
       const r = rows[m.turn]; if (!r) return; const item = S.watch.find((w) => w.code === m.code) || { slot: 0 };
-      for (let k = m.from; k < m.to; k++) { const sp = r.spans[k]; if (sp) { sp.classList.add("hl"); sp.setAttribute("style", cvar(item.slot)); } }
+      if (o.phrase) {
+        const a = r.spans[m.from], b = r.spans[m.to - 1];
+        if (a && b && a.parentNode === b.parentNode) {
+          const wrap = h("span", { class: "ph", style: cvar(item.slot), "data-code": o.codes === false ? null : m.code }); a.parentNode.insertBefore(wrap, a);
+          for (let n = a; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; }
+        }
+      } else for (let k = m.from; k < m.to; k++) { const sp = r.spans[k]; if (sp) { sp.classList.add("hl"); sp.setAttribute("style", cvar(item.slot)); } }
       if (o.tag && r.margin) { r.margin.append(o.tag(m, item)); glide.dirty(); }
     });
     S.onFrame(() => { if (S.done && caret.isConnected) caret.remove(); });
@@ -375,13 +403,13 @@
   }
 
   /* Flags currently visible on screen, for tools/measure.py (data-flag elements not clipped or faded). */
-  window.__mockFlags = () => {
+  window.__mockFlags = (sel) => {
     const out = {}, vh = innerHeight;
-    document.querySelectorAll("[data-flag]").forEach((el) => {
+    document.querySelectorAll(sel || "[data-flag]").forEach((el) => {
       const r = el.getBoundingClientRect(); if (!r.width || !r.height || r.bottom < 0 || r.top > vh) return;
       if (+(getComputedStyle(el).opacity) < 0.5) return;
       const clip = el.closest(".glide,.stackroot"); if (clip) { const c = clip.getBoundingClientRect(); if (r.top < c.top || r.bottom > c.bottom + 2) return; }
-      out[el.getAttribute("data-flag")] = window.__mockClock ? window.__mockClock() : 0;
+      for (const id of el.getAttribute("data-flag").split(" ")) out[id] = window.__mockClock ? window.__mockClock() : 0;
     });
     return out;
   };

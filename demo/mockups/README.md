@@ -10,6 +10,10 @@ Read `SPEC.md` first: principles, definitions and the measurable outcomes the re
 
 Shared: `mock.js` (Session clock, Signals, Moments, Stack, Glide, Chart, Transcript, WatchEditor), `mock.css` (tokens, both themes; categorical palette validated with the dataviz validator), `data.js` (invented scripts, labelled), `apollo.js` (real Apollo 13 transcript from `probes/v2/scenes/`; its tags are scripted).
 
+## Cockpit variations
+
+`cockpit-variants/` holds three variations of the call cockpit (`index.html`, `SPEC.md`): one continuous highlight per phrase, a message thread, per-person reading windows, model and window selection in the Captured area, us versus them. The originals in this folder are unchanged.
+
 ## How it stays fluid
 
 One rAF loop and one call clock. Words are revealed from timestamps. Levels ease with exponential smoothing. The transcript and card stacks move by `transform` only (no scrollTop, no reflow of neighbours); the chart is a canvas whose x axis is call time. Space for new items (watch chips, cards, slots) is reserved up front.

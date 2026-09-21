@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cockpit B</title><link rel="stylesheet" href="../mock.css"><link rel="stylesheet" href="cockpit.css">
+<style>.stage{grid-template-columns:minmax(0,1.5fr) minmax(340px,1fr);grid-template-rows:auto minmax(0,1fr) clamp(140px,19vh,240px);grid-template-areas:"top top" "conv rail" "chart chart"}
+ .coach{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:10px 14px 8px;border-bottom:1px solid var(--line)} .coach .bt{margin-top:0} .coach .bl{margin:4px 0 4px} .coach .tip{margin-top:2px}
+ #checklist{max-height:112px;overflow:auto} @media (max-width:1000px){.coach{grid-template-columns:1fr;padding:8px 14px 6px}.coach>div:nth-child(2),#balance>:nth-child(4),#balance>:nth-child(5){display:none}}</style></head>
+<body><div class="app">
+<header class="hd"><a class="back" href="index.html">&larr; Variants</a><h1>Cockpit B</h1><span id="pick"></span><span id="banner"></span><span class="sp"></span><span class="pill mp" id="modelpill" title="Model, typical lag, window per person"></span><canvas class="wave" id="wave"></canvas><span id="pill"></span><span id="ctl"></span></header>
+<div id="wbar"></div>
+<main class="stage" id="stage" data-tab="talk">
+  <section class="panel pane" data-pane="signals" style="grid-area:top;padding:6px 14px"><div class="strip" id="sigs"></div></section>
+  <section class="panel pane fill" data-pane="talk" style="grid-area:conv"><header><h2>Conversation</h2></header>
+    <div class="coach"><div><div id="balance"></div></div><div><div class="bt">Key points <span class="cprog" id="cprog"></span></div><div id="checklist"></div></div></div>
+    <div class="chat grow"><div class="glide" id="view"><div class="track" id="track"></div></div></div><div class="readnote" id="readnote"></div></section>
+  <div class="pane rail" data-pane="cues" style="grid-area:rail">
+    <section class="panel fill" style="flex:1 1 0;min-height:150px"><header><h2>Cue cards</h2><span class="r" id="more"></span></header><div class="grow" style="padding:10px 14px 14px"><div id="moms"></div></div></section>
+    <section class="panel fill" style="flex:0 0 clamp(130px,17vh,240px);position:relative"><header><h2>Captured so far</h2><button class="btn r" id="modelbtn" aria-haspopup="true" aria-expanded="false" style="margin-left:auto"></button></header>
+      <div class="pop" id="modelpop" hidden></div><div class="grow" style="padding:8px 14px 12px"><div class="facts" id="facts"></div><div class="fmore" id="fmore"></div></div></section>
+  </div>
+  <section class="panel pane fill" data-pane="history" style="grid-area:chart"><header><h2>Last 60 seconds</h2><span class="key"><span><i></i>Them</span><span><i class="d"></i>Us</span></span></header><div class="chart" id="ch"><canvas></canvas></div></section>
+</main>
+<nav class="tabs" id="tabs" aria-label="Sections"><button data-t="talk" aria-selected="true">Talk</button><button data-t="signals" aria-selected="false">Signals</button><button data-t="cues" aria-selected="false">Cues</button><button data-t="history" aria-selected="false">History</button></nav>
+</div>
+<script src="../apollo.js"></script><script src="../data.js"></script><script src="data2.js"></script><script src="../mock.js"></script><script src="cockpit.js"></script>
+<script>Cockpit.boot({ codes: true });</script></body></html>

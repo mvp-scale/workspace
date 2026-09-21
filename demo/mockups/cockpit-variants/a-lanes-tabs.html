@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cockpit A</title><link rel="stylesheet" href="../mock.css"><link rel="stylesheet" href="cockpit.css">
+<style>.stage{grid-template-columns:minmax(0,1.55fr) minmax(340px,1fr);grid-template-rows:auto minmax(0,1fr) clamp(130px,17vh,220px);grid-template-areas:"top top" "conv rail" "chart chart"}</style></head>
+<body><div class="app">
+<header class="hd"><a class="back" href="index.html">&larr; Variants</a><h1>Cockpit A</h1><span id="pick"></span><span id="banner"></span><span class="sp"></span><span class="pill mp" id="modelpill" title="Model, typical lag, window per person"></span><canvas class="wave" id="wave"></canvas><span id="pill"></span><span id="ctl"></span></header>
+<div id="wbar"></div>
+<main class="stage" id="stage" data-tab="talk">
+  <section class="panel pane" data-pane="signals" style="grid-area:top">
+    <div class="lane them"><div><div class="side">THEM</div><div class="who" id="who-them"></div></div><div class="strip" id="lane-them"></div></div>
+    <div class="lane you"><div><div class="side">US</div><div class="who" id="who-us"></div></div><div class="strip" id="lane-us"></div></div>
+  </section>
+  <section class="panel pane fill" data-pane="talk" style="grid-area:conv"><header><h2>Conversation</h2></header><div class="chat grow"><div class="glide" id="view"><div class="track" id="track"></div></div></div><div class="readnote" id="readnote"></div></section>
+  <div class="pane rail" data-pane="cues" style="grid-area:rail">
+    <section class="panel fill" style="flex:1 1 0;min-height:150px"><header><h2>Cue cards</h2><span class="r" id="more"></span></header><div class="grow" style="padding:10px 14px 14px"><div id="moms"></div></div></section>
+    <section class="panel fill" data-tabs style="flex:0 0 clamp(170px,22vh,280px)">
+      <div class="tabbar" role="tablist"><button role="tab" data-for="cap">Captured so far</button><button role="tab" data-for="model">Model &amp; window</button><button role="tab" data-for="coach">Coaching</button></div>
+      <div class="tabpane" data-tabpane="cap" style="overflow:hidden;position:relative"><div class="facts" id="facts" style="height:100%"></div><div class="fmore" id="fmore"></div></div>
+      <div class="tabpane" data-tabpane="model"><div id="model"></div></div>
+      <div class="tabpane" data-tabpane="coach"><div id="balance"></div><div class="bt" style="margin-top:12px">Key points <span class="cprog" id="cprog"></span></div><div id="checklist"></div></div>
+    </section>
+  </div>
+  <section class="panel pane fill" data-pane="history" style="grid-area:chart"><header><h2>Last 60 seconds</h2><span class="key"><span><i></i>Them</span><span><i class="d"></i>Us</span></span></header><div class="chart" id="ch"><canvas></canvas></div></section>
+</main>
+<nav class="tabs" id="tabs" aria-label="Sections"><button data-t="talk" aria-selected="true">Talk</button><button data-t="signals" aria-selected="false">Signals</button><button data-t="cues" aria-selected="false">Cues</button><button data-t="history" aria-selected="false">History</button></nav>
+</div>
+<script src="../apollo.js"></script><script src="../data.js"></script><script src="data2.js"></script><script src="../mock.js"></script><script src="cockpit.js"></script>
+<script>Cockpit.boot({ codes: true });</script></body></html>
