@@ -29,7 +29,7 @@ Model logs: `tail -f logs/kev-4b.log` (also `semif`, `so1`, `laya`, `verdict`). 
 |---|---|
 | Console: Leaderboard, Compare, Scenarios, Text windows, Call monitor, **Call cockpit (new, wired to the models)**, How they work, Report | http://127.0.0.1:8100 `/`, `/compare`, `/scenarios`, `/windows`, `/stream`, `/cockpit`, `/models`, `/report` |
 | Mock-ups index (4 pages, spec in `SPEC.md`) | `demo/mockups/index.html` |
-| Call cockpit variations A, B, C (spec in `cockpit-variants/SPEC.md`). **A is the chosen one** | `demo/mockups/cockpit-variants/index.html`, `a-lanes-tabs.html` |
+| Call cockpit variations A, B, C (spec in `cockpit-variants/SPEC.md`). **C was chosen**; it is now built as `/cockpit` | `demo/mockups/cockpit-variants/index.html`, `c-coach-chips.html` |
 
 Mock-ups are scripted: no audio, no speech to text, no model calls. Press Play (or space). Only Apollo 13 is a real transcript.
 
@@ -64,6 +64,6 @@ python3 demo/vram.py                                          # measure GPU memo
 
 - **`/cockpit` is built and running** (`demo/cockpit.html`): Cockpit C layout on the console's own style, per-person windows, KEV4B by default. Adding a route needs a demo-server restart (`kill` it, then the start command in section 2). Not yet in: scrubber and step, a facts extractor, live speech-to-text (the source is an interface: words with speaker and time), narrowed phrase highlights (highlights mark the whole scored sentence).
 
-- Real Call monitor (`demo/stream.html`) is unchanged. Mock-ups and specs are committed locally.
-- Next step agreed: wire Cockpit A to the local models (KEV4B default), per-person windows, replay real transcripts, measure latency and quality. Open decisions: how to highlight (whole scored sentence vs narrowed phrase), how to capture facts, whether to keep `/stream` beside a new cockpit page. Gap analysis is in the last message of the session `demo-wip`.
-- Measured on the idle GPU: KEV4B ~60 ms per check regardless of 1 to 8 questions; SEMIF4 ~60 ms per question (~480 ms for 8), calls serialised. The lag figures in the mock-ups (KEV4B 1.1 s, SEMIF4 1.8 s) are older and higher than this.
+- Real Call monitor (`demo/stream.html`) is unchanged; whether `/cockpit` replaces it is still open. Mock-ups and specs are committed locally.
+- Open decisions: narrowed phrase highlights vs whole sentence, a facts extractor, a scrubber and step. Standoff-state idea for spans: `docs/typesafe_standoff_pattern.md` (awareness only, not adopted).
+- Measured on unseen dialogues, 8 signals, KEV4B: check lag p50 65 to 123 ms, p95 up to 254 ms, keeps up at every speed including Max (30x). SEMIF4: p50 about 265 ms, keeps up to 4x, falls behind at Max (queue 22, p95 2.0 s). Single runs. The lag figures in the mock-ups (KEV4B 1.1 s, SEMIF4 1.8 s) are older and higher.
