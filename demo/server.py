@@ -142,6 +142,17 @@ def speeches():
     return [json.loads(f.read_text()) | {"slug": f.stem} for f in sorted((PROBES / "speeches").glob("*.json"))]
 
 
+def scenes():
+    """Real, cited scenes with their documented events."""
+    return [json.loads(f.read_text()) | {"slug": f.stem} for f in sorted((PROBES / "scenes").glob("*.json"))]
+
+
+def window_study():
+    """Stored results of probes/window_study.py, keyed by backend."""
+    d = ROOT / "data" / "window-study"
+    return {f.stem: json.loads(f.read_text()) for f in sorted(d.glob("*.json"))} if d.is_dir() else {}
+
+
 def leaderboard():
     """One row per model, with every tier that has a finished run."""
     models = {}
@@ -186,7 +197,7 @@ def status():
         return dict(ex.map(ping, BACKENDS.items()))
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/windows": "windows.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/windows": "windows.html", "/stream": "stream.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
@@ -223,6 +234,13 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, probe_detail(dict(x.split("=", 1) for x in q.split("&") if "=" in x).get("set", "")))
             except KeyError:
                 self._send(404, {"error": "unknown set"})
+        elif path == "/api/scenes":
+            self._send(200, scenes())
+        elif path == "/api/dialogues":
+            f = PROBES / "manipulation_windows.json"
+            self._send(200, json.loads(f.read_text()) if f.is_file() else {"dialogues": []})
+        elif path == "/api/window-study":
+            self._send(200, window_study())
         elif path == "/api/speeches":
             self._send(200, speeches())
         elif path == "/api/results":

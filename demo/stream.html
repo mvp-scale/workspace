@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Call monitor · Jev Bench Console</title>
+<meta name="description" content="Replay a real transcript word by word and watch about a dozen perspectives update as it unfolds, with the exact trailing window behind every reading.">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<style>
+  /* Layout the shared CSS lacks. Colours come from shared tokens only. */
+  .workbench { display: grid; grid-template-columns: minmax(290px, 340px) minmax(0, 1fr); gap: 12px; align-items: start; }
+  .side { position: sticky; top: 54px; max-height: calc(100vh - 66px); overflow-y: auto; display: grid; gap: 12px; }
+  @media (max-width: 900px) { .workbench { grid-template-columns: minmax(0, 1fr); } .side { position: static; max-height: none; } }
+  fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .side textarea { min-height: 110px; font-family: var(--mono); font-size: 12px; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+  .pill-row label { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; cursor: pointer; }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+  .main > *, .stage > * { min-width: 0; }
+  .playbar .segmented, .side .segmented { flex-wrap: wrap; max-width: 100%; }
+  .playbar { display: grid; gap: 8px; }
+  .playbar input[type=range] { width: 100%; min-height: 24px; }
+  .playbar .readout { font-variant-numeric: tabular-nums; color: var(--text-2); }
+  .stage { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 12px; align-items: start; }
+  @media (max-width: 1100px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+  .col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+  .tx-pane { max-height: 300px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 8px; background: var(--surface); }
+  .tturn { display: grid; grid-template-columns: minmax(56px, 104px) minmax(0, 1fr); gap: 0 8px; padding: 4px 0; border-top: 1px solid var(--border); }
+  .tturn:first-child { border-top: 0; }
+  .tturn .who { font-weight: 600; color: var(--text-2); font-size: 12px; overflow-wrap: anywhere; padding-top: 1px; }
+  .tturn .say { overflow-wrap: anywhere; }
+  .wd.cur { background: var(--accent-soft); border-radius: 2px; }
+  .wd.evs { text-decoration: underline; text-decoration-color: var(--warn); text-underline-offset: 3px; }
+  .gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(226px, 1fr)); gap: 8px; }
+  .g { border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius-sm); padding: 6px 9px; display: grid; gap: 3px; background: var(--surface); align-content: start; }
+  .g.off { opacity: .55; }
+  .g.flag { border-left-color: var(--bad); }
+  .g .gh { display: flex; gap: 6px; align-items: center; }
+  .g .gh input { margin: 0; width: 16px; height: 16px; flex: none; }
+  .g .gh label { font-weight: 600; cursor: pointer; line-height: 1.25; }
+  .g .grow { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 1px 6px; align-items: center; }
+  .g .wtag { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .g .sub { grid-column: 2; font-size: 11.5px; color: var(--text-3); overflow-wrap: anywhere; }
+  .g .sp { grid-column: 2; }
+  .spark { width: 100%; height: 24px; display: block; }
+  .spark text { fill: var(--text-3); font-size: 8px; }
+  .tl { position: relative; overflow: hidden; --lab: 104px; margin-top: 8px; }
+  .tl-row { display: grid; grid-template-columns: var(--lab) minmax(0, 1fr); align-items: center; gap: 6px; margin-bottom: 2px; }
+  .tl-lab { font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-track { position: relative; height: 12px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .tl-track.turns { height: 8px; }
+  .tl-c { position: absolute; top: 0; bottom: 0; }
+  .tl-c.fl { box-shadow: inset 0 -3px 0 var(--bad); }
+  .tl-c.tn { background: var(--border-strong); border-left: 1px solid var(--surface); }
+  .tl-c.tn:nth-child(even) { background: var(--border); }
+  .tl-over { position: absolute; left: calc(var(--lab) + 6px); right: 0; top: 0; bottom: 0; cursor: pointer; }
+  .ph { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text); pointer-events: none; }
+  .evm { position: absolute; top: 0; height: 18px; min-width: 18px; padding: 0 3px; font: inherit; font-size: 11px; line-height: 16px; font-weight: 600; border: 1px solid var(--warn); background: var(--warn-soft); color: var(--warn); border-radius: 3px; cursor: pointer; }
+  .evm:hover { filter: brightness(.95); }
+  @media (max-width: 520px) { .tl { --lab: 74px; } }
+  .log { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 5px; max-height: 340px; overflow: auto; }
+  .log button { font: inherit; text-align: left; width: 100%; display: grid; gap: 3px; padding: 6px 9px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); cursor: pointer; }
+  .log button:hover { background: var(--surface-2); }
+  .log .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .log .evq { color: var(--text-2); font-size: 12px; overflow-wrap: anywhere; }
+  .cite { margin: 0; padding: 5px 9px; border-left: 3px solid var(--border-strong); background: var(--surface-2); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-2); white-space: normal; overflow-wrap: anywhere; }
+  table.data td.wrap { white-space: normal; min-width: 200px; max-width: 440px; overflow-wrap: anywhere; }
+  table.data tr.hl { background: var(--accent-soft); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  pre.trace { margin: 4px 0 0; padding: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 11.5px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; }
+  details > summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
+  .card p, .card a, .callout { overflow-wrap: anywhere; }
+  .err { color: var(--bad); }
+  .tbtn { font: inherit; font-size: 12px; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  @media print {
+    .noprint { display: none !important; } .side { position: static; max-height: none; } .workbench, .stage { grid-template-columns: 1fr; }
+    .tx-pane, .log { max-height: none; } .tl-c, .g { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>Call monitor</h1>
+      <p>Replay a real transcript word by word and watch about a dozen perspectives update as it unfolds, to see whether something happened mid-call and which perspectives noticed. Every reading is the same text put through a small typed question; the windows, streaming and gates are composed here in page code.</p>
+    </div>
+    <div class="actions noprint">
+      <button class="btn" id="export-json" type="button">Export JSON</button>
+      <button class="btn" id="copy-trace" type="button">Copy trace</button>
+      <button class="btn" id="copy-link" type="button">Copy link</button>
+      <button class="btn" id="print" type="button">Print</button>
+    </div>
+  </div>
+  <div class="callout warn" style="margin-bottom:12px">
+    <strong>Technique signals, not verdicts.</strong> Models return probabilities, not written reasons, so the only "why" this page can give is the evidence: the exact trailing window that was scored at that moment and how the score moved. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector's measured accuracy is shown beside it; some are weak or near chance for small models, and the threat set has label noise. Documented events come from cited sources, not from us. The window study's labels belong to whole dialogues and are not localised to any turn.
+  </div>
+  <div id="app" aria-live="polite"></div>
+</main>
+<script>
+(() => {
+  const { el, fmt, api, toast, copy, download, mount, empty, failure, meter, sortable } = Jev;
+
+  const CHUNK = 100;              // items per /api/batch request; the server allows at most 400
+  const MAX_CALLS = 1500;         // page-side guard against a runaway paste or many windows
+  const HOSTED = "jev (typesafe)";
+  const SPIKE = 0.3, WPM = 150, MAX_WINS = 3;
+  const WINDOWS = ["w5", "w10", "w20", "w40", "s1", "s2", "s3", "t1", "t2", "full"];
+  const SPEEDS = ["0.5", "1", "2", "4", "instant"];
+  const CPS = [["sentence", "Each sentence end"], ["words", "Every 5 words"], ["turn", "Each turn end"]];
+  const modelId = (b) => b === HOSTED ? "jev" : b;
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Nine questions, twelve gauges. `read` says how a gauge is taken from the answer. */
+  const QSETS = { manipulation: "manipulation_dialogue", phishing: "phishing", sarcasm: "sarcasm_isarcasm", threat: "threat_civil", anger: "emotion_anger", fear: "emotion_fear",
+    politeness: "politeness_deference", darkpatterns: "darkpatterns", persuasion: "persuasion_appeals" };
+  const PERSP = [
+    { id: "manipulation", short: "Manipulation", name: "Manipulation", q: "manipulation", read: "noul", about: "Does one speaker try to manipulate the other? Validated on whole dialogues." },
+    { id: "phishing", short: "Deceptive request", name: "Deceptive request for credentials or money", q: "phishing", read: "noul", about: "Is the text trying to get credentials or money through deception?" },
+    { id: "sarcasm", short: "Sarcasm", name: "Sarcasm / irony", q: "sarcasm", read: "noul", about: "Does the speaker mean the opposite of the literal words?" },
+    { id: "threat", short: "Threat", name: "Threat", q: "threat", read: "noul", about: "Does the text threaten to harm the listener?", caveat: "The threat set has label noise, so treat its accuracy as a rough guide." },
+    { id: "anger", short: "Anger", name: "Anger", q: "anger", read: "noul", about: "Does the text express anger?" },
+    { id: "fear", short: "Fear", name: "Fear or nervousness", q: "fear", read: "noul", about: "Does the text express fear or nervousness?" },
+    { id: "politeness", short: "Politeness", name: "Politeness / deference", q: "politeness", read: "noul", about: "Is the speaker polite and deferential to the person addressed?" },
+    { id: "urgency", short: "Urgency", name: "Urgency pressure", q: "darkpatterns", read: "urgency", about: "P(urgency) from the dark-pattern question: a deadline pushing a quick decision.", caveat: "One question gives three readings; validated on short shopping-site text." },
+    { id: "scarcity", short: "Scarcity", name: "Scarcity pressure", q: "darkpatterns", read: "scarcity", about: "P(scarcity) from the dark-pattern question: something may run out.", caveat: "One question gives three readings; validated on short shopping-site text." },
+    { id: "social_proof", short: "Social proof", name: "Social-proof pressure", q: "darkpatterns", read: "social_proof", about: "P(social_proof) from the dark-pattern question: what other people did or said.", caveat: "One question gives three readings; validated on short shopping-site text." },
+    { id: "persuasion", short: "Persuasive move", name: "Persuasive move", q: "persuasion", read: "appeal", about: "1 minus P(none) from the persuasion-appeal question; the label names the most likely appeal.", caveat: "The validated wording is about donation appeals to a charity; other contexts are outside what was measured." },
+  ];
+  const PSET = (p) => QSETS[p.q];
+
+  const S = { src: null, dlg: null, model: null, wins: ["w20"], winTouched: false, cp: "sentence", gate: 0.8, speed: "1", on: new Set(PERSP.map(p => p.id)), pos: 0, playing: false,
+    paste: "", armed: false, running: false, progress: null, evWin: 0, reveal: false };
+  let D = null, T = null, cps = [], CS = {}, UNIQ = [], M = {}, EV = [], QS = {}, abortCtl = null, timer = 0, lastCi = -2, logN = 0, ui = {}, wordEls = [], turnEls = [], revealed = 0;
+  const C = new Map();            // model + state -> {answers, err, latency_ms, cached}
+  const ckey = (state) => S.model + "\u0001" + state;
+
+  /* ---------- storage / hash ---------- */
+  const kv = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return Object.fromEntries([...p.entries()]); }
+  function writeHash() {
+    const p = new URLSearchParams(); p.set("src", S.src); if (S.src === "dlg" && S.dlg) p.set("dlg", S.dlg); if (S.model) p.set("model", S.model);
+    p.set("win", S.wins.join(",")); p.set("cp", S.cp); p.set("gate", S.gate); p.set("speed", S.speed);
+    const off = PERSP.filter(x => !S.on.has(x.id)).map(x => x.id); if (off.length) p.set("off", off.join(","));
+    try { history.replaceState(null, "", "#" + p.toString()); } catch {}
+  }
+
+  /* ---------- text, windows (same definitions as probes/window_study.py) ---------- */
+  const words = (s) => String(s).split(/\s+/).filter(Boolean);
+  const sentences = (s) => s.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
+  const render = (turns) => turns.map(t => `${t.speaker}: ${t.text}`).join("\n");
+  function windowText(turns, spec) {
+    if (spec === "full") return render(turns);
+    const kind = spec[0], n = parseInt(spec.slice(1), 10);
+    if (kind === "t") return render(turns.slice(-n));
+    const flat = turns.map(t => `${t.speaker}: ${t.text}`).join(" ");
+    if (kind === "w") return words(flat).slice(-n).join(" ");
+    return sentences(flat).slice(-n).join(" ");
+  }
+  const winName = (s) => s === "full" ? "everything so far" : `last ${s.slice(1)} ${{ w: "word", s: "sentence", t: "turn" }[s[0]]}${s.slice(1) === "1" ? "" : "s"}`;
+  function parsePaste(text) {
+    const turns = [];
+    for (const raw of text.split(/\n/)) {
+      const line = raw.trim(); if (!line) continue;
+      const m = line.match(/^([^:]{1,40}):\s*(.*)$/);
+      if (m) { if (m[2].trim()) turns.push({ speaker: m[1].trim(), text: m[2].trim() }); }
+      else if (turns.length) turns[turns.length - 1].text += " " + line; else turns.push({ speaker: "Speaker", text: line });
+    }
+    return turns;
+  }
+  function makeTranscript(turns, meta) {
+    let pos = 0;
+    const ts = turns.map(t => { const w = words(t.text); const o = { speaker: t.speaker, text: w.join(" "), words: w, start: pos, end: pos + w.length }; pos += w.length; return o; });
+    return { turns: ts, total: pos, meta };
+  }
+  function currentTranscript() {
+    if (S.src === "paste") return makeTranscript(parsePaste(S.paste), { kind: "paste", title: "Pasted text" });
+    if (S.src === "dlg") { const d = D.dialogues.find(x => x.id === S.dlg) || D.dialogues[0]; return makeTranscript(d.turns, { kind: "dialogue", title: "Library dialogue " + d.id, d }); }
+    const s = D.scenes.find(x => x.slug === S.src) || D.scenes[0]; return makeTranscript(s.turns, { kind: "scene", title: s.title, s });
+  }
+  function turnAt(pos) { for (let k = 0; k < T.turns.length; k++) if (T.turns[k].start < pos && pos <= T.turns[k].end) return k; return Math.max(0, T.turns.length - 1); }
+  function makeCps(mode) {
+    const out = [], add = (turn, wi) => { const pos = T.turns[turn].start + wi; if (out.length && out[out.length - 1].pos === pos) return; out.push({ i: out.length, pos, turn, wi }); };
+    if (!T.total) return out;
+    if (mode === "turn") T.turns.forEach((t, k) => t.words.length && add(k, t.words.length));
+    else if (mode === "sentence") T.turns.forEach((t, k) => {
+      if (!t.words.length) return; let n = 0, last = 0;
+      for (const s of sentences(t.text)) { n += words(s).length; if (n - last >= 3 && n < t.words.length) { add(k, n); last = n; } }   // very short fragments such as "H." do not get a checkpoint
+      add(k, t.words.length);
+    });
+    else { for (let p = 5; p < T.total; p += 5) { const k = turnAt(p); add(k, p - T.turns[k].start); } add(T.turns.length - 1, T.turns[T.turns.length - 1].words.length); }
+    return out;
+  }
+  const revealedTurns = (cp) => { const ts = T.turns.slice(0, cp.turn).map(t => ({ speaker: t.speaker, text: t.text })); const t = T.turns[cp.turn]; ts.push({ speaker: t.speaker, text: t.words.slice(0, cp.wi).join(" ") }); return ts; };
+  const curCp = () => { let c = -1; for (let i = 0; i < cps.length && cps[i].pos <= S.pos; i++) c = i; return c; };
+  const posLabel = (pos) => { const k = pos <= 0 ? 0 : turnAt(pos); return `word ${pos} of ${T.total}, turn ${k + 1} of ${T.turns.length}${T.turns[k] ? " (" + T.turns[k].speaker + ")" : ""}`; };
+  const clipTail = (s, n = 240) => s.length > n ? "…" + s.slice(-n) : s;
+  const clip = (s, n = 140) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+
+  /* ---------- scoring, trust ---------- */
+  function read(p, ans) {
+    if (!ans) return null;
+    if (p.read === "noul") { const v = Number(ans.noul); return Number.isFinite(v) ? { score: v } : null; }
+    const pr = ans.probabilities; if (!pr) return null;
+    if (p.read === "appeal") { let top = null, tp = -1; for (const [k, v] of Object.entries(pr)) if (k !== "none" && v > tp) { top = k; tp = v; } return { score: Math.max(0, Math.min(1, 1 - (pr.none ?? 0))), label: top }; }
+    const v = pr[p.read]; return Number.isFinite(v) ? { score: v, label: ans.choice } : null;
+  }
+  const wilson = (k, n, z = 1.96) => { const p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - m) / d, (c + m) / d]; };
+  function trust(p) {
+    const set = D.sets[PSET(p)], res = set && set.results && set.results[modelId(S.model)]; if (!res) return null;
+    const rows = Object.values(res); if (!rows.length) return null;
+    const n = rows.length, correct = rows.filter(r => r.correct).length, chance = 1 / (set.items[0].labels.length || 2), ci = wilson(correct, n);
+    return { n, correct, acc: correct / n, chance, ci, near: ci[0] <= chance && chance <= ci[1] };
+  }
+  function trustChip(p) {
+    const t = trust(p), cav = p.caveat ? " " + p.caveat : "";
+    if (!t) return el("span", { class: "badge", text: "not measured for this model", title: `No published results for ${S.model} on the ${PSET(p)} set.${cav}` });
+    return el("span", { class: "badge " + (t.near ? "warn" : "accent"), title: `${t.correct} of ${t.n} correct on the ${PSET(p)} validation set. 95% Wilson interval ${fmt.pct(t.ci[0], 0)} to ${fmt.pct(t.ci[1], 0)}; chance level is ${fmt.pct(t.chance, 0)}.${t.near ? " The interval includes chance." : ""}${cav}` },
+      `accuracy ${fmt.pct(t.acc, 0)}, n=${t.n}` + (t.near ? ", near chance" : ""));
+  }
+
+  /* ---------- data model: states, cache, scores ---------- */
+  function recompute() {
+    cps = makeCps(S.cp); CS = {}; const u = new Set();
+    S.wins.forEach(w => { CS[w] = cps.map(cp => { const st = windowText(revealedTurns(cp), w); u.add(st); return st; }); });
+    UNIQ = [...u]; rescore();
+  }
+  function rescore() {
+    M = {};
+    S.wins.forEach(w => { M[w] = cps.map((cp, i) => { const rec = C.get(ckey(CS[w][i])), o = {}; PERSP.forEach(p => { const a = rec && rec.answers[p.q]; o[p.id] = a ? read(p, a) : null; }); return o; }); });
+    EV = computeEvents();
+  }
+  const SER = (w, id) => (M[w] || []).map(o => o[id]);
+  const enabledQids = () => [...new Set(PERSP.filter(p => S.on.has(p.id)).map(p => p.q))];
+  function pending() {
+    const qs = enabledQids(), out = [];
+    for (const st of UNIQ) { const rec = C.get(ckey(st)), miss = qs.filter(q => !(rec && rec.answers[q])); if (miss.length) out.push({ st, miss }); }
+    return out;
+  }
+  function computeEvents() {
+    const out = [];
+    S.wins.forEach(w => PERSP.filter(p => S.on.has(p.id)).forEach(p => {
+      let prev = null;
+      SER(w, p.id).forEach((v, i) => {
+        if (!v) return;
+        const delta = prev == null ? null : v.score - prev, cross = v.score >= S.gate && (prev == null || prev < S.gate), spike = delta != null && delta >= SPIKE;
+        if (cross || spike) out.push({ pos: cps[i].pos, cp: i, win: w, pid: p.id, score: v.score, label: v.label, delta, cross, spike, text: CS[w][i] });
+        prev = v.score;
+      });
+    }));
+    return out.sort((a, b) => a.pos - b.pos || S.wins.indexOf(a.win) - S.wins.indexOf(b.win) || PERSP.findIndex(x => x.id === a.pid) - PERSP.findIndex(x => x.id === b.pid));
+  }
+  function stat(w, id) {
+    const s = SER(w, id), vs = s.map((v, i) => v ? { v, i } : null).filter(Boolean); if (!vs.length) return null;
+    const best = vs.reduce((a, b) => b.v.score > a.v.score ? b : a);
+    return { peak: best.v.score, peakCp: best.i, label: best.v.label, share: vs.filter(x => x.v.score >= S.gate).length / vs.length, avg: vs.reduce((a, x) => a + x.v.score, 0) / vs.length, n: vs.length, of: s.length };
+  }
+
+  /* ---------- precompute run ---------- */
+  async function run() {
+    const pend = pending(); if (!pend.length) return;
+    S.running = true; S.armed = false; abortCtl = new AbortController(); S.progress = { done: 0, total: pend.length, failed: 0 }; setBusy(); renderRunBar();
+    const backend = S.model, groups = new Map();
+    pend.forEach(x => { const k = x.miss.join("|"); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); });
+    for (const [, list] of groups) {
+      for (let i = 0; i < list.length && !abortCtl.signal.aborted; i += CHUNK) {
+        const slice = list.slice(i, i + CHUNK);
+        const rec = (st) => { const k = backend + "\u0001" + st; if (!C.has(k)) C.set(k, { answers: {}, err: null }); return C.get(k); };
+        try {
+          const res = await api("/api/batch", { method: "POST", headers: { "Content-Type": "application/json" }, signal: abortCtl.signal,
+            body: JSON.stringify({ backend, items: slice.map(x => ({ state: x.st, questions: Object.fromEntries(x.miss.map(q => [q, QS[q]])) })) }) });
+          slice.forEach((x, j) => {
+            const r = Array.isArray(res) ? res[j] : null, o = rec(x.st);
+            if (!r || r.error) { o.err = (r && r.error) || "No result returned"; S.progress.failed++; return; }
+            Object.assign(o.answers, r.answers || {}); o.latency_ms = r.latency_ms; o.cached = !!r.cached; o.err = null;
+            if (x.miss.some(q => !o.answers[q])) { o.err = "Missing answer in response"; S.progress.failed++; }
+          });
+        } catch (e) {
+          if (abortCtl.signal.aborted) break;
+          slice.forEach(x => { rec(x.st).err = e.message; }); S.progress.failed += slice.length;
+        }
+        S.progress.done += slice.length; rescore(); renderRunBar(); renderAll();
+      }
+      if (abortCtl.signal.aborted) break;
+    }
+    const cancelled = abortCtl.signal.aborted, failed = S.progress.failed;
+    S.running = false; S.progress = null; abortCtl = null; setBusy(); rescore(); renderRunBar(); renderAll();
+    toast(cancelled ? "Precompute cancelled. Finished calls are kept." : failed ? `Done, ${failed} call${failed > 1 ? "s" : ""} failed. Use Retry.` : "Precompute complete. Playback is now instant.");
+  }
+  function setBusy() { if (ui.busy) ui.busy.disabled = S.running; }
+
+  /* ---------- left panel ---------- */
+  function buildSide() {
+    const srcSel = el("select", { id: "src", onchange: () => { S.src = srcSel.value; changeSource(); } },
+      el("optgroup", { label: "Real scenes (cited)" }, D.scenes.map(s => el("option", { value: s.slug, text: s.title + (s.control ? " [control]" : "") }))),
+      el("optgroup", { label: "Other sources" }, el("option", { value: "dlg", text: `Conversation library (${D.dialogues.length} dialogues)` }), el("option", { value: "paste", text: "Pasted text" })));
+    srcSel.value = S.src;
+    const dlgSel = el("select", { id: "dlg", "aria-label": "Library dialogue", onchange: () => { S.dlg = dlgSel.value; changeSource(); } },
+      D.dialogues.map((d, k) => el("option", { value: d.id, text: `${k + 1}. ${d.id.replace("mmwin-", "")} · ${d.turns.length} turns · ${d.turns.reduce((a, t) => a + words(t.text).length, 0)} words` })));
+    dlgSel.value = S.dlg;
+    const ta = el("textarea", { id: "paste", rows: 6, "aria-label": "Pasted text", placeholder: "Agent: Hello, this is your bank.\nCaller: Who is this?\n…" }); ta.value = S.paste;
+    let t; ta.addEventListener("input", () => { S.paste = ta.value; clearTimeout(t); t = setTimeout(() => { if (S.src === "paste") changeSource(); }, 300); });
+    const rand = el("button", { class: "btn", type: "button", onclick: () => { S.dlg = D.dialogues[Math.floor(Math.random() * D.dialogues.length)].id; dlgSel.value = S.dlg; changeSource(); }, text: "Random dialogue" });
+    ui.srcSel = srcSel; ui.dlgWrap = el("div", { class: "stack" }, el("div", { class: "field" }, el("label", { for: "dlg", text: "Dialogue" }), dlgSel, el("p", { class: "hint", text: "Real MentalManip dialogues. The dataset label is hidden until playback ends." })), rand);
+    ui.pasteWrap = el("div", { class: "field" }, el("label", { for: "paste", text: "Transcript, one \"Speaker: text\" per line" }), ta);
+    const modelSel = el("select", { id: "model", onchange: () => { S.model = modelSel.value; S.armed = false; if (!S.winTouched) S.wins = [bestWindow()]; recompute(); afterChange(); refreshWinBox(); } },
+      Object.entries(D.status).filter(([, v]) => v.up).map(([k]) => el("option", { value: k, text: k + (k === HOSTED ? " (hosted, paid)" : "") })));
+    modelSel.value = S.model; ui.modelSel = modelSel;
+    ui.winBox = el("div", { class: "stack" });
+    ui.cpBox = el("div", {});
+    ui.runBar = el("div", { class: "stack" });
+    const busy = el("fieldset", { class: "plain stack" },
+      el("div", { class: "card stack" }, el("h3", { text: "Source" }), el("div", { class: "field" }, el("label", { for: "src", text: "Transcript to replay" }), srcSel), ui.dlgWrap, ui.pasteWrap),
+      el("div", { class: "card stack" }, el("h3", { text: "Model" }), el("div", { class: "field" }, el("label", { for: "model", text: "Backend (only ones that are up)" }), modelSel,
+        el("p", { class: "hint", text: "Defaults to kev-4b. jev (typesafe) is stronger but paid; it needs one confirming click before a run." }))),
+      el("div", { class: "card stack" }, el("h3", { text: "Trailing window" }), ui.winBox),
+      el("div", { class: "card stack" }, el("h3", { text: "Checkpoints" }), ui.cpBox));
+    ui.busy = busy;
+    refreshWinBox(); refreshSrcPanels();
+    return el("div", { class: "side noprint" }, busy, el("div", { class: "card stack" }, el("h3", { text: "Precompute" }), ui.runBar));
+  }
+  function refreshSrcPanels() { ui.dlgWrap.hidden = S.src !== "dlg"; ui.pasteWrap.hidden = S.src !== "paste"; }
+  function refreshWinBox() {
+    ui.winBox.replaceChildren(
+      el("p", { class: "small muted", text: `Pick one window, or up to ${MAX_WINS} to compare side by side. A window is the last N words, sentences or turns of what has been revealed so far, speaker prefixes included.` }),
+      el("div", { class: "pill-row", role: "group", "aria-label": "Windows" }, WINDOWS.map(w => {
+        const c = el("input", { type: "checkbox", id: "win-" + w, onchange: () => {
+          const next = c.checked ? [...S.wins, w] : S.wins.filter(x => x !== w);
+          if (!next.length) { c.checked = true; return toast("Keep at least one window."); }
+          if (next.length > MAX_WINS) { c.checked = false; return toast(`At most ${MAX_WINS} windows at once.`); }
+          S.wins = WINDOWS.filter(x => next.includes(x)); S.winTouched = true; S.evWin = 0; S.armed = false; recompute(); afterChange(); } });
+        c.checked = S.wins.includes(w);
+        return el("label", { title: winName(w) }, c, w);
+      })),
+      el("p", { class: "small subtle", text: S.wins.map(w => `${w}: ${winName(w)}`).join(" · ") }));
+    ui.cpBox.replaceChildren(el("div", { class: "segmented", role: "group", "aria-label": "Checkpoint spacing" }, CPS.map(([k, t]) => el("button", { type: "button", "aria-pressed": String(S.cp === k), text: t, onclick: () => { S.cp = k; S.armed = false; recompute(); refreshWinBox(); afterChange(); } }))),
+      el("p", { class: "hint", style: "margin-top:4px", text: "The trailing window is scored at every checkpoint. Every checkpoint is precomputed before playback so replays cost nothing." }));
+  }
+  function bestWindow() {
+    const e = D.study && Object.values(D.study).find(x => x && x.backend === S.model);
+    if (e && e.windows) { const c = WINDOWS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
+    return "w20";
+  }
+  function renderRunBar() {
+    const bar = ui.runBar; if (!bar) return;
+    const pend = pending(), qs = enabledQids(), hosted = S.model === HOSTED, kids = [], total = UNIQ.length, failed = pend.filter(x => (C.get(ckey(x.st)) || {}).err).length;
+    if (S.running && S.progress) {
+      const p = S.progress;
+      kids.push(el("div", { role: "status" }, `Calling ${S.model}: ${p.done} of ${p.total} done` + (p.failed ? `, ${p.failed} failed` : ""), meter(p.done / p.total, `${p.done} of ${p.total} calls`)),
+        el("button", { class: "btn", type: "button", onclick: () => abortCtl && abortCtl.abort(), text: "Cancel" }));
+    } else {
+      const label = !T.total ? "No transcript" : !qs.length ? "Turn on a perspective" : total > MAX_CALLS ? "Too many calls" : !pend.length ? "All checkpoints computed" :
+        (hosted && S.armed) ? `Confirm: run ${pend.length} hosted calls` : (failed && failed === pend.length ? `Retry ${failed} failed call${failed > 1 ? "s" : ""}` : `Precompute ${pend.length} call${pend.length === 1 ? "" : "s"}`) + (hosted ? " (hosted, paid)" : "");
+      kids.push(el("p", { class: "small muted" }, `${total} distinct model call${total === 1 ? "" : "s"} for ${cps.length} checkpoint${cps.length === 1 ? "" : "s"} × ${S.wins.length} window${S.wins.length === 1 ? "" : "s"} (identical states are shared); ${total - pend.length} already done. ${qs.length} question${qs.length === 1 ? "" : "s"} per call, sent in requests of up to ${CHUNK} items.`));
+      if (hosted) kids.push(el("div", { class: "callout warn" }, el("strong", { text: "Hosted backend. " }), `Each call costs a fraction of a cent. This run makes up to ${pend.length} calls.`));
+      if (total > MAX_CALLS) kids.push(el("p", { class: "small err", text: `More than ${MAX_CALLS} calls: shorten the text, use fewer windows or coarser checkpoints.` }));
+      kids.push(el("div", { class: "row" },
+        el("button", { class: "btn primary", id: "run", type: "button", disabled: (!T.total || !qs.length || !pend.length || total > MAX_CALLS) ? "" : null, onclick: () => { if (hosted && !S.armed) { S.armed = true; renderRunBar(); ui.runBar.querySelector("#run")?.focus(); } else run(); }, text: label }),
+        failed ? el("span", { class: "badge bad", text: `${failed} failed` }) : null));
+      const errs = [...new Set(pend.map(x => (C.get(ckey(x.st)) || {}).err).filter(Boolean))].slice(0, 2);
+      if (errs.length) kids.push(el("div", { class: "callout bad", role: "alert" }, el("strong", { text: "Some calls failed. " }), errs.join(" / "), ". Everything else is unaffected; retry only re-sends the failed calls."));
+    }
+    bar.replaceChildren(...kids);
+  }
+  function afterChange() { S.armed = false; lastCi = -2; logN = -1; writeHash(); renderRunBar(); renderAll(); tick(); }
+  function changeSource() {
+    pause(); S.pos = 0; S.reveal = false; T = currentTranscript(); recompute(); refreshSrcPanels(); buildTranscript(); afterChange();
+  }
+
+  /* ---------- main column ---------- */
+  function buildMain() {
+    ui.play = el("button", { class: "btn primary", type: "button", id: "play", onclick: () => S.playing ? pause() : play() }, "Play");
+    ui.scrub = el("input", { type: "range", id: "scrub", min: "0", step: "1", "aria-label": "Playback position in words", oninput: () => seek(Number(ui.scrub.value)) });
+    ui.readout = el("span", { class: "readout", role: "status" });
+    const speed = el("div", { class: "segmented", role: "group", "aria-label": "Playback speed" }, SPEEDS.map(s => el("button", { type: "button", "aria-pressed": String(S.speed === s), "data-s": s, text: s === "instant" ? "Instant" : s + "x",
+      onclick: () => { S.speed = s; speed.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === s))); writeHash(); if (S.playing) { pause(); play(); } } })));
+    const gate = el("input", { type: "range", id: "gate", min: "0", max: "1", step: "0.05", "aria-label": "Gate", oninput: () => { S.gate = Number(gate.value); gv.textContent = S.gate.toFixed(2); rescore(); logN = -1; renderAll(); tick(); writeHash(); } });
+    gate.value = S.gate; const gv = el("strong", { text: S.gate.toFixed(2) });
+    const bar = el("section", { class: "card playbar noprint", "aria-label": "Playback" },
+      el("div", { class: "row" }, ui.play,
+        el("button", { class: "btn", type: "button", onclick: () => { pause(); seek(0); }, text: "Restart" }),
+        el("button", { class: "btn", type: "button", onclick: () => { pause(); seek(S.pos + 1); }, text: "Step word" }),
+        el("button", { class: "btn", type: "button", onclick: () => { pause(); const n = cps.find(c => c.pos > S.pos); seek(n ? n.pos : T.total); }, text: "Next checkpoint" }),
+        speed, el("span", { class: "spacer" }),
+        el("div", { class: "field", style: "min-width:190px" }, el("label", { for: "gate" }, "Gate ", gv, " (score at or above is flagged)"), gate)),
+      ui.scrub, el("div", { class: "row" }, ui.readout, reduced() ? el("span", { class: "small subtle", text: "Reduced motion is on: Play jumps to the end." }) : null));
+    ui.tx = el("div", { class: "tx-pane", tabindex: "0", role: "region", "aria-label": "Transcript revealed so far" });
+    ui.txHead = el("div", { class: "stack" }); ui.truth = el("div", {});
+    ui.gauges = el("div", { class: "gauges" }); ui.scored = el("div", { class: "stack" });
+    ui.log = el("ul", { class: "log", "aria-live": "polite", "aria-relevant": "additions", "aria-label": "Event log" }); ui.logEmpty = el("p", { class: "muted small" });
+    ui.tl = el("div", {}); ui.profile = el("div", {}); ui.docev = el("div", {}); ui.study = el("div", {});
+    const stage = el("div", { class: "stage" },
+      el("div", { class: "col" },
+        el("section", { class: "card stack", "aria-labelledby": "tx-h" }, el("h2", { id: "tx-h", text: "Transcript" }), ui.txHead, ui.tx, ui.truth),
+        el("section", { class: "card stack", "aria-labelledby": "log-h" }, el("h2", { id: "log-h", text: "Event log" }), el("p", { class: "small muted", text: `A moment is logged when a perspective crosses the gate or rises by ${SPIKE.toFixed(1)} or more versus the previous checkpoint. It shows the exact window text that was scored.` }), ui.log, ui.logEmpty)),
+      el("section", { class: "card stack", "aria-labelledby": "g-h" }, el("header", { class: "row" }, el("h2", { id: "g-h", text: "Live perspectives" }), el("span", { class: "small muted", text: "latest checkpoint at or before the current word; sparkline shows history so far" })), ui.gauges, ui.scored));
+    ui.main = el("div", { class: "main" }, bar, stage,
+      el("section", { class: "card stack", "aria-labelledby": "tl-h" }, el("h2", { id: "tl-h", text: "Timeline" }), ui.tl),
+      el("section", { class: "card stack", "aria-labelledby": "pf-h" }, el("h2", { id: "pf-h", text: "Profile" }), ui.profile),
+      el("section", { class: "card stack", "aria-labelledby": "de-h" }, el("h2", { id: "de-h", text: "Documented events versus detector flags" }), ui.docev),
+      el("section", { class: "card stack", "aria-labelledby": "ws-h" }, el("h2", { id: "ws-h", text: "Which window? (measured)" }), ui.study));
+    return ui.main;
+  }
+
+  /* transcript */
+  function buildTranscript() {
+    wordEls = []; turnEls = []; revealed = 0;
+    const evTurns = new Set(T.meta.kind === "scene" ? T.meta.s.documented_events.map(e => e.turn_index) : []);
+    ui.tx.replaceChildren(...T.turns.map((t, k) => {
+      const say = el("span", { class: "say" });
+      t.words.forEach((w, j) => { const s = el("span", { class: "wd" + (evTurns.has(k) ? " evs" : ""), hidden: "" }, w); wordEls.push(s); say.append(s, j < t.words.length - 1 ? " " : ""); });
+      const row = el("div", { class: "tturn", hidden: "" }, el("span", { class: "who", text: t.speaker }), say); turnEls.push(row); return row;
+    }));
+    const m = T.meta, kids = [];
+    if (m.kind === "scene") {
+      const s = m.s;
+      kids.push(el("div", { class: "row" }, el("h3", { text: s.title }), s.control ? el("span", { class: "badge good", title: "A control scene: the source describes no manipulation.", text: "control scene" }) : el("span", { class: "badge accent", text: "real scene" })),
+        el("p", { class: "small muted" }, s.date + ". ", el("a", { href: s.source_url, target: "_blank", rel: "noopener", text: "Source transcript" }), ". Public-domain basis: " + s.public_domain_basis),
+        el("details", {}, el("summary", { text: "Setting and notes" }), el("p", { class: "small muted", style: "margin-top:4px", text: s.setting }), s.notes ? el("p", { class: "small muted", style: "margin-top:4px", text: s.notes }) : null));
+    } else if (m.kind === "dialogue") kids.push(el("p", { class: "small muted", text: `A real dialogue from the MentalManip collection (${T.turns.length} turns, ${T.total} words). Its dataset label covers the whole dialogue and is shown after playback.` }));
+    else kids.push(el("p", { class: "small muted", text: `Pasted text: ${T.turns.length} turn${T.turns.length === 1 ? "" : "s"}, ${T.total} words. Lines that do not start with "Speaker:" continue the previous turn.` }));
+    ui.txHead.replaceChildren(...kids);
+    ui.scrub.max = String(T.total);
+    revealTo(S.pos);
+  }
+  function revealTo(pos) {
+    pos = Math.max(0, Math.min(T.total, pos));
+    if (pos > revealed) for (let i = revealed; i < pos; i++) wordEls[i] && (wordEls[i].hidden = false);
+    else for (let i = revealed - 1; i >= pos; i--) wordEls[i] && (wordEls[i].hidden = true);
+    if (revealed > 0 && wordEls[revealed - 1]) wordEls[revealed - 1].classList.remove("cur");
+    revealed = pos; if (pos > 0 && wordEls[pos - 1]) wordEls[pos - 1].classList.add("cur");
+    T.turns.forEach((t, k) => { const h = pos <= t.start; if (turnEls[k].hidden !== h) turnEls[k].hidden = h; });
+    const last = pos > 0 ? wordEls[pos - 1] : null;
+    if (last && ui.tx.scrollHeight > ui.tx.clientHeight) { const r = last.getBoundingClientRect(), b = ui.tx.getBoundingClientRect(); if (r.bottom > b.bottom || r.top < b.top) ui.tx.scrollTop += r.bottom - b.bottom + 24; }
+  }
+  function renderTruth() {
+    const m = T.meta; ui.truth.replaceChildren();
+    if (m.kind !== "dialogue") return;
+    if (S.pos >= T.total || S.reveal) {
+      const d = m.d;
+      ui.truth.replaceChildren(el("div", { class: "callout " + (d.manipulative ? "warn" : ""), role: "status" }, el("strong", { text: "Dataset label (ground truth): " }), d.manipulative ? "annotated as manipulative" : "annotated as not manipulative",
+        d.technique && d.technique.length ? `. Techniques: ${d.technique.join(", ")}` : "", d.vulnerability && d.vulnerability.length ? `. Vulnerability: ${d.vulnerability.join(", ")}` : "", `. ${d.label_scope || "Whole dialogue; not localised to any turn"}. A label like this does not say which turn, if any, a detector should fire on.`));
+    } else ui.truth.append(el("button", { class: "btn noprint", type: "button", onclick: () => { S.reveal = true; renderTruth(); }, text: "Show the dataset label now" }));
+  }
+
+  /* playback */
+  function play() {
+    if (!T.total) return toast("Nothing to play yet.");
+    if (S.pos >= T.total) { S.pos = 0; logN = -1; }
+    if (reduced() || S.speed === "instant") { seek(T.total); return; }
+    S.playing = true; ui.play.textContent = "Pause"; schedule();
+  }
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(() => { if (!S.playing) return; S.pos = Math.min(T.total, S.pos + 1); tick(); if (S.pos >= T.total) pause(); else schedule(); }, 60000 / (WPM * Number(S.speed)));
+  }
+  function pause() { S.playing = false; clearTimeout(timer); if (ui.play) ui.play.textContent = "Play"; }
+  function seek(pos) { S.pos = Math.max(0, Math.min(T.total, Math.round(pos))); if (S.pos >= T.total) pause(); tick(); }
+  function tick() {
+    if (!T) return;
+    revealTo(S.pos); ui.scrub.value = S.pos; ui.scrub.setAttribute("aria-valuetext", posLabel(S.pos));
+    const ci = curCp(); ui.readout.textContent = S.pos ? `${posLabel(S.pos)}. Checkpoint ${ci + 1} of ${cps.length}.` : `Start. ${T.total} words, ${cps.length} checkpoints.`;
+    if (ci !== lastCi) { lastCi = ci; renderGauges(); }
+    syncLog(); if (ui.ph) ui.ph.style.left = (T.total ? S.pos / T.total * 100 : 0) + "%"; renderTruth();
+  }
+
+  /* gauges */
+  function svgEl(tag, attrs, text) { const n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); if (text != null) n.textContent = text; return n; }
+  function spark(series, ci) {
+    const W = 120, H = 24, n = series.length, x = (i) => n > 1 ? 2 + i / (n - 1) * (W - 4) : W / 2, y = (v) => H - 2 - v * (H - 4);
+    const svg = svgEl("svg", { class: "spark", viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true" });
+    svg.append(svgEl("line", { x1: 0, x2: W, y1: y(S.gate), y2: y(S.gate), stroke: "var(--warn)", "stroke-dasharray": "3 3", "stroke-width": 1, "vector-effect": "non-scaling-stroke" }));
+    const pts = series.map((v, i) => v && i <= ci ? [x(i), y(Math.max(0, Math.min(1, v.score)))] : null).filter(Boolean);
+    if (pts.length > 1) svg.append(svgEl("polyline", { points: pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" "), fill: "none", stroke: "var(--accent)", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+    if (pts.length) { const l = pts[pts.length - 1]; svg.append(svgEl("circle", { cx: l[0], cy: l[1], r: 2.2, fill: "var(--accent)" })); }
+    return svg;
+  }
+  function renderGauges() {
+    const ae = document.activeElement, focusId = ae && ui.gauges.contains(ae) ? ae.id : null, ci = curCp(), multi = S.wins.length > 1;
+    ui.gauges.replaceChildren(...PERSP.map(p => {
+      const on = S.on.has(p.id);
+      const cb = el("input", { type: "checkbox", role: "switch", id: "sw-" + p.id, onchange: () => { cb.checked ? S.on.add(p.id) : S.on.delete(p.id); S.armed = false; rescore(); afterChange(); const f = document.getElementById("sw-" + p.id); if (f) f.focus(); } });
+      cb.checked = on;
+      const rows = on ? S.wins.map(w => {
+        const ser = SER(w, p.id), v = ci >= 0 ? ser[ci] : null, upto = ser.slice(0, ci + 1).map((x, i) => x ? { x, i } : null).filter(Boolean);
+        const pk = upto.length ? upto.reduce((a, b) => b.x.score > a.x.score ? b : a) : null, flag = v && v.score >= S.gate;
+        return [el("div", { class: "grow" }, el("span", { class: "wtag", text: w }),
+          v ? el("div", { class: "row", style: "gap:6px;flex-wrap:nowrap" }, meter(v.score, `${p.name}, ${multi ? w + ", " : ""}${fmt.pct(v.score, 0)}`), flag ? el("span", { class: "badge warn", text: "flag" }) : null) : el("span", { class: "subtle small", text: ci < 0 ? "not started" : "not computed" }),
+          el("span", { class: "sp" }, spark(ser, ci)),
+          el("span", { class: "sub", text: (v && v.label ? `${v.label}. ` : "") + (pk ? `peak ${pk.x.score.toFixed(2)} at word ${cps[pk.i].pos}` : "no peak yet") }))];
+      }) : [el("p", { class: "small subtle", text: "off" })];
+      const flagAny = on && S.wins.some(w => { const v = ci >= 0 ? SER(w, p.id)[ci] : null; return v && v.score >= S.gate; });
+      return el("div", { class: "g" + (on ? "" : " off") + (flagAny ? " flag" : "") }, el("div", { class: "gh" }, cb, el("label", { for: "sw-" + p.id, title: p.about, text: p.name })), el("div", {}, trustChip(p)), rows);
+    }));
+    if (focusId) { const f = document.getElementById(focusId); if (f) f.focus(); }
+    const showText = ci >= 0 ? S.wins.map(w => ({ w, t: CS[w][ci] })) : [];
+    ui.scored.replaceChildren(el("details", {}, el("summary", { text: "Scored text at this checkpoint (the evidence)" }),
+      showText.length ? showText.map(x => el("div", {}, el("h4", { text: `${x.w}: ${winName(x.w)}` }), el("pre", { class: "trace", text: x.t }))) : el("p", { class: "small muted", text: "Press Play or drag the scrubber." })));
+  }
+
+  /* event log */
+  function logItem(e) {
+    const p = PERSP.find(x => x.id === e.pid), k = e.cp < cps.length ? cps[e.cp].turn : 0;
+    return el("li", {}, el("button", { type: "button", onclick: () => { pause(); seek(e.pos); }, "aria-label": `${p.name}, ${e.cross ? "crossed the gate" : "spiked"}, score ${e.score.toFixed(2)}, at word ${e.pos}` },
+      el("span", { class: "chips" }, el("span", { class: "badge accent", text: p.name }), S.wins.length > 1 ? el("span", { class: "badge", text: e.win }) : null,
+        e.cross ? el("span", { class: "badge warn", text: "crossed gate " + S.gate.toFixed(2) }) : null, e.spike ? el("span", { class: "badge warn", text: "spike" }) : null),
+      el("span", { text: `score ${e.score.toFixed(2)}` + (e.delta != null ? `, change ${e.delta >= 0 ? "+" : ""}${e.delta.toFixed(2)}` : ", first checkpoint") + (e.label ? `, ${e.label}` : "") + `. Checkpoint ${e.cp + 1} of ${cps.length}, word ${e.pos}, turn ${k + 1} (${T.turns[k].speaker}).` }),
+      el("span", { class: "evq", text: `Scored window (${e.win}): “${clipTail(e.text)}”` })));
+  }
+  function syncLog() {
+    const n = EV.filter(e => e.pos <= S.pos).length;
+    if (n === logN) return;
+    if (logN < 0 || n < logN || n - logN > 3) { ui.log.setAttribute("aria-live", "off"); ui.log.replaceChildren(...EV.slice(0, n).map(logItem)); setTimeout(() => ui.log.setAttribute("aria-live", "polite"), 50); }
+    else EV.slice(logN, n).forEach(e => ui.log.append(logItem(e)));
+    logN = n; ui.log.scrollTop = ui.log.scrollHeight;
+    ui.logEmpty.textContent = n ? "" : (EV.length || !pending().length ? "Nothing logged yet. Moments appear here as playback passes them." : "Nothing logged yet. Precompute the checkpoints first, then play.");
+    ui.logEmpty.hidden = !!n;
+  }
+
+  /* timeline */
+  function renderTimeline() {
+    const on = PERSP.filter(p => S.on.has(p.id)), multi = S.wins.length > 1, box = ui.tl;
+    if (!T.total) return box.replaceChildren(empty("No transcript", "Choose a source or paste some text."));
+    if (!on.length) return box.replaceChildren(empty("No perspectives on", "Turn at least one perspective on with its switch."));
+    const anyData = S.wins.some(w => M[w].some(o => Object.values(o).some(Boolean)));
+    const pct = (v) => (v / T.total * 100);
+    const head = el("div", { class: "tl-row" }, el("span", { class: "tl-lab subtle", text: "documented events" }), el("div", { style: "height:18px" }));
+    const turnsRow = el("div", { class: "tl-row" }, el("span", { class: "tl-lab subtle", text: "turns" }), el("div", { class: "tl-track turns" }, T.turns.map(t => el("span", { class: "tl-c tn", style: `left:${pct(t.start)}%;width:${pct(t.end - t.start)}%` }))));
+    const lanes = [];
+    on.forEach(p => S.wins.forEach(w => {
+      const ser = SER(w, p.id), st = stat(w, p.id);
+      const cells = ser.map((v, i) => { if (!v) return null; const from = cps[i].pos, to = i + 1 < cps.length ? cps[i + 1].pos : T.total;
+        return el("span", { class: "tl-c" + (v.score >= S.gate ? " fl" : ""), style: `left:${pct(from)}%;width:${pct(to - from)}%;background:color-mix(in srgb, var(--accent) ${Math.round(Math.max(0, Math.min(1, v.score)) * 100)}%, var(--surface-2))` }); });
+      const nfl = ser.filter(v => v && v.score >= S.gate).length;
+      lanes.push(el("div", { class: "tl-row", role: "img", "aria-label": `${p.name}${multi ? ", " + w : ""}: ` + (st ? `peak ${st.peak.toFixed(2)} at word ${cps[st.peakCp].pos}, ${nfl} of ${st.n} checkpoints at or above the gate` : "not computed") },
+        el("span", { class: "tl-lab", title: p.name + (multi ? " (" + w + ")" : ""), text: p.short + (multi ? " " + w : "") }), el("div", { class: "tl-track" }, cells)));
+    }));
+    const over = el("div", { class: "tl-over noprint", title: "Click to jump to this point in the call", onclick: (e) => { const r = over.getBoundingClientRect(); pause(); seek((e.clientX - r.left) / r.width * T.total); },
+      onmousemove: (e) => { const r = over.getBoundingClientRect(); ui.tlRead.textContent = posLabel(Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * T.total)); } });
+    if (T.meta.kind === "scene") T.meta.s.documented_events.forEach((ev, n) => {
+      const t = T.turns[ev.turn_index]; if (!t) return;
+      over.append(el("button", { type: "button", class: "evm", style: `left:min(${pct(t.start)}%, calc(100% - 18px));width:max(18px, ${pct(t.end - t.start)}%);max-width:calc(100% - ${pct(t.start)}%)`, title: `Documented event ${n + 1} (turn ${ev.turn_index + 1}): ${ev.what_happened}\nCitation: "${clip(ev.evidence_quote, 300)}"\n${ev.evidence_source_url}`,
+        "aria-label": `Documented event ${n + 1}, turn ${ev.turn_index + 1}: ${clip(ev.what_happened, 120)}. Jump to the table.`, text: String(n + 1),
+        onclick: (e) => { e.stopPropagation(); pause(); seek(t.end); const row = document.getElementById("ev-" + n); if (row) { row.scrollIntoView({ block: "center" }); row.focus(); } } }));
+    });
+    ui.ph = el("span", { class: "ph" }); over.append(ui.ph); ui.ph.style.left = (S.pos / T.total * 100) + "%";
+    ui.tlRead = el("span", { class: "small subtle", text: "Hover the strip to see the position." });
+    box.replaceChildren(el("p", { class: "small muted", text: `Each lane is one perspective over the whole call (window shown when comparing). Darker means a higher score; a red edge marks checkpoints at or above the gate (${S.gate.toFixed(2)}). ` + (T.meta.kind === "scene" ? "Numbered markers are documented events from the scene's cited sources; hover for the quote." : "") }),
+      ...(anyData ? [] : [el("p", { class: "small muted", text: "Nothing computed yet: run the precompute to fill the lanes." })]),
+      el("div", { class: "tl" }, T.meta.kind === "scene" ? head : null, turnsRow, lanes, over), ui.tlRead);
+  }
+
+  /* profile */
+  function renderProfile() {
+    const on = PERSP.filter(p => S.on.has(p.id)), multi = S.wins.length > 1;
+    if (!on.length) return ui.profile.replaceChildren(empty("No perspectives on", "Turn on a perspective."));
+    if (!S.wins.some(w => on.some(p => stat(w, p.id)))) return ui.profile.replaceChildren(empty("Nothing computed yet", "Run the precompute; the profile can then be read at any time, before or after playback."));
+    const tb = el("tbody");
+    on.forEach(p => S.wins.forEach(w => {
+      const s = stat(w, p.id); if (!s) return;
+      const cp = cps[s.peakCp];
+      tb.append(el("tr", {}, el("th", { scope: "row", text: p.name }), multi ? el("td", { text: w }) : null,
+        el("td", { class: "num", "data-value": s.peak, text: s.peak.toFixed(2) + (s.label ? ` (${s.label})` : "") }),
+        el("td", {}, el("button", { class: "tbtn", type: "button", onclick: () => { pause(); seek(cp.pos); window.scrollTo({ top: 0, behavior: reduced() ? "auto" : "smooth" }); }, text: `word ${cp.pos}` }), ` · turn ${cp.turn + 1}`),
+        el("td", { class: "num", "data-value": s.share, text: fmt.pct(s.share, 0) + ` (${Math.round(s.share * s.n)}/${s.n})` }),
+        el("td", { class: "num", "data-value": s.avg, text: s.avg.toFixed(2) }), el("td", { class: "wrap" }, trustChip(p))));
+    }));
+    const table = el("table", { class: "data" }, el("caption", { class: "sr-only", text: "Profile per perspective" }),
+      el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Perspective" }), multi ? el("th", { scope: "col", text: "Window" }) : null, el("th", { scope: "col", "data-sort": "num", class: "num", text: "Peak" }), el("th", { scope: "col", text: "Where" }),
+        el("th", { scope: "col", "data-sort": "num", class: "num", text: "At or above gate" }), el("th", { scope: "col", "data-sort": "num", class: "num", text: "Average" }), el("th", { scope: "col", text: "Trust" }))), tb);
+    sortable(table);
+    const inc = S.wins.some(w => M[w].some(o => on.some(p => !o[p.id])));
+    ui.profile.replaceChildren(el("p", { class: "small muted", style: "margin-bottom:6px", text: `Whole call, ${cps.length} checkpoints, gate ${S.gate.toFixed(2)}. Peak is the highest checkpoint score; a peak is one noisy reading, not an event by itself. Trust is the detector's accuracy on its own validation set, not on this call.` + (inc ? " Some checkpoints are not computed and are left out of the shares and averages." : "") }), el("div", { class: "table-wrap" }, table));
+  }
+
+  /* documented events */
+  function renderDocEvents() {
+    const box = ui.docev;
+    if (T.meta.kind !== "scene") return box.replaceChildren(empty("No documented events for this source", "Only the real scenes carry events documented in cited sources. Library dialogues have a dialogue-level label instead, shown after playback."));
+    const s = T.meta.s, on = PERSP.filter(p => S.on.has(p.id)), w = S.wins[Math.min(S.evWin, S.wins.length - 1)];
+    const anyData = on.some(p => stat(w, p.id));
+    const top = (turns, w) => on.map(p => { let best = null; SER(w, p.id).forEach((v, i) => { if (v && turns.includes(cps[i].turn) && (!best || v.score > best.score)) best = { score: v.score, label: v.label, i }; }); return best ? { p, ...best } : null; })
+      .filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 3);
+    const chips = (list, w) => list.length ? el("div", { class: "chips" }, list.map(x => { const st = stat(w, x.p.id); return el("span", { class: "badge" + (x.score >= S.gate ? " warn" : ""), title: `${x.p.name}: highest checkpoint score here ${x.score.toFixed(2)}${x.label ? " (" + x.label + ")" : ""}; call-wide peak ${st ? st.peak.toFixed(2) + " at word " + cps[st.peakCp].pos : "n/a"}.` }, x.p.short + " ", el("strong", { text: x.score.toFixed(2) })); })) : el("span", { class: "subtle", text: anyData ? "no scored checkpoint" : "not computed" });
+    const tb = el("tbody");
+    s.documented_events.forEach((ev, n) => {
+      const k = ev.turn_index, t = T.turns[k], near = [k - 1, k + 1].filter(x => x >= 0 && x < T.turns.length);
+      tb.append(el("tr", { id: "ev-" + n, tabindex: "-1" }, el("td", { class: "num", text: n + 1 }),
+        el("td", { class: "wrap" }, el("strong", { text: `Turn ${k + 1}${t ? " (" + t.speaker + ")" : ""}` }), el("div", { class: "small muted", text: t ? clip(t.text, 160) : "" }), t ? el("button", { class: "tbtn", type: "button", onclick: () => { pause(); seek(t.end); window.scrollTo({ top: 0, behavior: reduced() ? "auto" : "smooth" }); }, text: "jump to this turn" }) : null),
+        el("td", { class: "wrap" }, el("div", { text: ev.what_happened }), el("blockquote", { class: "cite" }, `“${clip(ev.evidence_quote, 420)}” `, el("a", { href: ev.evidence_source_url, target: "_blank", rel: "noopener", text: "cited source" }))),
+        el("td", { class: "wrap" }, chips(top([k], w), w)), el("td", { class: "wrap" }, chips(top(near, w), w))));
+    });
+    box.replaceChildren(...[el("div", { class: "callout" }, el("strong", { text: "These events come from cited sources, not from us. " }), "The quote and link are the source's own words. A detector firing near an event does not confirm it, and a quiet detector does not refute it; the table only lets you judge whether detectors moved where history says something happened." + (s.control ? " This is a control scene: the source describes no manipulation, so flags here are false alarms to weigh against the detectors' hits elsewhere." : "")),
+      S.wins.length > 1 ? el("div", { class: "field", style: "max-width:260px" }, el("label", { for: "evwin", text: "Window used for this table" }), (() => { const sel = el("select", { id: "evwin", onchange: () => { S.evWin = S.wins.indexOf(sel.value); renderDocEvents(); } }, S.wins.map(x => el("option", { value: x, text: x + ": " + winName(x) }))); sel.value = w; return sel; })()) : null,
+      s.documented_events.length ? el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("caption", { class: "sr-only", text: "Documented events versus strongest perspective scores" }),
+        el("thead", {}, el("tr", {}, ["#", "Where", "What happened, with the source's own words", "Strongest scores within that turn", "Strongest in the neighbouring turns"].map(h => el("th", { scope: "col", text: h })))), tb)) : el("p", { class: "muted", text: "This scene has no documented events." })].filter(Boolean));
+  }
+
+  /* window study */
+  function renderStudy() {
+    const box = ui.study, keys = D.study ? Object.values(D.study).filter(x => x && x.windows) : [], e = keys.find(x => x.backend === S.model);
+    const note = el("p", { class: "small muted", text: "Measured on 200 labelled dialogues and one perspective, manipulation. The label is dialogue-level (not localised to a turn), so this compares how well each window raises an alarm somewhere in a dialogue, not whether it fires at the right moment. AUC is the chance that a manipulative dialogue outscores an ordinary one (0.5 is chance); the bracket is a bootstrap 95% interval. \"AUC max\" scores each dialogue by its highest reading, \"AUC end\" by its last." });
+    if (!e) return box.replaceChildren(note, empty("No window study for " + S.model, keys.length ? "Stored for: " + keys.map(x => x.backend).join(", ") + "." : "No window-study results are stored yet (an experiment may still be running). Until then the default window is w20."));
+    const rows = Object.entries(e.windows).filter(([, v]) => Number.isFinite(v.auc_max)).sort((a, b) => b[1].auc_max - a[1].auc_max);
+    const tb = el("tbody", {}, rows.map(([w, v]) => el("tr", {}, el("th", { scope: "row", text: w }), el("td", { class: "num", text: v.auc_max.toFixed(3) }), el("td", { class: "num", text: v.auc_max_ci ? `[${v.auc_max_ci[0].toFixed(3)}, ${v.auc_max_ci[1].toFixed(3)}]` : "–" }),
+      el("td", { class: "num", text: fmt.num(v.auc_end, 3) }), el("td", {}, WINDOWS.includes(w) ? el("button", { class: "btn noprint", type: "button", onclick: () => { S.wins = [w]; S.winTouched = true; S.evWin = 0; recompute(); refreshWinBox(); afterChange(); }, text: "Use " + w }) : el("span", { class: "subtle", text: "not offered here" })))));
+    box.replaceChildren(note, el("p", { class: "small" }, `Model ${S.model}, ${e.n_dialogues ?? "?"} dialogues. Best by AUC max: `, el("strong", { text: rows.length ? rows[0][0] : "n/a" }), "."),
+      el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("caption", { class: "sr-only", text: "Window study results" }),
+        el("thead", {}, el("tr", {}, ["Window", "AUC max", "95% interval", "AUC end", ""].map(h => el("th", { scope: "col", text: h })))), tb)));
+  }
+
+  function renderAll() { renderGauges(); renderTimeline(); renderProfile(); renderDocEvents(); renderStudy(); syncLog(); if (ui.ph) ui.ph.style.left = (T.total ? S.pos / T.total * 100 : 0) + "%"; }
+
+  /* ---------- export, trace ---------- */
+  const questionsFor = (miss) => Object.fromEntries(miss.map(q => [q, QS[q]]));
+  function callFor(state) { const rec = C.get(ckey(state)); return { request: { backend: S.model, items: [{ state, questions: questionsFor(enabledQids()) }] }, response: rec ? (rec.err && !Object.keys(rec.answers).length ? { error: rec.err } : { answers: rec.answers, latency_ms: rec.latency_ms, cached: rec.cached }) : null }; }
+  function traceNow() { const ci = Math.max(0, curCp()); return { note: "Requests as they would be sent to /api/batch (they travel in chunks with other states), with the stored response.", position: posLabel(S.pos), checkpoint: ci + 1, windows: S.wins.map(w => ({ window: w, ...callFor(CS[w][ci]) })) }; }
+  function exportData() {
+    const s = T.meta.kind === "scene" ? T.meta.s : null;
+    return { generated: new Date().toISOString(), note: "Technique signals, not verdicts. Models return probabilities, not reasons.",
+      source: { kind: T.meta.kind, title: T.meta.title, url: s && s.source_url, public_domain_basis: s && s.public_domain_basis, control: s ? !!s.control : null, dataset_label: T.meta.kind === "dialogue" ? { manipulative: T.meta.d.manipulative, technique: T.meta.d.technique, vulnerability: T.meta.d.vulnerability, scope: T.meta.d.label_scope } : null, documented_events: s ? s.documented_events : null },
+      model: S.model, windows: S.wins, checkpoint_mode: S.cp, gate: S.gate, spike: SPIKE, words: T.total, turns: T.turns.map(t => ({ speaker: t.speaker, text: t.text })),
+      perspectives: PERSP.map(p => { const t = trust(p); return { id: p.id, name: p.name, on: S.on.has(p.id), question_id: p.q, set: PSET(p), question: QS[p.q], read: p.read, validation: t ? { correct: t.correct, n: t.n, accuracy: t.acc, wilson95: t.ci, chance: t.chance, near_chance: t.near } : null }; }),
+      checkpoints: cps.map((cp, i) => ({ index: i + 1, word: cp.pos, turn: cp.turn + 1, scores: Object.fromEntries(S.wins.map(w => [w, { state: CS[w][i], values: Object.fromEntries(PERSP.filter(p => S.on.has(p.id)).map(p => [p.id, M[w][i][p.id] || null])) }])) })),
+      events: EV.map(e => ({ word: e.pos, window: e.win, perspective: e.pid, score: e.score, delta: e.delta, crossed_gate: e.cross, spike: e.spike, evidence_window: e.text })),
+      profile: Object.fromEntries(S.wins.map(w => [w, Object.fromEntries(PERSP.filter(p => S.on.has(p.id)).map(p => { const s2 = stat(w, p.id); return [p.id, s2 && { peak: s2.peak, peak_word: cps[s2.peakCp].pos, share_at_or_above_gate: s2.share, average: s2.avg, scored_checkpoints: s2.n }]; }))])),
+      calls: UNIQ.map(callFor).filter(c => c.response) };
+  }
+
+  /* ---------- boot ---------- */
+  async function loadAll() {
+    const ids = [...new Set(Object.values(QSETS))];
+    const [status, scenes, dlg, study, ...sets] = await Promise.all([api("/api/status"), api("/api/scenes"), api("/api/dialogues"), api("/api/window-study").catch(() => ({})), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
+    return { status, scenes, dialogues: dlg.dialogues || [], study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
+  }
+  function init(data) {
+    D = data; Object.entries(QSETS).forEach(([q, set]) => { QS[q] = D.sets[set].items[0].question; });
+    const up = Object.entries(D.status).filter(([, v]) => v.up).map(([k]) => k), h = readHash();
+    if (!up.length) return el("div", { class: "stack" }, empty("No backend is up", "Every model backend is unreachable right now. Start one, then check again."), el("p", { style: "text-align:center" }, el("button", { class: "btn", type: "button", onclick: boot, text: "Check again" })));
+    if (!D.scenes.length && !D.dialogues.length) return empty("No sources", "The server returned no scenes or dialogues.");
+    S.model = up.includes(h.model) ? h.model : up.includes("kev-4b") ? "kev-4b" : up[0];
+    const srcs = [...D.scenes.map(s => s.slug), "dlg", "paste"];
+    S.src = srcs.includes(h.src) ? h.src : (D.scenes.find(s => s.slug.startsWith("nixon")) || D.scenes[0] || { slug: "dlg" }).slug;
+    S.dlg = D.dialogues.some(d => d.id === h.dlg) ? h.dlg : D.dialogues[0] && D.dialogues[0].id;
+    if (S.src === "dlg" && !S.dlg) S.src = "paste";
+    const hw = (h.win || "").split(",").filter(w => WINDOWS.includes(w)).slice(0, MAX_WINS);
+    if (hw.length) { S.wins = WINDOWS.filter(w => hw.includes(w)); S.winTouched = true; } else S.wins = [bestWindow()];
+    if (CPS.some(([k]) => k === h.cp)) S.cp = h.cp;
+    if (h.gate != null && Number.isFinite(Number(h.gate))) S.gate = Math.min(1, Math.max(0, Number(h.gate)));
+    if (SPEEDS.includes(h.speed)) S.speed = h.speed;
+    if (h.off) h.off.split(",").forEach(id => S.on.delete(id));
+    S.paste = kv.get("stream.paste") || "";
+    T = currentTranscript(); recompute();
+    const main = buildMain(), side = buildSide(), root = el("div", { class: "workbench" }, side, main);
+    buildTranscript(); renderRunBar(); renderAll(); tick(); writeHash();
+    return root;
+  }
+  const app = document.getElementById("app");
+  function boot() { mount(app, loadAll, init); }
+  boot();
+  document.getElementById("print").addEventListener("click", () => window.print());
+  document.getElementById("copy-link").addEventListener("click", () => { writeHash(); copy(location.href); });
+  document.getElementById("copy-trace").addEventListener("click", () => { if (!D || !T) return toast("Nothing to copy yet"); copy(JSON.stringify(traceNow(), null, 2)); });
+  document.getElementById("export-json").addEventListener("click", () => { if (!D || !T) return toast("Nothing to export yet"); download("call-monitor.json", JSON.stringify(exportData(), null, 2), "application/json"); });
+  window.addEventListener("beforeunload", () => kv.set("stream.paste", S.paste.slice(0, 20000)));
+})();
+</script>
+</body>
+</html>

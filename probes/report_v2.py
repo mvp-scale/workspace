@@ -4,7 +4,7 @@ expected calibration error, and selective accuracy (accept only answers above a 
 import json, glob, os, sys, math, collections
 RUNS = sys.argv[1] if len(sys.argv) > 1 else "/workspace/data/probe-runs-v2"
 V2 = os.path.join(os.path.dirname(__file__), "v2")
-SETS = ["memsafety", "websec", "manipulation_dialogue", "fallacy_logic", "nli_snli", "sarcasm_isarcasm", "sarcasm_headlines", "phishing", "checklist_contractnli", "darkpatterns"]
+SETS = ["memsafety", "websec", "manipulation_dialogue", "fallacy_logic", "nli_snli", "sarcasm_isarcasm", "sarcasm_headlines", "phishing", "checklist_contractnli", "darkpatterns", "emotion_fear", "emotion_anger", "politeness_deference", "threat_civil", "persuasion_appeals"]
 truth = {s: [json.loads(l) for l in open(f"{V2}/{s}.jsonl")] for s in SETS if os.path.exists(f"{V2}/{s}.jsonl")}
 chance = {s: 1 / len({t["expected"] for t in truth[s]}) for s in truth}
 R = collections.defaultdict(dict)
