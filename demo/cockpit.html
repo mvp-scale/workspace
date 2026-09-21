@@ -753,15 +753,16 @@
     const ids = [...new Set(Object.values(QSETS))]; await Jev.ready;
     const [scenes, dlg, study, models, ...sets] = await Promise.all([api("/api/scenes"), api("/api/dialogues"), api("/api/window-study").catch(() => ({})), api("/api/models").catch(() => null), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
     try { const j = models && models.models.find(m => m.id === "jev"), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
-    return { scenes, dialogues: dlg.dialogues || [], study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
+    const topics = await fetch("/static/dialogue-topics.json").then(r => r.ok ? r.json() : null).catch(() => null);
+    return { scenes, dialogues: dlg.dialogues || [], topics: (topics && topics.topics) || {}, study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
   }
   function init(data) {
-    D = data; Object.entries(QSETS).forEach(([q, set]) => { QS[q] = D.sets[set].items[0].question; QALL[q] = QS[q]; });
+    D = data; D.lib = D.dialogues.filter(d => d.n_turns >= 6); Object.entries(QSETS).forEach(([q, set]) => { QS[q] = D.sets[set].items[0].question; QALL[q] = QS[q]; });
     const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up), h = readHash();
     if (!up.length) return el("div", { class: "stack" }, Jev.empty("No backend is up", "Every model backend is unreachable right now. Start one, then check again."));
     S.model = up.includes(h.model) ? h.model : up.includes("kev-4b") ? "kev-4b" : up.find(k => !st[k].hosted) || up[0];
     const srcs = [...D.scenes.map(s => s.slug), "dlg", "paste"]; S.src = srcs.includes(h.src) ? h.src : (D.scenes.find(s => s.slug.startsWith("apollo")) || D.scenes[0] || { slug: "dlg" }).slug;
-    S.dlg = D.dialogues.some(d => d.id === h.dlg) ? h.dlg : D.dialogues[0] && D.dialogues[0].id; if (S.src === "dlg" && !S.dlg) S.src = "paste";
+    S.dlg = D.lib.some(d => d.id === h.dlg) ? h.dlg : D.lib[0] && D.lib[0].id; if (S.src === "dlg" && !S.dlg) S.src = "paste";
     if (WINS.includes(h.win)) { S.win = h.win; S.winTouched = true; } else S.win = bestWindow();
     if (h.cp === "words" || h.cp === "sentence") S.cp = h.cp; if (h.n && Number.isFinite(+h.n)) S.n = clamp(Math.round(+h.n), 3, 20); if (h.gate && Number.isFinite(+h.gate)) S.gate = clamp(+h.gate, 0.3, 0.95);
     if (SPEEDS.some(([v]) => v === h.speed)) S.speed = h.speed; if (h.mode === "replay" || h.mode === "live") S.mode = h.mode; S.names = h.names !== "0"; S.coach = h.coach || null;
@@ -773,9 +774,15 @@
   function build() {
     const srcSel = el("select", { id: "src", "aria-label": "Transcript", onchange: () => { S.src = srcSel.value; rebuild(); refreshSrcPanels(); } },
       el("optgroup", { label: "Real scenes (cited)" }, D.scenes.map(s => el("option", { value: s.slug, text: s.title + (s.control ? " [control]" : "") }))),
-      el("optgroup", { label: "Other sources" }, el("option", { value: "dlg", text: `Conversation library (${D.dialogues.length})` }), el("option", { value: "paste", text: "Pasted text" }))); srcSel.value = S.src;
-    const dlgSel = el("select", { id: "dlg", "aria-label": "Library dialogue", onchange: () => { S.dlg = dlgSel.value; rebuild(); } }, D.dialogues.map((d, k) => el("option", { value: d.id, text: `${k + 1}. ${d.id.replace("mmwin-", "")} · ${d.turns.length} turns` }))); dlgSel.value = S.dlg;
-    ui.dlgField = el("div", { class: "field" }, el("label", { for: "dlg", text: "Dialogue (label hidden)" }), dlgSel);
+      el("optgroup", { label: "Other sources" }, el("option", { value: "dlg", text: `Movie dialogues (${D.lib.length})` }), el("option", { value: "paste", text: "Pasted text" }))); srcSel.value = S.src;
+    const snip = (d) => { const c = d.turns.slice(0, 4).map(t => t.text.replace(/\s+/g, " ")), t = c.find(x => x.split(" ").length >= 5) || c.reduce((a, b) => b.length > a.length ? b : a, ""); return "“" + (t.length > 46 ? t.slice(0, 45).trim() + "…" : t) + "”"; };
+    const topicOf = (d) => (D.topics[d.id] && D.topics[d.id].topic) || "Other", groups = {};
+    D.lib.forEach(d => (groups[topicOf(d)] ||= []).push(d));
+    const order = Object.keys(groups).sort((a, b) => (a === "Other") - (b === "Other") || groups[b].length - groups[a].length);
+    const dlgSel = el("select", { id: "dlg", "aria-label": "Movie dialogue", title: "Movie-script excerpts (MentalManip). Topics are guesses from a local model; the manipulation label stays hidden.", onchange: () => { S.dlg = dlgSel.value; rebuild(); } },
+      order.map(tp => el("optgroup", { label: `${tp} (${groups[tp].length})` }, groups[tp].map(d => el("option", { value: d.id, text: `${snip(d)} · ${new Set(d.turns.map(t => t.speaker)).size} voices · ${d.n_turns} lines` })))));
+    dlgSel.value = S.dlg;
+    ui.dlgField = el("div", { class: "field" }, el("label", { for: "dlg", text: "Dialogue (topic guessed)" }), dlgSel);
     const ta = el("textarea", { id: "paste", rows: 3, "aria-label": "Pasted text", placeholder: "Agent: Hello, this is your bank.\nCaller: Who is this?" }); ta.value = S.paste; let tt; ta.addEventListener("input", () => { S.paste = ta.value; kv.set("cockpit.paste", S.paste); clearTimeout(tt); tt = setTimeout(() => { if (S.src === "paste") rebuild(); }, 400); });
     ui.pasteField = el("div", { class: "field", style: "flex:1 1 320px" }, el("label", { for: "paste", text: 'Transcript, one "Speaker: text" per line' }), ta);
     ui.spkNote = el("span", { class: "small subtle", style: "align-self:center" });
