@@ -37,19 +37,17 @@
   .toppn { padding: 6px 12px 8px; display: grid; gap: 6px; grid-area: top; }
   .trow { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
   .trow h4 { padding-top: 6px; }
-  .dets { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; max-height: 94px; overflow: auto; min-height: 40px; }
-  .dchip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 1px 6px; align-items: center; width: 158px; padding: 3px 6px 3px 8px; border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: 6px; background: var(--surface); position: relative; }
-  .dchip.custom { border-style: dashed; border-left-style: solid; }
-  .dchip .ic { grid-row: 1 / 3; color: var(--c); display: grid; place-items: center; }
-  .dchip .nm { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .dchip .stt { font: 500 10px var(--mono); color: var(--text-2); white-space: nowrap; text-align: right; }
-  .dchip .r2 { grid-column: 2 / 4; display: flex; align-items: center; gap: 5px; }
-  .dchip .mt { position: relative; height: 5px; flex: 1; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
-  .dchip .mt i { position: absolute; inset: 0; background: var(--c); transform-origin: left; transform: scaleX(0); }
-  .dchip .mt b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); opacity: .55; }
-  .dchip .pc { font: 500 10px var(--mono); color: var(--text-2); min-width: 26px; text-align: right; }
-  .dchip .q { position: absolute; top: -6px; right: -4px; font: 700 10px var(--mono); color: var(--warn); background: var(--surface); border: 1px solid var(--warn); border-radius: 99px; width: 14px; height: 14px; display: grid; place-items: center; line-height: 1; }
-  .dchip.quiet { opacity: .72; }
+  .dets { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; max-height: 76px; overflow: auto; min-height: 30px; }
+  .dchip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); position: relative; }
+  .dchip.custom { border-style: dashed; }
+  .dchip .ic { color: var(--c); display: grid; place-items: center; }
+  .dchip .nm { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+  .dchip .mt { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--surface-2); border-radius: 0 0 5px 5px; overflow: hidden; }
+  .dchip .mt i { display: block; height: 100%; background: var(--c); transform-origin: left; transform: scaleX(0); }
+  .dchip .x { border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); cursor: pointer; padding: 0; font-size: 12px; line-height: 1; width: 16px; height: 16px; border-radius: 50%; position: absolute; right: -6px; top: -7px; opacity: 0; z-index: 2; display: grid; place-items: center; }
+  .dchip:hover .x, .dchip .x:focus-visible { opacity: 1; } .dchip .x:hover { color: var(--bad); border-color: var(--bad); }
+  .dchip.hot { background: color-mix(in srgb, var(--c) 14%, var(--surface)); border-color: var(--c); }
+  .dchip.quiet .nm { color: var(--text-2); font-weight: 500; } .dchip.quiet .ic { opacity: .75; }
   .people { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; min-height: 52px; }
   .pcard { flex: 0 0 auto; width: 206px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px 4px; background: var(--surface-2); }
   .pcard.speaking { border-color: var(--accent); background: var(--accent-soft); }
@@ -479,22 +477,19 @@
   function renderDets() {
     ui.dets.replaceChildren(); DCH = {};
     for (const d of S.dets) {
-      const t = trust(d), stt = el("span", { class: "stt" }), bar = el("i"), pc = el("span", { class: "pc", text: "0%" });
+      const t = trust(d), bar = el("i");
       const node = el("div", { class: "dchip quiet" + (d.custom ? " custom" : ""), style: cvar(d.slot), title: `${d.label}\n${d.about}\n${d.scope === "call" ? "Reads the whole call." : "Scored on each person's own window."}\n${t.text}` },
-        el("span", { class: "ic" }, iconEl(d.icon, 18)), el("span", { class: "nm", text: d.label }), stt, el("div", { class: "r2" }, el("div", { class: "mt", role: "img", "aria-label": d.label + " level" }, bar, el("b", { style: `left:${S.gate * 100}%` })), pc),
-        t.warn ? el("span", { class: "q", title: t.title, text: "?" }) : null);
-      DCH[d.key] = { d, node, stt, bar, pc, gate: node.querySelector(".mt b"), c: {} }; ui.dets.append(node);
+        el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), el("div", { class: "mt", "aria-hidden": "true" }, bar),
+        el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, title: "Remove " + d.label, onclick: (e) => { e.stopPropagation(); removeDet(d.key); }, text: "×" }));
+      DCH[d.key] = { d, node, bar, c: {} }; ui.dets.append(node);
     }
-    if (!S.dets.length) ui.dets.append(el("span", { class: "small muted", style: "padding-top:6px", text: "No detectors yet. Add one." }));
+    if (!S.dets.length) ui.dets.append(el("span", { class: "small muted", style: "padding-top:6px", text: "No detectors. Add one." }));
   }
   function updateDets() {
     for (const k in DCH) {
-      const L = DCH[k], a = L.d.agg, age = S.t - a.lastFire;
-      const txt = a.above != null ? "▲ " + mmss(S.t - a.above) : !a.n ? "wait" : age < 4 ? "● live" : age <= HOLD ? "◐ " + mmss(age) : a.disp > 0.2 ? "○ fade" : "– quiet";
-      if (L.c.st !== txt) { L.stt.textContent = txt; L.c.st = txt; }
-      const pc = Math.round(a.disp * 100) + "%"; if (L.c.pc !== pc) { L.pc.textContent = pc; L.c.pc = pc; }
-      L.bar.style.transform = `scaleX(${clamp(a.disp, 0, 1).toFixed(3)})`; const q = a.disp < 0.2; if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
-      if (L.c.g !== S.gate) { L.gate.style.left = S.gate * 100 + "%"; L.c.g = S.gate; }
+      const L = DCH[k], a = L.d.agg;
+      L.bar.style.transform = `scaleX(${clamp(a.disp, 0, 1).toFixed(3)})`;
+      const hot = a.disp >= S.gate, q = a.disp < 0.2; if (L.c.h !== hot) { L.node.classList.toggle("hot", hot); L.c.h = hot; } if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
     }
   }
   function renderPeople() {
@@ -534,7 +529,7 @@
   let formIcon = "";
   function renderDetTab() {
     ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow", style: cvar(d.slot) }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("div", {}, el("b", { text: d.label }), " ", el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("div", { class: "ex", text: d.about + (d.example ? ` Example: “${d.example}”` : "") })), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each person" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: () => removeDet(d.key), text: "×" })); }));
-    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)); ui.libSel.replaceChildren(el("option", { value: "", text: left.length ? "Add a validated detector…" : "All validated detectors are on" }), left.map(p => el("option", { value: p.id, text: p.name + (p.scope === "call" ? " (whole call)" : "") }))); ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
+    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)); ui.libSel.replaceChildren(el("option", { value: "", text: left.length ? "Add a validated detector…" : "All validated detectors are on" }), ...left.map(p => el("option", { value: p.id, text: p.name + (p.scope === "call" ? " (whole call)" : "") }))); ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
   }
   function renderReq() {
     if (!ui.reqPre || !CPS.length) { if (ui.reqPre) { ui.reqPre.textContent = "No checks yet. Press Play; each check sent to the model appears here exactly as sent."; ui.reqBadge.replaceChildren(); ui.reqSelEl.replaceChildren(); } return; }
@@ -726,8 +721,8 @@
       el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy in the Detectors tab; your own detectors are unvalidated (marked ?). Speakers are diarized ids, so they are shown as Person N. Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model. The Request tab shows exactly what is sent to the model." }));
     /* top: detectors bar and person cards */
     ui.dets = el("div", { class: "dets", id: "dets" }); ui.people = el("div", { class: "people", id: "people" });
-    const addBtn = el("button", { class: "btn", type: "button", id: "add-det", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dname.focus(), 50); }, text: "+ Add" });
-    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, ui.spkNote, addBtn)), el("div", { class: "trow" }, el("h4", { text: "People" }), ui.people, el("span")));
+    const addBtn = el("button", { class: "btn", type: "button", id: "add-det", title: "Add a detector", "aria-label": "Add a detector", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dname.focus(), 50); }, text: "+" });
+    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, addBtn)), el("div", { class: "trow" }, el("h4", { text: "People" }), ui.people, el("span")));
     /* conversation */
     ui.track = el("div", { class: "track" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" });
     const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.readnote);
