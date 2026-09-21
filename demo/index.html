@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jev Demo</title>
+<style>
+:root{--bg:#fff;--fg:#111;--mut:#666;--line:#ddd;--bar:#2563eb;--ok:#16a34a;--bad:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#0b0b0c;--fg:#eee;--mut:#999;--line:#2a2a2e;--bar:#60a5fa}}
+body{font:15px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg);max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:20px}h2{font-size:16px;margin-top:28px}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+input,select,textarea,button{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;box-sizing:border-box}
+button{width:auto;cursor:pointer;background:var(--fg);color:var(--bg)}label{display:block;margin:10px 0 2px;color:var(--mut);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+.card{border:1px solid var(--line);border-radius:8px;padding:12px}.card h3{margin:0 0 4px;font-size:15px}
+.mut{color:var(--mut);font-size:13px}.err{color:var(--bad)}
+.row{display:grid;grid-template-columns:110px 1fr 48px;gap:8px;align-items:center;margin:3px 0;font-size:13px}
+.row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{background:var(--line);border-radius:3px;height:10px}.fill{background:var(--bar);height:10px;border-radius:3px}
+</style></head><body>
+<h1>Jev decision models — local demo</h1>
+<h2>Benchmark runs</h2>
+<div style="overflow-x:auto"><table id="res"><thead></thead><tbody></tbody></table></div>
+
+<h2>Compare live</h2>
+<div id="be" class="mut"></div>
+<label>Preset</label><select id="preset"></select>
+<label>State</label><textarea id="state" rows="3"></textarea>
+<label>Question type</label><select id="type"><option>choice</option><option>score</option><option>noul</option></select>
+<label>Instructions</label><input id="instr">
+<label>Options / levels (one per line; choice may use "label: description")</label><textarea id="crit" rows="4"></textarea>
+<p><button id="go">Ask all</button></p>
+<div class="grid" id="out"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const PRESETS=[
+ {n:"Tone (choice)",state:"I was charged twice. Please help ASAP.",type:"choice",instr:"What is the tone?",crit:"calm\nangry: hostile\nneutral"},
+ {n:"Urgency (score)",state:"I was charged twice. Please help ASAP.",type:"score",instr:"How urgent is this?",crit:"low\nmedium\nhigh"},
+ {n:"Billing? (noul)",state:"I was charged twice. Please help ASAP.",type:"noul",instr:"Is this about billing?",crit:""}];
+PRESETS.forEach((p,i)=>$("preset").add(new Option(p.n,i)));
+function load(i){const p=PRESETS[i];$("state").value=p.state;$("type").value=p.type;$("instr").value=p.instr;$("crit").value=p.crit}
+$("preset").onchange=e=>load(e.target.value);load(0);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+
+fetch("/api/results").then(r=>r.json()).then(rs=>{
+ const fams=[...new Set(rs.flatMap(r=>Object.keys(r.families)))].sort();
+ const h=$("res").tHead.insertRow();["run","n","accuracy","ECE","schema",...fams].forEach(t=>h.appendChild(el("th",0,t)));
+ rs.forEach(r=>{const tr=$("res").tBodies[0].insertRow();
+  [r.run,r.n,(r.accuracy*100).toFixed(1)+"%",r.ece?.toFixed(3)??"-",(r.schema_validity*100).toFixed(0)+"%",...fams.map(f=>r.families[f]==null?"-":(r.families[f]*100).toFixed(0)+"%")]
+  .forEach(v=>tr.insertCell().textContent=v)});
+ if(!rs.length)$("res").after(el("p","mut","No runs in data/bench yet."))});
+fetch("/api/backends").then(r=>r.json()).then(b=>{$("be").textContent=Object.entries(b).map(([n,c])=>`${n}: ${c.url}${c.has_key?"":" (no key)"}`).join("  ·  ")});
+
+function question(){
+ const q={type:$("type").value,instructions:$("instr").value},lines=$("crit").value.split("\n").map(s=>s.trim()).filter(Boolean);
+ if(q.type==="choice"){q.criteria={};lines.forEach(l=>{const i=l.indexOf(":");q.criteria[i<0?l:l.slice(0,i).trim()]=i<0?null:l.slice(i+1).trim()})}
+ if(q.type==="score")q.criteria=lines;
+ return q}
+function bars(card,probs){Object.entries(probs).forEach(([k,v])=>{
+ const r=el("div","row");r.append(el("span",0,k));const t=el("div","track"),f=el("div","fill");f.style.width=(v*100)+"%";t.append(f);r.append(t,el("span",0,(v*100).toFixed(0)+"%"));card.append(r)})}
+$("go").onclick=async()=>{
+ $("out").replaceChildren(el("p","mut","Asking…"));
+ let res;try{res=await (await fetch("/api/compare",{method:"POST",body:JSON.stringify({state:$("state").value,question:question()})})).json()}
+ catch(e){return $("out").replaceChildren(el("p","err",String(e)))}
+ if(!Array.isArray(res))return $("out").replaceChildren(el("p","err",res.error||"error"));
+ $("out").replaceChildren(...res.map(r=>{const c=el("div","card");c.append(el("h3",0,r.backend));
+  if(r.error){c.append(el("div","err",r.error));return c}
+  const a=r.answer||{};c.append(el("div","mut",`${r.model||""} · ${r.latency_ms} ms`));
+  if(a.type==="noul")bars(c,{yes:a.noul,no:1-a.noul});
+  else{c.append(el("div",0,"→ "+(a.choice??a.score)));if(a.probabilities)bars(c,a.probabilities)}
+  return c}))};
+</script></body></html>

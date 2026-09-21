@@ -1,0 +1,39 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Nested repos (each has its own git history)
+/kev/
+/jeff/
+/jevbench/
+
+# Weights, caches, service logs
+/data/
+/logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
