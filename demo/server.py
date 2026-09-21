@@ -18,7 +18,9 @@ HERE = Path(__file__).parent
 BENCH = Path(os.environ.get("BENCH_DIR", HERE.parent / "data" / "bench"))
 BACKENDS = {
     "jeff": {"url": os.environ.get("JEFF_URL", "http://127.0.0.1:8000"), "key": os.environ.get("JEFF_API_KEYS", "devkey").split(",")[0]},
-    "kev": {"url": os.environ.get("KEV_URL", "http://127.0.0.1:8009"), "key": ""},
+    "kev-0.5b": {"url": os.environ.get("KEV05_URL", "http://127.0.0.1:8009"), "key": ""},
+    "kev-0.8b": {"url": os.environ.get("KEV08_URL", "http://127.0.0.1:8011"), "key": ""},
+    "kev-4b": {"url": os.environ.get("KEV4_URL", "http://127.0.0.1:8010"), "key": ""},
     "jev (typesafe)": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": os.environ.get("TYPESAFE_API_KEY", "")},
 }
 
@@ -47,7 +49,7 @@ def results():
     for p in sorted(BENCH.glob("*/summary.json")):
         s = json.loads(p.read_text())
         out.append({"run": p.parent.name, "accuracy": s["accuracy"], "ece": (s.get("ece") or {}).get("ece"),
-                    "schema_validity": s["schema_validity"], "n": s["n_planned"],
+                    "schema_validity": s["schema_validity"], "n": s["n_planned"], "p50_s": (s.get("latency") or {}).get("p50_s"),
                     "families": {k: v["accuracy"] for k, v in s["per_family"].items()}})
     return out
 
