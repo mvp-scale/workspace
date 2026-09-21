@@ -35,23 +35,36 @@ def call(name, cfg, body):
     t0 = time.perf_counter()
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
-            data, status = json.load(r), r.status
+            data, status, resp_headers = json.load(r), r.status, dict(r.headers.items())
     except urllib.error.HTTPError as e:
         return {"backend": name, "error": f"HTTP {e.code}: {e.read()[:200].decode('utf-8', 'replace')}"}
     except Exception as e:  # connection refused, timeout, bad JSON
         return {"backend": name, "error": f"{type(e).__name__}: {e}"}
+    answer = (data.get("answers") or {}).get("decision") or {}
     return {"backend": name, "status": status, "latency_ms": round((time.perf_counter() - t0) * 1000),
-            "model": data.get("model"), "answer": (data.get("answers") or {}).get("decision")}
+            "model": data.get("model"), "answer": answer, "extras": extras(data, answer, resp_headers)}
 
 
-def results():
-    out = []
-    for p in sorted(BENCH.glob("*/summary.json")):
-        s = json.loads(p.read_text())
-        out.append({"run": p.parent.name, "accuracy": s["accuracy"], "ece": (s.get("ece") or {}).get("ece"),
-                    "schema_validity": s["schema_validity"], "n": s["n_planned"], "p50_s": (s.get("latency") or {}).get("p50_s"),
-                    "families": {k: v["accuracy"] for k, v in s["per_family"].items()}})
+COMPARABLE_ANSWER_KEYS = {"type", "choice", "score", "noul", "confidence", "probabilities", "legend"}
+
+
+def flatten(d, prefix=""):
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            out.update(flatten(v, f"{prefix}{k}."))
+        else:
+            out[f"{prefix}{k}"] = v
     return out
+
+
+def extras(data, answer, headers):
+    """Everything a backend returned beyond the comparable answer, kept verbatim and grouped by where it came from."""
+    return {
+        "response": flatten({k: v for k, v in data.items() if k not in ("answers", "model")}),
+        "headers": {k.lower(): v for k, v in headers.items() if k.lower().startswith("x-")},
+        "answer": {k: v for k, v in answer.items() if k not in COMPARABLE_ANSWER_KEYS},
+    }
 
 
 def leaderboard():

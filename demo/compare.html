@@ -4,26 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Live compare · Jev Bench Console</title>
-<meta name="description" content="Send one typed decision to every running backend at once and compare the answers, confidence and latency side by side.">
+<meta name="description" content="Send one question to every running decision model and compare their answers side by side.">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
 <style>
-  [hidden] { display: none !important; }
-  .field .error { font-size: 13px; color: var(--bad); }
-  .field [aria-invalid="true"] { border-color: var(--bad); }
-  .answer { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; overflow-wrap: anywhere; }
-  .prob { display: grid; grid-template-columns: minmax(64px, 34%) 1fr; gap: 4px 12px; align-items: center; font-size: 13px; }
-  .prob .meter { min-width: 0; }
-  .prob-label { overflow-wrap: anywhere; color: var(--text-2); }
-  .facts { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--text-2); }
-  .facts strong { color: var(--text); font-variant-numeric: tabular-nums; }
-  .card-head { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; align-items: flex-start; }
-  .status-item { display: flex; align-items: baseline; gap: 2px; flex-wrap: wrap; }
-  .recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-  .recent li { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-  .recent .what { flex: 1; min-width: 200px; overflow-wrap: anywhere; }
-  details pre { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); color: var(--text-2); text-align: left; }
-  details summary { cursor: pointer; font-size: 13px; color: var(--text-2); }
+  /* Layout the shared CSS lacks. Colours come from shared tokens only. */
+  .workbench { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 12px; align-items: start; }
+  .qpane { position: sticky; top: 54px; max-height: calc(100vh - 66px); overflow-y: auto; display: grid; gap: 10px; }
+  .qpane textarea { min-height: 0; }
+  .field-error { color: var(--bad); font-size: 12px; margin: 0; }
+  [aria-invalid="true"] { border-color: var(--bad); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .summary { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; color: var(--text-2); }
+  .summary strong { color: var(--text); font-weight: 600; }
+  table.cmp { table-layout: fixed; min-width: 640px; }
+  table.cmp th, table.cmp td { white-space: normal; vertical-align: top; overflow-wrap: anywhere; }
+  table.cmp thead th { position: static; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text); vertical-align: bottom; }
+  table.cmp th[scope="row"] { width: 132px; color: var(--text-2); font-weight: 500; font-size: 12px; background: var(--surface); position: sticky; left: 0; z-index: 1; }
+  table.cmp tr.group th { background: var(--surface-2); color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; position: static; }
+  table.cmp td.top { background: var(--accent-soft); } table.cmp td.top .meter-val { font-weight: 700; color: var(--text); }
+  table.cmp .meter { min-width: 0; } table.cmp .meter-track { min-width: 30px; }
+  table.cmp .answer { font-weight: 650; font-size: 14px; }
+  table.cmp .placeholder { color: var(--text-3); }
+  .col-head { display: flex; align-items: baseline; gap: 2px; flex-wrap: wrap; } .col-sub { display: block; font-weight: 400; font-size: 11px; color: var(--text-3); }
+  .extras dl { margin: 0 0 6px; font-size: 11.5px; } .extras dl > div { display: flex; flex-wrap: wrap; column-gap: 8px; } .extras dt { color: var(--text-3); } .extras dd { margin: 0; flex: 1 1 60px; font-family: var(--mono); overflow-wrap: anywhere; }
+  .extras h5 { margin: 6px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 600; }
+  .extras pre { margin: 0; white-space: pre-wrap; font-size: 11px; }
+  .recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .recent li { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .recent .what { min-width: 0; } .recent .what div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  details.recent-box summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
+  @media (max-width: 980px) { .workbench { grid-template-columns: minmax(0, 1fr); } .qpane { position: static; max-height: none; } }
 </style>
 </head>
 <body>
@@ -31,98 +41,55 @@
   <div class="page-head">
     <div>
       <h1>Live compare</h1>
-      <p>Send the same decision to every running backend at once and see where they agree, how sure each one is, and how long each took. Press Ctrl+Enter (Cmd+Enter on Mac) to run.</p>
-    </div>
-    <div class="actions">
-      <button class="btn" id="share" type="button">Copy share link</button>
-      <button class="btn" id="copy-json" type="button" disabled>Copy results JSON</button>
-      <button class="btn" id="download-json" type="button" disabled>Download JSON</button>
+      <p>One question, sent to every running model at once. The table compares what all of them return; anything else a model sends back is kept separately, under model-specific data. Ctrl+Enter or Cmd+Enter runs.</p>
     </div>
   </div>
 
-  <section class="section" aria-labelledby="status-h" style="margin-top:0">
-    <header>
-      <div><h2 id="status-h">Backends</h2><p class="small">A backend that is down does not block the others.</p></div>
-      <button class="btn" id="recheck" type="button">Recheck</button>
-    </header>
-    <div class="card" id="status" aria-busy="true"></div>
-    <div class="callout" style="margin-top:16px">
-      <strong>Four benchmarked models are not here.</strong> SemIf, open-alternative-jev, Laya and Verdict only run in-process for the benchmark, so they cannot answer live. See <a href="/models">how each model works</a> and the <a href="/">leaderboard</a> for their results.
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="editor-h">
-    <header>
-      <div><h2 id="editor-h">Question</h2><p class="small">Pick a scenario or write your own. Everything is editable.</p></div>
+  <div class="workbench">
+    <form class="card qpane" id="form" novalidate aria-label="Question">
       <div class="row">
-        <div class="field" style="min-width:220px">
-          <label for="preset">Scenario</label>
-          <select id="preset"></select>
-        </div>
-        <button class="btn" id="reset" type="button">Reset to preset</button>
+        <div class="field" style="flex:1"><label for="preset">Scenario</label><select id="preset"></select></div>
+        <button class="btn ghost" id="reset" type="button" style="align-self:flex-end">Reset</button>
       </div>
-    </header>
-    <form class="card" id="form" novalidate>
-      <div class="grid cols-2">
-        <div class="field">
-          <label for="state">State (the situation to decide on)</label>
-          <textarea id="state" rows="10" aria-describedby="err-state" spellcheck="true"></textarea>
-          <p class="error" id="err-state" hidden></p>
-        </div>
-        <div class="stack">
-          <div class="field">
-            <label id="type-l">Question type</label>
-            <div class="segmented" role="group" aria-labelledby="type-l" id="type"></div>
-            <p class="hint" id="type-hint"></p>
-          </div>
-          <div class="field">
-            <label for="instructions">Instructions (what to decide)</label>
-            <textarea id="instructions" rows="3" aria-describedby="err-instructions"></textarea>
-            <p class="error" id="err-instructions" hidden></p>
-          </div>
-          <div class="field" id="options-field">
-            <label for="options" id="options-l">Options</label>
-            <textarea id="options" rows="6" aria-describedby="options-hint err-options"></textarea>
-            <p class="hint" id="options-hint"></p>
-            <p class="error" id="err-options" hidden></p>
-          </div>
-        </div>
-      </div>
-      <div class="row" style="margin-top:16px">
-        <button class="btn primary" id="run" type="submit">Run on all backends</button>
-        <span class="small subtle" id="run-note">Ctrl+Enter or Cmd+Enter also runs.</span>
-      </div>
+      <div class="field"><label for="state">State: the situation to decide on</label><textarea id="state" rows="5"></textarea><p class="field-error" id="err-state" hidden></p></div>
+      <div class="field"><span class="small" style="font-weight:500;color:var(--text-2)" id="type-l">Question type</span>
+        <div class="segmented" id="type" role="group" aria-labelledby="type-l">
+          <button type="button" data-type="choice">Choice</button><button type="button" data-type="score">Score</button><button type="button" data-type="noul">Yes / no</button>
+        </div><span class="hint" id="type-hint"></span></div>
+      <div class="field"><label for="instructions">Instructions: what to decide</label><textarea id="instructions" rows="2"></textarea><p class="field-error" id="err-instructions" hidden></p></div>
+      <div class="field" id="options-field"><label for="options" id="options-l">Options</label><textarea id="options" rows="5"></textarea><span class="hint" id="options-hint"></span><p class="field-error" id="err-options" hidden></p></div>
+      <div class="row"><button class="btn primary" id="run" type="submit">Run on all models</button><span class="small subtle" id="run-note"></span></div>
+      <details class="recent-box"><summary>Recent runs <span class="subtle" id="recent-count"></span></summary><div style="margin-top:8px" id="recent"></div>
+        <div style="margin-top:8px"><button class="btn ghost" id="clear-recent" type="button">Clear</button></div></details>
     </form>
-  </section>
 
-  <section class="section" aria-labelledby="results-h">
-    <header><div><h2 id="results-h" tabindex="-1">Results</h2><p class="small">One card per backend. Answers are compared on the top answer only.</p></div></header>
-    <div id="results" aria-live="polite"></div>
-  </section>
-
-  <section class="section" aria-labelledby="recent-h">
-    <header><div><h2 id="recent-h">Recent runs</h2><p class="small">Kept for this browser tab only.</p></div>
-      <button class="btn" id="clear-recent" type="button">Clear</button></header>
-    <div id="recent"></div>
-  </section>
+    <section aria-labelledby="res-h">
+      <div class="toolbar">
+        <h2 id="res-h">Results</h2>
+        <div class="actions">
+          <button class="btn" id="toggle-extras" type="button" aria-pressed="false" disabled>Model-specific data</button>
+          <button class="btn" id="share" type="button">Copy share link</button>
+          <button class="btn" id="copy-json" type="button" disabled>Copy JSON</button>
+          <button class="btn" id="download-json" type="button" disabled>Download JSON</button>
+          <button class="btn ghost" id="recheck" type="button">Recheck status</button>
+        </div>
+      </div>
+      <div id="banner"></div>
+      <div class="summary small" id="summary" aria-live="polite"><span class="subtle">Run a question to compare the models.</span></div>
+      <div class="table-wrap" style="margin-top:8px" id="matrix" aria-busy="false"></div>
+      <p class="small subtle" style="margin-top:8px">SemIf, open-alternative-jev, Laya and Verdict run in-process for the benchmark only, so they aren't here. See <a href="/">the leaderboard</a> and <a href="/models">how they work</a>.</p>
+    </section>
+  </div>
 </main>
 
 <script>
-const { el, fmt, api, toast, copy, download, empty, failure, meter } = Jev;
+const { el, fmt, api, toast, copy, download, empty, meter } = Jev;
 const $ = (id) => document.getElementById(id);
-const FALLBACK_BACKENDS = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "jev (typesafe)"];
-const TYPES = { choice: "Choice", score: "Score", noul: "Yes / no (noul)" };
-const TYPE_HINT = {
-  choice: "Pick exactly one of your options.",
-  score: "Place the situation on an ordered scale.",
-  noul: "A single 0 to 1 value for a yes/no question. No options needed.",
-};
-const OPTIONS_HELP = {
-  choice: ["Options", "One per line. Use “label: description” to explain an option to the model."],
-  score: ["Levels", "One per line, lowest first. Each line is the full level text."],
-};
-const STORE_KEY = "jev-compare-recent";
-const MAX_RECENT = 8;
+const FALLBACK = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "jev (typesafe)"];
+const TYPES = { choice: "Choice", score: "Score", noul: "Yes / no" };
+const TYPE_HINT = { choice: "Pick exactly one option.", score: "Place it on an ordered scale.", noul: "A single 0 to 1 value. No options needed." };
+const OPTIONS_HELP = { choice: ["Options", "One per line. “label: description” explains an option."], score: ["Levels", "One per line, lowest first."] };
+const STORE_KEY = "jev-compare-recent", MAX_RECENT = 8, CUSTOM = "custom";
 
 const PRESETS = [
   { id: "triage", label: "Support triage: billing complaint", t: "choice",
@@ -130,7 +97,7 @@ const PRESETS = [
     i: "What should the support team do first with this ticket?",
     o: "refund: refund the duplicate charge and apologise\nescalate: hand to a billing specialist or team lead now\nreply: send a standard reply asking for more details\nclose: close the ticket as resolved" },
   { id: "policy", label: "Content policy: user post", t: "choice",
-    s: "A user posted in a public cooking forum: \"Anyone who uses margarine instead of butter is an idiot and shouldn't be allowed in a kitchen. Also, DM me for my discount code, I get paid per signup.\"\nThe post has 3 reports. The account is 2 weeks old and has 40 posts, 35 of them containing referral links.",
+    s: "A user posted in a public cooking forum: \"Anyone who uses margarine instead of butter is an idiot and shouldn't be allowed in a kitchen. Also, DM me for my discount code, I get paid per signup.\"\nThe post has 3 reports. The account is 2 weeks old and has no prior warnings.",
     i: "What moderation action fits this post best?",
     o: "allow: leave the post up\nremove: remove the post and warn the user\nlimit: remove the referral content and limit the account\nban: ban the account" },
   { id: "routing", label: "Routing: inbound message intent", t: "choice",
@@ -139,49 +106,37 @@ const PRESETS = [
     o: "billing: invoices, prices, discounts\ntechnical: product bugs and feature access\nsales: plans, upgrades and quotes\naccount: login, seats and permissions" },
   { id: "urgency", label: "Ordinal score: incident urgency", t: "score",
     s: "Monitoring alert: the checkout API error rate rose from 0.2% to 6% over 15 minutes. It affects about 1 in 16 payment attempts. Latency is normal. No customer reports yet. It is 02:10 local time on a Tuesday.",
-    i: "How urgent is this incident?",
-    o: "Informational\nLow\nModerate\nHigh\nCritical" },
+    i: "How urgent is this incident?", o: "Informational\nLow\nModerate\nHigh\nCritical" },
   { id: "yesno", label: "Yes / no: cancellation request", t: "noul",
     s: "Customer message: \"I've been thinking about whether the Team plan is worth it for us. We use it a few times a month. What would happen to our saved reports if we ever stopped paying?\"",
-    i: "Is the customer asking to cancel their subscription right now?",
-    o: "" },
+    i: "Is the customer asking to cancel their subscription right now?", o: "" },
 ];
-const CUSTOM = "custom";
 
-let status = null, backendInfo = null, running = false, last = null, lastPreset = PRESETS[0].id, showErrors = false;
+let status = null, backendInfo = null, running = false, last = null, showErrors = false, showExtras = false, type = "choice";
 
 /* ---------- storage (always optional) ---------- */
 const store = {
   read() { try { const v = JSON.parse(sessionStorage.getItem(STORE_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } },
-  write(list) { try { sessionStorage.setItem(STORE_KEY, JSON.stringify(list)); return true; } catch { return false; } },
+  write(list) { try { sessionStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch { /* recent runs are a convenience */ } },
 };
 
 /* ---------- form ---------- */
-let type = "choice";
 const readForm = () => ({ s: $("state").value, t: type, i: $("instructions").value, o: $("options").value });
-function writeForm(f) {
-  $("state").value = f.s; $("instructions").value = f.i; $("options").value = f.o; setType(f.t);
-}
+const writeForm = (f) => { $("state").value = f.s; $("instructions").value = f.i; $("options").value = f.o; setType(f.t); };
 const sameForm = (a, b) => a.s === b.s && a.t === b.t && a.i === b.i && (a.t === "noul" || a.o === b.o);
 const lines = (text) => text.split("\n").map(l => l.trim()).filter(Boolean);
-
 function setType(t) {
   type = t;
-  [...$("type").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.type === t));
-  $("type-hint").textContent = TYPE_HINT[t];
-  $("options-field").hidden = t === "noul";
+  [...$("type").children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.type === t)));
+  $("type-hint").textContent = TYPE_HINT[t]; $("options-field").hidden = t === "noul";
   if (t !== "noul") { $("options-l").textContent = OPTIONS_HELP[t][0]; $("options-hint").textContent = OPTIONS_HELP[t][1]; }
 }
-
-/* Builds the question sent to the server, or the validation errors. */
 function buildQuestion(f) {
-  const errors = {}, state = f.s.trim(), instructions = f.i.trim();
+  const errors = {}, state = f.s.trim(), instructions = f.i.trim(), question = { type: f.t, instructions };
   if (!state) errors.state = "Add the situation to decide on.";
   if (!instructions) errors.instructions = "Add instructions that say what to decide.";
-  const question = { type: f.t, instructions };
   if (f.t === "choice") {
-    const items = lines(f.o).map(l => { const k = l.indexOf(":"); return k === -1 ? [l, ""] : [l.slice(0, k).trim(), l.slice(k + 1).trim()]; });
-    const labels = items.map(x => x[0]);
+    const items = lines(f.o).map(l => { const k = l.indexOf(":"); return k === -1 ? [l, ""] : [l.slice(0, k).trim(), l.slice(k + 1).trim()]; }), labels = items.map(x => x[0]);
     if (items.length < 2) errors.options = "Add at least 2 options, one per line.";
     else if (labels.some(l => !l)) errors.options = "Every option needs a label before the colon.";
     else if (new Set(labels).size !== labels.length) errors.options = "Option labels must be different from each other.";
@@ -194,255 +149,179 @@ function buildQuestion(f) {
   }
   return { state, question, errors };
 }
-
 function showFieldErrors(errors) {
   for (const k of ["state", "instructions", "options"]) {
     const p = $("err-" + k), input = $(k), msg = showErrors ? errors[k] : null;
-    p.hidden = !msg; p.textContent = msg || "";
-    if (msg) input.setAttribute("aria-invalid", "true"); else input.removeAttribute("aria-invalid");
+    p.hidden = !msg; p.textContent = msg || ""; if (msg) input.setAttribute("aria-invalid", "true"); else input.removeAttribute("aria-invalid");
   }
 }
-
-function syncPreset() {
-  const f = readForm(), p = PRESETS.find(x => x.id === $("preset").value);
-  if (!p || !sameForm(f, p)) $("preset").value = CUSTOM; else lastPreset = p.id;
-}
-function onEdit() { showFieldErrors(buildQuestion(readForm()).errors); syncPreset(); }
-
-function applyPreset(id) {
-  const p = PRESETS.find(x => x.id === id);
-  if (!p) return;
-  lastPreset = id; $("preset").value = id; writeForm(p); showErrors = false; showFieldErrors({});
-}
+function syncPreset() { const p = PRESETS.find(x => x.id === $("preset").value); if (!p || !sameForm(readForm(), p)) $("preset").value = CUSTOM; }
+const onEdit = () => { showFieldErrors(buildQuestion(readForm()).errors); syncPreset(); };
+function applyPreset(id) { const p = PRESETS.find(x => x.id === id); if (!p) return; $("preset").value = id; writeForm(p); showErrors = false; showFieldErrors({}); }
 
 /* ---------- share link ---------- */
-const encodeHash = (f) => "#q=" + encodeURIComponent(JSON.stringify({ s: f.s, t: f.t, i: f.i, o: f.o }));
+const encodeHash = (f) => "#q=" + encodeURIComponent(JSON.stringify(f));
 function decodeHash() {
-  const m = /^#q=(.+)$/.exec(location.hash);
-  if (!m) return null;
-  try {
-    const v = JSON.parse(decodeURIComponent(m[1]));
-    if (v && typeof v.s === "string" && typeof v.i === "string" && typeof v.o === "string" && Object.hasOwn(TYPES, v.t)) return { s: v.s, t: v.t, i: v.i, o: v.o };
-  } catch { /* fall through to presets */ }
+  const m = /^#q=(.+)$/.exec(location.hash); if (!m) return null;
+  try { const v = JSON.parse(decodeURIComponent(m[1])); if (v && typeof v.s === "string" && typeof v.i === "string" && typeof v.o === "string" && Object.hasOwn(TYPES, v.t)) return { s: v.s, t: v.t, i: v.i, o: v.o }; } catch { /* fall back to a preset */ }
   return null;
 }
-function pushHash() { try { history.replaceState(null, "", encodeHash(readForm())); } catch { /* the address bar stays unchanged */ } }
+const pushHash = () => { try { history.replaceState(null, "", encodeHash(readForm())); } catch { /* address bar stays as is */ } };
 
-/* ---------- backend status ---------- */
-const backendNames = () => status ? Object.keys(status) : FALLBACK_BACKENDS;
-function renderStatus() {
-  const root = $("status");
-  root.removeAttribute("aria-busy");
-  if (!status) { root.replaceChildren(failure(new Error("Could not check the backends. You can still run a comparison."), loadStatus)); return; }
-  root.replaceChildren(el("div", { class: "grid cols-4" }, Object.entries(status).map(([name, s]) =>
-    el("div", { class: "status-item" },
-      el("span", { class: `dot ${s.up ? "up" : "down"}`, "aria-hidden": "true" }),
-      el("span", {}, el("span", { class: "model-name", text: name }), " ",
-        el("span", { class: "small muted", text: s.up ? "ready" : `unavailable: ${s.reason || "no reason given"}` }))))));
-}
-async function loadStatus() {
-  const root = $("status");
-  root.setAttribute("aria-busy", "true"); root.replaceChildren(Jev.skeleton(1));
-  try { status = await api("/api/status"); } catch { status = null; }
-  renderStatus();
-}
-async function loadBackends() {
-  try { backendInfo = await api("/api/backends"); } catch { backendInfo = null; }
-}
+/* ---------- backends ---------- */
+const names = () => status ? Object.keys(status) : FALLBACK;
+async function loadStatus() { try { status = await api("/api/status"); } catch { status = null; } renderMatrix(); }
+async function loadBackends() { try { backendInfo = await api("/api/backends"); } catch { backendInfo = null; } }
 
 /* ---------- normalising real responses ---------- */
 function plainError(raw) {
   const m = String(raw || "");
-  if (/not set|no api key/i.test(m)) return "No API key is configured on the server for this backend.";
-  if (/HTTP 401|HTTP 403/.test(m)) return "The server's credentials were not accepted by this backend.";
-  if (/HTTP 422|HTTP 400/.test(m)) return "This backend did not accept the question. Check the options and instructions.";
-  if (/HTTP 429/.test(m)) return "This backend is rate limiting requests. Try again in a moment.";
-  if (/HTTP 5\d\d/.test(m)) return "This backend hit an internal error.";
-  if (/timed out|timeout/i.test(m)) return "This backend did not answer in time.";
-  if (/refused|unreachable|URLError|resolution|reset/i.test(m)) return "This backend is not reachable right now.";
-  return "This backend could not answer.";
+  if (/not set|no api key/i.test(m)) return "No API key is configured on the server.";
+  if (/HTTP 401|HTTP 403/.test(m)) return "The server's credentials were not accepted.";
+  if (/HTTP 422|HTTP 400/.test(m)) return "Did not accept the question. Check the options and instructions.";
+  if (/HTTP 429/.test(m)) return "Rate limited. Try again in a moment.";
+  if (/HTTP 5\d\d/.test(m)) return "Hit an internal error.";
+  if (/timed out|timeout/i.test(m)) return "Did not answer in time.";
+  if (/refused|unreachable|URLError|resolution|reset/i.test(m)) return "Not reachable right now.";
+  return "Could not answer.";
 }
-const probEntries = (a, q) => {
+function probEntries(a, q) {
   const p = a.probabilities && typeof a.probabilities === "object" ? a.probabilities : {};
-  if (q.type === "score") {
-    const legend = a.legend || {};
-    return Object.keys(p).sort((x, y) => Number(x) - Number(y)).map(k => ({ label: legend[k] ?? q.criteria[Number(k)] ?? `Level ${k}`, p: Number(p[k]) }));
-  }
-  const order = Object.keys(q.criteria || {});
-  const keys = Object.keys(p).sort((x, y) => (order.indexOf(x) + 1 || 999) - (order.indexOf(y) + 1 || 999));
-  return keys.map(k => ({ label: k, p: Number(p[k]) }));
-};
+  if (q.type === "score") { const legend = a.legend || {}; return Object.keys(p).sort((x, y) => Number(x) - Number(y)).map(k => ({ label: legend[k] ?? q.criteria[Number(k)] ?? `Level ${k}`, p: Number(p[k]) })); }
+  return Object.keys(p).map(k => ({ label: k, p: Number(p[k]) }));
+}
 function normalise(r, q) {
-  const base = { backend: r.backend };
+  const base = { backend: r.backend, extras: r.extras || null };
   const down = status && status[r.backend] && !status[r.backend].up ? status[r.backend].reason : null;
-  if (r.error || !r.answer) {
-    return { ...base, ok: false, error: down ? `Unavailable: ${down}.` : plainError(r.error), detail: r.error || "The backend returned no answer." };
-  }
+  if (r.error || !r.answer) return { ...base, ok: false, error: down ? `Unavailable: ${down}.` : plainError(r.error), detail: r.error || "The backend returned no answer." };
   const a = r.answer, out = { ...base, ok: true, model: r.model || null, latency: r.latency_ms ?? null, confidence: typeof a.confidence === "number" ? a.confidence : null };
-  if (q.type === "noul") {
-    const v = Number(a.noul);
-    return { ...out, noul: v, top: v >= 0.5 ? "at or above 0.5" : "below 0.5", heading: `Noul value ${fmt.num(v, 2)}`, probs: [] };
-  }
+  if (q.type === "noul") { const v = Number(a.noul); return { ...out, noul: v, top: v >= 0.5 ? "≥ 0.5" : "< 0.5", probs: [] }; }
   const probs = probEntries(a, q), best = probs.reduce((m, x) => (m == null || x.p > m.p ? x : m), null);
-  if (q.type === "choice") return { ...out, top: a.choice ?? best?.label ?? "No answer", heading: a.choice ?? best?.label ?? "No answer", probs };
-  return { ...out, top: best?.label ?? "No answer", heading: best?.label ?? "No answer", score: typeof a.score === "number" ? a.score : null, probs };
+  return { ...out, top: (q.type === "choice" ? a.choice : null) ?? best?.label ?? "No answer", probs };
 }
-
-/* ---------- summary ---------- */
 function summarise(rows) {
-  const ok = rows.filter(r => r.ok);
-  if (!ok.length) return null;
-  const groups = new Map();
-  ok.forEach(r => groups.set(r.top, (groups.get(r.top) || 0) + 1));
-  const sorted = [...groups.entries()].sort((a, b) => b[1] - a[1]);
-  const majority = sorted.length === 1 || sorted[0][1] > sorted[1][1] ? sorted[0] : null;
+  const ok = rows.filter(r => r.ok); if (!ok.length) return null;
+  const groups = new Map(); ok.forEach(r => groups.set(r.top, (groups.get(r.top) || 0) + 1));
+  const sorted = [...groups.entries()].sort((a, b) => b[1] - a[1]), majority = sorted.length === 1 || sorted[0][1] > sorted[1][1] ? sorted[0] : null;
   const timed = ok.filter(r => r.latency != null), sure = ok.filter(r => r.confidence != null);
-  return {
-    total: ok.length, majority, sorted,
+  return { total: ok.length, majority, sorted,
     fastest: timed.length ? timed.reduce((a, b) => (b.latency < a.latency ? b : a)) : null,
-    surest: sure.length ? sure.reduce((a, b) => (b.confidence > a.confidence ? b : a)) : null,
-  };
+    surest: sure.length ? sure.reduce((a, b) => (b.confidence > a.confidence ? b : a)) : null };
 }
-const agreeText = (s) => s.majority ? `${s.majority[1]} of ${s.total} agree` : "No majority";
-const agreeNote = (s) => s.majority ? `on “${s.majority[0]}”` : s.sorted.map(([k, n]) => `${k} (${n})`).join(", ");
+const agreeText = (s) => s.majority ? `${s.majority[1]} of ${s.total} agree on “${s.majority[0]}”` : `No majority: ${s.sorted.map(([k, n]) => `${k} (${n})`).join(", ")}`;
 
-/* ---------- rendering results ---------- */
-function skeletonCards() {
-  return el("div", { class: "grid cols-3", "aria-hidden": "true" }, backendNames().map(n =>
-    el("div", { class: "card stack" }, el("h3", { text: n }), el("div", { class: "skeleton", style: "height:28px" }), el("div", { class: "skeleton", style: "height:8px" }),
-      el("div", { class: "skeleton", style: "height:8px" }), el("div", { class: "skeleton", style: "height:8px" }))));
+/* ---------- the comparison matrix ---------- */
+const PH = () => el("span", { class: "placeholder", text: "–" });
+function extrasCell(r, name) {
+  if (!r) return PH();
+  if (!r.ok) return el("div", { class: "extras" }, el("h5", { text: "Technical detail" }), el("pre", { text: r.detail }));
+  const groups = [["Reported model id", r.model ? { model: r.model } : null], ["Response fields", r.extras?.response], ["Response headers", r.extras?.headers], ["Extra answer fields", r.extras?.answer]]
+    .filter(([, o]) => o && Object.keys(o).length);
+  return el("div", { class: "extras" }, groups.length ? groups.map(([h, o]) => [el("h5", { text: h }), el("dl", {}, Object.entries(o).map(([k, v]) => el("div", {}, el("dt", { text: k }), el("dd", { text: String(v) }))))]) : el("span", { class: "subtle small", text: "Nothing extra returned." }),
+    el("button", { class: "btn ghost", type: "button", onclick: () => copyCurl(name), text: "Copy curl" }));
 }
+function renderMatrix(phase) {
+  phase = phase || (running ? "running" : last && last.rows ? "done" : "idle");
+  const cols = names(), by = last && last.rows ? Object.fromEntries(last.rows.map(r => [r.backend, r])) : {}, q = last && last.question, sum = last && last.rows ? summarise(last.rows) : null;
+  const fill = (fn) => cols.map(n => fn(by[n], n));
+  const skel = () => el("div", { class: "skeleton", style: "height:14px" });
+  const cell = (r, fn, cls) => el("td", { class: cls }, phase === "running" ? skel() : (r ? fn(r) : PH()));
+  const row = (label, fn, cls) => el("tr", {}, el("th", { scope: "row", text: label }), fill((r, n) => cell(r, fn, typeof cls === "function" ? cls(r) : cls)));
+  const group = (label) => el("tr", { class: "group" }, el("th", { scope: "colgroup", colspan: cols.length + 1, text: label }));
+  const failed = (r, fn) => r.ok ? fn(r) : el("span", { class: "small subtle", text: "–" });
+  const body = [group("Comparable: every model returns these")];
 
-function probList(r) {
-  return el("div", { class: "prob" }, r.probs.flatMap(x => [
-    el("span", { class: "prob-label", text: x.label === r.top ? `${x.label} (top)` : x.label }),
-    meter(x.p, `${x.label}: ${fmt.pct(x.p)}`)]));
-}
-
-function card(r, sum) {
-  if (!r.ok) {
-    return el("div", { class: "card stack", role: "group", "aria-label": `${r.backend}, no answer` },
-      el("div", { class: "card-head" }, el("h3", { text: r.backend }), el("span", { class: "badge bad", text: "No answer" })),
-      el("p", { text: r.error }),
-      el("details", {}, el("summary", { text: "Technical detail" }), el("pre", { text: r.detail })));
+  body.push(el("tr", {}, el("th", { scope: "row", text: "Top answer" }), fill((r) => el("td", {}, phase === "running" ? skel() : !r ? PH() : !r.ok
+    ? el("div", {}, el("span", { class: "badge bad", text: "No answer" }), el("div", { class: "small muted", style: "margin-top:4px", text: r.error }))
+    : el("div", {}, el("span", { class: "answer", text: r.top }), sum && sum.majority && sum.total > 1 ? el("div", { style: "margin-top:3px" }, el("span", { class: `badge ${r.top === sum.majority[0] ? "good" : "warn"}`, text: r.top === sum.majority[0] ? "Agrees" : "Differs" })) : null)))));
+  if (q && q.type === "noul") body.push(row("Noul value (0 to 1)", r => failed(r, x => meter(x.noul, `Noul value ${fmt.num(x.noul, 2)}`))));
+  else {
+    body.push(row("Confidence", r => failed(r, x => x.confidence == null ? el("span", { class: "small subtle", text: "not reported" }) : meter(x.confidence, `Confidence ${fmt.pct(x.confidence)}`))));
+    const labels = q ? (q.type === "choice" ? Object.keys(q.criteria) : q.criteria) : [];
+    labels.forEach(l => body.push(row(l, r => failed(r, x => { const e = x.probs.find(p => p.label === l); return e ? meter(e.p, `${l}: ${fmt.pct(e.p)}`) : PH(); }), r => r && r.ok && r.top === l ? "top" : "")));
   }
-  const badge = sum.majority && sum.total > 1
-    ? el("span", { class: r.top === sum.majority[0] ? "badge good" : "badge warn", text: r.top === sum.majority[0] ? "Agrees with majority" : "Differs from majority" }) : null;
-  const q = last.question;
-  return el("div", { class: "card stack", role: "group", "aria-label": `${r.backend} result` },
-    el("div", { class: "card-head" }, el("div", {}, el("h3", { text: r.backend }), el("div", { class: "model-sub", text: r.model || "model not reported" })), badge),
-    el("div", { class: "answer", text: r.heading }),
-    q.type === "noul"
-      ? el("div", {}, el("div", { class: "small muted", text: "Noul value (0 to 1)" }), meter(r.noul, `Noul value ${fmt.num(r.noul, 2)}`))
-      : el("div", {}, el("div", { class: "small muted", text: "Confidence" }), r.confidence == null ? el("p", { class: "small", text: "Not reported" }) : meter(r.confidence, `Confidence ${fmt.pct(r.confidence)}`)),
-    r.probs.length ? el("div", {}, el("div", { class: "small muted", text: "Probability by option" }), probList(r)) : null,
-    el("div", { class: "facts" },
-      el("span", {}, "Latency ", el("strong", { text: fmt.ms(r.latency == null ? null : r.latency / 1000) })),
-      r.score != null ? el("span", {}, "Score ", el("strong", { text: fmt.num(r.score, 2) }), ` on a 0 to ${q.criteria.length - 1} scale`) : null),
-    el("div", {}, el("button", { class: "btn", type: "button", onclick: () => copyCurl(r.backend), text: "Copy curl" })));
-}
-
-function renderResults() {
-  const rows = last.rows, sum = summarise(rows), q = last.question;
-  const node = el("div", { class: "stack" });
-  if (sum) {
-    const kpi = (label, value, note) => el("div", { class: "card kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), el("div", { class: "note", text: note }));
-    node.append(el("div", { class: "grid cols-3" },
-      kpi("Agreement", agreeText(sum), agreeNote(sum)),
-      kpi("Fastest", sum.fastest ? sum.fastest.backend : "–", sum.fastest ? fmt.ms(sum.fastest.latency / 1000) : "No timings reported"),
-      kpi("Most confident", sum.surest ? sum.surest.backend : "–", sum.surest ? `${fmt.pct(sum.surest.confidence, 0)} confidence` : (q.type === "noul" ? "Noul questions report no confidence" : "No confidence reported"))));
-  } else {
-    node.append(el("div", { class: "callout bad", role: "alert" }, el("strong", { text: "No backend answered. " }), "Check the backend status above, then run again."));
+  body.push(row("Latency", r => failed(r, x => el("span", {}, fmt.ms(x.latency == null ? null : x.latency / 1000), sum && sum.fastest === x ? el("span", { class: "badge accent", style: "margin-left:6px", text: "fastest" }) : null))));
+  if (showExtras) {
+    body.push(group("Model-specific: names and meaning differ per model, so these are not comparable"));
+    body.push(el("tr", {}, el("th", { scope: "row", text: "As returned" }), fill((r, n) => el("td", { class: "extras" }, phase === "running" ? skel() : extrasCell(r, n)))));
   }
-  const failed = rows.filter(r => !r.ok).length;
-  if (sum && failed) node.append(el("div", { class: "callout warn" }, el("strong", { text: `${failed} of ${rows.length} backends did not answer. ` }), "The summary uses the others."));
-  node.append(el("div", { class: "grid cols-3" }, rows.map(r => card(r, sum || {}))));
-  $("results").replaceChildren(node);
+  const table = el("table", { class: "data cmp" }, el("caption", { class: "sr-only", text: "Comparison of every model's answer to the same question" }),
+    el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "" }), cols.map(n => { const s = status && status[n]; return el("th", { scope: "col" },
+      el("span", { class: "col-head" }, el("span", { class: `dot ${s ? (s.up ? "up" : "down") : ""}`, "aria-hidden": "true" }), el("span", { class: "model-name", text: n })),
+      el("span", { class: "col-sub", text: s && !s.up ? `unavailable: ${s.reason || "unknown"}` : (by[n] && by[n].model) || (s ? "ready" : "") })); }))),
+    el("tbody", {}, body));
+  $("matrix").replaceChildren(table); $("matrix").setAttribute("aria-busy", String(phase === "running"));
+  $("toggle-extras").disabled = !(last && last.rows);
+}
+function renderSummary() {
+  const s = last && last.rows ? summarise(last.rows) : null, box = $("summary");
+  if (!last || !last.rows) { box.replaceChildren(el("span", { class: "subtle", text: "Run a question to compare the models." })); return; }
+  if (!s) { box.replaceChildren(el("span", { class: "badge bad", text: "No model answered" }), " Check the status dots above each column, then run again."); return; }
+  const failed = last.rows.filter(r => !r.ok).length;
+  box.replaceChildren(...[el("strong", { text: agreeText(s) }), s.fastest ? el("span", {}, "Fastest ", el("strong", { text: s.fastest.backend }), ` ${fmt.ms(s.fastest.latency / 1000)}`) : null,
+    s.surest ? el("span", {}, "Most confident ", el("strong", { text: s.surest.backend }), ` ${fmt.pct(s.surest.confidence, 0)}`) : null,
+    failed ? el("span", { class: "badge warn", text: `${failed} of ${last.rows.length} did not answer` }) : null].filter(Boolean));
 }
 
 /* ---------- actions ---------- */
 const exportJson = () => JSON.stringify({ state: last.state, question: last.question, results: last.raw }, null, 2);
 const shq = (s) => `'${String(s).replace(/'/g, "'\\''")}'`;
 function copyCurl(name) {
-  const info = backendInfo && backendInfo[name];
-  if (!info) { toast("This backend's address is not available."); return; }
+  const info = backendInfo && backendInfo[name]; if (!info) { toast("This model's address is not available."); return; }
   const body = { state: last.state, model: "jev-latest", questions: { decision: last.question } };
-  copy([`curl -sS -X POST ${shq(info.url.replace(/\/$/, "") + "/v1/systemone")} \\`, "  -H 'Content-Type: application/json' \\",
-    "  -H \"Authorization: Bearer $API_KEY\" \\", `  -d ${shq(JSON.stringify(body))}`].join("\n"));
+  copy([`curl -sS -X POST ${shq(info.url.replace(/\/$/, "") + "/v1/systemone")} \\`, "  -H 'Content-Type: application/json' \\", "  -H \"Authorization: Bearer $API_KEY\" \\", `  -d ${shq(JSON.stringify(body))}`].join("\n"));
 }
-
-/* ---------- recent runs ---------- */
 function renderRecent() {
   const list = store.read(), root = $("recent");
-  $("clear-recent").disabled = !list.length;
-  if (!list.length) { root.replaceChildren(empty("No runs yet", "Runs you make in this tab appear here so you can load them again.")); return; }
-  root.replaceChildren(el("ul", { class: "recent" }, list.map(x => el("li", {},
-    el("div", { class: "what" }, el("div", { class: "model-name", text: x.title }), el("div", { class: "small muted", text: `${x.at} · ${x.summary}` })),
+  $("clear-recent").disabled = !list.length; $("recent-count").textContent = list.length ? `(${list.length})` : "";
+  if (!list.length) { root.replaceChildren(el("p", { class: "small subtle", text: "Runs you make in this tab appear here." })); return; }
+  root.replaceChildren(el("ul", { class: "recent" }, list.map(x => el("li", {}, el("div", { class: "what" }, el("div", { class: "model-name", text: x.title }), el("div", { class: "small muted", text: `${x.at} · ${x.summary}` })),
     el("button", { class: "btn", type: "button", "aria-label": `Load run: ${x.title}`, onclick: () => { writeForm(x.form); showErrors = false; syncPreset(); showFieldErrors({}); pushHash(); $("state").focus(); }, text: "Load" })))));
 }
 function remember(form, sum) {
-  const title = form.i.trim().slice(0, 90) || "Untitled question";
-  const summary = sum ? `${TYPES[form.t]} · ${agreeText(sum).toLowerCase()} ${agreeNote(sum)}` : `${TYPES[form.t]} · no backend answered`;
-  const list = [{ title, summary, at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), form }, ...store.read().filter(x => !(x && x.form && sameForm(x.form, form)))].slice(0, MAX_RECENT);
-  store.write(list); renderRecent();
+  const title = form.i.trim().slice(0, 90) || "Untitled question", summary = sum ? `${TYPES[form.t]} · ${agreeText(sum)}` : `${TYPES[form.t]} · no model answered`;
+  store.write([{ title, summary, at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), form }, ...store.read().filter(x => !(x && x.form && sameForm(x.form, form)))].slice(0, MAX_RECENT)); renderRecent();
 }
-
-/* ---------- run ---------- */
 function setRunning(on) {
-  running = on;
-  $("run").disabled = on; $("run").textContent = on ? "Running…" : "Run on all backends";
-  $("run-note").textContent = on ? "Waiting for every backend to answer." : "Ctrl+Enter or Cmd+Enter also runs.";
-  $("results").setAttribute("aria-busy", on);
+  running = on; $("run").disabled = on; $("run").textContent = on ? "Running…" : "Run on all models";
+  $("run-note").textContent = on ? "Waiting for every model." : "Ctrl+Enter also runs.";
 }
 function setExports(on) { $("copy-json").disabled = !on; $("download-json").disabled = !on; }
 
 async function run() {
   if (running) return;
-  const form = readForm(), { state, question, errors } = buildQuestion(form);
-  showErrors = true; showFieldErrors(errors);
-  const bad = ["state", "instructions", "options"].find(k => errors[k]);
-  if (bad) { $(bad).focus(); return; }
-  pushHash(); setRunning(true); setExports(false);
-  $("results").replaceChildren(skeletonCards());
+  const f = readForm(), { state, question, errors } = buildQuestion(f);
+  if (Object.keys(errors).length) { showErrors = true; showFieldErrors(errors); const first = ["state", "instructions", "options"].find(k => errors[k]); if (first) $(first).focus(); return; }
+  showErrors = false; showFieldErrors({}); $("banner").replaceChildren(); pushHash(); setRunning(true);
+  last = { state, question, rows: null, raw: null }; renderMatrix("running"); setExports(false);
   try {
     const raw = await api("/api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state, question }) });
-    const rows = raw.map(r => normalise(r, question));
-    last = { form, state, question, raw, rows };
-    renderResults(); setExports(true); remember(form, summarise(rows));
+    if (!Array.isArray(raw)) throw new Error("The server sent an unexpected response.");
+    last.raw = raw; last.rows = raw.map(r => normalise(r, question));
+    remember(f, summarise(last.rows)); setExports(true);
   } catch (e) {
-    last = null;
-    $("results").replaceChildren(failure(e, run));
-  } finally {
-    setRunning(false); $("results-h").focus();
-  }
+    last = null; $("banner").replaceChildren(el("div", { class: "callout bad", role: "alert" }, el("strong", { text: "The comparison could not run. " }), e.message, " ", el("button", { class: "btn", type: "button", onclick: run, text: "Try again" })));
+  } finally { setRunning(false); renderMatrix(); renderSummary(); }
 }
 
-/* ---------- wiring ---------- */
-PRESETS.forEach(p => $("preset").append(el("option", { value: p.id, text: p.label })));
-$("preset").append(el("option", { value: CUSTOM, text: "Custom: write your own" }));
-Object.entries(TYPES).forEach(([k, label]) => $("type").append(el("button", { type: "button", "data-type": k, "aria-pressed": "false", text: label,
-  onclick: () => { setType(k); onEdit(); } })));
-$("preset").addEventListener("change", (e) => { if (e.target.value === CUSTOM) { $("state").focus(); } else applyPreset(e.target.value); });
-$("reset").addEventListener("click", () => { applyPreset(lastPreset); toast("Reset to the preset"); });
-["state", "instructions", "options"].forEach(k => $(k).addEventListener("input", onEdit));
+/* ---------- init ---------- */
+$("preset").replaceChildren(...PRESETS.map(p => el("option", { value: p.id, text: p.label })), el("option", { value: CUSTOM, text: "Custom" }));
+$("preset").onchange = (e) => { if (e.target.value !== CUSTOM) applyPreset(e.target.value); };
+$("reset").onclick = () => { const p = PRESETS.find(x => x.id === $("preset").value) || PRESETS[0]; applyPreset(p.id); };
+[...$("type").children].forEach(b => b.onclick = () => { setType(b.dataset.type); onEdit(); });
+["state", "instructions", "options"].forEach(id => $(id).addEventListener("input", onEdit));
 $("form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
-document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); } });
-$("share").addEventListener("click", () => { pushHash(); copy(location.href); });
-$("copy-json").addEventListener("click", () => last && copy(exportJson()));
-$("download-json").addEventListener("click", () => last && download("jev-live-compare.json", exportJson(), "application/json"));
-$("recheck").addEventListener("click", loadStatus);
-$("clear-recent").addEventListener("click", () => { store.write([]); renderRecent(); toast("Recent runs cleared"); });
+$("form").addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); } });
+$("toggle-extras").onclick = () => { showExtras = !showExtras; $("toggle-extras").setAttribute("aria-pressed", String(showExtras)); renderMatrix(); };
+$("share").onclick = () => { pushHash(); copy(location.href); };
+$("copy-json").onclick = () => last && last.raw && copy(exportJson());
+$("download-json").onclick = () => last && last.raw && download("jev-compare.json", exportJson(), "application/json");
+$("recheck").onclick = async () => { $("recheck").disabled = true; await loadStatus(); $("recheck").disabled = false; toast("Status updated"); };
+$("clear-recent").onclick = () => { store.write([]); renderRecent(); };
 
-const shared = decodeHash();
-if (shared) {
-  writeForm(shared);
-  const match = PRESETS.find(p => sameForm(shared, p));
-  $("preset").value = match ? match.id : CUSTOM; if (match) lastPreset = match.id;
-} else applyPreset(PRESETS[0].id);
-syncPreset();
-renderRecent();
-$("results").replaceChildren(empty("No results yet", "Run the question to see every backend's answer side by side."));
-loadStatus(); loadBackends();
+const initial = decodeHash();
+if (initial) { writeForm(initial); $("preset").value = CUSTOM; syncPreset(); } else applyPreset(PRESETS[0].id);
+setRunning(false); renderRecent(); renderMatrix("idle"); loadStatus(); loadBackends();
 </script>
 </body>
 </html>

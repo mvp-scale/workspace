@@ -4,255 +4,300 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How they work · Jev Bench Console</title>
-<meta name="description" content="How each typed decision model turns a state and a question into a probability for every option, and how it performed in our benchmark.">
+<meta name="description" content="How typed decision models turn text into probabilities, built up from the fundamentals to each model's secret sauce.">
 <link rel="stylesheet" href="/static/app.css">
-<style>
-  /* Layout the shared CSS lacks: pipeline diagram, benchmark rows, fact lists. Colours come from shared tokens only. */
-  .model { scroll-margin-top: 72px; }
-  .model + .model { margin-top: 48px; }
-  .model[hidden], .jump a[hidden] { display: none; }
-  .model > header h2 { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
-  .model > header h2 .vendor { font-size: 14px; font-weight: 500; color: var(--text-3); }
-  .jump { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; }
-  .toolbar { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
-  table.data.fam-table th, table.data.fam-table td { white-space: normal; vertical-align: top; min-width: 0; }
-  table.data.fam-table td:first-child { min-width: 140px; }
-  .bullets { margin: 0; padding-left: 20px; }
-  .bullets li + li { margin-top: 6px; }
-  .flow { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
-  .flow li { display: flex; align-items: center; gap: 8px; flex: 1 1 140px; min-width: 0; }
-  .flow .node { flex: 1; min-width: 0; align-self: stretch; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13px; overflow-wrap: anywhere; }
-  .flow .node strong { display: block; font-weight: 600; }
-  .flow .node span { display: block; color: var(--text-3); font-size: 12px; margin-top: 2px; }
-  .flow .node.opaque { border-style: dashed; }
-  .flow .node.out { border-color: var(--accent); background: var(--accent-soft); }
-  .flow .arrow { color: var(--text-3); flex: none; }
-  .flow li:last-child .arrow { display: none; }
-  .bench { display: grid; grid-template-columns: minmax(84px, auto) 1fr; gap: 10px 16px; align-items: center; }
-  .bench .meter { min-width: 0; }
-  .facts { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 6px 16px; margin: 0; }
-  .facts dt { color: var(--text-3); font-size: 13px; }
-  .facts dd { margin: 0; overflow-wrap: anywhere; }
-  .stats { display: flex; flex-wrap: wrap; gap: 8px 32px; }
-  .stats dt { color: var(--text-3); font-size: 13px; }
-  .stats dd { margin: 0; font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
-  @media (max-width: 640px) {
-    .flow { flex-direction: column; }
-    .flow li { flex-direction: column; align-items: stretch; flex-basis: auto; }
-    .flow .arrow { align-self: center; transform: rotate(90deg); }
-    .bench, .facts { grid-template-columns: 1fr; gap: 4px; }
-    .bench .label { margin-top: 8px; }
-  }
-  @media print {
-    .jump, .toolbar .segmented { display: none; }
-    .model { break-inside: avoid; }
-  }
-</style>
 <script src="/static/app.js"></script>
+<style>
+  /* Layout and diagram styling the shared CSS lacks. Colours come from shared tokens only. */
+  .dg { display: block; width: 100%; max-height: 210px; }
+  .dg text { font-family: var(--font); }
+  .dg .t { fill: var(--text); font-size: 11.5px; } .dg .s { fill: var(--text-3); font-size: 10px; } .dg .m { font-family: var(--mono); }
+  .dg .b { font-weight: 600; } .dg .a { fill: var(--accent); }
+  .dg rect.box { fill: var(--surface); stroke: var(--border-strong); } .dg rect.hl { fill: var(--accent-soft); stroke: var(--accent); } .dg rect.soft { fill: var(--surface-2); stroke: var(--border); }
+  .dg .bar { fill: var(--accent); } .dg .bar.mut { fill: var(--border-strong); }
+  .dg .ar { stroke: var(--text-3); fill: none; stroke-width: 1.2; } .dg .arc { stroke: var(--accent); fill: none; stroke-width: 1; opacity: .55; } .dg .ah { fill: var(--text-3); }
+  .dg .cell { fill: var(--accent); } .dg .cell.g { fill: var(--good); } .dg .cell.w { fill: var(--warn); } .dg .cell.off { fill: var(--surface-2); }
+  .scroll-x { overflow-x: auto; } .scroll-x .dg { min-width: 720px; }
+  .defs { position: absolute; width: 0; height: 0; }
+  .steps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); }
+  .step h3 { display: flex; gap: 8px; align-items: baseline; } .step .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .step p { color: var(--text-2); margin-top: 4px; } .step .dg { margin-top: 8px; }
+  .sauce { display: grid; gap: 14px 20px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+  .sauce + .sauce { margin-top: 10px; } .sauce h3 { font-size: 15px; } .sauce .lead { color: var(--text-2); margin-top: 4px; }
+  .facts-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; } .facts-list li { color: var(--text-2); } .facts-list b { color: var(--text); font-weight: 600; }
+  .used { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--text-2); }
+  .diagrams { display: grid; gap: 8px; }
+  .cards { display: grid; align-items: start; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); }
+  .model[hidden], .jump a[hidden] { display: none; }
+  .model { display: flex; flex-direction: column; gap: 8px; }
+  .model h3 { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; font-size: 14.5px; } .model h3 .vendor { font-size: 12px; font-weight: 500; color: var(--text-3); }
+  .model .tags { display: flex; flex-wrap: wrap; gap: 4px; } .model .sauce-line { color: var(--text); }
+  .flow { list-style: none; margin: 0; padding: 0; display: flex; align-items: stretch; gap: 4px; }
+  .flow li { display: flex; align-items: center; gap: 4px; flex: 1 1 0; min-width: 0; }
+  .flow .node { flex: 1; min-width: 0; align-self: stretch; padding: 4px 7px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 11.5px; line-height: 1.3; overflow-wrap: anywhere; }
+  .flow .node.out { background: var(--accent-soft); border-color: var(--accent); } .flow .node strong { display: block; font-weight: 600; } .flow .node span { color: var(--text-3); }
+  .flow .arrow { color: var(--text-3); }
+  .bench { display: grid; gap: 3px; } .bench .r { display: grid; grid-template-columns: 62px 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--text-2); }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); } .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+  details.more { border-top: 1px solid var(--border); padding-top: 6px; } details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
+  details.more ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-2); } details.more li + li { margin-top: 3px; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; font-size: 12px; } .facts dt { color: var(--text-3); } .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .jump { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 8px 0 10px; font-size: 12.5px; }
+  table.data.fam td, table.data.fam th { white-space: normal; vertical-align: top; }
+  @media (max-width: 860px) { .sauce { grid-template-columns: 1fr; } .flow { flex-wrap: wrap; } }
+</style>
 </head>
 <body>
 <main class="page">
   <div class="page-head">
     <div>
       <h1>How they work</h1>
-      <p>Nine typed decision models, and what each one does between receiving a decision and returning probabilities. Everything here comes from each model's own repository or model card. Where a fact is not published, we say so instead of guessing.</p>
+      <p>Nine models, four techniques. This page starts from what a typed decision model is, builds up the handful of ideas every one of them relies on, and then shows the trick that sets each family apart. Diagram numbers are illustrative; model facts come from each model's own repository or card, and where something isn't published we say so.</p>
     </div>
-    <div class="actions">
-      <button class="btn" id="print" type="button">Print</button>
-    </div>
+    <div class="actions"><button class="btn" id="print" type="button">Print</button></div>
   </div>
 
-  <section class="section" aria-labelledby="what-h" style="margin-top:0">
-    <header><div><h2 id="what-h">What a typed decision model is</h2></div></header>
-    <p class="muted" style="max-width:80ch">A typed decision model takes a piece of state and a typed question with a fixed set of options, and returns a probability for every option. It never writes prose: the answer is the distribution itself, so software can act on it, threshold it, or check how well calibrated it is.</p>
-    <div class="callout" style="margin-top:16px">
-      <strong>Three question types.</strong> In the TypeSafe <code>/v1/systemone</code> format a question is one of <code>choice</code> (pick one of several options), <code>score</code> (the options are points on a scale) or <code>noul</code> (a yes or no question, answered as the probability of yes). Every model below is called with the same three types.
-    </div>
+  <section class="section" style="margin-top:0" aria-labelledby="big-h">
+    <header><div><h2 id="big-h">The big picture</h2><p class="small">A decision model reads a situation and a question with fixed options, and returns a probability for every option. It never writes prose, so software can act on the numbers directly.</p></div></header>
+    <div class="card scroll-x" id="hero"></div>
+    <div class="grid cols-3" style="margin-top:10px" id="parts"></div>
   </section>
 
-  <section class="section" aria-labelledby="fam-h">
-    <header>
-      <div><h2 id="fam-h">Four architecture families</h2><p class="small">Grouped from each model's fact sheet. No family generates text.</p></div>
-    </header>
-    <div id="families"></div>
+  <section class="section" aria-labelledby="steps-h">
+    <header><div><h2 id="steps-h">Six ideas that every model shares</h2><p class="small">Read these once and the rest of the page is variations on step 4.</p></div></header>
+    <div class="steps" id="steps"></div>
   </section>
 
-  <section class="section" aria-labelledby="models-h">
+  <section class="section" aria-labelledby="sauce-h">
+    <header><div><h2 id="sauce-h">The secret sauce: four ways to read out an answer</h2><p class="small">The models differ mainly in what reads the text and how the vectors become option scores (step 4).</p></div></header>
+    <div id="sauces"></div>
+  </section>
+
+  <section class="section" aria-labelledby="res-h">
+    <header><div><h2 id="res-h">What each technique did in our runs</h2><p class="small">Computed from the benchmark results. With only a few models per technique and 48 to 111 decisions per tier, this describes our runs; it does not prove the technique causes the result.</p></div></header>
+    <div id="famtable"></div>
+  </section>
+
+  <section class="section" aria-labelledby="mm-h">
     <header>
-      <div><h2 id="models-h">Model by model</h2><p class="small">Ordered by mean accuracy in our benchmark, best first.</p></div>
+      <div><h2 id="mm-h">Model by model</h2><p class="small">Ordered by mean accuracy in our benchmark, best first.</p></div>
+      <div class="segmented" role="group" aria-label="Filter by technique" id="filter"></div>
     </header>
-    <div id="models"></div>
+    <nav class="jump" id="jump" aria-label="Jump to a model"></nav>
+    <div class="cards" id="cards"></div>
   </section>
 </main>
 
 <script>
-const { el, fmt, mount, load, meter, empty } = Jev;
-const TIERS = ["easy", "original", "hard"];
+const { el, fmt, mount, load, meter } = Jev;
 
-/* Families are defined by what the fact sheet says; membership and size are derived per model. */
-const hasLora = (m) => /lora/i.test(m.base || "");
-const FAMILIES = [
-  { key: "hosted", label: "Hosted API", group: "hosted", test: (m) => /hosted/i.test(m.kind),
-    reads: "A hosted model behind an HTTPS endpoint. Its internals are not published.",
-    scores: "The endpoint returns a probability for every option.",
-    generates: "Not documented. The response is probabilities, not prose.",
-    node: { reader: ["Hosted model", "Internals not published"], readout: null } },
-  { key: "logits", label: "Decoder LLM read via logits", group: "decoder", test: (m) => /decoder/i.test(m.kind) && !hasLora(m),
-    reads: "A frozen decoder-only LLM, used as a classifier.",
-    scores: "Each option gets an answer letter. One forward pass, then a softmax over the logits of the declared letters.",
-    generates: "None.",
-    node: { reader: ["Decoder LLM, frozen", "One forward pass"], readout: "Logits of the answer letters, softmax" } },
-  { key: "pointer", label: "Decoder LLM with LoRA and pointer head", group: "decoder", test: (m) => /decoder/i.test(m.kind) && hasLora(m),
-    reads: "A LoRA-tuned causal LM, run prefill-only.",
-    scores: "A learned pointer head reads hidden states at option-boundary tokens and scores each option.",
-    generates: "None.",
-    node: { reader: ["LoRA-tuned decoder", "Prefill only"], readout: "Pointer head at option-boundary tokens" } },
-  { key: "encoder", label: "Encoder classifier", group: "encoder", test: (m) => /encoder/i.test(m.kind),
-    reads: "An encoder reads the state, question and options together in one pass.",
-    scores: "A classification head over the options. Normalised sigmoids, or a softmax over option markers, depending on the model.",
-    generates: "None.",
-    node: { reader: ["Encoder", "One pass"], readout: "Classification head over the options" } },
+/* ---------- SVG helpers ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const S = (tag, attrs = {}, ...kids) => {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) if (v != null) n.setAttribute(k, v);
+  for (const k of kids.flat(Infinity)) if (k != null) n.append(k.nodeType ? k : document.createTextNode(k));
+  return n;
+};
+const svg = (w, h, label, ...kids) => S("svg", { viewBox: `0 0 ${w} ${h}`, class: "dg", role: "img", "aria-label": label }, ...kids);
+const txt = (x, y, t, cls = "t", anchor = "start") => S("text", { x, y, class: cls, "text-anchor": anchor }, t);
+const box = (x, y, w, h, cls = "") => S("rect", { x, y, width: w, height: h, rx: 4, class: `box ${cls}` });
+const arrow = (x1, y1, x2, y2) => S("path", { d: `M${x1} ${y1} L${x2} ${y2}`, class: "ar", "marker-end": "url(#ah)" });
+const chip = (x, y, w, t, cls = "soft") => S("g", {}, S("rect", { x, y, width: w, height: 22, rx: 4, class: `box ${cls}` }), txt(x + w / 2, y + 15, t, "t m", "middle"));
+const softmax = (v) => { const e = v.map(Math.exp), z = e.reduce((a, b) => a + b, 0); return e.map(x => x / z); };
+const RAW = [2.4, 1.7, 0.2], NAMES = ["refund", "escalate", "reply"], PROB = softmax(RAW);
+/* Rows of labelled horizontal bars. items: [{k, v, max, mut}] */
+const rows = (x, y, items, w, fv, step = 17) => S("g", {}, items.map((it, i) => [
+  txt(x, y + i * step + 10, it.k, "s"),
+  S("rect", { x: x + 54, y: y + i * step + 2, width: Math.max(1, w * it.v / it.max), height: 9, rx: 2, class: `bar${it.mut ? " mut" : ""}` }),
+  txt(x + 54 + w * it.v / it.max + 5, y + i * step + 10, fv(it.v), "s")]));
+const scoreRows = (x, y, w = 70) => rows(x, y, RAW.map((v, i) => ({ k: NAMES[i], v, max: 2.4 })), w, v => v.toFixed(1));
+const probRows = (x, y, w = 70) => rows(x, y, PROB.map((v, i) => ({ k: NAMES[i], v, max: 1 })), w, v => Math.round(v * 100) + "%");
+const grid = (x, y, n, c, on, cls = () => "cell") => S("g", {}, Array.from({ length: n * n }, (_, i) => {
+  const r = Math.floor(i / n), k = i % n; return S("rect", { x: x + k * c, y: y + r * c, width: c - 1.5, height: c - 1.5, class: on(r, k) ? cls(r, k) : "cell off" }); }));
+const globalDefs = () => { const d = S("svg", { class: "defs", "aria-hidden": "true" }, S("defs", {}, S("marker", { id: "ah", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" }, S("path", { d: "M0 0 L10 5 L0 10 z", class: "ah" })))); document.body.prepend(d); };
+
+/* ---------- Diagrams ---------- */
+function dHero() {
+  return svg(1000, 130, "A state and a question with options go into a reader, which produces a score for each option, which become probabilities",
+    box(4, 6, 230, 52), txt(14, 26, "State", "t b"), txt(14, 46, "“I was charged twice. Please help ASAP.”", "s"),
+    box(4, 72, 230, 52), txt(14, 92, "Question + options", "t b"), txt(14, 112, "What should we do first?  refund · escalate · reply", "s"),
+    arrow(234, 32, 296, 60), arrow(234, 98, 296, 70),
+    box(298, 24, 200, 82, "hl"), txt(398, 52, "Reader", "t b", "middle"), txt(398, 72, "reads everything in one pass", "s", "middle"), txt(398, 88, "no text is written", "s", "middle"),
+    arrow(498, 65, 546, 65),
+    box(548, 18, 190, 94), txt(558, 36, "A score per option", "t b"), scoreRows(558, 46, 78),
+    arrow(738, 65, 776, 65),
+    box(778, 18, 218, 94, "hl"), txt(788, 36, "Probabilities, sum to 100%", "t b"), probRows(788, 46, 90));
+}
+function dTokens() {
+  const toks = ["I", "was", "charged", "twice", "."], ids = [40, 691, 12847, 9401, 13], w = [26, 40, 62, 50, 24]; let x = 6; const out = [];
+  toks.forEach((t, i) => { out.push(chip(x, 8, w[i], t), txt(x + w[i] / 2, 44, ids[i], "s m", "middle")); x += w[i] + 6; });
+  return svg(260, 74, "A sentence split into tokens, each with a number", out, txt(6, 66, "token → number (example ids)", "s"));
+}
+function dVectors() {
+  const cols = ["I", "was", "charged", "twice"], fills = [[.9, .2, .5, .1], [.3, .8, .2, .6], [.7, .6, .9, .2], [.2, .4, .7, .8]];
+  return svg(260, 92, "Each token becomes a column of numbers", cols.map((t, i) => [txt(30 + i * 60, 12, t, "s", "middle"),
+    fills[i].map((f, j) => S("rect", { x: 18 + i * 60, y: 20 + j * 14, width: 24, height: 12, rx: 2, class: "cell", opacity: 0.15 + f * 0.85 }))]), txt(130, 88, "one vector per token", "s", "middle"));
+}
+function dAttention() {
+  const n = 6, c = 13;
+  return svg(260, 108, "Two grids: a decoder token sees only earlier tokens, an encoder token sees all tokens",
+    txt(6, 10, "Decoder: sees the past", "s"), grid(6, 16, n, c, (r, k) => k <= r),
+    txt(140, 10, "Encoder: sees all", "s"), grid(140, 16, n, c, () => true),
+    txt(6, 104, "row = token reading, column = token it can see", "s"));
+}
+function dReadout() {
+  const on = [2, 4, 7], out = [];
+  for (let i = 0; i < 9; i++) out.push(S("rect", { x: 6 + i * 27, y: 8, width: 22, height: 22, rx: 3, class: on.includes(i) ? "box hl" : "box soft" }));
+  on.forEach((p, i) => out.push(arrow(17 + p * 27, 32, 70 + i * 60, 54)));
+  return svg(260, 108, "Selected vectors become one score per option", out, S("g", {}, on.map((_, i) => [S("rect", { x: 46 + i * 60, y: 56, width: 48, height: 12, rx: 2, class: "bar", opacity: 0.4 + i * 0.25 }), txt(70 + i * 60, 82, NAMES[i], "s", "middle")])),
+    txt(6, 102, "pick vectors → one score per option", "s"));
+}
+function dSoftmax() {
+  return svg(260, 92, "Scores are turned into probabilities that sum to one", txt(6, 12, "scores", "s"), scoreRows(6, 18, 40), txt(122, 12, "softmax", "s", "middle"), arrow(112, 44, 138, 44),
+    txt(146, 12, "probabilities", "s"), probRows(146, 18, 40), txt(6, 84, "p = eᵃ ÷ Σ eᵃ  (sums to 100%)", "s m"));
+}
+function dCalibration() {
+  const row = (y, name, says, right) => [txt(6, y + 8, name, "s"), S("rect", { x: 100, y, width: 130 * says, height: 8, rx: 2, class: "bar mut" }), S("rect", { x: 100, y: y + 11, width: 130 * right, height: 8, rx: 2, class: "bar" }), txt(236, y + 8, `says ${Math.round(says * 100)}%`, "s"), txt(236, y + 19, `right ${Math.round(right * 100)}%`, "s")];
+  return svg(300, 78, "A calibrated model is right as often as it says; an overconfident one is not", row(8, "Calibrated", .8, .8), row(42, "Overconfident", .8, .55), txt(6, 74, "grey = stated confidence, blue = actually right", "s"));
+}
+function dLogits() {
+  const chips = [["state …", 56], ["question …", 70], ["A refund", 62], ["B escalate", 74], ["C reply", 58], ["Answer:", 56]]; let x = 6; const out = [];
+  chips.forEach(([t, w], i) => { out.push(chip(x, 6, w, t, i >= 2 && i < 5 ? "hl" : "soft")); x += w + 6; });
+  const V = [["A", 2.4, 0], ["B", 1.7, 0], ["C", 0.2, 0], ["The", 1.2, 1], ["Yes", 0.6, 1], ["…", 0.4, 1]];
+  const bars = V.map((v, i) => [txt(28, 56 + i * 15 + 9, v[0], "s m", "end"), S("rect", { x: 34, y: 56 + i * 15 + 1, width: 34 * v[1], height: 9, rx: 2, class: v[2] ? "bar mut" : "bar" }), v[2] ? txt(34 + 34 * v[1] + 5, 56 + i * 15 + 9, "ignored", "s") : null]);
+  return svg(520, 150, "The model's next-word scores for the letters A, B and C are read and all other words are ignored", out,
+    arrow(345, 30, 345, 44), txt(352, 42, "next word, scored by the LLM", "s"), txt(6, 50, "its scores for each possible next word", "s"), bars,
+    arrow(190, 100, 250, 100), txt(220, 92, "keep A, B, C", "s", "middle"),
+    box(254, 78, 120, 62, "hl"), txt(262, 94, "softmax over A B C", "t b"), txt(262, 110, "62%  31%  7%", "s m"), txt(262, 126, "one forward pass", "s"),
+    txt(392, 100, "no training, no generation", "s"));
+}
+function dPointer() {
+  const chips = [["state …", 62], ["‹opt›", 44], ["refund", 56], ["‹opt›", 44], ["escalate", 68], ["‹opt›", 44], ["reply", 52]]; let x = 6; const xs = [], out = [];
+  chips.forEach(([t, w], i) => { const mark = t === "‹opt›"; out.push(chip(x, 6, w, t, mark ? "hl" : "soft")); if (mark) xs.push(x + w / 2); x += w + 6; });
+  return svg(520, 150, "A learned head reads the vectors at option boundary tokens and scores each option", out,
+    xs.map(px => arrow(px, 30, px, 66)), box(6, 68, 380, 30, "hl"), txt(196, 88, "pointer head (learned): a score at each boundary token", "t", "middle"),
+    xs.map(px => arrow(px, 98, px, 116)), S("g", {}, xs.map((px, i) => S("rect", { x: px - 22, y: 118, width: 44 * RAW[i] / 2.4, height: 10, rx: 2, class: "bar" }))),
+    txt(6, 144, "‹opt› marks where an option starts; LoRA adapters lightly tune the LLM", "s"), txt(396, 88, "highest score = answer", "s"));
+}
+function dMask() {
+  const n = 10, c = 12, blk = r => r < 4 ? 0 : r < 7 ? 1 : 2, on = (r, k) => k <= r && (k < 4 || blk(r) === blk(k));
+  const cls = (r, k) => k < 4 ? "cell" : blk(k) === 1 ? "cell g" : "cell w";
+  return svg(300, 140, "A block-causal mask lets two questions share the state but not see each other", grid(6, 6, n, c, on, cls),
+    S("rect", { x: 140, y: 12, width: 10, height: 10, class: "cell" }), txt(156, 21, "shared state", "s"),
+    S("rect", { x: 140, y: 30, width: 10, height: 10, class: "cell g" }), txt(156, 39, "question 1", "s"),
+    S("rect", { x: 140, y: 48, width: 10, height: 10, class: "cell w" }), txt(156, 57, "question 2", "s"),
+    txt(140, 84, "both read the state once;", "s"), txt(140, 98, "neither sees the other", "s"), txt(140, 112, "(attention-only backbones)", "s"));
+}
+function dEncoder() {
+  const chips = [["state …", 62], ["question", 62], ["‹m›", 34], ["refund", 56], ["‹m›", 34], ["escalate", 68], ["‹m›", 34], ["reply", 50]]; let x = 6; const out = [], cs = [];
+  chips.forEach(([t, w], i) => { out.push(chip(x, 40, w, t, t === "‹m›" ? "hl" : "soft")); cs.push(x + w / 2); x += w + 6; });
+  const arc = (a, b) => S("path", { d: `M${cs[a]} 40 Q${(cs[a] + cs[b]) / 2} ${40 - 6 * Math.abs(b - a) - 8} ${cs[b]} 40`, class: "arc" });
+  return svg(520, 150, "An encoder lets every token see every other, then a head scores the option markers", txt(6, 12, "every token sees every other, both directions", "s"),
+    [[0, 3], [1, 5], [2, 7], [3, 6], [0, 7], [4, 5]].map(([a, b]) => arc(a, b)), out,
+    [2, 4, 6].map(i => arrow(cs[i], 64, cs[i], 84)), box(6, 86, 380, 26), txt(196, 103, "encoder output at each marker → head → one score per option", "t", "middle"),
+    txt(6, 138, "‹m› = option marker · jeff: sigmoid + temperature 3.2 · Laya: softmax over markers", "s"));
+}
+
+/* ---------- Content ---------- */
+const short = (b) => (b || "").split(/ \+ | \(/)[0];
+const FAM = {
+  hosted: { name: "Hosted API", short: "Hosted", flow: m => [["State + question", "typed options"], ["Hosted model", "internals not published"], ["Probabilities", "one per option", 1]] },
+  logits: { name: "Read the LLM's letter scores", short: "Letter logits", flow: m => [["State + options", "lettered A, B, C"], ["Frozen LLM", short(m.base)], ["Letter scores", "next-word logits"], ["Probabilities", "softmax", 1]] },
+  pointer: { name: "Pointer head", short: "Pointer head", flow: m => [["State + options", "‹opt› marked"], ["LoRA-tuned LLM", short(m.base)], ["Pointer head", "learned"], ["Probabilities", "softmax", 1]] },
+  encoder: { name: "Encoder with option head", short: "Encoder", flow: m => [["State + options", "with markers"], ["Encoder", short(m.base)], ["Option head", "one score each"], ["Probabilities", "per option", 1]] },
+};
+const PARTS = [
+  ["The reader", "A neural network that turns text into vectors. Decoder LLMs read left to right; encoders read in both directions."],
+  ["The readout", "The step that turns the reader's vectors into one score per option. This is where each model's secret sauce lives."],
+  ["The calibration", "Whether the probabilities can be trusted: 70% should mean right about 70% of the time. It decides if you can set thresholds."],
 ];
-const familyOf = (m) => FAMILIES.find(f => f.test(m));
+const STEPS = [
+  ["Text becomes tokens", "Text is cut into tokens, small pieces of words, and each is mapped to a number the model can look up.", dTokens],
+  ["Tokens become vectors", "A transformer turns each token into a vector, a list of numbers that encodes what the token means in this context.", dVectors],
+  ["Attention decides who sees whom", "Attention lets a token look at others. Decoders may look only backwards; encoders look both ways. A mask can restrict this further.", dAttention],
+  ["A readout scores the options", "To answer, we pick particular vectors and turn each into one score per option. How this readout works is where the models differ.", dReadout],
+  ["Softmax makes probabilities", "Softmax turns the scores into probabilities that add up to 100%, so every option gets a share.", dSoftmax],
+  ["Calibration keeps them honest", "A model is calibrated when 70% confidence is right about 70% of the time. Expected calibration error (ECE) measures the gap; lower is better.", dCalibration],
+];
+const SAUCES = [
+  { fam: "logits", title: "1 · Read the model's own answer-letter scores", diagrams: [dLogits],
+    lead: "Give each option a letter and ask a large language model to answer. Instead of letting it write, look at the scores it assigns to the letters A, B and C as its next word, ignore every other word, and turn those three into probabilities.",
+    points: [["No training.", "The base model is frozen, so any capable LLM can become a decision model."], ["One pass.", "All options are scored together from a single forward pass; nothing is generated."], ["The catch.", "It is limited to what the frozen model already knows and is sensitive to option order: JevBench measured 21% versus 72% on answer-judging items for open-alternative-jev when the order was reversed."]] },
+  { fam: "pointer", title: "2 · Teach the model to point at the answer", diagrams: [dPointer, dMask],
+    lead: "Mark where each option starts with a boundary token. A small learned head reads the model's vectors at those tokens and scores each option, so the answer is a pointer into the input, not a word to generate. The LLM is lightly tuned with LoRA (small trainable adapter layers) and the head is trained with log loss on labelled decisions.",
+    points: [["Shared reading.", "On attention-only backbones a block-causal mask lets several questions share one copy of the state in one pass while stopping them seeing each other."], ["Hybrid backbones.", "kev 4B and 0.8B use Qwen3.5 hybrid (Gated DeltaNet) layers, which can't use that packed mask, so each question is read as its own row."], ["The catch.", "It needs labelled training data and a training run; the result depends on that recipe."]] },
+  { fam: "encoder", title: "3 · Read everything at once, in both directions", diagrams: [dEncoder],
+    lead: "An encoder isn't built to write text. Every token can attend to every other, so the state, the question and the options are read together. A head turns the vectors at option markers into one score per option.",
+    points: [["Small and cheap.", "These models are 151M to about 400M parameters here, against billions for the LLM-based approaches."], ["Same idea, different heads.", "jeff applies a sigmoid per option, scaled by a temperature of 3.2. Laya takes a softmax over its markers. Verdict adds an abstention slot that the benchmark drops."], ["The catch.", "Less world knowledge than a multi-billion-parameter LLM, and Laya truncates each question to 512 tokens."]] },
+  { fam: "hosted", title: "4 · Hosted: a black box with a known interface", diagrams: [],
+    lead: "TypeSafe's Jev is reached over an HTTPS API and its internals aren't published. We can describe only what it takes and returns: the state and typed questions go in, and a probability for every option comes out. It is priced per input token ($0.042 per million, output free, about 950 input tokens per decision in JevBench).",
+    points: [] },
+];
 
-const FILTERS = [["all", "All", () => true], ["hosted", "Hosted", (m) => familyOf(m)?.group === "hosted"],
-  ["decoder", "Decoder", (m) => familyOf(m)?.group === "decoder"], ["encoder", "Encoder", (m) => familyOf(m)?.group === "encoder"]];
+/* ---------- Data-driven pieces ---------- */
+const range = (vals, f) => { const v = vals.filter(x => x != null); if (!v.length) return "–"; const lo = Math.min(...v), hi = Math.max(...v); return lo === hi ? f(lo) : `${f(lo)} – ${f(hi)}`; };
+const famRows = (rows, fam) => rows.filter(r => r.info.family === fam);
+const usedBy = (rows, fam) => { const rs = famRows(rows, fam); if (!rs.length) return null;
+  return el("div", { class: "used" }, el("span", { text: "Used by" }), rs.map(r => el("a", { class: "badge", href: `#${r.id}`, text: r.info.name })),
+    el("span", { text: `· in our runs: ${range(rs.map(r => r.mean_accuracy), v => fmt.pct(v, 0))} mean accuracy, ${range(rs.map(r => r.tiers.hard?.p50_s), fmt.ms)} median` })); };
 
-/* "4B", "0.8B", "421M", "about 400M" -> millions, for ordering only. */
-const millions = (p) => { const m = /([\d.]+)\s*([BM])/i.exec(p || ""); return m ? parseFloat(m[1]) * (m[2].toUpperCase() === "B" ? 1000 : 1) : null; };
-function sizeRange(members) {
-  const sized = members.filter(m => millions(m.params) != null).sort((a, b) => millions(a.params) - millions(b.params));
-  if (!sized.length) return members.map(m => m.size_note).find(Boolean) || "Not published";
-  const lo = sized[0].params, hi = sized[sized.length - 1].params;
-  return lo === hi ? lo : `${lo} to ${hi}`;
+function sauces(d) {
+  return el("div", {}, SAUCES.map(s => el("article", { class: "card sauce" },
+    el("div", {}, el("h3", { text: s.title }), el("p", { class: "lead", text: s.lead }),
+      s.points.length ? el("ul", { class: "facts-list" }, s.points.map(([b, t]) => el("li", {}, el("b", { text: b + " " }), t))) : null, usedBy(d.rows, s.fam)),
+    s.diagrams.length ? el("div", { class: "diagrams" }, s.diagrams.map(f => f())) : null)));
 }
-
-function familyTable(models) {
-  const rows = FAMILIES.map(f => ({ f, members: models.filter(f.test) }));
-  if (!rows.some(r => r.members.length)) return empty("No models yet", "The model fact sheet is empty.");
-  const t = el("table", { class: "data fam-table" },
-    el("caption", { class: "sr-only", text: "Architecture families and how each scores options" }),
-    el("thead", {}, el("tr", {}, ["Family", "Models", "What reads the input", "How options are scored", "Text generated", "Size"].map(h => el("th", { scope: "col", text: h })))),
-    el("tbody", {}, rows.filter(r => r.members.length).map(({ f, members }) => el("tr", {},
-      el("th", { scope: "row", class: "model-name", text: f.label }),
-      el("td", {}, members.map((m, i) => [i ? ", " : null, el("a", { href: `#${m.id}`, text: m.name })])),
-      el("td", { text: f.reads }), el("td", { text: f.scores }), el("td", { text: f.generates }), el("td", { text: sizeRange(members) })))));
-  return el("div", { class: "table-wrap" }, t);
+function famTable(d) {
+  const head = ["Technique", "Models", "Mean accuracy", "Hard accuracy", "Hard ECE", "Median latency", "Parameters"];
+  return el("div", { class: "table-wrap" }, el("table", { class: "data fam" }, el("caption", { class: "sr-only", text: "Results by technique" }),
+    el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { scope: "col", class: i > 1 && i < 6 ? "num" : null, text: h })))),
+    el("tbody", {}, Object.entries(FAM).map(([k, f]) => { const rs = famRows(d.rows, k); if (!rs.length) return null;
+      return el("tr", {}, el("td", { class: "model-name", text: f.name }), el("td", { text: rs.map(r => r.info.name).join(", ") }),
+        el("td", { class: "num", text: range(rs.map(r => r.mean_accuracy), v => fmt.pct(v, 1)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.accuracy), v => fmt.pct(v, 1)) }),
+        el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.ece), v => fmt.num(v)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.p50_s), fmt.ms) }),
+        el("td", { text: [...new Set(rs.map(r => r.info.params).filter(Boolean))].join(", ") || "not published" })); }))));
 }
-
 function flow(m) {
-  const f = familyOf(m);
-  if (!f) return null;
-  const step = (cls, title, sub) => el("li", {}, el("div", { class: `node ${cls}`.trim() }, el("strong", { text: title }), sub ? el("span", { text: sub }) : null), el("span", { class: "arrow", "aria-hidden": "true", text: "→" }));
-  const [readerTitle, readerSub] = f.node.reader;
-  const nodes = [step("", "State + question", "Typed options")];
-  if (f.node.readout) {
-    nodes.push(step("", readerTitle, m.base || readerSub), step("", "Readout", f.node.readout));
-  } else {
-    nodes.push(step("opaque", readerTitle, m.interface || readerSub));
-  }
-  nodes.push(step("out", "Probabilities", "One per option, no text"));
-  return el("ol", { class: "flow", "aria-label": `Pipeline for ${m.name}` }, nodes);
+  const nodes = FAM[m.family].flow(m);
+  return el("ol", { class: "flow", "aria-label": "How input becomes probabilities" }, nodes.map(([t, s, out], i) => el("li", {},
+    el("div", { class: `node${out ? " out" : ""}` }, el("strong", { text: t }), s ? el("span", { text: s }) : null), i < nodes.length - 1 ? el("span", { class: "arrow", "aria-hidden": "true", text: "→" }) : null)));
+}
+function card(r, rank) {
+  const m = r.info, t = r.tiers, hard = t.hard || {};
+  const tier = (id, label) => el("div", { class: "r" }, el("span", { text: label }), t[id] ? meter(t[id].accuracy, `${label} accuracy ${fmt.pct(t[id].accuracy)}`) : el("span", { class: "subtle", text: "not run" }));
+  const facts = [["Licence", m.licence], ["Interface", m.interface], ["Base", m.base], ["Price", m.price], ["Published", m.public_score != null ? `JevBench v1.2 score ${m.public_score}, rank ${m.public_rank} (published by JevBench, not measured here)` : null]].filter(f => f[1]);
+  return el("article", { class: "card model", id: m.id },
+    el("h3", {}, m.name, el("span", { class: "vendor", text: m.vendor })),
+    el("div", { class: "tags" }, el("span", { class: `badge ${m.open ? "good" : ""}`, text: m.open ? "Open" : "Closed" }), m.params ? el("span", { class: "badge", text: m.params }) : null,
+      el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: `Ranked #${rank} in our runs` })),
+    el("p", { class: "sauce-line", text: m.sauce }), flow(m),
+    el("div", { class: "bench" }, tier("easy", "Easy"), tier("original", "Original"), tier("hard", "Hard")),
+    el("div", { class: "stats" }, el("span", {}, "Hard ECE ", el("b", { text: fmt.num(hard.ece) })), el("span", {}, "Median ", el("b", { text: fmt.ms(hard.p50_s) })), el("span", {}, "Mean ", el("b", { text: fmt.pct(r.mean_accuracy) }))),
+    el("details", { class: "more" }, el("summary", { text: "How it works, in detail" }), el("ul", {}, m.how.map(h => el("li", { text: h }))),
+      el("dl", { class: "facts" }, facts.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]), m.repo ? [el("dt", { text: "Source" }), el("dd", {}, el("a", { href: m.repo, target: "_blank", rel: "noopener", text: m.repo.replace(/^https?:\/\//, "") }))] : null)));
 }
 
-function latencyNote(m) {
-  const s = m.served_as || "";
-  if (/^HTTP/i.test(s)) return "Called over HTTP, so latency includes the network and server round trip.";
-  if (/cpu/i.test(s)) return "Run in-process on CPU, so its latency is not comparable with the GPU models.";
-  if (/^in-process/i.test(s)) return "Run in-process with no network hop, so its latency is lower than a like-for-like HTTP call would be.";
-  return null;
+function cards(d) {
+  const grid = document.getElementById("cards"), jump = document.getElementById("jump"), seg = document.getElementById("filter");
+  const cs = d.rows.map((r, i) => card(r, i + 1));
+  grid.replaceChildren(...cs);
+  jump.replaceChildren(...d.rows.map(r => el("a", { href: `#${r.id}`, text: r.info.name })));
+  const fams = ["all", ...Object.keys(FAM)].filter(f => f === "all" || famRows(d.rows, f).length);
+  const set = (f) => { [...seg.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === f)));
+    d.rows.forEach((r, i) => { const on = f === "all" || r.info.family === f; cs[i].hidden = !on; jump.children[i].hidden = !on; }); };
+  seg.replaceChildren(...fams.map(f => el("button", { type: "button", "data-f": f, onclick: () => set(f), text: `${f === "all" ? "All" : FAM[f].short} (${f === "all" ? d.rows.length : famRows(d.rows, f).length})` })));
+  set("all");
+  const reveal = () => { const t = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (!t) return; if (t.hidden) set("all"); t.scrollIntoView(); };
+  window.addEventListener("hashchange", reveal); if (location.hash) reveal();
 }
 
-function benchmark(r, m) {
-  if (!r) return empty("Not benchmarked", "This model has no results in the local leaderboard yet.");
-  const hard = r.tiers.hard || {};
-  const note = latencyNote(m);
-  return el("div", { class: "stack" },
-    el("div", { class: "bench" }, TIERS.flatMap(t => {
-      const tier = r.tiers[t];
-      return [el("div", { class: "label" }, el("div", { class: "model-name", text: t[0].toUpperCase() + t.slice(1) }), el("div", { class: "model-sub", text: tier ? `${tier.n} decisions` : "not run" })),
-        tier ? meter(tier.accuracy, `${t} tier accuracy ${fmt.pct(tier.accuracy)}`) : el("span", { class: "subtle", text: "–" })];
-    })),
-    el("dl", { class: "stats" },
-      el("div", {}, el("dt", { text: "Hard-tier calibration error" }), el("dd", { text: fmt.num(hard.ece) })),
-      el("div", {}, el("dt", { text: "Median latency, hard tier" }), el("dd", { text: fmt.ms(hard.p50_s) }))),
-    note ? el("p", { class: "small muted", text: note }) : null);
-}
-
-function externalLink(url) {
-  return el("a", { href: url, target: "_blank", rel: "noopener", text: url.replace(/^https?:\/\//, "") });
-}
-
-function details(m) {
-  const items = [["Licence", m.licence], ["Interface", m.interface], ["Base", m.base], ["Size", m.params ? null : m.size_note], ["Price", m.price]]
-    .filter(([, v]) => v);
-  return el("dl", { class: "facts" },
-    items.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]),
-    m.repo ? [el("dt", { text: "Source" }), el("dd", {}, externalLink(m.repo))] : null);
-}
-
-function modelSection(m, r, rank) {
-  const badges = [
-    el("span", { class: m.open ? "badge good" : "badge", text: m.open ? "Open" : "Closed" }),
-    m.params ? el("span", { class: "badge", text: m.params }) : null,
-    m.served_as ? el("span", { class: "badge accent", text: m.served_as }) : null,
-  ];
-  const published = m.public_score != null || m.public_rank != null
-    ? el("p", { class: "small muted", text: `Published by JevBench, not measured here: v1.2 public score ${m.public_score != null ? m.public_score : "not listed"}${m.public_rank != null ? `, rank ${m.public_rank}` : ""}.` })
-    : null;
-  return el("section", { class: "section model", id: m.id, "data-id": m.id, "aria-labelledby": `${m.id}-h` },
-    el("header", {},
-      el("div", {},
-        el("h2", { id: `${m.id}-h` }, m.name, el("span", { class: "vendor", text: m.vendor }), rank ? el("span", { class: "badge", text: `Ranked #${rank} in our runs` }) : null),
-        el("div", { class: "row", style: "margin-top:8px" }, badges))),
-    el("div", { class: "grid cols-2" },
-      el("div", { class: "card" }, el("h3", { text: "How it works" }),
-        el("ul", { class: "bullets" }, (m.how || []).map(h => el("li", { text: h }))),
-        el("h4", { style: "margin-top:20px", text: "Pipeline" }),
-        el("div", { style: "margin-top:8px" }, flow(m))),
-      el("div", { class: "card" }, el("h3", { text: "In our benchmark" }),
-        benchmark(r, m), published,
-        el("h4", { style: "margin-top:20px", text: "Details" }),
-        el("div", { style: "margin-top:8px" }, details(m)))));
-}
-
-function modelsView(d) {
-  const byId = Object.fromEntries(d.rows.map(r => [r.id, r]));
-  const ordered = [...d.rows.map(r => d.models.find(m => m.id === r.id)).filter(Boolean), ...d.models.filter(m => !byId[m.id])];
-  if (!ordered.length) return empty("No models", "The model fact sheet is empty.");
-  const seg = el("div", { class: "segmented", role: "group", "aria-label": "Filter by kind" });
-  const jump = el("nav", { class: "jump", "aria-label": "Jump to a model" }, ordered.map(m => el("a", { href: `#${m.id}`, "data-id": m.id, text: m.name })));
-  const none = el("div", { hidden: true }, empty("No models match", "Choose another kind."));
-  const sections = ordered.map((m, i) => modelSection(m, byId[m.id], byId[m.id] ? i + 1 : null));
-  const setFilter = (key) => {
-    const test = FILTERS.find(f => f[0] === key)[2];
-    let shown = 0;
-    ordered.forEach((m, i) => { const on = test(m); sections[i].hidden = !on; jump.children[i].hidden = !on; if (on) shown++; });
-    [...seg.children].forEach(b => b.setAttribute("aria-pressed", b.dataset.key === key));
-    none.hidden = shown > 0;
-    seg.dataset.key = key;
-  };
-  FILTERS.forEach(([key, label, test]) => {
-    const n = ordered.filter(test).length;
-    seg.append(el("button", { type: "button", "data-key": key, onclick: () => setFilter(key), text: `${label} (${n})` }));
-  });
-  /* A hash pointing at a model hidden by the filter resets the filter, then scrolls to it. */
-  const reveal = () => {
-    let id; try { id = decodeURIComponent(location.hash.slice(1)); } catch { return; }
-    const target = id && sections.find(s => s.id === id);
-    if (!target) return;
-    if (target.hidden) setFilter("all");
-    target.scrollIntoView();
-  };
-  window.addEventListener("hashchange", reveal);
-  setFilter("all");
-  requestAnimationFrame(reveal);
-  return el("div", { class: "stack" }, el("div", { class: "toolbar" }, seg), jump, none, ...sections);
-}
-
-mount(document.getElementById("families"), load, (d) => familyTable(d.models));
-mount(document.getElementById("models"), load, modelsView);
+globalDefs();
 document.getElementById("print").onclick = () => window.print();
+document.getElementById("hero").replaceChildren(dHero());
+document.getElementById("parts").replaceChildren(...PARTS.map(([h, p], i) => el("div", { class: "card" }, el("h3", { text: `${i + 1}. ${h}` }), el("p", { class: "muted", style: "margin-top:4px", text: p }))));
+document.getElementById("steps").replaceChildren(...STEPS.map(([h, p, f], i) => el("div", { class: "card step" }, el("h3", {}, el("span", { class: "n", text: i + 1 }), h), el("p", { text: p }), f())));
+mount(document.getElementById("sauces"), load, (d) => { document.getElementById("famtable").replaceChildren(famTable(d)); cards(d); return sauces(d); });
 </script>
 </body>
 </html>

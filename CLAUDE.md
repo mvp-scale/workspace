@@ -55,6 +55,8 @@ Use `systemctl restart|status kev kev-proxy jeff` and `tail` the logs. Torch is 
 - `demo/models.json` is the fact sheet for each model (mechanism, size, licence, how it was served). Unknown fields are `null`; don't add claims that aren't in a model's own repo or card.
 - APIs: `/api/leaderboard` (aggregated from `data/bench/*/summary.json`), `/api/models`, `/api/status`, `POST /api/compare`. Live compare only covers models served over HTTP (jeff :8000, kev-0.5b :8009, kev-0.8b :8011, kev-4b :8010, hosted Jev).
 
+`probes/` holds hand-labelled probe sets that go beyond JevBench's topics (manipulation tactics, fallacies, contradiction, sarcasm, social engineering). `python3 probes/build.py` regenerates the JSONL in JevBench's task format and `python3 probes/report.py` summarises runs. Run them with `TASKS_DIR=/workspace/probes BENCH_OUT=/workspace/data/probe-runs demo/bench.sh <sets>` (HTTP models) and the same env with `demo/bench-batch.sh` (in-process models, `TIERS="..."`). Keep probe runs out of `data/bench/`, since the leaderboard averages everything in it. They are single-author, 18 items per set, so treat results as a probe.
+
 Benchmarking: `dev-bench-setup.sh` installs each in-process model in its own venv under `models/` (gitignored). `demo/bench.sh` runs the HTTP-served models and `demo/bench-batch.sh` runs `laya verdict semif so1` one at a time; both write `data/bench/<model>-<tier>/` and skip runs that exist. Run one model on the GPU at a time: running several together caused CUDA out-of-memory failures on the hard tier. `semif_direct` needs a pinned commit `--revision` (handled in `bench-batch.sh`).
 
 ## Architecture (the parts that span files)
