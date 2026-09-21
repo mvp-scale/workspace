@@ -5,6 +5,7 @@
 The TypeSafe key stays server-side. Binds to 127.0.0.1 by default; set DEMO_HOST to expose it
 (anyone who can reach the port can spend the key).
 """
+import hashlib
 import json
 import os
 import time
@@ -25,7 +26,7 @@ BACKENDS = {
 }
 
 
-def call(name, cfg, body):
+def call(name, cfg, body, whole=False):
     if name.startswith("jev") and not cfg["key"]:
         return {"backend": name, "error": "TYPESAFE_API_KEY not set"}
     headers = {"Content-Type": "application/json", "User-Agent": "jev-demo/0.1"}
@@ -40,6 +41,9 @@ def call(name, cfg, body):
         return {"backend": name, "error": f"HTTP {e.code}: {e.read()[:200].decode('utf-8', 'replace')}"}
     except Exception as e:  # connection refused, timeout, bad JSON
         return {"backend": name, "error": f"{type(e).__name__}: {e}"}
+    if whole:
+        return {"backend": name, "status": status, "latency_ms": round((time.perf_counter() - t0) * 1000), "model": data.get("model"),
+                "answers": data.get("answers") or {}, "extras": extras(data, {}, resp_headers)}
     answer = (data.get("answers") or {}).get("decision") or {}
     return {"backend": name, "status": status, "latency_ms": round((time.perf_counter() - t0) * 1000),
             "model": data.get("model"), "answer": answer, "extras": extras(data, answer, resp_headers)}
@@ -65,6 +69,77 @@ def extras(data, answer, headers):
         "headers": {k.lower(): v for k, v in headers.items() if k.lower().startswith("x-")},
         "answer": {k: v for k, v in answer.items() if k not in COMPARABLE_ANSWER_KEYS},
     }
+
+
+MAX_BATCH_ITEMS = int(os.environ.get("DEMO_MAX_BATCH", "400"))  # protects the paid key from a runaway page
+_cache = {}
+
+
+def one_item(name, cfg, item):
+    """One state with a battery of questions in a single call; cached by content, so re-runs are free."""
+    key = hashlib.sha256(json.dumps([name, item], sort_keys=True).encode()).hexdigest()
+    if key in _cache:
+        return {**_cache[key], "cached": True}
+    r = call(name, cfg, {"state": item["state"], "model": "jev-latest", "questions": item["questions"]}, whole=True)
+    if "error" not in r:
+        _cache[key] = r
+    return r
+
+
+def batch(backend, items):
+    if backend not in BACKENDS:
+        raise KeyError(backend)
+    cfg = BACKENDS[backend]
+    with ThreadPoolExecutor(min(8, max(1, len(items)))) as ex:
+        return list(ex.map(lambda it: one_item(backend, cfg, it), items))
+
+
+ROOT = HERE.parent
+PROBES = ROOT / "probes" / "v2"
+PROBE_RUNS = Path(os.environ.get("PROBE_RUNS", ROOT / "data" / "probe-runs-v2"))
+
+
+def read_jsonl(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def probe_sets():
+    """Published probe sets with their provenance, so the page can show where every number comes from."""
+    out = []
+    for f in sorted(PROBES.glob("*.jsonl")):
+        rows = read_jsonl(f)
+        prov = rows[0].get("provenance", {})
+        questions = {r["question"]["instructions"] for r in rows}
+        classes = {}
+        for r in rows:
+            classes[r["expected"]] = classes.get(r["expected"], 0) + 1
+        out.append({"id": f.stem, "n": len(rows), "classes": classes, "labels": rows[0]["labels"], "type": rows[0]["question"]["type"],
+                    "questions": sorted(questions), "source": prov.get("source"), "url": prov.get("url"), "license": prov.get("license"),
+                    "models_run": sorted(d.name[: -len(f.stem) - 1] for d in PROBE_RUNS.glob(f"*-{f.stem}") if (d / "results.jsonl").exists())})
+    return out
+
+
+def probe_detail(set_id):
+    f = PROBES / f"{set_id}.jsonl"
+    if not f.is_file() or "/" in set_id:
+        raise KeyError(set_id)
+    items = read_jsonl(f)
+    notes = PROBES / f"{set_id}.md"
+    if not notes.is_file():  # sets that share one notes file, e.g. the two sarcasm sets
+        notes = next(iter(sorted(PROBES.glob(f"{set_id.split('_')[0]}*.md"))), None)
+    results = {}
+    for d in PROBE_RUNS.glob(f"*-{set_id}"):
+        rp = d / "results.jsonl"
+        if rp.exists():
+            results[d.name[: -len(set_id) - 1]] = {r["task_id"]: {"predicted": r.get("predicted"), "probs": r.get("probs"), "correct": bool(r.get("correct")),
+                                                                   "latency_s": r.get("latency_s")} for r in read_jsonl(rp)}
+    return {"id": set_id, "items": [{"id": r["id"], "state": r["state"], "expected": r["expected"], "labels": r["labels"], "question": r["question"],
+                                       "family": r.get("family"), "group": r.get("group"), "notes": r.get("provenance", {}).get("notes")} for r in items],
+            "results": results, "notes": notes.read_text() if notes else None}
+
+
+def speeches():
+    return [json.loads(f.read_text()) | {"slug": f.stem} for f in sorted((PROBES / "speeches").glob("*.json"))]
 
 
 def leaderboard():
@@ -111,7 +186,7 @@ def status():
         return dict(ex.map(ping, BACKENDS.items()))
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/windows": "windows.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
@@ -140,6 +215,16 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, json.loads((HERE / "models.json").read_text()))
         elif path == "/api/status":
             self._send(200, status())
+        elif path == "/api/probes":
+            self._send(200, probe_sets())
+        elif path == "/api/probe":
+            q = self.path.partition("?")[2]
+            try:
+                self._send(200, probe_detail(dict(x.split("=", 1) for x in q.split("&") if "=" in x).get("set", "")))
+            except KeyError:
+                self._send(404, {"error": "unknown set"})
+        elif path == "/api/speeches":
+            self._send(200, speeches())
         elif path == "/api/results":
             self._send(200, results())
         elif path == "/api/backends":
@@ -148,6 +233,19 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, {"error": "not found"})
 
     def do_POST(self):
+        if self.path == "/api/batch":
+            try:
+                req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+                backend, items = req["backend"], req["items"]
+                assert isinstance(items, list) and all(isinstance(i, dict) and "state" in i and isinstance(i.get("questions"), dict) for i in items)
+            except (ValueError, KeyError, AssertionError):
+                return self._send(400, {"error": "need JSON {backend, items:[{state, questions:{id: question}}]}"})
+            if len(items) > MAX_BATCH_ITEMS:
+                return self._send(413, {"error": f"at most {MAX_BATCH_ITEMS} items per batch"})
+            try:
+                return self._send(200, batch(backend, items))
+            except KeyError:
+                return self._send(404, {"error": f"unknown backend {backend}"})
         if self.path != "/api/compare":
             return self._send(404, {"error": "not found"})
         try:
