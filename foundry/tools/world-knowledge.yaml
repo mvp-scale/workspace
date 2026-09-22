@@ -26,11 +26,11 @@ status: >
   (slicer_live.py and grinder_live.py, which read from it first, have since been deleted --
   superseded by layered_walk.py per an Opus end-to-end review).
 open_question: >
-  gap_categories are still checked against every idea unconditionally today (all 12, regardless of
+  gap_categories are still checked against every idea unconditionally today (all 21, regardless of
   domain) -- now that by-domain exists, domain_enrichment could narrow which categories even get
-  checked (e.g. compliance-constraint only for a compliance-regulated domain, single-point-of-
-  failure almost everywhere). Not resolved here; the mechanism still runs the old way until that's
-  decided.
+  checked (e.g. nonfunctional-data-protection weighted up for a compliance-regulated domain,
+  ops-incident-response almost everywhere). Not resolved here; the mechanism still runs the old way
+  until that's decided.
 
 # =============================================================================================
 # SUPPORTS: layered_walk.py's classify_domain_audience (fanned into the same call as domain/
@@ -59,11 +59,11 @@ profile_probes:
   - id: financial-transaction
     text: This idea involves moving or tracking money.
     criteria: {"true": "Yes, money changes hands or is tracked.", "false": "No money is involved."}
-    boosts: [nonfunctional-data-protection, compliance-constraint]
+    boosts: [nonfunctional-data-protection]
   - id: regulated-industry
     text: This idea operates in an industry with specific regulatory compliance requirements, such as health, finance, or government.
     criteria: {"true": "Yes, a real regulatory regime applies.", "false": "No specific regulation applies."}
-    boosts: [compliance-constraint, nonfunctional-data-protection]
+    boosts: [nonfunctional-data-protection]
   - id: multi-tenant
     text: This idea needs to serve multiple separate organizations or customers from the same system, keeping their data apart.
     criteria: {"true": "Yes, real multi-tenancy is needed.", "false": "No, one organization or a single shared group."}
@@ -95,53 +95,30 @@ profile_probes:
 # one; it runs independently of by-domain's own classification, not narrowed by it (see
 # open_question above).
 # =============================================================================================
-gap_categories: # the 12 generic, reusable Level 0 gap categories -- checked live, one noul question
-                # each, fanned into one call by layered_walk.py.
-                # POLARITY FIX (found by an Opus end-to-end review): these must read as requirement/
-                # solved-state statements, matching gap_category_detail's polarity exactly -- they were
-                # previously written as problem statements ("X is missing"), which meant breadcrumb
-                # concatenation (Slicer text + Grinder detail text) produced literal contradictions
-                # ("depends on one person with no backup... a backup already exists"). The selection
-                # question in layered_walk.py asks "is this NOT yet true" against this text -- true
-                # still means "a real gap," nothing about the selection threshold logic changes.
-  - id: capability-gap
-    lens: technical
-    text: The technical capability or tool this needs already exists and doesn't need to be built or obtained from scratch.
-  - id: behavior-change
-    lens: business
-    text: The solution works within people's existing habits and behavior, without requiring them to change how they operate.
-  - id: escalation-authority
-    lens: business
-    text: There's already a clear decision-making or escalation path for this.
-  - id: fairness-distribution
-    lens: business
-    text: Whatever needs to be distributed or shared across multiple people is already fairly distributed, not concentrated on one or a few.
-  - id: visibility-tracking
-    lens: technical
-    text: Status is already visible and trackable by the people who need to see it.
-  - id: noise-reduction
-    lens: technical
-    text: Existing noise, false alarms, or low-value work has already been reduced, not just added to.
-  - id: knowledge-transfer
-    lens: technical
-    text: Relevant knowledge is already documented or shared, not locked in specific people's heads.
-  - id: compliance-constraint
-    lens: business
-    text: The solution already operates within all applicable policy, legal, or contractual rules.
-  - id: cost-resource
-    lens: business
-    text: There's already enough budget, headcount, or resource to do this, beyond just having the right design.
-  - id: trust-adoption
-    lens: business
-    text: People already trust the mechanism enough to actually rely on it, not just accept that it exists.
-  - id: single-point-of-failure
-    lens: technical
-    text: There is a designated backup for anything the current situation depends on.
-  - id: measurement-gap
-    lens: technical
-    text: It's already clear how to measure whether this problem is getting better or worse.
-  # 21 more, requirement-shaped (functional/non-functional/architectural/user-story/
-  # technical-spec/operational), built by an Opus-led workflow -- see each entry's `shape` field.
+gap_categories: # the 21 generic, reusable, requirement-shaped Level 0 gap categories -- checked
+                # live, one noul question each, fanned into one call by layered_walk.py. Shape:
+                # functional/non-functional/architectural/user-story/technical-spec/operational
+                # (see each entry's `shape` field), matching a real SRS/backlog/arc42 register.
+                # RETIRED (user decision, this session): the original 12 generic "is this a gap"
+                # audit-checklist categories (capability-gap, behavior-change,
+                # escalation-authority, fairness-distribution, visibility-tracking,
+                # noise-reduction, knowledge-transfer, compliance-constraint, cost-resource,
+                # trust-adoption, single-point-of-failure, measurement-gap) -- including the 4 that
+                # already had a hand-built gap_category_detail tree (single-point-of-failure,
+                # trust-adoption, cost-resource, behavior-change). Reasoning: 8 of the 12 had no
+                # library at all, and 7 of those 8 could never be boosted by any profile_probe
+                # (see world-knowledge.yaml git history / BRIDGE.md), so "they never landed in a
+                # top-4" wasn't reliable evidence of irrelevance either way -- the decision was made
+                # on library-shape grounds instead: one consistent, requirement-shaped library beats
+                # a mixed audit-checklist-plus-SRS one, and better matches what the user actually
+                # wants (see README.md's "Lessons learned"). All 21 remaining categories have a
+                # gap_category_detail entry -- see below.
+                # POLARITY: every entry reads as a requirement/solved-state statement (matching
+                # gap_category_detail's polarity exactly) -- found broken once by an Opus end-to-end
+                # review (breadcrumb concatenation of a problem-polarity Slicer text with a
+                # solved-state Grinder text produced literal contradictions); the selection question
+                # in layered_walk.py asks "is this NOT yet true" against this text -- true still
+                # means "a real gap."
   - id: functional-core-capability
     shape: functional
     lens: technical
@@ -232,59 +209,19 @@ gap_categories: # the 12 generic, reusable Level 0 gap categories -- checked liv
 # expander in the purest sense in this file -- it exists only to go deeper on ONE thing
 # gap_categories already selected. Structural relationship: gap_categories[id] selected at Layer 0
 # -> gap_category_detail[that same id] is the recursion target, keyed by the identical id on both
-# sides. Four categories have an entry now (single-point-of-failure, trust-adoption,
-# cost-resource, behavior-change); the other 8 still have nothing to expand into -- real, visible
-# gaps this file makes honest, not hidden.
+# sides. All 21 remaining categories have an entry now -- the 4 that used to (single-point-of-
+# failure, trust-adoption, cost-resource, behavior-change) were retired along with the 8 that
+# never had one (see gap_categories' RETIRED comment above); no more "SELECTED, BUT NOTHING BUILT
+# YET" categories should appear in report.py's output.
 # =============================================================================================
 gap_category_detail: # nested sub-libraries under specific gap_categories entries, for
-                      # layered_walk.py's recursive walk. Four of 12 gap_categories have one today
-                      # (single-point-of-failure, trust-adoption, cost-resource, behavior-change).
-                      # single-point-of-failure's content was originally moved unchanged from the retired
-                      # tools/gap-library-single-point-of-failure.yaml; leaf text below was then
-                      # tightened (see comment right below this one) -- the library's structure
-                      # and ids are unchanged, only the wording of the compound leaves.
-    # TIGHTENED: with well-calibrated models (P1/P2/P3), nothing was clearing the atomic threshold
-    # -- not a mechanism bug, a real content one: several leaves below still joined two claims with
-    # "or"/"and" ("backup person OR mechanism", "trigger OR process", "tested OR exercised"),
-    # which is literally what "not atomic, still compound" means. Rewritten to state the single
-    # underlying fact without the coordinating conjunction, same meaning, same ids, same tree
-    # shape -- not a new decomposition, an edit to already-authored generic library text.
-  single-point-of-failure:
-    tree:
-      - id: backup-exists
-        text: A designated backup already exists for when the primary is unavailable.
-        children: []
-      - id: backup-activation-defined
-        text: There's a clearly defined way to switch to the backup, not just an assumption it would happen.
-        children:
-          - id: trigger-condition-specified
-            text: The specific condition that triggers switching to the backup is clearly specified, not left to judgment.
-            children: []
-          - id: activation-mechanism-exists
-            text: A concrete mechanism actually performs the switch to backup, not just a verbal agreement.
-            children: []
-          - id: activation-authority-clear
-            text: It's clear who has the authority to trigger the switch to the backup.
-            children: []
-      - id: failure-detection
-        text: There's a reliable way to detect that the primary has actually become unavailable, rather than relying on someone noticing.
-        children:
-          - id: detection-mechanism-exists
-            text: A specific mechanism exists that detects the primary's unavailability, rather than depending on manual observation.
-            children: []
-          - id: detection-latency-acceptable
-            text: The time between the primary actually becoming unavailable and that being detected is short enough not to matter.
-            children: []
-      - id: backup-capability-verified
-        text: The backup has been confirmed capable of actually doing what's needed, not just nominally assigned.
-        children:
-          - id: backup-trained
-            text: The backup has actually been prepared for what they'd need to do, not just listed as backup.
-            children: []
-          - id: backup-tested
-            text: The backup role has actually been tested at least once, not just assumed to work if needed.
-            children: []
-  # 21 more detail trees, one per new category above.
+                      # layered_walk.py's recursive walk. All 21 remaining gap_categories have one.
+                      # All 21 trees are flat (depth 1) -- unlike the retired single-point-of-
+                      # failure tree, which had real depth-2 nesting -- so every leaf that doesn't
+                      # clear the atomic threshold stops at "needs further splitting, no deeper
+                      # library" rather than recursing again. Same generic, reusable, no-"or"/"and"
+                      # discipline throughout (see README.md's "Lessons learned" on why compound
+                      # leaves silently break the atomic check).
   functional-core-capability:
     tree:
     - id: func-action-inventory
@@ -597,53 +534,6 @@ gap_category_detail: # nested sub-libraries under specific gap_categories entrie
     - id: ops-backup-isolation
       text: Backups are stored separately from the system they protect.
       children: []
-  # Three more built out below -- picked because they're the categories that actually keep
-  # landing in Layer 0c's top-4 for real ideas checked this session, not because they're
-  # inherently more important than the other 8 unbuilt ones. Same generic, reusable, no-"or"/"and"
-  # discipline as single-point-of-failure above -- each of these applies to any idea, not authored
-  # to fit oncall-rotation specifically.
-  trust-adoption:
-    tree:
-      - id: trust-track-record-exists
-        text: There's already a track record of the mechanism working correctly that people can point to.
-        children: []
-      - id: trust-failure-visible
-        text: When the mechanism fails, people can tell it failed rather than silently trusting a wrong result.
-        children: []
-      - id: trust-override-available
-        text: People have a real way to override the mechanism in a specific case they don't trust.
-        children: []
-      - id: trust-endorsed-by-peers
-        text: People trust it partly because they've already seen someone they respect rely on it.
-        children: []
-  cost-resource:
-    tree:
-      - id: budget-allocated
-        text: A specific budget has actually been allocated for this, not just assumed to be available.
-        children: []
-      - id: headcount-assigned
-        text: Specific people have actually been assigned time to work on this, not just generally available.
-        children: []
-      - id: resource-owner-identified
-        text: There's a specific person accountable for making sure the needed resource actually shows up.
-        children: []
-      - id: cost-ceiling-known
-        text: There's a known ceiling on what this is allowed to cost before it needs re-approval.
-        children: []
-  behavior-change:
-    tree:
-      - id: existing-workflow-preserved
-        text: People can keep their existing daily workflow without adding a new separate step.
-        children: []
-      - id: no-new-tool-required
-        text: People aren't required to learn a new tool they didn't already use.
-        children: []
-      - id: change-is-opt-in
-        text: Where something does change, people can choose to adopt it rather than being forced to switch immediately.
-        children: []
-      - id: habit-reinforced-not-fought
-        text: The solution reinforces what people already tend to do, rather than working against their existing habit.
-        children: []
 
 # =============================================================================================
 # SUPPORTS: Slicer.by-domain (slicer.yaml). Structural relationship: by-domain's live `choice`

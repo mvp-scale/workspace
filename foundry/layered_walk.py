@@ -4,7 +4,7 @@ move to the next level of classification for whatever was selected, and stop for
 there's nothing further to classify into or the run's overall budget is exhausted.
 
 Level 0's domain/audience call is the one exception in kind -- a single `choice` pick, used once
-to set context, not a repeated select-many step. Everything from there down -- the 12 gap
+to set context, not a repeated select-many step. Everything from there down -- the 21 gap
 categories, and every Grinder node beneath whichever ones get selected -- is the SAME recursive
 select-many step over one merged tree with a virtual root (`build_tree`), walked by one function
 (`walk`). That used to be three separate functions (layer0_gaps, a for-loop in main, walk_gap)
@@ -188,10 +188,10 @@ def profile_boost(category_id, profile, world):
 
 
 def build_tree(world):
-    """One tree, virtual root -> the 12 gap_categories -> whatever gap_category_detail supplies
-    for each (empty for the 8 that have nothing built yet). Same shape at every level from here
-    down -- the root's children ARE gap_categories, exactly like any deeper node's children come
-    from its own library entry."""
+    """One tree, virtual root -> the 21 gap_categories -> whatever gap_category_detail supplies
+    for each (all 21 have a library now). Same shape at every level from here down -- the root's
+    children ARE gap_categories, exactly like any deeper node's children come from its own library
+    entry."""
     children = []
     for cat in world["gap_categories"]:
         detail = world.get("gap_category_detail", {}).get(cat["id"])

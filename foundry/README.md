@@ -21,8 +21,8 @@ mechanics of the selection itself actually right, is most of what this file's hi
 
 | Tool | Job | Live today? |
 |---|---|---|
-| **Slicer** | picks the domain/audience, and which of 12 gap categories apply to the idea | yes |
-| **Grinder** | recurses a selected category down to atomic requirements | yes, for 4 of 12 categories (see below) |
+| **Slicer** | picks the domain/audience, and which of 21 gap categories apply to the idea | yes |
+| **Grinder** | recurses a selected category down to atomic requirements | yes, all 21 categories have a library (see below) |
 | **Sorter** | scores each requirement (risk if false, effort) and groups by risk tier | yes, both halves |
 | **Conveyor** | sequences requirements into an order | `risk-first` yes; `dependency-order`/`parallel-lanes` blocked (no `depends_on`); duration variants not attempted (no real duration source) |
 | **Spotlight** | ranks what to check first | 3 of 5 variants live; `downstream-impact`/`audience-weighted` honestly blocked (no data to support them) |
@@ -40,7 +40,7 @@ python3 foundry/sort_and_rank.py --idea <id>    # Sorter + Conveyor + Spotlight 
 1. Intake (ideas/<id>.json)     idea + customer -- the only thing Claude authors
 2. Slicer.by-domain             1 call -> domain + audience (needs 0.6 confidence, both, or skipped)
 3. Expand                        world-knowledge.yaml lookup, no call -- folds enrichment into state
-4. Slicer.gap_categories        1 call -> scores all 12; top-4 by mean become the decomposition
+4. Slicer.gap_categories        1 call -> scores all 21; top-4 by mean become the decomposition
 5. Grinder                      recurse each selected category's library (if it has one) to atomic
 6. Ledger + report              layered_walk.py writes runs/<id>-layered-walk.jsonl; report.py reads it
 7. Sorter/Conveyor/Spotlight (sort_and_rank.py) score, group and rank the atomic requirements
@@ -96,11 +96,14 @@ trusting anything in it. The current, correct way to see a real run is to run `l
 yourself (see "Run it" below) and read `report.py`'s output; nothing static in this repo
 substitutes for that anymore.
 
-`tools/world-knowledge.yaml`'s `gap_category_detail` has four branches built out now
-(`single-point-of-failure`, `trust-adoption`, `cost-resource`, `behavior-change` -- picked because
-those four kept landing in real top-4 selections, not because the other 8 matter less). Whether a
-branch gets walked in a given run still depends on whether it lands in that run's top-4 -- no
-longer guaranteed the way a flat floor used to guarantee it.
+`tools/world-knowledge.yaml`'s `gap_categories` now holds only the 21 requirement-shaped
+categories (functional/non-functional/architectural/user-story/technical-spec/operational) -- the
+original 12 generic "is this a gap" audit-checklist categories were retired, including the 4 that
+had a hand-built `gap_category_detail` tree (`single-point-of-failure`, `trust-adoption`,
+`cost-resource`, `behavior-change`). All 21 remaining categories have a detail tree; see
+`gap_categories`' own `RETIRED` comment in the yaml for why. Whether a branch gets walked in a
+given run still depends on whether it lands in that run's top-4 by Composite Score -- no longer
+guaranteed the way a flat floor used to guarantee it.
 
 **Resolved, not open anymore:** two rounds of this. First, whether the atomic threshold was too
 strict or a Level 3 was needed -- neither; a diagnostic found P3 (so1) wasn't discriminating

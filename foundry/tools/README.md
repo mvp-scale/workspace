@@ -28,7 +28,7 @@ domain/audience candidate lists themselves live only in `slicer.yaml` (inline, t
 of truth; a former `domain-library.yaml` duplicated them and was retired for exactly that reason).
 **Open question, not yet resolved:** `gap_categories` (Layer 0c) and `by-domain` (Layer 0a) run
 independently today — domain classification doesn't narrow which gap categories even get checked,
-though it plausibly could (e.g. `compliance-constraint` mattering mainly for a
+though it plausibly could (e.g. `nonfunctional-data-protection` mattering mainly for a
 `compliance-regulated` domain). See `world-knowledge.yaml`'s `open_question`.
 
 ## Why the variants were rewritten
@@ -64,7 +64,7 @@ flowchart TD
     AE -->|"no"| AENO["not trusted -- skip enrichment,<br/>continue with base state"]
     AE -->|"yes"| AEYES["Expand: world-knowledge.domain_enrichment<br/>(lookup, no call) folded into state"]
     AENO --> B
-    AEYES --> B["Layer 0c: 12 gap_categories<br/>1 fanned-out call, 4 models, mean+spread each"]
+    AEYES --> B["Layer 0c: 21 gap_categories<br/>1 fanned-out call, 4 models, mean+spread each"]
     B --> B1["top-4 by mean selected<br/>(not a floor -- a floor near 1.0 selects everything)"]
     B1 --> C["enter the loop below, once per selected piece"]
 
@@ -85,13 +85,14 @@ flowchart TD
 
     C --> N
     DONE --> SORT["Sorter: score + group<br/>(downstream, outside this loop)"]
-    STOP_NOLIB --> GAP["real gap, made visible automatically:<br/>11 of 12 gap_categories have no library yet"]
+    STOP_NOLIB --> GAP["all 21 gap_categories now have a library,<br/>but every tree is flat (depth 1) -- so any<br/>leaf under the atomic threshold still stops here"]
 ```
 
 **What this makes visible:** the outer-driver gap the earlier version of this diagram described --
 a human hand-picking one `--root` per invocation -- is fixed. `layered_walk.py` walks every
-selected Level 0 piece automatically (`for cat in selected: walk_gap(...)`). What's still a real,
-visible gap: only 1 of 12 `gap_categories` (`single-point-of-failure`) has anything to recurse
-into. Top-4 selection means that piece isn't even guaranteed to be selected in a given run anymore
-(confirmed: it missed the top-4 in one real run, spread 0.89 on itself) -- which is the honest
-tradeoff of replacing a rubber-stamp floor with a real selection.
+selected Level 0 piece automatically (`for cat in selected: walk_gap(...)`). The original 12
+generic categories (8 with no library, plus 4 more retired alongside them for a single consistent
+shape -- see `world-knowledge.yaml`'s `gap_categories` comment) were retired in favor of the 21
+requirement-shaped ones, all 21 of which have a `gap_category_detail` entry. Top-4 selection still
+means any given category isn't guaranteed to be selected in a given run -- the honest tradeoff of
+replacing a rubber-stamp floor with a real selection.
