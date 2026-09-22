@@ -1,0 +1,330 @@
+reference: world-knowledge
+description: >
+  An EXPANDER, not a decider. Nothing in this file makes a selection -- every section here only
+  activates after a tool has already selected something live (a domain, a gap category), and its
+  job is to give more insight into that one thing, not to classify anything itself. The structural
+  relationship is always the same shape: a tool's live answer id -> a lookup key into a section
+  below -> more content to carry forward (extra state for the next call, a deeper library to
+  recurse into). Every section below is now labelled SUPPORTS: <tool>.<variant> stating exactly
+  which live call's output it expands on, and by what key -- if a section can't name one, that's a
+  real gap in this file, not a missing label. Replaces customer-lens.yaml and
+  tools/domain-library.yaml: the domain/audience candidate lists used to classify now live only
+  inside slicer.yaml itself (they're literally the `criteria` of a live question -- keeping a
+  second copy here just meant two files to keep in sync, which is exactly the kind of duplication
+  that made slicer.yaml hard to trust).
+status: >
+  hand-authored by Claude Sonnet 5, offline -- generic/reusable scaffolding (front-loading), not
+  idea-specific content. Same honesty flag as everything else in tools/: an informed guess at
+  what's cross-domain-common, not a verified external source. domain_enrichment is new; pain_points
+  /delights/customer_journey are unchanged from the retired customer-lens.yaml. gap_categories and
+  gap_category_detail were unchanged content from the retired tools/gap-library.yaml and
+  tools/gap-library-single-point-of-failure.yaml (still true) -- folded in here for the same
+  reason domain-library.yaml and customer-lens.yaml were: a second file holding content that
+  belongs to one central place is duplication, not organization. gap_categories.text was later
+  rewritten in place (polarity fix, see comment above that section) -- moved-not-modified no
+  longer applies to it specifically. foundry/layered_walk.py reads from this file directly
+  (slicer_live.py and grinder_live.py, which read from it first, have since been deleted --
+  superseded by layered_walk.py per an Opus end-to-end review).
+open_question: >
+  gap_categories are still checked against every idea unconditionally today (all 12, regardless of
+  domain) -- now that by-domain exists, domain_enrichment could narrow which categories even get
+  checked (e.g. compliance-constraint only for a compliance-regulated domain, single-point-of-
+  failure almost everywhere). Not resolved here; the mechanism still runs the old way until that's
+  decided.
+
+# =============================================================================================
+# SUPPORTS: layered_walk.py's Layer 0c (layer0_gaps) -- NOT slicer.yaml's five rewritten variants
+# (by-domain/by-layer/by-risk/by-phase/binary-halving). Flagged honestly, not papered over: this
+# is a real mismatch, still unresolved. This mechanism predates the variant rewrite and is still
+# the only one of the two that actually runs live; the five rewritten variants have only ever had
+# by-domain exercised (layered_walk.py's Layer 0a). Structural relationship: none upstream -- this
+# IS a first selection a tool makes (idea+customer -> which categories apply), not an expansion of
+# one; it runs independently of by-domain's own classification, not narrowed by it (see
+# open_question above).
+# =============================================================================================
+gap_categories: # the 12 generic, reusable Level 0 gap categories -- checked live, one noul question
+                # each, fanned into one call by layered_walk.py.
+                # POLARITY FIX (found by an Opus end-to-end review): these must read as requirement/
+                # solved-state statements, matching gap_category_detail's polarity exactly -- they were
+                # previously written as problem statements ("X is missing"), which meant breadcrumb
+                # concatenation (Slicer text + Grinder detail text) produced literal contradictions
+                # ("depends on one person with no backup... a backup already exists"). The selection
+                # question in layered_walk.py asks "is this NOT yet true" against this text -- true
+                # still means "a real gap," nothing about the selection threshold logic changes.
+  - id: capability-gap
+    lens: technical
+    text: The technical capability or tool this needs already exists and doesn't need to be built or obtained from scratch.
+  - id: behavior-change
+    lens: business
+    text: The solution works within people's existing habits and behavior, without requiring them to change how they operate.
+  - id: escalation-authority
+    lens: business
+    text: There's already a clear decision-making or escalation path for this.
+  - id: fairness-distribution
+    lens: business
+    text: Whatever needs to be distributed or shared across multiple people is already fairly distributed, not concentrated on one or a few.
+  - id: visibility-tracking
+    lens: technical
+    text: Status is already visible and trackable by the people who need to see it.
+  - id: noise-reduction
+    lens: technical
+    text: Existing noise, false alarms, or low-value work has already been reduced, not just added to.
+  - id: knowledge-transfer
+    lens: technical
+    text: Relevant knowledge is already documented or shared, not locked in specific people's heads.
+  - id: compliance-constraint
+    lens: business
+    text: The solution already operates within all applicable policy, legal, or contractual rules.
+  - id: cost-resource
+    lens: business
+    text: There's already enough budget, headcount, or resource to do this, beyond just having the right design.
+  - id: trust-adoption
+    lens: business
+    text: People already trust the mechanism enough to actually rely on it, not just accept that it exists.
+  - id: single-point-of-failure
+    lens: technical
+    text: There is a designated backup for anything the current situation depends on.
+  - id: measurement-gap
+    lens: technical
+    text: It's already clear how to measure whether this problem is getting better or worse.
+
+# =============================================================================================
+# SUPPORTS: Grinder.atomic-threshold (layered_walk.py's walk_gap/layer_n_node). This is the
+# expander in the purest sense in this file -- it exists only to go deeper on ONE thing
+# gap_categories already selected. Structural relationship: gap_categories[id] selected at Layer 0
+# -> gap_category_detail[that same id] is the recursion target, keyed by the identical id on both
+# sides. Four categories have an entry now (single-point-of-failure, trust-adoption,
+# cost-resource, behavior-change); the other 8 still have nothing to expand into -- real, visible
+# gaps this file makes honest, not hidden.
+# =============================================================================================
+gap_category_detail: # nested sub-libraries under specific gap_categories entries, for
+                      # layered_walk.py's recursive walk. Four of 12 gap_categories have one today
+                      # (single-point-of-failure, trust-adoption, cost-resource, behavior-change).
+                      # single-point-of-failure's content was originally moved unchanged from the retired
+                      # tools/gap-library-single-point-of-failure.yaml; leaf text below was then
+                      # tightened (see comment right below this one) -- the library's structure
+                      # and ids are unchanged, only the wording of the compound leaves.
+    # TIGHTENED: with well-calibrated models (P1/P2/P3), nothing was clearing the atomic threshold
+    # -- not a mechanism bug, a real content one: several leaves below still joined two claims with
+    # "or"/"and" ("backup person OR mechanism", "trigger OR process", "tested OR exercised"),
+    # which is literally what "not atomic, still compound" means. Rewritten to state the single
+    # underlying fact without the coordinating conjunction, same meaning, same ids, same tree
+    # shape -- not a new decomposition, an edit to already-authored generic library text.
+  single-point-of-failure:
+    tree:
+      - id: backup-exists
+        text: A designated backup already exists for when the primary is unavailable.
+        children: []
+      - id: backup-activation-defined
+        text: There's a clearly defined way to switch to the backup, not just an assumption it would happen.
+        children:
+          - id: trigger-condition-specified
+            text: The specific condition that triggers switching to the backup is clearly specified, not left to judgment.
+            children: []
+          - id: activation-mechanism-exists
+            text: A concrete mechanism actually performs the switch to backup, not just a verbal agreement.
+            children: []
+          - id: activation-authority-clear
+            text: It's clear who has the authority to trigger the switch to the backup.
+            children: []
+      - id: failure-detection
+        text: There's a reliable way to detect that the primary has actually become unavailable, rather than relying on someone noticing.
+        children:
+          - id: detection-mechanism-exists
+            text: A specific mechanism exists that detects the primary's unavailability, rather than depending on manual observation.
+            children: []
+          - id: detection-latency-acceptable
+            text: The time between the primary actually becoming unavailable and that being detected is short enough not to matter.
+            children: []
+      - id: backup-capability-verified
+        text: The backup has been confirmed capable of actually doing what's needed, not just nominally assigned.
+        children:
+          - id: backup-trained
+            text: The backup has actually been prepared for what they'd need to do, not just listed as backup.
+            children: []
+          - id: backup-tested
+            text: The backup role has actually been tested at least once, not just assumed to work if needed.
+            children: []
+  # Three more built out below -- picked because they're the categories that actually keep
+  # landing in Layer 0c's top-4 for real ideas checked this session, not because they're
+  # inherently more important than the other 8 unbuilt ones. Same generic, reusable, no-"or"/"and"
+  # discipline as single-point-of-failure above -- each of these applies to any idea, not authored
+  # to fit oncall-rotation specifically.
+  trust-adoption:
+    tree:
+      - id: trust-track-record-exists
+        text: There's already a track record of the mechanism working correctly that people can point to.
+        children: []
+      - id: trust-failure-visible
+        text: When the mechanism fails, people can tell it failed rather than silently trusting a wrong result.
+        children: []
+      - id: trust-override-available
+        text: People have a real way to override the mechanism in a specific case they don't trust.
+        children: []
+      - id: trust-endorsed-by-peers
+        text: People trust it partly because they've already seen someone they respect rely on it.
+        children: []
+  cost-resource:
+    tree:
+      - id: budget-allocated
+        text: A specific budget has actually been allocated for this, not just assumed to be available.
+        children: []
+      - id: headcount-assigned
+        text: Specific people have actually been assigned time to work on this, not just generally available.
+        children: []
+      - id: resource-owner-identified
+        text: There's a specific person accountable for making sure the needed resource actually shows up.
+        children: []
+      - id: cost-ceiling-known
+        text: There's a known ceiling on what this is allowed to cost before it needs re-approval.
+        children: []
+  behavior-change:
+    tree:
+      - id: existing-workflow-preserved
+        text: People can keep their existing daily workflow without adding a new separate step.
+        children: []
+      - id: no-new-tool-required
+        text: People aren't required to learn a new tool they didn't already use.
+        children: []
+      - id: change-is-opt-in
+        text: Where something does change, people can choose to adopt it rather than being forced to switch immediately.
+        children: []
+      - id: habit-reinforced-not-fought
+        text: The solution reinforces what people already tend to do, rather than working against their existing habit.
+        children: []
+
+# =============================================================================================
+# SUPPORTS: Slicer.by-domain (slicer.yaml). Structural relationship: by-domain's live `choice`
+# call returns a `domain` answer id (one of the 10 ids that are slicer.yaml's own inline
+# criteria) -> that id is the lookup key here -> returns likely_pain_points/likely_delights/
+# riskiest_journey_stage. This is the clean case: a tool's answer id is literally the key into
+# this section, nothing inferred or renamed in between.
+# =============================================================================================
+domain_enrichment_notes: >
+  Keyed by slicer.yaml's by-domain domain ids. For each domain: which of the pain_points/delights
+  below are especially likely to matter, and which customer_journey stage tends to carry the most
+  risk. Kept to 2-3 each per domain on purpose -- this is enrichment to carry forward into further
+  decomposition (e.g. as extra context in a Grinder node's state), not a second classification
+  pass, and "understand the size" applies here the same way it applies to choice option counts:
+  more isn't better if it dilutes what actually gets used.
+
+domain_enrichment: # the actual data -- was accidentally folded into the note above as one long
+                    # string (a real bug: `domain_enrichment: >` swallowed this whole mapping into
+                    # a scalar, making it unparseable as data); split apart and verified below.
+  internal-ops-tooling:
+    likely_pain_points: [time-cost, visibility, inconsistency]
+    likely_delights: [instant-confirmation, checkable-history]
+    riskiest_journey_stage: onboarding
+  customer-facing-saas:
+    likely_pain_points: [trust-in-accuracy, onboarding-friction, support-unreachable]
+    likely_delights: [minutes-to-useful, human-escalation]
+    riskiest_journey_stage: first-real-use
+  marketplace-two-sided:
+    likely_pain_points: [fairness-doubt, trust-in-accuracy, inconsistency]
+    likely_delights: [instant-confirmation, checkable-history]
+    riskiest_journey_stage: evaluating-trust
+  consumer-hardware-iot:
+    likely_pain_points: [learning-curve, unreliable, integration-friction]
+    likely_delights: [works-on-what-i-have, warned-before-not-after]
+    riskiest_journey_stage: onboarding
+  health-wellness:
+    likely_pain_points: [privacy-doubt, trust-in-accuracy, cant-prove-value]
+    likely_delights: [remembers-me, human-escalation]
+    riskiest_journey_stage: ongoing-use
+  developer-tooling:
+    likely_pain_points: [learning-curve, integration-friction, lock-in-fear]
+    likely_delights: [minutes-to-useful, plain-language]
+    riskiest_journey_stage: onboarding
+  workflow-automation:
+    likely_pain_points: [no-override, trust-in-accuracy, lost-information]
+    likely_delights: [easy-undo, checkable-history]
+    riskiest_journey_stage: first-real-use
+  compliance-regulated:
+    likely_pain_points: [privacy-doubt, inconsistency, no-override]
+    likely_delights: [checkable-history, human-escalation]
+    riskiest_journey_stage: trouble-handling
+  community-social:
+    likely_pain_points: [fairness-doubt, inconsistency, lost-information]
+    likely_delights: [instant-confirmation, remembers-me]
+    riskiest_journey_stage: ongoing-use
+  data-analytics-reporting:
+    likely_pain_points: [trust-in-accuracy, cant-prove-value, visibility]
+    likely_delights: [checkable-history, plain-language]
+    riskiest_journey_stage: first-real-use
+
+# =============================================================================================
+# SUPPORTS: nothing directly -- pain_points, delights and customer_journey below are the
+# underlying vocabulary domain_enrichment's ids point into. They support Slicer.by-domain only
+# indirectly, through domain_enrichment; no tool reads these three lists on their own.
+# =============================================================================================
+pain_points: # ~16, deliberately generic -- unchanged from the retired customer-lens.yaml, referenced by id above
+  - id: time-cost
+    text: Doing the thing takes too many steps or too long.
+  - id: trust-in-accuracy
+    text: I don't know if the answer/result is actually correct.
+  - id: visibility
+    text: I can't tell what's happening or where things stand right now.
+  - id: lost-information
+    text: Something I entered or said gets lost, forgotten, or I have to repeat myself.
+  - id: onboarding-friction
+    text: Getting started requires too much setup before I see any value.
+  - id: cost-surprise
+    text: I don't know what this will cost me, or the cost surprises me later.
+  - id: lock-in-fear
+    text: I'm worried I can't leave or change my mind later without real pain.
+  - id: support-unreachable
+    text: When something breaks, I can't get a real answer quickly.
+  - id: inconsistency
+    text: Different people, or the same person at different times, get a different answer to the same question.
+  - id: no-override
+    text: I can't correct or override something the system got wrong.
+  - id: integration-friction
+    text: It doesn't fit with the other tools I already use.
+  - id: privacy-doubt
+    text: I don't know who else can see this, or whether it's safe.
+  - id: learning-curve
+    text: I don't know how to use it without training or a manual.
+  - id: unreliable
+    text: It works sometimes and not others, unpredictably.
+  - id: fairness-doubt
+    text: I suspect other people are getting better treatment than me.
+  - id: cant-prove-value
+    text: I can't tell if this is actually helping or saving me anything.
+
+delights: # ~10 -- unchanged from the retired customer-lens.yaml
+  - id: instant-confirmation
+    text: I get clear, immediate confirmation that something happened.
+  - id: plain-language
+    text: It talks to me in plain language, not jargon.
+  - id: works-on-what-i-have
+    text: It works on the device I already have -- no separate hardware or app required.
+  - id: easy-undo
+    text: I can undo or correct a mistake easily.
+  - id: warned-before-not-after
+    text: I'm warned before a problem happens, not told about it after.
+  - id: remembers-me
+    text: It remembers or adapts to me instead of starting from zero every time.
+  - id: minutes-to-useful
+    text: I'm getting real value within minutes, not after a long setup.
+  - id: predictable-pricing
+    text: The pricing is clear and doesn't change on me.
+  - id: checkable-history
+    text: There's a record I can check any time.
+  - id: human-escalation
+    text: There's a real person to escalate to when automation isn't enough.
+
+customer_journey: # 7 stages (comment previously said 6 -- cosmetic drift, fixed) -- unchanged from the retired customer-lens.yaml
+  - id: awareness
+    text: The person first hears this kind of thing exists.
+  - id: evaluating-trust
+    text: Deciding whether to actually try it.
+  - id: onboarding
+    text: Getting set up for the first time.
+  - id: first-real-use
+    text: Using it for a real task for the first time.
+  - id: ongoing-use
+    text: Using it as a habit, repeatedly.
+  - id: trouble-handling
+    text: Something goes wrong and they need help.
+  - id: renew-or-churn
+    text: Deciding whether to keep using it or stop.

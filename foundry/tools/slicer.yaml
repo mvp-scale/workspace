@@ -1,64 +1,220 @@
 tool: slicer
 description: >
-  idea or piece -> first-pass pieces, with depends_on edges (and, from by-domain, a persona/lens
-  tag -- see "piece schema" below). The one tool with the most real design freedom -- how you cut
-  determines what kind of plan falls out the other end. Capped at five variants on purpose (see
-  README's "five tools, five variants" rule); one already cut for redundancy.
-status: manual for every variant -- no live call (no ANTHROPIC_API_KEY). Applying a variant means
-  hand-authoring the cut the way that variant's rule describes. A live Slicer, once it exists,
-  would take the variant id as a parameter to its prompt. by-domain is the one variant designed to
-  need the *least* fresh agentic judgment when that happens -- see its rule below.
+  idea or piece -> first-pass pieces, each backed by a real TypeSafe /v1/systemone call: a `state`
+  string and a `questions` dict of typed primitives (noul/choice/score, each with `instructions`
+  and `criteria`), exactly the shape layered_walk.py and funnel.py already send -- not a prose
+  description of a call, the actual call. Capped at five variants by design.
+status: >
+  designed, not yet wired to live calls. by-domain's, by-layer's, by-risk's and binary-halving's
+  criteria are all defined inline below -- the single source of truth for what a live call
+  actually sends, not copied from a separate reference file (tools/domain-library.yaml used to
+  hold a second copy of by-domain's lists; retired, folded into tools/world-knowledge.yaml as
+  enrichment instead -- see that file for why).
 piece_schema: >
-  {id, text, depends_on: [...]} always. Optionally now also persona (an id from
-  customer-lens.yaml's implied cohorts, set by by-domain) and lens ("business" or "technical",
-  set by by-domain or by-phase) -- Sorter's by-persona and by-lens variants read these
+  {id, text, depends_on: [...]} always. Optionally domain, audience (from by-domain, both single
+  ids), layer (from by-layer, a list of ids -- a piece can sit in more than one layer), phase (from
+  by-phase), risk_category (from by-risk, a single id) -- Sorter's grouping variants read these
   deterministically rather than re-deriving them.
+patterns_applied: >
+  Checked every variant against all four documented patterns (docs.typesafe.ai/patterns), not
+  defaulted to choice: (1) Speculative Fan-Out -- every variant below is one call with all its
+  questions in one `questions` dict, never one call per candidate. (2) Confidence-Gated Routing --
+  every choice variant (by-domain, by-risk, binary-halving) now reads the `confidence` field
+  TypeSafe actually returns alongside `choice`, not just the top answer, and routes low-confidence
+  results to an honest "unclear" outcome instead of silently trusting a shaky pick. (3) Composite
+  Scoring -- belongs to Sorter, not Slicer; see sorter.yaml. (4) Intent Routing -- is Fan-Out +
+  Confidence-Gated Routing combined for a classify-then-route shape; by-domain is the variant that
+  actually matches it (classify domain+audience together, gate on confidence, then route to a
+  metadata lookup) -- documented under by-domain below.
+
+# Every variant below is one or more literal TypeSafe primitives. `state` is always
+# `f"Idea: {idea}\n\nWho this is for: {customer}"` (the two-question intake, nothing else) unless
+# a variant says otherwise. The request body sent to POST /v1/systemone is always
+# `{"state": state, "model": "jev-latest", "questions": {<key>: <question>}}` -- "model" is
+# literally the string "jev-latest" regardless of which backend serves it, matching every other
+# live script here.
+
 variants:
-  - id: binary-halving
-    rule: >
-      Cut into exactly two roughly-equal parts each pass; recurse depth-first into one half
-      before touching the other. The most literal reading of "usually in half" -- attack one
-      half of the problem to done, then the other.
-    tradeoff: coarsest cut, most passes needed to reach atomic pieces; closest to how a developer
-      actually starts, worst as a direct source of requirements.
+  - id: by-domain
+    mechanism: >
+      Intent Routing, TypeSafe's own term for this shape (docs.typesafe.ai/patterns/intent-routing):
+      classify with `choice`, then route on the result. ONE live call, two choice questions in the
+      same `questions` dict (Speculative Fan-Out -- they share state, no reason for two round
+      trips). Criteria defined here, the single source of truth -- see tools/world-knowledge.yaml
+      for the domain-keyed enrichment that gets attached after this call, not for the criteria
+      themselves.
+    calls:
+      - state: "Idea: {idea}\n\nWho this is for: {customer}"
+        questions:
+          domain:
+            type: choice
+            instructions: "Question: of the domains listed, which one best describes what this idea is?"
+            criteria:
+              internal-ops-tooling: A tool or process used internally by a team to run its own operations, not sold to outside customers.
+              customer-facing-saas: A software product used directly by external customers to get value.
+              marketplace-two-sided: A platform that connects two distinct groups (e.g. buyers and sellers, workers and jobs) to transact with each other.
+              consumer-hardware-iot: A physical device, paired with connected software, used directly by a consumer.
+              health-wellness: Primarily about a person's health, fitness, or wellbeing.
+              developer-tooling: A tool built for software engineers or other technical builders.
+              workflow-automation: Automating or restructuring a process that's currently done manually.
+              compliance-regulated: Operating under an explicit legal, contractual, or regulatory requirement that shapes the solution.
+              community-social: Built around interaction, coordination, or shared activity between people.
+              data-analytics-reporting: Primarily about surfacing, analyzing, or reporting on information that already exists elsewhere.
+          audience:
+            type: choice
+            instructions: "Question: of the audiences listed, which one is this idea actually for?"
+            criteria:
+              internal-employees: The people using this are employees of the same organization building it.
+              smb-owner-operator: A small or medium business owner/operator making the decision themselves, with limited time or staff.
+              enterprise-buyer: A buyer inside a larger organization, likely not the end user, going through a purchase or approval process.
+              individual-consumer: A single person, using this for themselves, with no organization involved in the decision.
+              technical-practitioner: A specialist (engineer, developer, technician) using this as part of their own technical work.
+              non-technical-professional: A professional in a non-technical role (sales, support, ops, admin) who is not expected to have technical skill.
+              two-sided-mixed: There are two distinct audiences with different needs (e.g. one side supplies, the other consumes) and neither alone is "the" audience.
+              caregiver-or-family: The primary decision-maker or user is acting on behalf of someone else (a family member, a patient, a dependent).
+    routing: >
+      Confidence-Gated Routing (docs.typesafe.ai/patterns/confidence-routing): read `confidence`
+      from each answer, not just `choice`. confidence >= 0.6 on both -> trust domain+audience,
+      use them as the metadata lookup key. confidence < 0.6 on either -> STOP, honest "domain
+      unclear" outcome, do not act on a shaky classification -- this is the same floor
+      confidence-routing's example uses for its universal low bar, chosen for consistency with the
+      0.6 threshold already used everywhere else in this repo (gap selection, atomic checks), not
+      re-derived from scratch.
+    tradeoff: >
+      cheapest and most accurate of the five -- one call, two questions, mutually-exclusive
+      choice is what these models are built for -- but the returned domain/audience ids are only a
+      lookup key into per-domain requirement metadata that doesn't exist yet (an honest gap).
+      Candidate lists kept to 10 and 8 on purpose: choice accuracy degrades as the option count
+      grows.
 
   - id: by-layer
-    rule: >
-      Cut by system layer or functional area (technical feasibility, legal/rights, product/UX,
-      business/GTM, ...) -- however many layers the idea actually touches, not a fixed count.
-    tradeoff: this is what problems/*.json already do by hand. Produces pieces that map cleanly
-      onto Sorter's scoring and, eventually, requirement categories. Best fit so far.
+    mechanism: >
+      Speculative Fan-Out: ONE live call, one noul question per candidate layer (6 questions in
+      the same dict) -- not six separate calls.
+    calls:
+      - state: "Idea: {idea}\n\nWho this is for: {customer}"
+        questions:
+          technical:
+            type: noul
+            instructions: "The technical/engineering feasibility of building this.\n\nQuestion: does solving this idea require real work here?"
+            criteria: {"true": "Yes, this is where real work is needed.", "false": "No, this isn't where the real work is."}
+          legal-regulatory:
+            type: noul
+            instructions: "Legal, contractual, or regulatory requirements this must satisfy.\n\nQuestion: does solving this idea require real work here?"
+            criteria: {"true": "Yes, this is where real work is needed.", "false": "No, this isn't where the real work is."}
+          product-ux:
+            type: noul
+            instructions: "The product design and user experience of this.\n\nQuestion: does solving this idea require real work here?"
+            criteria: {"true": "Yes, this is where real work is needed.", "false": "No, this isn't where the real work is."}
+          business-gtm:
+            type: noul
+            instructions: "How this gets positioned, priced, and brought to customers.\n\nQuestion: does solving this idea require real work here?"
+            criteria: {"true": "Yes, this is where real work is needed.", "false": "No, this isn't where the real work is."}
+          operational:
+            type: noul
+            instructions: "The ongoing operational work required to run this day to day.\n\nQuestion: does solving this idea require real work here?"
+            criteria: {"true": "Yes, this is where real work is needed.", "false": "No, this isn't where the real work is."}
+          financial:
+            type: noul
+            instructions: "The budget, cost, or financial resourcing this requires.\n\nQuestion: does solving this idea require real work here?"
+            criteria: {"true": "Yes, this is where real work is needed.", "false": "No, this isn't where the real work is."}
+    routing: >
+      No confidence field to gate on -- noul returns only a single probability (no separate
+      `confidence`, per docs.typesafe.ai/primitives/noul), so how close the answer sits to 0.5
+      already *is* the uncertainty signal. A layer near 0.5 is genuinely ambiguous, not
+      mis-thresholded; report it as "unclear" rather than forcing true/false at exactly 0.6.
+    tradeoff: >
+      still the most questions of the five (6, all fanned into one call), but the only
+      variant that can mark more than one layer true for the same idea, since each layer is judged
+      independently rather than forced into one mutually-exclusive pick.
 
   - id: by-risk
-    rule: >
-      Split off the single biggest unknown/risk as its own branch first; treat "everything else"
-      as the second branch and recurse the same way into it. Produces a risk-ordered tree, not a
-      balanced one -- the opposite instinct from binary-halving. If the idea itself states its own
-      biggest worry (a real person's own words, not an invented one), use that directly instead of
-      guessing -- see plumber-crm in ideas/ for a case where this applies.
-    tradeoff: good for prioritization (what to answer first falls out of the tree shape itself,
-      Spotlight becomes almost redundant), bad for schedule-mapping (lopsided, no natural phases).
+    mechanism: >
+      one live call, one choice question -- same Intent Routing shape as by-domain, one
+      classification instead of two.
+    calls:
+      - state: "Idea: {idea}\n\nWho this is for: {customer}"
+        questions:
+          risk:
+            type: choice
+            instructions: "Question: of the risk categories listed, which is the single biggest risk standing between this idea and succeeding?"
+            criteria:
+              technical-feasibility: It might not be technically possible to build, or not at the quality needed.
+              market-adoption: People might not actually want or use it even if it's built correctly.
+              regulatory: A legal, contractual, or regulatory requirement might block or reshape it.
+              single-point-of-failure: It depends on one person, system, or thing with no backup.
+              cost-budget: It might cost more than the budget or resources available.
+              competitive: An existing or new competitor might make this unnecessary or uncompetitive.
+              timing: The timing might be wrong -- too early or too late for the market or the team.
+              data-privacy: It might expose or mishandle data in a way that creates real risk.
+    routing: >
+      Confidence-Gated Routing, same 0.6 floor as by-domain: confidence >= 0.6 -> trust the pick as
+      "the" biggest risk. confidence < 0.6 -> don't force it; report "no single dominant risk" as
+      the real finding (the idea's risk is diffuse) instead of silently keeping a low-confidence
+      top pick, which is what the previous version of this file did.
+    tradeoff: >
+      cheap and decisive -- one call -- but forces a single answer even when an idea
+      genuinely has two comparably large risks; low confidence is now surfaced instead of a silent
+      tie-break, but a *close* 0.6+ call between two real risks still hides the runner-up.
 
   - id: by-phase
-    rule: >
-      Cut along the standard project-phase taxonomy probes/lab_decompose.py already uses and
-      grades models against: spike, decide, build, validate, launch. Tag each piece's lens as
-      "technical" (spike/build/validate) unless the phase is clearly customer-facing.
-    tradeoff: reuses real, already-proven vocabulary from the CPM decompose-and-loop page; maps
-      directly onto "a standard development window" (the goal), at the cost of forcing every idea
-      into five phases whether or not that's the natural shape of its risk.
-
-  - id: by-domain
-    rule: >
-      Before cutting technically: (1) classify the domain/industry, (2) name the distinct
-      cohorts/personas, (3) for each domain+persona pair, look up applicable entries from
-      customer-lens.yaml's fixed pain_points/delights/customer_journey lists -- a deterministic
-      match against a predefined library, not a fresh invented guess each run -- and turn the
-      matches into candidate pieces, tagged with their persona and lens: "business". This is the
-      one variant whose entire purpose is surfacing gaps the idea's own wording never states.
+    rationale: >
+      Kept as noul-per-phase, not the single `choice` lab_decompose.py uses for its own "phase"
+      question -- that's a different question (which one phase does THIS ALREADY-ATOMIC PIECE
+      belong to, mutually exclusive) from this one (which phases does THE WHOLE IDEA touch, not
+      mutually exclusive -- an idea can need spike work and build work at once). Noting this so
+      the reuse of the phase taxonomy doesn't read as copying the wrong mechanism from precedent.
+    mechanism: >
+      Speculative Fan-Out: ONE live call, one noul question per phase (5 questions in the same
+      dict), reusing lab_decompose.py's fixed five-phase taxonomy.
+    calls:
+      - state: "Idea: {idea}\n\nWho this is for: {customer}"
+        questions:
+          spike:
+            type: noul
+            instructions: "The spike/discovery phase -- figuring out if this is even possible before committing.\n\nQuestion: does this idea require real work in this phase?"
+            criteria: {"true": "Yes, real work is needed in this phase.", "false": "No, this phase isn't where the work is."}
+          decide:
+            type: noul
+            instructions: "The decide phase -- choosing between real alternatives before committing to one approach.\n\nQuestion: does this idea require real work in this phase?"
+            criteria: {"true": "Yes, real work is needed in this phase.", "false": "No, this phase isn't where the work is."}
+          build:
+            type: noul
+            instructions: "The build phase -- actually constructing the thing once the approach is decided.\n\nQuestion: does this idea require real work in this phase?"
+            criteria: {"true": "Yes, real work is needed in this phase.", "false": "No, this phase isn't where the work is."}
+          validate:
+            type: noul
+            instructions: "The validate phase -- confirming the built thing actually works and solves the problem.\n\nQuestion: does this idea require real work in this phase?"
+            criteria: {"true": "Yes, real work is needed in this phase.", "false": "No, this phase isn't where the work is."}
+          launch:
+            type: noul
+            instructions: "The launch phase -- rolling it out to real use.\n\nQuestion: does this idea require real work in this phase?"
+            criteria: {"true": "Yes, real work is needed in this phase.", "false": "No, this phase isn't where the work is."}
+    routing: >
+      same as by-layer -- no separate confidence field on noul; closeness to 0.5 is the
+      uncertainty signal.
     tradeoff: >
-      the only variant that can add requirements not implied by the idea's own words at all.
-      Honesty flag is smaller than before customer-lens.yaml existed (matching against a fixed,
-      inspectable list beats an LLM inventing fresh "typical" pain points each run) but not zero --
-      the list itself is still an informed guess, not a verified external source, and the match
-      from domain to which list entries apply is still a judgment call.
+      reuses real, already-proven vocabulary; five questions, one call, all against a
+      taxonomy that's already fixed, so no new candidate list had to be authored for this one.
+
+  - id: binary-halving
+    mechanism: >
+      one live call, one choice question between exactly two fixed options -- same
+      Intent Routing shape as by-domain/by-risk, at N=2.
+    calls:
+      - state: "Idea: {idea}\n\nWho this is for: {customer}"
+        questions:
+          half:
+            type: choice
+            instructions: "Question: which of these two best describes the core of this problem?"
+            criteria:
+              people-process: The core problem is primarily about people, behavior, workflow, or coordination.
+              technology-capability: The core problem is primarily about a missing tool, system, or technical capability that doesn't exist yet.
+    routing: >
+      Confidence-Gated Routing, same 0.6 floor. confidence < 0.6 between the two options is itself
+      informative here -- it means the idea doesn't cleanly sit on this axis at all, worth
+      reporting as "mixed, doesn't split cleanly" rather than forcing a side.
+    tradeoff: >
+      the one variant that needed a real redefinition, not just a mechanism swap -- "cut in
+      half" had no fixed axis to classify against before this. Coarsest of the five by design; a
+      fast first triage, not a real decomposition step on its own.

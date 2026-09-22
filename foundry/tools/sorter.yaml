@@ -1,48 +1,100 @@
 tool: sorter
 description: >
   Weigher and Welder merged into one tool, per the five-tool cap: for each atomic piece from
-  Grinder, score it (how much the idea suffers if it's false -- Weigher's old job, still one real
-  live call per piece, currently implemented as funnel.py's bounce_and_weigh) and group it with
-  related pieces by shared need (Welder's old job). Output is scored groups, not a flat list of
-  individually-scored pieces.
+  Grinder, score it (how much the idea suffers if it's false -- Weigher's old job) and group it
+  with related pieces by shared need (Welder's old job). Output is scored groups, not a flat list
+  of individually-scored pieces.
 status: >
-  scoring is live (funnel.py, one battery per piece per model, unchanged mechanism). Grouping is
-  NOT built -- every variant below is a deterministic rule over metadata pieces already carry
-  (depends_on from Slicer, plus persona/lens where by-domain or by-phase set them), by design --
-  per "minimal agentic, mostly predefined scaffolding," grouping should never need a fresh live
-  call of its own. If a variant below can't be satisfied from existing piece metadata, that's a
-  sign Slicer needs to tag more, not that Sorter needs to ask a model something new.
+  scoring is live (funnel.py's bounce_and_weigh, unmodified, called from sort_and_rank.py -- see
+  scoring_primitive below). `by-risk-tier` grouping is live too (sort_and_rank.py), the one
+  variant that needs no Slicer metadata beyond the score itself. `by-domain`/`by-audience`/
+  `by-layer`/`by-phase` grouping are still not built -- each is a deterministic rule over metadata
+  pieces would carry from Slicer (domain, audience, layer, phase -- see slicer.yaml's rewritten
+  piece_schema), by design: per "minimal agentic, mostly predefined scaffolding," grouping should
+  never need a fresh live call of its own. They're unbuilt because the metadata they'd group on
+  isn't set per-piece by anything yet -- by-domain classifies the whole idea, not each atomic
+  requirement -- not because the grouping logic itself is hard. Two of the original five
+  (by-mean-risk, by-persona) are replaced below, not just renamed -- see each entry for why.
+patterns_applied: >
+  scoring_primitive below is already Speculative Fan-Out done right (bounce/weigh/resource in one
+  call, real precedent, no change needed there) and is literally TypeSafe's Composite Scoring
+  pattern (docs.typesafe.ai/patterns/composite-scoring: "break the judgment into independent
+  dimensions, score each one separately, and combine them with weights you control in code") --
+  except the combining step is where it falls short today. Two real gaps found applying the
+  pattern properly: (1) `weigh` and `resource` both return a `confidence` field alongside `score`
+  (docs.typesafe.ai/primitives/score), and funnel.py's bounce_and_weigh discards it -- reads only
+  `.score`, never `.confidence` -- the same mistake Slicer's choice variants had, on a different
+  primitive. (2) `resource` (effort) is scored live every run and then never used anywhere --
+  spotlight() combines only mean_risk + disagreement, dropping the third dimension entirely, which
+  is not what "combine them with weights you control" means; today it's "compute three, use one."
+scoring_primitive:
+  mechanism: >
+    ONE live call per piece per model, three questions in one `questions` dict (verbatim from
+    funnel.py's bounce_question/weigh_question/resource_question, not paraphrased).
+  calls:
+    - state: "{idea}"
+      questions:
+        bounce:
+          type: noul
+          instructions: "Idea under evaluation: {idea}\n\nClaim: {piece_text}\n\nQuestion: as the idea is described, {bouncer_variant_question}"
+          criteria: {"true": "{bouncer_variant_true}", "false": "{bouncer_variant_false}"}
+        weigh:
+          type: score
+          instructions: "Claim: {piece_text}\n\nQuestion: if this claim turns out false, how much does it damage the overall idea's viability?"
+          criteria: [very low damage to viability if false, low damage to viability if false, medium damage to viability if false, high damage to viability if false, very high damage to viability if false]
+        resource:
+          type: score
+          instructions: "Claim: {piece_text}\n\nQuestion: how much work would it actually take to resolve or implement this?"
+          criteria: [very low amount of work, low amount of work, medium amount of work, high amount of work, very high amount of work]
+  composite: >
+    Per Composite Scoring's own worked example: normalize weigh and resource to 0-1
+    (score / 4, since criteria has 5 levels, 0-4), read each one's `confidence` too, then combine
+    in code with explicit weights instead of the current spotlight()'s fixed, unweighted
+    "mean_risk + disagreement": e.g. priority = (w_risk * risk_0to1) + (w_effort * (1 -
+    effort_0to1)) + (w_disagreement * cross_model_disagreement(bounce)) -- weights chosen in code,
+    visible and adjustable, the way the pattern's own resume-screening example keeps senior-IC and
+    engineering-manager weightings separate rather than baking in one fixed formula.
 variants:
-  - id: by-mean-risk
-    rule: >
-      Cluster pieces that share a dependency root (same top-of-chain ancestor in depends_on) into
-      one group; the group's score is the mean of its pieces' risk-if-false.
-    tradeoff: today's de facto default (Conveyor already walks depends_on this way) -- cheapest,
-      but a group is only as meaningful as depends_on already being right.
+  - id: by-domain
+    rule: Group pieces that share the same domain tag (set by Slicer's by-domain variant).
+    tradeoff: only as good as by-domain actually having run -- pieces from other Slicer variants
+      (by-layer, by-risk, by-phase, binary-halving) won't carry a domain tag to group on at all.
 
-  - id: by-persona
-    rule: Group pieces that share the same persona tag (set by Slicer's by-domain variant).
-    tradeoff: only as good as by-domain actually tagged personas -- pieces from other Slicer
-      variants (binary-halving, by-risk) won't have a persona tag to group on at all.
+  - id: by-audience
+    rule: >
+      Group pieces that share the same audience tag (set by Slicer's by-domain variant --
+      replaces the original by-persona, which assumed a freely-invented persona id; audience is
+      now a fixed, classified id -- criteria defined inline in slicer.yaml's by-domain variant --
+      instead of something a model invents fresh).
+    tradeoff: same dependency as by-domain -- only populated when by-domain ran.
+
+  - id: by-layer
+    rule: >
+      Group pieces that share at least one layer tag (set by Slicer's by-layer variant; a piece
+      can land in more than one group, since layer is multi-valued, not single).
+    tradeoff: the only grouping that can put one piece in more than one group -- correct given
+      layer is multi-valued, but breaks the assumption that groups partition the piece list.
 
   - id: by-phase
-    rule: Group pieces that share the same SDLC phase tag (spike/decide/build/validate/launch).
-    tradeoff: maps directly onto Conveyor's schedule-mapping job downstream; same dependency on
-      Slicer having actually set the tag (by-phase does, others don't).
-
-  - id: by-lens
-    rule: >
-      Two groups only: "business" (customer-facing, plain-language pieces) and "technical"
-      (feasibility pieces) -- the actual mechanism behind "readable by anyone" / the human-agentic
-      bridge.
-    tradeoff: coarsest grouping of the five, but the one every idea can always produce regardless
-      of which Slicer variant ran, since lens is closer to a piece's own phrasing than to metadata
-      that has to be explicitly set.
+    rule: Group pieces that share the same phase tag (spike/decide/build/validate/launch, set by
+      Slicer's by-phase variant).
+    tradeoff: maps directly onto Conveyor's schedule-mapping job downstream; same dependency
+      pattern as the others above -- only populated when by-phase ran.
 
   - id: by-risk-tier
     rule: >
       Three fixed bins by mean risk-if-false: must-resolve-first (>=0.6), worth-checking
-      (0.3-0.6), low-stakes (<0.3). No dependency or tag needed -- works on any piece from any
-      Slicer variant.
+      (0.3-0.6), low-stakes (<0.3). No Slicer-set tag needed at all -- works on any piece
+      regardless of which Slicer variant produced it. (Replaces the original by-mean-risk, which
+      clustered by shared depends_on ancestor -- depends_on is still empty for every problem in
+      this repo, so that variant has never actually been able to run; kept out until dependency
+      inference is real.)
+    routing: >
+      Confidence-Gated Routing using weigh's own `confidence` field (once read -- see
+      patterns_applied): a piece scored must-resolve-first with low confidence isn't the same
+      finding as one scored must-resolve-first confidently -- the first means "probably risky, but
+      the model isn't sure," the second means "risky, and sure about it." Worth a fourth bin or a
+      flag, not silently averaged into the same tier as today.
     tradeoff: always available, but a group here says nothing about *why* pieces belong together,
-      only that they scored similarly -- weakest fit for "architecture rollup" of the five.
+      only that they scored similarly -- weakest fit for "architecture rollup" of the five. The
+      one true fallback when no Slicer metadata exists.

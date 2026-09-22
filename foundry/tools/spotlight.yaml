@@ -7,6 +7,14 @@ status: risk-plus-disagreement is live today (funnel.py's spotlight()). The othe
   same computation over the same inputs (per-piece/per-group risk and cross-model disagreement,
   both already produced by Sorter) with a different sort key -- no new live call needed for any of
   the five, consistent with "minimal agentic, mostly scaffolding."
+patterns_applied: >
+  Checked against all four documented patterns. None of Spotlight's five variants need a new live
+  call or a mechanism change -- they're pure recombination of numbers Sorter already produced, and
+  none of the four patterns are about how to recombine, only how to call and route. The one real
+  change flows down from Sorter's own fix: once bounce_and_weigh reads `weigh`'s `confidence`
+  field (see sorter.yaml), risk-plus-disagreement's "disagreement" term should fold in low
+  confidence the same way it folds in cross-model spread -- both are "don't trust this score at
+  face value" signals, and today only the second is counted.
 variants:
   - id: risk-plus-disagreement
     rule: Sort by (mean risk-if-false + cross-model disagreement on supported-p), descending.
@@ -26,14 +34,19 @@ variants:
       be wrong; this variant would never surface that.
 
   - id: downstream-impact
-    rule: Sort by how many other pieces/groups depend on this one (blast radius in the
-      dependency graph), ignoring risk and disagreement entirely.
+    rule: >
+      Sort by how many other pieces/groups depend on this one (blast radius in the dependency
+      graph), ignoring risk and disagreement entirely. Blocked today -- depends_on is still empty
+      for every problem in this repo.
     tradeoff: structural, not judgment-based -- doesn't need live scores at all, only Slicer's
-      depends_on edges. Cheapest of the five, but a heavily-depended-on piece isn't necessarily
-      risky, just central.
+      depends_on edges. Would be the cheapest of the five once dependency inference exists, but a
+      heavily-depended-on piece isn't necessarily risky, just central.
 
-  - id: persona-weighted
-    rule: Sort by risk-plus-disagreement, but multiply by a fixed weight for whichever persona
-      by-domain marked as most central to the idea.
-    tradeoff: only available when by-domain actually ran and tagged personas; otherwise falls back
-      to risk-plus-disagreement.
+  - id: audience-weighted
+    rule: >
+      Sort by risk-plus-disagreement, but multiply by a fixed weight for whichever audience
+      by-domain classified as this idea's primary one (replaces persona-weighted -- audience is
+      now a classified id, criteria defined inline in slicer.yaml's by-domain variant, not a
+      freely-invented persona).
+    tradeoff: only available when by-domain actually ran and classified an audience; otherwise
+      falls back to risk-plus-disagreement.

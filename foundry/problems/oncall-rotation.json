@@ -1,7 +1,7 @@
 {
   "id": "oncall-rotation",
   "idea": "Fix our on-call rotation: whoever is on call must answer pages within 5 minutes, 24/7 including overnight, with no real backup plan when someone is sick or traveling.",
-  "source": "live-selected via tools/gap-library.yaml: 12 generic categories, one noul question each per model, in context of this idea+customer -- selected categories crossed the 0.6 confidence bar. No idea-specific piece text authored by Claude. depends_on left empty -- dependency inference isn't built. See foundry/slicer_live.py.",
+  "source": "HISTORICAL, SUPERSEDED -- produced by slicer_live.py (since deleted) against tools/gap-library.yaml (since retired, folded into tools/world-knowledge.yaml). No idea-specific piece text authored by Claude; that much still holds. But the piece texts below are the pre-polarity-fix wording (problem statements, not requirement statements -- see world-knowledge.yaml's gap_categories comment) and the selection used a single-model 0.6 threshold rather than the current multi-model top-k. Kept as a historical record, not a current artifact. The current live mechanism is foundry/layered_walk.py; its output lands in foundry/runs/<idea>-layered-walk.jsonl, rendered by foundry/report.py, not written back to problems/*.json.",
   "pieces": [
     {
       "id": "behavior-change",

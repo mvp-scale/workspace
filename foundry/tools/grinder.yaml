@@ -1,31 +1,97 @@
 tool: grinder
 description: >
   Re-slice one piece that's still too coarse, recursively, until it stops producing anything new
-  ("infinitesimal" -- not a depth cutoff, a real stopping condition). Three variants; none wired
-  to live recursion yet, this is the design pass before building one. This tool is also where the
-  old Bouncer tool ended up: per the five-tool cap, Bouncer wasn't cut, it was absorbed here --
+  ("infinitesimal" -- not a depth cutoff, a real stopping condition). Three variants. Also where
+  the old Bouncer tool ended up: per the five-tool cap, Bouncer wasn't cut, it was absorbed here --
   its one mechanism (a live yes/no question per piece) is exactly what atomic-threshold already
-  needed to decide when to stop, so there's no separate downstream tool asking a structurally
-  identical question.
-status: not built. atomic-threshold is the one with real precedent (the noul question and 0.6
-  threshold already exist and already run live in probes/lab_decompose.py's battery()/
-  simulate_loop() against the hand-authored CPM tree) -- wiring it here means reusing that, not
-  inventing a new mechanism.
+  needed to decide when to stop.
+status: >
+  atomic-threshold is live today in foundry/layered_walk.py (walk_gap/layer_n_node), fanned out
+  and multi-model, matching the design below exactly -- this file previously described
+  grinder_live.py, a two-call-per-node, single-model script that has since been deleted (superseded,
+  found redundant with layered_walk.py by an Opus end-to-end review). fixed-depth and
+  irreducible-fact are still design-only, no-call alternatives.
+patterns_applied: >
+  Checked against all four documented patterns (docs.typesafe.ai/patterns): (1) Speculative
+  Fan-Out -- one call per node, atomic question and every child-relevance question as separate
+  keys in one `questions` dict, one call per model. (2) Confidence-Gated Routing -- noul has no
+  separate `confidence` field (docs.typesafe.ai/primitives/noul), so this uses cross-model
+  disagreement as the practical uncertainty signal instead, gated at funnel.py's own
+  DISAGREEMENT_THRESHOLD (0.3, already defined, not invented for this) -- a flat two-way
+  (atomic/not-atomic) outcome replaced with three: atomic, not-atomic, or genuinely uncertain. Not
+  hypothetical: confirmed live twice -- a single-model diagnostic mid-session found P1 (SemIf)
+  discriminates atomic-vs-compound text cleanly while P3 (so1), P4 (Laya) and P5 (Verdict) barely
+  discriminate at all on this question; P3 was then excluded from layered_walk.py's model list for
+  exactly that reason, and a real run on single-point-of-failure came back UNCERTAIN at the root
+  (spread 0.69) rather than being forced to a side. (3) Composite Scoring and (4) Intent Routing
+  don't apply here -- Grinder isn't combining independent scored dimensions or routing between
+  handler types, it's one repeated yes/no judgment.
+  Two real bugs an Opus end-to-end review found and layered_walk.py now fixes: (a) the previous
+  live code's child-relevance instructions repeated the full breadcrumb text three times in one
+  prompt (once via state, once via a prefix, once via "including {full_text}") -- now each piece
+  of context appears once: ancestors in `state`, this node's own text once in each question. (b)
+  the atomic threshold was 0.6, the same universal floor used everywhere else in this repo --
+  wrong per Confidence-Gated Routing's own point (different stakes need different thresholds), and
+  provably too fine a cut anyway: a single model's achievable noul values near 0.6 land on a
+  quantized grid (0.5923 vs 0.6225 are adjacent) -- narrower than the threshold itself. Raised to
+  0.75 for this terminal, ship-a-requirement decision; CHILD_RELEVANCE stays at 0.6 since a wrong
+  recursion is cheap to recover from.
 variants:
   - id: fixed-depth
-    rule: Stop after N recursive cuts, full stop, regardless of what the piece still says.
+    rule: >
+      Stop after N recursive cuts, full stop, regardless of what the piece still says. No model
+      call at all -- a control parameter, not a classification.
     tradeoff: cheapest, no model call, deterministic -- but arbitrary. A simple piece gets cut
       needlessly deep; a genuinely compound one gets left too coarse.
 
   - id: atomic-threshold
-    rule: >
-      Ask a live noul question -- "is this a single, atomic unit that should be executed as one
-      piece, not split further?" -- reusing probes/lab_decompose.py's exact "atomic" question and
-      its 0.6 stop threshold. Stop when the answer crosses threshold, recurse otherwise, capped at
-      a max depth as a safety valve for a model that never says yes.
-    tradeoff: real signal, real precedent, but spends a live model call per piece per depth level,
-      and different models will disagree on where "atomic" is (lab_decompose.py's own
-      simulate_loop() already measures this disagreement across the five models).
+    mechanism: >
+      ONE live call per node: the atomic question plus one relevance question per candidate child,
+      all as separate keys in the same `questions` dict (Speculative Fan-Out), same state for all
+      of them. Costs the same number of questions as before when the node turns out NOT atomic
+      (children were going to be checked anyway); costs a few wasted, already-paid-for questions
+      when the node turns out to BE atomic (children were asked speculatively and then never
+      needed) -- an honest tradeoff of a little extra spend for one round trip instead of up to
+      N+1. `state` still accumulates the breadcrumb the same way; `full_text` is breadcrumb + this
+      node's own text.
+    calls:
+      - state: "Idea: {idea}\n\nWho this is for: {customer}\n\nEstablished so far: {breadcrumb}"
+        questions:
+          atomic:
+            type: noul
+            instructions: "{node_text}\n\nQuestion: is this a single, directly checkable requirement -- something a person could look at the real system and confirm yes or no, without first splitting it into separate sub-checks?"
+            criteria:
+              "true": A single, directly checkable requirement -- one clear yes/no fact.
+              "false": Still a category or a compound of more than one checkable thing -- needs to split further.
+          # one of these per candidate child in the node's library entry, key = child id, e.g.:
+          child-<id>:
+            type: noul
+            instructions: "{node_text} {child_text}\n\nQuestion: given everything established so far, is this a real, relevant sub-gap that needs addressing?"
+            criteria:
+              "true": Yes, a real, relevant sub-gap here.
+              "false": No, not relevant given what's already established.
+    routing: >
+      Confidence-Gated Routing via cross-model disagreement (spread = max(votes) - min(votes)),
+      not the raw mean alone:
+      spread < 0.3 AND mean >= 0.75 -> ATOMIC, stop, confident.
+      spread < 0.3 AND mean < 0.75 -> NOT ATOMIC, confident -- recurse into children whose own
+        relevance question also cleared 0.6 (or honest "no deeper library" stop if none exist).
+      spread >= 0.3, any mean -> UNCERTAIN -- do not mechanically apply the threshold either way;
+        report which models disagreed and by how much as the actual finding, since disagreement
+        this large has already been shown to mean "some models aren't discriminating on this
+        question," not "the content is genuinely ambiguous."
+    tradeoff: >
+      real signal, but the wording is layered_walk.py's own ("is this a single, directly
+      checkable requirement..."), not lab_decompose.py's ("is this a single, atomic unit of
+      work...") -- an earlier version of this file wrongly claimed the two were the same; they're
+      close in spirit, not identical text, and only loop.py (now deleted) used lab_decompose.py's
+      exact wording. The uncertain-outcome bucket needs a real downstream action defined (today:
+      report and stop, no automatic recursion) -- otherwise "uncertain" just becomes a fourth kind
+      of honest stall next to "needs split, no library."
+    caps: a hard live-call budget and a max-depth safety valve, both enforced in code, for a model
+      that never says yes. Budget accounting needs to shift from "one unit per network call" to
+      "one unit per question asked" once fan-out lands, since one call can now carry several
+      questions -- otherwise the budget silently under-counts real spend.
 
   - id: irreducible-fact
     rule: >

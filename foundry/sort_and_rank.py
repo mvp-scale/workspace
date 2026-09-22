@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""Connects Sorter/Conveyor/Spotlight (funnel.py) to layered_walk.py's actual output -- the real
+gap this session had left open: funnel.py only ever read problems/*.json, and layered_walk.py
+never wrote to it. Takes the atomic requirements from a run's ledger, scores them live with
+funnel.bounce_and_weigh (unmodified -- proven, not touched), then does the deterministic parts
+that don't need a live call: Sorter.by-risk-tier grouping, Conveyor.risk-first ordering, and all
+five Spotlight variants where the data to support them actually exists.
+
+Two Spotlight variants and two Conveyor variants are reported as blocked, honestly, not faked:
+downstream-impact and Conveyor.dependency-order/parallel-lanes need depends_on, which nothing in
+this repo infers; audience-weighted needs a per-piece audience tag, which nothing currently sets
+(by-domain classifies the whole idea, not each piece). Conveyor.duration-weighted/critical-path
+need a real duration source that doesn't exist -- not attempted at all, per the standing rule
+against inventing one.
+
+    python3 foundry/layered_walk.py --idea oncall-rotation   # must run first
+    python3 foundry/sort_and_rank.py --idea oncall-rotation
+"""
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "demo"))
+import funnel  # noqa: E402
+
+MODELS = ["semif", "kev-4b", "so1"]  # same corrected set as layered_walk.py -- see its own comment
+
+
+def load_ledger(idea):
+    path = HERE / "runs" / f"{idea}-layered-walk.jsonl"
+    if not path.exists():
+        sys.exit(f"no ledger at {path} -- run layered_walk.py --idea {idea} first")
+    return [json.loads(l) for l in open(path) if l.strip()]
+
+
+def atomic_pieces(records):
+    return [{"id": "::".join(r["path"]), "text": r["full_text"], "depends_on": []}
+            for r in records if r["type"] == "grinder_node" and r["status"] == "atomic"]
+
+
+def mean_risk(piece_id, results):
+    per_model = results.get(piece_id, {})
+    rs = [v["risk_0to1"] for v in per_model.values() if v.get("risk_0to1") is not None]
+    return sum(rs) / len(rs) if rs else None
+
+
+def by_risk_tier(pieces, results):
+    """Sorter.by-risk-tier: three fixed bins by mean risk-if-false, per tools/sorter.yaml."""
+    tiers = {"must-resolve-first": [], "worth-checking": [], "low-stakes": []}
+    for p in pieces:
+        risk = mean_risk(p["id"], results)
+        if risk is None:
+            continue
+        tier = "must-resolve-first" if risk >= 0.6 else "worth-checking" if risk >= 0.3 else "low-stakes"
+        tiers[tier].append((p, risk))
+    for t in tiers:
+        tiers[t].sort(key=lambda pr: -pr[1])
+    return tiers
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--idea", required=True)
+    ap.add_argument("--bouncer", default="reasonable", choices=list(funnel.BOUNCER_VARIANTS))
+    a = ap.parse_args()
+
+    records = load_ledger(a.idea)
+    meta = next(r for r in records if r["type"] == "run_meta")
+    pieces = atomic_pieces(records)
+    if not pieces:
+        print(f"No atomic requirements in this ledger yet -- nothing for Sorter to score. Run layered_walk.py --idea {a.idea} again, or build more gap_category_detail libraries.")
+        return
+
+    print(f"Scoring {len(pieces)} atomic requirement(s) live -- {len(pieces)} pieces x {len(MODELS)} models x 1 call each (bounce+weigh+resource fanned together)...")
+    results = funnel.bounce_and_weigh(meta["idea"], pieces, MODELS, a.bouncer)
+
+    print(f"\nSORTER -- scored, bouncer variant '{a.bouncer}'")
+    rows = []
+    for p in pieces:
+        per_model = results.get(p["id"], {})
+        ps = [v["p"] for v in per_model.values() if v.get("p") is not None]
+        risks = [v["risk_0to1"] for v in per_model.values() if v.get("risk_0to1") is not None]
+        effort = funnel.mean_effort(p["id"], results)
+        if not ps or not risks:
+            continue
+        mean_p, mean_risk = sum(ps) / len(ps), sum(risks) / len(risks)
+        rows.append({"piece": p, "supported_p": mean_p, "risk": mean_risk, "effort": effort or 0.0,
+                     "disagreement": max(ps) - min(ps) if len(ps) > 1 else 0.0})
+    rows.sort(key=lambda r: -r["risk"])
+    w = max((len(r["piece"]["text"]) for r in rows), default=10)
+    w = min(w, 70)
+    print(f"{'requirement':<{w}}  {'supported':>9}  {'risk':>6}  {'effort':>6}  {'disagree':>8}")
+    for r in rows:
+        t = r["piece"]["text"]
+        t = t if len(t) <= w else t[:w - 3] + "..."
+        print(f"{t:<{w}}  {r['supported_p']:>9.2f}  {r['risk']:>6.2f}  {r['effort']:>6.2f}  {r['disagreement']:>8.2f}")
+
+    print("\nSORTER.by-risk-tier (grouping)")
+    tiers = by_risk_tier(pieces, results)
+    for tier, items in tiers.items():
+        print(f"  {tier}: {len(items)}")
+        for p, risk in items:
+            print(f"    - [{risk:.2f}] {p['text'][:80]}")
+
+    print("\nCONVEYOR.risk-first (sequence groups, highest risk first -- ignores dependency, none exists)")
+    for tier in ["must-resolve-first", "worth-checking", "low-stakes"]:
+        if tiers[tier]:
+            print(f"  {tier} ({len(tiers[tier])})")
+    print("CONVEYOR.dependency-order / parallel-lanes: BLOCKED -- depends_on is empty for every piece, no inference built.")
+    print("CONVEYOR.duration-weighted / critical-path: NOT ATTEMPTED -- no real duration source exists; not faking one.")
+
+    print("\nSPOTLIGHT -- five variants, same inputs, different sort key")
+    def show(label, key_fn):
+        ranked = sorted(rows, key=key_fn, reverse=True)
+        print(f"  {label}: " + ", ".join(r["piece"]["text"][:40] for r in ranked[:3]) + (" ..." if len(ranked) > 3 else ""))
+    show("risk-plus-disagreement (default)", lambda r: r["risk"] + r["disagreement"])
+    show("disagreement-only", lambda r: r["disagreement"])
+    show("risk-only", lambda r: r["risk"])
+    print("  downstream-impact: BLOCKED -- needs depends_on, none exists.")
+    print("  audience-weighted: BLOCKED -- needs a per-piece audience tag; by-domain classifies the whole idea, not each piece.")
+
+
+if __name__ == "__main__":
+    main()
