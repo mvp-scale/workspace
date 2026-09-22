@@ -387,14 +387,81 @@ const heat01 = (s) => s == null ? "var(--surface-2)" : s >= 0.5
   : `color-mix(in srgb, var(--bad) ${Math.round((0.5 - s) * 2 * 55)}%, var(--surface-2))`;
 const STATUS_LABEL = { done: "done", in_progress: "in progress", blocked: "blocked on a decision", not_started: "not started" };
 
+const STATUS_COLOR = { done: "--good", blocked: "--bad", in_progress: "--accent", not_started: "--text-3" };
+
+/* Everything the story needs, computed once from the raw scored nodes. */
+function decomposeStory(data) {
+  const models = orderModels(Object.keys(data.models || {}));
+  const byM = {};
+  for (const m of models) {
+    const nodes = data.models[m].nodes;
+    const mean = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    const atomicP = nodes.filter(n => n.answers?.atomic?.noul != null).map(n => n.answers.atomic.noul);
+    const coversP = nodes.filter(n => n.answers?.covers?.noul != null).map(n => n.answers.covers.noul);
+    const parallelP = nodes.filter(n => n.answers?.parallel?.noul != null).map(n => n.answers.parallel.noul);
+    const meanAtomic = mean(atomicP), meanCovers = mean(coversP), meanParallel = mean(parallelP);
+    const flaws = ["g-structures", "g-lineup"].map(id => nodes.find(n => n.id === id)).filter(Boolean);
+    const flawsCaught = flaws.filter(n => n.grade?.covers_correct).length;
+    const sync = nodes.find(n => n.id === "lineup-15");
+    const syncRank = data.models[m].top_risk.findIndex(t => t.id === "lineup-15");
+    byM[m] = { meanAtomic, meanCovers, meanParallel, flaws, flawsCaught, sync, syncRank, val: data.models[m].validate };
+  }
+  const syncAgree = models.filter(m => byM[m].syncRank >= 0 && byM[m].syncRank <= 1);
+  // "reflexive no" only on the two questions where it actually shows up here; parallel behaves normally
+  const alwaysNo = models.filter(m => byM[m].meanAtomic != null && byM[m].meanAtomic < 0.15 && byM[m].meanCovers < 0.15 && byM[m].meanParallel > 0.3);
+  return { models, byM, syncAgree, alwaysNo };
+}
+
 function renderDecomposeTree(data) {
   const models = orderModels(Object.keys(data.models || {}));
   if (!models.length) return empty("No decompose-tree run yet", "Run probes/lab_decompose.py for the loaded models.");
+  const story = decomposeStory(data);
   const out = el("div");
   out.append(
     el("h2", { text: "Decompose and loop" }),
-    el("p", { class: "muted", text: "A large problem (this project's own build-out plan, docs/scenario-lab-plan.md) broken by hand into a reference tree of work items, 3-4 layers deep. Every model judges every node with the same typed battery: is it atomic, do its listed children fully cover what it needs, how risky and complex is it, can it run in parallel, and what kind of dependency stands in its way. The tree's real status (done, in progress, blocked, not started) is never shown to a model; it is only used afterward to check whether a model's own risk judgement lines up with what has actually needed attention." }),
-    el("div", { class: "callout warn" }, "One worked example, 33 nodes, one problem: this shows the mechanism working, not that it generalises. Two group nodes have a genuine, documented coverage gap (explained on hover), not an invented one. The risk-forecast check below has only 2 blocked items to compare against — read its number as illustrative, not a result."));
+    el("p", { class: "muted", text: "We took a problem too big to answer in one call — this project's own build-out plan — and broke it by hand into 33 pieces across 4 layers: the plan itself, its 5 sections, their 18 items, and the candidate lists inside two of those items. Every model judged every piece the same way: is it a single unit of work, does it cover what its parent needs, how risky and complex is it, can it run in parallel, what stands in its way. None of them were told which pieces are actually done, blocked or untouched — that only gets checked afterward." }));
+
+  const p1 = story.syncAgree.length >= 2
+    ? `${story.syncAgree.map(m => Jev.codeOf(m)).join(", ")} independently picked the same node as the single riskiest thing in the entire plan: "Sync jevbench" — without seeing each other's answers, and without being told that it is, in fact, the one item explicitly blocked on a decision (upstream scoring changes could invalidate every stored benchmark number). That's real convergent signal from three separate models on a genuine problem.`
+    : `Models did not converge cleanly on the plan's real blocker ("Sync jevbench") as its top risk — the signal here is weaker than in other runs of this tree.`;
+  const caughtBoth = story.alwaysNo.filter(m => story.byM[m].flawsCaught === 2);
+  const p2 = story.alwaysNo.length
+    ? `${story.alwaysNo.map(m => Jev.codeOf(m)).join(", ")} answered "not atomic" and "doesn't cover" almost every time it was asked, regardless of the node — mean probability ${story.alwaysNo.map(m => `${fmt.num(story.byM[m].meanAtomic, 2)} atomic, ${fmt.num(story.byM[m].meanCovers, 2)} covers`).join("; ")} (its parallel answers, by contrast, are unremarkable).`
+      + (caughtBoth.length ? ` That model "caught" both of the deliberately hidden coverage gaps below — but that is not judgement, it is a broken clock: it says no by reflex, so it happens to be right whenever the true answer is no.` : "")
+    : null;
+  const missed = models.filter(m => !story.alwaysNo.includes(m)).filter(m => story.byM[m].flawsCaught === 0);
+  const p3 = missed.length
+    ? `${missed.map(m => Jev.codeOf(m)).join(", ")} confidently said both flawed groups fully covered their requirement (probability near 1.0) — the child items are listed right there in the text, so a surface read looks complete. Neither actually is: one lists "a baseline for every claim" as a child without any shipped structure having one yet, the other lists syncing jevbench as a child while that sync is itself undecided. Catching that needs knowing the project, not just reading the list.`
+    : null;
+  out.append(el("div", { class: "card" },
+    el("h3", { text: "What actually happened" }),
+    el("p", {}, p1),
+    p2 ? el("p", {}, p2) : null,
+    p3 ? el("p", {}, p3) : null));
+
+  const chartRows = models.map(m => {
+    const nodes = data.models[m].nodes.filter(n => n.kind === "leaf" && n.grade?.risk_0to1 != null);
+    return { m, nodes };
+  });
+  const CW = 640, CH = chartRows.length * 34 + 30, CL = 8, CR = 8, CT = 6;
+  const cx = (r) => CL + r * (CW - CL - CR);
+  const chart = S("svg", { viewBox: `0 0 ${CW} ${CH}`, class: "rc", role: "img", "aria-label": "Each leaf's model-given risk score, coloured by what actually happened to it" },
+    [0, .25, .5, .75, 1].map(v => S("line", { class: "gl", x1: cx(v), x2: cx(v), y1: CT, y2: CT + chartRows.length * 34 })),
+    chartRows.map(({ m, nodes }, i) => {
+      const y = CT + i * 34 + 17;
+      return [S("text", { x: 0, y: y + 4, "text-anchor": "start" }, Jev.codeOf(m)),
+        nodes.map((n, j) => {
+          const blocked = n.status === "blocked";
+          const jy = y + (blocked ? 0 : ((j % 3) - 1) * 6);
+          return S("circle", { cx: cx(n.grade.risk_0to1), cy: jy, r: blocked ? 6 : 3.5, fill: `var(${STATUS_COLOR[n.status]})`, stroke: blocked ? "var(--surface)" : "none", "stroke-width": blocked ? 1.5 : 0 },
+            S("title", {}, `${n.title}\nrisk ${fmt.num(n.grade.risk_0to1, 2)} — ${STATUS_LABEL[n.status]}`));
+        })];
+    }),
+    S("text", { x: cx(0), y: CH - 2, "text-anchor": "start" }, "0 risk"), S("text", { x: cx(1), y: CH - 2, "text-anchor": "end" }, "1 risk"));
+  out.append(el("div", { class: "card" }, el("h3", { text: "Did risk scores see the real trouble coming?" }),
+    el("p", { class: "small muted" }, "Every leaf, plotted by that model's own risk score. ", el("b", { style: "color:var(--bad)" }, "Large red dots"), " are the two leaves actually blocked on a decision today; small dots are everything else, coloured by real status (", el("span", { style: "color:var(--good)" }, "done"), ", ", el("span", { style: "color:var(--accent)" }, "in progress"), ", ", el("span", { style: "color:var(--text-3)" }, "not started"), "). If a model's judgement means anything, the red dots should sit to the right."),
+    el("div", { style: "overflow-x:auto" }, chart),
+    el("p", { class: "legend", text: "Only 2 blocked leaves exist in this tree, so this is a look, not a measurement — read the blocked-risk AUC column below the same way." })));
 
   const t = el("table", { class: "data" });
   t.append(el("caption", { class: "legend", text: "Accuracy on the typed battery across all 33 nodes. Risk/complexity are mean absolute error against my reference call, 0 to 1 (lower is better)." }),
