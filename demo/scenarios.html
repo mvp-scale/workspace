@@ -37,6 +37,21 @@
   .srcgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0; }
   .srcnote { cursor: help; }
   .srcnote code { font: 11px var(--mono); color: var(--text-2); background: var(--surface-2); padding: 1px 4px; border-radius: 3px; }
+  /* 3-step strip: high-level by default, detail on click */
+  .ministeps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 860px) { .ministeps { grid-template-columns: 1fr; } }
+  details.ministep { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; background: var(--surface); }
+  details.ministep summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; }
+  details.ministep summary::-webkit-details-marker { display: none; }
+  details.ministep .stepno { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  details.ministep .stept { flex: 1 1 auto; min-width: 0; }
+  details.ministep .stepmore { flex: none; }
+  details.ministep[open] .stepmore::after { content: ""; }
+  details.ministep p { margin: 8px 0 0; }
+  /* the closing card */
+  .bottomline { border-color: var(--accent); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface)); }
+  .bottomline .bl-stat { font-size: 22px; margin: 4px 0 8px; }
+  .bottomline .bl-close { font-size: 15px; font-weight: 600; margin-top: 10px; }
   .badges { display: flex; flex-wrap: wrap; gap: 4px; }
   details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
   pre.notes { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); max-height: 320px; overflow: auto; }
@@ -787,19 +802,28 @@ function renderDecomposeTree(data) {
       el("div", {}, el("b", { text: "3. The model scoring" }), el("br"), srcNote("models"))),
     el("p", { class: "small" }, "In short: ", el("b", { text: "I wrote the plan." }), " A computer computed the schedule from it. ", el("b", { text: "The models only graded it" }), " — they answered typed yes/no, multiple-choice and score questions about nodes I had already written; none of them proposed a single node.")));
 
-  // 3: plain words + fig 1
+  // 3: plain words as a 3-step strip, detail on demand rather than run-on prose
+  const step = (n, title, short, full) => el("details", { class: "ministep" },
+    el("summary", {}, el("span", { class: "stepno", text: n }), el("span", { class: "stept" }, el("b", { text: title }), el("span", { class: "small muted", text: " — " + short })), el("span", { class: "stepmore small muted", text: "expand" })),
+    el("p", { class: "small", text: full }));
   out.append(el("h3", { text: "What it means in plain words" }),
-    el("p", {}, "Some datasets are too big to fit in one machine's memory, so they get processed in slow passes off disk. The pitch's idea is to rent memory in tiny pieces from very many machines at once. Cloudflare Workers are small programs that run on Cloudflare's servers worldwide; the pitch proposes starting hundreds or thousands of them, giving each one a slice of the dataset to hold in its own memory, and having all of them scan their slice simultaneously for unusual records — anomaly detection — using the CPU's vector instructions (SIMD: one instruction applied to many numbers at once)."),
-    el("p", {}, "Because each worker sends back only the small changes it found — the “deltas” — rather than its whole slice, the traffic between workers is supposed to stay small. A model gets trained incrementally out of that stream of deltas. Live in 30 days."),
+    el("div", { class: "ministeps" },
+      step("1", "Explode", "split a too-big dataset into pieces small enough for one machine's memory each",
+        "Some datasets are too big to fit in one machine's memory, so they get processed in slow passes off disk. The pitch's idea is to rent memory in tiny pieces from very many machines at once — hundreds or thousands of Cloudflare Workers, each holding one slice of the dataset in its own memory."),
+      step("2", "Compute", "scan every slice at once for unusual records, using vector instructions",
+        "Cloudflare Workers are small programs that run on Cloudflare's servers worldwide. Every worker scans its own slice simultaneously for unusual records — anomaly detection — using the CPU's vector instructions (SIMD: one instruction applied to many numbers at once)."),
+      step("3", "Exchange and train", "send back only what changed, and train a model on that stream",
+        "Each worker sends back only the small changes it found — the “deltas” — rather than its whole slice, so the traffic between workers is supposed to stay small. A model gets trained incrementally out of that stream of deltas. Live in 30 days.")),
     figAssumption(),
     el("p", { class: "legend", text: "The gap between these two pictures is the whole question." }));
 
-  // 4: the assumption everything rests on
+  // 4: the assumption everything rests on — the lede stays visible, the reasoning is a click away
   out.append(el("div", { class: "callout warn" },
     el("h3", { style: "margin-top:0", text: "The assumption everything rests on" }),
-    el("p", {}, "Each Worker runs in an isolate with its own capped heap, and isolates are deliberately walled off from one another; there is no documented way for two of them to read or write the same physical memory. Anything one worker passes another goes over the network — through a Durable Object, a Queue, KV or R2. That is milliseconds and megabits, not nanoseconds and gigabytes."),
-    el("p", {}, "If that is right, “high-bandwidth RAM across many edge workers” is not a slower version of the pitch — it is a different architecture, and the pitch has to be re-scoped before day 2, not after day 20."),
-    el("p", { class: "small muted" }, el("b", { text: "This is my reading of the platform, not a measurement. " }), "Nothing on this page has been run against Cloudflare. That is exactly why it is the first experiment in the plan below, not a conclusion.")));
+    el("p", {}, "If “high-bandwidth RAM across many edge workers” isn't a real capability of this platform, this isn't a slower version of the pitch — it's a different architecture, and it has to be re-scoped before day 2, not after day 20."),
+    el("details", {}, el("summary", { class: "small" }, "Why I think that — expand"),
+      el("p", { class: "small" }, "Each Worker runs in an isolate with its own capped heap, and isolates are deliberately walled off from one another; there is no documented way for two of them to read or write the same physical memory. Anything one worker passes another goes over the network — through a Durable Object, a Queue, KV or R2. That is milliseconds and megabits, not nanoseconds and gigabytes."),
+      el("p", { class: "small muted" }, el("b", { text: "This is my reading of the platform, not a measurement. " }), "Nothing on this page has been run against Cloudflare. That is exactly why it is the first experiment in the plan below, not a conclusion."))));
 
   // 5: the plan + gantt
   out.append(el("h3", { text: `The plan: ${nodes.length} nodes, six workstreams, five phases` }), srcNote("plan"), ganttBoard(data));
@@ -824,7 +848,10 @@ function renderDecomposeTree(data) {
     el("p", {}, "The models on this console are typed decision models: you hand one a piece of text (here, one node of the plan) and a typed question, and it returns probabilities — no prose. A yes/no question (“is this a single, indivisible piece of work?”) comes back as a number between 0 and 1. A multiple-choice question comes back as a probability per option. That makes them cheap to run over every node and easy to score, and it is why they are used here as a reviewer of the plan rather than as its author. The plan above was written by hand; the models only answered questions about it."),
     el("p", { class: "small" }, "Every node below sends the model one real HTTP request with the node's text and its typed questions and gets back real probabilities — hover any answer for the exact numbers. Nothing in this section is precomputed narrative; it is all read live from ", el("code", { text: "tree_scored_edge.json" }), "."),
     codeLegend(models),
-    el("div", { class: "card" }, el("h4", { text: "How a model scores one node" }), el("div", { style: "overflow-x:auto" }, pipelineHero())));
+    el("div", { class: "card" }, el("h4", { text: "How a model scores one node" }), el("div", { style: "overflow-x:auto" }, pipelineHero()),
+      el("details", {}, el("summary", { class: "small" }, "See the exact typed questions sent — not a summary, the real battery"),
+        el("p", { class: "small muted" }, "Every leaf gets this shape of request in one call. This is the literal question set from ", el("code", { text: "probes/lab_decompose.py battery()" }), ", for one real node (“Measure the per-isolate memory ceiling”):"),
+        el("pre", { class: "notes" }, "POST /v1/systemone\n{\n  \"state\": \"Deploy a Worker that allocates memory until the platform kills it…\",\n  \"questions\": {\n    \"atomic\":     { type: noul,   \"is this a single, atomic unit of work…?\" },\n    \"gate\":       { type: noul,   \"would a surprise answer force a redesign, not just delay…?\" },\n    \"phase\":      { type: choice, one of: spike / decide / build / validate / launch },\n    \"risk\":       { type: score,  5 levels, \"very low…very high risk of schedule delay\" },\n    \"complexity\": { type: score,  5 levels, \"very low…very high complexity\" },\n    \"parallel\":   { type: noul,   \"can this run in parallel with its siblings…?\" },\n    \"dependency\": { type: choice, one of: none / needs-user-decision / needs-other-item / needs-external-check }\n  }\n}\n→ the model answers all 7 in one response: a probability per question (noul), a probability per option (choice), or an expected level (score)."))));
 
   const flaw = story.flawId ? nodes.find(n => n.id === story.flawId) : null;
   out.append(el("div", { class: "card" }, el("h4", { text: "Did they spot what's missing?" }),
@@ -871,7 +898,7 @@ function renderDecomposeTree(data) {
   out.append(el("div", { style: "overflow-x:auto" }, rt),
     el("p", { class: "small muted", text: "These are absent measurements, not results. Nothing here says the four missing models would do worse — nobody asked them. JEFF4H cannot be loaded alongside the current five (the card has under 2 GiB spare once the lineup warms); running it would mean stopping the lineup first, and it sits 7th of 9 on published sets — not obviously worth the swap for this page." }));
 
-  // 11: what this page does not measure
+  // 11: what this page does not measure — the fine print, before the close, not the close itself
   out.append(el("h3", { text: "What this page does not measure" }),
     el("ul", {},
       el("li", {}, "No Cloudflare measurement has been run — every platform figure above is documented belief awaiting a spike."),
@@ -880,7 +907,30 @@ function renderDecomposeTree(data) {
       el("li", {}, `${nodes.length} nodes is far too small for any statistical claim about the models, which is why no AUC or confidence interval appears anywhere on this page.`),
       el("li", {}, "The hosted model is not included (see above).")));
 
+  // 12: the bottom line — the one thing to remember, computed live from the plan and schedule above
+  out.append(bottomLine(data, story, nodes));
+
   return out;
+}
+
+function bottomLine(data, story, nodes) {
+  const sched = data.schedule || {};
+  const horizon = data.horizon_working_days || 20;
+  const leaves = nodes.filter(n => n.kind === "leaf");
+  const topGate = [...leaves].sort((a, b) => (b.blocks_count || 0) - (a.blocks_count || 0))[0];
+  const spanPct = Math.round((sched.span_days / horizon) * 100);
+  const barW = Math.min(100, spanPct);
+  const pickShare = `${story.gatePickedGate.length} of ${story.models.length}`;
+  return el("div", { class: "card bottomline" },
+    el("h3", { style: "margin-top:0", text: "The bottom line" }),
+    el("p", { class: "bl-stat" }, el("b", { text: `${sched.span_days} of ${horizon} working days` }), el("span", { class: "small muted", text: ` — ${sched.float_days} days of margin` })),
+    el("div", { class: "loopbar", style: "max-width:420px" }, el("span", { class: "fill", style: `width:${barW}%` })),
+    el("p", {}, "One answer decides the shape of everything else: ", el("b", { text: `"${topGate ? topGate.title : ""}"` }),
+      ` sits upstream of ${topGate ? topGate.blocks_count : "?"} of the other ${leaves.length - 1} items in this plan — more than any other single node.`),
+    el("p", {}, `${pickShare} models' own highest-priority pick matched one of the ${story.gateLeaves.length} real gates.`,
+      story.gatePickedGate.length === 0 ? " None of them did. If the plan were to trust a model's own alarm bell to say what to worry about first, on this evidence, it shouldn't — the dependency graph says more than the vibe." : ""),
+    el("p", { class: "bl-close" }, `So: spend one day on "${topGate ? topGate.title : "the top gate"}". Come back the way I expect, and the rest is a routine ${sched.span_days}-day build with ${sched.float_days} days of room to be wrong. Come back the other way, and the architecture changes — on day one, not day twenty.`),
+    el("p", { class: "small muted", style: "margin-top:10px" }, "Every number above is read live from this run's data (", el("code", { text: "tree_scored_edge.json" }), " and the CPM pass in ", el("code", { text: "build_tree_edge.py" }), ") — nothing in this card is hand-picked for effect."));
 }
 
 function dotDetail(n) {
