@@ -75,6 +75,21 @@
   .slider output { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 3ch; }
   .sentence { font-size: 14px; color: var(--text); }
   table.data.wrap td, table.data.wrap th { white-space: normal; vertical-align: top; padding-top: 4px; padding-bottom: 4px; }
+  /* Decompose-and-loop tree */
+  .dtree details.dgroup { margin-left: 14px; border-left: 1px solid var(--border); }
+  .dtree > .dtree, .dtree details.dgroup { padding-left: 4px; }
+  .dtree summary { cursor: pointer; list-style: none; } .dtree summary::-webkit-details-marker { display: none; }
+  .dnode { display: flex; align-items: center; gap: 8px; padding: 3px 4px 3px 14px; border-radius: var(--radius-sm); position: relative; }
+  .dgroup > summary .dnode::before { content: ""; position: absolute; left: 1px; top: 50%; width: 5px; height: 5px; margin-top: -3px; border-right: 1.5px solid var(--text-3); border-bottom: 1.5px solid var(--text-3); transform: rotate(-45deg); transition: transform .12s; }
+  .dgroup[open] > summary .dnode::before { transform: rotate(45deg); margin-top: -2px; }
+  .dnode:hover { background: var(--surface-2); }
+  .dtitle { font-size: 13px; }
+  .dbadge { font-size: 10.5px; color: var(--text-3); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+  .dbadge.status-done { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, var(--border)); }
+  .dbadge.status-blocked { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); }
+  .dbadge.status-in_progress { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  .ddot { margin-left: auto; flex: none; min-width: 34px; text-align: center; border-radius: 999px; padding: 2px 7px; font-size: 11px; font-variant-numeric: tabular-nums; cursor: help; }
+  .dkids { display: grid; }
   /* Explorer */
   .controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
   .controls input[type=search] { width: 200px; }
@@ -306,7 +321,7 @@ mount(document.getElementById("root"), async () => {
     buildRail();
     const box = el("div"); view.replaceChildren(box); const tok = ++TOK;
     if (ST.set === "batch") { mount(box, () => api("/api/batch-perf"), renderBatch); }
-    else if (ST.set === "decompose") { mount(box, () => api("/api/decompose-perf"), renderDecompose); }
+    else if (ST.set === "decompose") { mount(box, () => api("/api/decompose-tree"), renderDecomposeTree); }
     else if (ST.set === "all") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
@@ -360,34 +375,89 @@ function renderBatch(data) {
 }
 
 /* ---------- structure: decompose and loop ---------- */
-function renderDecompose(data) {
-  const sets = Object.keys(data);
-  if (!sets.length) return empty("No decompose runs yet", "Run probes/lab_decompose.py for a local model.");
+const heat01 = (s) => s == null ? "var(--surface-2)" : s >= 0.5
+  ? `color-mix(in srgb, var(--good) ${Math.round((s - 0.5) * 2 * 55)}%, var(--surface-2))`
+  : `color-mix(in srgb, var(--bad) ${Math.round((0.5 - s) * 2 * 55)}%, var(--surface-2))`;
+const STATUS_LABEL = { done: "done", in_progress: "in progress", blocked: "blocked on a decision", not_started: "not started" };
+
+function renderDecomposeTree(data) {
+  const models = orderModels(Object.keys(data.models || {}));
+  if (!models.length) return empty("No decompose-tree run yet", "Run probes/lab_decompose.py for the loaded models.");
   const out = el("div");
-  out.append(el("h2", { text: "Decompose and loop" }), el("p", { class: "muted", text: "Whole text (one call, read from the set's own stored run) against splitting the dialogue into trailing turn-windows and taking the highest probability across windows (recall-oriented: flagged if any window looks manipulative). Same items, same question, both sides scored against the same label." }));
-  for (const setId of sets) {
-    const nm = (PROBES.find(p => p.id === setId) ? meta(setId).name : setId);
-    const models = orderModels(Object.keys(data[setId]));
-    const t = el("table", { class: "data" });
-    t.append(el("caption", { class: "legend", text: "Accuracy, whole text vs decomposed (95% interval on hover); avg calls is the average number of window requests per item for the decomposed side (1 for whole)." }),
-      el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "n" }), el("th", { text: "Whole (1 call)" }), el("th", { text: "Decomposed" }), el("th", { text: "Avg calls" }), el("th", { text: "Gap" }))));
-    const tb = el("tbody");
-    for (const m of models) {
-      for (const row of data[setId][m]) {
-        const wa = row.whole_k / row.n, da = row.decomposed_k / row.n, ww = wilson(row.whole_k, row.n), dw = wilson(row.decomposed_k, row.n);
-        const gap = da - wa, gapStyle = Math.abs(gap) < 0.03 ? "" : `color:var(--${gap > 0 ? "good" : "bad"});font-weight:600`;
-        tb.append(el("tr", {},
-          el("td", {}, mtagShort(m)), el("td", { class: "muted", text: String(row.n) }),
-          el("td", { title: `${row.whole_k}/${row.n}, interval ${pc(ww.lo)} to ${pc(ww.hi)}`, text: pc(wa) }),
-          el("td", { title: `${row.decomposed_k}/${row.n}, interval ${pc(dw.lo)} to ${pc(dw.hi)}, ${row.turns_k}-turn trailing windows${row.failed ? `, ${row.failed} failed` : ""}`, text: pc(da) }),
-          el("td", { class: "muted", text: row.avg_calls.toFixed(1) }),
-          el("td", { style: gapStyle, text: (gap >= 0 ? "+" : "") + pc(gap, 1) })));
-      }
-    }
-    t.append(tb);
-    out.append(el("div", { class: "card" }, el("h3", { text: nm }), el("div", { style: "overflow-x:auto" }, t)));
+  out.append(
+    el("h2", { text: "Decompose and loop" }),
+    el("p", { class: "muted", text: "A large problem (this project's own build-out plan, docs/scenario-lab-plan.md) broken by hand into a reference tree of work items, 3-4 layers deep. Every model judges every node with the same typed battery: is it atomic, do its listed children fully cover what it needs, how risky and complex is it, can it run in parallel, and what kind of dependency stands in its way. The tree's real status (done, in progress, blocked, not started) is never shown to a model; it is only used afterward to check whether a model's own risk judgement lines up with what has actually needed attention." }),
+    el("div", { class: "callout warn" }, "One worked example, 33 nodes, one problem: this shows the mechanism working, not that it generalises. Two group nodes have a genuine, documented coverage gap (explained on hover), not an invented one. The risk-forecast check below has only 2 blocked items to compare against — read its number as illustrative, not a result."));
+
+  const t = el("table", { class: "data" });
+  t.append(el("caption", { class: "legend", text: "Accuracy on the typed battery across all 33 nodes. Risk/complexity are mean absolute error against my reference call, 0 to 1 (lower is better)." }),
+    el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Atomic" }), el("th", { text: "Covers" }), el("th", { text: "Parallel" }), el("th", { text: "Dependency" }), el("th", { text: "Risk MAE" }), el("th", { text: "Complexity MAE" }), el("th", { text: "Blocked-risk AUC*" }))));
+  const tb = el("tbody");
+  for (const m of models) {
+    const md = data.models[m], nodes = md.nodes;
+    const rate = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.filter(Boolean).length / v.length : null; };
+    const mae = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    const v = md.validate;
+    tb.append(el("tr", {}, el("td", {}, mtagShort(m)),
+      el("td", { style: `background:${heat01(rate("atomic_correct"))}`, text: pc(rate("atomic_correct")) }),
+      el("td", { style: `background:${heat01(rate("covers_correct"))}`, text: pc(rate("covers_correct")) }),
+      el("td", { style: `background:${heat01(rate("parallel_correct"))}`, text: pc(rate("parallel_correct")) }),
+      el("td", { style: `background:${heat01(rate("dependency_correct"))}`, text: pc(rate("dependency_correct")) }),
+      el("td", { class: "muted", text: fmt.num(mae("risk_abs_error"), 2) }),
+      el("td", { class: "muted", text: fmt.num(mae("complexity_abs_error"), 2) }),
+      el("td", { title: v ? `${v.n_blocked} blocked vs ${v.n_other} other leaves; mean risk ${pc(v.mean_risk_blocked)} vs ${pc(v.mean_risk_other)}` : "no blocked leaves scored", text: v ? v.auc.toFixed(2) : "–" })));
   }
+  t.append(tb);
+  out.append(el("div", { class: "card" }, el("h3", { text: "Model comparison" }), el("div", { style: "overflow-x:auto" }, t),
+    el("p", { class: "legend", text: "*AUC: chance a random blocked leaf is scored riskier than a random non-blocked leaf by that model; 0.5 = no signal, 1.0 = always separates them correctly." })));
+
+  let curModel = models[0];
+  const treeBox = el("div");
+  const select = el("select", { "aria-label": "Model for the tree view", onchange: (e) => { curModel = e.target.value; drawTree(); } }, models.map(m => el("option", { value: m, text: Jev.codeOf(m) })));
+  const drawTree = () => treeBox.replaceChildren(buildTreeView(data.models[curModel].nodes));
+  drawTree();
+  out.append(el("div", { class: "card" }, el("h3", { text: "Tree: who got which node right" }),
+    el("p", { class: "small muted", text: "Each node's dot is the share of its typed answers this model got right (leaves: atomic, parallel, dependency; groups: covers). Hover a dot for the detail, including my reference call and why." }),
+    el("div", { class: "row", style: "margin-bottom:8px;align-items:center;gap:8px" }, el("span", { class: "small muted", text: "Model:" }), select), treeBox));
   return out;
+}
+
+function dotDetail(n) {
+  const g = n.grade || {};
+  if (n.error) return `Request failed: ${n.error}`;
+  if (n.kind !== "leaf") {
+    if (n.covers_ref == null) return `No single "covers" judgement applies here.\n${n.covers_why || ""}`;
+    return `Covers: model said ${g.covers_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.covers_p, 2)}), reference ${n.covers_ref ? "yes" : "no"} — ${g.covers_correct ? "correct" : "wrong"}.\nWhy: ${n.covers_why}`;
+  }
+  const lines = [];
+  if ("atomic_correct" in g) lines.push(`Atomic: model ${g.atomic_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.atomic_p, 2)}), reference ${n.atomic_ref ? "yes" : "no"} — ${g.atomic_correct ? "correct" : "wrong"}`);
+  if ("parallel_correct" in g) lines.push(`Parallel: model ${g.parallel_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.parallel_p, 2)}), reference ${n.parallel_ref ? "yes" : "no"} — ${g.parallel_correct ? "correct" : "wrong"}`);
+  if ("dependency_correct" in g) lines.push(`Dependency: model said "${g.dependency_pred}", reference "${n.dependency_ref}" — ${g.dependency_correct ? "correct" : "wrong"}`);
+  if ("risk_0to1" in g) lines.push(`Risk: model ${fmt.num(g.risk_0to1, 2)}, reference ${fmt.num(n.risk_ref, 2)} (abs error ${fmt.num(g.risk_abs_error, 2)})`);
+  if ("complexity_0to1" in g) lines.push(`Complexity: model ${fmt.num(g.complexity_0to1, 2)}, reference ${fmt.num(n.complexity_ref, 2)} (abs error ${fmt.num(g.complexity_abs_error, 2)})`);
+  lines.push(`Real status: ${STATUS_LABEL[n.status] || n.status}. Why: ${n.why}`);
+  return lines.join("\n");
+}
+
+function buildTreeView(nodes) {
+  const by = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const kids = {}; for (const n of nodes) (kids[n.parent] ||= []).push(n.id);
+  const nodeScore = (n) => {
+    if (n.error) return null;
+    if (n.kind !== "leaf") return n.grade && "covers_correct" in n.grade ? (n.grade.covers_correct ? 1 : 0) : null;
+    const g = n.grade || {}, keys = ["atomic_correct", "parallel_correct", "dependency_correct"].filter(k => k in g);
+    return keys.length ? keys.filter(k => g[k]).length / keys.length : null;
+  };
+  const render = (id) => {
+    const n = by[id], cs = kids[id] || [], s = nodeScore(n);
+    const row = el("div", { class: "dnode" },
+      el("span", { class: "dtitle", text: n.title }),
+      n.kind !== "leaf" ? el("span", { class: "dbadge", text: "group" }) : el("span", { class: "dbadge status-" + n.status, text: STATUS_LABEL[n.status] || n.status }),
+      el("span", { class: "ddot", style: `background:${heat01(s)}`, title: dotDetail(n), text: s == null ? (n.error ? "err" : "–") : pc(s, 0) }));
+    if (!cs.length) return row;
+    return el("details", { class: "dgroup", open: n.layer < 2 ? "" : null }, el("summary", {}, row), el("div", { class: "dkids" }, cs.map(render)));
+  };
+  return el("div", { class: "dtree" }, render("root"));
 }
 
 /* ---------- overview ---------- */

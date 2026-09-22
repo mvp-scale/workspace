@@ -203,19 +203,13 @@ def batch_perf():
     return out
 
 
-def decompose_perf():
-    """{set: {model: [{turns_k, n, failed, whole_k, decomposed_k, avg_calls}]}} from probes/lab_decompose.py runs."""
-    out = {}
-    for f in sorted(PROBE_RUNS.glob("_decompose/*/*/results-k*.jsonl")):
-        recs = read_jsonl(f)
-        ok = [r for r in recs if not r.get("error")]
-        if not ok:
-            continue
-        row = {"turns_k": ok[0]["turns_k"], "n": len(ok), "failed": len(recs) - len(ok),
-               "whole_k": sum(1 for r in ok if r["whole_correct"]), "decomposed_k": sum(1 for r in ok if r["decomposed_correct"]),
-               "avg_calls": round(sum(r["calls"] for r in ok) / len(ok), 1)}
-        out.setdefault(f.parent.parent.name, {}).setdefault(f.parent.name, []).append(row)
-    return out
+def decompose_tree():
+    """The decompose-and-loop worked example: a reference requirements tree plus every loaded
+    model's judgment of each node and a Monte Carlo risk forecast, from probes/lab_decompose.py."""
+    p = PROBE_RUNS / "_decompose" / "tree_scored.json"
+    if not p.is_file():
+        return {"nodes": [], "models": []}
+    return json.loads(p.read_text())
 
 
 def probe_macro():
@@ -378,8 +372,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, vram())
         elif path == "/api/batch-perf":
             self._send(200, batch_perf())
-        elif path == "/api/decompose-perf":
-            self._send(200, decompose_perf())
+        elif path == "/api/decompose-tree":
+            self._send(200, decompose_tree())
         elif path == "/api/probe-macro":
             self._send(200, probe_macro())
         elif path == "/api/agreement":

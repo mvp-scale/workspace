@@ -1,112 +1,162 @@
 #!/usr/bin/env python3
-"""Decompose and loop: does splitting a dialogue into trailing turn-windows and taking the
-max beat scoring the whole text once?
+"""Decompose and loop: score every model on the reference requirements tree
+(probes/decompose/tree_ref.json) with a typed battery per node, then turn each leaf's risk
+judgement into a Monte Carlo forecast of where the plan is likely to hit trouble, and check that
+forecast against the leaf's real, held-out status (done / in_progress / blocked / not_started) --
+not shown to the model.
 
-The whole-text score is not re-run here; it is read from the set's existing stored run
-(data/probe-runs-v2/<model>-manipulation_dialogue/), the same numbers the Scenario lab
-already shows. This script only adds the decomposed side: for each item, split the state into
-turns, score every trailing window of `--turns` turns (default 2, the window study's best
-spot for manipulation) with the same question, and take the max probability as the
-decomposed prediction. Keeps the whole-text score next to the pieces, as the plan asks.
+One call per node per model (the node's whole battery in one request, like the other structures).
+Local models only; the hosted backend is refused here. Writes the fully scored tree to
+data/probe-runs-v2/_decompose/tree_scored.json, which server.py's /api/decompose-tree reads
+directly (this structure is small enough that there's no separate per-item JSONL log; re-running
+overwrites the file with all requested models included).
 
-  python3 probes/lab_decompose.py --model kev-4b --set manipulation_dialogue --n 40 --turns 2
-
-Local models only: the hosted backend is refused here (spend goes through the UI). Records
-are per item, resumable, and never written to data/bench/.
+  python3 probes/lab_decompose.py --models kev-4b semif so1 laya verdict
 """
-import argparse, json, random, re, sys, time
+import argparse, json, random, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "demo"))
 import server  # noqa: E402
 
-PROBES = ROOT / "probes" / "v2"
-RUNS = ROOT / "data" / "probe-runs-v2"
-OUT = RUNS / "_decompose"
-TURN_RE = re.compile(r"^(Person\d+|[A-Z][a-zA-Z]*):\s?(.*)$")
+REF = ROOT / "probes" / "decompose" / "tree_ref.json"
+OUT = ROOT / "data" / "probe-runs-v2" / "_decompose" / "tree_scored.json"
+LEVELS5 = ["very low", "low", "medium", "high", "very high"]
 
 
-def load(set_id):
-    return [json.loads(l) for l in (PROBES / f"{set_id}.jsonl").read_text().splitlines() if l.strip()]
+def battery(node, dep_options):
+    if node["kind"] in ("root", "group"):
+        return {"covers": {"type": "noul", "instructions": node["text"] + "\n\nQuestion: do the listed child items, taken together, fully cover what this requirement needs? Answer no if something the requirement calls for is missing, or not yet actually delivered by the children as things stand today.",
+                            "criteria": {"true": "The children, taken together, fully cover the requirement as it stands today.", "false": "Something the requirement needs is missing from the children, or not yet actually delivered by them."}}}
+    return {
+        "atomic": {"type": "noul", "instructions": node["text"] + "\n\nQuestion: is this a single, atomic unit of work that should be executed as one piece, not split into smaller pieces?",
+                   "criteria": {"true": "A single indivisible unit of work.", "false": "Really a group of smaller pieces of work."}},
+        "risk": {"type": "score", "instructions": node["text"] + "\n\nQuestion: how likely is this item to cause delay or rework?",
+                 "criteria": [f"{l} risk of delay or rework" for l in LEVELS5]},
+        "complexity": {"type": "score", "instructions": node["text"] + "\n\nQuestion: how complex is this item to actually do?",
+                       "criteria": [f"{l} complexity" for l in LEVELS5]},
+        "parallel": {"type": "noul", "instructions": node["text"] + "\n\nQuestion: can this item be worked on in parallel with the other items in its group, without waiting for one of them to finish first?",
+                     "criteria": {"true": "Can proceed independently of its siblings.", "false": "Has to wait on a sibling first."}},
+        "dependency": {"type": "choice", "instructions": node["text"] + "\n\nQuestion: what mainly stands between this item and being done?",
+                       "criteria": {"none": "Nothing external; it just needs to be built.", "needs-user-decision": "It is blocked on a decision only the user can make.",
+                                    "needs-other-item": "It depends on another item in this plan finishing first.", "needs-external-check": "It depends on an external resource or check (e.g. data access) not yet confirmed."}},
+    }
 
 
-def whole_scores(model, set_id):
-    """{item id: {predicted, correct}} from the set's existing stored run; None if there is none."""
-    p = RUNS / f"{model}-{set_id}" / "results.jsonl"
-    if not p.exists():
+def grade(node, answers):
+    g = {}
+    if node["kind"] in ("root", "group"):
+        p = (answers.get("covers") or {}).get("noul")
+        if p is not None and node["covers_ref"] is not None:
+            g["covers_p"] = p
+            g["covers_correct"] = (p >= 0.5) == node["covers_ref"]
+        return g
+    a = (answers.get("atomic") or {}).get("noul")
+    if a is not None:
+        g["atomic_p"] = a; g["atomic_correct"] = (a >= 0.5) == node["atomic_ref"]
+    par = (answers.get("parallel") or {}).get("noul")
+    if par is not None:
+        g["parallel_p"] = par; g["parallel_correct"] = (par >= 0.5) == node["parallel_ref"]
+    risk = (answers.get("risk") or {}).get("score")
+    if risk is not None:
+        g["risk_0to1"] = risk / (len(LEVELS5) - 1)
+        g["risk_abs_error"] = abs(g["risk_0to1"] - node["risk_ref"])
+    comp = (answers.get("complexity") or {}).get("score")
+    if comp is not None:
+        g["complexity_0to1"] = comp / (len(LEVELS5) - 1)
+        g["complexity_abs_error"] = abs(g["complexity_0to1"] - node["complexity_ref"])
+    dep = answers.get("dependency") or {}
+    if dep.get("choice") is not None:
+        g["dependency_pred"] = dep["choice"]; g["dependency_correct"] = dep["choice"] == node["dependency_ref"]
+    return g
+
+
+def score_model(model, cfg, ref):
+    nodes = ref["nodes"]
+    scored = []
+    for node in nodes:
+        q = battery(node, ref["dep_options"])
+        r = server.call(model, cfg, {"state": node["text"], "model": "jev-latest", "questions": q}, whole=True)
+        if "error" in r:
+            scored.append({**node, "error": r["error"]}); continue
+        answers = r.get("answers") or {}
+        scored.append({**node, "answers": answers, "grade": grade(node, answers)})
+    return scored
+
+
+def forecast(scored_nodes, seed=20260922, draws=4000):
+    """Monte Carlo: sample each leaf's 'causes trouble' outcome as a coin flip at the model's own
+    risk score, OR the flips up the tree (documented simplification: treats leaves as independent;
+    the plan's own caveat is that real correlation between atoms isn't handled here)."""
+    rnd = random.Random(seed)
+    by_id = {n["id"]: n for n in scored_nodes}
+    children = {}
+    for n in scored_nodes:
+        children.setdefault(n["parent"], []).append(n["id"])
+    leaf_p = {n["id"]: n["grade"]["risk_0to1"] for n in scored_nodes if n["kind"] == "leaf" and "grade" in n and "risk_0to1" in n["grade"]}
+    p_trouble = {}
+    def sim(nid):
+        if nid in p_trouble:
+            return p_trouble[nid]
+        node = by_id[nid]
+        if node["kind"] == "leaf":
+            p = leaf_p.get(nid, 0.0)
+        else:
+            kids = children.get(nid, [])
+            hit = 0
+            for _ in range(draws):
+                if any(rnd.random() < sim(k) for k in kids):
+                    hit += 1
+            p = hit / draws if kids else 0.0
+        p_trouble[nid] = p
+        return p
+    for n in scored_nodes:
+        sim(n["id"])
+    return p_trouble
+
+
+def validate(scored_nodes, p_trouble):
+    """Illustrative only: with 2 blocked leaves out of 25 there is no statistical power here, just
+    a check that the direction isn't obviously backwards."""
+    leaves = [n for n in scored_nodes if n["kind"] == "leaf" and "grade" in n and "risk_0to1" in n.get("grade", {})]
+    blocked = [n for n in leaves if n["status"] == "blocked"]
+    other = [n for n in leaves if n["status"] != "blocked"]
+    if not blocked or not other:
         return None
-    return {r["task_id"]: {"predicted": r["predicted"], "correct": r["correct"]} for r in map(json.loads, p.read_text().splitlines()) if r.get("ok")}
-
-
-def split_turns(state):
-    lines = [l for l in state.splitlines() if l.strip()]
-    return lines if all(TURN_RE.match(l) for l in lines) else None  # only decompose real turn-structured dialogues
-
-
-def windows(turns, k):
-    return ["\n".join(turns[max(0, i - k + 1): i + 1]) for i in range(len(turns))]
+    wins = sum(1 for b in blocked for o in other if p_trouble[b["id"]] > p_trouble[o["id"]])
+    ties = sum(1 for b in blocked for o in other if p_trouble[b["id"]] == p_trouble[o["id"]])
+    total = len(blocked) * len(other)
+    auc = (wins + 0.5 * ties) / total
+    return {"n_blocked": len(blocked), "n_other": len(other), "auc": round(auc, 3),
+            "mean_risk_blocked": round(sum(p_trouble[b["id"]] for b in blocked) / len(blocked), 3),
+            "mean_risk_other": round(sum(p_trouble[o["id"]] for o in other) / len(other), 3)}
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True)
-    ap.add_argument("--set", default="manipulation_dialogue")
-    ap.add_argument("--n", type=int, default=40)
-    ap.add_argument("--turns", type=int, default=2, help="trailing turns per window (window study: 2-3 turns is best)")
-    ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--models", nargs="+", required=True)
     a = ap.parse_args()
-    cfg = server.BACKENDS[a.model]
-    if cfg.get("hosted"):
-        sys.exit("refusing: hosted model runs only through the UI")
-    items = load(a.set)
-    whole = whole_scores(a.model, a.set)
-    if whole is None:
-        sys.exit(f"no stored whole-text run for {a.model} on {a.set}; run demo/bench.sh or demo/bench-batch.sh first")
-    rnd = random.Random(a.seed)
-    rnd.shuffle(items)
-    items = [it for it in items if split_turns(it["state"])][: a.n]
-    if not items:
-        sys.exit("no turn-structured items in this set (expected 'Speaker: text' lines)")
-    d = OUT / a.set / a.model
-    d.mkdir(parents=True, exist_ok=True)
-    path = d / f"results-k{a.turns}.jsonl"
-    done = set()
-    if path.exists():
-        done = {r["item"] for r in map(json.loads, path.read_text().splitlines()) if not r.get("error")}
-    with path.open("a") as out:
-        for it in items:
-            if it["id"] in done or it["id"] not in whole:
-                continue
-            turns = split_turns(it["state"])
-            wins = windows(turns, a.turns)
-            probs, err = [], None
-            for w in wins:
-                r = server.call(a.model, cfg, {"state": w, "model": "jev-latest", "questions": {"q0": it["question"]}}, whole=True)
-                ans = (r.get("answers") or {}).get("q0")
-                if "error" in r or not ans or ans.get("noul") is None:
-                    err = r.get("error") or "no answer"; break
-                probs.append(ans["noul"])
-            rec = {"set": a.set, "model": a.model, "item": it["id"], "turns_k": a.turns, "n_windows": len(wins),
-                   "expected": it["expected"], "whole_predicted": whole[it["id"]]["predicted"], "whole_correct": whole[it["id"]]["correct"]}
-            if err:
-                rec["error"] = err
-            else:
-                dec_p = max(probs)
-                dec_pred = "yes" if dec_p >= 0.5 else "no"
-                rec.update(decomposed_p=dec_p, decomposed_predicted=dec_pred, decomposed_correct=(dec_pred == it["expected"]),
-                           window_probs=probs, calls=len(wins))
-            out.write(json.dumps(rec) + "\n"); out.flush()
-    recs = [json.loads(l) for l in path.read_text().splitlines()]
-    ok = [r for r in recs if not r.get("error")]
-    n = len(ok)
-    print(f"{a.model} / {a.set} / k={a.turns}: {n} ok, {len(recs) - n} failed")
-    if n:
-        wa = sum(r["whole_correct"] for r in ok) / n
-        da = sum(r["decomposed_correct"] for r in ok) / n
-        calls = sum(r["calls"] for r in ok) / n
-        print(f"  whole accuracy      {wa:.2f}  (1 call/item)")
-        print(f"  decomposed accuracy {da:.2f}  ({calls:.1f} calls/item avg)")
+    ref = json.loads(REF.read_text())
+    out = {"generated_from": str(REF), "models": {}}
+    for model in a.models:
+        cfg = server.BACKENDS[model]
+        if cfg.get("hosted"):
+            print(f"skipping {model}: hosted model runs only through the UI"); continue
+        print(f"scoring {model} ({len(ref['nodes'])} nodes)...")
+        scored = score_model(model, cfg, ref)
+        p_trouble = forecast(scored)
+        val = validate(scored, p_trouble)
+        sensitivity = sorted((n for n in scored if n["kind"] == "leaf" and "grade" in n and "risk_0to1" in n["grade"]),
+                              key=lambda n: n["grade"]["risk_0to1"], reverse=True)[:5]
+        n_ok = sum(1 for n in scored if "error" not in n)
+        out["models"][model] = {"nodes": scored, "forecast": p_trouble, "validate": val,
+                                 "top_risk": [{"id": n["id"], "title": n["title"], "risk": round(n["grade"]["risk_0to1"], 2)} for n in sensitivity],
+                                 "n_ok": n_ok, "n_failed": len(scored) - n_ok}
+        print(f"  {n_ok}/{len(scored)} nodes answered" + (f"; blocked-vs-other risk AUC {val['auc']}" if val else ""))
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(out, indent=1))
+    print(f"wrote {OUT}")
 
 
 if __name__ == "__main__":
