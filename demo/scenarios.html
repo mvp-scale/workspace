@@ -73,6 +73,34 @@
   .pipeline .arrow { stroke: var(--text-3); stroke-width: 1.6; fill: none; }
   .pipeline .loopback { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-dasharray: 4 3; }
   .pipeline .lbl { fill: var(--text-3); font-size: 10.5px; }
+  .pipeline.wide { max-width: none; }
+  /* Fig 1: assumption vs platform */
+  .figwrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .figwrap { grid-template-columns: 1fr; } }
+  .figcol { min-width: 0; }
+  .fa-title { font-size: 12.5px; font-weight: 600; fill: var(--text); }
+  .fa-sub { font-size: 10.5px; fill: var(--text-3); }
+  .fa-worker { fill: var(--surface-2); stroke: var(--border); }
+  .fa-heap { fill: color-mix(in srgb, var(--good) 45%, var(--surface-2)); }
+  .fa-arrow { stroke: var(--accent); stroke-width: 1.6; }
+  .fa-arrow.thin { stroke: var(--text-3); stroke-width: 1.1; }
+  .fa-bar { fill: color-mix(in srgb, var(--bad) 25%, var(--surface-2)); stroke: var(--bad); stroke-dasharray: 3 2; }
+  .fa-net { fill: color-mix(in srgb, var(--accent) 25%, var(--surface-2)); stroke: var(--accent); }
+  .fa-barlabel { font-size: 10px; fill: var(--text-2); text-anchor: middle; }
+  /* Gantt board */
+  .gantt { display: block; width: 100%; height: auto; min-width: 700px; }
+  .gantt .gl { stroke: var(--border); stroke-width: 1; }
+  .gantt .lbl { fill: var(--text-3); font-size: 10px; }
+  .gantt .gantt-lane-label { fill: var(--text-2); font-size: 11px; font-weight: 600; }
+  .gantt .gantt-row-label { fill: var(--text-2); font-size: 10.5px; }
+  .gantt .bar { fill: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); stroke: var(--border); }
+  .gantt .bar.crit { fill: color-mix(in srgb, var(--bad) 45%, var(--surface-2)); stroke: var(--bad); }
+  .gantt .bar.gate { stroke: var(--bad); stroke-width: 2; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); }
+  .swatch.crit { background: color-mix(in srgb, var(--bad) 45%, var(--surface-2)); border: 1px solid var(--bad); }
+  .swatch.gate { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); border: 2px solid var(--bad); }
+  .swatch.plain { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); }
+  .unverified { border-bottom: 1px dashed var(--text-3); cursor: help; }
   .looprow { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 5px 0; }
   .loopbar { position: relative; height: 18px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 3px; }
   .loopbar .fill { position: absolute; top: 0; bottom: 0; left: 0; background: color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 2px 0 0 2px; }
@@ -80,8 +108,9 @@
   .loopnote { font-size: 12.5px; color: var(--text-2); }
   table.data.gapmap td.cell, table.data.gapmap th.cell { text-align: center; padding: 4px 6px; font-variant-numeric: tabular-nums; font-size: 12px; }
   table.data.gapmap td.rowlbl { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; position: relative; }
+  table.data.gapmap td.whycol { max-width: 320px; }
   table.data.gapmap td.rowlbl.blocked { padding-left: 14px; }
-  table.data.gapmap td.rowlbl.blocked::before { content: ""; position: absolute; left: 2px; top: 50%; margin-top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--bad); }
+  table.data.gapmap td.rowlbl.blocked::before { content: ""; position: absolute; left: 2px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--bad); }
   table.data.gapmap tr.sec td { padding-top: 10px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); border-bottom: none; }
   .rc text { font-family: var(--font); fill: var(--text-3); font-size: 10px; }
   .rc .gl { stroke: var(--border); stroke-width: 1; }
@@ -401,21 +430,26 @@ function renderBatch(data) {
 }
 
 /* ---------- structure: decompose and loop ---------- */
+const STATUS_LABEL = {
+  known: "answerable now", needs_measurement: "needs a live spike", needs_decision: "needs a decision from you",
+  to_build: "to build", to_validate: "to validate", documented: "answerable now", deferred: "deferred past week 1" };
+const STATUS_COLOR = {
+  known: "--good", needs_measurement: "--bad", needs_decision: "--accent",
+  to_build: "--text-3", to_validate: "--accent", documented: "--good", deferred: "--text-3" };
+const PHASE_LABEL = { spike: "spike", decide: "decide", build: "build", validate: "validate", launch: "launch" };
+const PHASE_COLOR = { spike: "--bad", decide: "--accent", build: "--text-2", validate: "--accent", launch: "--good" };
 const heat01 = (s) => s == null ? "var(--surface-2)" : s >= 0.5
   ? `color-mix(in srgb, var(--good) ${Math.round((s - 0.5) * 2 * 55)}%, var(--surface-2))`
   : `color-mix(in srgb, var(--bad) ${Math.round((0.5 - s) * 2 * 55)}%, var(--surface-2))`;
-const STATUS_LABEL = { done: "done", in_progress: "in progress", blocked: "blocked on a decision", not_started: "not started",
-  known: "answerable now", needs_spike: "needs a live spike", needs_decision: "needs a decision from you", deferred: "deferred past week 1" };
+const heatRisk = (p) => p == null ? "var(--surface-2)" : `color-mix(in srgb, var(--bad) ${Math.round(clamp01(p) * 60)}%, var(--surface-2))`;
 
-const STATUS_COLOR = { done: "--good", blocked: "--bad", in_progress: "--accent", not_started: "--text-3",
-  known: "--good", needs_spike: "--bad", needs_decision: "--accent", deferred: "--text-3" };
-
-/* Everything the story needs, computed once from the raw scored nodes. */
+/* Everything the story needs, computed once from the raw scored nodes. Every sentence the page
+   prints is derived here from data — nothing about a specific run is hardcoded. */
 function decomposeStory(data) {
   const models = orderModels(Object.keys(data.models || {}));
   const allNodes = data.models[models[0]]?.nodes || [];
-  const criticalLeaves = allNodes.filter(n => n.kind === "leaf" && n.critical_path);
-  const flawId = allNodes.find(n => n.covers_ref === false && n.layer === 1)?.id; // the deliberately incomplete top-level group
+  const flawId = allNodes.find(n => n.covers_ref === false && n.layer === 1)?.id;
+  const gateLeaves = allNodes.filter(n => n.kind === "leaf" && n.gate);
   const byM = {};
   for (const m of models) {
     const nodes = data.models[m].nodes;
@@ -426,48 +460,128 @@ function decomposeStory(data) {
     const meanAtomic = mean(atomicP), meanCovers = mean(coversP), meanParallel = mean(parallelP);
     const flaw = flawId ? nodes.find(n => n.id === flawId) : null;
     const flawCaught = flaw?.grade?.covers_correct === true;
-    // "confidence for 30 days": chance NONE of the week-1 critical spikes turns up trouble, from this
-    // model's own schedule-risk judgement on just those leaves (not the whole-tree rollup, which
-    // saturates near 100% for any tree this size — see the note in the panel).
-    const critLeafP = criticalLeaves.map(n => nodes.find(x => x.id === n.id)?.grade?.risk_0to1).filter(p => p != null);
-    const confidence30d = critLeafP.length ? critLeafP.reduce((a, p) => a * (1 - p), 1) : null;
     const loop = data.models[m].loop;
-    byM[m] = { meanAtomic, meanCovers, meanParallel, flaw, flawCaught, confidence30d, loop, valS: data.models[m].validate_schedule, valB: data.models[m].validate_budget };
+    const gatePick = data.models[m].gate_pick;
+    byM[m] = { meanAtomic, meanCovers, meanParallel, flaw, flawCaught, loop, gatePick, riskAgreement: data.models[m].risk_agreement };
   }
-  // "reflexive no" only on the two questions where it actually shows up here; parallel behaves normally
   const alwaysNo = models.filter(m => byM[m].meanAtomic != null && byM[m].meanAtomic < 0.15 && byM[m].meanCovers < 0.15 && byM[m].meanParallel > 0.3);
   const rootStop = models.filter(m => byM[m].loop.stops.some(s => s.id === "root"));
-  return { models, byM, alwaysNo, rootStop, criticalLeaves, flawId };
+  const flawCaughtBy = models.filter(m => byM[m].flawCaught);
+  const flawMissedBy = models.filter(m => !byM[m].flawCaught);
+  const gatePickedGate = models.filter(m => byM[m].gatePick?.is_gate);
+  return { models, byM, alwaysNo, rootStop, flawId, gateLeaves, flawCaughtBy, flawMissedBy, gatePickedGate };
 }
 
-/* ---------- decompose-and-loop: the pipeline hero and the loop-results panel ---------- */
+/* ---------- Fig 1: what the pitch assumes vs what the platform gives ---------- */
+function figAssumption() {
+  const W = 900, H = 220, midY = 40, boxW = 46, boxH = 30, gap = 14, n = 6, startX = 40;
+  const worker = (x, y) => S("rect", { x, y, width: boxW, height: boxH, rx: 5, class: "fa-worker" });
+  const leftWorkers = [], leftArrows = [];
+  for (let i = 0; i < n; i++) {
+    const x = startX + i * (boxW + gap);
+    leftWorkers.push(worker(x, midY));
+    leftArrows.push(S("line", { x1: x + boxW / 2, x2: x + boxW / 2, y1: midY + boxH, y2: midY + boxH + 26, class: "fa-arrow" }));
+  }
+  const barY = midY + boxH + 26, barW = startX * 2 + n * boxW + (n - 1) * gap - 80;
+  const rightWorkers = [], rightArrows = [];
+  const netX = startX + 2.5 * (boxW + gap), netY = midY + boxH + 60;
+  for (let i = 0; i < n; i++) {
+    const x = startX + i * (boxW + gap);
+    rightWorkers.push(worker(x, midY));
+    rightWorkers.push(S("rect", { x: x + 6, y: midY + boxH - 8, width: boxW - 12, height: 8, rx: 2, class: "fa-heap" }));
+    rightArrows.push(S("path", { d: `M${x + boxW / 2} ${midY + boxH} L${netX + 45} ${netY}`, class: "fa-arrow thin" }));
+  }
+  const panel = (x0, title, sub, kids) => S("g", {},
+    S("text", { class: "fa-title", x: x0 + 430, y: 18, "text-anchor": "middle" }, title),
+    kids,
+    S("text", { class: "fa-sub", x: x0 + 430, y: H - 8, "text-anchor": "middle" }, sub));
+  return el("div", { class: "figwrap" },
+    el("div", { class: "figcol" },
+      S("svg", { viewBox: `0 0 900 ${H}`, class: "pipeline wide", role: "img", "aria-label": "What the pitch assumes: one shared memory pool" },
+        panel(0, "What the pitch assumes", "one memory pool — GB/s, nanoseconds", [
+          leftWorkers, leftArrows,
+          S("rect", { x: startX - 10, y: barY, width: barW + 20, height: 18, rx: 4, class: "fa-bar" }),
+          S("text", { x: startX + barW / 2, y: barY + 13, "text-anchor": "middle", class: "fa-barlabel" }, "shared RAM-speed pool")]))),
+    el("div", { class: "figcol" },
+      S("svg", { viewBox: `0 0 900 ${H}`, class: "pipeline wide", role: "img", "aria-label": "What the platform gives: isolated workers over a network" },
+        panel(0, "What the platform actually gives", "network: Durable Object / Queue / KV / R2 — Mb/s, milliseconds", [
+          rightWorkers, rightArrows,
+          S("rect", { x: netX, y: netY - 10, width: 90, height: 22, rx: 11, class: "fa-net" }),
+          S("text", { x: netX + 45, y: netY + 5, "text-anchor": "middle", class: "fa-barlabel" }, "network")]))));
+}
+
+/* ---------- Fig 2: the schedule board (a real Gantt from the CPM pass) ---------- */
+function ganttBoard(data) {
+  const nodes = data.models[orderModels(Object.keys(data.models))[0]].nodes;
+  const leaves = nodes.filter(n => n.kind === "leaf").sort((a, b) => a.earliest_start_day - b.earliest_start_day);
+  const groups = nodes.filter(n => n.layer === 1);
+  const byGroup = {}; for (const g of groups) byGroup[g.id] = leaves.filter(n => n.parent === g.id);
+  const horizon = data.horizon_working_days || 20;
+  const rowH = 22, headH = 26, W = 900, L = 210, R = 20;
+  const dayW = (W - L - R) / horizon;
+  const rows = []; let y = headH;
+  const lanes = [];
+  const laneRowH = 18;
+  for (const g of groups) {
+    const kids = byGroup[g.id]; if (!kids.length) continue;
+    lanes.push({ y, label: g.title });
+    y += laneRowH;
+    for (const n of kids) {
+      rows.push({ n, y });
+      y += rowH;
+    }
+    y += 6;
+  }
+  const H = y + 10;
+  const dayX = (d) => L + d * dayW;
+  const grid = [];
+  for (let d = 0; d <= horizon; d += 5) grid.push(S("g", {},
+    S("line", { x1: dayX(d), x2: dayX(d), y1: headH - 4, y2: H - 6, class: "gl" }),
+    S("text", { x: dayX(d), y: 14, "text-anchor": "middle", class: "lbl" }, `day ${d}`)));
+  const laneLabels = lanes.map(l => S("text", { x: 4, y: l.y + 14, class: "gantt-lane-label" }, l.label));
+  const bars = rows.map(({ n, y: ry }) => {
+    const x1 = dayX(n.earliest_start_day), x2 = dayX(n.earliest_finish_day);
+    const crit = n.on_critical_path;
+    return S("g", {},
+      S("rect", { x: x1, y: ry + 3, width: Math.max(2, x2 - x1), height: rowH - 7, rx: 3, class: "bar" + (crit ? " crit" : "") + (n.gate ? " gate" : "") },
+        S("title", {}, `${n.title}\nday ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)} · float ${fmt.num(n.total_float_days, 1)}d${crit ? " · critical path" : ""}${n.gate ? " · gate" : ""}`)),
+      S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" }, n.title.length > 30 ? n.title.slice(0, 28) + "…" : n.title));
+  });
+  const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, class: "gantt", role: "img", "aria-label": "Schedule board: earliest start to finish for every item, critical path highlighted" },
+    grid, laneLabels, bars);
+  return el("div", {}, el("div", { style: "overflow-x:auto" }, svg),
+    el("div", { class: "legend", style: "margin-top:6px;display:flex;gap:16px;flex-wrap:wrap" },
+      el("span", {}, el("span", { class: "swatch crit" }), " critical path"),
+      el("span", {}, el("span", { class: "swatch gate" }), " week-1 gate"),
+      el("span", {}, el("span", { class: "swatch plain" }), " has float")));
+}
+
+/* ---------- pipeline diagram: the model-scoring loop (demoted to section 9) ---------- */
 function pipelineHero() {
-  const W = 900, H = 160;
+  const W = 900, H = 130;
   const stage = (x, w, title, sub) => S("g", { class: "stage" },
-    S("rect", { x, y: 30, width: w, height: 60, rx: 8 }),
-    S("text", { class: "t", x: x + w / 2, y: 58, "text-anchor": "middle" }, title),
-    S("text", { class: "n", x: x + w / 2, y: 76, "text-anchor": "middle" }, sub));
+    S("rect", { x, y: 20, width: w, height: 50, rx: 8 }),
+    S("text", { class: "t", x: x + w / 2, y: 42, "text-anchor": "middle" }, title),
+    S("text", { class: "n", x: x + w / 2, y: 58, "text-anchor": "middle" }, sub));
   const arrow = (x1, x2, y) => S("g", {},
     S("path", { class: "arrow", d: `M${x1} ${y} L${x2 - 8} ${y}` }),
     S("path", { class: "arrow", d: `M${x2 - 10} ${y - 4} L${x2} ${y} L${x2 - 10} ${y + 4}` }));
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "The decompose-and-loop mechanism" },
-    stage(10, 190, "The pitch", "1 problem, ambitious"),
-    arrow(200, 250, 60),
-    stage(250, 190, "Planner splits", "hand-authored, fixed: up to 4 layers, 23 nodes"),
-    arrow(440, 490, 60),
-    stage(490, 220, "Classifier: atomic?", "asked live at every node"),
-    arrow(710, 760, 60),
-    stage(760, 130, "Stop", "pseudo-atomic"),
-    S("text", { class: "lbl", x: 600, y: 118, "text-anchor": "middle" }, "no — loop back and split again"),
-    S("path", { class: "loopback", d: "M600 90 C 600 130, 345 130, 345 90" }),
-    S("path", { class: "loopback", d: "M338 96 L345 90 L352 96" }),
-    S("text", { class: "lbl", x: 825, y: 118, "text-anchor": "middle" }, "yes"));
+  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "How a model scores one node: is it atomic, stop or split again" },
+    stage(10, 190, "Plan node", "hand-authored, fixed"),
+    arrow(200, 250, 45),
+    stage(250, 220, "Classifier: atomic?", "asked live at every node"),
+    arrow(470, 520, 45),
+    stage(520, 130, "Stop", "pseudo-atomic"),
+    S("text", { class: "lbl", x: 375, y: 98, "text-anchor": "middle" }, "no — loop back and split again"),
+    S("path", { class: "loopback", d: "M360 68 C 360 95, 265 95, 265 68" }),
+    S("path", { class: "loopback", d: "M258 74 L265 68 L272 74" }),
+    S("text", { class: "lbl", x: 590, y: 98, "text-anchor": "middle" }, "yes"));
 }
 
 function loopResultsPanel(story) {
   const maxDepth = 4;
-  const box = el("div", { class: "card" }, el("h3", { text: "Where the loop actually stopped" }),
-    el("p", { class: "small muted", text: "Real answers, not staged: this replays each model's own live ‘is this atomic?’ judgement at every node, starting from the root, and stops splitting as soon as that model says yes (≥60% confidence). The planner's split itself is fixed — only the stop/continue decision is the model's." }));
+  const box = el("div", { class: "card" }, el("h4", { text: "Did they split it to a workable level?" }),
+    el("p", { class: "small muted", text: "This replays each model's own live ‘is this atomic?’ judgement at every node, starting from the root, and stops splitting as soon as that model says yes (≥60% confidence). The planner's split itself is fixed — only the stop/continue decision is the model's. No plan consequence follows from this section: these are facts about the models." }));
   for (const m of story.models) {
     const l = story.byM[m].loop;
     const w = Math.min(100, (l.avg_depth / maxDepth) * 100);
@@ -480,125 +594,266 @@ function loopResultsPanel(story) {
   if (story.rootStop.length) notes.push(`${story.rootStop.map(m => Jev.codeOf(m)).join(" and ")} called the entire pitch a single atomic unit of work at the very first question, ${story.rootStop.map(m => fmt.num(story.byM[m].loop.stops.find(s => s.id === "root").atomic_p, 2)).join("/")} confidence — and never split it at all.`);
   const partial = story.models.filter(m => !story.rootStop.includes(m) && story.byM[m].loop.premature.length);
   if (partial.length) notes.push(`${partial.map(m => `${Jev.codeOf(m)} (${story.byM[m].loop.premature.map(p => `"${p.title}"`).join(", ")})`).join("; ")} split most of the pitch correctly, but still closed off at least one real group as if it were one item.`);
-  const maxLeafStops = Math.max(...story.models.map(m => story.byM[m].loop.n_stops));
-  const full = story.models.filter(m => story.byM[m].loop.n_stops === maxLeafStops && story.byM[m].loop.premature.length === 0 && maxLeafStops > 5);
-  if (full.length) notes.push(`${full.map(m => Jev.codeOf(m)).join(", ")} split furthest of all (${maxLeafStops} stops) without a single premature stop — but that model also almost never says "atomic" (mean probability ${full.map(m => fmt.num(story.byM[m].meanAtomic, 2)).join(", ")}), so it likely went that deep by running out of children to split, not by recognising them.`);
+  const maxStops = Math.max(...story.models.map(m => story.byM[m].loop.n_stops));
+  const full = story.models.filter(m => story.byM[m].loop.n_stops === maxStops && story.byM[m].loop.premature.length === 0 && maxStops > 5);
+  if (full.length) notes.push(`${full.map(m => Jev.codeOf(m)).join(", ")} split furthest (${maxStops} stops) without a single premature stop — but that model also almost never says "atomic" (mean probability ${full.map(m => fmt.num(story.byM[m].meanAtomic, 2)).join(", ")}), so it likely got there by running out of children to split, not by recognising them.`);
   for (const n of notes) box.append(el("p", { class: "small" }, n));
   return box;
 }
 
-const heatRisk = (p) => p == null ? "var(--surface-2)" : `color-mix(in srgb, var(--bad) ${Math.round(clamp01(p) * 60)}%, var(--surface-2))`;
+/* ---------- section 6: the week-1 gate card ---------- */
+function gateCard(data, story) {
+  const nodes = data.models[story.models[0]].nodes;
+  const gates = [...story.gateLeaves].sort((a, b) => (b.blocks_count || 0) - (a.blocks_count || 0));
+  const box = el("div", { class: "card" }, el("h3", { text: `Week 1: ${gates.length} measurements that decide the rest` }),
+    el("p", { class: "small muted", text: "Ranked by how much of the plan waits on the answer. Each is a measurement or documentation check, not a design choice — none of them can be reasoned to, only measured." }));
+  const t = el("table", { class: "data wrap" });
+  t.append(el("thead", {}, el("tr", {}, el("th", { text: "Question" }), el("th", { text: "How it gets measured" }), el("th", { text: "Cost" }), el("th", { text: "Blocks" }), el("th", { text: "Status" }))));
+  const tb = el("tbody");
+  for (const g of gates) {
+    tb.append(el("tr", {}, el("td", {}, el("b", { text: g.title })), el("td", { class: "small", text: g.text.split("\n")[0] }),
+      el("td", { class: "muted", text: `${g.duration_days}d` }), el("td", { class: "muted", text: `${g.blocks_count || 0} item${g.blocks_count === 1 ? "" : "s"}` }),
+      el("td", {}, el("span", { class: "dbadge status-" + g.status, text: STATUS_LABEL[g.status] || g.status }))));
+  }
+  t.append(tb); box.append(el("div", { style: "overflow-x:auto" }, t));
+  const sched = data.schedule || {};
+  box.append(el("div", { class: "callout", style: "margin-top:12px" },
+    el("p", {}, el("b", { text: "As pitched literally" }), " — a shared, RAM-speed memory pool across independent edge workers — ", el("b", { style: "color:var(--bad)" }, "unlikely, pending one spike."),
+      " On my reading of the isolation model this is not a capability the platform has, and no amount of schedule fixes that. “Measure worker-to-worker transfer” is the one-day experiment that either confirms this or proves me wrong."),
+    el("p", {}, el("b", { text: "Re-scoped" }), " — sharded per-worker WASM-SIMD compute, deltas exchanged over Durable Objects/Queues and state persisted in R2 — ",
+      el("b", { style: "color:var(--good)" }, "go, contingent on the week-1 measurements above."), ` The schedule arithmetic below says ${sched.span_days} of ${data.horizon_working_days} working days with ${sched.float_days} days of float, and it still lands at a 50% overrun on every estimate.`)));
+  return box;
+}
 
-/* One row per real leaf (grouped by section), one column per model, cell = that model's forecast
-   probability for the given dimension, rolled up from its own atomic judgement (Monte Carlo). */
-function gapHeatMap(data, models, dim, forecastKey) {
-  const allNodes = data.models[models[0]].nodes;
-  const leaves = allNodes.filter(n => n.kind === "leaf");
-  // group by top-level section: whichever layer-1 ancestor a leaf descends from, in tree order
-  const byId = Object.fromEntries(allNodes.map(n => [n.id, n]));
-  const titleOf = Object.fromEntries(allNodes.map(n => [n.id, n.title]));
-  const order = allNodes.filter(n => n.layer === 1).map(n => n.id);
-  const sectionOf = (n) => { let p = byId[n.parent]; while (p && p.layer > 1) p = byId[p.parent]; return p ? p.id : n.parent; };
-  const rows = [...leaves].sort((a, b) => order.indexOf(sectionOf(a)) - order.indexOf(sectionOf(b)));
-  const t = el("table", { class: "data gapmap" });
-  t.append(el("thead", {}, el("tr", {}, el("th", { text: "Item" }), models.map(m => el("th", { text: Jev.codeOf(m) })))));
+/* ---------- section 7: the resource table ---------- */
+function resourceRow(nodes, id, tier, why) {
+  const n = nodes.find(x => x.id === id);
+  if (!n) return null;
+  const tm = n.target_metric || {};
+  return { n, tier, why, metric: tm.name, unit: tm.unit, needed: tm.needed, assumed: tm.assumed_today };
+}
+function resourceTable(data, story) {
+  const nodes = data.models[story.models[0]].nodes;
+  const rows = [
+    resourceRow(nodes, "spike-sharedmem", 1, "A negative result here changes the meaning of every other question — if exchange is network-only, the architecture's identity changes before anything else is sized."),
+    resourceRow(nodes, "spike-memcap", 1, "The first hard predecessor on the critical path — chunk size, and everything built on it, waits on this number."),
+    resourceRow(nodes, "spike-timebudget", 1, "If a chunk's compute doesn't fit one invocation, every chunk needs a different program, not just more time."),
+    resourceRow(nodes, "feas-fanout", 1, "A generous memory cap is worthless if only a handful of workers can run at once — this is what makes 'many workers' true or false at all."),
+    resourceRow(nodes, "feas-netcost", 2, "The replacement for shared memory. Doesn't kill the idea the way a bad spike-sharedmem result would — it sizes whether the re-scoped design can hit its own pass-time target."),
+    resourceRow(nodes, "train-state", 2, "Where accumulating state lives decides whether many workers training at once is even coherent — see the open question below."),
+    resourceRow(nodes, "ops-costmodel", 2, "There is no cost figure anywhere else in this plan. This is the one node that produces a dollar amount."),
+    resourceRow(nodes, "kernel-accuracy", 3, "The architecture can be sound and the product still pointless if sharded detection finds materially less than a whole-dataset detector."),
+    resourceRow(nodes, "ops-failure", 3, "A distributed system that assumes every worker finishes is not a real distributed system."),
+    resourceRow(nodes, "ops-e2e", 3, "The first point every prior piece has to actually work together, not just in isolation."),
+  ].filter(Boolean);
+  const box = el("div", { class: "card" }, el("h3", { text: "What has to be true, by resource" }),
+    el("p", { class: "small muted", text: "Every “assumed today” figure is unverified from this box — nothing here has been checked against live Cloudflare docs or a real account. Treat every one as a belief awaiting its spike, not a fact." }));
+  const t = el("table", { class: "data wrap" });
+  t.append(el("thead", {}, el("tr", {}, el("th", { text: "Tier" }), el("th", { text: "Resource" }), el("th", { text: "Number we need" }), el("th", { text: "Assumed today" }), el("th", { text: "Why it matters, and when" }))));
+  const tb = el("tbody");
+  for (const r of rows) {
+    tb.append(el("tr", {}, el("td", {}, el("span", { class: "dbadge", text: `tier ${r.tier}` })),
+      el("td", {}, el("b", { text: r.n.title })),
+      el("td", { class: "small" }, r.metric ? `${r.metric} (${r.unit}): ${r.needed}` : "—"),
+      el("td", {}, r.assumed ? el("span", { class: "unverified", title: "Unverified from this box" }, r.assumed) : el("span", { class: "muted", text: "—" })),
+      el("td", { class: "small" }, r.why)));
+  }
+  t.append(tb); box.append(el("div", { style: "overflow-x:auto" }, t));
+  box.append(el("p", { class: "legend", text: "Tier 1: week 1, ≤ 1 day each, a wrong answer changes the architecture. Tier 2: week 2, sizes the design once its shape is fixed. Tier 3: weeks 3–4, needs a working build to ask at all." }));
+  return box;
+}
+
+/* ---------- section 8: what the plan still doesn't say ---------- */
+function openItemsSection(data, story) {
+  const box = el("div", { class: "card" }, el("h3", { text: "What the plan still doesn't say" }));
+  const flaw = story.flawId ? data.models[story.models[0]].nodes.find(n => n.id === story.flawId) : null;
+  if (flaw) {
+    const caught = story.flawCaughtBy, missed = story.flawMissedBy;
+    box.append(el("h4", { text: "Open, and it matters" }),
+      el("p", {}, el("b", { text: flaw.title + ": " }), flaw.covers_why,
+        caught.length ? el("span", { class: "small muted" }, ` Found by the completeness check below: ${caught.map(m => Jev.codeOf(m)).join(", ")}.`)
+          : el("span", { class: "small muted" }, " None of the five models spotted it; found while writing this plan.")));
+  }
+  box.append(el("h4", { text: "Explicitly out of scope for v1" }),
+    el("ul", {}, (data.out_of_scope_v1 || []).map(o => el("li", {}, el("b", { text: o.title + ": " }), o.why))));
+  return box;
+}
+
+/* ---------- section 9: code legend, disagreement table, scorecard ---------- */
+function codeLegend(models) {
+  const t = el("table", { class: "data" });
+  t.append(el("thead", {}, el("tr", {}, el("th", { text: "Code" }), el("th", { text: "Name" }), el("th", { text: "Size" }), el("th", { text: "Served as" }))));
+  const tb = el("tbody");
+  for (const m of models) {
+    const info = INFO[m] || {};
+    tb.append(el("tr", {}, el("td", {}, Jev.tag(m, { name: false })), el("td", { text: info.name || m }),
+      el("td", { class: "muted", text: info.params || "—" }), el("td", { class: "muted small", text: info.served_as || info.kind || "—" })));
+  }
+  t.append(tb);
+  return t;
+}
+
+function disagreeTable(data, story) {
+  const nodes = data.models[story.models[0]].nodes.filter(n => n.kind === "leaf").sort((a, b) => (b.blocks_count || 0) - (a.blocks_count || 0));
+  const t = el("table", { class: "data wrap gapmap" });
+  t.append(el("thead", {}, el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Week" }), el("th", { text: "Blocks" }), el("th", { text: "Gate" }),
+    el("th", { text: "Why this is risky" }), story.models.map(m => el("th", { text: Jev.codeOf(m) })))));
   const tb = el("tbody"); let lastSec = null;
-  for (const n of rows) {
-    const sec = sectionOf(n);
-    if (sec !== lastSec) { lastSec = sec; tb.append(el("tr", { class: "sec" }, el("td", { colspan: models.length + 1, text: titleOf[sec] || sec }))); }
-    tb.append(el("tr", {}, el("td", { class: "rowlbl" + (n.critical_path || n.status === "blocked" ? " blocked" : ""), title: n.title, text: n.title },),
-      models.map(m => {
-        const p = data.models[m][forecastKey]?.[n.id];
+  const titleOf = Object.fromEntries(nodes.concat(data.models[story.models[0]].nodes.filter(n => n.layer === 1)).map(n => [n.id, n.title]));
+  const parentOf = Object.fromEntries(data.models[story.models[0]].nodes.map(n => [n.id, n.parent]));
+  for (const n of nodes) {
+    if (n.parent !== lastSec) { lastSec = n.parent; tb.append(el("tr", { class: "sec" }, el("td", { colspan: 5 + story.models.length, text: titleOf[n.parent] || n.parent }))); }
+    tb.append(el("tr", {},
+      el("td", { class: "rowlbl" + (n.gate ? " blocked" : "") }, n.title),
+      el("td", { class: "muted", text: n.week != null ? `w${n.week}` : "—" }),
+      el("td", { class: "muted", text: n.blocks_count || 0 }),
+      el("td", {}, n.gate ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", text: "gate" }) : ""),
+      el("td", { class: "small whycol" }, n.risk_reason),
+      story.models.map(m => {
         const gn = data.models[m].nodes.find(x => x.id === n.id);
-        return el("td", { class: "cell", style: `background:${heatRisk(p)}`, title: p == null ? "no data" : `${n.title}\n${dim} risk ${pc(p)} — real status: ${STATUS_LABEL[gn.status]}`, text: p == null ? "–" : pc(p, 0) });
+        const g = gn?.grade || {};
+        const glyph = g.gate_correct == null ? "–" : g.gate_correct ? "=" : (g.gate_p >= 0.5 ? "▲" : "▼");
+        const cls = g.gate_correct == null ? "muted" : g.gate_correct ? "" : "below";
+        return el("td", { class: cls, title: g.gate_p != null ? `gate probability ${fmt.num(g.gate_p, 2)}, reference ${n.gate ? "yes" : "no"}` : "no answer", text: glyph });
       })));
   }
   t.append(tb);
   return t;
 }
 
+function scorecardTable(data, story) {
+  const t = el("table", { class: "data" });
+  t.append(el("caption", { class: "legend", text: `Accuracy across all ${data.models[story.models[0]].nodes.length} nodes. Atomic/covers are graded against my own judgement (the only reference that exists for them); gate/phase/parallel/dependency/complexity are graded against objective fields derived from the plan's structure. Risk agreement is pairwise leaf-ordering agreement between this model and the other four — it needs no reference, since none exists for a subjective rating.` }),
+    el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Atomic" }), el("th", { text: "Covers" }), el("th", { text: "Gate" }), el("th", { text: "Phase" }), el("th", { text: "Parallel" }), el("th", { text: "Dependency" }), el("th", { text: "Complexity MAE" }), el("th", { text: "Risk agreement" }))));
+  const tb = el("tbody");
+  for (const m of story.models) {
+    const nodes = data.models[m].nodes;
+    const rate = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.filter(Boolean).length / v.length : null; };
+    const mae = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    tb.append(el("tr", {}, el("td", {}, mtagShort(m)),
+      el("td", { style: `background:${heat01(rate("atomic_correct"))}`, text: pc(rate("atomic_correct")) }),
+      el("td", { style: `background:${heat01(rate("covers_correct"))}`, text: pc(rate("covers_correct")) }),
+      el("td", { style: `background:${heat01(rate("gate_correct"))}`, text: pc(rate("gate_correct")) }),
+      el("td", { style: `background:${heat01(rate("phase_correct"))}`, text: pc(rate("phase_correct")) }),
+      el("td", { style: `background:${heat01(rate("parallel_correct"))}`, text: pc(rate("parallel_correct")) }),
+      el("td", { style: `background:${heat01(rate("dependency_correct"))}`, text: pc(rate("dependency_correct")) }),
+      el("td", { class: "muted", text: fmt.num(mae("complexity_abs_error"), 2) }),
+      el("td", { class: "muted", text: story.byM[m].riskAgreement != null ? pc(story.byM[m].riskAgreement) : "–" })));
+  }
+  t.append(tb);
+  return t;
+}
+
+/* ---------- main render ---------- */
 function renderDecomposeTree(data) {
   const models = orderModels(Object.keys(data.models || {}));
   if (!models.length) return empty("No decompose-tree run yet", "Run probes/lab_decompose.py for the loaded models.");
   const story = decomposeStory(data);
+  const nodes = data.models[models[0]].nodes;
+  const sched = data.schedule || {};
+  const pitch = data.pitch || "";
   const out = el("div");
-  const pitch = data.pitch || "Exploit high-bandwidth RAM across many Cloudflare Edge Workers to explode a dataset too large for one machine into memory, run SIMD/MIMD-style anomaly detection and incremental training across workers, and persist only the deltas.";
-  out.append(
-    el("h2", { text: "Decompose and loop: can this ship in 30 days?" }),
-    el("blockquote", { class: "qbox", text: pitch }),
-    el("p", { class: "muted", text: "A fixed planner split that pitch into 23 candidate pieces. A classifier judges each piece live: is it already atomic, does the level above it actually hold together, how likely is it to blow the schedule or the budget, what stands in its way. Whatever isn't atomic gets split again — that's the loop. Nobody told the models which pieces are genuinely unresolved; that's checked afterward, against my own read of the platform." }));
 
-  out.append(el("div", { class: "card" }, el("h3", { text: "Pass 1: split the pitch" }),
-    el("div", { style: "overflow-x:auto" }, pipelineHero()),
-    el("p", { class: "small" }, "The planner's first cut is five subsystems: can the platform actually do this (feasibility), get the data in (ingest), compute on it (kernel), move results between workers (orchestration), and learn from the results (training). ", el("b", {}, "Two of those five — feasibility and the compute kernel — are where the loop had to go deepest"), ", because that's where the classifier's own atomic-confidence stayed lowest.")));
+  // 1: title + deck
+  out.append(el("h2", { text: "Decompose and loop: can this be built at all?" }),
+    el("p", { class: "muted", text: "One real engineering pitch, split into a plan, then checked — first against the platform it names, then by five decision models as a second reader. The 30-day schedule turns out not to be the binding constraint." }));
+
+  // 2: the pitch, verbatim
+  out.append(el("h3", { text: "The pitch, as received" }), el("blockquote", { class: "qbox", text: pitch }),
+    el("p", { class: "legend", text: "A real pitch, lightly paraphrased. The 30-day target is the pitcher's, not mine." }));
+
+  // 3: plain words + fig 1
+  out.append(el("h3", { text: "What it means in plain words" }),
+    el("p", {}, "Some datasets are too big to fit in one machine's memory, so they get processed in slow passes off disk. The pitch's idea is to rent memory in tiny pieces from very many machines at once. Cloudflare Workers are small programs that run on Cloudflare's servers worldwide; the pitch proposes starting hundreds or thousands of them, giving each one a slice of the dataset to hold in its own memory, and having all of them scan their slice simultaneously for unusual records — anomaly detection — using the CPU's vector instructions (SIMD: one instruction applied to many numbers at once)."),
+    el("p", {}, "Because each worker sends back only the small changes it found — the “deltas” — rather than its whole slice, the traffic between workers is supposed to stay small. A model gets trained incrementally out of that stream of deltas. Live in 30 days."),
+    figAssumption(),
+    el("p", { class: "legend", text: "The gap between these two pictures is the whole question." }));
+
+  // 4: the assumption everything rests on
+  out.append(el("div", { class: "callout warn" },
+    el("h3", { style: "margin-top:0", text: "The assumption everything rests on" }),
+    el("p", {}, "Each Worker runs in an isolate with its own capped heap, and isolates are deliberately walled off from one another; there is no documented way for two of them to read or write the same physical memory. Anything one worker passes another goes over the network — through a Durable Object, a Queue, KV or R2. That is milliseconds and megabits, not nanoseconds and gigabytes."),
+    el("p", {}, "If that is right, “high-bandwidth RAM across many edge workers” is not a slower version of the pitch — it is a different architecture, and the pitch has to be re-scoped before day 2, not after day 20."),
+    el("p", { class: "small muted" }, el("b", { text: "This is my reading of the platform, not a measurement. " }), "Nothing on this page has been run against Cloudflare. That is exactly why it is the first experiment in the plan below, not a conclusion.")));
+
+  // 5: the plan + gantt
+  out.append(el("h3", { text: `The plan: ${nodes.length} nodes, six workstreams, five phases` }), ganttBoard(data));
+  out.append(el("div", { class: "strip" },
+    el("p", { class: "small" }, "Total span: ", el("b", { text: `${sched.span_days} of ${data.horizon_working_days} working days` }), "."),
+    el("p", { class: "small" }, "Critical path: ", el("b", { text: (sched.critical_path || []).map(id => (nodes.find(n => n.id === id) || {}).title || id).join(" → ") }), "."),
+    el("p", { class: "small" }, "Float against the 30-day target: ", el("b", { text: `${sched.float_days} working days` }), "."),
+    el("p", { class: "small" }, "Sensitivity: at ×1.5 on every estimate the plan lands at ", el("b", { text: `${sched.sensitivity?.["1.5"]} days` }), "; at ×2.0 it misses at ", el("b", { text: `${sched.sensitivity?.["2.0"]} days` }), ".")));
+  out.append(el("p", { class: "legend", text: "Critical path and float are computed by a forward/backward pass over stated predecessor edges and duration estimates — the method is in build_tree_edge.py and is reproducible. The durations are my estimates for one experienced engineer, and they are the weakest input on this page; that is what the sensitivity line is for." }));
+
+  // 6: week 1 gate card
+  out.append(gateCard(data, story));
+
+  // 7: resource table
+  out.append(resourceTable(data, story));
+
+  // 8: open items
+  out.append(openItemsSection(data, story));
+
+  // 9: second opinion
+  out.append(el("h3", { text: "Second opinion: five decision models read the same plan" }),
+    el("p", {}, "The models on this console are typed decision models: you hand one a piece of text (here, one node of the plan) and a typed question, and it returns probabilities — no prose. A yes/no question (“is this a single, indivisible piece of work?”) comes back as a number between 0 and 1. A multiple-choice question comes back as a probability per option. That makes them cheap to run over every node and easy to score, and it is why they are used here as a reviewer of the plan rather than as its author. The plan above was written by hand; the models only answered questions about it."),
+    codeLegend(models),
+    el("div", { class: "card" }, el("h4", { text: "How a model scores one node" }), el("div", { style: "overflow-x:auto" }, pipelineHero())));
+
+  const flaw = story.flawId ? nodes.find(n => n.id === story.flawId) : null;
+  out.append(el("div", { class: "card" }, el("h4", { text: "Did they spot what's missing?" }),
+    flaw ? el("p", {}, story.flawCaughtBy.length
+      ? `${story.flawCaughtBy.map(m => Jev.codeOf(m)).join(", ")} said "${flaw.title}" does not fully cover what it needs — catching the real gap (concurrent writers) described above.`
+      : `None of the five models caught the real gap in "${flaw.title}" — all said it fully covers what it needs.`) : null,
+    story.flawMissedBy.length && flaw ? el("p", { class: "small muted" }, `${story.flawMissedBy.map(m => Jev.codeOf(m)).join(", ")} said it was fully covered — the three listed children are right there in the text, so a surface read looks complete.`) : null,
+    el("p", { class: "small" }, el("b", { text: "Plan consequence: " }), flaw ? "this became the open item above." : "none identified this run."),
+    story.alwaysNo.length ? el("p", { class: "small muted" }, `${story.alwaysNo.map(m => Jev.codeOf(m)).join(", ")} answers "not atomic" and "doesn't cover" almost every time regardless of the node (mean probability ${story.alwaysNo.map(m => `${fmt.num(story.byM[m].meanAtomic, 2)} atomic, ${fmt.num(story.byM[m].meanCovers, 2)} covers`).join("; ")}; its parallel answers are unremarkable, so this is a specific reflex). Where it caught the gap above, treat that as a broken clock, not judgement.`) : null));
 
   out.append(loopResultsPanel(story));
 
-  const flawNode = story.flawId ? data.models[models[0]].nodes.find(n => n.id === story.flawId) : null;
-  const flawCaught = models.filter(m => story.byM[m].flawCaught);
-  const flawMissed = models.filter(m => !story.byM[m].flawCaught);
-  const p2 = story.alwaysNo.length
-    ? `${story.alwaysNo.map(m => Jev.codeOf(m)).join(", ")} answered "not atomic" and "doesn't cover" almost every time it was asked, regardless of the node — mean probability ${story.alwaysNo.map(m => `${fmt.num(story.byM[m].meanAtomic, 2)} atomic, ${fmt.num(story.byM[m].meanCovers, 2)} covers`).join("; ")}. Its parallel answers, by contrast, are unremarkable, so this is a specific reflex, not general caution.`
-    : null;
-  const p3 = flawNode && flawMissed.length
-    ? `${flawMissed.map(m => Jev.codeOf(m)).join(", ")} said "${flawNode.title}" fully covers what it needs (probability near 1.0). It doesn't: none of its three listed pieces say anything about a worker crashing mid-computation or a delta going missing — real failure handling is just absent from the split, not merely under-specified. ${flawCaught.length ? `${flawCaught.map(m => Jev.codeOf(m)).join(", ")} caught it.` : ""}`
-    : null;
-  if (p2 || p3) out.append(el("div", { class: "card" }, el("h3", { text: "Pass 2: what the coverage check caught" }),
-    p2 ? el("p", {}, p2) : null, p3 ? el("p", {}, p3) : null,
-    el("p", { class: "small muted", text: "My own read, not the models': Cloudflare Worker isolates are deliberately memory-isolated for security, and there is no documented primitive for two isolates to share physical memory at RAM bandwidth. “High-bandwidth memory... across edge workers”, read literally, is very likely not a real capability of this platform — which is exactly why that question is the top week-1 spike below, not asserted as settled." })));
+  out.append(el("div", { class: "card" }, el("h4", { text: "Did they pick the same gates I did?" }),
+    el("p", {}, `${story.gatePickedGate.length} of ${story.models.length} models' own highest-risk item is one of the ${story.gateLeaves.length} authored week-1 gates.`,
+      story.gatePickedGate.length ? ` (${story.gatePickedGate.map(m => Jev.codeOf(m)).join(", ")}.)` : ""),
+    el("p", { class: "small muted", text: "On this evidence the models are a second reader, not a substitute for the planner's read — stated plainly rather than smoothed over." })));
 
-  out.append(el("div", { class: "card" }, el("h3", { text: "Pass 3: the near-term items" }),
-    el("p", { class: "small" }, `The loop bottomed out on ${story.criticalLeaves.length} items that gate everything else — do these in week 1, before committing to the rest of the 30 days:`),
-    el("ul", {}, story.criticalLeaves.map(n => el("li", {}, el("b", { text: n.title + ": " }), n.text.split("\n")[0])))));
+  out.append(el("div", { class: "card" }, el("h4", { text: "Where they disagree with me" }),
+    el("p", { class: "small muted", text: "= agrees with my gate call. ▲ rates it more likely to force a redesign than I do. ▼ rates it less likely. Sorted by how much of the plan each item blocks." }),
+    el("div", { style: "overflow-x:auto" }, disagreeTable(data, story))));
 
-  out.append(el("div", { class: "card" }, el("h3", { text: "Verdict: confidence for a 30-day launch" }),
-    el("p", { class: "small muted", text: "Not the whole-tree rollup (that saturates near 100% for any tree this size — of course something among 18 items needs rework, that's normal). This is the chance that none of the week-1 critical items turns up real trouble, from each model's own schedule-risk judgement on just those items." }),
-    el("div", { class: "strip" }, models.map(m => {
-      const c = story.byM[m].confidence30d;
-      return el("div", { class: "mrow" }, el("span", {}, mtagShort(m)),
-        el("div", { class: "ci" }, el("div", { class: "rng", style: `left:0%;width:${Math.round((c ?? 0) * 100)}%;background:${c == null ? "var(--surface-2)" : heat01(c)}` })),
-        el("span", { class: "val", text: c == null ? "–" : pc(c) }));
-    })),
-    el("p", { class: "legend", text: "As pitched literally (a shared, RAM-speed memory pool across independent edge workers), this is unlikely to be buildable on Cloudflare Workers at all — that's not how the isolation model works. A re-scoped version (per-worker WASM-SIMD compute, deltas exchanged over Durable Objects/Queues/R2 instead of shared memory) is a realistic 30-day prototype target, contingent on the week-1 spikes above." })));
-
-  out.append(el("div", { class: "card" }, el("h3", { text: "Gap analysis: predicted schedule overrun" }),
-    el("p", { class: "small muted", text: "Every pseudo-atomic leaf, one column per model. Cell = that model's own forecast probability this piece pushes the plan behind schedule, rolled up from its live risk judgement by the same Monte Carlo pass used for budget below. Darker red = higher predicted risk. Marked rows are the week-1 critical-path items." }),
-    el("div", { style: "overflow-x:auto" }, gapHeatMap(data, models, "schedule", "forecast_schedule"))));
-  out.append(el("div", { class: "card" }, el("h3", { text: "Gap analysis: predicted budget overrun" }),
-    el("p", { class: "small muted", text: "Same rows, same models, a separately asked question: how likely is this piece to cost more effort, compute or external spend than planned." }),
-    el("div", { style: "overflow-x:auto" }, gapHeatMap(data, models, "budget", "forecast_budget"))));
-
-  const t = el("table", { class: "data" });
-  t.append(el("caption", { class: "legend", text: `Accuracy on the typed battery across all ${data.models[models[0]].nodes.length} nodes. Risk/complexity are mean absolute error against my reference call, 0 to 1 (lower is better). The two AUCs are illustrative only (${story.criticalLeaves.length} critical-path leaves).` }),
-    el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Atomic" }), el("th", { text: "Covers" }), el("th", { text: "Parallel" }), el("th", { text: "Dependency" }), el("th", { text: "Risk MAE" }), el("th", { text: "Complexity MAE" }), el("th", { text: "Schedule AUC*" }), el("th", { text: "Budget AUC*" }))));
-  const tb = el("tbody");
-  for (const m of models) {
-    const md = data.models[m], nodes = md.nodes;
-    const rate = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.filter(Boolean).length / v.length : null; };
-    const mae = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-    const vs = md.validate_schedule, vb = md.validate_budget;
-    tb.append(el("tr", {}, el("td", {}, mtagShort(m)),
-      el("td", { style: `background:${heat01(rate("atomic_correct"))}`, text: pc(rate("atomic_correct")) }),
-      el("td", { style: `background:${heat01(rate("covers_correct"))}`, text: pc(rate("covers_correct")) }),
-      el("td", { style: `background:${heat01(rate("parallel_correct"))}`, text: pc(rate("parallel_correct")) }),
-      el("td", { style: `background:${heat01(rate("dependency_correct"))}`, text: pc(rate("dependency_correct")) }),
-      el("td", { class: "muted", text: fmt.num(mae("risk_abs_error"), 2) }),
-      el("td", { class: "muted", text: fmt.num(mae("complexity_abs_error"), 2) }),
-      el("td", { title: vs ? `${vs.n_blocked} critical vs ${vs.n_other} other; mean ${pc(vs.mean_blocked)} vs ${pc(vs.mean_other)}` : "no critical-path leaves scored", text: vs ? vs.auc.toFixed(2) : "–" }),
-      el("td", { title: vb ? `${vb.n_blocked} critical vs ${vb.n_other} other; mean ${pc(vb.mean_blocked)} vs ${pc(vb.mean_other)}` : "no critical-path leaves scored", text: vb ? vb.auc.toFixed(2) : "–" })));
-  }
-  t.append(tb);
-  out.append(el("div", { class: "card" }, el("h3", { text: "Model comparison" }), el("div", { style: "overflow-x:auto" }, t),
-    el("p", { class: "legend", text: "*AUC: chance a random week-1 critical-path leaf is scored riskier than a random non-critical leaf by that model; 0.5 = no signal, 1.0 = always separates them correctly." })));
+  out.append(el("div", { class: "card" }, el("h4", { text: "Scorecard" }), el("div", { style: "overflow-x:auto" }, scorecardTable(data, story))));
 
   let curModel = models[0];
   const treeBox = el("div");
   const select = el("select", { "aria-label": "Model for the tree view", onchange: (e) => { curModel = e.target.value; drawTree(); } }, models.map(m => el("option", { value: m, text: Jev.codeOf(m) })));
   const drawTree = () => treeBox.replaceChildren(buildTreeView(data.models[curModel].nodes));
   drawTree();
-  out.append(el("div", { class: "card" }, el("h3", { text: "Tree: who got which node right" }),
-    el("p", { class: "small muted", text: "Each node's dot is the share of its typed answers this model got right (leaves: atomic, parallel, dependency; groups: covers). Hover a dot for the detail, including my reference call and why." }),
+  out.append(el("div", { class: "card" }, el("h4", { text: "Node by node" }),
+    el("p", { class: "small muted", text: "Each node's dot is the share of its typed answers this model got right. Hover a dot for the detail, including my reference call and why." }),
     el("div", { class: "row", style: "margin-bottom:8px;align-items:center;gap:8px" }, el("span", { class: "small muted", text: "Model:" }), select), treeBox));
+
+  // 10: why five models
+  out.append(el("h3", { text: "Why five models, and not the other four" }));
+  const roster = [
+    ["KEV4B, SEMIF4, OAJEV4, LAYA4H, VERD2H", "scored", "loaded on this box and runnable live"],
+    ["JEV113", "not run", "the hosted model is billed per request; this page sends one battery per node per model, and scripted runs against it are disallowed here. It can be run from the console on request."],
+    ["JEFF4H", "not run", "its service was retired to fit the five current models on one 31.8 GiB card"],
+    ["KEV8H", "not run", "same"],
+    ["KEV5H", "not run", "same"],
+  ];
+  const rt = el("table", { class: "data" }, el("thead", {}, el("tr", {}, el("th", { text: "Code" }), el("th", { text: "State" }), el("th", { text: "Why" }))),
+    el("tbody", {}, roster.map(([c, s, w]) => el("tr", {}, el("td", { text: c }), el("td", { class: "muted", text: s }), el("td", { class: "small", text: w })))));
+  out.append(el("div", { style: "overflow-x:auto" }, rt),
+    el("p", { class: "small muted", text: "These are absent measurements, not results. Nothing here says the four missing models would do worse — nobody asked them. JEFF4H cannot be loaded alongside the current five (the card has under 2 GiB spare once the lineup warms); running it would mean stopping the lineup first, and it sits 7th of 9 on published sets — not obviously worth the swap for this page." }));
+
+  // 11: what this page does not measure
+  out.append(el("h3", { text: "What this page does not measure" }),
+    el("ul", {},
+      el("li", {}, "No Cloudflare measurement has been run — every platform figure above is documented belief awaiting a spike."),
+      el("li", {}, "Durations are one person's estimates, for one experienced engineer."),
+      el("li", {}, "The covers/atomic reference answers are my judgement, written down with reasons so they can be argued with."),
+      el("li", {}, `${nodes.length} nodes is far too small for any statistical claim about the models, which is why no AUC or confidence interval appears anywhere on this page.`),
+      el("li", {}, "The hosted model is not included (see above).")));
+
   return out;
 }
 
@@ -611,11 +866,13 @@ function dotDetail(n) {
   }
   const lines = [];
   if ("atomic_correct" in g) lines.push(`Atomic: model ${g.atomic_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.atomic_p, 2)}), reference ${n.atomic_ref ? "yes" : "no"} — ${g.atomic_correct ? "correct" : "wrong"}`);
+  if ("gate_correct" in g) lines.push(`Gate (would a surprise here force a redesign?): model ${g.gate_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.gate_p, 2)}), reference ${n.gate ? "yes" : "no"} — ${g.gate_correct ? "correct" : "wrong"}`);
+  if ("phase_correct" in g) lines.push(`Phase: model said "${g.phase_pred}", reference "${n.phase}" — ${g.phase_correct ? "correct" : "wrong"}`);
   if ("parallel_correct" in g) lines.push(`Parallel: model ${g.parallel_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.parallel_p, 2)}), reference ${n.parallel_ref ? "yes" : "no"} — ${g.parallel_correct ? "correct" : "wrong"}`);
   if ("dependency_correct" in g) lines.push(`Dependency: model said "${g.dependency_pred}", reference "${n.dependency_ref}" — ${g.dependency_correct ? "correct" : "wrong"}`);
-  if ("risk_0to1" in g) lines.push(`Risk: model ${fmt.num(g.risk_0to1, 2)}, reference ${fmt.num(n.risk_ref, 2)} (abs error ${fmt.num(g.risk_abs_error, 2)})`);
+  if ("risk_0to1" in g) lines.push(`Risk (not graded — no objective reference exists): model ${fmt.num(g.risk_0to1, 2)}`);
   if ("complexity_0to1" in g) lines.push(`Complexity: model ${fmt.num(g.complexity_0to1, 2)}, reference ${fmt.num(n.complexity_ref, 2)} (abs error ${fmt.num(g.complexity_abs_error, 2)})`);
-  lines.push(`Real status: ${STATUS_LABEL[n.status] || n.status}. Why: ${n.why}`);
+  lines.push(`Status: ${STATUS_LABEL[n.status] || n.status}${n.week ? `, week ${n.week}` : ""}${n.on_critical_path ? ", on the critical path" : ""}. Why it matters: ${n.risk_reason || n.covers_why || ""}`);
   return lines.join("\n");
 }
 

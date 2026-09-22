@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
-"""Decompose and loop: score every model on the reference requirements tree
-(probes/decompose/tree_ref.json) with a typed battery per node, then turn each leaf's risk
-judgement into a Monte Carlo forecast of where the plan is likely to hit trouble, and check that
-forecast against the leaf's real, held-out status (done / in_progress / blocked / not_started) --
-not shown to the model.
+"""Decompose and loop: score every model on a reference plan (probes/decompose/tree_ref*.json)
+with a typed battery per node, then check what the models are actually worth as a second reader
+of a hand-authored plan: do they catch a genuine, planted coverage gap; do they split the plan to
+a workable level (the loop, driven by each model's own live 'atomic' judgement); do they pick out
+the same schedule-critical items the planner's CPM pass did; where do they disagree with the
+planner's own risk read.
+
+There is no Monte Carlo forecast and no "confidence" number here (an earlier version had one; it
+was removed on review -- multiplying together a few models' own subjective 0-4 Likert ratings and
+calling the product a probability of meeting a launch date is dressed-up subjectivity, not a
+forecast: see the write-up in demo/scenarios.html's "What this page does not measure" section).
+The schedule verdict instead comes from a deterministic CPM pass over authored duration estimates
+and predecessor edges, computed once in build_tree_edge.py and never touched by a model.
 
 One call per node per model (the node's whole battery in one request, like the other structures).
 Local models only; the hosted backend is refused here. Writes the fully scored tree to
@@ -11,13 +19,9 @@ data/probe-runs-v2/_decompose/tree_scored.json, which server.py's /api/decompose
 directly (this structure is small enough that there's no separate per-item JSONL log; re-running
 overwrites the file with all requested models included).
 
-  python3 probes/lab_decompose.py --models kev-4b semif so1 laya verdict
   python3 probes/lab_decompose.py --models kev-4b semif so1 laya verdict --tree probes/decompose/tree_ref_edge.json --out data/probe-runs-v2/_decompose/tree_scored_edge.json
-
-The 'true class' used for the schedule/budget forecast validation is whichever the tree
-provides: 'critical_path' (bool, per node) if present, else status == 'blocked'.
 """
-import argparse, json, random, sys
+import argparse, json, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,13 +31,22 @@ import server  # noqa: E402
 REF = ROOT / "probes" / "decompose" / "tree_ref.json"
 OUT = ROOT / "data" / "probe-runs-v2" / "_decompose" / "tree_scored.json"
 LEVELS5 = ["very low", "low", "medium", "high", "very high"]
+PHASE_CRITERIA = {
+    "spike": "Finding something out -- a measurement, an experiment, a check against documentation. Nothing is built or decided yet.",
+    "decide": "A choice between real options that a person has to make; no new information is being gathered.",
+    "build": "Writing the actual implementation, once what to build is already known.",
+    "validate": "Checking that something already built actually works, at realistic scale or against a real baseline.",
+    "launch": "Getting a working, validated system into production: deploy, rollback, runbook.",
+}
 
 
-def battery(node, dep_options):
-    """Every node gets 'atomic' -- that is the classifier the loop steps on: a group should score
-    low, a true leaf should score high. Only root/group also get 'covers'. Only leaves get the
-    forecast questions: schedule risk (still called 'risk' in the record, worded as delay/rework)
-    and a separate, directly-asked budget risk, plus complexity/parallel/dependency."""
+def battery(node, dep_options, phase_options):
+    """Every node gets 'atomic' -- the classifier the loop steps on: a group should score low, a
+    true leaf should score high. Only root/group also get 'covers'. Only leaves get: 'gate' (does
+    a bad answer here change the architecture, not just the date -- graded against the authored
+    gate flag), 'phase' (which SDLC phase this is -- graded against the authored phase), plus
+    risk/complexity/parallel/dependency. 'risk' is asked but never graded against a reference (the
+    reference would be equally subjective); it is used only for cross-model agreement."""
     q = {"atomic": {"type": "noul", "instructions": node["text"] + "\n\nQuestion: is this a single, atomic unit of work that should be executed as one piece, not split into smaller pieces?",
                      "criteria": {"true": "A single indivisible unit of work.", "false": "Really a group of smaller pieces of work."}}}
     if node["kind"] in ("root", "group"):
@@ -41,10 +54,11 @@ def battery(node, dep_options):
                         "criteria": {"true": "The children, taken together, fully cover the requirement as it stands today.", "false": "Something the requirement needs is missing from the children, or not yet actually delivered by them."}}
         return q
     q.update({
+        "gate": {"type": "noul", "instructions": node["text"] + "\n\nQuestion: if this item's answer comes back the opposite of what is currently assumed, does the overall architecture have to change shape -- not just take longer?",
+                 "criteria": {"true": "A surprising answer here would force a redesign, not just a delay.", "false": "A surprising answer here would only cost time, not change the design."}},
+        "phase": {"type": "choice", "instructions": node["text"] + "\n\nQuestion: which of these best describes this item?", "criteria": PHASE_CRITERIA},
         "risk": {"type": "score", "instructions": node["text"] + "\n\nQuestion: if this item is left undone or wrong, how likely is it to make the overall plan run behind schedule (delay or rework)?",
                  "criteria": [f"{l} risk of schedule delay or rework" for l in LEVELS5]},
-        "budget": {"type": "score", "instructions": node["text"] + "\n\nQuestion: if this item is left undone or wrong, how likely is it to make the overall plan cost more than planned (extra effort, compute or external spend)?",
-                   "criteria": [f"{l} risk of running over budget" for l in LEVELS5]},
         "complexity": {"type": "score", "instructions": node["text"] + "\n\nQuestion: how complex is this item to actually do?",
                        "criteria": [f"{l} complexity" for l in LEVELS5]},
         "parallel": {"type": "noul", "instructions": node["text"] + "\n\nQuestion: can this item be worked on in parallel with the other items in its group, without waiting for one of them to finish first?",
@@ -69,16 +83,18 @@ def grade(node, answers):
             g["covers_p"] = p
             g["covers_correct"] = (p >= 0.5) == node["covers_ref"]
         return g
+    gate = (answers.get("gate") or {}).get("noul")
+    if gate is not None:
+        g["gate_p"] = gate; g["gate_correct"] = (gate >= 0.5) == bool(node.get("gate"))
+    phase = answers.get("phase") or {}
+    if phase.get("choice") is not None:
+        g["phase_pred"] = phase["choice"]; g["phase_correct"] = phase["choice"] == node.get("phase")
     par = (answers.get("parallel") or {}).get("noul")
     if par is not None:
         g["parallel_p"] = par; g["parallel_correct"] = (par >= 0.5) == node["parallel_ref"]
     risk = (answers.get("risk") or {}).get("score")
     if risk is not None:
-        g["risk_0to1"] = risk / (len(LEVELS5) - 1)
-        g["risk_abs_error"] = abs(g["risk_0to1"] - node["risk_ref"])
-    budget = (answers.get("budget") or {}).get("score")
-    if budget is not None:
-        g["budget_0to1"] = budget / (len(LEVELS5) - 1)
+        g["risk_0to1"] = risk / (len(LEVELS5) - 1)  # never graded against a reference -- see module docstring
     comp = (answers.get("complexity") or {}).get("score")
     if comp is not None:
         g["complexity_0to1"] = comp / (len(LEVELS5) - 1)
@@ -93,7 +109,7 @@ def score_model(model, cfg, ref):
     nodes = ref["nodes"]
     scored = []
     for node in nodes:
-        q = battery(node, ref["dep_options"])
+        q = battery(node, ref["dep_options"], ref.get("phase_options", []))
         r = server.call(model, cfg, {"state": node["text"], "model": "jev-latest", "questions": q}, whole=True)
         if "error" in r:
             scored.append({**node, "error": r["error"]}); continue
@@ -102,68 +118,18 @@ def score_model(model, cfg, ref):
     return scored
 
 
-def forecast_dim(scored_nodes, grade_key, seed, draws=4000):
-    """Monte Carlo for one forecast dimension (schedule or budget): sample each leaf's 'causes
-    trouble' outcome as a coin flip at the model's own score for that dimension, OR the flips up
-    the tree (documented simplification: treats leaves as independent; the plan's own caveat is
-    that real correlation between atoms isn't handled here)."""
-    rnd = random.Random(seed)
-    by_id = {n["id"]: n for n in scored_nodes}
-    children = {}
-    for n in scored_nodes:
-        children.setdefault(n["parent"], []).append(n["id"])
-    leaf_p = {n["id"]: n["grade"][grade_key] for n in scored_nodes if n["kind"] == "leaf" and "grade" in n and grade_key in n["grade"]}
-    p_trouble = {}
-    def sim(nid):
-        if nid in p_trouble:
-            return p_trouble[nid]
-        node = by_id[nid]
-        if node["kind"] == "leaf":
-            p = leaf_p.get(nid, 0.0)
-        else:
-            kids = children.get(nid, [])
-            hit = 0
-            for _ in range(draws):
-                if any(rnd.random() < sim(k) for k in kids):
-                    hit += 1
-            p = hit / draws if kids else 0.0
-        p_trouble[nid] = p
-        return p
-    for n in scored_nodes:
-        sim(n["id"])
-    return p_trouble
-
-
-def validate_dim(scored_nodes, p_trouble, grade_key, true_fn):
-    """Illustrative only: with so few true-class leaves there is no statistical power here, just
-    a check that the direction isn't obviously backwards."""
-    leaves = [n for n in scored_nodes if n["kind"] == "leaf" and grade_key in n.get("grade", {})]
-    hot = [n for n in leaves if true_fn(n)]
-    other = [n for n in leaves if not true_fn(n)]
-    if not hot or not other:
-        return None
-    wins = sum(1 for b in hot for o in other if p_trouble[b["id"]] > p_trouble[o["id"]])
-    ties = sum(1 for b in hot for o in other if p_trouble[b["id"]] == p_trouble[o["id"]])
-    total = len(hot) * len(other)
-    auc = (wins + 0.5 * ties) / total
-    return {"n_blocked": len(hot), "n_other": len(other), "auc": round(auc, 3),
-            "mean_blocked": round(sum(p_trouble[b["id"]] for b in hot) / len(hot), 3),
-            "mean_other": round(sum(p_trouble[o["id"]] for o in other) / len(other), 3)}
-
-
 def simulate_loop(scored_nodes, threshold=0.6, max_depth=6):
     """The actual loop: starting at root, walk down; at each node ask the model's own live
     'atomic' judgement (already scored, not re-asked). If atomic_p >= threshold, stop here --
     that node becomes a pseudo-atomic stopping point for this model, whether or not the reference
     tree goes deeper. Otherwise expand into its real children (the planner's split is fixed and
     hand-authored; only the stop/continue decision is the model's own). Caps at max_depth as a
-    safety valve for a model that never says yes (e.g. one that answers 'not atomic' to nearly
-    everything -- see the write-up)."""
+    safety valve for a model that never says yes."""
     by_id = {n["id"]: n for n in scored_nodes}
     children = {}
     for n in scored_nodes:
         children.setdefault(n["parent"], []).append(n["id"])
-    stops, premature, path = [], [], []
+    stops, premature = [], []
     def walk(nid, depth):
         node = by_id[nid]
         p = (node.get("grade") or {}).get("atomic_p")
@@ -183,6 +149,45 @@ def simulate_loop(scored_nodes, threshold=0.6, max_depth=6):
             "max_depth_hit": sum(1 for s in stops if s["depth"] >= max_depth and not s["is_real_leaf"])}
 
 
+def gate_pick(scored_nodes):
+    """Does this model's own highest-risk leaf happen to be one of the planner's authored gates?
+    A small, honest measure of whether the model's judgement lines up with the planner's -- not a
+    claim that either is right."""
+    leaves = [n for n in scored_nodes if n["kind"] == "leaf" and "grade" in n and "risk_0to1" in n["grade"]]
+    if not leaves:
+        return None
+    top = max(leaves, key=lambda n: n["grade"]["risk_0to1"])
+    return {"id": top["id"], "title": top["title"], "risk": round(top["grade"]["risk_0to1"], 2), "is_gate": bool(top.get("gate"))}
+
+
+def pairwise_agreement(all_scored):
+    """Share of leaf pairs that every pair of models ranks in the same relative order by 'risk'.
+    Needs no ground truth (there isn't one for a subjective rating) -- it only measures whether
+    the models agree with each other, which is itself information."""
+    models = list(all_scored.keys())
+    leaves_by_model = {m: {n["id"]: n["grade"]["risk_0to1"] for n in all_scored[m] if n["kind"] == "leaf" and "grade" in n and "risk_0to1" in n["grade"]} for m in models}
+    common = set.intersection(*(set(v) for v in leaves_by_model.values())) if leaves_by_model else set()
+    common = sorted(common)
+    out = {}
+    for i, m1 in enumerate(models):
+        agree, total = 0, 0
+        for m2 in models:
+            if m2 == m1:
+                continue
+            for a in range(len(common)):
+                for b in range(a + 1, len(common)):
+                    x, y = common[a], common[b]
+                    d1 = leaves_by_model[m1][x] - leaves_by_model[m1][y]
+                    d2 = leaves_by_model[m2][x] - leaves_by_model[m2][y]
+                    if d1 == 0 or d2 == 0:
+                        continue
+                    total += 1
+                    if (d1 > 0) == (d2 > 0):
+                        agree += 1
+        out[m1] = round(agree / total, 3) if total else None
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="+", required=True)
@@ -190,30 +195,27 @@ def main():
     ap.add_argument("--out", type=Path, default=OUT)
     a = ap.parse_args()
     ref = json.loads(a.tree.read_text())
-    has_critical_path = any("critical_path" in n for n in ref["nodes"])
-    true_fn = (lambda n: bool(n.get("critical_path"))) if has_critical_path else (lambda n: n.get("status") == "blocked")
-    out = {"generated_from": str(a.tree), "pitch": ref.get("pitch"), "models": {}}
+    out = {"generated_from": str(a.tree), "pitch": ref.get("pitch"), "schedule": ref.get("schedule"),
+           "horizon_working_days": ref.get("horizon_working_days"), "days_per_week": ref.get("days_per_week"),
+           "out_of_scope_v1": ref.get("out_of_scope_v1"), "models": {}}
+    all_scored = {}
     for model in a.models:
         cfg = server.BACKENDS[model]
         if cfg.get("hosted"):
             print(f"skipping {model}: hosted model runs only through the UI"); continue
         print(f"scoring {model} ({len(ref['nodes'])} nodes)...")
         scored = score_model(model, cfg, ref)
-        sched_p = forecast_dim(scored, "risk_0to1", seed=20260922)
-        budget_p = forecast_dim(scored, "budget_0to1", seed=20260923)
-        sched_val = validate_dim(scored, sched_p, "risk_0to1", true_fn)
-        budget_val = validate_dim(scored, budget_p, "budget_0to1", true_fn)
+        all_scored[model] = scored
         loop = simulate_loop(scored)
-        sensitivity = sorted((n for n in scored if n["kind"] == "leaf" and "grade" in n and "risk_0to1" in n["grade"]),
-                              key=lambda n: n["grade"]["risk_0to1"], reverse=True)[:5]
+        pick = gate_pick(scored)
         n_ok = sum(1 for n in scored if "error" not in n)
-        out["models"][model] = {"nodes": scored, "forecast_schedule": sched_p, "forecast_budget": budget_p,
-                                 "validate_schedule": sched_val, "validate_budget": budget_val, "loop": loop,
-                                 "top_risk": [{"id": n["id"], "title": n["title"], "risk": round(n["grade"]["risk_0to1"], 2)} for n in sensitivity],
-                                 "n_ok": n_ok, "n_failed": len(scored) - n_ok}
+        out["models"][model] = {"nodes": scored, "loop": loop, "gate_pick": pick, "n_ok": n_ok, "n_failed": len(scored) - n_ok}
         print(f"  {n_ok}/{len(scored)} nodes answered; loop stopped at {loop['n_stops']} pseudo-atomic points, avg depth {loop['avg_depth']}, "
-              f"{len(loop['premature'])} premature (called a group atomic)"
-              + (f"; schedule AUC {sched_val['auc']}, budget AUC {budget_val['auc']}" if sched_val and budget_val else ""))
+              f"{len(loop['premature'])} premature"
+              + (f"; top-risk pick '{pick['title']}' is{'' if pick['is_gate'] else ' NOT'} a gate" if pick else ""))
+    agreement = pairwise_agreement(all_scored) if all_scored else {}
+    for m in out["models"]:
+        out["models"][m]["risk_agreement"] = agreement.get(m)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps(out, indent=1))
     print(f"wrote {a.out}")

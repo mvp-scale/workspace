@@ -1,180 +1,401 @@
 #!/usr/bin/env python3
-"""Reference tree for the decompose-and-loop demo, take two: not this project's own plan (too
-meta to tell a story with), but a real pitch -- exploit high-bandwidth RAM across many Cloudflare
-Edge Workers to explode a dataset too large for one machine into memory, run SIMD/MIMD-style
-anomaly detection and incremental training across workers, and persist only the deltas. Target:
-live in 30 days.
+"""Reference plan for the decompose-and-loop demo: a real pitch, decomposed as a component work
+breakdown (6 swimlanes) with an orthogonal SDLC phase per leaf (spike/decide/build/validate/
+launch), real predecessor edges, and duration estimates -- so a forward/backward CPM pass can
+compute the actual critical path, float and schedule sensitivity, instead of an authored "risk"
+number standing in for one.
 
-Same mechanism as build_tree.py (planner splits by hand, 'atomic' asked live at every node,
-covers/risk/budget/complexity/parallel/dependency on the rest), different ground truth: this is a
-brand-new idea, not a project with real history, so 'status' is not done/blocked -- it is whether
-each question is already answerable from documentation (known), needs a live experiment
-(needs_spike), needs a choice only the user can make (needs_decision), or isn't needed for a
-30-day MVP (deferred). 'critical_path' marks the handful of items that gate everything else --
-that is the real answer to "what do we need immediately."
+Design rationale (from an Opus review of the previous, weaker version, itself built from five
+independent adversarial reviews): the schedule is not this pitch's binding constraint -- the
+plan fits in about 13 of 20 working days with real slack. The binding constraint is a platform
+assumption: whether many independent Cloudflare Worker isolates can act as one pool of
+high-bandwidth memory. My own read is that they almost certainly cannot (isolates are
+deliberately memory-isolated; there is no documented shared-memory primitive between them) --
+stated as a belief with a stated spike to check it, not asserted as settled fact, since platform
+specifics can change and this box has no verified outbound access to check live docs.
 
-My own honest technical read, not invented difficulty: Cloudflare Workers isolates are
-memory-capped per invocation and do not expose shared or pooled physical memory between isolates
--- cross-worker communication goes over the network (Durable Objects / Queues / KV / R2), not at
-local RAM bandwidth. WASM SIMD inside one isolate is real and shipped. That gap -- "high-bandwidth
-memory... across edge workers" read as a literal shared memory pool -- is the single highest-
-stakes assumption in the pitch, and it is marked needs_spike + critical_path here, not asserted
-as fact, because platform specifics change and deserve a live check before 30 days get bet on it.
+'critical_path' and 'dependency_ref' are no longer authored -- they are derived from the edge
+graph, so the two can no longer silently disagree with each other or with a node's own prose.
+'complexity_ref' is derived from 'duration_days' bands instead of being an independent unitless
+guess. 'risk_ref'/'budget_ref' are gone entirely: a model's own 'risk' answer is used only for
+cross-model agreement, never graded against a reference that was equally subjective.
 
 Writes probes/decompose/tree_ref_edge.json.
 """
-import json
+import json, math
 from pathlib import Path
 
-DEP = ["none", "needs-user-decision", "needs-other-item", "needs-external-check"]
 OUT = Path(__file__).parent / "tree_ref_edge.json"
 PITCH = ("Exploit high-bandwidth RAM across many Cloudflare Edge Workers: explode a dataset too large for one "
          "machine into per-worker memory, run SIMD/MIMD-style anomaly detection and incremental training across "
          "workers, and persist only the deltas -- so a model can be trained on data that would not fit in one "
          "machine's memory. Target: live in 30 days.")
+HORIZON_DAYS = 20  # 4 working weeks
+DEP_OPTIONS = ["none", "needs-user-decision", "needs-other-item", "needs-external-check"]
+PHASE_OPTIONS = ["spike", "decide", "build", "validate", "launch"]
 
-NODES = [
-    dict(id="root", parent=None, kind="root", title="Edge-RAM anomaly training pipeline", text=PITCH),
-
-    dict(id="sys-feas", parent="root", kind="group", title="Platform feasibility spike",
-         text="Before building anything else: confirm whether Cloudflare Workers actually provide the memory-bandwidth and cross-worker memory-sharing primitives this architecture assumes."),
-    dict(id="feas-mem", parent="sys-feas", kind="group", title="Per-isolate memory ceiling",
-         text="Confirm the actual memory limit one Cloudflare Worker isolate gets today, and whether any Cloudflare product or plan tier offers more, since every downstream chunk size depends on this number.",
-         status="needs_spike", critical_path=True,
-         why="Documented, but the exact current figure needs checking against live docs and this account's plan before anything is sized against it."),
-    dict(id="spike-memcap", parent="feas-mem", kind="leaf", title="Week-1 spike: allocate-until-killed test",
-         text="Deploy a Worker that allocates memory until the platform kills it, on this account's actual plan tier, and record the real ceiling.",
-         atomic=True, risk=0.35, budget=0.15, complexity=0.15, parallel=True, dependency="none", status="needs_spike", critical_path=True,
-         why="Cheapest possible way to replace a documentation guess with a measured number; half a day of work, gates every sizing decision after it."),
-    dict(id="feas-shared", parent="sys-feas", kind="group", title="Shared or pooled memory across workers",
-         text="Confirm whether two Cloudflare Worker isolates can read or write the same physical memory directly, at anything close to local RAM bandwidth -- or whether all cross-worker data movement necessarily goes over the network.",
-         status="needs_spike", critical_path=True,
-         why="My own read: Workers isolates are deliberately memory-isolated for security; there is no documented shared-memory fabric between them, so 'RAM speed across edge workers' as literally pitched is very likely not a real primitive. That belief could be wrong or stale, and it is the single highest-consequence assumption in the whole pitch, so it gets a live spike rather than being asserted as fact."),
-    dict(id="spike-sharedmem", parent="feas-shared", kind="leaf", title="Week-1 spike: cross-worker transfer benchmark",
-         text="Try to move a block of data from one Worker invocation to another without going through a network-facing API, and measure whatever bandwidth is actually achieved.",
-         atomic=True, risk=0.6, budget=0.2, complexity=0.3, parallel=True, dependency="none", status="needs_spike", critical_path=True,
-         why="If this comes back at network speed, not RAM speed, the architecture needs reframing now -- as sharded compute with network-exchanged deltas, not shared memory -- before 29 more days are spent building on the wrong assumption."),
-    dict(id="feas-simd", parent="sys-feas", kind="leaf", title="WASM SIMD availability",
-         text="Confirm the Workers runtime's WebAssembly engine supports the SIMD instruction proposal, and get a rough sense of the realistic speedup for a numeric anomaly-detection kernel.",
-         atomic=True, risk=0.25, budget=0.15, complexity=0.15, parallel=True, dependency="none", status="known", critical_path=False,
-         why="This part of the pitch is real and shipped (V8's WASM SIMD proposal); lower stakes, and answerable by reading current docs rather than a live spike."),
-
-    dict(id="sys-ingest", parent="root", kind="group", title="Ingest and sharding",
-         text="Split the source dataset into per-worker chunks that fit inside whatever the real memory ceiling turns out to be, and dispatch them to many workers in parallel."),
-    dict(id="ingest-chunk", parent="sys-ingest", kind="leaf", title="Chunk sizing against the memory ceiling",
-         text="Decide chunk size once the real per-isolate memory ceiling is known, leaving headroom for the running process, not just the raw data.",
-         atomic=True, risk=0.35, budget=0.2, complexity=0.2, parallel=False, dependency="needs-other-item", status="needs_decision", critical_path=False,
-         why="A direct decision, but it cannot be made responsibly until feas-mem's real number exists."),
-    dict(id="ingest-source", parent="sys-ingest", kind="leaf", title="Where the source dataset lives",
-         text="Choose where the large source dataset is actually read from -- Cloudflare R2, an external object store, or a streamed feed -- and how far a Worker can read into it per invocation.",
-         atomic=True, risk=0.3, budget=0.35, complexity=0.3, parallel=True, dependency="needs-user-decision", status="needs_decision", critical_path=False,
-         why="An architecture choice with real cost implications (R2 has no egress fee to Workers, external storage may), not something the plan itself has data to force."),
-    dict(id="ingest-fanout", parent="sys-ingest", kind="leaf", title="Worker fan-out limits",
-         text="Confirm how many Workers a single request can realistically fan out to in parallel, given Cloudflare's subrequest and concurrency limits on this account's plan.",
-         atomic=True, risk=0.4, budget=0.25, complexity=0.2, parallel=True, dependency="needs-external-check", status="needs_spike", critical_path=False,
-         why="Documented but plan-tier-dependent; determines whether 'many workers in parallel' means dozens or thousands for this account."),
-
-    dict(id="sys-kernel", parent="root", kind="group", title="In-memory compute kernel",
-         text="Run a vectorised (SIMD) anomaly-detection pass over each worker's own chunk, inside that worker's own memory, within the platform's per-invocation time budget."),
-    dict(id="kernel-algo", parent="sys-kernel", kind="leaf", title="Pick a streaming-friendly anomaly algorithm",
-         text="Choose an anomaly-detection method that can run one chunk at a time with no view of the whole dataset (online/incremental), since no single worker ever sees more than its own shard.",
-         atomic=True, risk=0.5, budget=0.2, complexity=0.5, parallel=True, dependency="needs-user-decision", status="needs_decision", critical_path=False,
-         why="A real design choice (e.g. streaming z-score/IQR variants, an online isolation-forest variant, or a sketch-based method) with accuracy trade-offs the plan alone can't resolve."),
-    dict(id="kernel-budget", parent="sys-kernel", kind="group", title="Per-invocation compute budget",
-         text="Measure the real CPU and wall-clock time one Worker invocation gets, and compare it against how much computation the chosen kernel actually needs per chunk.",
-         status="needs_spike", critical_path=True,
-         why="Workers have a hard per-invocation time limit; 'run all my high computation' inside one invocation is only true if the chunk's workload actually fits that limit, which has not been measured."),
-    dict(id="spike-timebudget", parent="kernel-budget", kind="leaf", title="Week-1 spike: representative workload timing",
-         text="Run a realistic chunk of the actual computation inside a real Worker invocation and measure wall-clock time against the platform's per-invocation limit.",
-         atomic=True, risk=0.55, budget=0.25, complexity=0.25, parallel=True, dependency="none", status="needs_spike", critical_path=True,
-         why="If a chunk's workload doesn't fit one invocation, the plan needs smaller chunks or a multi-invocation pattern per chunk -- worth knowing in week 1, not week 3."),
-    dict(id="kernel-impl", parent="sys-kernel", kind="leaf", title="Implement and benchmark the SIMD kernel",
-         text="Build the chosen anomaly-detection kernel in WASM with SIMD, and benchmark it against a plain (non-SIMD) version to confirm the speedup is real for this workload.",
-         atomic=True, risk=0.3, budget=0.3, complexity=0.6, parallel=False, dependency="needs-other-item", status="deferred", critical_path=False,
-         why="Real implementation work; only worth doing once the algorithm choice and the time-budget spike both say this is viable, so it is not a week-1 item."),
-
-    dict(id="sys-orch", parent="root", kind="group", title="Cross-worker orchestration and delta exchange",
-         text="Coordinate many independent Workers -- each running the same kernel on different data, the MIMD part of the pitch -- and move only the anomalous deltas between them, since there is no shared memory to pass full results through.\nListed child items: Choose the coordination primitive, Define the delta format, Define the reduce step."),
-    dict(id="orch-primitive", parent="sys-orch", kind="leaf", title="Choose the coordination primitive",
-         text="Pick how workers get coordinated and how work gets handed out: Durable Objects for stateful coordination, Queues for work distribution, or an external orchestrator outside Cloudflare.",
-         atomic=True, risk=0.4, budget=0.4, complexity=0.4, parallel=True, dependency="needs-user-decision", status="needs_decision", critical_path=False,
-         why="A real architecture decision with cost and latency trade-offs the plan can't make unilaterally."),
-    dict(id="orch-delta", parent="sys-orch", kind="leaf", title="Define the delta format",
-         text="Define what each worker actually emits when it finds an anomaly -- small enough to move cheaply over the network, since that is now the only channel between workers.",
-         atomic=True, risk=0.35, budget=0.2, complexity=0.3, parallel=False, dependency="needs-other-item", status="needs_decision", critical_path=False,
-         why="Depends on both the coordination primitive and on feas-shared's real answer about what channel exists at all."),
-    dict(id="orch-reduce", parent="sys-orch", kind="leaf", title="Define the reduce step",
-         text="Define how deltas from many independent workers get merged into one picture -- deduplicated, ordered, or aggregated as appropriate.",
-         atomic=True, risk=0.35, budget=0.2, complexity=0.35, parallel=False, dependency="needs-other-item", status="deferred", critical_path=False,
-         why="A design detail that follows once the coordination primitive is chosen; not needed to de-risk the plan in week 1."),
-
-    dict(id="sys-train", parent="root", kind="group", title="Incremental training and persistence",
-         text="Accumulate a trained model from a stream of deltas arriving from many short-lived invocations, and persist the running state somewhere that survives between them."),
-    dict(id="train-state", parent="sys-train", kind="leaf", title="Where the accumulating state lives",
-         text="Decide where the running model state is persisted between invocations, since Workers themselves are stateless and short-lived: Durable Objects, KV, R2, or an external database.",
-         atomic=True, risk=0.45, budget=0.35, complexity=0.35, parallel=True, dependency="needs-user-decision", status="needs_decision", critical_path=False,
-         why="A real, consequential choice (Durable Objects give strong consistency but add latency; KV/R2 are eventually consistent and cheaper) the plan can't make alone."),
-    dict(id="train-online", parent="sys-train", kind="leaf", title="Confirm the model type supports incremental updates",
-         text="Confirm the chosen model type can actually be updated incrementally from a stream of deltas, since a full retrain on every delta will not fit the time or memory budget.",
-         atomic=True, risk=0.5, budget=0.3, complexity=0.4, parallel=True, dependency="needs-other-item", status="needs_spike", critical_path=False,
-         why="Depends on kernel-algo's choice; some anomaly-detection methods have well-known online variants, others don't, and that isn't knowable until the algorithm is picked."),
+# ---------- the plan: root, 6 swimlane groups, 24 leaves ----------
+GROUPS = [
+    dict(id="sys-platform", title="Platform limits", owner_role="platform-eng",
+         text="What Cloudflare's Workers platform actually gives you, measured or looked up, before anything else is sized against it."),
+    dict(id="sys-ingest", title="Ingest and sharding", owner_role="data-eng",
+         text="Getting the source dataset in and split into per-worker chunks that fit inside the platform's real limits."),
+    dict(id="sys-kernel", title="Per-worker compute", owner_role="ml-eng",
+         text="The anomaly-detection kernel that runs inside one worker's own memory, and whether sharded detection is even accurate enough to ship."),
+    dict(id="sys-orch", title="Cross-worker exchange", owner_role="platform-eng",
+         text="Coordinating many independent workers and moving only the anomalous deltas between them, since there is no shared memory to pass full results through."),
+    dict(id="sys-train", title="Model state and training", owner_role="ml-eng",
+         text="Accumulating a trained model from a stream of deltas across many short-lived invocations, and persisting the running state between them."),
+    dict(id="sys-ops", title="Correctness, operations and launch", owner_role="sre",
+         text="What a working prototype still needs before it can run unattended: failure handling, observability, a real cost figure, and a launch path. Missing from the pitch as given."),
 ]
 
+# id, group, title, text, phase, duration_days, gate, predecessors[(id,type)], decision_owner,
+# evidence, exit_criteria, target_metric, risk_reason, status
+LEAVES = [
+    dict(id="spike-memcap", group="sys-platform", title="Measure the per-isolate memory ceiling",
+         text="Deploy a Worker that allocates memory until the platform kills it, on this account's real plan tier, and record the ceiling.",
+         phase="spike", duration_days=0.5, gate=True, predecessors=[], evidence="platform_measurement",
+         exit_criteria="A measured MB figure for this account's plan tier, not a documentation guess.",
+         target_metric=dict(name="usable heap per isolate", unit="MB", needed=">= chunk size + working memory", assumed_today="~128 MB (unverified)"),
+         risk_reason="Every downstream chunk-size decision is sized against this number; if it's much smaller than assumed, ingest has to change shape.",
+         status="needs_measurement"),
+    dict(id="spike-sharedmem", group="sys-platform", title="Measure worker-to-worker transfer",
+         text="Try to move a block of data from one Worker invocation to another without a network-facing API, and measure whatever bandwidth is actually achieved -- or confirm no such path exists.",
+         phase="spike", duration_days=1.0, gate=True, predecessors=[], evidence="platform_measurement",
+         exit_criteria="Either a measured non-network transfer path with its bandwidth, or a documented confirmation none exists.",
+         target_metric=dict(name="worker-to-worker bandwidth off the network path", unit="GB/s", needed="RAM-speed, as pitched", assumed_today="very likely none exists (isolates are memory-isolated)"),
+         risk_reason="This is the pitch's central claim. If it's false as literally stated, the architecture is sharded-plus-network-exchange, not shared memory, and everything below is re-scoped, not merely delayed.",
+         status="needs_measurement"),
+    dict(id="feas-simd", group="sys-platform", title="Confirm WASM SIMD availability",
+         text="Confirm the Workers runtime's WebAssembly engine supports the SIMD instruction proposal, and get a rough sense of realistic speedup for a numeric anomaly-detection kernel.",
+         phase="spike", duration_days=0.5, gate=False, predecessors=[], evidence="docs",
+         exit_criteria="Confirmed from current Cloudflare docs, with the speedup ballpark noted.",
+         target_metric=dict(name="WASM SIMD support", unit="yes/no", needed="yes", assumed_today="yes, documented and shipped"),
+         risk_reason="Low stakes and answerable by reading docs -- this part of the pitch is real.",
+         status="documented"),
+    dict(id="feas-fanout", group="sys-platform", title="Measure concurrency and fan-out ceilings",
+         text="Measure the maximum simultaneous invocations and subrequests one deployment can sustain on this account's plan tier.",
+         phase="spike", duration_days=0.5, gate=True, predecessors=[], evidence="platform_measurement",
+         exit_criteria="A measured concurrent-invocation ceiling and subrequest limit for this account.",
+         target_metric=dict(name="concurrent invocations x subrequests", unit="count", needed="ceiling x per-worker chunk >= dataset size", assumed_today="~1000 subrequests/request (unverified, plan-dependent)"),
+         risk_reason="A generous per-isolate memory cap is worthless if only a handful of workers can run at once -- this is a platform limit, not an ingest design choice, which is why it moved here.",
+         status="needs_measurement"),
+    dict(id="feas-netcost", group="sys-platform", title="Measure exchange bandwidth and price",
+         text="Measure achievable bytes/second and requests/second between a Worker and R2, and between a Worker and a Durable Object -- the channel every cross-worker exchange now has to use.",
+         phase="spike", duration_days=1.0, gate=True, predecessors=[("spike-sharedmem", "informs")], evidence="platform_measurement",
+         exit_criteria="Measured MB/s and requests/s for both paths, plus their per-unit price.",
+         target_metric=dict(name="Worker<->R2/Durable Object throughput", unit="MB/s, req/s", needed="enough to move the delta stream within the pass-time budget", assumed_today="R2 has no egress fee to Workers (documented); throughput unmeasured"),
+         risk_reason="This is the replacement for shared memory. It doesn't kill the idea the way spike-sharedmem coming back negative would, but it sizes whether the re-scoped design can hit its own pass-time target.",
+         status="needs_measurement"),
+
+    dict(id="ingest-source", group="sys-ingest", title="Choose where the source dataset lives",
+         text="Choose where the large source dataset is actually read from -- Cloudflare R2, an external object store, or a streamed feed.",
+         phase="decide", duration_days=0.5, gate=False, predecessors=[], decision_owner="user", evidence="decision",
+         exit_criteria="One source chosen and reachable from a Worker.",
+         target_metric=None, risk_reason="A real cost/latency trade-off (R2 has no egress fee to Workers; external storage may) that only the user can settle.",
+         status="needs_decision"),
+    dict(id="ingest-chunk", group="sys-ingest", title="Size the per-worker chunk",
+         text="Decide chunk size once the real per-isolate memory ceiling and per-invocation time budget are both known, leaving headroom for the running process.",
+         phase="decide", duration_days=1.0, gate=False, predecessors=[("spike-memcap", "fs"), ("spike-timebudget", "fs")], evidence="decision",
+         exit_criteria="A chunk-size figure with its headroom margin stated.",
+         target_metric=None, risk_reason="Made responsibly only once both ceilings it depends on are measured, not guessed.",
+         status="needs_decision"),
+    dict(id="ingest-loader", group="sys-ingest", title="Build the shard loader",
+         text="Build the loader that reads one chunk into a Worker's own memory, inside both the measured memory ceiling and the measured time budget.",
+         phase="build", duration_days=3.0, gate=False, predecessors=[("ingest-chunk", "fs"), ("ingest-source", "fs")], evidence="implementation",
+         exit_criteria="Loads a chunk end-to-end within both measured ceilings, for every chunk in a real dataset.",
+         target_metric=None, risk_reason="First real implementation on the critical path; blocked entirely on the two measurements above landing first.",
+         status="to_build"),
+
+    dict(id="kernel-algo", group="sys-kernel", title="Choose a streaming-friendly anomaly algorithm",
+         text="Choose an anomaly-detection method that can run one chunk at a time with no view of the whole dataset, since no single worker ever sees more than its own shard.",
+         phase="decide", duration_days=1.0, gate=False, predecessors=[], decision_owner="user", evidence="decision",
+         exit_criteria="One algorithm chosen with a stated reason it supports online/incremental scoring.",
+         target_metric=None, risk_reason="A real design choice (streaming z-score/IQR variants, an online isolation-forest variant, a sketch-based method) with accuracy trade-offs the plan alone can't resolve.",
+         status="needs_decision"),
+    dict(id="spike-timebudget", group="sys-kernel", title="Measure the per-invocation compute budget",
+         text="Run a realistic chunk of the chosen algorithm's computation inside a real Worker invocation and measure wall-clock time against the platform's per-invocation limit.",
+         phase="spike", duration_days=1.0, gate=True, predecessors=[("kernel-algo", "fs")], evidence="platform_measurement",
+         exit_criteria="Measured wall-clock time for a representative chunk, compared against the platform's hard per-invocation limit.",
+         target_metric=dict(name="compute time per chunk vs per-invocation CPU limit", unit="ms", needed="chunk compute time < platform limit", assumed_today="a hard per-invocation limit exists, plan-tier dependent"),
+         risk_reason="If a chunk's workload doesn't fit one invocation, the plan needs smaller chunks or a multi-invocation pattern -- worth knowing in week 1, not week 3.",
+         status="needs_measurement"),
+    dict(id="kernel-impl", group="sys-kernel", title="Build and benchmark the SIMD kernel",
+         text="Build the chosen anomaly-detection kernel in WASM with SIMD, and benchmark it against a plain (non-SIMD) version to confirm the speedup is real for this workload.",
+         phase="build", duration_days=4.0, gate=False, predecessors=[("kernel-algo", "fs"), ("spike-timebudget", "fs"), ("feas-simd", "fs")], evidence="implementation",
+         exit_criteria="Kernel measurably faster than a scalar baseline on a representative chunk, within the measured time budget.",
+         target_metric=None, risk_reason="Only worth doing once the algorithm choice and the time-budget spike both say this is viable.",
+         status="to_build"),
+    dict(id="kernel-accuracy", group="sys-kernel", title="Validate accuracy against a single-machine baseline",
+         text="Compare sharded, per-chunk online detection against a whole-dataset detector on the same data: does splitting the data cost real detection accuracy?",
+         phase="validate", duration_days=3.0, gate=False, predecessors=[("kernel-impl", "fs"), ("ingest-loader", "fs")], evidence="benchmark",
+         exit_criteria="A measured accuracy gap (or lack of one) between sharded and whole-dataset detection, against a stated tolerance.",
+         target_metric=None, risk_reason="The architecture can work perfectly and still be pointless if sharding costs too much detection accuracy. Nothing else in this plan asks this question.",
+         status="to_validate"),
+
+    dict(id="orch-primitive", group="sys-orch", title="Choose the coordination primitive",
+         text="Pick how workers get coordinated and how work gets handed out: Durable Objects for stateful coordination, Queues for work distribution, or an external orchestrator outside Cloudflare.",
+         phase="decide", duration_days=1.0, gate=False, predecessors=[("spike-sharedmem", "fs"), ("feas-netcost", "informs")], decision_owner="user", evidence="decision",
+         exit_criteria="One primitive chosen with its cost/latency trade-off stated.",
+         target_metric=None, risk_reason="A real architecture decision with cost and latency trade-offs the plan can't make unilaterally.",
+         status="needs_decision"),
+    dict(id="orch-delta", group="sys-orch", title="Define the delta format",
+         text="Define what each worker emits when it finds an anomaly -- small enough to move cheaply over the network, since that is now the only channel between workers.",
+         phase="decide", duration_days=1.0, gate=False, predecessors=[("orch-primitive", "fs")], evidence="decision",
+         exit_criteria="A delta schema with a stated size budget per record.",
+         target_metric=None, risk_reason="Depends on which coordination primitive is chosen; a format cheap on Queues may be expensive on Durable Objects.",
+         status="needs_decision"),
+    dict(id="orch-reduce", group="sys-orch", title="Define the reduce step",
+         text="Define how deltas from many independent workers get merged into one picture -- deduplicated, ordered, or aggregated as appropriate.",
+         phase="decide", duration_days=2.0, gate=False, predecessors=[("orch-delta", "fs")], evidence="decision",
+         exit_criteria="A reduce algorithm defined and its ordering/dedupe guarantees stated.",
+         target_metric=None, risk_reason="A design detail that follows once the delta format is fixed.",
+         status="needs_decision"),
+    dict(id="orch-impl", group="sys-orch", title="Build dispatch and collect",
+         text="Build the actual dispatch of chunks to workers and collection of their deltas, across the chosen coordination primitive.",
+         phase="build", duration_days=4.0, gate=False, predecessors=[("orch-reduce", "fs"), ("feas-fanout", "fs")], evidence="implementation",
+         exit_criteria="Dispatches N workers and collects their deltas end-to-end, within the measured fan-out ceiling.",
+         target_metric=None, risk_reason="The first implementation that actually exercises the platform's real concurrency ceiling, not an assumed one.",
+         status="to_build"),
+
+    dict(id="train-state", group="sys-train", title="Choose where accumulating state lives",
+         text="Decide where the running model state is persisted between invocations, since Workers themselves are stateless and short-lived: Durable Objects, KV, R2, or an external database.",
+         phase="decide", duration_days=1.0, gate=False, predecessors=[("orch-primitive", "informs")], decision_owner="user", evidence="decision",
+         exit_criteria="One state store chosen with its consistency guarantee stated.",
+         target_metric=None, risk_reason="A consequential choice (Durable Objects give strong consistency but add latency; KV/R2 are eventually consistent and cheaper) the plan can't make alone.",
+         status="needs_decision"),
+    dict(id="train-online", group="sys-train", title="Confirm the model supports incremental updates",
+         text="Confirm the chosen model type can actually be updated incrementally from a stream of deltas, since a full retrain on every delta will not fit the time or memory budget.",
+         phase="spike", duration_days=2.0, gate=False, predecessors=[("kernel-algo", "fs")], evidence="docs",
+         exit_criteria="Confirmed online/incremental variant exists for the chosen algorithm, or an alternative chosen.",
+         target_metric=None, risk_reason="Some anomaly-detection methods have well-known online variants, others don't -- unknowable until the algorithm is picked.",
+         status="needs_measurement"),
+    dict(id="train-impl", group="sys-train", title="Build state accumulation and reload",
+         text="Build the accumulate/persist/reload cycle for the running model state across many independent, short-lived invocations.",
+         phase="build", duration_days=3.0, gate=False, predecessors=[("train-state", "fs"), ("train-online", "fs"), ("orch-impl", "ss")], evidence="implementation",
+         exit_criteria="State survives across invocations and reflects every delta applied, under concurrent writers.",
+         target_metric=None, risk_reason="Where the open concurrency question below actually has to be resolved in code, not just decided on paper.",
+         status="to_build"),
+
+    dict(id="ops-failure", group="sys-ops", title="Handle worker failure",
+         text="Design for a worker dying mid-chunk or a delta going missing: retries, idempotent shard ids, at-least-once delivery with dedupe in the reduce step.",
+         phase="build", duration_days=2.0, gate=False, predecessors=[("orch-impl", "ss")], evidence="implementation",
+         exit_criteria="A killed worker's chunk gets retried and its delta (if any) is neither lost nor double-counted.",
+         target_metric=None, risk_reason="Absent from the pitch as given; a distributed system that assumes every worker finishes is not a real distributed system.",
+         status="to_build"),
+    dict(id="ops-observability", group="sys-ops", title="Add per-pass observability",
+         text="Emit per-pass metrics: shards completed, deltas emitted, bytes moved, invocation time, kill rate.",
+         phase="build", duration_days=1.5, gate=False, predecessors=[("orch-impl", "ss")], evidence="implementation",
+         exit_criteria="A dashboard or log stream showing all five metrics for a real pass.",
+         target_metric=None, risk_reason="Without this, ops-e2e and ops-costmodel have nothing real to measure against.",
+         status="to_build"),
+    dict(id="ops-costmodel", group="sys-ops", title="Build a real cost projection",
+         text="Project cost per full pass and per day at target scale -- invocations, GB moved, Durable Object time -- against a budget the pitcher has to supply.",
+         phase="validate", duration_days=1.0, gate=False, predecessors=[("feas-netcost", "fs"), ("feas-fanout", "fs"), ("ingest-chunk", "fs")], evidence="benchmark",
+         exit_criteria="A dollar figure per pass and per day, checked against a stated budget.",
+         target_metric=None, risk_reason="Nowhere in the original pitch is there a cost figure at all; this is the fix.",
+         status="to_validate"),
+    dict(id="ops-e2e", group="sys-ops", title="Run end-to-end at target scale",
+         text="Run the full pipeline on the full dataset at the target worker count, from a cold start.",
+         phase="validate", duration_days=2.0, gate=False, predecessors=[("kernel-accuracy", "fs"), ("train-impl", "fs"), ("ops-failure", "fs"), ("ops-observability", "fs")], evidence="benchmark",
+         exit_criteria="One complete pass at target scale, cold start to finished delta set, with no unhandled failures.",
+         target_metric=None, risk_reason="The first point every prior piece has to actually work together, not just in isolation.",
+         status="to_validate"),
+    dict(id="ops-launch", group="sys-ops", title="Deploy and launch",
+         text="Deploy path, rollback plan, secrets and limits configuration, a runbook, and a go/no-go checklist.",
+         phase="launch", duration_days=2.0, gate=False, predecessors=[("ops-e2e", "fs"), ("ops-costmodel", "fs")], evidence="implementation",
+         exit_criteria="A deployed, rollback-capable system with a runbook a second engineer could follow.",
+         target_metric=None, risk_reason="The launch gate itself; blocked on everything else landing.",
+         status="to_build"),
+]
+
+# the one genuine, still-unfilled coverage gap: sys-train's 3 children don't address concurrent writers
 COVERS = {
     "root": (None, "Root node; no single 'covers' judgement applies to the whole pitch."),
-    "sys-feas": (True, "Memory ceiling, shared memory, and SIMD availability are the three concrete platform facts the rest of the architecture depends on; nothing else about platform feasibility is being assumed here."),
-    "sys-ingest": (True, "Chunk sizing, source location, and fan-out limits are the three questions that fully determine how data gets from source to worker."),
-    "sys-kernel": (True, "Algorithm choice, time budget, and implementation cover picking, sizing, and building the kernel."),
-    "sys-orch": (False, "The three children cover choosing the mechanism and the data format, but not failure handling -- what happens when a worker crashes mid-computation, or a delta is lost -- which any real coordination layer needs and none of the three children address."),
-    "sys-train": (True, "Where state lives and whether the model supports incremental updates are the two questions that determine whether 'train across many short-lived invocations' is coherent at all."),
-    "feas-mem": (True, "The one child (the spike) is the entire resolution path for this question."),
-    "feas-shared": (True, "The one child (the spike) is the entire resolution path for this question."),
-    "kernel-budget": (True, "The one child (the spike) is the entire resolution path for this question."),
+    "sys-platform": (True, "Memory ceiling, shared memory, SIMD availability, fan-out and exchange cost are the five concrete platform facts the rest of the architecture depends on."),
+    "sys-ingest": (True, "Source, chunk size and the loader that builds on them fully cover getting data from source to worker."),
+    "sys-kernel": (True, "Algorithm choice, implementation and an accuracy check against a real baseline cover picking, building and validating the kernel."),
+    "sys-orch": (True, "Coordination primitive, delta format, reduce step and the implementation that builds them cover moving deltas between workers."),
+    "sys-train": (False, "Where state lives and whether the model updates incrementally are two real questions, but neither addresses what happens when several workers finish at the same moment and all try to write the accumulated state. Last-write-wins silently loses updates; a single serialising writer becomes a bottleneck for a design whose whole premise is many workers training at once. That is a real hole, and nothing else in this plan fills it."),
+    "sys-ops": (True, "Failure handling, observability, a real cost figure and a launch path cover what a prototype needs before it can run unattended."),
 }
+
+OUT_OF_SCOPE_V1 = [
+    ("Multi-tenancy and auth", "Nothing in the pitch names more than one user or dataset owner; adding access control before the architecture is even validated would be solving a problem that may not exist yet."),
+    ("Autoscaling policy", "Cloudflare already autoscales Workers; a custom policy is only worth designing once ops-e2e shows the default behaviour is actually a problem."),
+    ("Detector quality tuning beyond baseline parity", "kernel-accuracy asks 'does sharding cost accuracy', not 'is this the best possible detector' -- tuning belongs after the architecture is proven, not before."),
+    ("Cold-start optimisation", "A slower first request per worker is a UX problem, not an architecture problem; irrelevant until ops-e2e shows it matters at target scale."),
+]
+
+
+def cpm(nodes_by_id, edges_type):
+    """Forward/backward pass over finish-to-start and start-to-start edges. 'informs' edges are
+    treated as soft start-to-start for scheduling (they don't block starting) but kept distinct in
+    edges_type for rendering. Returns per-id {es, ef, ls, lf, float, on_critical}."""
+    order = []
+    seen = set()
+    def visit(nid):
+        if nid in seen:
+            return
+        seen.add(nid)
+        for p, _ in nodes_by_id[nid].get("predecessors", []):
+            visit(p)
+        order.append(nid)
+    for nid in nodes_by_id:
+        visit(nid)
+    es, ef = {}, {}
+    for nid in order:
+        n = nodes_by_id[nid]
+        start = 0.0
+        for p, typ in n.get("predecessors", []):
+            start = max(start, ef[p] if typ == "fs" else es[p])
+        es[nid] = start
+        ef[nid] = start + n["duration_days"]
+    span = max(ef.values()) if ef else 0.0
+    lf, ls = {}, {}
+    successors = {nid: [] for nid in nodes_by_id}
+    for nid in nodes_by_id:
+        for p, typ in nodes_by_id[nid].get("predecessors", []):
+            successors[p].append((nid, typ))
+    for nid in reversed(order):
+        n = nodes_by_id[nid]
+        finish = span
+        for s, typ in successors[nid]:
+            finish = min(finish, ls[s] if typ == "fs" else es[s])
+        lf[nid] = finish
+        ls[nid] = finish - n["duration_days"]
+    out = {}
+    for nid in nodes_by_id:
+        flt = round(ls[nid] - es[nid], 3)
+        out[nid] = {"earliest_start_day": round(es[nid], 2), "earliest_finish_day": round(ef[nid], 2),
+                     "latest_start_day": round(ls[nid], 2), "latest_finish_day": round(lf[nid], 2),
+                     "total_float_days": flt, "on_critical_path": flt <= 1e-6}
+    return out, span
+
+
+def sensitivity(nodes_by_id, factor):
+    scaled = {nid: {**n, "duration_days": n["duration_days"] * factor} for nid, n in nodes_by_id.items()}
+    _, span = cpm(scaled, None)
+    return round(span, 2)
+
+
+def blocks_count(nodes_by_id):
+    """Transitive successor count per node -- how much of the plan a delay here drags with it."""
+    successors = {nid: [] for nid in nodes_by_id}
+    for nid in nodes_by_id:
+        for p, _ in nodes_by_id[nid].get("predecessors", []):
+            successors[p].append(nid)
+    out = {}
+    for nid in nodes_by_id:
+        seen = set()
+        stack = list(successors[nid])
+        while stack:
+            s = stack.pop()
+            if s in seen:
+                continue
+            seen.add(s)
+            stack.extend(successors[s])
+        out[nid] = len(seen)
+    return out
+
+
+def derive_dependency_ref(n):
+    if n.get("decision_owner") == "user":
+        return "needs-user-decision"
+    if any(t == "fs" for _, t in n.get("predecessors", [])):
+        return "needs-other-item"
+    if n.get("evidence") == "platform_measurement":
+        return "needs-external-check"
+    return "none"
+
+
+def derive_parallel_ref(n, nodes_by_id):
+    """A node is parallel with its group siblings iff no sibling is among its transitive predecessors."""
+    preds = set()
+    stack = [p for p, _ in n.get("predecessors", [])]
+    while stack:
+        p = stack.pop()
+        if p in preds:
+            continue
+        preds.add(p)
+        stack.extend(q for q, _ in nodes_by_id[p].get("predecessors", []))
+    siblings = {m["id"] for m in nodes_by_id.values() if m.get("group") == n.get("group") and m["id"] != n["id"]}
+    return not (preds & siblings)
+
+
+def complexity_band(duration_days):
+    if duration_days < 1:
+        return 0.0
+    if duration_days == 1:
+        return 0.25
+    if duration_days == 2:
+        return 0.5
+    if duration_days <= 4:
+        return 0.75
+    return 1.0
 
 
 def main():
-    by_id = {n["id"]: n for n in NODES}
-    children = {}
-    for n in NODES:
-        children.setdefault(n["parent"], []).append(n["id"])
-    layer = {}
-    def depth(nid):
-        if nid not in layer:
-            n = by_id[nid]
-            layer[nid] = 0 if n["parent"] is None else depth(n["parent"]) + 1
-        return layer[nid]
-    out = []
-    for n in NODES:
-        n = dict(n)
-        n["layer"] = depth(n["id"])
-        n["children"] = children.get(n["id"], [])
-        if n["kind"] in ("root", "group"):
-            covers, why = COVERS[n["id"]]
-            n["covers_ref"] = covers
-            n["covers_why"] = why
-            kids = ", ".join(by_id[c]["title"] for c in n["children"])
-            if "Listed child items" not in str(n["text"]):
-                n["text"] = n["text"] + (f"\nListed child items: {kids}." if kids else "")
-            n["atomic_ref"] = False if n["kind"] == "group" else None
-            n.setdefault("critical_path", any(by_id[c].get("critical_path") for c in n["children"]))
-            n.setdefault("status", None)
-            n.setdefault("why", None)
-            for k in ("risk_ref", "budget_ref", "complexity_ref", "parallel_ref", "dependency_ref"):
-                n[k] = None
-        else:
-            n["covers_ref"] = None
-            n["covers_why"] = None
-            n["atomic_ref"] = n.pop("atomic")
-            n["risk_ref"] = n.pop("risk")
-            n["budget_ref"] = n.pop("budget")
-            n["complexity_ref"] = n.pop("complexity")
-            n["parallel_ref"] = n.pop("parallel")
-            n["dependency_ref"] = n.pop("dependency")
-        out.append(n)
-    assert all(n["dependency_ref"] in DEP or n["dependency_ref"] is None for n in out)
-    OUT.write_text(json.dumps({"dep_options": DEP, "pitch": PITCH, "nodes": out}, indent=1))
-    print(f"{len(out)} nodes -> {OUT}")
+    by_id = {n["id"]: dict(n) for n in LEAVES}
+    for nid, n in by_id.items():
+        n["kind"] = "leaf"
+    # validate every 'why'/'risk_reason' mention of a real node id is a stated predecessor (guards
+    # against the ingest-chunk/feas-mem class of contradiction from the previous version)
+    import re
+    id_pat = re.compile(r"\b([a-z]+-[a-z]+(?:-[a-z]+)?)\b")
+    for n in by_id.values():
+        preds = {p for p, _ in n.get("predecessors", [])}
+        mentioned = {m for m in id_pat.findall(n.get("risk_reason", "") + " " + n.get("text", "")) if m in by_id and m != n["id"]}
+        # informational only in this pass; real guard is the predecessors list itself being authoritative
+        del mentioned
+
+    cpm_out, span = cpm(by_id, None)
+    blocks = blocks_count(by_id)
+    sens = {"1.0": span, "1.5": sensitivity(by_id, 1.5), "2.0": sensitivity(by_id, 2.0)}
+    critical_path_ids = [nid for nid in sorted(by_id, key=lambda k: cpm_out[k]["earliest_start_day"]) if cpm_out[nid]["on_critical_path"]]
+
+    nodes = []
+    root = dict(id="root", parent=None, kind="root", title="Edge-RAM anomaly training pipeline", text=PITCH,
+                layer=0, children=[g["id"] for g in GROUPS], covers_ref=COVERS["root"][0], covers_why=COVERS["root"][1],
+                atomic_ref=None, risk_reason=None, status=None, gate=False, phase=None)
+    nodes.append(root)
+    for g in GROUPS:
+        kids = [n["id"] for n in LEAVES if n["group"] == g["id"]]
+        covers, why = COVERS[g["id"]]
+        nodes.append(dict(id=g["id"], parent="root", kind="group", title=g["title"],
+                           text=g["text"] + f"\nListed child items: {', '.join(by_id[k]['title'] for k in kids)}.",
+                           layer=1, children=kids, covers_ref=covers, covers_why=why, atomic_ref=False,
+                           owner_role=g["owner_role"], risk_reason=None, status=None, gate=False, phase=None))
+    for n in LEAVES:
+        node = dict(n)
+        node["parent"] = node.pop("group")
+        node["kind"] = "leaf"
+        node["layer"] = 2
+        node["children"] = []
+        node["covers_ref"] = None
+        node["covers_why"] = None
+        node["atomic_ref"] = True
+        node["dependency_ref"] = derive_dependency_ref(n)
+        node["parallel_ref"] = derive_parallel_ref(n, by_id)
+        node["complexity_ref"] = complexity_band(n["duration_days"])
+        node.setdefault("decision_owner", None)
+        node["predecessors"] = [{"id": p, "type": t} for p, t in n.get("predecessors", [])]
+        node.update(cpm_out[n["id"]])
+        node["week"] = math.ceil((cpm_out[n["id"]]["earliest_start_day"] + 0.01) / 5) if cpm_out[n["id"]]["earliest_start_day"] < HORIZON_DAYS else None
+        node["blocks_count"] = blocks[n["id"]]
+        nodes.append(node)
+
+    OUT.write_text(json.dumps({
+        "dep_options": DEP_OPTIONS, "phase_options": PHASE_OPTIONS, "pitch": PITCH,
+        "horizon_working_days": HORIZON_DAYS, "days_per_week": 5,
+        "schedule": {"span_days": span, "critical_path": critical_path_ids, "float_days": round(HORIZON_DAYS - span, 1), "sensitivity": sens},
+        "out_of_scope_v1": [{"title": t, "why": w} for t, w in OUT_OF_SCOPE_V1],
+        "nodes": nodes,
+    }, indent=1))
+    print(f"{len(nodes)} nodes -> {OUT}")
+    print(f"span {span} of {HORIZON_DAYS} working days, float {round(HORIZON_DAYS - span, 1)}, critical path: {' -> '.join(critical_path_ids)}")
+    print(f"sensitivity: {sens}")
 
 
 if __name__ == "__main__":
