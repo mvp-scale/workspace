@@ -5,6 +5,11 @@ Status as of 2026-09-22. "Done" is committed; everything else is proposed and wa
 ## Done
 - Set list shows names only, grouped by family; item and class counts moved to a tooltip (fe85242).
 - Overview is a numberless 7-step heat map with a scale, all 15 sets on screen, numbers in tooltips (8363c83).
+- Item 6, batch performance, built as the first structure: `probes/lab_batch.py` (offline runner), `/api/batch-perf`,
+  a "Batch performance" page under a new Structures rail section (4954fd6). Run on all five loaded models over 40
+  manipulation-dialogue items, sizes 1-160. Rail also restyled: Overview/Structures/Sets sections, icons, divider,
+  current-item highlight.
+- Text windows and Call monitor pages removed; Cockpit renamed to Conversation flow (`/flow`) (01f3472).
 
 ## Layout
 1. Flip the overview: models across the top (nine short codes), sets down as rows under family headings. Rows expand in place: per-model accuracy with intervals, calibration, confusion split, and the items sorted by model disagreement.
