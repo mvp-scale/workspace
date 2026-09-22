@@ -23,6 +23,15 @@ measurement has to happen before this is safe to build).
   the 2 of 3 default models that answered (kev-4b is currently down), separation between atomic
   and compound scores is +0.006 — noise-level. Current `ATOMIC_THRESHOLD=0.18` scores 21.6%
   accuracy on these controls, worse than the 81.1% you'd get by calling everything atomic.
+- **Rewrote `layered_walk.py`'s selection and walk mechanism** (the "aggressive plan" pass): shape-
+  guaranteed + budget-ranked category selection replacing the pooled top-4, a shared priority-queue
+  walk replacing fixed top-k depth-first recursion, margin-based domain/audience trust replacing
+  `DOMAIN_AUDIENCE_FLOOR`'s flat 0.6, and a new `decomposition_depth` score signal. Verified live:
+  `oncall-rotation` went from 1 requirement / 18/80 budget spent to **13 requirements / 80/80
+  budget spent**, all 6 shapes represented; `sleep-coach-wearable` (previously 0 requirements) went
+  to **4**. `report.py` and `sort_and_rank.py` both stayed compatible, unmodified except one
+  additive line in `report.py`. See the commit for full detail. `ATOMIC_THRESHOLD` itself was
+  deliberately left untouched this pass (still pending kev-4b's data).
 
 ## Infrastructure blocker
 
@@ -40,12 +49,13 @@ domain/audience call + 1 gap-category call + 21 category nodes + 90 leaves). Bud
 7-idea run spent 18/80 (22.5%) per idea. OpenAI's proposal is sized to navigate a frontier you
 can't afford to exhaust (`max_nodes: 500`); here you nearly can exhaust the whole thing.
 
+**DONE:** the priority-queue walk and shape-guaranteed selection (see "Already done" above) —
+replaces `GAP_TOPK`/`CHILD_TOPK_BOOSTED`/`CHILD_TOPK_NORMAL` entirely. Budget utilization is now the
+real, only cutoff, which means the "decision needed" item below about what "selected" means as a
+claim is live now, not hypothetical — `report.py`'s table was relabeled "guaranteed" to stay honest
+about it.
+
 **READY — no open decision, small, cheap:**
-- Replace `walk`'s fixed-top-k depth-first recursion with a priority queue that drains by the
-  *existing* composite score (`W_GAP*own + W_PROFILE*boost` for categories, same shape for
-  children) until the budget runs out, not until `GAP_TOPK`/`CHILD_TOPK_BOOSTED`/`CHILD_TOPK_NORMAL`
-  are exhausted. Deletes 3 undiagnosed constants. Raises typical spend from ~18/80 toward 80/80 —
-  see "decision needed" below, this changes what "top-4 selected" means as a claim.
 - Standing per-run calibration record: terminal-state counts, score distributions, budget
   utilisation, written alongside the ledger. Zero live calls, pure instrumentation.
 - Offline duplicate lint over the fixed 90-leaf library (deterministic script, no calls). Already
