@@ -124,6 +124,15 @@ def combine_noul(per_model, key):
     return sum(ps) / len(ps), (max(ps) - min(ps) if len(ps) > 1 else 0.0)
 
 
+def per_model_noul(per_model, key):
+    """Raw per-model values for one noul key, keyed by model id (e.g. {"semif": 0.83, "kev-4b":
+    0.71}) -- not just the mean/spread `combine_noul` returns. BRIDGE.md's own repeated lesson is
+    that per-model behavior against known controls is what actually finds a non-discriminating
+    model (the P3 diagnosis), but a ledger that only ever records mean/spread can't be used for
+    that after the fact. Recorded on gap_check and the leaf half of grinder_node."""
+    return {model: a[key]["noul"] for model, a in per_model.items() if (a.get(key) or {}).get("noul") is not None}
+
+
 def combine_choice(per_model, key):
     option_sums, n = {}, 0
     for a in per_model.values():
@@ -203,7 +212,7 @@ def classify_node(state, node_text, children, budget):
     """ONE call: the atomic question (leaf only -- ancestor context lives in `state`) plus one
     relevance question per candidate child, fanned into the same dict."""
     if budget.exhausted():
-        return None, None, {}
+        return None, None, {}, {}
     questions = {}
     if not children:
         questions["atomic"] = noul_question(
@@ -211,15 +220,20 @@ def classify_node(state, node_text, children, budget):
             "A single, directly checkable requirement -- one clear yes/no fact.",
             "Still a category or a compound of more than one checkable thing -- needs to split further.")
     for child in children:
+        # Same explicit "NOT yet true" polarity as classify_root's Level 0 question (not just the
+        # same meaning in different words) -- a second-review pass found the previous wording here
+        # left the polarity to be inferred against a state string that, before the fix above, was
+        # itself inverted; stating it explicitly removes the ambiguity regardless of state wording.
         questions[f"child::{child['id']}"] = noul_question(
-            node_text + " " + child["text"] + "\n\nQuestion: given everything established so far, is this a real, relevant sub-gap that needs addressing?",
-            "Yes, a real, relevant sub-gap here.", "No, not relevant given what's already established.")
+            node_text + " " + child["text"] + "\n\nQuestion: given the gaps already identified so far, is this NOT yet true -- i.e., is this a real, relevant sub-gap that needs addressing?",
+            "No, not yet true -- a real, relevant sub-gap here.", "Yes, this is already addressed, or not relevant given what's already identified.")
     per_model = call_all(state, questions, budget)
     if not per_model:
-        return None, None, {}
+        return None, None, {}, {}
     atomic_mean, atomic_spread = (combine_noul(per_model, "atomic") if not children else (None, None))
+    atomic_per_model = (per_model_noul(per_model, "atomic") if not children else {})
     child_means = {c["id"]: combine_noul(per_model, f"child::{c['id']}")[0] for c in children}
-    return atomic_mean, atomic_spread, child_means
+    return atomic_mean, atomic_spread, child_means, atomic_per_model
 
 
 def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, max_depth, boosted=False):
@@ -237,8 +251,16 @@ def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, ma
 
     is_leaf = not node["children"]
     full_text = " ".join(breadcrumb + [node["text"]])
-    state = base_state + (f"\n\nEstablished so far: {'; '.join(breadcrumb)}" if breadcrumb else "")
-    atomic_mean, atomic_spread, child_means = classify_node(state, node["text"], node["children"], budget)
+    # POLARITY: breadcrumb entries are gap_categories/gap_category_detail text, which reads as a
+    # solved-state claim ("X is defined") -- but every entry in `breadcrumb` got there because a
+    # live call judged it NOT yet true for this idea (that's why the branch was selected). Framing
+    # it as "Established so far: <solved-state text>" asserts the opposite of what was actually
+    # found -- the same class of bug as the gap_categories/gap_category_detail polarity
+    # contradiction (see README's "Lessons learned"), just in the state-building code instead of
+    # authored content. Found by a second-review pass, not caught by "polarity read clean" checks
+    # of rendered requirement text, since this string never appears in report.py's output.
+    state = base_state + (f"\n\nGaps already identified for this idea (confirmed NOT yet true, i.e. real, unaddressed gaps so far): {'; '.join(breadcrumb)}" if breadcrumb else "")
+    atomic_mean, atomic_spread, child_means, atomic_per_model = classify_node(state, node["text"], node["children"], budget)
     progress(f"  {'  ' * depth}[{node['id']}]")
 
     # The call failed entirely (not "leaf with no children" or "internal node, some answers null")
@@ -276,7 +298,7 @@ def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, ma
 
     ledger.emit(type="grinder_node", path=path, id=node["id"], depth=depth, text=node["text"],
                 full_text=full_text, atomic_mean=atomic_mean, atomic_spread=atomic_spread,
-                status=status, children=child_records, boosted=boosted)
+                atomic_per_model=atomic_per_model, status=status, children=child_records, boosted=boosted)
 
     if status == "not_atomic_recursing":
         for child in node["children"]:
@@ -301,6 +323,7 @@ def classify_root(tree, state, budget, world, ledger, progress, profile):
     if not per_model:
         return []
     results = {n["id"]: combine_noul(per_model, n["id"]) for n in tree}
+    per_model_results = {n["id"]: per_model_noul(per_model, n["id"]) for n in tree}
     boosts = {n["id"]: profile_boost(n["id"], profile, world) for n in tree}
 
     def composite(n):
@@ -313,6 +336,7 @@ def classify_root(tree, state, budget, world, ledger, progress, profile):
     for n in tree:
         mean, spread = results[n["id"]]
         ledger.emit(type="gap_check", id=n["id"], text=n["text"], mean=mean, spread=spread,
+                    per_model=per_model_results[n["id"]],
                     profile_boost=boosts[n["id"]], composite=composite(n), selected=n["id"] in selected_ids)
     ledger.emit(type="gap_summary", selected_count=len(selected), total=len(tree), method=f"top-{GAP_TOPK} by composite score")
     result = []
