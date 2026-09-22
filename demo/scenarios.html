@@ -621,6 +621,94 @@ function loopResultsPanel(story) {
   return box;
 }
 
+/* ---------- section 5b: worked example — one node, fully explored ---------- */
+const ORIGIN_NOTE = {
+  "spike-sharedmem": "The pitch's headline claim is workers sharing high-bandwidth memory. No existing Cloudflare primitive maps to that directly, so rather than guess, it became its own question: try the transfer and measure what actually happens.",
+  "spike-memcap": "Every downstream sizing decision (chunk size, worker count, cost) needs a real number here, not the ~128 MB figure I recall from documentation — so it got its own spike instead of being folded into ingest-chunk as an assumption.",
+  "spike-timebudget": "The pitch says workers run “all my high computation” — that's only true if the compute fits Cloudflare's hard per-invocation time limit, which depends on the algorithm chosen in kernel-algo, so this spike waits on that decision and then measures directly.",
+  "feas-fanout": "A generous memory cap is meaningless if only a few workers can run at once. This started inside the ingest workstream and got moved to platform limits, because it's a platform ceiling, not an ingest design choice.",
+  "feas-netcost": "Once spike-sharedmem shows there's no real shared-memory path, the network channel (Worker to R2, Worker to Durable Object) becomes the actual bottleneck the rest of the design has to live inside — so it gets measured too, not just assumed.",
+  "ingest-chunk": "This decision can't responsibly be made until both the memory ceiling and the time budget are real numbers, not guesses — it waits on both spikes explicitly rather than being 'day 1 platform work' in general.",
+  "train-state": "Workers are stateless between invocations, so accumulating a model at all requires somewhere for that state to live. Pulled out as its own decision because Durable Objects, KV and R2 have real, different consistency trade-offs for concurrent writers.",
+  "kernel-accuracy": "Added because the architecture succeeding and the product working are two different questions — nothing else in the plan checks whether splitting the data costs real detection accuracy.",
+  "ops-failure": "The original pitch never mentions a worker dying mid-chunk. This node exists because a distributed system that assumes every worker finishes isn't a real one — it was added, not pulled from the pitch.",
+};
+const PHASE_ORIGIN = { spike: "It's a spike because the honest answer is “measure it,” not “reason about it.”",
+  decide: "It's a decision because it's a real trade-off only a person can settle, not something to compute.",
+  build: "It's build work: what to do is already known by the time this is reached; it's a matter of writing it.",
+  validate: "It's a validation step: something else has to already exist before this can run.",
+  launch: "It's the launch gate: everything else in the plan exists to get here." };
+
+function workedExample(data, story, nodes) {
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const leaves = nodes.filter(n => n.kind === "leaf").sort((a, b) => (b.blocks_count || 0) - (a.blocks_count || 0));
+  const defaultId = leaves[0]?.id;
+  const box = el("div", { class: "card" }, el("h3", { style: "margin-top:0", text: "Worked example: how one node was actually decomposed" }),
+    el("p", { class: "small muted", text: "Pick any node from the plan. Everything below is read live from the same data as the rest of this page — nothing here is a separate, prettier retelling." }));
+  const select = el("select", { "aria-label": "Node to explore" },
+    nodes.filter(n => n.kind === "leaf").map(n => el("option", { value: n.id, text: n.title, selected: n.id === defaultId })));
+  const body = el("div");
+  const draw = () => { body.replaceChildren(workedExampleBody(data, story, nodes, byId, select.value)); };
+  select.onchange = draw;
+  box.append(el("div", { style: "margin-bottom:10px" }, select), body);
+  draw();
+  return box;
+}
+
+function workedExampleBody(data, story, nodes, byId, id) {
+  const n = byId[id];
+  const parent = byId[n.parent];
+  const root = byId["root"];
+  const kids = nodes.filter(x => x.predecessors?.some(p => p.id === id));
+  const tm = n.target_metric || {};
+  const frag = el("div");
+
+  frag.append(el("p", { class: "small muted" }, `${root.title} → ${parent.title} → `, el("b", { text: n.title })));
+  frag.append(el("h4", { text: "Why it was split out as its own node" }),
+    el("p", { class: "small" }, ORIGIN_NOTE[id] || `Placed under “${parent.title}.” ${PHASE_ORIGIN[n.phase] || ""}`));
+
+  frag.append(el("h4", { text: "What it means" }), el("p", { class: "small" }, n.text.split("\n")[0]));
+
+  frag.append(el("h4", { text: "The requirement behind it" }),
+    tm.name ? el("table", { class: "data" },
+      el("tbody", {},
+        el("tr", {}, el("td", { class: "muted", text: "Metric" }), el("td", {}, `${tm.name} (${tm.unit})`)),
+        el("tr", {}, el("td", { class: "muted", text: "Needed" }), el("td", {}, tm.needed || "—")),
+        el("tr", {}, el("td", { class: "muted", text: "Assumed today" }), el("td", {}, tm.assumed_today ? el("span", { class: "unverified", title: "My own recollection, not fetched or measured." }, tm.assumed_today) : "—"))))
+      : el("p", { class: "small muted", text: "No standalone metric — this node is a decision or a build step, not a measurement." }),
+    el("p", { class: "small" }, el("b", { text: "Evidence needed: " }), EVIDENCE_LABEL[n.evidence] || n.evidence || "—"),
+    el("p", { class: "small" }, el("b", { text: "Done when: " }), n.exit_criteria || "—"));
+
+  const preds = (n.predecessors || []).map(p => `${byId[p.id]?.title || p.id} (${p.type === "fs" ? "must finish first" : p.type === "ss" ? "must start first" : "informs this, doesn't block it"})`);
+  frag.append(el("h4", { text: "Where it sits in the schedule, and why" }),
+    el("p", { class: "small" }, preds.length ? `Waits on: ${preds.join("; ")}.` : "No predecessors — can start day 0."),
+    el("p", { class: "small" }, `Estimated at ${n.duration_days} day${n.duration_days === 1 ? "" : "s"}. Scheduled day ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)}, with ${fmt.num(n.total_float_days, 1)} days of float.`,
+      n.on_critical_path ? " On the critical path: any delay here delays the whole plan." : " Has slack: it can run late without moving the finish date."),
+    el("p", { class: "small" }, `Blocks ${n.blocks_count || 0} other item${n.blocks_count === 1 ? "" : "s"}${kids.length ? `, directly: ${kids.map(k => k.title).join(", ")}.` : "."}`));
+
+  frag.append(el("h4", { text: "How the five models actually did on it" }),
+    el("p", { class: "small muted", text: "Their real answers on this exact node, next to my reference call — not an aggregate." }));
+  const mt = el("table", { class: "data wrap" });
+  mt.append(el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Atomic" }), el("th", { text: "Gate" }), el("th", { text: "Phase" }), el("th", { text: "Risk" }), el("th", { text: "Complexity" }), el("th", { text: "Parallel" }), el("th", { text: "Dependency" }))));
+  const mtb = el("tbody");
+  for (const m of story.models) {
+    const gn = data.models[m].nodes.find(x => x.id === id);
+    const g = gn?.grade || {};
+    const cell = (correctKey, val, refVal) => el("td", { class: correctKey && g[correctKey] != null ? (g[correctKey] ? "" : "below") : "muted", title: refVal != null ? `my call: ${refVal}` : "" }, val == null ? "–" : String(val));
+    mtb.append(el("tr", {}, el("td", {}, mtagShort(m)),
+      cell("atomic_correct", g.atomic_p != null ? (g.atomic_p >= 0.5 ? "yes" : "no") : null, n.atomic_ref ? "yes" : "no"),
+      cell("gate_correct", g.gate_p != null ? (g.gate_p >= 0.5 ? "yes" : "no") : null, n.gate ? "yes" : "no"),
+      cell("phase_correct", g.phase_pred, n.phase),
+      el("td", { class: "muted", title: "Not graded — no objective reference exists for this one" }, g.risk_0to1 != null ? fmt.num(g.risk_0to1, 2) : "–"),
+      el("td", { class: "muted", title: `my call (from duration): ${fmt.num(n.complexity_ref, 2)}, abs error ${fmt.num(g.complexity_abs_error, 2)}` }, g.complexity_0to1 != null ? fmt.num(g.complexity_0to1, 2) : "–"),
+      cell("parallel_correct", g.parallel_p != null ? (g.parallel_p >= 0.5 ? "yes" : "no") : null, n.parallel_ref ? "yes" : "no"),
+      cell("dependency_correct", g.dependency_pred, n.dependency_ref)));
+  }
+  mt.append(mtb); frag.append(el("div", { style: "overflow-x:auto" }, mt));
+  frag.append(el("p", { class: "legend", text: "Red = disagreed with my hand-authored call. Risk has no reference (none exists) so it's never marked right or wrong, only shown." }));
+  return frag;
+}
+
 /* ---------- section 6: the week-1 gate card ---------- */
 function gateCard(data, story) {
   const nodes = data.models[story.models[0]].nodes;
@@ -833,6 +921,9 @@ function renderDecomposeTree(data) {
     el("p", { class: "small" }, "Float against the 30-day target: ", el("b", { text: `${sched.float_days} working days` }), "."),
     el("p", { class: "small" }, "Sensitivity: at ×1.5 on every estimate the plan lands at ", el("b", { text: `${sched.sensitivity?.["1.5"]} days` }), "; at ×2.0 it misses at ", el("b", { text: `${sched.sensitivity?.["2.0"]} days` }), ".")));
   out.append(el("p", { class: "legend", text: "Critical path and float are computed by a forward/backward pass over stated predecessor edges and duration estimates — the method is in build_tree_edge.py and is reproducible. The durations are my estimates for one experienced engineer, and they are the weakest input on this page; that is what the sensitivity line is for." }), srcNote("schedule"));
+
+  // 5b: worked example — one node, explored in full, not summarized
+  out.append(workedExample(data, story, nodes));
 
   // 6: week 1 gate card
   out.append(gateCard(data, story), srcNote("plan"));

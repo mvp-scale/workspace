@@ -262,7 +262,14 @@ def cpm(nodes_by_id, edges_type):
         n = nodes_by_id[nid]
         finish = span
         for s, typ in successors[nid]:
-            finish = min(finish, ls[s] if typ == "fs" else es[s])
+            # fs: this node must finish by the successor's latest start.
+            # ss/informs: this node's *start* must be by the successor's latest start, i.e.
+            # finish <= ls[s] + this node's own duration (using the successor's LATEST start,
+            # already computed since successors precede nid in this reversed topological order --
+            # using es[s] here was a bug: it let a same-day "informs" successor cap this node's
+            # finish below its own earliest finish, producing impossible negative float).
+            bound = ls[s] if typ == "fs" else ls[s] + n["duration_days"]
+            finish = min(finish, bound)
         lf[nid] = finish
         ls[nid] = finish - n["duration_days"]
     out = {}
