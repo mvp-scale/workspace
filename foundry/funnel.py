@@ -142,9 +142,19 @@ def weigh_question(piece):
             "criteria": [f"{l} damage to viability if false" for l in LEVELS5]}
 
 
+def resource_question(piece):
+    """Third scored axis, added per the resolved design: a schedule should be a computed output
+    of resourced atomic work, not a guessed input. Same shape/precedent as lab_decompose.py's
+    existing 'complexity' question -- not a new mechanism."""
+    return {"type": "score",
+            "instructions": f"Claim: {piece['text']}\n\nQuestion: how much work would it actually take to resolve or implement this?",
+            "criteria": [f"{l} amount of work" for l in LEVELS5]}
+
+
 def bounce_and_weigh(idea, pieces, models, bouncer_variant):
-    """Sorter's scoring half: one battery (both questions) per piece per model, one real POST
-    each. Returns {piece_id: {model: {p, risk_0to1}}}. Silent -- no progress printing here, the
+    """Sorter's scoring half: one battery (three questions) per piece per model, one real POST
+    each -- still one call, not three, per piece per model. Returns
+    {piece_id: {model: {p, risk_0to1, effort_0to1}}}. Silent -- no progress printing here, the
     caller decides what's worth showing."""
     results = {p["id"]: {} for p in pieces}
     for model in models:
@@ -152,16 +162,19 @@ def bounce_and_weigh(idea, pieces, models, bouncer_variant):
         if cfg.get("hosted"):
             continue
         for piece in pieces:
-            q = {"bounce": bounce_question(idea, piece, bouncer_variant), "weigh": weigh_question(piece)}
+            q = {"bounce": bounce_question(idea, piece, bouncer_variant), "weigh": weigh_question(piece),
+                 "resource": resource_question(piece)}
             r = server.call(model, cfg, {"state": idea, "model": "jev-latest", "questions": q}, whole=True)
             if "error" in r:
-                results[piece["id"]][model] = {"p": None, "risk_0to1": None, "error": r["error"]}
+                results[piece["id"]][model] = {"p": None, "risk_0to1": None, "effort_0to1": None, "error": r["error"]}
                 continue
             answers = r.get("answers") or {}
             p = (answers.get("bounce") or {}).get("noul")
-            score = (answers.get("weigh") or {}).get("score")
-            risk = score / (len(LEVELS5) - 1) if score is not None else None
-            results[piece["id"]][model] = {"p": p, "risk_0to1": risk}
+            risk_score = (answers.get("weigh") or {}).get("score")
+            risk = risk_score / (len(LEVELS5) - 1) if risk_score is not None else None
+            effort_score = (answers.get("resource") or {}).get("score")
+            effort = effort_score / (len(LEVELS5) - 1) if effort_score is not None else None
+            results[piece["id"]][model] = {"p": p, "risk_0to1": risk, "effort_0to1": effort}
     return results
 
 
@@ -219,20 +232,31 @@ def spotlight(pieces, results):
 
 
 def render_table(pieces, results, models):
-    """Technical-detail-only: one row per piece, one column per model, real numbers. Never shown
-    in the human-facing story."""
-    col_w = 16
-    header = "piece".ljust(22) + "".join(f"{MODEL_META[m][0]:>{col_w}}" for m in models)
+    """Technical-detail-only: one row per piece, one column per model, real numbers
+    (supported-p/risk-if-false/effort). Never shown in the human-facing story. Columns are
+    P-numbers, not model codes -- the legend states the mapping once; nothing after it should
+    ever go back to naming a model directly."""
+    col_w = 20
+    header = "piece".ljust(22) + "".join(f"{MODEL_P[m]:>{col_w}}" for m in models)
     lines = [header, "-" * len(header)]
     for piece in pieces:
         row = piece["id"].ljust(22)
         for m in models:
             v = results.get(piece["id"], {}).get(m, {})
-            p, r = v.get("p"), v.get("risk_0to1")
-            cell = f"{p:.2f}/{r:.2f}" if p is not None and r is not None else "err"
+            p, r, e = v.get("p"), v.get("risk_0to1"), v.get("effort_0to1")
+            cell = f"{p:.2f}/{r:.2f}/{e:.2f}" if None not in (p, r, e) else "err"
             row += f"{cell:>{col_w}}"
         lines.append(row)
     return "\n".join(lines)
+
+
+def mean_effort(piece_id, results):
+    """Mean effort_0to1 across models for one piece -- not yet a real schedule (that needs
+    Sorter's grouping, still unbuilt), but real, reported data instead of nothing. See
+    README.md's 'resource-cost axis' section for what's still missing before this is a Gantt."""
+    per_model = results.get(piece_id, {})
+    es = [v["effort_0to1"] for v in per_model.values() if v.get("effort_0to1") is not None]
+    return sum(es) / len(es) if es else None
 
 
 def run_problem(problem, models, bouncer_variant="reasonable"):
@@ -290,17 +314,25 @@ def run_problem(problem, models, bouncer_variant="reasonable"):
         print(f"  {MODEL_P[m]}  {code:<8}{name:<16}{note}")
     print(f"\nBouncer phrasing: {bouncer_variant} -- {BOUNCER_VARIANTS[bouncer_variant]['question']}")
     print(f"Confidence bar: mean supported-p >= {CONFIDENCE_THRESHOLD}. Disagreement bar: model spread >= {DISAGREEMENT_THRESHOLD}.\n")
-    print("Raw supported-p / risk-if-false, by model:")
+    print("Raw supported-p / risk-if-false / effort, by model:")
     print(render_table(pieces, results, models))
     print(f"\nDependency order: {' -> '.join(order)}")
     print("\nSpotlight (raw): risk + disagreement, descending:")
     for r in ranked:
         print(f"  {r['id']:<22} risk={r['mean_risk']:.2f}  disagreement={r['disagreement']:.2f}  ({r['n_models']} models)")
+    print("\nMean effort per piece (NOT a schedule yet -- Sorter's grouping still isn't built, so this")
+    print("is real per-piece data, not a computed Gantt; see README.md's 'resource-cost axis'):")
+    efforts = {pid: mean_effort(pid, results) for pid in by_id}
+    for pid in order:
+        e = efforts[pid]
+        print(f"  {pid:<32} {e:.2f}" if e is not None else f"  {pid:<32} no data")
+    total_effort = sum(e for e in efforts.values() if e is not None)
+    print(f"  {'TOTAL (sum, not a duration)':<32} {total_effort:.2f}")
 
     pipeline = {"id": problem["id"], "idea": idea, "models": models, "bouncer_variant": bouncer_variant,
                 "slicer": {"source": problem.get("source"), "pieces": pieces},
                 "sorter": results, "verdicts": {pid: v[0] for pid, v in verdicts.items()},
-                "conveyor": order, "spotlight": ranked}
+                "mean_effort": efforts, "conveyor": order, "spotlight": ranked}
     write_run(problem["id"], bouncer_variant, pipeline, "\n".join(story))
     return pipeline
 

@@ -1,0 +1,67 @@
+{
+  "id": "oncall-rotation",
+  "idea": "Fix our on-call rotation: whoever is on call must answer pages within 5 minutes, 24/7 including overnight, with no real backup plan when someone is sick or traveling.",
+  "source": "live-selected via tools/gap-library.yaml: 12 generic categories, one noul question each per model, in context of this idea+customer -- selected categories crossed the 0.6 confidence bar. No idea-specific piece text authored by Claude. depends_on left empty -- dependency inference isn't built. See foundry/slicer_live.py.",
+  "pieces": [
+    {
+      "id": "behavior-change",
+      "text": "Solving this requires people to change an existing habit or behavior, not just get a new tool.",
+      "depends_on": [],
+      "lens": "business"
+    },
+    {
+      "id": "escalation-authority",
+      "text": "Solving this requires a clear decision-making or escalation path that doesn't already exist.",
+      "depends_on": [],
+      "lens": "business"
+    },
+    {
+      "id": "fairness-distribution",
+      "text": "Solving this requires something to be distributed or shared fairly across multiple people, not concentrated on one or a few.",
+      "depends_on": [],
+      "lens": "business"
+    },
+    {
+      "id": "visibility-tracking",
+      "text": "Solving this requires someone to be able to see or track status that isn't currently visible.",
+      "depends_on": [],
+      "lens": "technical"
+    },
+    {
+      "id": "knowledge-transfer",
+      "text": "Solving this requires documenting or transferring knowledge that currently exists only in specific people's heads.",
+      "depends_on": [],
+      "lens": "technical"
+    },
+    {
+      "id": "compliance-constraint",
+      "text": "Solving this is constrained by a policy, legal, or contractual rule that must not be violated.",
+      "depends_on": [],
+      "lens": "business"
+    },
+    {
+      "id": "cost-resource",
+      "text": "Solving this depends on having enough budget, headcount, or resource, not just the right design.",
+      "depends_on": [],
+      "lens": "business"
+    },
+    {
+      "id": "trust-adoption",
+      "text": "Solving this depends on people trusting a new mechanism enough to actually rely on it, not just it existing.",
+      "depends_on": [],
+      "lens": "business"
+    },
+    {
+      "id": "single-point-of-failure",
+      "text": "The current situation depends on one person or thing with no backup, creating a single point of failure.",
+      "depends_on": [],
+      "lens": "technical"
+    },
+    {
+      "id": "measurement-gap",
+      "text": "It's currently unclear how to measure whether this problem is actually getting better or worse.",
+      "depends_on": [],
+      "lens": "technical"
+    }
+  ]
+}

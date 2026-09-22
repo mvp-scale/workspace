@@ -5,22 +5,28 @@ Updated 2026-09-22. Read `CLAUDE.md` too (commands, architecture, gotchas); this
 ## Starter prompt for the next session (paste this)
 
 ```
-Read /workspace/BRIDGE.md, /workspace/CLAUDE.md and /workspace/docs/scenario-lab-plan.md first. Then verify the state
-before touching anything: run `demo/lineup.sh status`, `curl -s localhost:8100/api/status` (start the demo server per
-CLAUDE.md if it is down) and `git status`. Report in a few lines what is loaded and whether the tree is clean.
+Read /workspace/BRIDGE.md and /workspace/foundry/README.md first. Then verify the state before touching anything:
+`demo/lineup.sh status`, `git status`, and confirm the loaded local models (kev-4b, semif, so1, laya, verdict) are up
+-- foundry's live calls depend on them. Report in a few lines what's loaded and whether the tree is clean.
 
-The task is to build out the Scenario lab (demo/scenarios.html) so that every loaded model can be run on every set and
-every test structure, offline with the full GPU and live through the demo server. Do not start coding.
-1. Read BRIDGE.md section "THE NEXT TASK" and the plan. Ask me which family and which structure to build first, and
-   confirm the set groups and the per-set template.
-2. Propose the run-record format and the offline runner (one model at a time, per-item records, resumable) and the live
-   path, and show how the existing set page (model comparison, calibration chart, examples/item explorer) stays the
-   template every new set follows. Wait for my go before implementing.
+The active thread is /workspace/foundry -- a live, tool-driven idea-decomposition pipeline. Read foundry/README.md's
+"the one rule that matters most" before doing anything else: you author exactly two things, an idea and an ideal
+customer/user, nothing else -- every piece of an actual decomposition has to come from the tools running live, never
+from you writing plausible content and slotting it in as if the tools produced it. This was violated repeatedly in the
+session that built this before being understood properly; don't repeat it.
 
-Constraints: no spending on the hosted model (JEV113) from scripts, only through a UI confirmation; never restart
-demo/server.py while an experiment runs through it; timeout on every wait and check `ps` afterwards; show models only
-through Jev.tag/Jev.codeOf; DOM through Jev.el/textContent; keep the honest framing (signals, not verdicts) and Wilson
-intervals; commit locally with the Co-Authored-By trailer (there is no remote).
+Open, unresolved question to resolve first (see foundry/README.md's "oncall-rotation" section): a recursive Grinder
+walk on the oncall-rotation idea's single-point-of-failure branch left 7 of 8 leaf checks stuck at "needs further
+splitting, no deeper library" under the current 0.6 atomic threshold. Look at those 7 stuck requirement texts and
+judge: do they already read as good, actionable atomic requirements (threshold's too strict), or do they genuinely
+need a Level 3 built under them? Ask the user before building more library content either way.
+
+The Scenario lab task (demo/scenarios.html, see docs/scenario-lab-plan.md) is still queued but paused this session --
+don't pick it up unless asked.
+
+Constraints: no spending on the hosted model (JEV113/P0) from any script, ever -- the environment's permission
+classifier blocks it outright, not just convention. Never restart demo/server.py while an experiment runs through it.
+Timeout on every wait and check `ps` afterwards. Commit locally with the Co-Authored-By trailer (there is no remote).
 ```
 
 ## Git state (read this first)
@@ -93,6 +99,8 @@ Conversation flow (`/flow`, was Cockpit) built and wired to the local models (me
 
 **2026-09-21/22 session:** Removed Text windows (`/windows`) and Call monitor (`/stream`); Cockpit renamed to Conversation flow (`/flow`). Built the first structure, **batch performance** (`probes/lab_batch.py`, `/api/batch-perf`, a "Batch performance" entry in the lab under a new Structures rail section): one state, N filler questions added to the one labelled question (sizes 1-160), scored on the labelled question only, resumable, one model at a time with the full GPU, never touches `data/bench/`. On 40 manipulation-dialogue items: KEV4B, SEMIF4, OAJEV4 and VERD2H hold flat accuracy from 1 to 160 questions/state (latency scales roughly linearly with size); LAYA4H's latency *drops* sharply at 160 questions, consistent with its 512-token limit truncating most of the added filler questions rather than processing them (worth a real check, not just an inference). Also restyled the lab's rail into Overview/Structures/Sets sections with icons, a divider, and a stronger current-item highlight; fixed the mobile dropdown, which was missing the Structures entry. Gotcha confirmed the hard way: the `demo/lineup.sh`-installed inproc services (`semif`, `so1`, `laya`, `verdict`) have `ExecStartPre` wait on kev-4b being up on :8010 — if kev-4b is stopped, those services hang "activating" forever with the GPU idle; run them directly (`.venv/bin/python demo/serve_inproc.py --model <m> --port <port>`) when kev-4b isn't loaded.
 
+**2026-09-22 session (separate thread, Scenario lab untouched): built `/workspace/foundry`,** a live idea-decomposition pipeline, from scratch. Started as a CLI prototype exploring a factory-themed tool vocabulary (Slicer/Grinder/Sorter/Conveyor/Spotlight, capped at 5 tools x 5 variants by explicit request), but the real work of the session was methodological: repeatedly writing hand-authored decomposition content and having it correctly called out as invalid — first for authoring an idea and its pieces together in one pass (proves nothing about decomposition quality), then for authoring "neutral" pieces that still embedded a specific solution design instead of a real decomposition. The fix that actually works: a fixed, generic, reusable candidate library (`tools/gap-library.yaml`, 12 categories, plus a nested per-category library for deeper levels) that gets *selected from live*, per idea, via real noul calls to the loaded models — Claude authors the library once (generic, front-loaded, fine) and the two-question intake per idea (idea + customer, also fine), nothing else. `slicer_live.py` (Level 0 selection) and `grinder_live.py` (recursive, budget-capped, breadcrumb-accumulating) both work end to end on a real worked example (`oncall-rotation`). Full state, the one hard rule, and the open unresolved question (is the current atomic threshold too strict, or does the tree need another level) are in `foundry/README.md` — read that before touching foundry again. All 5 of the original hand-authored example problems were moved from `foundry/problems/` to `foundry/ideas/` (stripped of their invalid pieces) during end-of-session cleanup; only `oncall-rotation` is a validated, live-produced decomposition.
+
 ## Gotchas learned the hard way
 
 - **Never restart `demo/server.py` while an experiment runs through it** (`probes/window_study.py` dies; results are cached in server memory only).
@@ -103,6 +111,9 @@ Conversation flow (`/flow`, was Cockpit) built and wired to the local models (me
 - Do not run the Baseline compare "Run" in tests: it includes the hosted model.
 - kev-4b's GPU memory grows as it warms (8.5 to 9.6 GiB); only ~1.7 GiB is spare, so do not load anything else.
 - Playwright/Chromium used for visual checks lived in the previous session's scratchpad; reinstall in the new one (`python3 -m venv pw && pw/bin/pip install playwright && PLAYWRIGHT_BROWSERS_PATH=... pw/bin/playwright install --with-deps chromium`). There is no browser otherwise.
+- **`foundry/`: never hand-author decomposition content, not even "neutral" pieces** — the fix is a generic, reusable candidate library selected live, not more careful writing by hand. See `foundry/README.md`'s "the one rule that matters most."
+- **`foundry/`: a Bouncer/noul question's exact wording changes the answer distribution more than the model does.** "True today, without further verification" collapses almost every forward-looking claim toward 0 regardless of model; "a reasonable assumption to build on" doesn't. Always note which phrasing produced a given number before drawing a conclusion from it.
+- **`foundry/`: model output tables must use the P0-P5 mapping, stated once, never a raw model code or name after that** — caught as a real bug (`render_table` reverted to codes after the legend), not just a style preference.
 
 ## Useful commands
 
