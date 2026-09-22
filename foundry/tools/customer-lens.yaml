@@ -1,0 +1,84 @@
+reference: customer-lens
+description: >
+  Static, hand-authored once, reused by every idea -- not regenerated per run. This is the
+  "predefine the scaffolding up front" piece: Slicer's by-domain variant and Sorter's by-persona
+  and by-lens variants read from this file rather than an LLM freely inventing typical pain points
+  from scratch each time. Deterministic lookup against a fixed list, not a fresh agentic guess.
+  Deliberately not exhaustive -- "reasonable levels," not a complete taxonomy -- and expected to be
+  revised as real runs show what's missing, same as everything else in tools/.
+status: >
+  hand-authored by Claude Sonnet 5, offline. Not verified against an external source -- same
+  honesty flag as by-domain's own entry in slicer.yaml -- these are informed guesses at what's
+  cross-domain-common, not measured.
+
+pain_points:  # ~16, deliberately generic, not industry-specific -- the same list applies whether the idea is a browser extension or a plumbing CRM
+  - id: time-cost
+    text: Doing the thing takes too many steps or too long.
+  - id: trust-in-accuracy
+    text: I don't know if the answer/result is actually correct.
+  - id: visibility
+    text: I can't tell what's happening or where things stand right now.
+  - id: lost-information
+    text: Something I entered or said gets lost, forgotten, or I have to repeat myself.
+  - id: onboarding-friction
+    text: Getting started requires too much setup before I see any value.
+  - id: cost-surprise
+    text: I don't know what this will cost me, or the cost surprises me later.
+  - id: lock-in-fear
+    text: I'm worried I can't leave or change my mind later without real pain.
+  - id: support-unreachable
+    text: When something breaks, I can't get a real answer quickly.
+  - id: inconsistency
+    text: Different people, or the same person at different times, get a different answer to the same question.
+  - id: no-override
+    text: I can't correct or override something the system got wrong.
+  - id: integration-friction
+    text: It doesn't fit with the other tools I already use.
+  - id: privacy-doubt
+    text: I don't know who else can see this, or whether it's safe.
+  - id: learning-curve
+    text: I don't know how to use it without training or a manual.
+  - id: unreliable
+    text: It works sometimes and not others, unpredictably.
+  - id: fairness-doubt
+    text: I suspect other people are getting better treatment than me.
+  - id: cant-prove-value
+    text: I can't tell if this is actually helping or saving me anything.
+
+delights:  # ~10, baseline expectations people have absorbed from good products generally -- not novel features
+  - id: instant-confirmation
+    text: I get clear, immediate confirmation that something happened.
+  - id: plain-language
+    text: It talks to me in plain language, not jargon.
+  - id: works-on-what-i-have
+    text: It works on the device I already have -- no separate hardware or app required.
+  - id: easy-undo
+    text: I can undo or correct a mistake easily.
+  - id: warned-before-not-after
+    text: I'm warned before a problem happens, not told about it after.
+  - id: remembers-me
+    text: It remembers or adapts to me instead of starting from zero every time.
+  - id: minutes-to-useful
+    text: I'm getting real value within minutes, not after a long setup.
+  - id: predictable-pricing
+    text: The pricing is clear and doesn't change on me.
+  - id: checkable-history
+    text: There's a record I can check any time.
+  - id: human-escalation
+    text: There's a real person to escalate to when automation isn't enough.
+
+customer_journey:  # ~6 stages, generic -- used to place pain points/delights, not to guess industry specifics
+  - id: awareness
+    text: The person first hears this kind of thing exists.
+  - id: evaluating-trust
+    text: Deciding whether to actually try it.
+  - id: onboarding
+    text: Getting set up for the first time.
+  - id: first-real-use
+    text: Using it for a real task for the first time.
+  - id: ongoing-use
+    text: Using it as a habit, repeatedly.
+  - id: trouble-handling
+    text: Something goes wrong and they need help.
+  - id: renew-or-churn
+    text: Deciding whether to keep using it or stop.

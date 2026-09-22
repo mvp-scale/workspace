@@ -1,0 +1,48 @@
+tool: sorter
+description: >
+  Weigher and Welder merged into one tool, per the five-tool cap: for each atomic piece from
+  Grinder, score it (how much the idea suffers if it's false -- Weigher's old job, still one real
+  live call per piece, currently implemented as funnel.py's bounce_and_weigh) and group it with
+  related pieces by shared need (Welder's old job). Output is scored groups, not a flat list of
+  individually-scored pieces.
+status: >
+  scoring is live (funnel.py, one battery per piece per model, unchanged mechanism). Grouping is
+  NOT built -- every variant below is a deterministic rule over metadata pieces already carry
+  (depends_on from Slicer, plus persona/lens where by-domain or by-phase set them), by design --
+  per "minimal agentic, mostly predefined scaffolding," grouping should never need a fresh live
+  call of its own. If a variant below can't be satisfied from existing piece metadata, that's a
+  sign Slicer needs to tag more, not that Sorter needs to ask a model something new.
+variants:
+  - id: by-mean-risk
+    rule: >
+      Cluster pieces that share a dependency root (same top-of-chain ancestor in depends_on) into
+      one group; the group's score is the mean of its pieces' risk-if-false.
+    tradeoff: today's de facto default (Conveyor already walks depends_on this way) -- cheapest,
+      but a group is only as meaningful as depends_on already being right.
+
+  - id: by-persona
+    rule: Group pieces that share the same persona tag (set by Slicer's by-domain variant).
+    tradeoff: only as good as by-domain actually tagged personas -- pieces from other Slicer
+      variants (binary-halving, by-risk) won't have a persona tag to group on at all.
+
+  - id: by-phase
+    rule: Group pieces that share the same SDLC phase tag (spike/decide/build/validate/launch).
+    tradeoff: maps directly onto Conveyor's schedule-mapping job downstream; same dependency on
+      Slicer having actually set the tag (by-phase does, others don't).
+
+  - id: by-lens
+    rule: >
+      Two groups only: "business" (customer-facing, plain-language pieces) and "technical"
+      (feasibility pieces) -- the actual mechanism behind "readable by anyone" / the human-agentic
+      bridge.
+    tradeoff: coarsest grouping of the five, but the one every idea can always produce regardless
+      of which Slicer variant ran, since lens is closer to a piece's own phrasing than to metadata
+      that has to be explicitly set.
+
+  - id: by-risk-tier
+    rule: >
+      Three fixed bins by mean risk-if-false: must-resolve-first (>=0.6), worth-checking
+      (0.3-0.6), low-stakes (<0.3). No dependency or tag needed -- works on any piece from any
+      Slicer variant.
+    tradeoff: always available, but a group here says nothing about *why* pieces belong together,
+      only that they scored similarly -- weakest fit for "architecture rollup" of the five.

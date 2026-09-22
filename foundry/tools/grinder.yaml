@@ -1,0 +1,35 @@
+tool: grinder
+description: >
+  Re-slice one piece that's still too coarse, recursively, until it stops producing anything new
+  ("infinitesimal" -- not a depth cutoff, a real stopping condition). Three variants; none wired
+  to live recursion yet, this is the design pass before building one. This tool is also where the
+  old Bouncer tool ended up: per the five-tool cap, Bouncer wasn't cut, it was absorbed here --
+  its one mechanism (a live yes/no question per piece) is exactly what atomic-threshold already
+  needed to decide when to stop, so there's no separate downstream tool asking a structurally
+  identical question.
+status: not built. atomic-threshold is the one with real precedent (the noul question and 0.6
+  threshold already exist and already run live in probes/lab_decompose.py's battery()/
+  simulate_loop() against the hand-authored CPM tree) -- wiring it here means reusing that, not
+  inventing a new mechanism.
+variants:
+  - id: fixed-depth
+    rule: Stop after N recursive cuts, full stop, regardless of what the piece still says.
+    tradeoff: cheapest, no model call, deterministic -- but arbitrary. A simple piece gets cut
+      needlessly deep; a genuinely compound one gets left too coarse.
+
+  - id: atomic-threshold
+    rule: >
+      Ask a live noul question -- "is this a single, atomic unit that should be executed as one
+      piece, not split further?" -- reusing probes/lab_decompose.py's exact "atomic" question and
+      its 0.6 stop threshold. Stop when the answer crosses threshold, recurse otherwise, capped at
+      a max depth as a safety valve for a model that never says yes.
+    tradeoff: real signal, real precedent, but spends a live model call per piece per depth level,
+      and different models will disagree on where "atomic" is (lab_decompose.py's own
+      simulate_loop() already measures this disagreement across the five models).
+
+  - id: irreducible-fact
+    rule: >
+      Cheap, no-call heuristic proxy for the same idea as atomic-threshold: stop when the piece's
+      text is already a single clause (roughly, no coordinating "and"/"or" joining two claims).
+    tradeoff: free and fast, but a crude proxy -- a short piece can still be compound, and a long
+      one can still be a single genuinely complex fact.

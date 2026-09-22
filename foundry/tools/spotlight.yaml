@@ -1,0 +1,39 @@
+tool: spotlight
+description: >
+  Ranks what most needs answering -- deliberately distinct from Conveyor's "how long," this is
+  "how sure are we." Kept as its own tool rather than folded into Conveyor for exactly that reason:
+  merging "when" and "how confident" into one number would hide one behind the other.
+status: risk-plus-disagreement is live today (funnel.py's spotlight()). The other four are the
+  same computation over the same inputs (per-piece/per-group risk and cross-model disagreement,
+  both already produced by Sorter) with a different sort key -- no new live call needed for any of
+  the five, consistent with "minimal agentic, mostly scaffolding."
+variants:
+  - id: risk-plus-disagreement
+    rule: Sort by (mean risk-if-false + cross-model disagreement on supported-p), descending.
+      Today's default.
+    tradeoff: proven across 5 problems / 25 claims; conflates two different reasons something might
+      need attention (it's dangerous vs. models can't agree on it) into one number.
+
+  - id: disagreement-only
+    rule: Sort by cross-model disagreement alone, ignoring risk.
+    tradeoff: purely "where do the models disagree" -- useful for the cross-model-family research
+      question (does decomposition hold up across Jev-like models generally), useless for
+      prioritizing what actually matters to the idea.
+
+  - id: risk-only
+    rule: Sort by mean risk-if-false alone, ignoring disagreement.
+    tradeoff: purely "what hurts most if wrong" -- the models could unanimously agree and still all
+      be wrong; this variant would never surface that.
+
+  - id: downstream-impact
+    rule: Sort by how many other pieces/groups depend on this one (blast radius in the
+      dependency graph), ignoring risk and disagreement entirely.
+    tradeoff: structural, not judgment-based -- doesn't need live scores at all, only Slicer's
+      depends_on edges. Cheapest of the five, but a heavily-depended-on piece isn't necessarily
+      risky, just central.
+
+  - id: persona-weighted
+    rule: Sort by risk-plus-disagreement, but multiply by a fixed weight for whichever persona
+      by-domain marked as most central to the idea.
+    tradeoff: only available when by-domain actually ran and tagged personas; otherwise falls back
+      to risk-plus-disagreement.

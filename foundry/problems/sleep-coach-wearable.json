@@ -1,0 +1,12 @@
+{
+  "id": "sleep-coach-wearable",
+  "idea": "Cheap wrist wearable nudges the user with a single vibration pattern ninety minutes before their historically best bedtime, learned from a week of sleep-tracking data, with no app needed after the initial setup week.",
+  "source": "hand-authored by Claude Sonnet 5, offline in this session, by-layer Slicer variant -- see foundry/tools/slicer.yaml",
+  "pieces": [
+    {"id": "week-enough-signal", "text": "One week of sleep-tracking data is enough to reliably estimate a person's best bedtime, without needing months of data or accounting for weekday/weekend variation.", "depends_on": [], "lens": "technical"},
+    {"id": "vibration-heeded", "text": "A single vibration pattern, ninety minutes ahead, is a strong enough cue that people will actually change behavior (start winding down) rather than ignore it like a phone notification.", "depends_on": [], "lens": "business"},
+    {"id": "bedtime-stability", "text": "A person's best bedtime stays stable enough week to week that a one-time, no-app-needed setup remains accurate for the device's useful life, rather than drifting out of date.", "depends_on": ["week-enough-signal"], "lens": "technical"},
+    {"id": "no-app-value", "text": "Removing the phone app after setup is a real selling point, rather than something that just removes a useful ongoing feedback loop and makes the device feel abandoned.", "depends_on": ["bedtime-stability"], "lens": "business"},
+    {"id": "price-sensitivity", "text": "A device this narrow in function (one vibration, no app) can be priced cheaply enough that people buy it instead of using the sleep features already built into a phone or existing wearable they own.", "depends_on": [], "lens": "business"}
+  ]
+}

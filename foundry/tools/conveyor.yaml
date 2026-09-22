@@ -1,0 +1,42 @@
+tool: conveyor
+description: >
+  Takes Sorter's groups, sequences them, and estimates how long each takes -- the timing job
+  nothing had before. Operates on groups now, not individual pieces (a scope change from the
+  original tool, which topologically sorted raw pieces -- that behavior survives as
+  dependency-order, now applied one level up).
+status: dependency-order, risk-first and parallel-lanes are deterministic and buildable today from
+  existing data (a group's dependency is the union of its pieces' depends_on). duration-weighted
+  and critical-path need a real time estimate per group, which nothing in this repo can honestly
+  supply yet -- named per the five-tool cap, not populated. Do not fake a number into either until
+  a real source exists (reference-class industry norms, per the Monte Carlo discussion in
+  README.md) -- an invented duration is exactly the fabricated-precision mistake this project has
+  already caught itself making once.
+variants:
+  - id: dependency-order
+    rule: Topological sort of groups by their pieces' combined depends_on. Today's behavior,
+      moved up one level from pieces to groups.
+    tradeoff: same as before -- correct only as far as depends_on itself is correct, and flattens
+      branching structure into one line.
+
+  - id: risk-first
+    rule: Ignore dependency; sequence groups by mean risk-if-false, highest first.
+    tradeoff: useful for "what to de-risk first," useless as an actual build order if dependencies
+      are real (you can't build the risky part before its prerequisite just because it's scarier).
+
+  - id: parallel-lanes
+    rule: >
+      Identify which groups have no dependency on each other at all and output them as separate
+      lanes instead of forcing one line.
+    tradeoff: most honest about real structure, but needs a display that can show multiple lanes --
+      Conveyor's current single-line "A -> B -> C" trace output can't yet.
+
+  - id: duration-weighted
+    rule: NOT POPULATED. Would order + estimate rough time per group from a real duration source.
+    tradeoff: n/a until that source exists.
+
+  - id: critical-path
+    rule: >
+      NOT POPULATED. Would reuse lab_decompose.py's real cpm() forward/backward pass -- proven
+      code, already fixed one real bug -- but needs the same duration source as duration-weighted
+      to have anything to compute over.
+    tradeoff: n/a until that source exists.

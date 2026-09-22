@@ -1,0 +1,64 @@
+tool: slicer
+description: >
+  idea or piece -> first-pass pieces, with depends_on edges (and, from by-domain, a persona/lens
+  tag -- see "piece schema" below). The one tool with the most real design freedom -- how you cut
+  determines what kind of plan falls out the other end. Capped at five variants on purpose (see
+  README's "five tools, five variants" rule); one already cut for redundancy.
+status: manual for every variant -- no live call (no ANTHROPIC_API_KEY). Applying a variant means
+  hand-authoring the cut the way that variant's rule describes. A live Slicer, once it exists,
+  would take the variant id as a parameter to its prompt. by-domain is the one variant designed to
+  need the *least* fresh agentic judgment when that happens -- see its rule below.
+piece_schema: >
+  {id, text, depends_on: [...]} always. Optionally now also persona (an id from
+  customer-lens.yaml's implied cohorts, set by by-domain) and lens ("business" or "technical",
+  set by by-domain or by-phase) -- Sorter's by-persona and by-lens variants read these
+  deterministically rather than re-deriving them.
+variants:
+  - id: binary-halving
+    rule: >
+      Cut into exactly two roughly-equal parts each pass; recurse depth-first into one half
+      before touching the other. The most literal reading of "usually in half" -- attack one
+      half of the problem to done, then the other.
+    tradeoff: coarsest cut, most passes needed to reach atomic pieces; closest to how a developer
+      actually starts, worst as a direct source of requirements.
+
+  - id: by-layer
+    rule: >
+      Cut by system layer or functional area (technical feasibility, legal/rights, product/UX,
+      business/GTM, ...) -- however many layers the idea actually touches, not a fixed count.
+    tradeoff: this is what problems/*.json already do by hand. Produces pieces that map cleanly
+      onto Sorter's scoring and, eventually, requirement categories. Best fit so far.
+
+  - id: by-risk
+    rule: >
+      Split off the single biggest unknown/risk as its own branch first; treat "everything else"
+      as the second branch and recurse the same way into it. Produces a risk-ordered tree, not a
+      balanced one -- the opposite instinct from binary-halving. If the idea itself states its own
+      biggest worry (a real person's own words, not an invented one), use that directly instead of
+      guessing -- see plumber-crm in ideas/ for a case where this applies.
+    tradeoff: good for prioritization (what to answer first falls out of the tree shape itself,
+      Spotlight becomes almost redundant), bad for schedule-mapping (lopsided, no natural phases).
+
+  - id: by-phase
+    rule: >
+      Cut along the standard project-phase taxonomy probes/lab_decompose.py already uses and
+      grades models against: spike, decide, build, validate, launch. Tag each piece's lens as
+      "technical" (spike/build/validate) unless the phase is clearly customer-facing.
+    tradeoff: reuses real, already-proven vocabulary from the CPM decompose-and-loop page; maps
+      directly onto "a standard development window" (the goal), at the cost of forcing every idea
+      into five phases whether or not that's the natural shape of its risk.
+
+  - id: by-domain
+    rule: >
+      Before cutting technically: (1) classify the domain/industry, (2) name the distinct
+      cohorts/personas, (3) for each domain+persona pair, look up applicable entries from
+      customer-lens.yaml's fixed pain_points/delights/customer_journey lists -- a deterministic
+      match against a predefined library, not a fresh invented guess each run -- and turn the
+      matches into candidate pieces, tagged with their persona and lens: "business". This is the
+      one variant whose entire purpose is surfacing gaps the idea's own wording never states.
+    tradeoff: >
+      the only variant that can add requirements not implied by the idea's own words at all.
+      Honesty flag is smaller than before customer-lens.yaml existed (matching against a fixed,
+      inspectable list beats an LLM inventing fresh "typical" pain points each run) but not zero --
+      the list itself is still an informed guess, not a verified external source, and the match
+      from domain to which list entries apply is still a judgment call.

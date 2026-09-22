@@ -1,0 +1,12 @@
+{
+  "id": "smart-recycling-bin",
+  "idea": "Neighborhood recycling bin with a camera sorts common contamination items (plastic bags, food waste) out of the recycling stream automatically before pickup, refusing bins more than 10% contaminated and texting the resident why.",
+  "source": "hand-authored by Claude Sonnet 5, offline in this session, by-layer Slicer variant -- see foundry/tools/slicer.yaml",
+  "pieces": [
+    {"id": "camera-sort-accuracy", "text": "A camera-based sorter can reliably identify plastic bags and food waste in a mixed recycling stream at the accuracy needed to avoid wrongly refusing clean bins.", "depends_on": [], "lens": "technical"},
+    {"id": "refuse-mechanism", "text": "The bin can physically or procedurally refuse a load over 10% contaminated -- not close, not get picked up, flag for return -- without a person on-site to intervene.", "depends_on": ["camera-sort-accuracy"], "lens": "technical"},
+    {"id": "resident-notification", "text": "A text message explaining the specific contamination is enough for most residents to actually change their sorting behavior, rather than being ignored after the first few times.", "depends_on": [], "lens": "business"},
+    {"id": "hardware-cost", "text": "A camera plus sorting/refusal hardware can be added to a standard recycling bin at a cost the neighborhood or city is willing to pay per bin.", "depends_on": [], "lens": "business"},
+    {"id": "false-refusal-tolerance", "text": "Residents and the city will tolerate the false-refusal rate a camera sorter realistically has, rather than losing trust after a few wrongly-refused clean bins.", "depends_on": ["camera-sort-accuracy"], "lens": "business"}
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "idea": "Browser extension that reads any webpage aloud in the voice of a historical figure the user picks, using a small on-device text-to-speech model, no cloud calls, free tier limited to 10 minutes per day.",
+  "note": "Top-level cut only (one pass, not recursed to atomic) -- this is a scoping comparison of how differently each Slicer variant divides the SAME idea, not five full trees. Hand-authored by Claude Sonnet 5, same session as tools/slicer.yaml.",
+  "variants": {
+    "binary-halving": [
+      {"id": "can-it-work", "text": "The technical half: an on-device TTS model exists, runs inside browser-extension audio APIs, at acceptable latency."},
+      {"id": "will-it-be-used", "text": "The adoption half: voice rights clear, users find it more than a novelty, and the free tier converts to paid."}
+    ],
+    "thirds": [
+      {"id": "technical-feasibility", "text": "An on-device TTS model exists and runs inside browser-extension audio APIs at acceptable latency."},
+      {"id": "content-legal", "text": "Historical-figure voice packs can be produced or licensed without infringing likeness or IP rights."},
+      {"id": "business-viability", "text": "Users find it more than a novelty, and a 10-minute/day free tier converts to paid."}
+    ],
+    "by-layer": "same as problems/voice-extension.json's 5 pieces (tts-model, extension-audio, voice-rights, product-appeal, conversion) -- this variant is what that file already does by hand",
+    "by-risk": [
+      {"id": "biggest-unknown", "text": "A licensable, on-device TTS model exists for this use case at all."},
+      {"id": "everything-else", "text": "Everything else (extension audio integration, voice rights, product appeal, conversion), assumed answerable once the TTS-model risk resolves favorably -- itself re-cut by this same rule on the next pass."}
+    ],
+    "by-phase": [
+      {"id": "spike", "text": "Spike: does a licensable on-device TTS model exist, and can it run inside browser-extension audio APIs."},
+      {"id": "decide", "text": "Decide: which historical figures/voices to launch with, given rights constraints."},
+      {"id": "build", "text": "Build: the extension itself -- TTS integration, voice picker, the free-tier timer."},
+      {"id": "validate", "text": "Validate: do users keep using it past the novelty, and does the free tier actually convert."},
+      {"id": "launch", "text": "Launch: ship the free tier with an upgrade path."}
+    ]
+  },
+  "finding": "All five CAN slice this idea -- that part of the question is settled. What differs is what falls out the other end: binary-halving/thirds (2-3 pieces) are the coarsest, closest to how a person actually starts, but need the most Grinder passes before anything is atomic enough to be a requirement. by-risk (2 pieces) front-loads prioritization into the tree shape itself, at the cost of being lopsided and hard to map onto a schedule. by-layer and by-phase (5 pieces each) are the two that already produce something requirement-shaped in one pass: by-layer is what problems/*.json already do and is proven against live Bouncer/Weigher; by-phase is the one that maps directly onto 'a standard development window' since it reuses lab_decompose.py's own phase taxonomy and could plug straight into the existing CPM machinery. Tentative conclusion: by-layer and by-phase look like the two worth taking further; binary-halving/thirds/by-risk are real but better suited as an outer loop that decides *when* to switch layers/phases, not as the primary cut."
+}
