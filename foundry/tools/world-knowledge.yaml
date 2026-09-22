@@ -99,6 +99,12 @@ gap_categories: # the 21 generic, reusable, requirement-shaped Level 0 gap categ
                 # live, one noul question each, fanned into one call by layered_walk.py. Shape:
                 # functional/non-functional/architectural/user-story/technical-spec/operational
                 # (see each entry's `shape` field), matching a real SRS/backlog/arc42 register.
+                # `shape` is load-bearing now, not just descriptive (fixed this session):
+                # classify_root groups categories by it and guarantees a top pick from every one
+                # of the 6 shapes, instead of pooling all 21 into one ranking -- before this, the
+                # field was present but never actually read by any code, and nonfunctional-
+                # performance/-availability dominated nearly every idea's selection regardless of
+                # domain (confirmed in the 7-idea run). See layered_walk.py's classify_root.
                 # RETIRED (user decision, this session): the original 12 generic "is this a gap"
                 # audit-checklist categories (capability-gap, behavior-change,
                 # escalation-authority, fairness-distribution, visibility-tracking,
