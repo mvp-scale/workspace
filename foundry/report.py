@@ -95,17 +95,30 @@ def main():
         domain, audience = da["domain"], da["audience"]
         print(f"DOMAIN: {domain['choice']} ({domain['confidence']:.0%})   AUDIENCE: {audience['choice']} ({audience['confidence']:.0%})"
               f"   ENRICHMENT: {'applied' if (enrich and enrich['applied']) else 'skipped'}")
+        profile = one(records, "profile")
+        if profile and profile.get("values"):
+            active = sorted(((k, v) for k, v in profile["values"].items() if v is not None and v >= 0.6), key=lambda kv: -kv[1])
+            print(f"PROFILE (>=0.6): " + (", ".join(f"{k} ({v:.2f})" for k, v in active) if active else "nothing scored this high"))
         print()
 
     gaps = by_type(records, "gap_check")
     gsum = one(records, "gap_summary")
     if gaps:
         print(f"GAP CATEGORIES CHECKED ({gsum['selected_count']}/{gsum['total']} selected, {gsum['method']})")
-        rows = [(wrap(g["text"], a.width), "yes" if g["selected"] else "no",
-                 f"{g['mean']:.2f}" if g["mean"] is not None else "-",
-                 f"{g['spread']:.2f}" if g["spread"] is not None else "-")
-                for g in sorted(gaps, key=lambda r: -(r["mean"] or 0))]
-        table(["category", "selected", "mean", "spread"], rows)
+        has_composite = any(g.get("composite") is not None for g in gaps)
+        sort_key = (lambda r: -(r.get("composite") or 0)) if has_composite else (lambda r: -(r["mean"] or 0))
+        if has_composite:
+            rows = [(wrap(g["text"], a.width), "yes" if g["selected"] else "no",
+                     f"{g['mean']:.2f}" if g["mean"] is not None else "-",
+                     f"{g.get('profile_boost', 0):.2f}", f"{g['composite']:.2f}")
+                    for g in sorted(gaps, key=sort_key)]
+            table(["category", "selected", "own score", "profile boost", "composite"], rows)
+        else:
+            rows = [(wrap(g["text"], a.width), "yes" if g["selected"] else "no",
+                     f"{g['mean']:.2f}" if g["mean"] is not None else "-",
+                     f"{g['spread']:.2f}" if g["spread"] is not None else "-")
+                    for g in sorted(gaps, key=sort_key)]
+            table(["category", "selected", "mean", "spread"], rows)
         print()
 
     nodes = by_type(records, "grinder_node")

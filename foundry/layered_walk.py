@@ -40,12 +40,20 @@ sys.path.insert(0, str(ROOT / "demo"))
 import server  # noqa: E402
 import funnel  # noqa: E402
 
-# Grounded in probes/report_v2.py's already-validated measurement (1,437 real labeled items, 15
-# published sets): semif 66.8% / kev-4b 66.9% / so1 64.8% accuracy, all three with a real
-# calibration gap (0.10-0.13); laya drops to 56.9% with confident answers becoming rare at higher
-# thresholds; verdict is 46.7% with a calibration gap of just 0.04 -- confidence carries almost no
-# signal. Not an in-session guess.
-MODELS = ["semif", "kev-4b", "so1"]  # P1, P2, P3
+# Default, grounded in probes/report_v2.py's already-validated measurement (1,437 real labeled
+# items, 15 published sets): semif 66.8% / kev-4b 66.9% / so1 64.8% accuracy, all three with a
+# real calibration gap (0.10-0.13); laya drops to 56.9% with confident answers becoming rare at
+# higher thresholds; verdict is 46.7% with a calibration gap of just 0.04 -- confidence carries
+# almost no signal. Not an in-session guess. Override with --models, e.g. --models semif for a
+# single model. "jev" (hosted) is deliberately not a valid choice -- see LOCAL_MODELS below.
+LOCAL_MODELS = ["semif", "kev-4b", "so1", "laya", "verdict"]  # every non-hosted backend loaded
+                                                                # today (demo/lineup.sh); "jev" is
+                                                                # hosted and cannot run from a
+                                                                # script -- the harness itself
+                                                                # blocks credential access for it,
+                                                                # confirmed directly this session,
+                                                                # not a convention being enforced.
+MODELS = ["semif", "kev-4b", "so1"]  # P1, P2, P3 -- overwritten by --models in main()
 
 DOMAIN_AUDIENCE_FLOOR = 0.6   # slicer.yaml's own written by-domain routing rule: both must clear
                               # this or the classification isn't trusted -- no composite average.
@@ -62,6 +70,14 @@ ATOMIC_THRESHOLD = 0.18       # terminal -- ends a branch and ships a requiremen
                               # shifted low. Model-combination-specific; re-calibrate if MODELS
                               # changes.
 DISAGREEMENT_THRESHOLD = funnel.DISAGREEMENT_THRESHOLD  # reused, not reinvented
+W_GAP, W_PROFILE = 0.7, 0.3   # Composite Scoring weights for category selection: own gap-check
+                               # score vs. the profile-probe boost (see profile_boost). Explicit,
+                               # adjustable, not a first-attempt-and-forget number.
+BOOST_SHIFT = 0.1             # Confidence-Gated Routing with more than one signal: a
+                               # profile-boosted branch's child-relevance bar drops by this much
+                               # (dig deeper where the profile says it matters); a non-boosted
+                               # branch's bar rises by the same amount (back off sooner). A first,
+                               # bounded attempt -- not empirically tuned yet.
 BUDGET = 60                   # hard cap on live calls (one call = one classify, regardless of how
                               # many questions are fanned into it) for the whole run, root through
                               # every leaf. Real, enforced -- "until you exceed the budget," not
@@ -133,15 +149,35 @@ def noul_question(text, true_label, false_label):
     return {"type": "noul", "instructions": text, "criteria": {"true": true_label, "false": false_label}}
 
 
-def classify_domain_audience(base_state, slicer, budget):
-    """The one exception in kind: a single `choice` pick, used once, not a select-many step."""
+def classify_domain_audience_and_profile(base_state, slicer, world, budget):
+    """The one non-recursive step, and the one call that mixes kinds: domain + audience (`choice`,
+    used once to set context) fanned together with world-knowledge.yaml's profile_probes (`noul`,
+    ten generic speculative questions about the idea's tech/context) -- Speculative Fan-Out means
+    not splitting what can go in one call just because the question types differ."""
     if budget.exhausted():
-        return None, None
+        return None, None, {}
     by_domain = [v for v in slicer["variants"] if v["id"] == "by-domain"][0]
-    per_model = call_all(base_state, by_domain["calls"][0]["questions"], budget)
+    questions = dict(by_domain["calls"][0]["questions"])
+    for p in world.get("profile_probes", []):
+        questions[f"profile::{p['id']}"] = noul_question(p["text"], p["criteria"]["true"], p["criteria"]["false"])
+    per_model = call_all(base_state, questions, budget)
     if not per_model:
-        return None, None
-    return combine_choice(per_model, "domain"), combine_choice(per_model, "audience")
+        return None, None, {}
+    domain, audience = combine_choice(per_model, "domain"), combine_choice(per_model, "audience")
+    profile = {p["id"]: combine_noul(per_model, f"profile::{p['id']}")[0] for p in world.get("profile_probes", [])}
+    return domain, audience, profile
+
+
+def profile_boost(category_id, profile, world):
+    """Deterministic, no live call: sum of profile signal strength for every probe that lists
+    this category in its `boosts`."""
+    boost = 0.0
+    for p in world.get("profile_probes", []):
+        if category_id in p.get("boosts", []):
+            v = profile.get(p["id"])
+            if v is not None:
+                boost += v
+    return boost
 
 
 def build_tree(world):
@@ -179,9 +215,12 @@ def classify_node(state, node_text, children, budget):
     return atomic_mean, atomic_spread, child_means
 
 
-def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, max_depth):
+def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, max_depth, boosted=False):
     """The one loop, recursive: classify -> (breadcrumb carries the expansion forward) -> recurse
-    into whatever was selected -> stop when there's nothing left to select or the budget's gone."""
+    into whatever was selected -> stop when there's nothing left to select or the budget's gone.
+    `boosted` is the profile-based second confidence signal: propagated unchanged down a whole
+    branch from whichever root category it started at (a branch's relevance to the idea's actual
+    profile doesn't change node to node), and shifts how easily a child gets selected."""
     if budget.exhausted():
         ledger.emit(type="grinder_node", path=path, id=node["id"], depth=depth, text=node["text"],
                      full_text=" ".join(breadcrumb + [node["text"]]), atomic_mean=None,
@@ -204,10 +243,11 @@ def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, ma
                      full_text=full_text, atomic_mean=None, status="no_answer", children=[])
         return
 
+    child_bar = CHILD_RELEVANCE - BOOST_SHIFT if boosted else CHILD_RELEVANCE + BOOST_SHIFT
     child_records = []
     for child in node["children"]:
         p = child_means.get(child["id"])
-        selected = p is not None and p >= CHILD_RELEVANCE
+        selected = p is not None and p >= child_bar
         child_records.append({"id": child["id"], "text": child["text"], "p": p, "selected": selected})
 
     if is_leaf:
@@ -224,20 +264,21 @@ def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, ma
 
     ledger.emit(type="grinder_node", path=path, id=node["id"], depth=depth, text=node["text"],
                 full_text=full_text, atomic_mean=atomic_mean, atomic_spread=atomic_spread,
-                status=status, children=child_records)
+                status=status, children=child_records, boosted=boosted)
 
     if status == "not_atomic_recursing":
         for child in node["children"]:
             rec = next(c for c in child_records if c["id"] == child["id"])
             if rec["selected"]:
                 walk(child, path + [child["id"]], breadcrumb + [node["text"]], base_state,
-                     budget, ledger, progress, depth + 1, max_depth)
+                     budget, ledger, progress, depth + 1, max_depth, boosted=boosted)
 
 
-def classify_root(tree, state, budget, world, ledger, progress):
-    """Level 0's select-many step over the 12 gap categories -- same mechanism as any deeper
-    node's child-relevance check, except the selection policy is top-k, not a threshold (see
-    GAP_TOPK)."""
+def classify_root(tree, state, budget, world, ledger, progress, profile):
+    """Level 0's select-many step over the gap categories -- same mechanism as any deeper node's
+    child-relevance check, except the selection policy is Composite Scoring + top-k, not a
+    threshold alone (see GAP_TOPK): each category's rank is its own gap-check score combined with
+    a profile-based boost, weighted (W_GAP, W_PROFILE), not the raw score alone."""
     if budget.exhausted():
         return []
     questions = {n["id"]: noul_question(
@@ -248,24 +289,39 @@ def classify_root(tree, state, budget, world, ledger, progress):
     if not per_model:
         return []
     results = {n["id"]: combine_noul(per_model, n["id"]) for n in tree}
-    ranked = sorted(tree, key=lambda n: -(results[n["id"]][0] or 0))
+    boosts = {n["id"]: profile_boost(n["id"], profile, world) for n in tree}
+
+    def composite(n):
+        mean = results[n["id"]][0] or 0
+        return W_GAP * mean + W_PROFILE * min(boosts[n["id"]], 1.0)
+
+    ranked = sorted(tree, key=lambda n: -composite(n))
     selected = ranked[:GAP_TOPK]
     selected_ids = {n["id"] for n in selected}
     for n in tree:
         mean, spread = results[n["id"]]
-        ledger.emit(type="gap_check", id=n["id"], text=n["text"], mean=mean, spread=spread, selected=n["id"] in selected_ids)
-    ledger.emit(type="gap_summary", selected_count=len(selected), total=len(tree), method=f"top-{GAP_TOPK}")
+        ledger.emit(type="gap_check", id=n["id"], text=n["text"], mean=mean, spread=spread,
+                    profile_boost=boosts[n["id"]], composite=composite(n), selected=n["id"] in selected_ids)
+    ledger.emit(type="gap_summary", selected_count=len(selected), total=len(tree), method=f"top-{GAP_TOPK} by composite score")
+    result = []
     for n in selected:
-        ledger.emit(type="category_recursion", id=n["id"], has_library=bool(n["children"]))
-    return selected
+        is_boosted = boosts[n["id"]] > 0
+        ledger.emit(type="category_recursion", id=n["id"], has_library=bool(n["children"]), boosted=is_boosted)
+        result.append((n, is_boosted))
+    return result
 
 
 def main():
+    global MODELS
     ap = argparse.ArgumentParser()
     ap.add_argument("--idea", required=True)
     ap.add_argument("--max-depth", type=int, default=3)
     ap.add_argument("--budget", type=int, default=BUDGET)
+    ap.add_argument("--models", nargs="+", default=MODELS, choices=LOCAL_MODELS,
+                     help="which local model(s) to use, e.g. --models semif for one model only. "
+                          "'jev' (hosted) is not a valid choice -- it cannot run from a script.")
     a = ap.parse_args()
+    MODELS = a.models
 
     idea_data = json.loads((HERE / "ideas" / f"{a.idea}.json").read_text())
     idea, customer = idea_data["idea"], idea_data["customer"]
@@ -287,13 +343,21 @@ def main():
     ledger.emit(type="run_meta", idea=idea, customer=customer, models=MODELS,
                 model_ps=[funnel.MODEL_P[m] for m in MODELS])
 
-    # 1. Classify (domain/audience) -- the one non-recursive step.
-    domain_a, audience_a = classify_domain_audience(base_state, slicer, budget)
+    tools_used = {}  # tool.variant -> (ran: bool, note: str) -- the honest accounting printed at the end
+
+    # 1. Classify (domain/audience + the profile pre-scan, one combined call) -- the one
+    # non-recursive step.
+    progress("TOOL: Slicer.by-domain (choice x2 + 10 profile probes, fanned into one call)")
+    domain_a, audience_a, profile = classify_domain_audience_and_profile(base_state, slicer, world, budget)
     ledger.emit(type="layer0_domain_audience", domain=domain_a, audience=audience_a)
+    ledger.emit(type="profile", values=profile)
+    tools_used["Slicer.by-domain"] = (domain_a is not None, f"ran, {'trusted' if domain_a and audience_a and domain_a['confidence'] >= DOMAIN_AUDIENCE_FLOOR and audience_a['confidence'] >= DOMAIN_AUDIENCE_FLOOR else 'not trusted'}" if domain_a else "budget exhausted before this call")
     trusted = (domain_a and audience_a and domain_a["confidence"] >= DOMAIN_AUDIENCE_FLOOR
                and audience_a["confidence"] >= DOMAIN_AUDIENCE_FLOOR)
-    progress(f"domain/audience: {'trusted' if trusted else 'not trusted'} "
+    progress(f"  -> domain/audience: {'trusted' if trusted else 'not trusted'} "
              f"({domain_a['choice'] if domain_a else '?'}, {audience_a['choice'] if audience_a else '?'})")
+    active_probes = sorted(((k, v) for k, v in profile.items() if v is not None and v >= 0.6), key=lambda kv: -kv[1])
+    progress(f"  -> profile: {', '.join(f'{k} ({v:.2f})' for k, v in active_probes) or 'nothing scored >= 0.6'}")
 
     # 2. Expand with world-knowledge metadata (no call -- a lookup).
     enrich = world["domain_enrichment"].get(domain_a["choice"]) if (domain_a and trusted) else None
@@ -312,17 +376,33 @@ def main():
                     riskiest_journey_stage=enrich["riskiest_journey_stage"])
     else:
         enriched_state = base_state
-        ledger.emit(type="enrichment", domain=domain_a["choice"] if domain_a else None, applied=False,
-                    reason="domain/audience not trusted" if not trusted else "no domain_enrichment entry")
-    progress(f"enrichment: {'applied' if enrich else 'skipped'}\n")
+        reason = "domain/audience not trusted" if not trusted else "no domain_enrichment entry"
+        ledger.emit(type="enrichment", domain=domain_a["choice"] if domain_a else None, applied=False, reason=reason)
+    progress(f"  -> enrichment: {'applied' if enrich else f'skipped ({reason})'}\n")
 
     # 3-5. Classify -> recurse into whatever's selected -> stop at no-further-level or budget --
-    # one tree, one function, from the 12 gap categories all the way down.
+    # one tree, one function, from the gap categories all the way down. Selection is Composite
+    # Scoring (own score + profile boost); recursion inside a selected branch carries that
+    # branch's boosted-or-not status all the way down as a second confidence-gating signal.
+    progress("TOOL: Slicer.gap_categories (one noul per category, all fanned into one call, Composite Scoring)")
     tree = build_tree(world)
-    selected = classify_root(tree, enriched_state, budget, world, ledger, progress)
-    progress(f"gap categories: top {GAP_TOPK} of {len(tree)} selected (budget spent: {budget.spent}/{budget.limit})")
-    for node in selected:
-        walk(node, [node["id"]], [], enriched_state, budget, ledger, progress, depth=0, max_depth=a.max_depth)
+    selected = classify_root(tree, enriched_state, budget, world, ledger, progress, profile)
+    tools_used["Slicer.gap_categories"] = (bool(selected) or budget.spent > 0, f"selected {len(selected)} of {len(tree)} by composite score")
+    progress(f"  -> top {GAP_TOPK} of {len(tree)} selected by composite score (budget spent: {budget.spent}/{budget.limit})")
+
+    progress("TOOL: Grinder.atomic-threshold (one fanned call per node, per selected branch)")
+    nodes_walked = 0
+    for node, is_boosted in selected:
+        before = budget.spent
+        walk(node, [node["id"]], [], enriched_state, budget, ledger, progress, depth=0,
+             max_depth=a.max_depth, boosted=is_boosted)
+        nodes_walked += budget.spent - before
+    tools_used["Grinder.atomic-threshold"] = (nodes_walked > 0, f"{nodes_walked} node classifications across {len(selected)} branches" if selected else "no branches selected to walk")
+
+    progress("\nTOOLS USED THIS RUN")
+    for tool, (ran, note) in tools_used.items():
+        progress(f"  {'✓' if ran else '✗'} {tool}: {note}")
+    progress("  ✗ Sorter / Conveyor / Spotlight: not run by this script -- run sort_and_rank.py next")
 
     ledger.emit(type="run_end", budget_spent=budget.spent, budget_limit=budget.limit)
     ledger.close()

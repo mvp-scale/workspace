@@ -26,7 +26,11 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "demo"))
 import funnel  # noqa: E402
 
-MODELS = ["semif", "kev-4b", "so1"]  # same corrected set as layered_walk.py -- see its own comment
+LOCAL_MODELS = ["semif", "kev-4b", "so1", "laya", "verdict"]  # "jev" (hosted) is deliberately not
+                                                                # a valid choice -- cannot run from
+                                                                # a script, confirmed this session.
+MODELS = ["semif", "kev-4b", "so1"]  # same corrected default as layered_walk.py; overwritten by
+                                       # --models in main()
 
 
 def load_ledger(idea):
@@ -62,10 +66,14 @@ def by_risk_tier(pieces, results):
 
 
 def main():
+    global MODELS
     ap = argparse.ArgumentParser()
     ap.add_argument("--idea", required=True)
     ap.add_argument("--bouncer", default="reasonable", choices=list(funnel.BOUNCER_VARIANTS))
+    ap.add_argument("--models", nargs="+", default=MODELS, choices=LOCAL_MODELS,
+                     help="which local model(s) to use -- match what layered_walk.py used for this ledger if you want an apples-to-apples run.")
     a = ap.parse_args()
+    MODELS = a.models
 
     records = load_ledger(a.idea)
     meta = next(r for r in records if r["type"] == "run_meta")
@@ -74,8 +82,11 @@ def main():
         print(f"No atomic requirements in this ledger yet -- nothing for Sorter to score. Run layered_walk.py --idea {a.idea} again, or build more gap_category_detail libraries.")
         return
 
-    print(f"Scoring {len(pieces)} atomic requirement(s) live -- {len(pieces)} pieces x {len(MODELS)} models x 1 call each (bounce+weigh+resource fanned together)...")
+    tools_used = {}  # tool.variant -> (ran: bool, note: str) -- printed as an honest accounting at the end
+
+    print(f"TOOL: Sorter.scoring_primitive (bounce+weigh+resource fanned together, {len(pieces)} pieces x {len(MODELS)} models)")
     results = funnel.bounce_and_weigh(meta["idea"], pieces, MODELS, a.bouncer)
+    tools_used["Sorter.scoring_primitive"] = (True, f"scored {len(pieces)} pieces, bouncer variant '{a.bouncer}'")
 
     print(f"\nSORTER -- scored, bouncer variant '{a.bouncer}'")
     rows = []
@@ -98,29 +109,38 @@ def main():
         t = t if len(t) <= w else t[:w - 3] + "..."
         print(f"{t:<{w}}  {r['supported_p']:>9.2f}  {r['risk']:>6.2f}  {r['effort']:>6.2f}  {r['disagreement']:>8.2f}")
 
-    print("\nSORTER.by-risk-tier (grouping)")
+    print("\nTOOL: Sorter.by-risk-tier (grouping, deterministic, no live call)")
     tiers = by_risk_tier(pieces, results)
     for tier, items in tiers.items():
         print(f"  {tier}: {len(items)}")
         for p, risk in items:
             print(f"    - [{risk:.2f}] {p['text'][:80]}")
+    tools_used["Sorter.by-risk-tier"] = (True, f"{sum(len(v) for v in tiers.values())} pieces grouped into 3 tiers")
+    tools_used["Sorter.by-domain / by-audience / by-layer / by-phase"] = (False, "not run -- need per-piece domain/audience/layer/phase tags that nothing currently sets (by-domain classifies the whole idea, not each requirement)")
 
-    print("\nCONVEYOR.risk-first (sequence groups, highest risk first -- ignores dependency, none exists)")
+    print("\nTOOL: Conveyor.risk-first (sequence groups, highest risk first -- ignores dependency, none exists)")
     for tier in ["must-resolve-first", "worth-checking", "low-stakes"]:
         if tiers[tier]:
             print(f"  {tier} ({len(tiers[tier])})")
-    print("CONVEYOR.dependency-order / parallel-lanes: BLOCKED -- depends_on is empty for every piece, no inference built.")
-    print("CONVEYOR.duration-weighted / critical-path: NOT ATTEMPTED -- no real duration source exists; not faking one.")
+    tools_used["Conveyor.risk-first"] = (True, "sequenced by Sorter's risk tiers")
+    tools_used["Conveyor.dependency-order / parallel-lanes"] = (False, "BLOCKED -- depends_on is empty for every piece, no inference built")
+    tools_used["Conveyor.duration-weighted / critical-path"] = (False, "NOT ATTEMPTED -- no real duration source exists; not faking one")
 
-    print("\nSPOTLIGHT -- five variants, same inputs, different sort key")
+    print("\nTOOL: Spotlight (risk-plus-disagreement, disagreement-only, risk-only -- three of five variants)")
     def show(label, key_fn):
         ranked = sorted(rows, key=key_fn, reverse=True)
         print(f"  {label}: " + ", ".join(r["piece"]["text"][:40] for r in ranked[:3]) + (" ..." if len(ranked) > 3 else ""))
     show("risk-plus-disagreement (default)", lambda r: r["risk"] + r["disagreement"])
     show("disagreement-only", lambda r: r["disagreement"])
     show("risk-only", lambda r: r["risk"])
-    print("  downstream-impact: BLOCKED -- needs depends_on, none exists.")
-    print("  audience-weighted: BLOCKED -- needs a per-piece audience tag; by-domain classifies the whole idea, not each piece.")
+    tools_used["Spotlight.risk-plus-disagreement / disagreement-only / risk-only"] = (True, f"ranked {len(rows)} pieces, 3 sort keys")
+    tools_used["Spotlight.downstream-impact"] = (False, "BLOCKED -- needs depends_on, none exists")
+    tools_used["Spotlight.audience-weighted"] = (False, "BLOCKED -- needs a per-piece audience tag; by-domain classifies the whole idea, not each piece")
+
+    print("\nTOOLS USED THIS RUN")
+    for tool, (ran, note) in tools_used.items():
+        print(f"  {'✓' if ran else '✗'} {tool}: {note}")
+    print("  (Slicer and Grinder ran in layered_walk.py, the previous command -- not repeated here.)")
 
 
 if __name__ == "__main__":
