@@ -26,9 +26,11 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "demo"))
 import funnel  # noqa: E402
 
-LOCAL_MODELS = ["semif", "kev-4b", "so1", "laya", "verdict"]  # "jev" (hosted) is deliberately not
-                                                                # a valid choice -- cannot run from
-                                                                # a script, confirmed this session.
+ALL_MODELS = ["semif", "kev-4b", "so1", "laya", "verdict", "jev"]  # same as layered_walk.py --
+                                                                     # no code-level exclusion of
+                                                                     # jev; funnel.bounce_and_weigh
+                                                                     # already calls server.call the
+                                                                     # same way for every backend.
 MODELS = ["semif", "kev-4b", "so1"]  # same corrected default as layered_walk.py; overwritten by
                                        # --models in main()
 
@@ -65,15 +67,38 @@ def by_risk_tier(pieces, results):
     return tiers
 
 
+def parse_models(spec):
+    """Same convention as layered_walk.py's --models: comma-separated P-numbers and/or raw
+    backend ids, e.g. --models P0,P1 or --models jev,semif."""
+    p_to_model = {p: m for m, p in funnel.MODEL_P.items()}
+    result = []
+    for token in spec.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        if token in p_to_model:
+            result.append(p_to_model[token])
+        elif token in ALL_MODELS:
+            result.append(token)
+        else:
+            sys.exit(f"unknown model '{token}' -- use a P-number ({', '.join(sorted(p_to_model))}) or a backend id ({', '.join(ALL_MODELS)})")
+    if not result:
+        sys.exit(f"--models '{spec}' resolved to no models")
+    return result
+
+
 def main():
     global MODELS
     ap = argparse.ArgumentParser()
     ap.add_argument("--idea", required=True)
     ap.add_argument("--bouncer", default="reasonable", choices=list(funnel.BOUNCER_VARIANTS))
-    ap.add_argument("--models", nargs="+", default=MODELS, choices=LOCAL_MODELS,
-                     help="which local model(s) to use -- match what layered_walk.py used for this ledger if you want an apples-to-apples run.")
+    ap.add_argument("--models", default=None,
+                     help="comma-separated P-numbers or backend ids, jev included -- e.g. "
+                          "--models P0,P1. Match what layered_walk.py used for this ledger if "
+                          "you want an apples-to-apples run.")
     a = ap.parse_args()
-    MODELS = a.models
+    if a.models:
+        MODELS = parse_models(a.models)
 
     records = load_ledger(a.idea)
     meta = next(r for r in records if r["type"] == "run_meta")

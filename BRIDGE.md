@@ -1,131 +1,220 @@
 # BRIDGE: where we are, for the next session
 
-Updated 2026-09-22. Read `CLAUDE.md` too (commands, architecture, gotchas); this file is the narrative and the next task. `START.md` has the run and measure commands.
+Updated 2026-09-22 (foundry session). Read `CLAUDE.md` too. This file is the narrative and the
+next task. The active thread is `/workspace/foundry` — a live, tool-driven idea-decomposition
+pipeline. The Scenario lab work (`demo/scenarios.html`) is a separate, still-paused thread; see the
+bottom of this file. Don't touch it unless asked.
 
 ## Starter prompt for the next session (paste this)
 
 ```
-Read /workspace/BRIDGE.md and /workspace/foundry/README.md first. Then verify the state before touching anything:
-`demo/lineup.sh status`, `git status`, and confirm the loaded local models (kev-4b, semif, so1, laya, verdict) are up
--- foundry's live calls depend on them. Report in a few lines what's loaded and whether the tree is clean.
+Read /workspace/BRIDGE.md and /workspace/foundry/README.md first, in that order. The active
+thread is /workspace/foundry. Read foundry/README.md's "one rule that matters most" before
+touching anything -- you author exactly the idea+customer intake and fixed, generic, reusable
+candidate library content, nothing idea-specific, ever. Everything else has to come from live
+TypeSafe calls against the loaded local models (or, now, optionally the hosted model -- see
+below).
 
-The active thread is /workspace/foundry -- a live, tool-driven idea-decomposition pipeline. Read foundry/README.md's
-"the one rule that matters most" before doing anything else: you author exactly two things, an idea and an ideal
-customer/user, nothing else -- every piece of an actual decomposition has to come from the tools running live, never
-from you writing plausible content and slotting it in as if the tools produced it. This was violated repeatedly in the
-session that built this before being understood properly; don't repeat it.
+Verify state first: `demo/lineup.sh status` (loaded local models), `cd foundry && git status`
+(check for the two files this session left with uncommitted local edits -- see "Git state"
+below), and run the three-command pipeline yourself once to confirm it still works:
+    python3 layered_walk.py --idea oncall-rotation --budget 80
+    python3 report.py --idea oncall-rotation
+    python3 sort_and_rank.py --idea oncall-rotation
+Report in a few lines what's loaded and whether it ran clean before doing anything else.
 
-Open, unresolved question to resolve first (see foundry/README.md's "oncall-rotation" section): a recursive Grinder
-walk on the oncall-rotation idea's single-point-of-failure branch left 7 of 8 leaf checks stuck at "needs further
-splitting, no deeper library" under the current 0.6 atomic threshold. Look at those 7 stuck requirement texts and
-judge: do they already read as good, actionable atomic requirements (threshold's too strict), or do they genuinely
-need a Level 3 built under them? Ask the user before building more library content either way.
+This session (the one that wrote this file) fixed a long chain of real bugs in the pipeline --
+polarity contradictions, a wrongly-excluded model, a magic threshold that only worked for one
+model combination, a flat floor that silently selected nothing against a different model's score
+scale -- see "Fixed this session" below before assuming anything numeric here is still right for
+whatever model combination you're using. The user wants this handed to a Fable-run planning pass
+next: the real, substantial gaps are concentrated in tools/*.yaml and tools/world-knowledge.yaml
+(see "Real gaps, prioritized" below) -- that's the brief to plan against, not a request to
+mechanically start filling them in.
 
-The Scenario lab task (demo/scenarios.html, see docs/scenario-lab-plan.md) is still queued but paused this session --
-don't pick it up unless asked.
-
-Working pattern: once the end state for a piece of work is clear and agreed, run it yourself and report when it's
-ready -- don't hand over commands that have no real decision point left in them. While something is still being
-decided (a threshold, a library's shape, whether an approach is right), let the user run it themselves if they want
-to see it directly, rather than running ahead of them.
-
-Constraints: no spending on the hosted model (JEV113/P0) from any script, ever -- the environment's permission
-classifier blocks it outright, not just convention. Never restart demo/server.py while an experiment runs through it.
-Timeout on every wait and check `ps` afterwards. Commit locally with the Co-Authored-By trailer (there is no remote).
+Constraints, unchanged: no hosted-model spend from any script's own environment (P0/jev requires
+the person to `set -a; . /workspace/.env; set +a` in THEIR OWN shell before running a script from
+it -- never read or paste the key yourself; see "Hosted Jev" below for what's now actually
+possible). Never restart demo/server.py while an experiment runs through it. Timeout on every
+wait, check `ps` afterward. Commit locally with the Co-Authored-By trailer -- note: this
+environment appears to auto-commit periodically (see "Git state"); don't assume nothing is saved,
+but don't rely on it either.
 ```
 
-## Git state (read this first)
+## Git state
 
-- `/workspace` is a small git repo with **local commits only. There is no remote; nothing has been pushed.** `git log` is the history. Tracked: `setup.sh`, `CLAUDE.md`, `BRIDGE.md`, `START.md`, `docs/`, `demo/`. The nested repos `kev/`, `jeff/`, `jevbench/` and `data/`, `models/`, `logs/`, `.env` are git-ignored. `research/` (a clone of mrmps/classifier-dev plus notes) is untracked on purpose.
-- Before any push: `probes/v2/` contains licensed third-party data (OWASP Benchmark GPL-2.0, dark-patterns repo GPL-3.0, MentalManip CC BY-NC, LOGIC no declared licence). Each set's `.md` records its licence.
-- Author identity is set globally to `corey <test@Test.com>`.
+`/workspace` is a small git repo, local commits only, no remote. `foundry/` is tracked (unlike
+`data/`, `models/`, `logs/`, `.env`, `research/`). This session observed the environment
+auto-committing periodically without an explicit `git commit` being run (commits `75b6bac`,
+`6e2494e` both landed mid-session, matching real work, not something this session's user or
+assistant triggered directly) — reassuring, but don't rely on it as a substitute for committing
+before ending a session. **As of this file being written, `foundry/layered_walk.py` and
+`foundry/sort_and_rank.py` have local, uncommitted edits** (the `--models` flag and the
+child-selection top-k fix, both described below) — commit those before trusting anything else has
+definitely landed.
 
-## What exists
+## Foundry: the guide
 
-A six-page local console at `http://127.0.0.1:8100` (`set -a; . ./.env; set +a; python3 demo/server.py`, stdlib only) for typed decision models: a model gets a state plus typed questions (noul, choice, score) and returns a probability per option.
-
-| Page | Purpose |
-|---|---|
-| `/` Leaderboard | public JevBench tiers, measured GPU memory, planner, answer agreement |
-| `/compare` Baseline compare | one question to every loaded model (its Run includes the hosted model: never run it in tests) |
-| `/scenarios` Scenario lab | accuracy, pair accuracy, calibration and risk-coverage on 15 published labelled sets; **the next task** |
-| `/flow` Conversation flow (was Cockpit) | the reworked call view: voices, detectors, coaching, cue cards, heat strip; described in CLAUDE.md. Detectors show only at or above the minimum threshold and fade without support |
-| `/models` How they work | explainer of the techniques |
-| `/report` Report | computed benchmark report |
-
-Shared layer: `demo/static/app.css` (tokens), `demo/static/app.js` (`window.Jev`: `el`, `mount`, `tag`, `codeOf`, `modelSelect`, `ready`, status panel). Pages build DOM with `Jev.el` and `textContent`, never `innerHTML` with data. Each page is one file. Console cleanup candidates (redundant pages, per-page style blocks, a dead `/api/results`, retired ids in `index.html`) are listed in the last message of the 2026-09-22 session and in "Cleanup" below.
-
-## Models and naming (important)
-
-One registry: `demo/models.json`. Stable ids (leaderboard ids) map to six-character codes shown everywhere through `Jev.tag(id)` / `Jev.codeOf(id)`; never print a raw id. Codes: JEV113 (hosted Jev, id `jev`), SEMIF4 (`semif`), OAJEV4 (`so1`, open-alternative-jev), KEV4B, KEV8H, KEV5H, JEFF4H, LAYA4H, VERD2H. Rule: family letters + size, B = billions of parameters, H = hundreds of millions.
-
-Loaded now (systemd, `demo/lineup.sh install|up|down|status`; kev-4b must start first, its load spike is ~17 GiB): KEV4B :8010 (bf16 through `demo/serve_kev.py`), SEMIF4 :8012, OAJEV4 :8013, LAYA4H :8014, VERD2H :8015 (CPU). About 30 of 31.8 GiB used. KEV8H, JEFF4H, KEV5H are **not loaded** (the old `kev`, `kev-proxy`, `jeff` services were disabled); their stored results remain. `/api/status` reports live state, real identity (asked of the running server) and GPU memory per process.
-
-SEMIF4/OAJEV4/LAYA4H/VERD2H are served by `demo/serve_inproc.py`, a stdlib server wrapping the same jevbench adapters that produced their benchmark numbers (live vs stored answers matched exactly on the items checked).
-
-## Findings worth remembering
-
-- On **published** labelled data (`probes/v2/`, 15 sets, ~1,400 items) mean accuracy: Jev 76.5%, SemIf 67.5, kev-4b 66.8, open-alt-jev 64.8, Laya 58.4, kev-0.8b 56.9, jeff 51.5, kev-0.5b 50.6, Verdict 46.7. My earlier hand-written probes were far too easy (>90%); ignore them.
-- SemIf is #2 on the public leaderboard but weak on memory-safety *pairs* (5% pair accuracy): it is not reading the code. Jev 66%.
-- Jev's confidence is usable for routing (accepting >=0.9 gives ~91% accuracy on half the items); small models' confidence is not.
-- kev serves fp32 by default (kev-4b 17 GiB). `KEV_DTYPE=bf16` gave the same accuracy on 372 items (97-100% identical answers) and, launched through `serve_kev.py`, needs 8.5 GiB loaded / 9.8 peak.
-- Window study (200 real MentalManip dialogues, manipulation only, dialogue-level labels): last 5 words / 1 sentence are weakest (AUC ~0.60-0.64); ~20-40 words, 2 sentences or 2-3 turns are best (0.67-0.70); "everything so far" adds nothing. Results in `data/window-study/`.
-- Cost: a 9-question checkpoint is ~1,450 input tokens on hosted Jev whether the window is 10 or 40 words (question text dominates); the levers are checkpoint count and question count. Tariff $0.042 per million input tokens.
-
-## THE NEXT TASK: build out the Scenario lab
-
-Full plan: `docs/scenario-lab-plan.md` (18 items, decisions needed at the end). Summary of what the user wants:
-
-**Principle (user's words, paraphrased): every test the lab defines must be runnable on every loaded model.** Two run paths:
-1. **Offline runner.** A script that goes through sets and structures one model at a time with the full GPU (stop the other services first with `demo/lineup.sh down`; running several together caused CUDA OOM on the hard tier), writes per-item records, is resumable and skips finished runs, and never touches `data/bench/` (the leaderboard averages it). Probe runs live in `data/probe-runs-v2/`; `demo/bench.sh` and `demo/bench-batch.sh` are the existing pattern. Check `results.jsonl` for failed items after every run: a server still loading gives silent 0%.
-2. **Live path.** Some tests must run live in the page against loaded local models via `/api/batch` (cached, capped at 400 items, hosted model costs money, confirm in the UI). Batch-size, cascade and decompose-and-loop tests are the natural live ones.
-
-**Keep as the template every set follows (user: "paramount to be consistent"):** the decomposition, the model comparison and model selection, the graphs and charts, the worked example of what actually happened, and the item explorer. Confirm with the user exactly which existing pieces they mean by "decomposition" (the per-set breakdown by pair/group, or the decompose-and-loop test in the plan). Existing set page sections: model comparison, "Does confidence mean anything?" calibration, examples. Do not redesign these; build new sets and structures so they drop into them.
-
-**Hierarchy (proposed, agreed in outline):** Overview heat map (models x sets, numberless, 7-step scale, numbers in tooltips; already built) -> Families (Security, Conversation flow, Reasoning and looping, Subtext, Fraud, Documents, Emotion and persuasion) -> Set page (header with source/licence/caveats/n/classes/chance; results heat strip per model that expands to intervals; confidence; cost and baseline; item explorer). **Structures** (single decision, batch, cascade, funnel, decompose-and-loop, blind run) are tags on a set, not a second navigation tier (recommended; the user has not ruled).
-
-**Structures, in the user's terms:** *batch performance* (not "batteries"): one state with 5, 10, 20, 40, 80, 160 questions; record latency per answer, accuracy, and where the context limit or question cap bites; local models first, hosted only after approval. *Funnel*: atomic questions rolled up into a Monte Carlo forecast with sensitivity (needs labelled outcomes; correlations between atoms must be handled or tested). *Decompose and loop*: score the whole, split into halves/sentences/turns, recurse into pieces above threshold; keep the whole-text score. *Cascade*: cheap model first, escalate below a confidence threshold. *Blind run*: fixed seed, sealed key file, n of 60-100, grades revealed afterwards. Every claim needs a baseline (generative LLM or single question) on the same items with intervals.
-
-**New sets:** each is a seeded `probes/v2/build_*.py` from a published dataset -> `.jsonl` + `.md` (source, licence, label caveats). Candidates: Gretel PII, ABCD support escalation, ProsocialDialog, toxicity, negotiation, CUAD. Check outbound access to Hugging Face and GitHub first (never verified from this box).
-
-**Open decisions for the user:** first family and structure; overview orientation (models across the top and sets down as rows, expandable); family names; structures as tags vs tier; whether the empty family header strip gets labels or is removed.
-
-**Known ceilings:** demo server 400 items per batch; Beam-hosted models 32 questions per request; Laya state plus question within 512 tokens; KEV4B answers 1 to 8 questions in about 60 ms total while SEMIF4 costs about 60 ms per question (serial under a lock).
-
-**Model lineup facts:** upstream has moved on (JevBench v1.3.0 changes scoring; SemIf/OpenJev added CPU, EXL3 and calibration; new systems Winnow-12B Q8, reflex 4B, Open-Jev 2B/9B, djev). Nothing was pulled. Decide before re-scoring.
-
-## Cleanup (asked for: after the lab, remove redundancy)
-
-Text windows and Call monitor pages removed; Cockpit renamed to Conversation flow (`/flow`). Remaining candidates: `demo/mockups/` (superseded by `/flow`; committed, recoverable), per-page `<style>` blocks (flow.html 165 lines, scenarios ~120) that belong in `app.css`, `/api/results` in `server.py` unused, `index.html` still lists retired `jeff`, `kev-0.5b`, `kev-0.8b`, `/api/speeches` and `/api/window-study` now unused now that Text windows is gone (still read by `/flow`, check before removing). Ask before deleting.
-
-## Done recently
-
-Conversation flow (`/flow`, was Cockpit) built and wired to the local models (measured on unseen dialogues: KEV4B check lag p50 65 to 123 ms, keeps up at 30x; SEMIF4 p50 about 265 ms, keeps up to 4x). Scenario lab: set list names only, numberless 7-step heat map. Research: `research/classifier-dev-notes.md` (classifier.dev is a wrapper around Jev, Laya and Kev on Beam; no model of its own).
-
-**2026-09-21/22 session:** Removed Text windows (`/windows`) and Call monitor (`/stream`); Cockpit renamed to Conversation flow (`/flow`). Built the first structure, **batch performance** (`probes/lab_batch.py`, `/api/batch-perf`, a "Batch performance" entry in the lab under a new Structures rail section): one state, N filler questions added to the one labelled question (sizes 1-160), scored on the labelled question only, resumable, one model at a time with the full GPU, never touches `data/bench/`. On 40 manipulation-dialogue items: KEV4B, SEMIF4, OAJEV4 and VERD2H hold flat accuracy from 1 to 160 questions/state (latency scales roughly linearly with size); LAYA4H's latency *drops* sharply at 160 questions, consistent with its 512-token limit truncating most of the added filler questions rather than processing them (worth a real check, not just an inference). Also restyled the lab's rail into Overview/Structures/Sets sections with icons, a divider, and a stronger current-item highlight; fixed the mobile dropdown, which was missing the Structures entry. Gotcha confirmed the hard way: the `demo/lineup.sh`-installed inproc services (`semif`, `so1`, `laya`, `verdict`) have `ExecStartPre` wait on kev-4b being up on :8010 — if kev-4b is stopped, those services hang "activating" forever with the GPU idle; run them directly (`.venv/bin/python demo/serve_inproc.py --model <m> --port <port>`) when kev-4b isn't loaded.
-
-**2026-09-22 session (separate thread, Scenario lab untouched): built `/workspace/foundry`,** a live idea-decomposition pipeline, from scratch. Started as a CLI prototype exploring a factory-themed tool vocabulary (Slicer/Grinder/Sorter/Conveyor/Spotlight, capped at 5 tools x 5 variants by explicit request), but the real work of the session was methodological: repeatedly writing hand-authored decomposition content and having it correctly called out as invalid — first for authoring an idea and its pieces together in one pass (proves nothing about decomposition quality), then for authoring "neutral" pieces that still embedded a specific solution design instead of a real decomposition. The fix that actually works: a fixed, generic, reusable candidate library (`tools/gap-library.yaml`, 12 categories, plus a nested per-category library for deeper levels) that gets *selected from live*, per idea, via real noul calls to the loaded models — Claude authors the library once (generic, front-loaded, fine) and the two-question intake per idea (idea + customer, also fine), nothing else. `slicer_live.py` (Level 0 selection) and `grinder_live.py` (recursive, budget-capped, breadcrumb-accumulating) both work end to end on a real worked example (`oncall-rotation`). Full state, the one hard rule, and the open unresolved question (is the current atomic threshold too strict, or does the tree need another level) are in `foundry/README.md` — read that before touching foundry again. All 5 of the original hand-authored example problems were moved from `foundry/problems/` to `foundry/ideas/` (stripped of their invalid pieces) during end-of-session cleanup; only `oncall-rotation` is a validated, live-produced decomposition.
-
-## Gotchas learned the hard way
-
-- **Never restart `demo/server.py` while an experiment runs through it** (`probes/window_study.py` dies; results are cached in server memory only).
-- After starting/restarting a model server, **check `results.jsonl` for failed items**: a server still loading produces silent 0% runs.
-- One heavy model at a time when benchmarking on the GPU; running several together caused CUDA OOM.
-- Sub-agents can leave orphaned wait loops (`until grep ...; do sleep`); tell them to use `timeout` on every wait and check `ps` afterwards.
-- The environment's permission classifier **blocks spending on the hosted backend from scripts**. Hosted runs are for the user to confirm in the UI (Play/Run twice); tests should use a loaded local model (SEMIF4, KEV4B).
-- Do not run the Baseline compare "Run" in tests: it includes the hosted model.
-- kev-4b's GPU memory grows as it warms (8.5 to 9.6 GiB); only ~1.7 GiB is spare, so do not load anything else.
-- Playwright/Chromium used for visual checks lived in the previous session's scratchpad; reinstall in the new one (`python3 -m venv pw && pw/bin/pip install playwright && PLAYWRIGHT_BROWSERS_PATH=... pw/bin/playwright install --with-deps chromium`). There is no browser otherwise.
-- **`foundry/`: never hand-author decomposition content, not even "neutral" pieces** — the fix is a generic, reusable candidate library selected live, not more careful writing by hand. See `foundry/README.md`'s "the one rule that matters most."
-- **`foundry/`: a Bouncer/noul question's exact wording changes the answer distribution more than the model does.** "True today, without further verification" collapses almost every forward-looking claim toward 0 regardless of model; "a reasonable assumption to build on" doesn't. Always note which phrasing produced a given number before drawing a conclusion from it.
-- **`foundry/`: model output tables must use the P0-P5 mapping, stated once, never a raw model code or name after that** — caught as a real bug (`render_table` reverted to codes after the legend), not just a style preference.
-
-## Useful commands
-
+Three commands, always, from `/workspace/foundry`:
+```bash
+python3 layered_walk.py --idea <id> --budget 80      # Slicer + Grinder, writes a ledger
+python3 report.py --idea <id>                          # renders the ledger as tables
+python3 sort_and_rank.py --idea <id>                    # Sorter + Conveyor + Spotlight on it
 ```
-demo/lineup.sh status                       # loaded lineup
-curl -s localhost:8100/api/status           # live state, identity, GPU per model
-python3 probes/report_v2.py                 # accuracy/calibration over published sets
-python3 probes/window_study.py --backend kev-4b   # window study (server must stay up)
-python3 demo/vram.py                        # measure GPU memory (stop servers first)
-```
+`--models` on either of the first and third: comma-separated P-numbers or backend ids, e.g.
+`--models P1` (one local model), `--models P0,P1` (hosted + one local), default `P1,P2,P3`
+(semif/kev-4b/so1 — see "Model selection" below for why those three specifically).
+
+**Tool guide** (5 tools; full detail in `tools/README.md`):
+
+| Tool | Job | Live? |
+|---|---|---|
+| Slicer | domain/audience + 10-probe tech-context pre-scan (1 call) → Composite-Scoring-ranked top-k of 33 gap categories (1 call) | yes, `by-domain` variant only — 4 other designed variants never run |
+| Grinder | recurse each selected category's library to atomic requirements | yes — top-k child selection (see "Fixed this session"), only 25/33 categories have a library to recurse into |
+| Sorter | score each requirement (risk/effort), group by risk tier | yes, scoring + `by-risk-tier`; 4 other grouping variants blocked (no per-piece tags exist) |
+| Conveyor | sequence groups | `risk-first` only; dependency/duration variants blocked (no data source) |
+| Spotlight | rank what to check first | 3 of 5 variants live; 2 blocked (same missing-data reasons) |
+
+Both scripts print `TOOL:` before each real invocation and end with a **TOOLS USED THIS RUN**
+block naming anything that didn't run and why — read that before assuming a run was complete.
+
+**Model selection**: default is P1/P2/P3 (semif/kev-4b/so1), grounded in `probes/report_v2.py`'s
+already-validated measurement (1,437 real items, 15 published sets) — not a guess. An earlier
+version of this session excluded P3 instead, based on a small in-session diagnostic that
+generalized too far from one question's wording; that was wrong and got corrected. laya (P4,
+56.9% accuracy) and verdict (P5, 46.7%, near-zero calibration gap) are the ones actually excluded
+by default.
+
+**Hosted Jev (P0)**: confirmed working this session, run by the user directly in their own
+terminal with `.env` sourced first (`set -a; . /workspace/.env; set +a`) — the code has no
+special-case exclusion of `jev`, it's just another entry in `ALL_MODELS`. From a Claude-run Bash
+tool call, it fails clean with `"TYPESAFE_API_KEY not set"` (no key in that shell's environment) —
+this is not a permission block on the call itself, just no credential present; reading whether the
+key exists at all (e.g. `cat .env`) **is** a real, harness-level block (hit directly this session)
+and should not be retried. Never read or relay the key through chat.
+
+## Fixed this session (condensed — read before touching any threshold or model list)
+
+- **`slicer.yaml` didn't parse as YAML at all** (a plain multi-line scalar broke mid-file) and
+  **`world-knowledge.yaml`'s `domain_enrichment` had silently collapsed into one string** instead
+  of staying queryable data (a `>` block scalar swallowed a whole mapping). Both fixed; every yaml
+  file in `tools/` should be re-parsed after any edit, not just visually reviewed — this exact
+  class of bug happened twice.
+- **The pipeline's actual output was self-contradictory for three hours**: `gap_categories` text
+  was problem-polarity ("depends on one person, no backup"), `gap_category_detail` text was
+  solved-state polarity ("a backup already exists") — breadcrumb concatenation joined them into
+  literal contradictions. Fixed by rewriting `gap_categories` to solved-state polarity. Any new
+  library content must match this polarity, and must not join two claims with "and"/"or" in a leaf
+  (also a real, separately-caught bug).
+- **P3 (so1) was wrongly excluded**, based on a 10-statement in-session diagnostic generalized too
+  far from one question's wording. `probes/report_v2.py`'s real measurement says the opposite:
+  laya and verdict are the weak pair, P1/P2/P3 are comparable and reasonably calibrated. Corrected.
+- **`ATOMIC_THRESHOLD` went 0.6 → 0.75 → 0.18** across this session, each a guess before the last
+  one — landed on 0.18 via an actual controlled diagnostic (5 known-atomic vs 5 known-compound
+  control statements) against the corrected P1/P2/P3 set specifically. **This number is
+  model-combination-specific and has not been re-diagnosed for any other `--models` choice**,
+  including hosted P0 — a real open item, not a solved one.
+- **A node with children was structurally guaranteed to be a category** (that's why it was given
+  children when the library was authored) **but a live score alone could still label it "atomic"
+  and skip its own children** — the actual root cause of an early false-positive result. Fixed:
+  only true leaves (no children) can ever terminate a branch as atomic now, regardless of score.
+  This mattered more than any threshold value.
+- **`CHILD_RELEVANCE` was a flat 0.6 floor, never actually diagnosed against real data** (unlike
+  `ATOMIC_THRESHOLD`). A real run against hosted P0 scored every child across four branches
+  0.15–0.45 — nowhere near the floor — so nothing recursed, silently. Replaced with top-k
+  selection (`CHILD_TOPK_BOOSTED=3`, `CHILD_TOPK_NORMAL=1`), the same fix already proven at Level 0
+  (`GAP_TOPK`) for the identical failure mode. **These top-k numbers are a first attempt, not
+  diagnosed** — same open-item caveat as `ATOMIC_THRESHOLD`.
+- **`slicer_live.py`, `grinder_live.py`, `loop.py` deleted** (385 lines) — an Opus end-to-end
+  review found them fully superseded by `layered_walk.py` and running on the polarity-broken
+  content above. `layered_walk.py` is now one recursive loop (`walk`) over one merged tree with a
+  virtual root (`build_tree`) — classify → expand (world-knowledge lookup) → recurse into what's
+  selected → stop at no-further-level or a real, enforced call budget (`Budget` class, not just a
+  depth limit).
+- **`funnel.py` (Sorter/Conveyor/Spotlight) was never connected to the new pipeline** — it only
+  ever read `problems/*.json`; `layered_walk.py` writes to a ledger instead. `sort_and_rank.py`
+  bridges them, reusing `funnel.py`'s scoring code unmodified.
+- **Speculative Fan-Out pre-scan + Composite Scoring added**: `tools/world-knowledge.yaml`'s
+  `profile_probes` (10 generic, reusable tech-context questions — sensitive data, external
+  integration, real-time latency, financial, regulated industry, multi-tenant, offline, mobile,
+  scale, change-frequency) are fanned into the same call as domain/audience. Each category's
+  selection score is `0.7 * own gap-check score + 0.3 * profile boost` (which probes list that
+  category in their `boosts`), not the raw score alone — confirmed live to correctly surface
+  `nonfunctional-performance` for the on-call idea's actual 5-minute SLA. **The 10 probes and
+  their boost mappings are Claude-authored, generic, never independently validated** — same
+  honesty flag as everything else in this file, explicitly unverified.
+- **A 21-category / 90-leaf requirement-shaped library was added** (functional, non-functional,
+  architectural, user-story, technical-spec, operational — matching real SRS/backlog/arc42
+  register, not the original 12's generic "is this a gap" audit-checklist tone). Built via a
+  Workflow (6 Sonnet + 6 Haiku + 1 Opus agent) that had a real bug — a JS scoping error meant the
+  Sonnet "articulate" stage never ran, so the 6-way consolidation never happened. The final Opus
+  "correct" stage caught its own broken (empty) input and disclosed it unprompted, then authored
+  the full set solo against the same rules. Read and spot-checked directly before writing to disk;
+  held up (consistent polarity, no compound leaves, genuinely shape-appropriate per category) —
+  but **it is one reviewer's single pass, not the six-way consolidation originally designed**, and
+  hasn't had a second, independent review.
+
+## Real gaps, prioritized (the brief for Fable's planning pass)
+
+Concentrated in `tools/*.yaml` and `tools/world-knowledge.yaml`, as suspected:
+
+1. **8 of 33 `gap_categories` still have no `gap_category_detail` library at all**: `capability-gap`,
+   `escalation-authority`, `fairness-distribution`, `visibility-tracking`, `noise-reduction`,
+   `knowledge-transfer`, `compliance-constraint`, `measurement-gap` — all from the *original*
+   generic 12, none from the new 21 requirement-shaped ones (those all got trees from the
+   workflow). Open question, not yet decided: build these 8 out to match the new requirement
+   shapes, or retire them now that the requirement-shaped library exists and better matches what
+   the user actually wants (see foundry/README.md's own "Lessons learned" — the original 12 read
+   as an abstract maturity checklist, which was explicitly the wrong shape).
+2. **4 of Slicer's 5 designed variants have never run live**: `by-layer`, `by-risk`, `by-phase`,
+   `binary-halving` exist only as design in `slicer.yaml`. Only `by-domain` (+ the profile
+   pre-scan bolted onto it) has ever been exercised.
+3. **Sorter's 4 non-`by-risk-tier` grouping variants are blocked on missing data**, not missing
+   code: `by-domain`/`by-audience`/`by-layer`/`by-phase` grouping need a per-piece tag that nothing
+   sets — `by-domain`'s classification is whole-idea-level, not per-requirement. Same root cause
+   blocks Conveyor's `dependency-order`/`parallel-lanes` (`depends_on` inference was never built)
+   and Spotlight's `downstream-impact`/`audience-weighted`.
+4. **`ATOMIC_THRESHOLD` and `CHILD_TOPK_*` are calibrated (or guessed) for the local P1/P2/P3
+   ensemble only.** Hosted P0 is now confirmed reachable (user-driven, own terminal) — a real
+   calibration diagnostic against P0 specifically (same method as the one that fixed
+   `ATOMIC_THRESHOLD` for local models) hasn't been run and would directly answer whether these
+   numbers hold up.
+5. **`domain_enrichment`/`profile_probes` never narrow which of the 33 `gap_categories` even get
+   checked** — every idea still gets all 33 checked unconditionally regardless of domain or
+   profile signal (the long-standing `open_question` in `world-knowledge.yaml`, still unresolved).
+6. **Only `oncall-rotation` has ever been run through the live pipeline.** The other 6 ideas in
+   `ideas/*.json` (`plumber-crm`, `shift-swap-marketplace`, `sleep-coach-wearable`,
+   `smart-recycling-bin`, `standup-async`, `voice-extension`) have never been tested — worth doing
+   before trusting that anything calibrated on one idea generalizes.
+7. **The 21-category requirement-shaped library is one Opus pass, not the six-way consolidation
+   originally designed** (see "Fixed this session" above) — a real second review, or an actual
+   working re-run of the intended research→gap-find→articulate→correct pipeline, is still owed.
+8. **`problems/oncall-rotation.json` is fully historical** (pre-polarity-fix text, produced by a
+   deleted script) — kept only as a labeled artifact, not a current one.
+
+## Scenario lab (separate, still paused)
+
+Untouched this session. Full plan: `docs/scenario-lab-plan.md`. Summary unchanged from before:
+build out `/scenarios` (accuracy/calibration on 15 published labelled sets) with an offline runner
+and a live `/api/batch` path, keeping the existing template (decomposition, model comparison,
+graphs, worked example, item explorer) consistent across sets. Do not pick this up unless asked.
+
+## Gotchas learned the hard way (foundry-specific, this session)
+
+- **A live, well-formed classifier mechanism over broken content still produces broken output.**
+  "The tools ran live" is not the same claim as "the output is coherent" — only reading the actual
+  rendered text (not trusting the mechanism's design) catches a polarity contradiction.
+- **A magic threshold tuned against one model or one small diagnostic does not generalize.**
+  Re-diagnose, don't reuse, when the model combination changes — `ATOMIC_THRESHOLD` and
+  `CHILD_TOPK_*` are both known-untested outside the P1/P2/P3 default right now.
+- **Information already in the data structure beats another round of threshold-tuning.** The
+  leaf-vs-category fix (structural, not numeric) mattered more than any of the three threshold
+  values tried before it.
+- **Cross-model disagreement can mean one model isn't discriminating at all**, not that the
+  content is genuinely ambiguous — found via a controlled diagnostic against known-atomic/
+  known-compound text, not by staring harder at the disagreement itself.
+- **A YAML file can silently fail to parse, or silently collapse structured data into a string** —
+  happened twice. Re-parse with the real loader after every edit to `tools/*.yaml`.
+- **Reading whether a credential exists is itself a blocked action**, separate from and prior to
+  whether a call using it would be blocked. Don't retry it; don't paste secrets into chat either
+  direction.

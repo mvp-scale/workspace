@@ -45,14 +45,14 @@ import funnel  # noqa: E402
 # real calibration gap (0.10-0.13); laya drops to 56.9% with confident answers becoming rare at
 # higher thresholds; verdict is 46.7% with a calibration gap of just 0.04 -- confidence carries
 # almost no signal. Not an in-session guess. Override with --models, e.g. --models semif for a
-# single model. "jev" (hosted) is deliberately not a valid choice -- see LOCAL_MODELS below.
-LOCAL_MODELS = ["semif", "kev-4b", "so1", "laya", "verdict"]  # every non-hosted backend loaded
-                                                                # today (demo/lineup.sh); "jev" is
-                                                                # hosted and cannot run from a
-                                                                # script -- the harness itself
-                                                                # blocks credential access for it,
-                                                                # confirmed directly this session,
-                                                                # not a convention being enforced.
+# single model, or --models jev for the hosted reference -- same call_all/server.call path as
+# every other backend, no special-cased exclusion. What actually happens when jev is selected
+# depends on the environment, not this code: server.BACKENDS reads TYPESAFE_API_KEY from the
+# process environment, and if that's empty (nothing sourced it), server.call's own existing check
+# (`if name.startswith("jev") and not cfg["key"]`) returns a clean "TYPESAFE_API_KEY not set"
+# error -- the same behavior every other script here has always had. Kept out of the *default*
+# list for the reasons above (three comparable, calibrated local models); available on request.
+ALL_MODELS = ["semif", "kev-4b", "so1", "laya", "verdict", "jev"]
 MODELS = ["semif", "kev-4b", "so1"]  # P1, P2, P3 -- overwritten by --models in main()
 
 DOMAIN_AUDIENCE_FLOOR = 0.6   # slicer.yaml's own written by-domain routing rule: both must clear
@@ -61,8 +61,16 @@ GAP_TOPK = 4                  # Level 0's selection policy differs from every de
                               # purpose: top-k by mean, not a floor. A floor near 1.0 for nearly
                               # every category selected everything in an early run -- not a
                               # decision, a rubber stamp.
-CHILD_RELEVANCE = 0.6         # cheap, recoverable -- a wrongly-followed recursion just costs a
-                              # few more calls.
+CHILD_TOPK_BOOSTED = 3        # was a flat 0.6 floor (CHILD_RELEVANCE) -- replaced for the same
+CHILD_TOPK_NORMAL = 1          # reason GAP_TOPK replaced one at Level 0: a real run against P0
+                              # (hosted Jev) scored every single child across four branches
+                              # 0.15-0.45 -- nowhere near 0.6, or even the boosted 0.5 -- so a
+                              # flat floor selected nothing, silently, for a model whose score
+                              # scale just sits lower. Top-k is robust to that; a floor isn't.
+                              # Boosted branches (see profile_boost) get more room to dig in.
+CHILD_MIN_SANITY = 0.05       # top-k still needs a floor beneath which nothing gets selected no
+                              # matter how it ranks -- catches a node whose children are all
+                              # genuinely irrelevant, not just low-ranked among themselves.
 ATOMIC_THRESHOLD = 0.18       # terminal -- ends a branch and ships a requirement. Calibrated
                               # against a controlled diagnostic on the corrected P1/P2/P3 set:
                               # these models discriminate correctly in direction (atomic-mean 0.28
@@ -73,11 +81,10 @@ DISAGREEMENT_THRESHOLD = funnel.DISAGREEMENT_THRESHOLD  # reused, not reinvented
 W_GAP, W_PROFILE = 0.7, 0.3   # Composite Scoring weights for category selection: own gap-check
                                # score vs. the profile-probe boost (see profile_boost). Explicit,
                                # adjustable, not a first-attempt-and-forget number.
-BOOST_SHIFT = 0.1             # Confidence-Gated Routing with more than one signal: a
-                               # profile-boosted branch's child-relevance bar drops by this much
-                               # (dig deeper where the profile says it matters); a non-boosted
-                               # branch's bar rises by the same amount (back off sooner). A first,
-                               # bounded attempt -- not empirically tuned yet.
+# Confidence-Gated Routing with more than one signal: a profile-boosted branch gets a higher k
+# (CHILD_TOPK_BOOSTED, dig deeper where the profile says it matters); a non-boosted branch gets a
+# lower one (CHILD_TOPK_NORMAL, back off sooner) -- see that comment above, not a separate
+# constant of its own anymore now that child selection is top-k rather than a floor to shift.
 BUDGET = 60                   # hard cap on live calls (one call = one classify, regardless of how
                               # many questions are fanned into it) for the whole run, root through
                               # every leaf. Real, enforced -- "until you exceed the budget," not
@@ -243,11 +250,16 @@ def walk(node, path, breadcrumb, base_state, budget, ledger, progress, depth, ma
                      full_text=full_text, atomic_mean=None, status="no_answer", children=[])
         return
 
-    child_bar = CHILD_RELEVANCE - BOOST_SHIFT if boosted else CHILD_RELEVANCE + BOOST_SHIFT
+    # Top-k, not a floor (see CHILD_TOPK_BOOSTED/NORMAL comment) -- ranked by score among this
+    # node's own children, with a low sanity floor beneath which nothing gets selected regardless
+    # of rank.
+    k = CHILD_TOPK_BOOSTED if boosted else CHILD_TOPK_NORMAL
+    ranked_children = sorted(node["children"], key=lambda c: -(child_means.get(c["id"]) or -1))
+    top_ids = {c["id"] for c in ranked_children[:k] if (child_means.get(c["id"]) or 0) >= CHILD_MIN_SANITY}
     child_records = []
     for child in node["children"]:
         p = child_means.get(child["id"])
-        selected = p is not None and p >= child_bar
+        selected = child["id"] in top_ids
         child_records.append({"id": child["id"], "text": child["text"], "p": p, "selected": selected})
 
     if is_leaf:
@@ -311,17 +323,39 @@ def classify_root(tree, state, budget, world, ledger, progress, profile):
     return result
 
 
+def parse_models(spec):
+    """Comma-separated P-numbers (the project's own legend, P0-P5) and/or raw backend ids, mixed
+    freely -- e.g. --models P0,P1 or --models jev,semif. Just replaces the MODELS list; nothing
+    else about the run changes based on how they were spelled."""
+    p_to_model = {p: m for m, p in funnel.MODEL_P.items()}
+    result = []
+    for token in spec.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        if token in p_to_model:
+            result.append(p_to_model[token])
+        elif token in ALL_MODELS:
+            result.append(token)
+        else:
+            sys.exit(f"unknown model '{token}' -- use a P-number ({', '.join(sorted(p_to_model))}) or a backend id ({', '.join(ALL_MODELS)})")
+    if not result:
+        sys.exit(f"--models '{spec}' resolved to no models")
+    return result
+
+
 def main():
     global MODELS
     ap = argparse.ArgumentParser()
     ap.add_argument("--idea", required=True)
     ap.add_argument("--max-depth", type=int, default=3)
     ap.add_argument("--budget", type=int, default=BUDGET)
-    ap.add_argument("--models", nargs="+", default=MODELS, choices=LOCAL_MODELS,
-                     help="which local model(s) to use, e.g. --models semif for one model only. "
-                          "'jev' (hosted) is not a valid choice -- it cannot run from a script.")
+    ap.add_argument("--models", default=None,
+                     help="comma-separated P-numbers or backend ids, e.g. --models P0,P1 or "
+                          "--models jev,semif. Defaults to P1,P2,P3 (see MODELS comment above) if omitted.")
     a = ap.parse_args()
-    MODELS = a.models
+    if a.models:
+        MODELS = parse_models(a.models)
 
     idea_data = json.loads((HERE / "ideas" / f"{a.idea}.json").read_text())
     idea, customer = idea_data["idea"], idea_data["customer"]
