@@ -12,6 +12,10 @@ directly (this structure is small enough that there's no separate per-item JSONL
 overwrites the file with all requested models included).
 
   python3 probes/lab_decompose.py --models kev-4b semif so1 laya verdict
+  python3 probes/lab_decompose.py --models kev-4b semif so1 laya verdict --tree probes/decompose/tree_ref_edge.json --out data/probe-runs-v2/_decompose/tree_scored_edge.json
+
+The 'true class' used for the schedule/budget forecast validation is whichever the tree
+provides: 'critical_path' (bool, per node) if present, else status == 'blocked'.
 """
 import argparse, json, random, sys
 from pathlib import Path
@@ -130,20 +134,20 @@ def forecast_dim(scored_nodes, grade_key, seed, draws=4000):
     return p_trouble
 
 
-def validate_dim(scored_nodes, p_trouble, grade_key):
-    """Illustrative only: with 2 blocked leaves out of 25 there is no statistical power here, just
+def validate_dim(scored_nodes, p_trouble, grade_key, true_fn):
+    """Illustrative only: with so few true-class leaves there is no statistical power here, just
     a check that the direction isn't obviously backwards."""
     leaves = [n for n in scored_nodes if n["kind"] == "leaf" and grade_key in n.get("grade", {})]
-    blocked = [n for n in leaves if n["status"] == "blocked"]
-    other = [n for n in leaves if n["status"] != "blocked"]
-    if not blocked or not other:
+    hot = [n for n in leaves if true_fn(n)]
+    other = [n for n in leaves if not true_fn(n)]
+    if not hot or not other:
         return None
-    wins = sum(1 for b in blocked for o in other if p_trouble[b["id"]] > p_trouble[o["id"]])
-    ties = sum(1 for b in blocked for o in other if p_trouble[b["id"]] == p_trouble[o["id"]])
-    total = len(blocked) * len(other)
+    wins = sum(1 for b in hot for o in other if p_trouble[b["id"]] > p_trouble[o["id"]])
+    ties = sum(1 for b in hot for o in other if p_trouble[b["id"]] == p_trouble[o["id"]])
+    total = len(hot) * len(other)
     auc = (wins + 0.5 * ties) / total
-    return {"n_blocked": len(blocked), "n_other": len(other), "auc": round(auc, 3),
-            "mean_blocked": round(sum(p_trouble[b["id"]] for b in blocked) / len(blocked), 3),
+    return {"n_blocked": len(hot), "n_other": len(other), "auc": round(auc, 3),
+            "mean_blocked": round(sum(p_trouble[b["id"]] for b in hot) / len(hot), 3),
             "mean_other": round(sum(p_trouble[o["id"]] for o in other) / len(other), 3)}
 
 
@@ -182,9 +186,13 @@ def simulate_loop(scored_nodes, threshold=0.6, max_depth=6):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="+", required=True)
+    ap.add_argument("--tree", type=Path, default=REF)
+    ap.add_argument("--out", type=Path, default=OUT)
     a = ap.parse_args()
-    ref = json.loads(REF.read_text())
-    out = {"generated_from": str(REF), "models": {}}
+    ref = json.loads(a.tree.read_text())
+    has_critical_path = any("critical_path" in n for n in ref["nodes"])
+    true_fn = (lambda n: bool(n.get("critical_path"))) if has_critical_path else (lambda n: n.get("status") == "blocked")
+    out = {"generated_from": str(a.tree), "pitch": ref.get("pitch"), "models": {}}
     for model in a.models:
         cfg = server.BACKENDS[model]
         if cfg.get("hosted"):
@@ -193,8 +201,8 @@ def main():
         scored = score_model(model, cfg, ref)
         sched_p = forecast_dim(scored, "risk_0to1", seed=20260922)
         budget_p = forecast_dim(scored, "budget_0to1", seed=20260923)
-        sched_val = validate_dim(scored, sched_p, "risk_0to1")
-        budget_val = validate_dim(scored, budget_p, "budget_0to1")
+        sched_val = validate_dim(scored, sched_p, "risk_0to1", true_fn)
+        budget_val = validate_dim(scored, budget_p, "budget_0to1", true_fn)
         loop = simulate_loop(scored)
         sensitivity = sorted((n for n in scored if n["kind"] == "leaf" and "grade" in n and "risk_0to1" in n["grade"]),
                               key=lambda n: n["grade"]["risk_0to1"], reverse=True)[:5]
@@ -206,9 +214,9 @@ def main():
         print(f"  {n_ok}/{len(scored)} nodes answered; loop stopped at {loop['n_stops']} pseudo-atomic points, avg depth {loop['avg_depth']}, "
               f"{len(loop['premature'])} premature (called a group atomic)"
               + (f"; schedule AUC {sched_val['auc']}, budget AUC {budget_val['auc']}" if sched_val and budget_val else ""))
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(out, indent=1))
-    print(f"wrote {OUT}")
+    a.out.parent.mkdir(parents=True, exist_ok=True)
+    a.out.write_text(json.dumps(out, indent=1))
+    print(f"wrote {a.out}")
 
 
 if __name__ == "__main__":

@@ -204,9 +204,11 @@ def batch_perf():
 
 
 def decompose_tree():
-    """The decompose-and-loop worked example: a reference requirements tree plus every loaded
-    model's judgment of each node and a Monte Carlo risk forecast, from probes/lab_decompose.py."""
-    p = PROBE_RUNS / "_decompose" / "tree_scored.json"
+    """The decompose-and-loop worked example: exploiting high-bandwidth RAM across Cloudflare Edge
+    Workers, decomposed and scored by every loaded model, from probes/lab_decompose.py
+    --tree probes/decompose/tree_ref_edge.json. (The original worked example, this project's own
+    build plan, is still scored at data/probe-runs-v2/_decompose/tree_scored.json if wanted.)"""
+    p = PROBE_RUNS / "_decompose" / "tree_scored_edge.json"
     if not p.is_file():
         return {"nodes": [], "models": []}
     return json.loads(p.read_text())
