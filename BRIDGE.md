@@ -31,16 +31,14 @@ intervals; commit locally with the Co-Authored-By trailer (there is no remote).
 
 ## What exists
 
-An eight-page local console at `http://127.0.0.1:8100` (`set -a; . ./.env; set +a; python3 demo/server.py`, stdlib only) for typed decision models: a model gets a state plus typed questions (noul, choice, score) and returns a probability per option.
+A six-page local console at `http://127.0.0.1:8100` (`set -a; . ./.env; set +a; python3 demo/server.py`, stdlib only) for typed decision models: a model gets a state plus typed questions (noul, choice, score) and returns a probability per option.
 
 | Page | Purpose |
 |---|---|
 | `/` Leaderboard | public JevBench tiers, measured GPU memory, planner, answer agreement |
 | `/compare` Baseline compare | one question to every loaded model (its Run includes the hosted model: never run it in tests) |
 | `/scenarios` Scenario lab | accuracy, pair accuracy, calibration and risk-coverage on 15 published labelled sets; **the next task** |
-| `/windows` Text windows | detector batteries over speeches and pasted text |
-| `/stream` Call monitor | older word-by-word replay, unchanged; superseded in practice by the cockpit |
-| `/cockpit` Call cockpit | the reworked call view: voices, detectors, coaching, cue cards, heat strip; described in CLAUDE.md. Detectors show only at or above the minimum threshold and fade without support |
+| `/flow` Conversation flow (was Cockpit) | the reworked call view: voices, detectors, coaching, cue cards, heat strip; described in CLAUDE.md. Detectors show only at or above the minimum threshold and fade without support |
 | `/models` How they work | explainer of the techniques |
 | `/report` Report | computed benchmark report |
 
@@ -87,11 +85,11 @@ Full plan: `docs/scenario-lab-plan.md` (18 items, decisions needed at the end). 
 
 ## Cleanup (asked for: after the lab, remove redundancy)
 
-Nothing removed yet. Candidates: `demo/mockups/` (superseded by the cockpit; committed, recoverable), Call monitor vs Cockpit overlap, Text windows overlap with the cockpit settings, per-page `<style>` blocks (cockpit 165 lines, scenarios 94, stream 93) that belong in `app.css`, three pages patching the old `jev (typesafe)` id separately, raw ids (`so1`, `verdict`) in `stream.html` text, `/api/results` in `server.py` unused, `index.html` still lists retired `jeff`, `kev-0.5b`, `kev-0.8b`. Ask before deleting.
+Nothing removed yet. Candidates: `demo/mockups/` (superseded by the cockpit; committed, recoverable), per-page `<style>` blocks (cockpit 165 lines, scenarios 94, stream 93) that belong in `app.css`, three pages patching the old `jev (typesafe)` id separately, raw ids (`so1`, `verdict`) in `stream.html` text, `/api/results` in `server.py` unused, `index.html` still lists retired `jeff`, `kev-0.5b`, `kev-0.8b`. Ask before deleting.
 
 ## Done recently
 
-Cockpit (`/cockpit`) built and wired to the local models (measured on unseen dialogues: KEV4B check lag p50 65 to 123 ms, keeps up at 30x; SEMIF4 p50 about 265 ms, keeps up to 4x). Scenario lab: set list names only, numberless 7-step heat map. Research: `research/classifier-dev-notes.md` (classifier.dev is a wrapper around Jev, Laya and Kev on Beam; no model of its own).
+Conversation flow (`/flow`, was Cockpit) built and wired to the local models (measured on unseen dialogues: KEV4B check lag p50 65 to 123 ms, keeps up at 30x; SEMIF4 p50 about 265 ms, keeps up to 4x). Scenario lab: set list names only, numberless 7-step heat map. Research: `research/classifier-dev-notes.md` (classifier.dev is a wrapper around Jev, Laya and Kev on Beam; no model of its own).
 
 ## Gotchas learned the hard way
 

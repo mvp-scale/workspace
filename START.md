@@ -27,9 +27,9 @@ Model logs: `tail -f logs/kev-4b.log` (also `semif`, `so1`, `laya`, `verdict`). 
 
 | Page | URL / file |
 |---|---|
-| Console: Leaderboard, Compare, Scenarios, Text windows, Call monitor, **Call cockpit (new, wired to the models)**, How they work, Report | http://127.0.0.1:8100 `/`, `/compare`, `/scenarios`, `/windows`, `/stream`, `/cockpit`, `/models`, `/report` |
+| Console: Leaderboard, Compare, Scenarios, **Conversation flow (formerly Call cockpit)**, How they work, Report | http://127.0.0.1:8100 `/`, `/compare`, `/scenarios`, `/flow`, `/models`, `/report` |
 | Mock-ups index (4 pages, spec in `SPEC.md`) | `demo/mockups/index.html` |
-| Call cockpit variations A, B, C (spec in `cockpit-variants/SPEC.md`). **C was chosen**; it is now built as `/cockpit` | `demo/mockups/cockpit-variants/index.html`, `c-coach-chips.html` |
+| Call cockpit variations A, B, C (spec in `cockpit-variants/SPEC.md`). **C was chosen**; it is now built as `/flow` | `demo/mockups/cockpit-variants/index.html`, `c-coach-chips.html` |
 
 Mock-ups are scripted: no audio, no speech to text, no model calls. Press Play (or space). Only Apollo 13 is a real transcript.
 
@@ -62,8 +62,8 @@ python3 demo/vram.py                                          # measure GPU memo
 
 ## 6. Where things stand
 
-- **`/cockpit` is built and running** (`demo/cockpit.html`): detector bar (colour + icon each, up to 20, add your own), person cards showing each person's hits, per-person windows, coaching for the person you pick, cue cards for everyone else, heat-strip history, and a Captured card with tabs (Flagged, Detectors, Settings, Request, Events). Detectors show, flag and chart only at or above the minimum threshold; a detector fades 8 s after its last supporting evidence from that voice; a new different cue from a voice shifts that voice's older cue cards out. Flagged rows match cue cards (icon, cue, voice, %, time) plus the sentence. Not yet in: scrubber and step, a facts extractor, live speech-to-text (the source is an interface: words with speaker and time), narrowed phrase highlights (highlights mark the whole scored sentence).
+- **`/flow` (Conversation flow) is built and running** (`demo/flow.html`): detector bar (colour + icon each, up to 20, add your own), person cards showing each person's hits, per-person windows, coaching for the person you pick, cue cards for everyone else, heat-strip history, and a Captured card with tabs (Flagged, Detectors, Settings, Request, Events). Detectors show, flag and chart only at or above the minimum threshold; a detector fades 8 s after its last supporting evidence from that voice; a new different cue from a voice shifts that voice's older cue cards out. Flagged rows match cue cards (icon, cue, voice, %, time) plus the sentence. Not yet in: scrubber and step, a facts extractor, live speech-to-text (the source is an interface: words with speaker and time), narrowed phrase highlights (highlights mark the whole scored sentence).
 
-- Real Call monitor (`demo/stream.html`) is unchanged; whether `/cockpit` replaces it is still open. Mock-ups and specs are committed locally.
+- The Call monitor and Text windows pages were removed (Conversation flow replaces them). Mock-ups and specs are committed locally.
 - Open decisions: narrowed phrase highlights vs whole sentence, a facts extractor, a scrubber and step. Standoff-state idea for spans: `docs/typesafe_standoff_pattern.md` (awareness only, not adopted).
 - Measured on unseen dialogues, 8 signals, KEV4B: check lag p50 65 to 123 ms, p95 up to 254 ms, keeps up at every speed including Max (30x). SEMIF4: p50 about 265 ms, keeps up to 4x, falls behind at Max (queue 22, p95 2.0 s). Single runs. The lag figures in the mock-ups (KEV4B 1.1 s, SEMIF4 1.8 s) are older and higher.

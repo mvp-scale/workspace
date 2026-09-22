@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Call cockpit · Jev Bench Console</title>
+<title>Conversation flow · Jev Bench Console</title>
 <meta name="description" content="A real transcript replayed word by word through the loaded models. Detectors have a colour and an icon; each person's own window is scored, and person cards show which detectors they hit. Signals rise, hold and fade, with a heat-strip history and the exact request sent to the model.">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
@@ -797,7 +797,7 @@
     const namesCb = el("input", { type: "checkbox", id: "names", onchange: () => { S.names = namesCb.checked; relabel(); } }); namesCb.checked = S.names; ui.namesCb = namesCb;
     ui.clock = el("span", { class: "num", text: "00:00" }); ui.pill = el("span", { class: "pill" }, el("span", { class: "rec" }), "LIVE ", ui.clock); ui.behind = el("span", { class: "small muted", role: "status" });
     ui.confirm = el("div", { role: "status" }); ui.status = el("div", { class: "notice small", role: "status" }); ui.err = el("span", { class: "small err", role: "alert" });
-    const top = el("div", { class: "top" }, el("div", {}, el("h1", { text: "Call cockpit" }), el("p", { class: "sub", text: "Detectors have a colour and an icon. Signals rise, hold and fade so there is time to react." })),
+    const top = el("div", { class: "top" }, el("div", {}, el("h1", { text: "Conversation flow" }), el("p", { class: "sub", text: "Detectors have a colour and an icon. Signals rise, hold and fade so there is time to react." })),
       el("div", { class: "ctl" }, el("div", { class: "field" }, el("label", { for: "src", text: "Transcript" }), srcSel), ui.dlgField, el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Mode" }), mode),
         ui.play, el("button", { class: "btn", type: "button", onclick: () => { resetRun(); updatePlay(); }, text: "Restart" }), el("div", { class: "field" }, el("span", { style: "font-size:12px;font-weight:500;color:var(--text-2)", text: "Speed" }), speed), ui.pill,
         el("button", { class: "btn", type: "button", onclick: () => download(`cockpit-${Date.now()}.json`, JSON.stringify(exportData(), null, 1), "application/json"), text: "Export" }), el("button", { class: "btn", type: "button", onclick: () => copy(location.href), text: "Copy link" })));
