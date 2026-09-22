@@ -64,6 +64,25 @@
   table.cm td.zero { color: var(--text-3); }
   /* Calibration */
   .rc { display: block; width: 100%; max-width: 560px; height: auto; }
+  .rc.wide { max-width: none; }
+  /* Decompose-and-loop pipeline + loop results */
+  .pipeline { display: block; width: 100%; height: auto; }
+  .pipeline .stage rect { fill: var(--surface-2); stroke: var(--border); }
+  .pipeline .stage text.t { font-weight: 600; fill: var(--text); }
+  .pipeline .stage text.n { fill: var(--text-3); font-size: 10.5px; }
+  .pipeline .arrow { stroke: var(--text-3); stroke-width: 1.6; fill: none; }
+  .pipeline .loopback { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-dasharray: 4 3; }
+  .pipeline .lbl { fill: var(--text-3); font-size: 10.5px; }
+  .looprow { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 5px 0; }
+  .loopbar { position: relative; height: 18px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 3px; }
+  .loopbar .fill { position: absolute; top: 0; bottom: 0; left: 0; background: color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 2px 0 0 2px; }
+  .loopbar .mark { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 2px solid var(--bad); }
+  .loopnote { font-size: 12.5px; color: var(--text-2); }
+  table.data.gapmap td.cell, table.data.gapmap th.cell { text-align: center; padding: 4px 6px; font-variant-numeric: tabular-nums; font-size: 12px; }
+  table.data.gapmap td.rowlbl { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; position: relative; }
+  table.data.gapmap td.rowlbl.blocked { padding-left: 14px; }
+  table.data.gapmap td.rowlbl.blocked::before { content: ""; position: absolute; left: 2px; top: 50%; margin-top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--bad); }
+  table.data.gapmap tr.sec td { padding-top: 10px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); border-bottom: none; }
   .rc text { font-family: var(--font); fill: var(--text-3); font-size: 10px; }
   .rc .gl { stroke: var(--border); stroke-width: 1; }
   .rc .curve { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
@@ -404,12 +423,89 @@ function decomposeStory(data) {
     const flawsCaught = flaws.filter(n => n.grade?.covers_correct).length;
     const sync = nodes.find(n => n.id === "lineup-15");
     const syncRank = data.models[m].top_risk.findIndex(t => t.id === "lineup-15");
-    byM[m] = { meanAtomic, meanCovers, meanParallel, flaws, flawsCaught, sync, syncRank, val: data.models[m].validate };
+    const loop = data.models[m].loop;
+    byM[m] = { meanAtomic, meanCovers, meanParallel, flaws, flawsCaught, sync, syncRank, loop, val: data.models[m].validate };
   }
   const syncAgree = models.filter(m => byM[m].syncRank >= 0 && byM[m].syncRank <= 1);
   // "reflexive no" only on the two questions where it actually shows up here; parallel behaves normally
   const alwaysNo = models.filter(m => byM[m].meanAtomic != null && byM[m].meanAtomic < 0.15 && byM[m].meanCovers < 0.15 && byM[m].meanParallel > 0.3);
-  return { models, byM, syncAgree, alwaysNo };
+  const rootStop = models.filter(m => byM[m].loop.stops.some(s => s.id === "root"));
+  return { models, byM, syncAgree, alwaysNo, rootStop };
+}
+
+/* ---------- decompose-and-loop: the pipeline hero and the loop-results panel ---------- */
+function pipelineHero() {
+  const W = 900, H = 160;
+  const stage = (x, w, title, sub) => S("g", { class: "stage" },
+    S("rect", { x, y: 30, width: w, height: 60, rx: 8 }),
+    S("text", { class: "t", x: x + w / 2, y: 58, "text-anchor": "middle" }, title),
+    S("text", { class: "n", x: x + w / 2, y: 76, "text-anchor": "middle" }, sub));
+  const arrow = (x1, x2, y) => S("g", {},
+    S("path", { class: "arrow", d: `M${x1} ${y} L${x2 - 8} ${y}` }),
+    S("path", { class: "arrow", d: `M${x2 - 10} ${y - 4} L${x2} ${y} L${x2 - 10} ${y + 4}` }));
+  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "The decompose-and-loop mechanism" },
+    stage(10, 190, "Requirements", "1 problem: this project's plan"),
+    arrow(200, 250, 60),
+    stage(250, 190, "Planner splits", "hand-authored, fixed: up to 4 layers, 33 nodes"),
+    arrow(440, 490, 60),
+    stage(490, 220, "Classifier: atomic?", "asked live at every node"),
+    arrow(710, 760, 60),
+    stage(760, 130, "Stop", "pseudo-atomic"),
+    S("text", { class: "lbl", x: 600, y: 118, "text-anchor": "middle" }, "no — loop back and split again"),
+    S("path", { class: "loopback", d: "M600 90 C 600 130, 345 130, 345 90" }),
+    S("path", { class: "loopback", d: "M338 96 L345 90 L352 96" }),
+    S("text", { class: "lbl", x: 825, y: 118, "text-anchor": "middle" }, "yes"));
+}
+
+function loopResultsPanel(story) {
+  const maxDepth = 4;
+  const box = el("div", { class: "card" }, el("h3", { text: "Where the loop actually stopped" }),
+    el("p", { class: "small muted", text: "Real answers, not staged: this replays each model's own live ‘is this atomic?’ judgement at every node, starting from the root, and stops splitting as soon as that model says yes (≥60% confidence). The planner's split itself is fixed — only the stop/continue decision is the model's." }));
+  for (const m of story.models) {
+    const l = story.byM[m].loop;
+    const w = Math.min(100, (l.avg_depth / maxDepth) * 100);
+    box.append(el("div", { class: "looprow" },
+      el("span", {}, mtagShort(m)),
+      el("span", { class: "loopbar", title: `average stop depth ${l.avg_depth} of ${maxDepth}` }, el("span", { class: "fill", style: `width:${w}%` })),
+      el("span", { class: "loopnote", text: `${l.n_stops} stop${l.n_stops === 1 ? "" : "s"}, avg depth ${l.avg_depth}${l.premature.length ? `, ${l.premature.length} premature` : ""}` })));
+  }
+  const notes = [];
+  if (story.rootStop.length) notes.push(`${story.rootStop.map(m => Jev.codeOf(m)).join(" and ")} called the entire 33-node plan a single atomic unit of work at the very first question, ${story.rootStop.map(m => fmt.num(story.byM[m].loop.stops.find(s => s.id === "root").atomic_p, 2)).join("/")} confidence — and never split it at all.`);
+  const partial = story.models.filter(m => !story.rootStop.includes(m) && story.byM[m].loop.premature.length);
+  if (partial.length) notes.push(`${partial.map(m => `${Jev.codeOf(m)} (${story.byM[m].loop.premature.map(p => `"${p.title}"`).join(", ")})`).join("; ")} split most of the plan correctly, but still closed off at least one real group as if it were one item.`);
+  const full = story.models.filter(m => story.byM[m].loop.n_stops === 25 && story.byM[m].loop.premature.length === 0);
+  if (full.length) notes.push(`${full.map(m => Jev.codeOf(m)).join(", ")} split all the way down to the real 25 leaves without a single premature stop — but that model also almost never says "atomic" (mean probability ${full.map(m => fmt.num(story.byM[m].meanAtomic, 2)).join(", ")}), so it reached the true leaves by running out of children to split, not by recognising them.`);
+  for (const n of notes) box.append(el("p", { class: "small" }, n));
+  return box;
+}
+
+const heatRisk = (p) => p == null ? "var(--surface-2)" : `color-mix(in srgb, var(--bad) ${Math.round(clamp01(p) * 60)}%, var(--surface-2))`;
+
+/* One row per real leaf (grouped by section), one column per model, cell = that model's forecast
+   probability for the given dimension, rolled up from its own atomic judgement (Monte Carlo). */
+function gapHeatMap(data, models, dim, forecastKey) {
+  const leaves = data.models[models[0]].nodes.filter(n => n.kind === "leaf");
+  // group by top-level section using the group each leaf's parent belongs to, in tree order
+  const parentOf = Object.fromEntries(data.models[models[0]].nodes.map(n => [n.id, n.parent]));
+  const titleOf = Object.fromEntries(data.models[models[0]].nodes.map(n => [n.id, n.title]));
+  const sectionOf = (n) => { let p = n.parent; while (p && !["g-layout", "g-sets", "g-structures", "g-blind", "g-lineup"].includes(p)) p = parentOf[p]; return p || n.parent; };
+  const order = ["g-layout", "g-sets", "g-structures", "g-blind", "g-lineup"];
+  const rows = [...leaves].sort((a, b) => order.indexOf(sectionOf(a)) - order.indexOf(sectionOf(b)));
+  const t = el("table", { class: "data gapmap" });
+  t.append(el("thead", {}, el("tr", {}, el("th", { text: "Item" }), models.map(m => el("th", { text: Jev.codeOf(m) })))));
+  const tb = el("tbody"); let lastSec = null;
+  for (const n of rows) {
+    const sec = sectionOf(n);
+    if (sec !== lastSec) { lastSec = sec; tb.append(el("tr", { class: "sec" }, el("td", { colspan: models.length + 1, text: titleOf[sec] || sec }))); }
+    tb.append(el("tr", {}, el("td", { class: "rowlbl" + (n.status === "blocked" ? " blocked" : ""), title: n.title, text: n.title },),
+      models.map(m => {
+        const p = data.models[m][forecastKey]?.[n.id];
+        const gn = data.models[m].nodes.find(x => x.id === n.id);
+        return el("td", { class: "cell", style: `background:${heatRisk(p)}`, title: p == null ? "no data" : `${n.title}\n${dim} risk ${pc(p)} — real status: ${STATUS_LABEL[gn.status]}`, text: p == null ? "–" : pc(p, 0) });
+      })));
+  }
+  t.append(tb);
+  return t;
 }
 
 function renderDecomposeTree(data) {
@@ -419,11 +515,11 @@ function renderDecomposeTree(data) {
   const out = el("div");
   out.append(
     el("h2", { text: "Decompose and loop" }),
-    el("p", { class: "muted", text: "We took a problem too big to answer in one call — this project's own build-out plan — and broke it by hand into 33 pieces across 4 layers: the plan itself, its 5 sections, their 18 items, and the candidate lists inside two of those items. Every model judged every piece the same way: is it a single unit of work, does it cover what its parent needs, how risky and complex is it, can it run in parallel, what stands in its way. None of them were told which pieces are actually done, blocked or untouched — that only gets checked afterward." }));
+    el("p", { class: "muted", text: "A problem too big to answer in one call — this project's own build-out plan — split by a fixed planner into 33 candidate pieces, 4 layers deep. A classifier decides, live, whether each piece is already atomic; whatever it says isn't gets split again. Once a piece is pseudo-atomic, two more classifiers price it: how likely is it to run the plan over schedule, and over budget. None of the three were told which pieces are actually done, blocked or untouched — that's only checked afterward." }));
 
-  const p1 = story.syncAgree.length >= 2
-    ? `${story.syncAgree.map(m => Jev.codeOf(m)).join(", ")} independently picked the same node as the single riskiest thing in the entire plan: "Sync jevbench" — without seeing each other's answers, and without being told that it is, in fact, the one item explicitly blocked on a decision (upstream scoring changes could invalidate every stored benchmark number). That's real convergent signal from three separate models on a genuine problem.`
-    : `Models did not converge cleanly on the plan's real blocker ("Sync jevbench") as its top risk — the signal here is weaker than in other runs of this tree.`;
+  out.append(el("div", { class: "card" }, el("h3", { text: "The loop" }), el("div", { style: "overflow-x:auto" }, pipelineHero())));
+  out.append(loopResultsPanel(story));
+
   const caughtBoth = story.alwaysNo.filter(m => story.byM[m].flawsCaught === 2);
   const p2 = story.alwaysNo.length
     ? `${story.alwaysNo.map(m => Jev.codeOf(m)).join(", ")} answered "not atomic" and "doesn't cover" almost every time it was asked, regardless of the node — mean probability ${story.alwaysNo.map(m => `${fmt.num(story.byM[m].meanAtomic, 2)} atomic, ${fmt.num(story.byM[m].meanCovers, 2)} covers`).join("; ")} (its parallel answers, by contrast, are unremarkable).`
@@ -431,47 +527,30 @@ function renderDecomposeTree(data) {
     : null;
   const missed = models.filter(m => !story.alwaysNo.includes(m)).filter(m => story.byM[m].flawsCaught === 0);
   const p3 = missed.length
-    ? `${missed.map(m => Jev.codeOf(m)).join(", ")} confidently said both flawed groups fully covered their requirement (probability near 1.0) — the child items are listed right there in the text, so a surface read looks complete. Neither actually is: one lists "a baseline for every claim" as a child without any shipped structure having one yet, the other lists syncing jevbench as a child while that sync is itself undecided. Catching that needs knowing the project, not just reading the list.`
+    ? `${missed.map(m => Jev.codeOf(m)).join(", ")} confidently said both flawed groups fully covered their requirement (probability near 1.0) — the child items are listed right there in the text, so a surface read looks complete. Neither actually is: one lists "a baseline for every claim" as a child without any shipped structure having one yet, the other lists syncing jevbench as a child while that sync is itself undecided.`
     : null;
-  out.append(el("div", { class: "card" },
-    el("h3", { text: "What actually happened" }),
-    el("p", {}, p1),
-    p2 ? el("p", {}, p2) : null,
-    p3 ? el("p", {}, p3) : null));
+  const p1 = story.syncAgree.length >= 2
+    ? `Once past the loop, ${story.syncAgree.map(m => Jev.codeOf(m)).join(", ")} independently priced the same node as the single riskiest thing in the whole plan: "Sync jevbench" — without being told it is, in fact, the one item explicitly blocked on a decision.`
+    : null;
+  if (p1 || p2 || p3) out.append(el("div", { class: "card" }, el("h3", { text: "What the coverage check caught" }),
+    p1 ? el("p", {}, p1) : null, p2 ? el("p", {}, p2) : null, p3 ? el("p", {}, p3) : null));
 
-  const chartRows = models.map(m => {
-    const nodes = data.models[m].nodes.filter(n => n.kind === "leaf" && n.grade?.risk_0to1 != null);
-    return { m, nodes };
-  });
-  const CW = 640, CH = chartRows.length * 34 + 30, CL = 8, CR = 8, CT = 6;
-  const cx = (r) => CL + r * (CW - CL - CR);
-  const chart = S("svg", { viewBox: `0 0 ${CW} ${CH}`, class: "rc", role: "img", "aria-label": "Each leaf's model-given risk score, coloured by what actually happened to it" },
-    [0, .25, .5, .75, 1].map(v => S("line", { class: "gl", x1: cx(v), x2: cx(v), y1: CT, y2: CT + chartRows.length * 34 })),
-    chartRows.map(({ m, nodes }, i) => {
-      const y = CT + i * 34 + 17;
-      return [S("text", { x: 0, y: y + 4, "text-anchor": "start" }, Jev.codeOf(m)),
-        nodes.map((n, j) => {
-          const blocked = n.status === "blocked";
-          const jy = y + (blocked ? 0 : ((j % 3) - 1) * 6);
-          return S("circle", { cx: cx(n.grade.risk_0to1), cy: jy, r: blocked ? 6 : 3.5, fill: `var(${STATUS_COLOR[n.status]})`, stroke: blocked ? "var(--surface)" : "none", "stroke-width": blocked ? 1.5 : 0 },
-            S("title", {}, `${n.title}\nrisk ${fmt.num(n.grade.risk_0to1, 2)} — ${STATUS_LABEL[n.status]}`));
-        })];
-    }),
-    S("text", { x: cx(0), y: CH - 2, "text-anchor": "start" }, "0 risk"), S("text", { x: cx(1), y: CH - 2, "text-anchor": "end" }, "1 risk"));
-  out.append(el("div", { class: "card" }, el("h3", { text: "Did risk scores see the real trouble coming?" }),
-    el("p", { class: "small muted" }, "Every leaf, plotted by that model's own risk score. ", el("b", { style: "color:var(--bad)" }, "Large red dots"), " are the two leaves actually blocked on a decision today; small dots are everything else, coloured by real status (", el("span", { style: "color:var(--good)" }, "done"), ", ", el("span", { style: "color:var(--accent)" }, "in progress"), ", ", el("span", { style: "color:var(--text-3)" }, "not started"), "). If a model's judgement means anything, the red dots should sit to the right."),
-    el("div", { style: "overflow-x:auto" }, chart),
-    el("p", { class: "legend", text: "Only 2 blocked leaves exist in this tree, so this is a look, not a measurement — read the blocked-risk AUC column below the same way." })));
+  out.append(el("div", { class: "card" }, el("h3", { text: "Gap analysis: predicted schedule overrun" }),
+    el("p", { class: "small muted", text: "Every pseudo-atomic leaf, one column per model. Cell = that model's own forecast probability this piece pushes the plan behind schedule, rolled up from its live risk judgement by the same Monte Carlo pass used for budget below. Darker red = higher predicted risk. The marked rows are the two leaves actually blocked on a decision today." }),
+    el("div", { style: "overflow-x:auto" }, gapHeatMap(data, models, "schedule", "forecast_schedule"))));
+  out.append(el("div", { class: "card" }, el("h3", { text: "Gap analysis: predicted budget overrun" }),
+    el("p", { class: "small muted", text: "Same rows, same models, a separately asked question: how likely is this piece to cost more effort, compute or external spend than planned." }),
+    el("div", { style: "overflow-x:auto" }, gapHeatMap(data, models, "budget", "forecast_budget"))));
 
   const t = el("table", { class: "data" });
-  t.append(el("caption", { class: "legend", text: "Accuracy on the typed battery across all 33 nodes. Risk/complexity are mean absolute error against my reference call, 0 to 1 (lower is better)." }),
-    el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Atomic" }), el("th", { text: "Covers" }), el("th", { text: "Parallel" }), el("th", { text: "Dependency" }), el("th", { text: "Risk MAE" }), el("th", { text: "Complexity MAE" }), el("th", { text: "Blocked-risk AUC*" }))));
+  t.append(el("caption", { class: "legend", text: "Accuracy on the typed battery across all 33 nodes. Risk/complexity are mean absolute error against my reference call, 0 to 1 (lower is better). The two AUCs are illustrative only (2 blocked leaves)." }),
+    el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Atomic" }), el("th", { text: "Covers" }), el("th", { text: "Parallel" }), el("th", { text: "Dependency" }), el("th", { text: "Risk MAE" }), el("th", { text: "Complexity MAE" }), el("th", { text: "Schedule AUC*" }), el("th", { text: "Budget AUC*" }))));
   const tb = el("tbody");
   for (const m of models) {
     const md = data.models[m], nodes = md.nodes;
     const rate = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.filter(Boolean).length / v.length : null; };
     const mae = (key) => { const v = nodes.filter(n => n.grade && key in n.grade).map(n => n.grade[key]); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-    const v = md.validate;
+    const vs = md.validate_schedule, vb = md.validate_budget;
     tb.append(el("tr", {}, el("td", {}, mtagShort(m)),
       el("td", { style: `background:${heat01(rate("atomic_correct"))}`, text: pc(rate("atomic_correct")) }),
       el("td", { style: `background:${heat01(rate("covers_correct"))}`, text: pc(rate("covers_correct")) }),
@@ -479,7 +558,8 @@ function renderDecomposeTree(data) {
       el("td", { style: `background:${heat01(rate("dependency_correct"))}`, text: pc(rate("dependency_correct")) }),
       el("td", { class: "muted", text: fmt.num(mae("risk_abs_error"), 2) }),
       el("td", { class: "muted", text: fmt.num(mae("complexity_abs_error"), 2) }),
-      el("td", { title: v ? `${v.n_blocked} blocked vs ${v.n_other} other leaves; mean risk ${pc(v.mean_risk_blocked)} vs ${pc(v.mean_risk_other)}` : "no blocked leaves scored", text: v ? v.auc.toFixed(2) : "–" })));
+      el("td", { title: vs ? `${vs.n_blocked} blocked vs ${vs.n_other} other; mean ${pc(vs.mean_blocked)} vs ${pc(vs.mean_other)}` : "no blocked leaves scored", text: vs ? vs.auc.toFixed(2) : "–" }),
+      el("td", { title: vb ? `${vb.n_blocked} blocked vs ${vb.n_other} other; mean ${pc(vb.mean_blocked)} vs ${pc(vb.mean_other)}` : "no blocked leaves scored", text: vb ? vb.auc.toFixed(2) : "–" })));
   }
   t.append(tb);
   out.append(el("div", { class: "card" }, el("h3", { text: "Model comparison" }), el("div", { style: "overflow-x:auto" }, t),

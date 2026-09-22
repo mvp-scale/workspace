@@ -162,7 +162,8 @@ def main():
             n["covers_why"] = why
             kids = ", ".join(by_id[c]["title"] for c in n["children"])
             n["text"] = n["text"] + (f"\nListed child items: {kids}." if kids else "")
-            for k in ("atomic_ref", "risk_ref", "complexity_ref", "parallel_ref", "dependency_ref", "status", "why"):
+            n["atomic_ref"] = False if n["kind"] == "group" else None  # a group is compound by construction; no single call for the root
+            for k in ("risk_ref", "complexity_ref", "parallel_ref", "dependency_ref", "status", "why"):
                 n.setdefault(k, None)
         else:
             n["covers_ref"] = None
