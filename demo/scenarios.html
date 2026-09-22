@@ -14,7 +14,15 @@
   .rail { position: sticky; top: 52px; max-height: calc(100vh - 64px); overflow-y: auto; display: grid; gap: 1px; padding-right: 6px; }
   .rail h4.sect { margin: 16px 8px 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
   .rail h4.sect:first-child { margin-top: 0; padding-top: 0; border-top: none; }
-  .rail h5.fam-h { margin: 12px 8px 2px; font-size: 11px; color: var(--text-2); font-weight: 600; }
+  .rail details.fam { margin: 2px 0; }
+  .rail details.fam summary.fam-h { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; margin: 0; padding: 5px 8px 5px 20px; border-radius: var(--radius-sm); font-size: 11px; color: var(--text-2); font-weight: 600; position: relative; }
+  .rail details.fam summary.fam-h::-webkit-details-marker { display: none; }
+  .rail details.fam summary.fam-h::before { content: ""; position: absolute; left: 7px; top: 50%; width: 6px; height: 6px; margin-top: -4px; border-right: 1.5px solid var(--text-3); border-bottom: 1.5px solid var(--text-3); transform: rotate(-45deg); transition: transform .12s; }
+  .rail details.fam[open] > summary.fam-h::before { transform: rotate(45deg); margin-top: -3px; }
+  .rail details.fam summary.fam-h:hover { background: var(--surface-2); color: var(--text); }
+  .rail details.fam summary.fam-h .lbl { flex: 1 1 auto; }
+  .rail details.fam summary.fam-h .n { color: var(--text-3); font-size: 10.5px; }
+  .rail details.fam .fam-list { display: grid; gap: 1px; padding-left: 10px; }
   .rail a { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: var(--radius-sm); color: var(--text-2); text-decoration: none; font-size: 13px; border-left: 2px solid transparent; }
   .rail a .lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rail a .railicon { flex: none; color: var(--text-3); }
@@ -126,7 +134,7 @@
 const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
-const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Other"];
+const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
   websec: ["Security audit", "Web security (OWASP Benchmark)", "Web security"],
@@ -138,6 +146,11 @@ const META = {
   phishing: ["Fraud and growth", "Phishing emails", "Phishing"],
   darkpatterns: ["Fraud and growth", "Dark patterns", "Dark patterns"],
   checklist_contractnli: ["Document checklist", "Contract checks (ContractNLI)", "ContractNLI"],
+  emotion_anger: ["Perspective validation", "Anger (GoEmotions)", "Anger"],
+  emotion_fear: ["Perspective validation", "Fear (GoEmotions)", "Fear"],
+  persuasion_appeals: ["Perspective validation", "Persuasion appeals (Persuasion for Good)", "Persuasion"],
+  politeness_deference: ["Perspective validation", "Politeness (Stanford Politeness Corpus)", "Politeness"],
+  threat_civil: ["Perspective validation", "Threat (Jigsaw Civil Comments)", "Threat"],
 };
 const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1], short: m[2] } : { group: "Other", name: id, short: id }; };
 const CODE_SETS = new Set(["memsafety", "websec"]);
@@ -272,11 +285,19 @@ mount(document.getElementById("root"), async () => {
       structOg.append(el("option", { value: id, text: name, selected: ST.set === id }));
     }
     rail.append(el("h4", { class: "sect", text: "Sets" }));
-    let last = null, og = null;
+    let last = null, og = null, det = null, list = null;
     for (const p of PROBES) {
       const m = meta(p.id);
-      if (m.group !== last) { last = m.group; rail.append(el("h5", { class: "fam-h", text: m.group })); og = el("optgroup", { label: m.group }); select.append(og); }
-      { const a = link(p.id, m.name, ""); a.title = `${p.n} items, ${nClasses(p)} classes`; rail.append(a); }
+      if (m.group !== last) {
+        last = m.group;
+        const count = PROBES.filter(x => meta(x.id).group === m.group).length;
+        list = el("div", { class: "fam-list" });
+        det = el("details", { class: "fam", open: ST.set !== "all" && ST.set !== "batch" && meta(ST.set).group === m.group ? "" : null },
+          el("summary", { class: "fam-h" }, el("span", { class: "lbl", text: m.group }), el("span", { class: "n", text: count })), list);
+        rail.append(det);
+        og = el("optgroup", { label: m.group }); select.append(og);
+      }
+      { const a = link(p.id, m.name, ""); a.title = `${p.n} items, ${nClasses(p)} classes`; list.append(a); }
       og.append(el("option", { value: p.id, text: `${m.name} (${p.n})`, selected: ST.set === p.id }));
     }
   };
