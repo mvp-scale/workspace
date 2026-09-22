@@ -24,6 +24,11 @@ need a Level 3 built under them? Ask the user before building more library conte
 The Scenario lab task (demo/scenarios.html, see docs/scenario-lab-plan.md) is still queued but paused this session --
 don't pick it up unless asked.
 
+Working pattern: once the end state for a piece of work is clear and agreed, run it yourself and report when it's
+ready -- don't hand over commands that have no real decision point left in them. While something is still being
+decided (a threshold, a library's shape, whether an approach is right), let the user run it themselves if they want
+to see it directly, rather than running ahead of them.
+
 Constraints: no spending on the hosted model (JEV113/P0) from any script, ever -- the environment's permission
 classifier blocks it outright, not just convention. Never restart demo/server.py while an experiment runs through it.
 Timeout on every wait and check `ps` afterwards. Commit locally with the Co-Authored-By trailer (there is no remote).
