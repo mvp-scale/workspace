@@ -52,6 +52,29 @@
   .bottomline { border-color: var(--accent); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface)); }
   .bottomline .bl-stat { font-size: 22px; margin: 4px 0 8px; }
   .bottomline .bl-close { font-size: 15px; font-weight: 600; margin-top: 10px; }
+  /* Pills: replace <select> pickers with clickable chips */
+  .pillrow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font: inherit; cursor: pointer; }
+  .pill:hover { background: var(--surface-2); color: var(--text); }
+  .pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .pill.gate:not(.active) { border-color: color-mix(in srgb, var(--bad) 35%, var(--border)); }
+  .pill.other { cursor: default; }
+  .pill.other:hover { background: var(--accent-soft); color: var(--accent); }
+  /* Gantt bars as pickers */
+  .gbar.pickable { cursor: pointer; }
+  .gbar.pickable:hover .bar { stroke: var(--accent); stroke-width: 2; }
+  .gbar.pickable:hover .gantt-row-label { fill: var(--accent); }
+  /* Worked example: focus up front, support off to the side */
+  .weCard { border-color: var(--accent); }
+  .weGrid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; margin-top: 10px; }
+  @media (max-width: 860px) { .weGrid { grid-template-columns: 1fr; } }
+  .weFocus { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); }
+  .weBadges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 2px; }
+  .weStat { margin: 8px 0; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
+  .weStatMain { font-size: 17px; margin-bottom: 2px; }
+  .weSchedRow { display: flex; flex-wrap: wrap; gap: 14px; margin: 10px 0; font-size: 13px; }
+  .weSide { padding: 2px 0 2px 12px; border-left: 2px solid var(--border); }
+  .weSide p { margin: 0 0 8px; }
   .badges { display: flex; flex-wrap: wrap; gap: 4px; }
   details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
   pre.notes { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); max-height: 320px; overflow: auto; }
@@ -531,7 +554,7 @@ function figAssumption() {
 }
 
 /* ---------- Fig 2: the schedule board (a real Gantt from the CPM pass) ---------- */
-function ganttBoard(data) {
+function ganttBoard(data, onPick) {
   const nodes = data.models[orderModels(Object.keys(data.models))[0]].nodes;
   const leaves = nodes.filter(n => n.kind === "leaf").sort((a, b) => a.earliest_start_day - b.earliest_start_day);
   const groups = nodes.filter(n => n.layer === 1);
@@ -562,10 +585,12 @@ function ganttBoard(data) {
   const bars = rows.map(({ n, y: ry }) => {
     const x1 = dayX(n.earliest_start_day), x2 = dayX(n.earliest_finish_day);
     const crit = n.on_critical_path;
-    return S("g", {},
+    const g = S("g", { class: "gbar" + (onPick ? " pickable" : "") },
       S("rect", { x: x1, y: ry + 3, width: Math.max(2, x2 - x1), height: rowH - 7, rx: 3, class: "bar" + (crit ? " crit" : "") + (n.gate ? " gate" : "") },
-        S("title", {}, `${n.title}\nday ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)} · float ${fmt.num(n.total_float_days, 1)}d${crit ? " · critical path" : ""}${n.gate ? " · gate" : ""}\n\nWhy this node exists, in my own words: ${n.risk_reason || ""}\nEvidence needed: ${EVIDENCE_LABEL[n.evidence] || n.evidence || "—"}\nDone when: ${n.exit_criteria || "—"}\n\n(Hand-authored — see "How this page was built" above.)`)),
+        S("title", {}, `${n.title}\nday ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)} · float ${fmt.num(n.total_float_days, 1)}d${crit ? " · critical path" : ""}${n.gate ? " · gate" : ""}\n\nWhy this node exists, in my own words: ${n.risk_reason || ""}\nEvidence needed: ${EVIDENCE_LABEL[n.evidence] || n.evidence || "—"}\nDone when: ${n.exit_criteria || "—"}\n\n(Hand-authored — see "How this page was built" above.)${onPick ? "\n\nClick to explore this node below." : ""}`)),
       S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" }, n.title.length > 30 ? n.title.slice(0, 28) + "…" : n.title));
+    if (onPick) g.addEventListener("click", () => onPick(n.id));
+    return g;
   });
   const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, class: "gantt", role: "img", "aria-label": "Schedule board: earliest start to finish for every item, critical path highlighted" },
     grid, laneLabels, bars);
@@ -639,19 +664,30 @@ const PHASE_ORIGIN = { spike: "It's a spike because the honest answer is “meas
   validate: "It's a validation step: something else has to already exist before this can run.",
   launch: "It's the launch gate: everything else in the plan exists to get here." };
 
-function workedExample(data, story, nodes) {
+function workedExample(data, story, nodes, initialId) {
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
   const leaves = nodes.filter(n => n.kind === "leaf").sort((a, b) => (b.blocks_count || 0) - (a.blocks_count || 0));
-  const defaultId = leaves[0]?.id;
-  const box = el("div", { class: "card" }, el("h3", { style: "margin-top:0", text: "Worked example: how one node was actually decomposed" }),
-    el("p", { class: "small muted", text: "Pick any node from the plan. Everything below is read live from the same data as the rest of this page — nothing here is a separate, prettier retelling." }));
-  const select = el("select", { "aria-label": "Node to explore" },
-    nodes.filter(n => n.kind === "leaf").map(n => el("option", { value: n.id, text: n.title, selected: n.id === defaultId })));
+  const defaultId = initialId || leaves[0]?.id;
+  const box = el("div", { class: "card weCard" }, el("h3", { style: "margin-top:0", text: "Worked example" }),
+    el("p", { class: "small muted", text: "Click any node — here, in the schedule board above, or in the tree further down — to see everything behind it. Live from the same data as the rest of this page." }));
+  const picks = leaves.slice(0, 6);
+  const pillRow = el("div", { class: "pillrow" });
   const body = el("div");
-  const draw = () => { body.replaceChildren(workedExampleBody(data, story, nodes, byId, select.value)); };
-  select.onchange = draw;
-  box.append(el("div", { style: "margin-bottom:10px" }, select), body);
-  draw();
+  let current = defaultId;
+  const draw = (id) => {
+    current = id;
+    const pillEls = picks.map(n => {
+      const btn = el("button", { type: "button", class: "pill" + (n.id === current ? " active" : "") + (n.gate ? " gate" : "") }, n.title);
+      btn.addEventListener("click", () => draw(n.id));
+      return btn;
+    });
+    if (!picks.some(p => p.id === current)) pillEls.push(el("span", { class: "pill active other" }, byId[current]?.title || current));
+    pillRow.replaceChildren(...pillEls);
+    body.replaceChildren(workedExampleBody(data, story, nodes, byId, current));
+  };
+  box.weSelect = draw;
+  box.append(pillRow, body);
+  draw(defaultId);
   return box;
 }
 
@@ -663,28 +699,35 @@ function workedExampleBody(data, story, nodes, byId, id) {
   const tm = n.target_metric || {};
   const frag = el("div");
 
-  frag.append(el("p", { class: "small muted" }, `${root.title} → ${parent.title} → `, el("b", { text: n.title })));
-  frag.append(el("h4", { text: "Why it was split out as its own node" }),
-    el("p", { class: "small" }, ORIGIN_NOTE[id] || `Placed under “${parent.title}.” ${PHASE_ORIGIN[n.phase] || ""}`));
-
-  frag.append(el("h4", { text: "What it means" }), el("p", { class: "small" }, n.text.split("\n")[0]));
-
-  frag.append(el("h4", { text: "The requirement behind it" }),
-    tm.name ? el("table", { class: "data" },
-      el("tbody", {},
-        el("tr", {}, el("td", { class: "muted", text: "Metric" }), el("td", {}, `${tm.name} (${tm.unit})`)),
-        el("tr", {}, el("td", { class: "muted", text: "Needed" }), el("td", {}, tm.needed || "—")),
-        el("tr", {}, el("td", { class: "muted", text: "Assumed today" }), el("td", {}, tm.assumed_today ? el("span", { class: "unverified", title: "My own recollection, not fetched or measured." }, tm.assumed_today) : "—"))))
-      : el("p", { class: "small muted", text: "No standalone metric — this node is a decision or a build step, not a measurement." }),
-    el("p", { class: "small" }, el("b", { text: "Evidence needed: " }), EVIDENCE_LABEL[n.evidence] || n.evidence || "—"),
+  // Focus area, up front: what this node is and the one number that matters. Supporting
+  // narrative (where it came from) sits off to the side, not ahead of the headline.
+  const focus = el("div", { class: "weFocus" },
+    el("div", { class: "weBadges" },
+      el("span", { class: "dbadge", text: PHASE_LABEL[n.phase] || n.phase || "—" }),
+      n.gate ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", text: "week-1 gate" }) : null,
+      n.on_critical_path ? el("span", { class: "dbadge", style: "color:var(--accent);border-color:color-mix(in srgb, var(--accent) 40%, var(--border))", text: "critical path" }) : null,
+      el("span", { class: "dbadge status-" + n.status, text: STATUS_LABEL[n.status] || n.status })),
+    el("h4", { style: "margin:6px 0 4px; font-size:19px", text: n.title }),
+    el("p", { class: "small", text: n.text.split("\n")[0] }),
+    tm.name ? el("div", { class: "weStat" },
+      el("div", { class: "weStatMain" }, el("b", { text: tm.needed || "—" }), el("span", { class: "small muted", text: ` ${tm.name} (${tm.unit})` })),
+      el("div", { class: "small" }, "Assumed today: ", tm.assumed_today ? el("span", { class: "unverified", title: "My own recollection, not fetched or measured." }, tm.assumed_today) : "—"))
+      : el("p", { class: "small muted", text: "A decision or a build step, not a measurement — no standalone metric." }),
+    el("div", { class: "weSchedRow" },
+      el("span", {}, el("b", { text: `${n.duration_days}d` }), el("span", { class: "small muted", text: " estimated" })),
+      el("span", {}, el("b", { text: `day ${fmt.num(n.earliest_start_day, 1)}–${fmt.num(n.earliest_finish_day, 1)}` })),
+      el("span", {}, el("b", { text: `${fmt.num(n.total_float_days, 1)}d` }), el("span", { class: "small muted", text: " float" })),
+      el("span", {}, el("b", { text: String(n.blocks_count || 0) }), el("span", { class: "small muted", text: " items depend on this" }))),
     el("p", { class: "small" }, el("b", { text: "Done when: " }), n.exit_criteria || "—"));
 
-  const preds = (n.predecessors || []).map(p => `${byId[p.id]?.title || p.id} (${p.type === "fs" ? "must finish first" : p.type === "ss" ? "must start first" : "informs this, doesn't block it"})`);
-  frag.append(el("h4", { text: "Where it sits in the schedule, and why" }),
-    el("p", { class: "small" }, preds.length ? `Waits on: ${preds.join("; ")}.` : "No predecessors — can start day 0."),
-    el("p", { class: "small" }, `Estimated at ${n.duration_days} day${n.duration_days === 1 ? "" : "s"}. Scheduled day ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)}, with ${fmt.num(n.total_float_days, 1)} days of float.`,
-      n.on_critical_path ? " On the critical path: any delay here delays the whole plan." : " Has slack: it can run late without moving the finish date."),
-    el("p", { class: "small" }, `Blocks ${n.blocks_count || 0} other item${n.blocks_count === 1 ? "" : "s"}${kids.length ? `, directly: ${kids.map(k => k.title).join(", ")}.` : "."}`));
+  const preds = (n.predecessors || []).map(p => `${byId[p.id]?.title || p.id} (${p.type === "fs" ? "must finish first" : p.type === "ss" ? "must start first" : "informs, doesn't block"})`);
+  const side = el("div", { class: "weSide" },
+    el("p", { class: "small muted" }, `${root.title} → ${parent.title} → ${n.title}`),
+    el("p", { class: "small" }, el("b", { text: "Why its own node: " }), ORIGIN_NOTE[id] || `Placed under "${parent.title}." ${PHASE_ORIGIN[n.phase] || ""}`),
+    el("p", { class: "small" }, el("b", { text: "Waits on: " }), preds.length ? preds.join("; ") : "nothing — can start day 0"),
+    kids.length ? el("p", { class: "small" }, el("b", { text: "Directly unlocks: " }), kids.map(k => k.title).join(", ")) : null,
+    el("p", { class: "small" }, el("b", { text: "Evidence: " }), EVIDENCE_LABEL[n.evidence] || n.evidence || "—"));
+  frag.append(el("div", { class: "weGrid" }, focus, side));
 
   frag.append(el("h4", { text: "How the five models actually did on it" }),
     el("p", { class: "small muted", text: "Their real answers on this exact node, next to my reference call — not an aggregate." }));
@@ -913,8 +956,10 @@ function renderDecomposeTree(data) {
       el("p", { class: "small" }, "Each Worker runs in an isolate with its own capped heap, and isolates are deliberately walled off from one another; there is no documented way for two of them to read or write the same physical memory. Anything one worker passes another goes over the network — through a Durable Object, a Queue, KV or R2. That is milliseconds and megabits, not nanoseconds and gigabytes."),
       el("p", { class: "small muted" }, el("b", { text: "This is my reading of the platform, not a measurement. " }), "Nothing on this page has been run against Cloudflare. That is exactly why it is the first experiment in the plan below, not a conclusion."))));
 
-  // 5: the plan + gantt
-  out.append(el("h3", { text: `The plan: ${nodes.length} nodes, six workstreams, five phases` }), srcNote("plan"), ganttBoard(data));
+  // 5: the plan + gantt (bars are clickable — they drive the worked example below)
+  const weBox = workedExample(data, story, nodes);
+  out.append(el("h3", { text: `The plan: ${nodes.length} nodes, six workstreams, five phases` }), srcNote("plan"),
+    ganttBoard(data, (id) => { weBox.weSelect(id); weBox.scrollIntoView({ behavior: "smooth", block: "nearest" }); }));
   out.append(el("div", { class: "strip" },
     el("p", { class: "small" }, "Total span: ", el("b", { text: `${sched.span_days} of ${data.horizon_working_days} working days` }), "."),
     el("p", { class: "small" }, "Critical path: ", el("b", { text: (sched.critical_path || []).map(id => (nodes.find(n => n.id === id) || {}).title || id).join(" → ") }), "."),
@@ -923,7 +968,7 @@ function renderDecomposeTree(data) {
   out.append(el("p", { class: "legend", text: "Critical path and float are computed by a forward/backward pass over stated predecessor edges and duration estimates — the method is in build_tree_edge.py and is reproducible. The durations are my estimates for one experienced engineer, and they are the weakest input on this page; that is what the sensitivity line is for." }), srcNote("schedule"));
 
   // 5b: worked example — one node, explored in full, not summarized
-  out.append(workedExample(data, story, nodes));
+  out.append(weBox);
 
   // 6: week 1 gate card
   out.append(gateCard(data, story), srcNote("plan"));
@@ -968,12 +1013,19 @@ function renderDecomposeTree(data) {
 
   let curModel = models[0];
   const treeBox = el("div");
-  const select = el("select", { "aria-label": "Model for the tree view", onchange: (e) => { curModel = e.target.value; drawTree(); } }, models.map(m => el("option", { value: m, text: Jev.codeOf(m) })));
-  const drawTree = () => treeBox.replaceChildren(buildTreeView(data.models[curModel].nodes));
+  const modelPills = el("div", { class: "pillrow" });
+  const drawTree = () => {
+    treeBox.replaceChildren(buildTreeView(data.models[curModel].nodes));
+    modelPills.replaceChildren(...models.map(m => {
+      const btn = el("button", { type: "button", class: "pill" + (m === curModel ? " active" : "") }, mtagShort(m));
+      btn.addEventListener("click", () => { curModel = m; drawTree(); });
+      return btn;
+    }));
+  };
   drawTree();
   out.append(el("div", { class: "card" }, el("h4", { text: "Node by node" }),
     el("p", { class: "small muted", text: "Each node's dot is the share of its typed answers this model got right. Hover a dot for the detail, including my reference call and why." }),
-    el("div", { class: "row", style: "margin-bottom:8px;align-items:center;gap:8px" }, el("span", { class: "small muted", text: "Model:" }), select), treeBox));
+    el("div", { style: "margin-bottom:8px" }, modelPills), treeBox));
 
   // 10: why five models
   out.append(el("h3", { text: "Why five models, and not the other four" }));
