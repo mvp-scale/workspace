@@ -16,42 +16,40 @@ TypeSafe calls against the loaded local models (or, now, optionally the hosted m
 below).
 
 Verify state first: `demo/lineup.sh status` (loaded local models), `cd foundry && git status`
-(check for the two files this session left with uncommitted local edits -- see "Git state"
-below), and run the three-command pipeline yourself once to confirm it still works:
+(should be clean -- see "Git state" below), and run the three-command pipeline yourself once to
+confirm it still works:
     python3 layered_walk.py --idea oncall-rotation --budget 80
     python3 report.py --idea oncall-rotation
     python3 sort_and_rank.py --idea oncall-rotation
 Report in a few lines what's loaded and whether it ran clean before doing anything else.
 
-This session (the one that wrote this file) fixed a long chain of real bugs in the pipeline --
-polarity contradictions, a wrongly-excluded model, a magic threshold that only worked for one
-model combination, a flat floor that silently selected nothing against a different model's score
-scale -- see "Fixed this session" below before assuming anything numeric here is still right for
-whatever model combination you're using. The user wants this handed to a Fable-run planning pass
-next: the real, substantial gaps are concentrated in tools/*.yaml and tools/world-knowledge.yaml
-(see "Real gaps, prioritized" below) -- that's the brief to plan against, not a request to
-mechanically start filling them in.
+This session got a Fable-model planning pass against the "Real gaps, prioritized" list below,
+acted on its one open decision (gap 1: the user chose to retire the 12 original gap_categories,
+not build them out or fold them in -- done), then authored the 6 missing idea customer-intakes and
+ran all 7 ideas through the live pipeline for the first time (gap 6) -- see
+`foundry/comparisons/seven-idea-run-2026-09-22.md` for what that surfaced, some of it genuinely new
+evidence, not just BRIDGE.md's prior summary re-confirmed. Read "Real gaps, prioritized" below
+before assuming any threshold or selection number is still right -- several are now better
+evidenced than before, none are newly resolved except gap 1.
 
 Constraints, unchanged: no hosted-model spend from any script's own environment (P0/jev requires
 the person to `set -a; . /workspace/.env; set +a` in THEIR OWN shell before running a script from
-it -- never read or paste the key yourself; see "Hosted Jev" below for what's now actually
-possible). Never restart demo/server.py while an experiment runs through it. Timeout on every
-wait, check `ps` afterward. Commit locally with the Co-Authored-By trailer -- note: this
-environment appears to auto-commit periodically (see "Git state"); don't assume nothing is saved,
-but don't rely on it either.
+it -- never read or paste the key yourself; see "Hosted Jev" below, including a real bug the Fable
+pass found in the Sorter half specifically). Never restart demo/server.py while an experiment runs
+through it. Timeout on every wait, check `ps` afterward. Commit locally with the Co-Authored-By
+trailer -- note: this environment appears to auto-commit periodically (see "Git state"); don't
+assume nothing is saved, but don't rely on it either.
 ```
 
 ## Git state
 
 `/workspace` is a small git repo, local commits only, no remote. `foundry/` is tracked (unlike
-`data/`, `models/`, `logs/`, `.env`, `research/`). This session observed the environment
-auto-committing periodically without an explicit `git commit` being run (commits `75b6bac`,
-`6e2494e` both landed mid-session, matching real work, not something this session's user or
-assistant triggered directly) — reassuring, but don't rely on it as a substitute for committing
-before ending a session. **As of this file being written, `foundry/layered_walk.py` and
-`foundry/sort_and_rank.py` have local, uncommitted edits** (the `--models` flag and the
-child-selection top-k fix, both described below) — commit those before trusting anything else has
-definitely landed.
+`data/`, `models/`, `logs/`, `.env`, `research/`). The environment auto-commits periodically
+without an explicit `git commit` being run — reassuring, but don't rely on it as a substitute for
+committing real milestones yourself. As of this file being written, git is clean: this session
+committed the prior session's pending `--models`/`CHILD_TOPK_*` edits after verifying them, the
+gap-1 retirement, the 6 authored customer intakes, and this file. Verify with `cd foundry && git
+status` regardless — don't take "clean" as read.
 
 ## Foundry: the guide
 
@@ -69,8 +67,8 @@ python3 sort_and_rank.py --idea <id>                    # Sorter + Conveyor + Sp
 
 | Tool | Job | Live? |
 |---|---|---|
-| Slicer | domain/audience + 10-probe tech-context pre-scan (1 call) → Composite-Scoring-ranked top-k of 33 gap categories (1 call) | yes, `by-domain` variant only — 4 other designed variants never run |
-| Grinder | recurse each selected category's library to atomic requirements | yes — top-k child selection (see "Fixed this session"), only 25/33 categories have a library to recurse into |
+| Slicer | domain/audience + 10-probe tech-context pre-scan (1 call) → Composite-Scoring-ranked top-k of 21 gap categories (1 call) | yes, `by-domain` variant only — 4 other designed variants never run |
+| Grinder | recurse each selected category's library to atomic requirements | yes — top-k child selection (see "Fixed this session"); all 21 categories now have a library (the original 12 were retired, see "Real gaps" gap 1) |
 | Sorter | score each requirement (risk/effort), group by risk tier | yes, scoring + `by-risk-tier`; 4 other grouping variants blocked (no per-piece tags exist) |
 | Conveyor | sequence groups | `risk-first` only; dependency/duration variants blocked (no data source) |
 | Spotlight | rank what to check first | 3 of 5 variants live; 2 blocked (same missing-data reasons) |
@@ -85,13 +83,18 @@ generalized too far from one question's wording; that was wrong and got correcte
 56.9% accuracy) and verdict (P5, 46.7%, near-zero calibration gap) are the ones actually excluded
 by default.
 
-**Hosted Jev (P0)**: confirmed working this session, run by the user directly in their own
+**Hosted Jev (P0)**: confirmed working for `layered_walk.py`, run by the user directly in their own
 terminal with `.env` sourced first (`set -a; . /workspace/.env; set +a`) — the code has no
 special-case exclusion of `jev`, it's just another entry in `ALL_MODELS`. From a Claude-run Bash
 tool call, it fails clean with `"TYPESAFE_API_KEY not set"` (no key in that shell's environment) —
 this is not a permission block on the call itself, just no credential present; reading whether the
-key exists at all (e.g. `cat .env`) **is** a real, harness-level block (hit directly this session)
-and should not be retried. Never read or relay the key through chat.
+key exists at all (e.g. `cat .env`) **is** a real, harness-level block (hit directly a prior
+session) and should not be retried. Never read or relay the key through chat. **Real bug found by
+the Fable planning pass, not yet fixed:** `sort_and_rank.py --models P0` (or any `jev`-including
+combination) silently scores nothing — `funnel.bounce_and_weigh` (line ~161) does `if
+cfg.get("hosted"): continue`, and `demo/server.py` marks `jev` as `hosted: True`. This is a
+separate skip from the credential check above; `layered_walk.py` doesn't have it, `sort_and_rank.py`
+does. Not fixed this session — flagged in "Real gaps" gap 4.
 
 ## Fixed this session (condensed — read before touching any threshold or model list)
 
@@ -154,43 +157,79 @@ and should not be retried. Never read or relay the key through chat.
   but **it is one reviewer's single pass, not the six-way consolidation originally designed**, and
   hasn't had a second, independent review.
 
-## Real gaps, prioritized (the brief for Fable's planning pass)
+## Real gaps, prioritized
 
-Concentrated in `tools/*.yaml` and `tools/world-knowledge.yaml`, as suspected:
+Concentrated in `tools/*.yaml` and `tools/world-knowledge.yaml`, as suspected. A Fable-model
+planning pass went through all 8 of the prior version of this list, re-verified each against the
+real files (not just this doc's summary), and found several things worth correcting — folded in
+below. Gap 1 (below) is resolved this session; the rest are renumbered 1-7 accordingly, roughly in
+the sequencing the Fable pass suggested (evidence-gathering first, since gap 6 — now done — turned
+out to cheaply inform several of the others at once).
 
-1. **8 of 33 `gap_categories` still have no `gap_category_detail` library at all**: `capability-gap`,
-   `escalation-authority`, `fairness-distribution`, `visibility-tracking`, `noise-reduction`,
-   `knowledge-transfer`, `compliance-constraint`, `measurement-gap` — all from the *original*
-   generic 12, none from the new 21 requirement-shaped ones (those all got trees from the
-   workflow). Open question, not yet decided: build these 8 out to match the new requirement
-   shapes, or retire them now that the requirement-shaped library exists and better matches what
-   the user actually wants (see foundry/README.md's own "Lessons learned" — the original 12 read
-   as an abstract maturity checklist, which was explicitly the wrong shape).
+1. **RESOLVED this session.** The 8 of 33 `gap_categories` with no `gap_category_detail` library,
+   plus the 4 that had one, were retired — the user's decision, not inferred: one consistent
+   21-category requirement-shaped library beats a mixed audit-checklist-plus-SRS one. Caveat the
+   Fable pass surfaced before the decision: 7 of the 8 libraryless categories could never be
+   boosted by any `profile_probe` anyway, so "they never landed in a top-4" wasn't clean evidence
+   of irrelevance on its own — the decision was made on library-shape grounds, with that caveat
+   known. See `world-knowledge.yaml`'s `gap_categories` comment for the full reasoning.
 2. **4 of Slicer's 5 designed variants have never run live**: `by-layer`, `by-risk`, `by-phase`,
    `binary-halving` exist only as design in `slicer.yaml`. Only `by-domain` (+ the profile
-   pre-scan bolted onto it) has ever been exercised.
+   pre-scan bolted onto it) has ever been exercised. These are whole-idea-level classifications, so
+   their natural consumer is Composite Scoring (gap 5 below), not directly gap 3's per-piece
+   problem — don't conflate the two when picking this up.
 3. **Sorter's 4 non-`by-risk-tier` grouping variants are blocked on missing data**, not missing
    code: `by-domain`/`by-audience`/`by-layer`/`by-phase` grouping need a per-piece tag that nothing
    sets — `by-domain`'s classification is whole-idea-level, not per-requirement. Same root cause
    blocks Conveyor's `dependency-order`/`parallel-lanes` (`depends_on` inference was never built)
-   and Spotlight's `downstream-impact`/`audience-weighted`.
-4. **`ATOMIC_THRESHOLD` and `CHILD_TOPK_*` are calibrated (or guessed) for the local P1/P2/P3
-   ensemble only.** Hosted P0 is now confirmed reachable (user-driven, own terminal) — a real
-   calibration diagnostic against P0 specifically (same method as the one that fixed
-   `ATOMIC_THRESHOLD` for local models) hasn't been run and would directly answer whether these
-   numbers hold up.
-5. **`domain_enrichment`/`profile_probes` never narrow which of the 33 `gap_categories` even get
-   checked** — every idea still gets all 33 checked unconditionally regardless of domain or
-   profile signal (the long-standing `open_question` in `world-knowledge.yaml`, still unresolved).
-6. **Only `oncall-rotation` has ever been run through the live pipeline.** The other 6 ideas in
-   `ideas/*.json` (`plumber-crm`, `shift-swap-marketplace`, `sleep-coach-wearable`,
-   `smart-recycling-bin`, `standup-async`, `voice-extension`) have never been tested — worth doing
-   before trusting that anything calibrated on one idea generalizes.
+   and Spotlight's `downstream-impact`/`audience-weighted`. Cheapest real progress here doesn't
+   need new calls: pieces already carry `lens` (business/technical) and `shape` (for the 21
+   categories) from their root category — a free grouping by either is unbuilt but needs zero live
+   calls, unlike the five designed variants.
+4. **`ATOMIC_THRESHOLD`, `CHILD_TOPK_*`, and (newly identified) Sorter's risk-tier bins are all
+   calibrated or guessed for the local P1/P2/P3 ensemble only, and now have much stronger evidence
+   they're marginal.** The 7-idea run (gap 6, done this session — see
+   `foundry/comparisons/seven-idea-run-2026-09-22.md`) found `sleep-coach-wearable` produced
+   **zero** requirements at all — every leaf either needed a decision (cross-model spread >= 0.3)
+   or had no library — and across all 7 ideas, 13 of 14 requirements ever found landed in Sorter's
+   `low-stakes` risk tier, `must-resolve-first` (>= 0.6) was never reached once. The risk-tier bins
+   were never diagnosed against real data the way `ATOMIC_THRESHOLD` was — same open-item class.
+   Hosted P0 is reachable (user-driven, own terminal) for `layered_walk.py`, but not yet for
+   `sort_and_rank.py` — see "Hosted Jev (P0)" above for the `hosted`-skip bug the Fable pass found
+   in `funnel.bounce_and_weigh`; fix that before a P0 Sorter calibration is even possible.
+5. **`domain_enrichment`/`profile_probes` never narrow which of the 21 `gap_categories` even get
+   checked** — every idea still gets all 21 checked unconditionally (the long-standing
+   `open_question` in `world-knowledge.yaml`, still unresolved). New evidence this session
+   complicates it further, not just confirms it: `nonfunctional-performance` was selected in the
+   top-4 for **all 7** ideas run, `nonfunctional-availability` for 6 of 7, regardless of domain —
+   and checking the *own* gap-check score (not just the boost) shows it's consistently high
+   (0.36-0.81) across every idea, likely because a one-paragraph idea pitch essentially never
+   states a measurable performance/availability target, so the honest answer to "is this stated as
+   a number" is "no" almost by construction. This means Composite Scoring's boost term is doing
+   less differentiating work than assumed, and narrowing-by-domain may not even be the fix — see
+   the comparisons file for the full writeup before touching `W_GAP`/`W_PROFILE` or this open
+   question.
+6. **DONE this session.** All 7 ideas in `ideas/*.json` have now been run through the live
+   pipeline (`plumber-crm`, `shift-swap-marketplace`, `sleep-coach-wearable`,
+   `smart-recycling-bin`, `standup-async`, `voice-extension`, plus `oncall-rotation` re-run
+   post-retirement) — all ran clean, no crashes, no stray processes, polarity read clean on every
+   rendered requirement. The 6 previously-untested ideas needed real `customer` intake authorship
+   first (`plumber-crm.json` had no `customer` key at all — would have crashed; the other five
+   carried a placeholder string) — authored this session, the one authorship the project's own
+   rule allows. Full findings, not just "it ran": `foundry/comparisons/seven-idea-run-2026-09-22.md`
+   — feeds directly into gaps 4 and 5 above.
 7. **The 21-category requirement-shaped library is one Opus pass, not the six-way consolidation
    originally designed** (see "Fixed this session" above) — a real second review, or an actual
    working re-run of the intended research→gap-find→articulate→correct pipeline, is still owed.
-8. **`problems/oncall-rotation.json` is fully historical** (pre-polarity-fix text, produced by a
-   deleted script) — kept only as a labeled artifact, not a current one.
+   Now the *only* gap_category_detail library (the 12 original's four trees were retired with the
+   rest) — a review matters more than before, not less.
+8. **Doc drift, broader than one file.** The Fable pass found `foundry/tools/grinder.yaml`'s
+   `patterns_applied` still describes the wrongly-excluded-P3 diagnosis and a 0.75 atomic threshold
+   (both since corrected elsewhere), and `problems/oncall-rotation.json` is fully historical
+   (pre-polarity-fix text, produced by a deleted script, kept only as a labeled artifact). This
+   session fixed the doc drift its own gap-1 retirement directly caused (`README.md`,
+   `tools/README.md`, two `layered_walk.py` comments) but did not do a full sweep — `grinder.yaml`
+   and `problems/oncall-rotation.json` are still stale.
 
 ## Scenario lab (separate, still paused)
 
@@ -218,3 +257,10 @@ graphs, worked example, item explorer) consistent across sets. Do not pick this 
 - **Reading whether a credential exists is itself a blocked action**, separate from and prior to
   whether a call using it would be blocked. Don't retry it; don't paste secrets into chat either
   direction.
+- **A one-paragraph idea pitch structurally lacks spec detail, so spec-completeness categories
+  (measurable performance/availability targets, named component boundaries) will look like gaps
+  for almost any idea, independent of what actually matters for it.** Found by running 7 genuinely
+  different ideas, not visible from one: `nonfunctional-performance`/`nonfunctional-availability`
+  dominated the top-4 across all 7, own gap-check score high (0.36-0.81) even without a profile
+  boost. A single worked example can't surface this kind of generalization failure — running the
+  full idea set is cheap and catches it; running one idea repeatedly doesn't.
