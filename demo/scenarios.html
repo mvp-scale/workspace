@@ -34,6 +34,9 @@
   .view { min-width: 0; }
   .view > * + * { margin-top: 14px; }
   .qbox { margin: 0; padding: 6px 10px; border-left: 3px solid var(--border-strong); background: var(--surface-2); border-radius: var(--radius-sm); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .srcgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0; }
+  .srcnote { cursor: help; }
+  .srcnote code { font: 11px var(--mono); color: var(--text-2); background: var(--surface-2); padding: 1px 4px; border-radius: 3px; }
   .badges { display: flex; flex-wrap: wrap; gap: 4px; }
   details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
   pre.notes { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); max-height: 320px; overflow: auto; }
@@ -437,6 +440,8 @@ const STATUS_COLOR = {
   known: "--good", needs_measurement: "--bad", needs_decision: "--accent",
   to_build: "--text-3", to_validate: "--accent", documented: "--good", deferred: "--text-3" };
 const PHASE_LABEL = { spike: "spike", decide: "decide", build: "build", validate: "validate", launch: "launch" };
+const EVIDENCE_LABEL = { docs: "answerable from published docs (unverified from this box)", platform_measurement: "needs a live measurement against the real platform — nothing here has been measured",
+  benchmark: "needs a real benchmark run", decision: "a choice, not a fact — nothing to verify, someone has to pick", implementation: "settled once it's built" };
 const PHASE_COLOR = { spike: "--bad", decide: "--accent", build: "--text-2", validate: "--accent", launch: "--good" };
 const heat01 = (s) => s == null ? "var(--surface-2)" : s >= 0.5
   ? `color-mix(in srgb, var(--good) ${Math.round((s - 0.5) * 2 * 55)}%, var(--surface-2))`
@@ -544,7 +549,7 @@ function ganttBoard(data) {
     const crit = n.on_critical_path;
     return S("g", {},
       S("rect", { x: x1, y: ry + 3, width: Math.max(2, x2 - x1), height: rowH - 7, rx: 3, class: "bar" + (crit ? " crit" : "") + (n.gate ? " gate" : "") },
-        S("title", {}, `${n.title}\nday ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)} · float ${fmt.num(n.total_float_days, 1)}d${crit ? " · critical path" : ""}${n.gate ? " · gate" : ""}`)),
+        S("title", {}, `${n.title}\nday ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)} · float ${fmt.num(n.total_float_days, 1)}d${crit ? " · critical path" : ""}${n.gate ? " · gate" : ""}\n\nWhy this node exists, in my own words: ${n.risk_reason || ""}\nEvidence needed: ${EVIDENCE_LABEL[n.evidence] || n.evidence || "—"}\nDone when: ${n.exit_criteria || "—"}\n\n(Hand-authored — see "How this page was built" above.)`)),
       S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" }, n.title.length > 30 ? n.title.slice(0, 28) + "…" : n.title));
   });
   const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, class: "gantt", role: "img", "aria-label": "Schedule board: earliest start to finish for every item, critical path highlighted" },
@@ -611,9 +616,10 @@ function gateCard(data, story) {
   t.append(el("thead", {}, el("tr", {}, el("th", { text: "Question" }), el("th", { text: "How it gets measured" }), el("th", { text: "Cost" }), el("th", { text: "Blocks" }), el("th", { text: "Status" }))));
   const tb = el("tbody");
   for (const g of gates) {
-    tb.append(el("tr", {}, el("td", {}, el("b", { text: g.title })), el("td", { class: "small", text: g.text.split("\n")[0] }),
+    tb.append(el("tr", {}, el("td", { title: `Why I picked this as a gate: ${g.risk_reason || ""}\n\nHand-authored, not sourced from documentation.` }, el("b", { text: g.title })),
+      el("td", { class: "small", title: EVIDENCE_LABEL[g.evidence] || "", text: g.text.split("\n")[0] }),
       el("td", { class: "muted", text: `${g.duration_days}d` }), el("td", { class: "muted", text: `${g.blocks_count || 0} item${g.blocks_count === 1 ? "" : "s"}` }),
-      el("td", {}, el("span", { class: "dbadge status-" + g.status, text: STATUS_LABEL[g.status] || g.status }))));
+      el("td", {}, el("span", { class: "dbadge status-" + g.status, title: EVIDENCE_LABEL[g.evidence] || "", text: STATUS_LABEL[g.status] || g.status }))));
   }
   t.append(tb); box.append(el("div", { style: "overflow-x:auto" }, t));
   const sched = data.schedule || {};
@@ -655,7 +661,7 @@ function resourceTable(data, story) {
     tb.append(el("tr", {}, el("td", {}, el("span", { class: "dbadge", text: `tier ${r.tier}` })),
       el("td", {}, el("b", { text: r.n.title })),
       el("td", { class: "small" }, r.metric ? `${r.metric} (${r.unit}): ${r.needed}` : "—"),
-      el("td", {}, r.assumed ? el("span", { class: "unverified", title: "Unverified from this box" }, r.assumed) : el("span", { class: "muted", text: "—" })),
+      el("td", {}, r.assumed ? el("span", { class: "unverified", title: "This is my own recollection of the platform, written into the plan by hand — not fetched from Cloudflare's docs, not measured, not generated by any model. Treat it as a guess with a name on it until the spike checks it." }, r.assumed) : el("span", { class: "muted", text: "—" })),
       el("td", { class: "small" }, r.why)));
   }
   t.append(tb); box.append(el("div", { style: "overflow-x:auto" }, t));
@@ -745,6 +751,16 @@ function scorecardTable(data, story) {
 }
 
 /* ---------- main render ---------- */
+const SRC = {
+  plan: { path: "probes/decompose/build_tree_edge.py", kind: "Hand-authored by Claude", detail: "Every node's title, text, duration, dependency, gate flag and “assumed today” figure was written by hand. Not fetched from Cloudflare's documentation, not measured, and not generated by any of the models below — they never saw the pitch and were never asked to produce a plan." },
+  schedule: { path: "probes/decompose/build_tree_edge.py (cpm())", kind: "Computed, from the authored plan", detail: "Real deterministic math (a forward/backward critical-path pass) run on the durations and dependencies above. The computation is real; the inputs it runs on are still just my estimates." },
+  models: { path: "probes/lab_decompose.py → data/probe-runs-v2/_decompose/tree_scored_edge.json", kind: "Live model output", detail: "One real POST /v1/systemone call per node per model, to the 5 models actually running on this box. Fully reproducible: rerun the script and the answers regenerate from the live servers, not from anything cached or invented." },
+};
+function srcNote(key) {
+  const s = SRC[key];
+  return el("p", { class: "small muted srcnote", title: s.detail }, el("b", { text: "Source: " }), el("code", { text: s.path }), ` — ${s.kind}.`);
+}
+
 function renderDecomposeTree(data) {
   const models = orderModels(Object.keys(data.models || {}));
   if (!models.length) return empty("No decompose-tree run yet", "Run probes/lab_decompose.py for the loaded models.");
@@ -762,6 +778,15 @@ function renderDecomposeTree(data) {
   out.append(el("h3", { text: "The pitch, as received" }), el("blockquote", { class: "qbox", text: pitch }),
     el("p", { class: "legend", text: "A real pitch, lightly paraphrased. The 30-day target is the pitcher's, not mine." }));
 
+  // 2b: how this was built, up front, not buried
+  out.append(el("div", { class: "card" }, el("h3", { style: "margin-top:0", text: "How this page was built" }),
+    el("p", { class: "small muted", text: "Three different things happen on this page. They are not the same kind of claim, so they get separate sourcing every time they appear below." }),
+    el("div", { class: "srcgrid" },
+      el("div", {}, el("b", { text: "1. The plan" }), el("br"), srcNote("plan")),
+      el("div", {}, el("b", { text: "2. The schedule" }), el("br"), srcNote("schedule")),
+      el("div", {}, el("b", { text: "3. The model scoring" }), el("br"), srcNote("models"))),
+    el("p", { class: "small" }, "In short: ", el("b", { text: "I wrote the plan." }), " A computer computed the schedule from it. ", el("b", { text: "The models only graded it" }), " — they answered typed yes/no, multiple-choice and score questions about nodes I had already written; none of them proposed a single node.")));
+
   // 3: plain words + fig 1
   out.append(el("h3", { text: "What it means in plain words" }),
     el("p", {}, "Some datasets are too big to fit in one machine's memory, so they get processed in slow passes off disk. The pitch's idea is to rent memory in tiny pieces from very many machines at once. Cloudflare Workers are small programs that run on Cloudflare's servers worldwide; the pitch proposes starting hundreds or thousands of them, giving each one a slice of the dataset to hold in its own memory, and having all of them scan their slice simultaneously for unusual records — anomaly detection — using the CPU's vector instructions (SIMD: one instruction applied to many numbers at once)."),
@@ -777,26 +802,27 @@ function renderDecomposeTree(data) {
     el("p", { class: "small muted" }, el("b", { text: "This is my reading of the platform, not a measurement. " }), "Nothing on this page has been run against Cloudflare. That is exactly why it is the first experiment in the plan below, not a conclusion.")));
 
   // 5: the plan + gantt
-  out.append(el("h3", { text: `The plan: ${nodes.length} nodes, six workstreams, five phases` }), ganttBoard(data));
+  out.append(el("h3", { text: `The plan: ${nodes.length} nodes, six workstreams, five phases` }), srcNote("plan"), ganttBoard(data));
   out.append(el("div", { class: "strip" },
     el("p", { class: "small" }, "Total span: ", el("b", { text: `${sched.span_days} of ${data.horizon_working_days} working days` }), "."),
     el("p", { class: "small" }, "Critical path: ", el("b", { text: (sched.critical_path || []).map(id => (nodes.find(n => n.id === id) || {}).title || id).join(" → ") }), "."),
     el("p", { class: "small" }, "Float against the 30-day target: ", el("b", { text: `${sched.float_days} working days` }), "."),
     el("p", { class: "small" }, "Sensitivity: at ×1.5 on every estimate the plan lands at ", el("b", { text: `${sched.sensitivity?.["1.5"]} days` }), "; at ×2.0 it misses at ", el("b", { text: `${sched.sensitivity?.["2.0"]} days` }), ".")));
-  out.append(el("p", { class: "legend", text: "Critical path and float are computed by a forward/backward pass over stated predecessor edges and duration estimates — the method is in build_tree_edge.py and is reproducible. The durations are my estimates for one experienced engineer, and they are the weakest input on this page; that is what the sensitivity line is for." }));
+  out.append(el("p", { class: "legend", text: "Critical path and float are computed by a forward/backward pass over stated predecessor edges and duration estimates — the method is in build_tree_edge.py and is reproducible. The durations are my estimates for one experienced engineer, and they are the weakest input on this page; that is what the sensitivity line is for." }), srcNote("schedule"));
 
   // 6: week 1 gate card
-  out.append(gateCard(data, story));
+  out.append(gateCard(data, story), srcNote("plan"));
 
   // 7: resource table
-  out.append(resourceTable(data, story));
+  out.append(resourceTable(data, story), srcNote("plan"));
 
   // 8: open items
   out.append(openItemsSection(data, story));
 
   // 9: second opinion
-  out.append(el("h3", { text: "Second opinion: five decision models read the same plan" }),
+  out.append(el("h3", { text: "Second opinion: five decision models read the same plan" }), srcNote("models"),
     el("p", {}, "The models on this console are typed decision models: you hand one a piece of text (here, one node of the plan) and a typed question, and it returns probabilities — no prose. A yes/no question (“is this a single, indivisible piece of work?”) comes back as a number between 0 and 1. A multiple-choice question comes back as a probability per option. That makes them cheap to run over every node and easy to score, and it is why they are used here as a reviewer of the plan rather than as its author. The plan above was written by hand; the models only answered questions about it."),
+    el("p", { class: "small" }, "Every node below sends the model one real HTTP request with the node's text and its typed questions and gets back real probabilities — hover any answer for the exact numbers. Nothing in this section is precomputed narrative; it is all read live from ", el("code", { text: "tree_scored_edge.json" }), "."),
     codeLegend(models),
     el("div", { class: "card" }, el("h4", { text: "How a model scores one node" }), el("div", { style: "overflow-x:auto" }, pipelineHero())));
 
@@ -862,17 +888,17 @@ function dotDetail(n) {
   if (n.error) return `Request failed: ${n.error}`;
   if (n.kind !== "leaf") {
     if (n.covers_ref == null) return `No single "covers" judgement applies here.\n${n.covers_why || ""}`;
-    return `Covers: model said ${g.covers_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.covers_p, 2)}), reference ${n.covers_ref ? "yes" : "no"} — ${g.covers_correct ? "correct" : "wrong"}.\nWhy: ${n.covers_why}`;
+    return `Covers: model said ${g.covers_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.covers_p, 2)}), my (hand-authored) call: ${n.covers_ref ? "yes" : "no"} — ${g.covers_correct ? "model agreed" : "model disagreed"}.\nWhy I called it that: ${n.covers_why}`;
   }
   const lines = [];
-  if ("atomic_correct" in g) lines.push(`Atomic: model ${g.atomic_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.atomic_p, 2)}), reference ${n.atomic_ref ? "yes" : "no"} — ${g.atomic_correct ? "correct" : "wrong"}`);
-  if ("gate_correct" in g) lines.push(`Gate (would a surprise here force a redesign?): model ${g.gate_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.gate_p, 2)}), reference ${n.gate ? "yes" : "no"} — ${g.gate_correct ? "correct" : "wrong"}`);
-  if ("phase_correct" in g) lines.push(`Phase: model said "${g.phase_pred}", reference "${n.phase}" — ${g.phase_correct ? "correct" : "wrong"}`);
-  if ("parallel_correct" in g) lines.push(`Parallel: model ${g.parallel_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.parallel_p, 2)}), reference ${n.parallel_ref ? "yes" : "no"} — ${g.parallel_correct ? "correct" : "wrong"}`);
-  if ("dependency_correct" in g) lines.push(`Dependency: model said "${g.dependency_pred}", reference "${n.dependency_ref}" — ${g.dependency_correct ? "correct" : "wrong"}`);
+  if ("atomic_correct" in g) lines.push(`Atomic: model ${g.atomic_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.atomic_p, 2)}), my call: ${n.atomic_ref ? "yes" : "no"} — ${g.atomic_correct ? "model agreed" : "model disagreed"}`);
+  if ("gate_correct" in g) lines.push(`Gate (would a surprise here force a redesign?): model ${g.gate_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.gate_p, 2)}), my call: ${n.gate ? "yes" : "no"} — ${g.gate_correct ? "model agreed" : "model disagreed"}`);
+  if ("phase_correct" in g) lines.push(`Phase: model said "${g.phase_pred}", my call: "${n.phase}" — ${g.phase_correct ? "model agreed" : "model disagreed"}`);
+  if ("parallel_correct" in g) lines.push(`Parallel: model ${g.parallel_p >= 0.5 ? "yes" : "no"} (p=${fmt.num(g.parallel_p, 2)}), my call: ${n.parallel_ref ? "yes" : "no"} — ${g.parallel_correct ? "model agreed" : "model disagreed"}`);
+  if ("dependency_correct" in g) lines.push(`Dependency: model said "${g.dependency_pred}", my call: "${n.dependency_ref}" — ${g.dependency_correct ? "model agreed" : "model disagreed"}`);
   if ("risk_0to1" in g) lines.push(`Risk (not graded — no objective reference exists): model ${fmt.num(g.risk_0to1, 2)}`);
-  if ("complexity_0to1" in g) lines.push(`Complexity: model ${fmt.num(g.complexity_0to1, 2)}, reference ${fmt.num(n.complexity_ref, 2)} (abs error ${fmt.num(g.complexity_abs_error, 2)})`);
-  lines.push(`Status: ${STATUS_LABEL[n.status] || n.status}${n.week ? `, week ${n.week}` : ""}${n.on_critical_path ? ", on the critical path" : ""}. Why it matters: ${n.risk_reason || n.covers_why || ""}`);
+  if ("complexity_0to1" in g) lines.push(`Complexity: model ${fmt.num(g.complexity_0to1, 2)}, my call (from duration, not a guess): ${fmt.num(n.complexity_ref, 2)} (abs error ${fmt.num(g.complexity_abs_error, 2)})`);
+  lines.push(`Status: ${STATUS_LABEL[n.status] || n.status}${n.week ? `, week ${n.week}` : ""}${n.on_critical_path ? ", on the critical path" : ""}. Evidence needed: ${EVIDENCE_LABEL[n.evidence] || n.evidence || "n/a"}. Why it matters (my reasoning, hand-authored): ${n.risk_reason || n.covers_why || ""}`);
   return lines.join("\n");
 }
 
