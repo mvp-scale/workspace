@@ -34,6 +34,9 @@ Status as of 2026-09-22. "Done" is committed; everything else is proposed and wa
 17. Candidates: Winnow-12B Q8, reflex 4B, Open-Jev 2B/9B, djev, rerankers. GPU is nearly full, so this is a lineup decision.
 18. Report which model actually answered.
 
+## Run principle
+Every test the lab defines must be runnable on every loaded model, by two paths: an offline runner (one model at a time with the full GPU, per-item records, resumable, outside `data/bench/`) and a live path through the demo server for tests that should run in the page (batch size, cascade, decompose-and-loop). The existing set-page pieces (decomposition, model comparison and selection, charts, worked example, item explorer) are the template every set follows.
+
 ## Decisions needed
 - First area: fraud escalation (data exists, saving easy to measure), conversation flow, or looping/decomposition.
 - Overview orientation (item 1).

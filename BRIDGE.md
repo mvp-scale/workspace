@@ -63,15 +63,6 @@ SEMIF4/OAJEV4/LAYA4H/VERD2H are served by `demo/serve_inproc.py`, a stdlib serve
 - Window study (200 real MentalManip dialogues, manipulation only, dialogue-level labels): last 5 words / 1 sentence are weakest (AUC ~0.60-0.64); ~20-40 words, 2 sentences or 2-3 turns are best (0.67-0.70); "everything so far" adds nothing. Results in `data/window-study/`.
 - Cost: a 9-question checkpoint is ~1,450 input tokens on hosted Jev whether the window is 10 or 40 words (question text dominates); the levers are checkpoint count and question count. Tariff $0.042 per million input tokens.
 
-## Findings worth remembering
-
-- On **published** labelled data (`probes/v2/`, 15 sets, ~1,400 items) mean accuracy: Jev 76.5%, SemIf 67.5, kev-4b 66.8, open-alt-jev 64.8, Laya 58.4, kev-0.8b 56.9, jeff 51.5, kev-0.5b 50.6, Verdict 46.7. My earlier hand-written probes were far too easy (>90%); ignore them.
-- SemIf is #2 on the public leaderboard but weak on memory-safety *pairs* (5% pair accuracy): it is not reading the code. Jev 66%.
-- Jev's confidence is usable for routing (accepting >=0.9 gives ~91% accuracy on half the items); small models' confidence is not.
-- kev serves fp32 by default (kev-4b 17 GiB). `KEV_DTYPE=bf16` gave the same accuracy on 372 items (97-100% identical answers) and, launched through `serve_kev.py`, needs 8.5 GiB loaded / 9.8 peak.
-- Window study (200 real MentalManip dialogues, manipulation only, dialogue-level labels): last 5 words / 1 sentence are weakest (AUC ~0.60-0.64); ~20-40 words, 2 sentences or 2-3 turns are best (0.67-0.70); "everything so far" adds nothing. Results in `data/window-study/`.
-- Cost: a 9-question checkpoint is ~1,450 input tokens on hosted Jev whether the window is 10 or 40 words (question text dominates); the levers are checkpoint count and question count. Tariff $0.042 per million input tokens.
-
 ## THE NEXT TASK: build out the Scenario lab
 
 Full plan: `docs/scenario-lab-plan.md` (18 items, decisions needed at the end). Summary of what the user wants:
