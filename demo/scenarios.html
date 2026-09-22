@@ -9,13 +9,19 @@
 <script src="/static/app.js"></script>
 <style>
   /* Layout the shared CSS lacks. Colours come from shared tokens only. */
-  .lab { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 18px; align-items: start; }
-  .rail { position: sticky; top: 52px; max-height: calc(100vh - 64px); overflow-y: auto; display: grid; gap: 2px; }
-  .rail h4 { margin: 10px 8px 2px; }
-  .rail a { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: var(--radius-sm); color: var(--text-2); text-decoration: none; font-size: 13px; }
+  .lab { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px; align-items: start; }
+  .lab > .view { border-left: 1px solid var(--border); padding-left: 30px; }
+  .rail { position: sticky; top: 52px; max-height: calc(100vh - 64px); overflow-y: auto; display: grid; gap: 1px; padding-right: 6px; }
+  .rail h4.sect { margin: 16px 8px 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+  .rail h4.sect:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .rail h5.fam-h { margin: 12px 8px 2px; font-size: 11px; color: var(--text-2); font-weight: 600; }
+  .rail a { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: var(--radius-sm); color: var(--text-2); text-decoration: none; font-size: 13px; border-left: 2px solid transparent; }
+  .rail a .lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rail a .railicon { flex: none; color: var(--text-3); }
   .rail a:hover { background: var(--surface-2); color: var(--text); }
-  .rail a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .rail a .n { color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; }
+  .rail a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; border-left-color: var(--accent); }
+  .rail a[aria-current="page"] .railicon { color: var(--accent); }
+  .rail a .n { color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; flex: none; }
   .rail-select { display: none; }
   .view { min-width: 0; }
   .view > * + * { margin-top: 14px; }
@@ -90,6 +96,7 @@
   @media (max-width: 860px) {
     .lab { grid-template-columns: 1fr; gap: 10px; }
     .rail { display: none; }
+    .lab > .view { border-left: none; padding-left: 0; }
     .rail-select { display: block; }
     .mrow { grid-template-columns: 1fr; gap: 4px; }
     .pair .members { grid-template-columns: 1fr; }
@@ -97,7 +104,7 @@
   }
   @media print {
     .rail, .rail-select, .slider, .controls, .txtwrap .btn { display: none !important; }
-    .lab { display: block; } .txt.clamp { max-height: none; }
+    .lab { display: block; } .lab > .view { border-left: none; padding-left: 0; } .txt.clamp { max-height: none; }
     .mrow { break-inside: avoid; }
   }
 </style>
@@ -135,6 +142,15 @@ const META = {
 const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1], short: m[2] } : { group: "Other", name: id, short: id }; };
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
+/* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4" };
+function railIcon(name) {
+  const s = document.createElementNS(NS, "svg");
+  for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
+    s.setAttribute(k, v);
+  for (const d of RAIL_ICONS[name].split("|")) { const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); s.append(p); }
+  return s;
+}
 const S = (tag, attrs = {}, ...kids) => {
   const n = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) if (v != null) n.setAttribute(k, v);
@@ -159,7 +175,7 @@ let PROBES = [], MODELS = [], INFO = {}, TOK = 0;
 function parseHash() {
   const p = new URLSearchParams(location.hash.replace(/^#/, ""));
   const s = p.get("set");
-  ST.set = s && PROBES.some(x => x.id === s) ? s : "all";
+  ST.set = s === "batch" || (s && PROBES.some(x => x.id === s)) ? s : "all";
   ST.model = p.get("model") || ST.model;
   const t = parseFloat(p.get("t")); if (isFinite(t)) ST.t = clamp01(t);
 }
@@ -242,15 +258,24 @@ mount(document.getElementById("root"), async () => {
   parseHash();
   const view = el("div", { class: "view" }), rail = el("nav", { class: "rail", "aria-label": "Scenario sets" });
   const select = el("select", { class: "rail-select", "aria-label": "Scenario set", onchange: (e) => { location.hash = hashFor({ set: e.target.value }); } });
+  const STRUCTURES = [["batch", "Batch performance", "layers"]];
   const buildRail = () => {
     rail.replaceChildren(); select.replaceChildren();
-    const link = (id, name, n, sub) => el("a", { href: hashFor({ set: id }), "aria-current": ST.set === id ? "page" : null }, el("span", { text: name }), el("span", { class: "n", text: n }));
-    rail.append(link("all", "All sets", `${PROBES.length} sets`));
+    const link = (id, name, n, icon) => el("a", { href: hashFor({ set: id }), "aria-current": ST.set === id ? "page" : null },
+      icon ? railIcon(icon) : null, el("span", { class: "lbl", text: name }), n ? el("span", { class: "n", text: n }) : null);
+    rail.append(el("h4", { class: "sect", text: "Overview" }), link("all", "All sets", `${PROBES.length}`, "grid"));
     select.append(el("option", { value: "all", text: "All sets (overview)", selected: ST.set === "all" }));
+    rail.append(el("h4", { class: "sect", text: "Structures" }));
+    const structOg = el("optgroup", { label: "Structures" }); select.append(structOg);
+    for (const [id, name, icon] of STRUCTURES) {
+      rail.append(link(id, name, "", icon));
+      structOg.append(el("option", { value: id, text: name, selected: ST.set === id }));
+    }
+    rail.append(el("h4", { class: "sect", text: "Sets" }));
     let last = null, og = null;
     for (const p of PROBES) {
       const m = meta(p.id);
-      if (m.group !== last) { last = m.group; rail.append(el("h4", { text: m.group })); og = el("optgroup", { label: m.group }); select.append(og); }
+      if (m.group !== last) { last = m.group; rail.append(el("h5", { class: "fam-h", text: m.group })); og = el("optgroup", { label: m.group }); select.append(og); }
       { const a = link(p.id, m.name, ""); a.title = `${p.n} items, ${nClasses(p)} classes`; rail.append(a); }
       og.append(el("option", { value: p.id, text: `${m.name} (${p.n})`, selected: ST.set === p.id }));
     }
@@ -258,7 +283,8 @@ mount(document.getElementById("root"), async () => {
   const show = () => {
     buildRail();
     const box = el("div"); view.replaceChildren(box); const tok = ++TOK;
-    if (ST.set === "all") {
+    if (ST.set === "batch") { mount(box, () => api("/api/batch-perf"), renderBatch); }
+    else if (ST.set === "all") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
         if (PROBES.length && res.every(r => r.status === "rejected")) throw res[0].reason;
@@ -279,6 +305,36 @@ mount(document.getElementById("root"), async () => {
   show();
   return lab;
 });
+
+/* ---------- structure: batch performance ---------- */
+function renderBatch(data) {
+  const sets = Object.keys(data);
+  if (!sets.length) return empty("No batch runs yet", "Run probes/lab_batch.py for a local model.");
+  const out = el("div");
+  out.append(el("h2", { text: "Batch performance" }), el("p", { class: "muted", text: "One state, N questions in one request. Only the first question is labelled; the others are filler that add load. Accuracy is scored on that first question, so the row shows whether a model degrades as the battery grows. Failed requests are counted separately and never scored as wrong." }));
+  for (const setId of sets) {
+    const models = orderModels(Object.keys(data[setId])), sizes = [...new Set(models.flatMap(m => data[setId][m].map(r => r.size)))].sort((a, b) => a - b);
+    const nm = (PROBES.find(p => p.id === setId) ? meta(setId).name : setId);
+    const chance = 1 / Math.max(1, nClasses(PROBES.find(p => p.id === setId) || {}));
+    const acc = el("table", { class: "data" }), lat = el("table", { class: "data" });
+    for (const [t, cap] of [[acc, "Accuracy on the labelled question (cell colour is relative to chance; hover for interval)"], [lat, "Median latency per request, ms (failed requests are excluded)"]])
+      t.append(el("caption", { class: "legend", text: cap }), el("thead", {}, el("tr", {}, el("th", { text: "Model" }), sizes.map(z => el("th", { text: `${z} q` })))));
+    const ab = el("tbody"), lb = el("tbody");
+    for (const m of models) {
+      const by = Object.fromEntries(data[setId][m].map(r => [r.size, r]));
+      ab.append(el("tr", {}, el("td", {}, mtagShort(m)), sizes.map(z => {
+        const r = by[z]; if (!r) return el("td", { class: "muted", text: "–" });
+        const fail = r.failed ? ` (${r.failed} failed)` : "", w = r.n ? wilson(r.k, r.n) : null;
+        if (!r.n) return el("td", { class: "below", title: `All ${r.failed} requests failed: ${Object.keys(r.errors).join("; ")}`, text: "failed" });
+        return el("td", { style: `background:${stepBg(stepOf(r.k / r.n, chance))}`, title: `${r.k}/${r.n} correct, 95% interval ${pc(w.lo)} to ${pc(w.hi)}${fail}`, text: pc(r.k / r.n) + (r.failed ? " *" : "") });
+      })));
+      lb.append(el("tr", {}, el("td", {}, mtagShort(m)), sizes.map(z => { const r = by[z]; return el("td", { text: r && r.p50_ms != null ? String(r.p50_ms) : "–", title: r && r.p90_ms != null ? `90th percentile ${r.p90_ms} ms` : "" }); })));
+    }
+    acc.append(ab); lat.append(lb);
+    out.append(el("div", { class: "card" }, el("h3", { text: nm }), el("div", { style: "overflow-x:auto" }, acc), el("p", { class: "legend", text: "* some requests failed at this size; only answered ones are scored." }), el("div", { style: "overflow-x:auto" }, lat)));
+  }
+  return out;
+}
 
 /* ---------- overview ---------- */
 function renderOverview(details) {

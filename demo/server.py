@@ -182,6 +182,27 @@ def probe_runs():
     return out
 
 
+def batch_perf():
+    """{set: {model: [{size, n, failed, k, p50_ms, p90_ms, answered, errors}]}} from probes/lab_batch.py runs."""
+    out = {}
+    for f in sorted(PROBE_RUNS.glob("_batch/*/*/results.jsonl")):
+        recs = read_jsonl(f)
+        rows = []
+        for size in sorted({r["size"] for r in recs}):
+            rs = [r for r in recs if r["size"] == size]
+            ok = [r for r in rs if not r.get("error")]
+            lat = sorted(r["latency_ms"] for r in ok)
+            errs = {}
+            for r in rs:
+                if r.get("error"):
+                    errs[r["error"][:80]] = errs.get(r["error"][:80], 0) + 1
+            rows.append({"size": size, "n": len(ok), "failed": len(rs) - len(ok), "k": sum(1 for r in ok if r["correct"]),
+                         "p50_ms": lat[len(lat) // 2] if lat else None, "p90_ms": lat[int(len(lat) * .9)] if lat else None,
+                         "answered": min((r["answered"] for r in ok), default=None), "errors": errs})
+        out.setdefault(f.parent.parent.name, {})[f.parent.name] = rows
+    return out
+
+
 def probe_macro():
     """Mean accuracy per model over the published sets, and the sets each ran."""
     return {m: {"macro": sum(sum(r["correct"] for r in rs.values()) / len(rs) for rs in sets.values()) / len(sets), "n_sets": len(sets)} for m, sets in probe_runs().items() if sets}
@@ -340,6 +361,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"error": "unknown set"})
         elif path == "/api/vram":
             self._send(200, vram())
+        elif path == "/api/batch-perf":
+            self._send(200, batch_perf())
         elif path == "/api/probe-macro":
             self._send(200, probe_macro())
         elif path == "/api/agreement":
