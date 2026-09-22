@@ -135,6 +135,8 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
+const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"]];
+const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
   websec: ["Security audit", "Web security (OWASP Benchmark)", "Web security"],
@@ -156,7 +158,7 @@ const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1],
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4" };
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -188,7 +190,7 @@ let PROBES = [], MODELS = [], INFO = {}, TOK = 0;
 function parseHash() {
   const p = new URLSearchParams(location.hash.replace(/^#/, ""));
   const s = p.get("set");
-  ST.set = s === "batch" || (s && PROBES.some(x => x.id === s)) ? s : "all";
+  ST.set = STRUCTURE_IDS.has(s) || (s && PROBES.some(x => x.id === s)) ? s : "all";
   ST.model = p.get("model") || ST.model;
   const t = parseFloat(p.get("t")); if (isFinite(t)) ST.t = clamp01(t);
 }
@@ -271,7 +273,6 @@ mount(document.getElementById("root"), async () => {
   parseHash();
   const view = el("div", { class: "view" }), rail = el("nav", { class: "rail", "aria-label": "Scenario sets" });
   const select = el("select", { class: "rail-select", "aria-label": "Scenario set", onchange: (e) => { location.hash = hashFor({ set: e.target.value }); } });
-  const STRUCTURES = [["batch", "Batch performance", "layers"]];
   const buildRail = () => {
     rail.replaceChildren(); select.replaceChildren();
     const link = (id, name, n, icon) => el("a", { href: hashFor({ set: id }), "aria-current": ST.set === id ? "page" : null },
@@ -292,7 +293,7 @@ mount(document.getElementById("root"), async () => {
         last = m.group;
         const count = PROBES.filter(x => meta(x.id).group === m.group).length;
         list = el("div", { class: "fam-list" });
-        det = el("details", { class: "fam", open: ST.set !== "all" && ST.set !== "batch" && meta(ST.set).group === m.group ? "" : null },
+        det = el("details", { class: "fam", open: ST.set !== "all" && !STRUCTURE_IDS.has(ST.set) && meta(ST.set).group === m.group ? "" : null },
           el("summary", { class: "fam-h" }, el("span", { class: "lbl", text: m.group }), el("span", { class: "n", text: count })), list);
         rail.append(det);
         og = el("optgroup", { label: m.group }); select.append(og);
@@ -305,6 +306,7 @@ mount(document.getElementById("root"), async () => {
     buildRail();
     const box = el("div"); view.replaceChildren(box); const tok = ++TOK;
     if (ST.set === "batch") { mount(box, () => api("/api/batch-perf"), renderBatch); }
+    else if (ST.set === "decompose") { mount(box, () => api("/api/decompose-perf"), renderDecompose); }
     else if (ST.set === "all") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
@@ -353,6 +355,37 @@ function renderBatch(data) {
     }
     acc.append(ab); lat.append(lb);
     out.append(el("div", { class: "card" }, el("h3", { text: nm }), el("div", { style: "overflow-x:auto" }, acc), el("p", { class: "legend", text: "* some requests failed at this size; only answered ones are scored." }), el("div", { style: "overflow-x:auto" }, lat)));
+  }
+  return out;
+}
+
+/* ---------- structure: decompose and loop ---------- */
+function renderDecompose(data) {
+  const sets = Object.keys(data);
+  if (!sets.length) return empty("No decompose runs yet", "Run probes/lab_decompose.py for a local model.");
+  const out = el("div");
+  out.append(el("h2", { text: "Decompose and loop" }), el("p", { class: "muted", text: "Whole text (one call, read from the set's own stored run) against splitting the dialogue into trailing turn-windows and taking the highest probability across windows (recall-oriented: flagged if any window looks manipulative). Same items, same question, both sides scored against the same label." }));
+  for (const setId of sets) {
+    const nm = (PROBES.find(p => p.id === setId) ? meta(setId).name : setId);
+    const models = orderModels(Object.keys(data[setId]));
+    const t = el("table", { class: "data" });
+    t.append(el("caption", { class: "legend", text: "Accuracy, whole text vs decomposed (95% interval on hover); avg calls is the average number of window requests per item for the decomposed side (1 for whole)." }),
+      el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "n" }), el("th", { text: "Whole (1 call)" }), el("th", { text: "Decomposed" }), el("th", { text: "Avg calls" }), el("th", { text: "Gap" }))));
+    const tb = el("tbody");
+    for (const m of models) {
+      for (const row of data[setId][m]) {
+        const wa = row.whole_k / row.n, da = row.decomposed_k / row.n, ww = wilson(row.whole_k, row.n), dw = wilson(row.decomposed_k, row.n);
+        const gap = da - wa, gapStyle = Math.abs(gap) < 0.03 ? "" : `color:var(--${gap > 0 ? "good" : "bad"});font-weight:600`;
+        tb.append(el("tr", {},
+          el("td", {}, mtagShort(m)), el("td", { class: "muted", text: String(row.n) }),
+          el("td", { title: `${row.whole_k}/${row.n}, interval ${pc(ww.lo)} to ${pc(ww.hi)}`, text: pc(wa) }),
+          el("td", { title: `${row.decomposed_k}/${row.n}, interval ${pc(dw.lo)} to ${pc(dw.hi)}, ${row.turns_k}-turn trailing windows${row.failed ? `, ${row.failed} failed` : ""}`, text: pc(da) }),
+          el("td", { class: "muted", text: row.avg_calls.toFixed(1) }),
+          el("td", { style: gapStyle, text: (gap >= 0 ? "+" : "") + pc(gap, 1) })));
+      }
+    }
+    t.append(tb);
+    out.append(el("div", { class: "card" }, el("h3", { text: nm }), el("div", { style: "overflow-x:auto" }, t)));
   }
   return out;
 }
