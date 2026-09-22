@@ -99,15 +99,26 @@ def main():
         if profile and profile.get("values"):
             active = sorted(((k, v) for k, v in profile["values"].items() if v is not None and v >= 0.6), key=lambda kv: -kv[1])
             print(f"PROFILE (>=0.6): " + (", ".join(f"{k} ({v:.2f})" for k, v in active) if active else "nothing scored this high"))
+        depth = one(records, "depth_estimate")
+        if depth and depth.get("mean") is not None:
+            print(f"DEPTH ESTIMATE: {depth['mean']:.2f}/4 (spread {depth['spread']:.2f}) -- informational only, not yet load-bearing")
         print()
 
     gaps = by_type(records, "gap_check")
     gsum = one(records, "gap_summary")
     if gaps:
-        print(f"GAP CATEGORIES CHECKED ({gsum['selected_count']}/{gsum['total']} selected, {gsum['method']})")
+        print(f"GAP CATEGORIES CHECKED ({gsum['selected_count']}/{gsum['total']} shape-guaranteed, {gsum['method']})")
         has_composite = any(g.get("composite") is not None for g in gaps)
         sort_key = (lambda r: -(r.get("composite") or 0)) if has_composite else (lambda r: -(r["mean"] or 0))
-        if has_composite:
+        has_shape = any(g.get("shape") for g in gaps)
+        if has_composite and has_shape:
+            rows = [(wrap(g["text"], a.width), g.get("shape") or "-", "yes" if g["selected"] else "no",
+                     f"{g['mean']:.2f}" if g["mean"] is not None else "-",
+                     f"{g.get('profile_boost', 0):.2f}", f"{g['composite']:.2f}")
+                    for g in sorted(gaps, key=sort_key)]
+            table(["category", "shape", "guaranteed", "own score", "profile boost", "composite"], rows)
+            print("  (\"guaranteed\" = shape-guaranteed top pick; a \"no\" may still get walked if the budget reaches it -- see grinder_node/category_recursion below)")
+        elif has_composite:
             rows = [(wrap(g["text"], a.width), "yes" if g["selected"] else "no",
                      f"{g['mean']:.2f}" if g["mean"] is not None else "-",
                      f"{g.get('profile_boost', 0):.2f}", f"{g['composite']:.2f}")
