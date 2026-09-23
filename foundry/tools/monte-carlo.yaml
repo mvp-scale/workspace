@@ -1,0 +1,105 @@
+reference: monte-carlo
+description: >
+  A DEMO BASELINE for a qualitative risk-concentration pass over Sorter's live weigh/resource
+  scores -- not a validated forecast, not a schedule, not a budget. This is explicitly a demo of a
+  possible future capability (the user's own framing): a reasonable, clearly-labeled starting
+  baseline, understood to be swapped for a real organization's own historical data before any
+  number from it should be trusted for a real decision. Same honesty pattern already used for
+  `world-knowledge.yaml`'s `domain_enrichment` and `profile_probes` -- Claude-authored, generic,
+  never independently validated, front-loaded once, explicitly flagged as such.
+status: >
+  Kept in its own file, deliberately not folded into world-knowledge.yaml, in case this whole
+  direction doesn't pan out -- the user's own call, matching how this repo already isolates
+  speculative work (comparisons/, PLAN.md) from the stable core.
+methodology_note: >
+  Per PMBOK's own distinction (verified against real sources, not assumed): qualitative risk
+  analysis uses ordinal probability/impact scores for PRIORITIZATION, no units, no forecast.
+  Quantitative risk analysis (where "Monte Carlo simulation" is a named technique in standard PM
+  usage) needs three-point time/cost estimates in real units. This file and monte_carlo.py build
+  the QUALITATIVE version only: sampling from each requirement's own live ordinal risk/effort
+  score (plus cross-model spread as the distribution's width) to find which gap categories
+  concentrate the most simulated risk exposure, relative to each other -- never an absolute
+  schedule or budget number. See foundry/PLAN.md for the fuller reasoning and what a real
+  quantitative version would still need (a real duration/cost source, outcome tracking to
+  validate against, a corrected disagreement signal -- none of that is here yet).
+priority_never_overrides_live: >
+  The live per-requirement weigh/resource scores from Sorter (funnel.bounce_and_weigh) are always
+  the primary signal when they exist. Everything below is a PRIOR used only (a) as a same-shape
+  reference to sanity-check a live score against, shown side by side, never silently substituted,
+  and (b) as a fallback when live Sorter data doesn't exist for a category yet. A live score is
+  never overwritten by a baseline value.
+
+# =============================================================================================
+# Per-shape baseline priors: reasoned generically from the shape's own nature (per real,
+# widely-cited software engineering practice -- e.g. architectural/data-model mistakes are
+# expensive specifically because they're discovered late and costly to reverse; this is a
+# defensible qualitative claim, not a fabricated number), not idea-specific, not calibrated
+# against any measured outcome. `risk_prior` and `effort_prior` are on the same 0-1 scale as
+# Sorter's live risk_0to1/effort_0to1 so they're directly comparable, never a different unit
+# smuggled in as if it were the same thing.
+# =============================================================================================
+shape_baselines:
+  - shape: architectural
+    risk_prior: 0.7
+    effort_prior: 0.6
+    rationale: >
+      Architectural gaps (component boundaries, data ownership, external-service boundaries) are
+      typically discovered late and are expensive to reverse once other work depends on them --
+      the well-known "cost of change" curve rises sharply after architectural decisions are load-
+      bearing. High risk-if-wrong is a defensible generic prior; effort is moderate-high because
+      fixing one after the fact usually means real rework, not just documentation.
+  - shape: non-functional
+    risk_prior: 0.6
+    effort_prior: 0.5
+    rationale: >
+      Non-functional gaps (performance, availability, data protection, accessibility) often don't
+      block a first working version but surface as real incidents or compliance exposure later --
+      moderate-high risk, moderate effort since many are addressable with targeted work once
+      identified, not a full redesign.
+  - shape: operational
+    risk_prior: 0.55
+    effort_prior: 0.4
+    rationale: >
+      Operational gaps (release process, incident response, observability, data recovery) mostly
+      cost real pain during an actual incident or deploy, not during initial build -- real risk,
+      but usually addressable with process and tooling work that doesn't touch the core system,
+      hence lower effort than architectural gaps of similar risk.
+  - shape: functional
+    risk_prior: 0.5
+    effort_prior: 0.45
+    rationale: >
+      Functional gaps (core capability, data lifecycle, access rules, error behavior) are usually
+      caught earliest, in normal use or testing, and are the most directly fixable -- moderate
+      risk and moderate effort, the closest to a "normal" baseline of the six shapes.
+  - shape: technical-spec
+    risk_prior: 0.4
+    effort_prior: 0.3
+    rationale: >
+      Technical-spec gaps (API contract, data model, integration protocol) are mostly about
+      whether something is written down and agreed, not whether it works -- lower risk than a
+      functional or architectural gap of the same topic, and usually cheap to close once someone
+      sits down to specify it (the actual work may already exist, just undocumented).
+  - shape: user-story
+    risk_prior: 0.35
+    effort_prior: 0.35
+    rationale: >
+      User-story gaps (first use, error recovery, administration) matter most for adoption, not
+      for whether the system technically functions -- real but generally the lowest-risk shape of
+      the six, since a missing story is usually a UX gap, not a correctness or stability one.
+
+# =============================================================================================
+# The sampling mechanism itself, documented here (not just in code) -- matches this project's own
+# convention of keeping the live-call/mechanism spec in tools/*.yaml even when Python does the
+# actual work (see sorter.yaml's scoring_primitive).
+# =============================================================================================
+sampling_mechanism: >
+  For each atomic requirement with a persisted live Sorter score: build a triangular distribution
+  on [0,1] with mode = mean(risk_0to1) across models and half-width = cross-model disagreement
+  (max - min), same shape for effort_0to1. For a category with no live Sorter data yet, fall back
+  to this file's shape_baseline as a flat prior (explicitly marked as such in output, never
+  silently blended in as if it were live). Draw N times (default 5000); each draw's per-category
+  "exposure" = mean(risk_draw * effort_draw) across that category's requirements in the draw.
+  Rank categories/shapes by their contribution to the variance of total exposure across draws
+  (a real sensitivity-analysis technique -- which inputs' variance actually moves the aggregate
+  outcome) -- NOT by their mean exposure alone, which would just re-derive the existing risk-tier
+  sort and add nothing.

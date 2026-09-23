@@ -43,7 +43,7 @@ def load_ledger(idea):
 
 
 def atomic_pieces(records):
-    return [{"id": "::".join(r["path"]), "text": r["full_text"], "depends_on": []}
+    return [{"id": "::".join(r["path"]), "text": r["full_text"], "depends_on": [], "category": r["path"][0]}
             for r in records if r["type"] == "grinder_node" and r["status"] == "atomic"]
 
 
@@ -126,6 +126,23 @@ def main():
         rows.append({"piece": p, "supported_p": mean_p, "risk": mean_risk, "effort": effort or 0.0,
                      "disagreement": max(ps) - min(ps) if len(ps) > 1 else 0.0})
     rows.sort(key=lambda r: -r["risk"])
+
+    # Persist Sorter's output -- previously printed to terminal scrollback and nothing else,
+    # which meant no diagnostic or downstream analysis (e.g. a Monte Carlo sensitivity pass) could
+    # ever be run against it after the fact. Same lesson as the ledger's per-model values.
+    sort_path = HERE / "runs" / f"{a.idea}-sort.jsonl"
+    with open(sort_path, "w") as f:
+        f.write(json.dumps({"type": "sort_meta", "idea": a.idea, "models": MODELS, "bouncer": a.bouncer}) + "\n")
+        for r in rows:
+            per_model = results.get(r["piece"]["id"], {})
+            f.write(json.dumps({
+                "type": "sort_piece", "id": r["piece"]["id"], "text": r["piece"]["text"],
+                "category": r["piece"]["category"], "supported_p": r["supported_p"],
+                "risk": r["risk"], "effort": r["effort"], "disagreement": r["disagreement"],
+                "per_model": {m: v for m, v in per_model.items()},
+            }) + "\n")
+    print(f"  (Sorter output persisted: {sort_path})")
+
     w = max((len(r["piece"]["text"]) for r in rows), default=10)
     w = min(w, 70)
     print(f"{'requirement':<{w}}  {'supported':>9}  {'risk':>6}  {'effort':>6}  {'disagree':>8}")
