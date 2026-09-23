@@ -10,6 +10,8 @@ import json
 import os
 import re
 import subprocess
+import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -18,6 +20,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE.parent / "probes"))
+try:
+    import lab_custom_decompose as lcd  # noqa: E402 -- custom decomposition ("orbit map"); PyYAML-dependent, see below
+    _LCD_ERROR = None
+except Exception as e:  # PyYAML missing, or a library-file problem -- fail soft, not at import time
+    lcd = None
+    _LCD_ERROR = str(e)
+_decompose_lock = threading.Lock()
 BENCH = Path(os.environ.get("BENCH_DIR", HERE.parent / "data" / "bench"))
 BACKENDS = {  # keyed by the same model ids as the leaderboard, best first; codes and names live in models.json
     "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": os.environ.get("TYPESAFE_API_KEY", ""), "hosted": True},
@@ -233,6 +243,18 @@ def decompose_tree():
     return json.loads(p.read_text())
 
 
+def decompose_examples():
+    """The 7 existing foundry/ideas/*.json intakes -- the only idea-specific content foundry's one
+    rule allows Claude to author -- so the custom-decomposition page gets example chips without
+    anyone writing anything new for it. Reads only idea/customer, even where a file also has a
+    (historical, pre-live-mechanism) 'pieces' field."""
+    out = []
+    for f in sorted((ROOT / "foundry" / "ideas").glob("*.json")):
+        d = json.loads(f.read_text())
+        out.append({"id": f.stem, "idea": d.get("idea", ""), "customer": d.get("customer", "")})
+    return out
+
+
 def probe_macro():
     """Mean accuracy per model over the published sets, and the sets each ran."""
     return {m: {"macro": sum(sum(r["correct"] for r in rs.values()) / len(rs) for rs in sets.values()) / len(sets), "n_sets": len(sets)} for m, sets in probe_runs().items() if sets}
@@ -395,6 +417,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, batch_perf())
         elif path == "/api/decompose-tree":
             self._send(200, decompose_tree())
+        elif path == "/api/decompose-library":
+            if lcd is None:
+                self._send(503, {"error": f"PyYAML missing or library failed to load: {_LCD_ERROR}"})
+            else:
+                self._send(200, lcd.skeleton(lcd.load_library()))
+        elif path == "/api/decompose-examples":
+            self._send(200, decompose_examples())
         elif path == "/api/probe-macro":
             self._send(200, probe_macro())
         elif path == "/api/agreement":
@@ -419,7 +448,60 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, {"error": "not found"})
 
+    def _stream(self, events):
+        """HTTP/1.0-style streaming response: no Content-Length, connection closed at the end, so
+        fetch() on the client can read it as it arrives. A client disconnect (Stop, or navigating
+        away) raises BrokenPipeError/ConnectionResetError on the next write, which is caught here;
+        events.close() then raises GeneratorExit inside lcd.walk(), which makes no further model
+        calls (see lab_custom_decompose.py's walk() docstring and its GeneratorExit test)."""
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-ndjson")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.close_connection = True
+        try:
+            for ev in events:
+                self.wfile.write((json.dumps(ev) + "\n").encode())
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            events.close()
+            _decompose_lock.release()
+
+    def _handle_decompose_live(self):
+        if lcd is None:
+            return self._send(503, {"error": f"PyYAML missing or library failed to load: {_LCD_ERROR}"})
+        try:
+            req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+            text, who, models, budget = req.get("text", ""), req.get("who") or "", req.get("models"), req.get("budget")
+            assert isinstance(text, str) and 0 < len(text) <= lcd.MAX_TEXT
+            assert isinstance(who, str) and len(who) <= lcd.MAX_WHO
+            assert isinstance(budget, int) and 3 <= budget <= 113
+            assert isinstance(models, list) and 1 <= len(models) <= 5 and all(isinstance(m, str) for m in models)
+        except (ValueError, KeyError, AssertionError, TypeError):
+            return self._send(400, {"error": "need JSON {text, who?, models:[...], budget:3-113}"})
+        for m in models:
+            if m not in BACKENDS:
+                return self._send(404, {"error": f"unknown backend {m}"})
+            if BACKENDS[m].get("hosted"):
+                return self._send(400, {"error": "hosted model is not available here"})
+        up = {n: v.get("up") for n, v in status().items()}
+        not_loaded = [m for m in models if not up.get(m)]
+        if not_loaded:
+            return self._send(409, {"error": f"not loaded: {', '.join(not_loaded)}"})
+        if not _decompose_lock.acquire(blocking=False):
+            return self._send(409, {"error": "another decomposition is running; try again when it finishes"})
+        try:
+            events = lcd.walk(text, who, models, budget, lambda m, item: one_item(m, BACKENDS[m], item))
+        except Exception as e:
+            _decompose_lock.release()
+            return self._send(500, {"error": str(e)})
+        self._stream(events)
+
     def do_POST(self):
+        if self.path == "/api/decompose-live":
+            return self._handle_decompose_live()
         if self.path == "/api/batch":
             try:
                 req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
