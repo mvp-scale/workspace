@@ -277,7 +277,7 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
-const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"], ["time", "Time (onset and false alarms)", "time"], ["custom", "Custom decomposition", "orbit"]];
+const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (calibration forecast)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"], ["time", "Time (onset and false alarms)", "time"], ["custom", "Custom decomposition", "orbit"]];
 const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
@@ -1510,7 +1510,7 @@ function pairSample(d, mid, pair) {
 function renderFunnel(d) {
   const mids = orderModels(modelsIn(d));
   const out = el("div");
-  out.append(el("h2", { text: "Funnel (Monte Carlo)" }),
+  out.append(el("h2", { text: "Funnel (calibration forecast)" }),
     el("p", { class: "muted", text: "Memory safety (NIST Juliet) is the one published set here with a real multi-item grouping: a genuinely vulnerable and a fixed variant of the same CWE pattern, sharing one group id." }),
     flowHeader(funnelFlow()),
     el("p", { class: "legend", text: "No other published set here has a real multi-item grouping to build this on, so it isn't shown for the rest — a fabricated grouping would just be noise wearing a Monte Carlo costume." }));
