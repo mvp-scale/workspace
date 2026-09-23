@@ -12,6 +12,7 @@
   .report { counter-reset: sec; }
   .report .section > header h2::before { counter-increment: sec; content: counter(sec) ". "; color: var(--text-3); font-weight: 500; }
   .prose { max-width: 78ch; } .prose > * + * { margin-top: 12px; }
+  .point { font-weight: 650; color: var(--text); }
   .prose ul { margin: 0; padding-left: 20px; } .prose li + li { margin-top: 6px; }
   .rec h4 { margin-bottom: 4px; } .rec .pick { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin-bottom: 8px; }
   .rec .pick .mtag { white-space: normal; flex-wrap: wrap; gap: 2px 8px; }
@@ -124,7 +125,7 @@ function summary(a) {
   out.push(`Median hard-tier latency runs from ${fmt.ms(fastest.tiers.hard.p50_s)} (${nameOf(fastest)}) to ${fmt.ms(slowest.tiers.hard.p50_s)} (${nameOf(slowest)}), but the models were served in different ways, so these are not like-for-like.`);
   out.push(`Calibration is uneven: hard-tier ECE runs from ${fmt.num(bestEce.tiers.hard.ece)} (${nameOf(bestEce)}, lower is better) to ${fmt.num(worstEce.tiers.hard.ece)} (${nameOf(worstEce)}).`);
   out.push(`With ${a.n} hard decisions, differences of a few points are within sampling noise (see Limitations).`);
-  return out.join(" ");
+  return out;
 }
 
 function findings(a, tol) {
@@ -249,7 +250,8 @@ function liveCard(a) {
     const used = up.reduce((n, id) => n + (st[id].gpu_mb || 0), 0);
     const tags = (l) => l.map((id, i) => [i ? " " : null, Jev.tag(id)]);
     box.replaceChildren(el("h3", { text: "Models loaded right now" }),
-      el("p", {}, `At the time you opened this page ${up.length} of ${ids.length} models were loaded in memory (${gib(used)} of GPU memory in use): `, tags(up), down.length ? [". Not loaded: ", tags(down)] : null, ". Results above come from stored runs, so a model can appear in them without being loaded now."),
+      el("p", { class: "point" }, `${up.length} of ${ids.length} models loaded (${gib(used)} of GPU memory in use).`),
+      el("p", { class: "muted small" }, "Loaded: ", tags(up), down.length ? [". Not loaded: ", tags(down)] : null, ". Results above come from stored runs, so a model can appear without being loaded now."),
       el("p", { class: "muted small" }, "How codes map: family letters plus size, at most six characters; B means billions of parameters and H means hundreds of millions. ",
         ids.map((id, i) => [i ? "; " : null, el("span", { class: "mcode", text: Jev.codeOf(id) }), " = ", Jev.nameOf(id), st[id].params ? ` (${st[id].params})` : ""])));
   };
@@ -261,7 +263,7 @@ function methodology(a, tiers) {
     const n = a.rows.find(r => r.tiers[t]?.n)?.tiers[t].n;
     return el("li", {}, el("strong", { text: `${info[t]?.label || t} (${n ?? "?"} decisions). ` }), info[t]?.note || "");
   });
-  const metric = (title, body) => el("div", { class: "card" }, el("h3", { text: title }), el("p", { class: "muted", text: body }));
+  const metric = (title, point, body) => el("div", { class: "card" }, el("h3", { text: title }), el("p", { class: "point" }, point), el("p", { class: "muted small" }, body));
   return section("method-h", "Methodology", "What was run and how each number is defined.",
     el("div", { class: "grid cols-2" },
       el("div", { class: "card prose" }, el("h3", { text: "Tiers" }), el("ul", {}, tierItems), el("p", { class: "muted small", text: "Datasets are frozen public files. Expected labels never change after a run." })),
@@ -269,10 +271,10 @@ function methodology(a, tiers) {
         el("ul", {}, serving(a).map(([label, names]) => el("li", {}, el("strong", { text: `${label}: ` }), rich(list(names))))),
         el("p", { class: "muted small" }, rich("HTTP servers add request handling and, for the hosted model, the network. In-process models skip both. \u27E6verdict\u27E7 ran on CPU. Latency is therefore not like-for-like across models.")))),
     el("div", { class: "grid cols-2", style: "margin-top:16px" },
-      metric("Accuracy", "The share of decisions where the model's most probable option (argmax of its native probability distribution) matches the frozen expected label exactly. No partial credit."),
-      metric("ECE (expected calibration error)", "Predictions are grouped into 10 equal-width bins by confidence in the chosen answer. ECE is the size-weighted average gap between confidence and actual accuracy in each bin. 0 is perfect; lower is better."),
-      metric("Median and p95 latency", "Wall-clock time per decision as measured by the harness: the middle value, and the value 95% of decisions finish within. Raw measurements, no adjustment."),
-      metric("Schema validity", "The share of responses that were well-formed answers for the requested typed schema. Invalid responses are counted as failures, not repaired.")),
+      metric("Accuracy", "Exact match only \u2014 no partial credit.", "The model's most probable option (argmax of its native probability distribution) must match the frozen expected label."),
+      metric("ECE (expected calibration error)", "0 is perfect; lower is better.", "Predictions are grouped into 10 equal-width confidence bins; ECE is the size-weighted gap between confidence and actual accuracy in each bin."),
+      metric("Median and p95 latency", "Raw wall-clock time, no adjustment.", "The middle value, and the value 95% of decisions finish within, as measured by the harness."),
+      metric("Schema validity", "Invalid answers count as failures.", "The share of responses that were well-formed for the requested typed schema. Nothing is repaired.")),
     liveCard(a),
     el("div", { class: "callout", style: "margin-top:16px" }, el("strong", { text: "Run discipline. " }), "Each model ran one at a time on the GPU to avoid memory contention. Each decision was a single call with no retries and no fallback to another model. Runs were serial."));
 }
@@ -308,7 +310,7 @@ function render(d) {
   const showTier = (v) => { TIER_FILTER = v; [...tierSeg.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tier === v))); tableBox.replaceChildren(resultsTable(a)); };
   const frag = document.createDocumentFragment();
   frag.append(
-    section("summary-h", "Executive summary", null, el("div", { class: "card prose" }, el("p", {}, rich(summary(a))))),
+    section("summary-h", "Executive summary", null, el("div", { class: "card prose" }, ...(([head, ...rest]) => [el("p", { class: "point" }, rich(head)), el("p", { class: "muted" }, rich(rest.join(" ")))])(summary(a)))),
     el("section", { class: "section", "aria-labelledby": "find-h" },
       el("header", {}, el("div", {}, el("h2", { id: "find-h", text: "Key findings" }), el("p", { class: "small", text: "Each finding states its rule. The tolerance control applies to the size-based finding and to the recommendations." })), seg), findGrid),
     el("section", { class: "section", "aria-labelledby": "rec-h" },
