@@ -9,9 +9,22 @@
 <script src="/static/app.js"></script>
 <style>
   /* Layout the shared CSS lacks. Colours come from shared tokens only. */
-  .workbench { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 12px; align-items: start; }
-  .qpane { position: sticky; top: 54px; max-height: calc(100vh - 66px); overflow-y: auto; display: grid; gap: 10px; }
+  .workbench { display: grid; grid-template-columns: minmax(340px, 440px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .qpane { position: sticky; top: 54px; max-height: calc(100vh - 66px); overflow-y: auto; display: grid; gap: 14px; }
   .qpane textarea { min-height: 0; }
+  /* State reads as a passage, not a form field: relaxed line-height, no monospace instinct. */
+  #state { line-height: 1.55; font-size: 13.5px; }
+  /* Free-form text stays free-form (paste a whole block in) -- highlighting is a transparent
+     textarea laid over a backdrop that renders the same text with a couple of tokens coloured.
+     Both must share identical box metrics (padding/border/font/line-height/wrap) or the overlay
+     drifts out of alignment with what you're actually typing. */
+  .hl-wrap { display: grid; }
+  .hl-wrap > * { grid-area: 1 / 1; padding: 5px 8px; border: 1px solid transparent; border-radius: var(--radius-sm); font: inherit; line-height: inherit; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+  .hl-backdrop { pointer-events: none; overflow: hidden; color: var(--text); margin: 0; border-color: var(--border-strong); }
+  .hl-wrap textarea { position: relative; background: transparent; color: transparent; caret-color: var(--text); }
+  .hl-wrap textarea::selection { background: var(--accent-soft); }
+  .hl-key { color: var(--accent); font-weight: 650; }
+  .hl-quote { color: var(--good); }
   .field-error { color: var(--bad); font-size: 12px; margin: 0; }
   [aria-invalid="true"] { border-color: var(--bad); }
   .toolbar { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -56,13 +69,17 @@
         <div class="field" style="flex:1"><label for="preset">Scenario</label><select id="preset"></select></div>
         <button class="btn ghost" id="reset" type="button" style="align-self:flex-end">Reset</button>
       </div>
-      <div class="field"><label for="state">State: the situation to decide on</label><textarea id="state" rows="5"></textarea><p class="field-error" id="err-state" hidden></p></div>
+      <div class="field"><label for="state">State: the situation to decide on</label>
+        <div class="hl-wrap"><div class="hl-backdrop" id="state-hl" aria-hidden="true"></div><textarea id="state" rows="6" spellcheck="false"></textarea></div>
+        <p class="field-error" id="err-state" hidden></p></div>
       <div class="field"><span class="small" style="font-weight:500;color:var(--text-2)" id="type-l">Question type</span>
         <div class="segmented" id="type" role="group" aria-labelledby="type-l">
           <button type="button" data-type="choice">Choice</button><button type="button" data-type="score">Score</button><button type="button" data-type="noul">Yes / no</button>
         </div><span class="hint" id="type-hint"></span></div>
       <div class="field"><label for="instructions">Instructions: what to decide</label><textarea id="instructions" rows="2"></textarea><p class="field-error" id="err-instructions" hidden></p></div>
-      <div class="field" id="options-field"><label for="options" id="options-l">Options</label><textarea id="options" rows="5"></textarea><span class="hint" id="options-hint"></span><p class="field-error" id="err-options" hidden></p></div>
+      <div class="field" id="options-field"><label for="options" id="options-l">Options</label><span class="hint" id="options-hint"></span>
+        <div class="hl-wrap"><div class="hl-backdrop" id="options-hl" aria-hidden="true"></div><textarea id="options" rows="5" spellcheck="false"></textarea></div>
+        <p class="field-error" id="err-options" hidden></p></div>
       <div class="row"><button class="btn primary" id="run" type="submit">Run on all models</button><span class="small subtle" id="run-note"></span></div>
       <details class="recent-box"><summary>Recent runs <span class="subtle" id="recent-count"></span></summary><div style="margin-top:8px" id="recent"></div>
         <div style="margin-top:8px"><button class="btn ghost" id="clear-recent" type="button">Clear</button></div></details>
@@ -95,7 +112,7 @@ const $ = (id) => document.getElementById(id);
 const hostedUp = () => loadedIds().filter(id => status && status[id]?.hosted);
 const TYPES = { choice: "Choice", score: "Score", noul: "Yes / no" };
 const TYPE_HINT = { choice: "Pick exactly one option.", score: "Place it on an ordered scale.", noul: "A single 0 to 1 value. No options needed." };
-const OPTIONS_HELP = { choice: ["Options", "One per line. “label: description” explains an option."], score: ["Levels", "One per line, lowest first."] };
+const OPTIONS_HELP = { choice: ["Options", "One per line. “label: description” — the label before the colon is highlighted."], score: ["Levels", "One per line, lowest first."] };
 const STORE_KEY = "jev-compare-recent", MAX_RECENT = 8, CUSTOM = "custom";
 
 const PRESETS = [
@@ -129,7 +146,7 @@ const store = {
 
 /* ---------- form ---------- */
 const readForm = () => ({ s: $("state").value, t: type, i: $("instructions").value, o: $("options").value });
-const writeForm = (f) => { $("state").value = f.s; $("instructions").value = f.i; $("options").value = f.o; setType(f.t); };
+const writeForm = (f) => { $("state").value = f.s; $("instructions").value = f.i; $("options").value = f.o; setType(f.t); highlightAll(); };
 const sameForm = (a, b) => a.s === b.s && a.t === b.t && a.i === b.i && (a.t === "noul" || a.o === b.o);
 const lines = (text) => text.split("\n").map(l => l.trim()).filter(Boolean);
 function setType(t) {
@@ -138,6 +155,39 @@ function setType(t) {
   $("type-hint").textContent = TYPE_HINT[t]; $("options-field").hidden = t === "noul";
   if (t !== "noul") { $("options-l").textContent = OPTIONS_HELP[t][0]; $("options-hint").textContent = OPTIONS_HELP[t][1]; }
 }
+
+/* ---------- highlighting: still free-form textareas (paste a whole block in) -- a transparent
+   textarea sits over a backdrop rendering the same text with a couple of real tokens coloured, so
+   nothing about editing changes. "label:" (or "Customer:", "Account:" -- anything before a colon
+   near the start of a line) is the key token everywhere, matching the one real convention this
+   page already asks for ("label: description"). State additionally highlights quoted text, since
+   a direct quote is usually the actual thing being decided on. */
+const escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/* Key and quote spans are built separately and only concatenated at the end -- running the quote
+   regex on text that already contains the key span's own HTML (its class="..." attribute is
+   itself a quoted string) would match across the tag and corrupt it. */
+function highlightLine(line, withQuotes) {
+  const m = /^([^:]{1,60}):/.exec(line);
+  const keyPart = m ? `<span class="hl-key">${escapeHtml(m[1])}:</span>` : "";
+  let restHtml = escapeHtml(line.slice(m ? m[0].length : 0));
+  if (withQuotes) restHtml = restHtml.replace(/"([^"]*)"/g, (_, inner) => `<span class="hl-quote">&quot;${inner}&quot;</span>`);
+  return keyPart + restHtml;
+}
+function highlightText(raw, withQuotes) {
+  return raw.split("\n").map((l) => highlightLine(l, withQuotes)).join("\n") + (raw === "" || raw.endsWith("\n") ? "​" : "");
+}
+function syncHighlight(id, withQuotes) {
+  const ta = $(id), hl = $(id + "-hl");
+  hl.innerHTML = highlightText(ta.value, withQuotes);
+  hl.scrollTop = ta.scrollTop; hl.scrollLeft = ta.scrollLeft;
+}
+const highlightAll = () => { syncHighlight("state", true); syncHighlight("options", false); };
+["state", "options"].forEach((id) => {
+  const ta = $(id), withQuotes = id === "state";
+  ta.addEventListener("input", () => syncHighlight(id, withQuotes));
+  ta.addEventListener("scroll", () => syncHighlight(id, withQuotes));
+  new ResizeObserver(() => syncHighlight(id, withQuotes)).observe(ta);
+});
 function buildQuestion(f) {
   const errors = {}, state = f.s.trim(), instructions = f.i.trim(), question = { type: f.t, instructions };
   if (!state) errors.state = "Add the situation to decide on.";
