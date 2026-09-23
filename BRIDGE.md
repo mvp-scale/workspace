@@ -1,244 +1,162 @@
 # BRIDGE: where we are, for the next session
 
-Updated 2026-09-23. Read `CLAUDE.md` too. This file is the narrative; `foundry/PLAN.md` is the
-actionable backlog (tagged DONE/DECISION NEEDED/READY/NEEDS DIAGNOSTIC) — read both, don't assume
-this file duplicates it. **Two active threads now, not one**: `/workspace/foundry` (the
-tool-driven idea-decomposition pipeline) and `/workspace/demo`'s Scenario lab / decompose-and-loop
-work (`demo/scenarios.html`, `probes/lab_decompose.py`, `probes/decompose/`) — previously paused,
-now explicitly back in scope. The user's own framing for next session: **"learn from our foundry
-and update the demo"** — cross-pollinate lessons between the two, direction not yet fully decided
-(see "The two threads, and how they relate" below).
+Updated 2026-09-24 (overnight autonomous session, user asleep throughout). Read `CLAUDE.md` too.
+This file is the narrative; `docs/scenario-lab-structures-plan.md` is the actionable, per-item
+backlog for tonight's work (now all DONE) and `docs/custom-decomposition-design.md` is the full
+design the custom-decomposition build was implemented from. `foundry/PLAN.md` is still the
+backlog for foundry's own unrelated open items (untouched this session, still open — see below).
 
-## Starter prompt for the next session (paste this)
+## The headline: tonight's whole queue is done
 
-```
-Read /workspace/BRIDGE.md, then /workspace/foundry/README.md, then /workspace/foundry/PLAN.md, in
-that order. Read foundry/README.md's "one rule that matters most" before touching anything -- you
-author exactly the idea+customer intake and fixed, generic, reusable candidate library content,
-nothing idea-specific, ever.
+The user asked, before going to bed, for autonomous overnight work on: (1) the 5 missing
+Scenario-lab "structures" from `docs/scenario-lab-plan.md`'s old backlog (funnel/Monte Carlo,
+incremental state, hierarchy, time, baseline), and (2) a new "Custom decomposition" feature —
+freeform text in, decomposed live through the loaded models against a fixed generic library,
+rendered as an extremely visual, browser-native experience. **Both are done, shipped, and
+verified live** — see `docs/scenario-lab-structures-plan.md` for the per-item detail. In order,
+this session also: restarted the kev-4b lineup (it was down from the prior session), re-validated
+decompose-and-loop live with the full 5-model lineup, then built all 6 pieces.
 
-Verify state first: `demo/lineup.sh status` (kev-4b is down -- see "Infrastructure" below, real,
-not yet fixed), `git status` (should be clean), and run the FOUR-command pipeline once:
-    cd foundry
-    python3 layered_walk.py --idea oncall-rotation --budget 80
-    python3 report.py --idea oncall-rotation
-    python3 sort_and_rank.py --idea oncall-rotation
-    python3 monte_carlo.py --idea oncall-rotation
-(Note: it's four commands now, not three -- monte_carlo.py is new this session.) Report in a few
-lines what's loaded and whether it ran clean before doing anything else.
+**One loose end**: the real, long-running `demo/server.py` process (port 8100, running since
+2026-09-22, PID logged in shell history) needs a restart to actually *serve* the five new
+endpoints (`/api/hierarchy`, `/api/time-study`, `/api/decompose-library`, `/api/decompose-examples`,
+`/api/decompose-live`) in production. Every piece of new server code was verified against
+*temporary* second instances on other ports instead, specifically so the real server was never
+touched while `probes/window_study.py` (and its queued `probes/lab_time.py` follow-up) were
+running live batch jobs through it in the background. **Check `logs/window-study/run.log` and
+`logs/window-study/lab_time_followup.log` — once both say fully done, restart the real server**
+(`kill` the long-running PID, `python3 demo/server.py` again) and do one final
+puppeteer regression pass against the real port-8100 instance before trusting it in production. If
+this session's wakeup loop got to it first, it's already done — check the log tail below this
+file's own last edit for confirmation before assuming it's still pending.
 
-Then read `foundry/comparisons/jev-monte-carlo-showcase-2026-09-22.md` (real output across all 7
-ideas) and skim `probes/lab_decompose.py` + `probes/decompose/build_tree_edge.py` (the
-decompose-and-loop system -- real CPM scheduling, hand-authored ground truth, already more mature
-than foundry in some ways) before deciding what "learn from foundry, update the demo" actually
-means to build. See "The two threads, and how they relate" below for what's already known about
-the gap between them.
+## What actually shipped, briefly (full detail in commit messages and the plan doc)
 
-Constraints, unchanged: no hosted-model spend from any script's own environment (P0/jev requires
-the person to source /workspace/.env in THEIR OWN shell first -- never read or relay the key
-yourself). Never restart demo/server.py while an experiment runs through it (it's currently
-running, has been since before this session -- don't kill it). Timeout on every wait, check `ps`
-afterward. Commit locally with the Co-Authored-By trailer -- the environment auto-commits
-periodically (harmless, already observed twice more this session) but don't rely on it instead of
-committing real milestones yourself.
-```
+**Baseline (majority class)**: pure client-side, no new live calls — always-guess-the-most-common-
+label accuracy per set, compared against each model's stored accuracy. Stronger than the existing
+chance line on imbalanced sets.
 
-## Infrastructure: kev-4b is down, real, not fixed
+**Funnel (Monte Carlo)**: honestly scoped to `memsafety` only — the one published set with a real
+multi-item grouping (NIST Juliet bad/good CWE pairs). Extends foundry's own `monte_carlo.py`
+technique with something foundry can never do: validate the forecast against real ground truth.
+Real finding: hosted `jev` came back underconfident, `semif` came back badly overconfident — a
+genuine, model-specific calibration result the compound view surfaces.
 
-An oversized diagnostic batch (40 questions/call, well above anything this pipeline normally
-sends) pushed `kev-4b` into a CUDA OOM state this session. A restart attempt then failed to reload
-it, because the other 4 loaded models already hold the GPU memory it needs at startup (documented
-requirement: it must load first, before the other four). It's stopped cleanly, not crash-looping.
-**Recovery needs restarting the full lineup in the documented order** (`demo/lineup.sh`) — a
-bigger action than the one service that broke, not done without the user's go-ahead. Every run
-this session since has used 2 of 3 default models; `call_all`'s existing per-model error tolerance
-handled it gracefully throughout, but any diagnostic needing all 3 (the atomic-gate threshold
-question, Sorter risk-tier calibration) is still waiting on this.
+**Window size** (the honest reframe of "incremental state"): confirmed live that these models are
+stateless prefill-only with no KV-cache reuse between calls, so the literal "read only new words
+vs. re-read the window" comparison the old plan doc asked for isn't real — reframed around what
+`probes/window_study.py` actually measures (AUC by trailing-window definition).
 
-## Foundry: the guide
+**Hierarchy (gate)**: new `probes/lab_hierarchy.py`, a live binary gate question on
+`persuasion_appeals` (the one set with a real "none" class), reusing the existing stored flat
+7-way answer as detail only if the gate fires. **Real, honest finding, reported plainly**:
+hierarchical accuracy was *lower* than flat for every model tested (deltas -35.0% to +0.0%,
+never positive) — splitting the question added a second, often weaker place to be wrong rather
+than helping.
 
-**Four commands now**, always, from `/workspace/foundry`:
-```bash
-python3 layered_walk.py --idea <id> --budget 80      # Slicer + Grinder -> ledger
-python3 report.py --idea <id>                          # renders the ledger as tables
-python3 sort_and_rank.py --idea <id>                    # Sorter scoring, now persists to
-                                                         #   runs/<id>-sort.jsonl
-python3 monte_carlo.py --idea <id>                       # NEW this session -- qualitative
-                                                          #   risk-concentration pass
-```
-`--models` on the first and third: comma-separated P-numbers or backend ids (`--models P0,P1`
-etc.), default `P1,P2,P3` (semif/kev-4b/so1).
+**Time (onset and false alarms)**: new `probes/lab_time.py`. No dialogue has a real turn-level
+onset label, so this measures something self-referential instead that needs no such label: how
+much of a manipulative dialogue plays out before a model's own running score commits to an alarm,
+and how often a non-manipulative dialogue's running score false-alarms, per 10 turns (never "per
+minute" — no real timestamps exist in this data).
 
-**The walk mechanism was rewritten this session** — see "This session's major work" below for the
-full reasoning. In short: `layered_walk.py` no longer picks a fixed top-4 `gap_categories` from
-one pooled ranking and walks each with a fixed top-k of children. It now (a) groups the 21
-categories by their `shape` field and guarantees a top pick from every one of the 6 shapes, and
-(b) drains the whole tree via one shared priority queue until the real budget runs out, not until
-an artificial per-node k is exhausted. Verified: `oncall-rotation` went from 1 requirement / 18-of-80
-budget spent to 13 requirements / 80-of-80 spent, all 6 shapes represented.
+**Custom decomposition**: the big one. `probes/lab_custom_decompose.py` is a from-scratch reimplementation
+of foundry's Slicer+Grinder walk mechanics (shape-guaranteed category selection, one shared
+priority queue, a real enforced budget) — read directly from `foundry/tools/world-knowledge.yaml`
+and `slicer.yaml`, **not** importing `foundry/layered_walk.py` (which mutates a module-global model
+list and writes its own ledger; a hybrid leaf battery from `lab_decompose.py` (gate/phase/risk/
+complexity/dependency, dropping `atomic` — measured at noise level in foundry's own diagnostic —
+and `parallel` — no real sibling group exists for freeform text). Since there's no ground truth,
+it computes lift-over-a-control, cross-model spread, a flat-scoring-model flag, and a scope
+warning instead of grading. **Live acceptance check passed exactly**: run on the same intake as
+`layered_walk.py --idea oncall-rotation --budget 60`, the new engine visited the identical 58 node
+ids in the identical order — byte-for-byte parity. Shipped with a full live-streaming UI: an
+animated radial "orbit map" of all 111 library items lighting up as calls resolve (the actual
+"extremely visual" ask), an accessible Outline view, a detail panel, a read-out card, spend-more/
+download controls. Verified interactively end-to-end with a real headless Chrome (see below).
 
-**Model selection**: default P1/P2/P3, grounded in `probes/report_v2.py`'s validated measurement
-(1,437 items). laya (56.9%) and verdict (46.7%) excluded by default — independently re-confirmed
-this session by a *completely different* harness: `probes/decompose/`'s live-run results show
-laya/verdict stopped at the root of a 31-node reference plan (judged the whole thing "atomic",
-avg depth 0.0) while semif/kev-4b/so1 correctly recursed to depth 2.0. Same two weak models,
-different task, different codebase — strong convergent evidence.
+## New capability this session: real browser verification is now set up
 
-**Hosted Jev (P0)**: works for `layered_walk.py`, user-run in their own terminal only. **Known bug,
-still not fixed**: `sort_and_rank.py --models P0` silently scores nothing (`funnel.bounce_and_weigh`
-skips any `hosted` backend, `funnel.py` line ~162) — `layered_walk.py` has no such skip. Blocks a
-real P0 Sorter/risk-tier calibration until fixed.
+Puppeteer + a real headless Chrome got installed in this container specifically because CLAUDE.md
+requires testing frontend changes in an actual browser, not just reviewing code — `unzip` was
+missing (installed via apt), then `npx puppeteer browsers install chrome` worked. Location:
+`/tmp/pptr-test/node_modules`, Chrome cached at `/root/.cache/puppeteer`. **Use this for any future
+Scenario-lab UI work** — screenshot before/after, a `pageerror`/console-error listener, and a full
+regression pass across the other Structures pages after every change. This was used for every
+piece of UI shipped tonight, including one genuinely interactive test (typing real text, clicking
+Run, watching a live decomposition stream and animate, clicking a node, switching views, checking
+dark mode).
 
-## This session's major work (condensed — full detail in commit messages and PLAN.md)
+**The pattern for testing server.py changes without touching the real running process**: since the
+real `demo/server.py` (port 8100) must never be restarted while an experiment is running through
+it (this session had `window_study.py`/`lab_time.py` doing exactly that for hours), every server.py
+change tonight was verified by launching a *second*, temporary instance on another port
+(`DEMO_PORT=810X python3 demo/server.py &`, `disown`), testing against it, then killing *only* that
+PID (confirmed via `ps`/`curl` each time that the real instance was untouched). Use this pattern
+again rather than ever restarting the real one speculatively.
 
-Picking up from the prior BRIDGE.md (gap-1 retirement, 7-idea run, both already committed):
+## Infrastructure state
 
-1. **A real bug found by a second content-review pass, not by testing**: `walk()`'s breadcrumb
-   told every recursive call "Established so far: `<gap text>`" — asserting each selected gap was
-   *true*, when it was selected precisely because a live call judged it *not* true. Same class of
-   bug as the original polarity contradiction, now in state-building code instead of authored
-   content, invisible to "read the rendered output" checks since this string never reaches
-   `report.py`. Fixed.
-2. **The atomic-gate diagnostic ran for real** (`diagnose_atomic_gate.py`, now committed): 90
-   known-atomic leaves vs. 21 known-compound categories, reproduced twice. On 2 of 3 models,
-   separation is +0.006 — noise-level. `ATOMIC_THRESHOLD=0.18` scores 21.6% accuracy on these
-   controls, worse than the 81.1% you'd get by calling everything atomic. **Not yet acted on** —
-   the decision (drop the gate vs. re-threshold) is pending kev-4b's data.
-3. **An Opus arbitration of a user-proposed "OpenAI loop" design** (`foundry/tools/OPENAI-LOOP.md`,
-   committed) against the current mechanism found the real search space is only 113 live calls
-   total, and the old walk spent only 18 of an 80 budget (22.5%) — reframed the whole debate. Real,
-   adopted findings: a priority-queue walk (built, see below), and — independently, from the
-   user pushing back hard on the arbitration being too conservative — the diagnosis that the
-   real fix was **shape-guaranteed selection using `gap_categories`' own `shape` field**, which
-   existed in the yaml but was never actually read by any code before this session.
-4. **The priority-queue + shape-guaranteed rewrite**, built and verified: replaced `GAP_TOPK`/
-   `CHILD_TOPK_BOOSTED`/`CHILD_TOPK_NORMAL` (three undiagnosed constants) with shape-guaranteed
-   seeding + one shared max-priority queue draining by budget. Also replaced `DOMAIN_AUDIENCE_FLOOR`
-   (flat 0.6, confirmed discarding real signal — oncall-rotation's 55% and standup-async's 39%
-   domain confidence were both thrown away) with a margin-based trust rule. Added a
-   `decomposition_depth` score signal (informational only, not yet load-bearing). Verified across
-   all 7 ideas: every run now uses close to its full budget; `oncall-rotation` 1→13 requirements,
-   `sleep-coach-wearable` 0→4.
-5. **A demo qualitative Monte Carlo risk-concentration pass**, built after checking a specific
-   factual claim first: PMBOK draws a real line between *qualitative* risk analysis (ordinal
-   scores, relative prioritization, no units — what foundry's data can honestly support) and
-   *quantitative* risk analysis (where "Monte Carlo simulation" is a named technique needing real
-   time/cost estimates — what this project has already refused to fabricate twice, see
-   `tools/monte-carlo.yaml`'s `methodology_note` and `probes/lab_decompose.py`'s own docstring,
-   independently making the identical argument). Built the qualitative version only:
-   `monte_carlo.py` samples each requirement's live risk/effort score as a distribution, ranks
-   categories by contribution to simulated exposure *variance* (real sensitivity analysis, not
-   just re-sorting by mean), and translates onto a real, cited illustrative scale (COCOMO Organic
-   mode, Boehm 1981, verified against real sources — 10 KLOC → ~27 person-months — explicitly
-   never a claim about any idea's real size). `sort_and_rank.py` now persists its scoring
-   (`runs/<id>-sort.jsonl`) — previously printed to terminal scrollback only. Verified across all
-   7 ideas including 2-requirement edge cases, no failures. Full writeup with real numbers:
-   `foundry/comparisons/jev-monte-carlo-showcase-2026-09-22.md`.
-6. **A second-review pass on `world-knowledge.yaml`'s content** (separate from the bug in #1 it
-   found) identified ~15-18 specific leaf-text edits, 3 confirmed-wrong `profile_probes` boost
-   mappings (`offline-capable→nonfunctional-availability` was putting server-uptime requirements
-   on two on-device ideas with no server — confirmed in real run data), 5 categories that should
-   plausibly get a boost and don't, and 2 `domain_enrichment` errors. **None of this applied yet**
-   — full list in `foundry/PLAN.md`.
-7. **A user-created idea, `ideas/cf-memory.json`** (a distributed ML-training pitch on Cloudflare
-   Edge Workers), turned out to be the *exact same pitch*, verbatim, already used as the reference
-   plan in `probes/decompose/build_tree_edge.py` — see next section.
+- **kev-4b**: restarted successfully this session (was down from the prior session), full 5-model
+  lineup (`kev-4b`, `semif`, `so1`, `laya`, `verdict`) confirmed active, 28196/32607 MiB.
+- **`probes/window_study.py`**: ran for `semif`/`so1`/`laya`/`verdict` (only `kev-4b` and hosted
+  `jev` had data before tonight) as a detached background job, `logs/window-study/run.log`.
+  `verdict` (CPU-bound) is the slow one. A queued follow-up
+  (`logs/window-study/lab_time_followup.log`) runs `probes/lab_time.py` for `so1`/`laya`/`verdict`
+  once `window_study.py` fully finishes, so the two never compete for the same model's GPU time.
+  Check both logs — if either is still running, let it finish before restarting the real server.
+- **`demo/server.py`** (port 8100, PID from `Sep22`): still the pre-tonight code as of this file's
+  last edit unless the wakeup loop already restarted it — see "the headline" above.
 
-## The two threads, and how they relate
+## Gotchas learned the hard way, this session
 
-`probes/lab_decompose.py` + `probes/decompose/` (`build_tree.py`, `build_tree_edge.py`) is a
-**separate, already-more-mature decomposition system**, live in `demo/scenarios.html`'s Scenario
-lab page. Read before assuming foundry is the only or the most advanced thing in this repo. What
-it has that foundry doesn't:
+- **A background job launched with `nohup ... & disown` is invisible to the harness's own
+  notification system** — it's a detached OS process, not a tracked background task, so nothing
+  auto-notifies on completion. Poll it explicitly (log tail, `ps`) on a real timer instead of
+  assuming a task-notification will arrive.
+- **Never assume a live-testable claim without actually testing it live.** The custom-decomposition
+  design doc was extremely thorough on paper; the actual value came from running the CLI parity
+  check for real (it could easily have silently diverged from `layered_walk.py` in some subtle way)
+  and from an actual interactive puppeteer run, not from the design reading well.
+- **A tuple-unpacking bug in freshly written code is exactly the kind of thing unit tests with a
+  fake dependency catch before a single real model call is wasted on it** — `test_lab_custom_decompose.py`
+  caught a `call_all_models` return-arity mismatch on the very first run, entirely offline.
+- **Reframing a plan-doc item honestly, once the data says the literal framing doesn't hold, beats
+  forcing the original framing.** Both "incremental state" (stateless models, no real KV-cache
+  comparison possible) and the hierarchical-gate result (real, negative finding) were reported as
+  what was actually true, not adjusted to match what the backlog assumed going in.
+- **Real infrastructure conflicts (two live jobs wanting the same long-running server process) are
+  worth designing around rather than serializing on blindly** — the temp-instance-on-another-port
+  pattern let UI/server work continue in parallel with the hours-long window_study job instead of
+  blocking on it.
 
-- **A hand-authored reference tree with real, planted ground truth** (`atomic_ref`, `covers_ref`,
-  `gate`, `phase`, `dependency_ref`, `complexity_ref`) — used to actually *grade* each model
-  against a known-correct answer. Foundry has no ground truth anywhere in its pipeline.
-- **A real CPM (Critical Path Method) schedule** — forward/backward pass, float, critical path,
-  duration sensitivity (1.5x/2.0x) — computed once, deterministically, over hand-estimated
-  durations and real finish-to-start/start-to-start predecessor edges, never touched by a model.
-  This is the legitimate *quantitative* technique foundry's Monte Carlo explicitly can't do yet
-  (see work item #5 above) — done here, because real duration estimates exist (one engineer's
-  judgment, explicitly labeled as such) where foundry has none.
-- **A deliberately planted, technically real coverage gap** (`sys-train`'s children don't address
-  concurrent-writer conflicts) as a genuine test of whether a model catches a real hole.
-- **A documented bug fix in the CPM code itself** (an "informs"-edge bound error, per the commit
-  "immediately caught a scheduling bug") and 5 prior commits of real iteration, including a
-  5-agent adversarial review that rebuilt the whole reference plan.
-- Already run live: `data/probe-runs-v2/_decompose/tree_scored_edge.json` has real per-model
-  results. laya/verdict stopped at the root (avg depth 0.0, judged the *entire* 31-node plan
-  atomic); semif/kev-4b/so1 correctly recursed to depth 2.0 — see "Model selection" above.
+## What's still open (unrelated to tonight's queue, from prior sessions, still true)
 
-What foundry has that this doesn't: a **generic, reusable candidate library** (the 21
-`gap_categories`) that works across any idea without hand-authoring a new tree each time. The
-decompose-and-loop system's plan is a one-off expert artifact for one pitch — rich, but not a
-repeatable mechanism the way foundry's `world-knowledge.yaml` is.
+`foundry/PLAN.md`'s own backlog is untouched tonight: the `ATOMIC_THRESHOLD` drop/re-threshold
+decision (kev-4b's data is now available again after tonight's restart — this is now unblocked,
+next session could pick it up), the ~15-18 `world-knowledge.yaml` content edits identified but not
+applied, `sort_and_rank.py`'s hosted-model-skip bug, and a real second review of the 21-category
+library. The "learn from our foundry and update the demo" open question from the prior BRIDGE.md
+is, in effect, resolved by tonight's custom-decomposition build — not by picking either of the two
+directions that file laid out, but by a third path: a fresh, from-scratch reimplementation of
+foundry's walk *mechanics* inside the demo, deliberately not importing foundry's own code or
+touching `probes/decompose/`'s separate CPM/reference-plan system at all. Whether to *also* pursue
+either original direction (porting CPM/dependency machinery into foundry, or foundry's generic-
+library discipline into `probes/decompose/`) is still open, now a fresh question rather than a
+continuation.
 
-**"Learn from our foundry and update the demo"** — not yet resolved into a concrete task. Two
-readings, both legitimate, not yet chosen between:
-(a) Port foundry's *generic* discipline (a reusable category library, the shape-guaranteed
-selection fix, the honesty patterns) into the decompose-and-loop system, so it stops needing a
-fresh hand-authored tree per idea.
-(b) Port the decompose-and-loop system's *real* CPM/dependency/phase machinery into foundry, since
-`depends_on` has been empty everywhere in foundry all session and `slicer.yaml`'s `by-phase`
-variant (spike/decide/build/validate/launch — the exact same taxonomy already live in
-`build_tree_edge.py`) has never been wired up.
-Next session should read both systems properly (this file's summary is not a substitute) and
-decide with the user which direction, or both.
-
-## Gotchas learned the hard way (this session, in addition to the prior list still below)
-
-- **A methodology critique can be right about the specific numbers and wrong about the
-  architecture underneath them.** The Opus arbitration correctly refuted OpenAI's specific
-  thresholds and formula, but under-credited the structural idea (priority queue, shape-based
-  organization) — caught only because the user pushed back hard and insisted on re-examining it,
-  not because the review caught its own blind spot.
-- **Measure the actual size of the thing before evaluating whether a control structure fits it.**
-  The whole "priority queue vs. fixed top-k" debate was decided by one number nobody had checked:
-  the real search space is 113 calls, not the hundreds either side's mental model assumed.
-- **A real external methodology claim (PMBOK's qualitative/quantitative split, COCOMO's Organic
-  mode) is worth 5 minutes of verification before either building on it or rejecting a request
-  that turns out to rest on it.** The Monte Carlo conversation only converged once the actual
-  distinction was checked against real sources instead of argued about in the abstract.
-- **An oversized batch to a memory-constrained local model can cascade**: one oversized diagnostic
-  call OOM'd kev-4b, and the *fix attempt* then failed because of an ordering dependency
-  (kev-4b must load before the other four) — the failure mode compounded past the original mistake.
-- **Two independent systems in the same repo, built for the same underlying task, can go
-  unnoticed until someone runs the same pitch through both** — foundry and `probes/decompose/`
-  coexisted all session without either being checked against the other, until the user's own
-  `cf-memory.json` idea happened to be verbatim identical to an existing reference plan.
-
-## Gotchas learned the hard way (prior sessions, still true)
-
-- **A live, well-formed classifier mechanism over broken content still produces broken output.**
-  "The tools ran live" is not the same claim as "the output is coherent."
-- **A magic threshold tuned against one model or one small diagnostic does not generalize.**
-  Re-diagnose, don't reuse, when the model combination changes.
-- **Information already in the data structure beats another round of threshold-tuning.** The
-  leaf-vs-category fix (structural) mattered more than any threshold value; the shape-guaranteed
-  fix (also structural, this session) mattered more than the priority-queue mechanics around it.
-- **Cross-model disagreement can mean one model isn't discriminating at all**, not genuine
-  ambiguity — found via controlled diagnostics against known controls, twice now (atomic/compound
-  text this session, the original P3 diagnosis before it).
-- **A YAML file can silently fail to parse, or silently collapse structured data into a string.**
-  Re-parse with the real loader after every edit.
-- **Reading whether a credential exists is itself a blocked action**, separate from and prior to
-  whether a call using it would be blocked.
-- **A one-paragraph idea pitch structurally lacks spec detail**, so spec-completeness categories
-  look like gaps for almost any idea regardless of what actually matters — only visible by running
-  a genuinely varied idea set, not one idea repeatedly.
-
-## Real gaps, prioritized — see `foundry/PLAN.md` for the actionable version
-
-This file no longer duplicates the full list (it did, and immediately went stale relative to
-PLAN.md the moment PLAN.md started tracking real-time status). Headline items still open:
-kev-4b recovery; the `ATOMIC_THRESHOLD` drop/re-threshold decision (data in hand, pending kev-4b);
-the ~15-18 world-knowledge content edits (identified, not applied); `sort_and_rank.py`'s hosted-skip
-bug; a real second review of the 21-category library (one Opus pass only, still); and now, the
-foundry/decompose-and-loop cross-pollination direction above.
+**Stretch goals explicitly out of v1 scope** (from `docs/custom-decomposition-design.md` §5, in
+priority order if picked up later): a Board view (phase columns), a model-subset toggle, a Numbers
+view (sortable/exportable table), a compare-two-texts overlay, saved-run replay, leaf-level lift
+(21 more cached control calls), and an optional paid hosted-model escalation for "models split"
+leaves.
 
 ## Scenario lab
 
-No longer "separate, still paused" — see "The two threads" above. `docs/scenario-lab-plan.md` is
-the original plan document if useful context, but read `probes/lab_decompose.py` and
-`probes/decompose/build_tree_edge.py` directly before trusting any older summary of what's there.
+`docs/scenario-lab-plan.md`'s original backlog (items 1-18) is now mostly superseded by
+`docs/scenario-lab-structures-plan.md` for the structures specifically (items 6-13). Its other
+items — overview orientation (item 1), family header labels (item 2), colour normalization (item
+3), new probe sets beyond the existing 15 (item 4: PII, support escalation, toxicity, prosocial
+safety, negotiation all still unbuilt), blind grading (item 14, still planning-stage only), and the
+lineup/benchmark items (15-18: jevbench is still 8+ commits behind upstream v1.3.0, which changes
+scoring) — remain genuinely open, not touched tonight.
