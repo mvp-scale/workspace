@@ -214,6 +214,9 @@
    "text": "Deploy a Worker that allocates memory until the platform kills it, on this account's real plan tier, and record the ceiling.",
    "phase": "spike",
    "duration_days": 0.5,
+   "duration_optimistic_days": 0.25,
+   "duration_pessimistic_days": 1.5,
+   "duration_basis": "Optimistic: the kill signal is unambiguous and the ceiling is read off in one run. Pessimistic: the kill is a CPU-time limit, not a memory limit, and the measurement has to be redesigned to isolate the real cause.",
    "gate": true,
    "predecessors": [],
    "evidence": "platform_measurement",
@@ -252,6 +255,9 @@
    "text": "Try to move a block of data from one Worker invocation to another without a network-facing API, and measure whatever bandwidth is actually achieved -- or confirm no such path exists.",
    "phase": "spike",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 3.0,
+   "duration_basis": "Optimistic: the docs already settle it -- no shared-memory primitive exists, confirmed and done. Pessimistic: this is the pitch's central claim, so it's worth trying several near-misses (SharedArrayBuffer, a KV race, a Durable Object as a mailbox) before writing down a confident 'no'.",
    "gate": true,
    "predecessors": [],
    "evidence": "platform_measurement",
@@ -290,6 +296,9 @@
    "text": "Confirm the Workers runtime's WebAssembly engine supports the SIMD instruction proposal, and get a rough sense of realistic speedup for a numeric anomaly-detection kernel.",
    "phase": "spike",
    "duration_days": 0.5,
+   "duration_optimistic_days": 0.25,
+   "duration_pessimistic_days": 1.0,
+   "duration_basis": "Low-stakes docs lookup either way; the only slippage risk is the docs being unclear about which runtime version ships the proposal.",
    "gate": false,
    "predecessors": [],
    "evidence": "docs",
@@ -328,6 +337,9 @@
    "text": "Measure the maximum simultaneous invocations and subrequests one deployment can sustain on this account's plan tier.",
    "phase": "spike",
    "duration_days": 0.5,
+   "duration_optimistic_days": 0.25,
+   "duration_pessimistic_days": 1.5,
+   "duration_basis": "Pessimistic: the real ceiling is plan-tier-dependent and undocumented for the exact combination needed, so it may take a support ticket rather than a self-serve measurement.",
    "gate": true,
    "predecessors": [],
    "evidence": "platform_measurement",
@@ -366,6 +378,9 @@
    "text": "Measure achievable bytes/second and requests/second between a Worker and R2, and between a Worker and a Durable Object -- the channel every cross-worker exchange now has to use.",
    "phase": "spike",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 2.5,
+   "duration_basis": "Two separate channels to benchmark (R2, Durable Objects), each with its own time-of-day variance; pessimistic case is re-running both to get a stable figure.",
    "gate": true,
    "predecessors": [
     {
@@ -409,6 +424,9 @@
    "text": "Choose where the large source dataset is actually read from -- Cloudflare R2, an external object store, or a streamed feed.",
    "phase": "decide",
    "duration_days": 0.5,
+   "duration_optimistic_days": 0.25,
+   "duration_pessimistic_days": 2.0,
+   "duration_basis": "Optimistic: a same-day call once the trade-off is laid out. Pessimistic: this needs the user's calendar, not more analysis -- decision tasks slip on availability, not difficulty.",
    "gate": false,
    "predecessors": [],
    "decision_owner": "user",
@@ -442,6 +460,9 @@
    "text": "Decide chunk size once the real per-isolate memory ceiling and per-invocation time budget are both known, leaving headroom for the running process.",
    "phase": "decide",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 2.0,
+   "duration_basis": "Only decidable once both upstream measurements land cleanly; if either was ambiguous this negotiation drags while a second measurement is sought.",
    "gate": false,
    "predecessors": [
     {
@@ -484,6 +505,9 @@
    "text": "Build the loader that reads one chunk into a Worker's own memory, inside both the measured memory ceiling and the measured time budget.",
    "phase": "build",
    "duration_days": 3.0,
+   "duration_optimistic_days": 2.0,
+   "duration_pessimistic_days": 5.0,
+   "duration_basis": "First real implementation on the critical path; typical first-integration slip once the measured ceilings turn out tighter in practice than in a spike.",
    "gate": false,
    "predecessors": [
     {
@@ -526,6 +550,9 @@
    "text": "Choose an anomaly-detection method that can run one chunk at a time with no view of the whole dataset, since no single worker ever sees more than its own shard.",
    "phase": "decide",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 2.5,
+   "duration_basis": "Same calendar risk as any decision task, compounded by a real technical trade-off (streaming z-score/IQR vs. online isolation-forest vs. sketch-based) that has to actually be presented, not just asked.",
    "gate": false,
    "predecessors": [],
    "decision_owner": "user",
@@ -559,6 +586,9 @@
    "text": "Run a realistic chunk of the chosen algorithm's computation inside a real Worker invocation and measure wall-clock time against the platform's per-invocation limit.",
    "phase": "spike",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 2.0,
+   "duration_basis": "A representative chunk is hard to pick before the real loader exists; the pessimistic case is faking one, getting an unrepresentative number, and having to redo it once ingest-loader lands.",
    "gate": true,
    "predecessors": [
     {
@@ -602,6 +632,9 @@
    "text": "Build the chosen anomaly-detection kernel in WASM with SIMD, and benchmark it against a plain (non-SIMD) version to confirm the speedup is real for this workload.",
    "phase": "build",
    "duration_days": 4.0,
+   "duration_optimistic_days": 2.5,
+   "duration_pessimistic_days": 7.0,
+   "duration_basis": "The single most novel, highest-skill-risk build in the plan -- WASM SIMD tuning has a long, unpredictable tail even for an experienced engineer.",
    "gate": false,
    "predecessors": [
     {
@@ -648,6 +681,9 @@
    "text": "Compare sharded, per-chunk online detection against a whole-dataset detector on the same data: does splitting the data cost real detection accuracy?",
    "phase": "validate",
    "duration_days": 3.0,
+   "duration_optimistic_days": 2.0,
+   "duration_pessimistic_days": 5.0,
+   "duration_basis": "An unfavorable accuracy gap sends this back to kernel-algo for a second pass, not just a longer benchmark run -- the pessimistic case is one round-trip through that loop.",
    "gate": false,
    "predecessors": [
     {
@@ -690,6 +726,9 @@
    "text": "Pick how workers get coordinated and how work gets handed out: Durable Objects for stateful coordination, Queues for work distribution, or an external orchestrator outside Cloudflare.",
    "phase": "decide",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 2.5,
+   "duration_basis": "A real architecture decision with cost/latency trade-offs; same calendar risk as other decision tasks.",
    "gate": false,
    "predecessors": [
     {
@@ -732,6 +771,9 @@
    "text": "Define what each worker emits when it finds an anomaly -- small enough to move cheaply over the network, since that is now the only channel between workers.",
    "phase": "decide",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 1.5,
+   "duration_basis": "A narrower decision than most here (format follows from the primitive already chosen), so the tail is shorter.",
    "gate": false,
    "predecessors": [
     {
@@ -770,6 +812,9 @@
    "text": "Define how deltas from many independent workers get merged into one picture -- deduplicated, ordered, or aggregated as appropriate.",
    "phase": "decide",
    "duration_days": 2.0,
+   "duration_optimistic_days": 1.0,
+   "duration_pessimistic_days": 3.5,
+   "duration_basis": "Ordering/dedupe guarantees are subtle and easy to under-scope on a first pass; pessimistic case is a second design pass once a gap is noticed.",
    "gate": false,
    "predecessors": [
     {
@@ -808,6 +853,9 @@
    "text": "Build the actual dispatch of chunks to workers and collection of their deltas, across the chosen coordination primitive.",
    "phase": "build",
    "duration_days": 4.0,
+   "duration_optimistic_days": 2.5,
+   "duration_pessimistic_days": 7.0,
+   "duration_basis": "The first real exercise of the platform's true concurrency ceiling rather than an assumed one -- likely to surface surprises the fan-out spike didn't catch.",
    "gate": false,
    "predecessors": [
     {
@@ -850,6 +898,9 @@
    "text": "Decide where the running model state is persisted between invocations, since Workers themselves are stateless and short-lived: Durable Objects, KV, R2, or an external database.",
    "phase": "decide",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 2.5,
+   "duration_basis": "A consequential choice with a real consistency/latency trade-off; same calendar risk as other decision tasks.",
    "gate": false,
    "predecessors": [
     {
@@ -888,6 +939,9 @@
    "text": "Confirm the chosen model type can actually be updated incrementally from a stream of deltas, since a full retrain on every delta will not fit the time or memory budget.",
    "phase": "spike",
    "duration_days": 2.0,
+   "duration_optimistic_days": 1.0,
+   "duration_pessimistic_days": 4.0,
+   "duration_basis": "If no online variant is documented for the chosen algorithm, this stops being a lookup and becomes its own small research task.",
    "gate": false,
    "predecessors": [
     {
@@ -926,6 +980,9 @@
    "text": "Build the accumulate/persist/reload cycle for the running model state across many independent, short-lived invocations.",
    "phase": "build",
    "duration_days": 3.0,
+   "duration_optimistic_days": 2.0,
+   "duration_pessimistic_days": 6.0,
+   "duration_basis": "Concurrent-writer correctness is the plan's one stated coverage gap (see sys-train's covers_why below); this is where it actually has to get solved in code, which is where estimates most often blow out.",
    "gate": false,
    "predecessors": [
     {
@@ -972,6 +1029,9 @@
    "text": "Design for a worker dying mid-chunk or a delta going missing: retries, idempotent shard ids, at-least-once delivery with dedupe in the reduce step.",
    "phase": "build",
    "duration_days": 2.0,
+   "duration_optimistic_days": 1.0,
+   "duration_pessimistic_days": 4.0,
+   "duration_basis": "Absent from the original pitch, so there's no prior design to build against -- real risk of discovering a second failure mode mid-implementation.",
    "gate": false,
    "predecessors": [
     {
@@ -1010,6 +1070,9 @@
    "text": "Emit per-pass metrics: shards completed, deltas emitted, bytes moved, invocation time, kill rate.",
    "phase": "build",
    "duration_days": 1.5,
+   "duration_optimistic_days": 1.0,
+   "duration_pessimistic_days": 2.5,
+   "duration_basis": "Mostly wiring against metrics that already exist elsewhere in the build; modest tail.",
    "gate": false,
    "predecessors": [
     {
@@ -1048,6 +1111,9 @@
    "text": "Project cost per full pass and per day at target scale -- invocations, GB moved, Durable Object time -- against a budget the pitcher has to supply.",
    "phase": "validate",
    "duration_days": 1.0,
+   "duration_optimistic_days": 0.5,
+   "duration_pessimistic_days": 2.0,
+   "duration_basis": "Depends on three upstream measurements; if any came in worse than assumed, the cost model has to be redone before it's a stated figure.",
    "gate": false,
    "predecessors": [
     {
@@ -1094,6 +1160,9 @@
    "text": "Run the full pipeline on the full dataset at the target worker count, from a cold start.",
    "phase": "validate",
    "duration_days": 2.0,
+   "duration_optimistic_days": 1.5,
+   "duration_pessimistic_days": 4.0,
+   "duration_basis": "The first point every prior piece has to actually work together, not just in isolation -- classic integration-day risk, where the pessimistic case is one full extra debugging pass.",
    "gate": false,
    "predecessors": [
     {
@@ -1144,6 +1213,9 @@
    "text": "Deploy path, rollback plan, secrets and limits configuration, a runbook, and a go/no-go checklist.",
    "phase": "launch",
    "duration_days": 2.0,
+   "duration_optimistic_days": 1.0,
+   "duration_pessimistic_days": 3.5,
+   "duration_basis": "The launch gate itself; pessimistic case is a rollback dry run or secrets/limits review turning up something that has to be fixed before go-live.",
    "gate": false,
    "predecessors": [
     {

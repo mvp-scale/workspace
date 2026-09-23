@@ -243,6 +243,16 @@ def decompose_tree():
     return json.loads(p.read_text())
 
 
+def monte_carlo_schedule():
+    """Monte Carlo schedule risk analysis (PMI/PMBOK QSRA) over the same worked example as
+    decompose_tree(), from probes/decompose/build_monte_carlo.py. Pure computation over
+    hand-authored data -- no model calls, unlike decompose_tree()."""
+    p = ROOT / "probes" / "decompose" / "monte_carlo_schedule.json"
+    if not p.is_file():
+        return {"tasks": []}
+    return json.loads(p.read_text())
+
+
 def decompose_examples():
     """The 7 existing foundry/ideas/*.json intakes -- the only idea-specific content foundry's one
     rule allows Claude to author -- so the custom-decomposition page gets example chips without
@@ -417,6 +427,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, batch_perf())
         elif path == "/api/decompose-tree":
             self._send(200, decompose_tree())
+        elif path == "/api/monte-carlo":
+            self._send(200, monte_carlo_schedule())
         elif path == "/api/decompose-library":
             if lcd is None:
                 self._send(503, {"error": f"PyYAML missing or library failed to load: {_LCD_ERROR}"})

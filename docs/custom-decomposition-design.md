@@ -460,6 +460,16 @@ the idea. Each line appears only when its data exists:
 - The closing line in `.small.muted`: "No right answers exist for your idea, so nothing here is
   scored as right or wrong. No schedule is computed either, because no durations exist."
 
+**Update, later session**: the "no schedule" rule above still holds in its original sense -- no
+*measured* schedule is possible for arbitrary text, for the reasons stated in §1. What changed:
+`demo/scenarios.html`'s `customScheduleSection()` now derives an *estimated* schedule from the
+live `complexity`/`dependency` answers already described above, through one disclosed,
+fixed rule (duration bands from live complexity, category order from the live priority queue,
+parallel-by-default within a category). It is never presented as measured, is loudly labeled as a
+stated rule wherever it appears, and reuses `demo/scenarios.html`'s Monte Carlo (schedule risk)
+rendering (`mcGanttBoard`/`mcHistogram`) client-side, with no extra model calls. See BRIDGE.md for
+the fuller reasoning and the user decision that authorized this.
+
 ---
 
 ## 4. Interaction model

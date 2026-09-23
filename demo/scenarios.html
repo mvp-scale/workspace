@@ -144,6 +144,19 @@
   .gantt .bar { fill: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); stroke: var(--border); }
   .gantt .bar.crit { fill: color-mix(in srgb, var(--bad) 45%, var(--surface-2)); stroke: var(--bad); }
   .gantt .bar.gate { stroke: var(--bad); stroke-width: 2; }
+  /* Monte Carlo idealistic-vs-risk Gantt (reuses .gantt / .bar / .bar.crit from the board above) */
+  .mcgantt .band { stroke: var(--border); stroke-width: 0.5; }
+  .mc-horizon { stroke: var(--bad); stroke-width: 1.5; }
+  .mc-horizon-lbl { fill: var(--bad); font-size: 10px; font-weight: 600; }
+  .swatch.mcband { background: color-mix(in srgb, var(--bad) 35%, var(--surface-2)); }
+  /* Monte Carlo completion histogram */
+  .mchist { display: block; width: 100%; height: auto; min-width: 560px; }
+  .mchist .bin { fill: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); stroke: var(--border); stroke-width: 0.5; }
+  .mchist .axis { stroke: var(--border); stroke-width: 1; }
+  .mchist .marker { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 3 2; }
+  .mchist .marker.horizon { stroke: var(--bad); stroke-dasharray: none; }
+  .mchist .mlbl { fill: var(--text-2); font-size: 9.5px; }
+  .mchist .mlbl.horizon { fill: var(--bad); font-weight: 600; }
   .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); }
   .swatch.crit { background: color-mix(in srgb, var(--bad) 45%, var(--surface-2)); border: 1px solid var(--bad); }
   .swatch.gate { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); border: 2px solid var(--bad); }
@@ -277,7 +290,17 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
-const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (calibration forecast)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"], ["time", "Time (onset and false alarms)", "time"], ["custom", "Custom decomposition", "orbit"]];
+/* "Basic" structures each stand alone, one mechanism against the published probe sets. The three
+   "decomposition" structures all operate on the same real hand-authored plan (build_tree_edge.py's
+   Cloudflare Edge Workers worked example, or the custom-decomposition library) rather than on a
+   published dataset, and build on each other -- decompose-and-loop produces the plan tree, Monte
+   Carlo samples schedule risk over that same tree, custom decomposition applies the same
+   atomic/split mechanism to arbitrary pasted text -- so they get their own rail section. */
+const STRUCTURE_SECTIONS = [
+  ["Basic structures", [["batch", "Batch performance", "layers"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (calibration forecast)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"], ["time", "Time (onset and false alarms)", "time"]]],
+  ["Decomposition structures", [["decompose", "Decompose and loop", "split"], ["montecarlo", "Monte Carlo (schedule risk)", "montecarlo"], ["custom", "Custom decomposition", "orbit"]]],
+];
+const STRUCTURES = STRUCTURE_SECTIONS.flatMap(([, items]) => items);
 const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
@@ -300,7 +323,7 @@ const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1],
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4", time: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0|M12 7v5l4 2", orbit: "M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5|M12 3v3.5|M12 17.5V21|M3 12h3.5|M17.5 12H21|M5.6 5.6l2.5 2.5|M15.9 15.9l2.5 2.5" };
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4", time: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0|M12 7v5l4 2", montecarlo: "M3 20h18|M5 20V16|M8.5 20V11|M12 20V6|M15.5 20V11|M19 20V16", orbit: "M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5|M12 3v3.5|M12 17.5V21|M3 12h3.5|M17.5 12H21|M5.6 5.6l2.5 2.5|M15.9 15.9l2.5 2.5" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -403,6 +426,10 @@ const heatBg = (acc, chance) => {
   if (acc >= chance) return `color-mix(in srgb, var(--good) ${Math.round(clamp01((acc - chance) / (1 - chance)) * 42)}%, transparent)`;
   return `color-mix(in srgb, var(--bad) ${Math.round(clamp01((chance - acc) / chance) * 42 + 8)}%, transparent)`;
 };
+/* Monte Carlo Gantt risk band: fill intensity carries the criticality index directly, independent
+   of whether the task is on the single deterministic critical path -- a low-index task always
+   reads as a quiet band even if its risk range happens to be wide. */
+const mcBandFill = (ci) => `color-mix(in srgb, var(--bad) ${Math.round(clamp01(ci) * 55 + 8)}%, var(--surface-2))`;
 
 /* ---------- boot ---------- */
 mount(document.getElementById("root"), async () => {
@@ -421,11 +448,13 @@ mount(document.getElementById("root"), async () => {
       icon ? railIcon(icon) : null, el("span", { class: "lbl", text: name }), n ? el("span", { class: "n", text: n }) : null);
     rail.append(el("h4", { class: "sect", text: "Overview" }), link("all", "All sets", `${PROBES.length}`, "grid"));
     select.append(el("option", { value: "all", text: "All sets (overview)", selected: ST.set === "all" }));
-    rail.append(el("h4", { class: "sect", text: "Structures" }));
-    const structOg = el("optgroup", { label: "Structures" }); select.append(structOg);
-    for (const [id, name, icon] of STRUCTURES) {
-      rail.append(link(id, name, "", icon));
-      structOg.append(el("option", { value: id, text: name, selected: ST.set === id }));
+    for (const [section, items] of STRUCTURE_SECTIONS) {
+      rail.append(el("h4", { class: "sect", text: section }));
+      const structOg = el("optgroup", { label: section }); select.append(structOg);
+      for (const [id, name, icon] of items) {
+        rail.append(link(id, name, "", icon));
+        structOg.append(el("option", { value: id, text: name, selected: ST.set === id }));
+      }
     }
     rail.append(el("h4", { class: "sect", text: "Sets" }));
     let last = null, og = null, det = null, list = null;
@@ -468,6 +497,7 @@ mount(document.getElementById("root"), async () => {
     else if (ST.set === "window") { mount(box, () => api("/api/window-study"), renderWindowStudy); }
     else if (ST.set === "hierarchy") { mount(box, () => api("/api/hierarchy"), renderHierarchy); }
     else if (ST.set === "time") { mount(box, () => api("/api/time-study"), renderTimeStudy); }
+    else if (ST.set === "montecarlo") { mount(box, () => api("/api/monte-carlo"), renderMonteCarlo); }
     else if (ST.set === "custom") {
       mount(box, async () => ({ library: await api("/api/decompose-library"), examples: await api("/api/decompose-examples") }), renderCustom);
     }
@@ -834,6 +864,20 @@ function customFlow() {
     flowLoop(685, 495, cy + h / 2, "budget left? do the next one"));
 }
 
+function monteCarloFlow() {
+  FLOW_SEQ = 0;
+  const h = 28, cy = FLOW_H / 2, y = cy - h / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "Each task's duration is sampled thousands of times, the critical path is recomputed on every draw, and the results become a completion distribution and a per-task criticality index" },
+    flowBox(0, y, 130, h, "task durations", "optimistic / likely / pessimistic"),
+    flowArrow(130, cy, 166, cy, "sample", "sample"),
+    flowBox(166, y, 150, h, "one sampled schedule", "one draw per task"),
+    flowArrow(316, cy, 356, cy, "compute", "figure out"),
+    flowBox(356, y, 130, h, "run the critical path", "this draw only"),
+    flowLoop(421, 241, cy + h / 2, "thousands of times"),
+    flowArrow(486, cy, 526, cy, "compare", "check"),
+    flowBox(526, y, 234, h, "completion range + criticality", "per-task share of runs critical"));
+}
+
 function decomposeFlow() {
   FLOW_SEQ = 0;
   const h = 28, cy = FLOW_H / 2, y = cy - h / 2;
@@ -1145,10 +1189,22 @@ const SRC = {
   plan: { path: "probes/decompose/build_tree_edge.py", kind: "Hand-authored by Claude", detail: "Every node's title, text, duration, dependency, gate flag and “assumed today” figure was written by hand. Not fetched from Cloudflare's documentation, not measured, and not generated by any of the models below — they never saw the pitch and were never asked to produce a plan." },
   schedule: { path: "probes/decompose/build_tree_edge.py (cpm())", kind: "Computed, from the authored plan", detail: "Real deterministic math (a forward/backward critical-path pass) run on the durations and dependencies above. The computation is real; the inputs it runs on are still just my estimates." },
   models: { path: "probes/lab_decompose.py → data/probe-runs-v2/_decompose/tree_scored_edge.json", kind: "Live model output", detail: "One real POST /v1/systemone call per node per model, to the 5 models actually running on this box. Fully reproducible: rerun the script and the answers regenerate from the live servers, not from anything cached or invented." },
+  durations: { path: "probes/decompose/build_tree_edge.py (duration_optimistic_days / duration_pessimistic_days)", kind: "Hand-authored by Claude, not measured", detail: "The optimistic/likely/pessimistic three-point estimate for each of the 24 leaf tasks was written by hand, with a stated one-line reason per task. Not derived from a formula, not fetched from anywhere, and no model was asked to estimate a duration — durations are a human-style planning judgement call, the same status as the plan text itself." },
+  sampling: { path: "probes/decompose/build_monte_carlo.py", kind: "Computed, zero model calls", detail: "10,000 triangular-distribution samples per task, each one run through the exact same cpm() forward/backward pass used for the deterministic schedule above. Every number on this page — the histogram, the percentiles, the criticality index, the Gantt risk bands — is arithmetic over the hand-authored durations and edges. No model, live or hosted, is called anywhere in this computation." },
 };
 function srcNote(key) {
   const s = SRC[key];
   return el("p", { class: "small muted srcnote", title: s.detail }, el("b", { text: "Source: " }), el("code", { text: s.path }), ` — ${s.kind}.`);
+}
+/* A short, skimmable "what's real here" banner for the two structures built on real hand-authored
+   plan data rather than a published probe set — the user's own direct ask after using the pages:
+   make the plan/computed/live-model distinction impossible to miss, not just present in a hover
+   tooltip. `rows` is [[label, kind, key]] in SRC key order. */
+function dataDrivenBanner(rows) {
+  return el("div", { class: "callout", style: "display:flex;flex-direction:column;gap:4px" },
+    el("p", { style: "margin:0" }, el("b", { text: "Not a theoretical demo: " }), "every number below traces to one of these three real sources, not to AI narrative standing in for data."),
+    el("ul", { class: "small", style: "margin:4px 0 0 18px;padding:0" }, rows.map(([label, key]) =>
+      el("li", {}, el("b", { text: label + ": " }), SRC[key].kind, " — ", el("span", { class: "muted", title: SRC[key].detail, style: "border-bottom:1px dashed var(--text-3);cursor:help" }, "hover for exactly what that means" ), ". (", el("code", { text: SRC[key].path }), ")"))));
 }
 
 function renderDecomposeTree(data) {
@@ -1163,6 +1219,7 @@ function renderDecomposeTree(data) {
   // 1: title + deck
   out.append(el("h2", { text: "Decompose and loop: can this be built at all?" }),
     el("p", { class: "muted", text: "One real engineering pitch, split into a plan, then checked — first against the platform it names, then by five decision models as a second reader. The 30-day schedule turns out not to be the binding constraint." }),
+    dataDrivenBanner([["The plan (31 nodes, text, durations, dependency edges)", "plan"], ["Schedule (span, critical path, float, sensitivity)", "schedule"], ["Model scoring (atomic / gate / phase / risk / complexity / dependency, per node)", "models"]]),
     flowHeader(decomposeFlow()));
 
   // 2: the pitch, verbatim
@@ -1211,6 +1268,7 @@ function renderDecomposeTree(data) {
     el("p", { class: "small" }, "Float against the 30-day target: ", el("b", { text: `${sched.float_days} working days` }), "."),
     el("p", { class: "small" }, "Sensitivity: at ×1.5 on every estimate the plan lands at ", el("b", { text: `${sched.sensitivity?.["1.5"]} days` }), "; at ×2.0 it misses at ", el("b", { text: `${sched.sensitivity?.["2.0"]} days` }), ".")));
   out.append(el("p", { class: "legend", text: "Critical path and float are computed by a forward/backward pass over stated predecessor edges and duration estimates — the method is in build_tree_edge.py and is reproducible. The durations are my estimates for one experienced engineer, and they are the weakest input on this page; that is what the sensitivity line is for." }), srcNote("schedule"));
+  out.append(el("p", { class: "legend" }, "That sensitivity line is a coarse ×1.5/×2.0 multiplier on every estimate at once. ", el("a", { href: hashFor({ set: "montecarlo" }), text: "Monte Carlo (schedule risk)" }), " samples each task's own real optimistic/likely/pessimistic range instead, thousands of times, and turns this single 13-day figure into a probability distribution over the same plan."));
 
   // 5b: worked example — one node, explored in full, not summarized
   out.append(weBox);
@@ -1693,6 +1751,330 @@ function renderTimeStudy(data) {
   return out;
 }
 
+/* ---------- structure: Monte Carlo (schedule risk) ---------- */
+/* The impact-on-the-critical-path visual the Decompose Gantt above doesn't have: for every task,
+   a pale band shows the p10-start-to-p90-finish range across all sampled runs (coloured by
+   criticality index, independent of the deterministic bar), and a solid bar on top shows the
+   single-estimate ("idealistic") schedule that build_tree_edge.py's own cpm() produces. Same row
+   layout (grouped lanes, one row per task) as ganttBoard() above, deliberately -- this is the same
+   plan tree, just read two ways. */
+function mcGanttBoard(data) {
+  const horizon = data.horizon_working_days ?? null;
+  const tasks = [...data.tasks].sort((a, b) => a.deterministic_start_day - b.deterministic_start_day);
+  const byGroup = {};
+  for (const g of data.groups || []) byGroup[g.id] = tasks.filter((t) => t.group === g.id);
+  const rowH = 22, headH = 26, W = 900, L = 210, R = 20, laneRowH = 18;
+  const maxDay = Math.max(...(horizon != null ? [horizon] : []), ...tasks.map((t) => t.finish_p90 ?? t.deterministic_finish_day));
+  const dayW = (W - L - R) / maxDay;
+  const dayX = (d) => L + d * dayW;
+  const rows = []; let y = headH;
+  const lanes = [];
+  for (const g of data.groups || []) {
+    const kids = byGroup[g.id] || []; if (!kids.length) continue;
+    lanes.push({ y, label: g.title });
+    y += laneRowH;
+    for (const t of kids) { rows.push({ t, y }); y += rowH; }
+    y += 6;
+  }
+  const H = y + 10;
+  const grid = [];
+  const tickStep = Math.max(1, Math.round(maxDay / 10));
+  for (let d = 0; d <= maxDay; d += tickStep) grid.push(S("g", {},
+    S("line", { x1: dayX(d), x2: dayX(d), y1: headH - 4, y2: H - 6, class: "gl" }),
+    S("text", { x: dayX(d), y: 14, "text-anchor": "middle", class: "lbl" }, `day ${d}`)));
+  const laneLabels = lanes.map((l) => S("text", { x: 4, y: l.y + 14, class: "gantt-lane-label" }, l.label));
+  const horizonX = horizon != null ? dayX(horizon) : null;
+  const horizonLine = (horizon != null && horizon <= maxDay) ? S("g", {},
+    S("line", { x1: horizonX, x2: horizonX, y1: headH - 4, y2: H - 6, class: "mc-horizon" }),
+    S("text", { x: horizonX - 4, y: H - 10, "text-anchor": "end", class: "mc-horizon-lbl" }, `${horizon}d target`)) : null;
+  const bars = rows.map(({ t, y: ry }) => {
+    const bandX1 = dayX(t.start_p10), bandX2 = dayX(t.finish_p90);
+    const barX1 = dayX(t.deterministic_start_day), barX2 = dayX(t.deterministic_finish_day);
+    const crit = t.deterministic_on_critical_path;
+    return S("g", { class: "mcbar" },
+      S("rect", { x: bandX1, y: ry + 2, width: Math.max(1, bandX2 - bandX1), height: rowH - 5, rx: 3, class: "band", style: `fill:${mcBandFill(t.criticality_index)}` },
+        S("title", {}, `${t.title}\nrisk range across ${data.n_runs.toLocaleString()} sampled runs: day ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)} (p10 start to p90 finish)\ncriticality index: ${pc(t.criticality_index)} of runs had this task on that run's own critical path`)),
+      S("rect", { x: barX1, y: ry + 6, width: Math.max(2, barX2 - barX1), height: rowH - 13, rx: 2, class: "bar" + (crit ? " crit" : "") },
+        S("title", {}, `${t.title}\nidealistic schedule (every task at its single-estimate duration): day ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)}${crit ? " · on the deterministic critical path" : ""}`)),
+      S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" }, t.title.length > 30 ? t.title.slice(0, 28) + "…" : t.title));
+  });
+  const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, class: "gantt mcgantt", role: "img", "aria-label": "For every task: a pale band for its risk range across simulated runs, and a solid bar for the single idealistic schedule" },
+    grid, laneLabels, horizonLine, bars);
+  return el("div", {}, el("div", { style: "overflow-x:auto" }, svg),
+    el("div", { class: "legend", style: "margin-top:6px;display:flex;gap:16px;flex-wrap:wrap" },
+      el("span", {}, el("span", { class: "swatch mcband" }), " risk range (p10 start to p90 finish, darker = more often critical)"),
+      el("span", {}, el("span", { class: "swatch plain" }), " idealistic schedule (single estimate)"),
+      el("span", {}, el("span", { class: "swatch crit" }), " on the deterministic critical path")));
+}
+
+function mcHistogram(hist, dist, horizon) {
+  const W = 900, H = 190, L = 34, R = 20, top = 10, axisY = H - 26;
+  const lo = hist[0].start, hi = hist[hist.length - 1].end;
+  const span = Math.max(1e-6, hi - lo);
+  const maxCount = Math.max(...hist.map((b) => b.count));
+  const x = (v) => L + ((v - lo) / span) * (W - L - R);
+  const barW = (W - L - R) / hist.length;
+  const bars = hist.map((b) => {
+    const bh = maxCount ? (b.count / maxCount) * (axisY - top) : 0;
+    return S("rect", { class: "bin", x: x(b.start), y: axisY - bh, width: Math.max(0.5, barW - 1), height: bh },
+      S("title", {}, `${fmt.num(b.start, 1)}–${fmt.num(b.end, 1)} days: ${b.count} of ${hist.reduce((s, r) => s + r.count, 0)} runs`));
+  });
+  const marker = (day, label, cls = "") => {
+    if (day == null || day < lo || day > hi) return null;
+    const mx = x(day);
+    return S("g", {}, S("line", { class: "marker" + (cls ? " " + cls : ""), x1: mx, x2: mx, y1: top, y2: axisY }),
+      S("text", { class: "mlbl" + (cls ? " " + cls : ""), x: mx, y: top + 10, "text-anchor": "middle" }, label));
+  };
+  const ticks = [];
+  const tickStep = Math.max(1, Math.round(span / 8));
+  for (let d = Math.ceil(lo); d <= hi; d += tickStep) ticks.push(S("text", { class: "mlbl", x: x(d), y: axisY + 14, "text-anchor": "middle" }, `${Math.round(d)}`));
+  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "mchist", role: "img", "aria-label": `Distribution of ${hist.reduce((s, r) => s + r.count, 0)} simulated completion times, ${fmt.num(lo, 0)} to ${fmt.num(hi, 0)} working days` },
+    bars, S("line", { class: "axis", x1: L, x2: W - R, y1: axisY, y2: axisY }), ticks,
+    marker(dist.p10, "p10"), marker(dist.p50, "median"), marker(dist.p90, "p90"),
+    horizon != null ? marker(horizon, `${horizon}d target`, "horizon") : null);
+}
+
+function renderMonteCarlo(data) {
+  const out = el("div");
+  out.append(el("h2", { text: "Monte Carlo (schedule risk)" }),
+    el("p", { class: "muted", text: "The real PMI/PMBOK technique (Monte Carlo Schedule Risk Analysis, “QSRA”): sample each task's duration from a triangular distribution thousands of times, run a real critical-path pass on every draw, and report a probability range instead of one deterministic number." }),
+    dataDrivenBanner([["The plan tree (same 24 tasks and dependency edges as Decompose and loop)", "plan"], ["Optimistic / likely / pessimistic duration estimate per task", "durations"], ["10,000-run schedule risk simulation (histogram, percentiles, criticality index, Gantt risk bands)", "sampling"]]),
+    flowHeader(monteCarloFlow()));
+  if (!(data.tasks || []).length) return out.append(empty("No Monte Carlo run yet", "Run probes/decompose/build_monte_carlo.py.")), out;
+  const dist = data.distribution, det = data.deterministic, horizon = data.horizon_working_days;
+  const groupTitle = Object.fromEntries((data.groups || []).map((g) => [g.id, g.title]));
+
+  out.append(el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "Where this comes from" }),
+    el("p", { class: "small" }, "This runs against exactly one real dataset in this repo: ", el("code", { text: "build_tree_edge.py" }), "'s Cloudflare Edge Workers plan — 24 leaf tasks with real predecessor edges and hand-authored optimistic/likely/pessimistic duration estimates (see each task's rationale below). It is not generalized to any other foundry idea, which has no real duration or dependency data to sample from."),
+    el("p", { class: "small" }, "It is the same plan tree the ", el("a", { href: hashFor({ set: "decompose" }), text: "Decompose and loop" }), " structure walks node by node — this page doesn't decompose anything itself, it samples schedule risk over the plan that page's decomposition already produced."),
+    el("p", { class: "small muted" }, `${data.n_runs.toLocaleString()} simulated runs, seed ${data.seed} (reproducible — rerun the script and the numbers reproduce exactly).`)));
+
+  out.append(el("h3", { text: "One number becomes a range" }),
+    el("p", { class: "legend" }, "The deterministic pass (every task at its ", el("i", { text: "likely" }), " estimate) says ", el("b", { text: `${fmt.num(det.span_days, 1)} working days` }), ". Sampling every task's real uncertainty ", data.n_runs.toLocaleString(), " times instead gives a distribution: half the sampled runs finish by ", el("b", { text: `${fmt.num(dist.p50, 1)} days` }), ", and 90% finish by ", el("b", { text: `${fmt.num(dist.p90, 1)} days` }), " — both higher than the single deterministic figure, because pessimistic tails pull the distribution's mean above its mode."),
+    el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, mcHistogram(data.histogram, dist, horizon)),
+      el("div", { class: "legend", style: "margin-top:6px" }, `p10 ${fmt.num(dist.p10, 1)}d · median ${fmt.num(dist.p50, 1)}d · p90 ${fmt.num(dist.p90, 1)}d · range sampled ${fmt.num(dist.min, 1)}–${fmt.num(dist.max, 1)}d against a ${horizon}-day target.`)),
+    el("div", { class: "callout" + (dist.prob_within_horizon >= 0.8 ? "" : " warn") },
+      el("p", {}, el("b", { text: `P(finish within ${horizon} working days) = ${pc(dist.prob_within_horizon, 1)}. ` }),
+        dist.prob_within_horizon >= 0.8
+          ? "The 30-day target has real slack even under sampled uncertainty — consistent with the deterministic pass's own float finding."
+          : "Sampled uncertainty puts the horizon genuinely at risk, which the single deterministic pass alone would not have shown.")));
+
+  const sortedTasks = [...data.tasks].sort((a, b) => b.criticality_index - a.criticality_index);
+  const hiddenRisk = sortedTasks.filter((t) => !t.deterministic_on_critical_path && t.criticality_index > 0);
+  out.append(el("h3", { text: "Impact on the critical path" }),
+    el("p", { class: "legend", text: "The same plan, read two ways: the solid bar is the idealistic schedule (every task at its single-estimate duration, exactly what the Decompose Gantt above shows); the pale band behind it is where that task actually landed across every sampled run, coloured by how often it was critical. A wide, dark band on a task with a thin idealistic bar is real risk the deterministic view hides." }),
+    el("div", { class: "card" }, mcGanttBoard(data)));
+
+  out.append(el("h3", { text: "Criticality index: which tasks actually drive the schedule" }),
+    el("p", { class: "legend", text: "Share of the sampled runs where each task landed on that run's own critical path — not just the one deterministic path. A task can be critical some of the time without ever being critical in the single-estimate plan." }),
+    el("div", { class: "card" }, el("div", { style: "overflow-x:auto" },
+      el("table", { class: "data wrap" },
+        el("thead", {}, el("tr", {}, el("th", { text: "Task" }), el("th", { text: "Group" }), el("th", { text: "Likely / range (days)" }), el("th", { text: "On deterministic critical path" }), el("th", { text: "Criticality index" }))),
+        el("tbody", {}, sortedTasks.map((t) => el("tr", {},
+          el("td", { title: t.duration_basis }, t.title),
+          el("td", { class: "muted small" }, groupTitle[t.group] || t.group),
+          el("td", { class: "muted small", text: `${fmt.num(t.duration_days, 1)} (${fmt.num(t.optimistic_days, 1)}–${fmt.num(t.pessimistic_days, 1)})` }),
+          el("td", {}, t.deterministic_on_critical_path ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", text: "critical path" }) : el("span", { class: "muted small", text: "–" })),
+          el("td", { style: "min-width:160px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)))))))));
+
+  out.append(el("div", { class: "callout" }, el("h3", { style: "margin-top:0", text: "What sampling reveals that one CPM pass doesn't" }),
+    hiddenRisk.length
+      ? el("p", {}, `${hiddenRisk.length} task${hiddenRisk.length === 1 ? "" : "s"} never appear on the single deterministic critical path, but land on the critical path in a real share of sampled runs: `,
+          hiddenRisk.slice(0, 6).map((t, i) => el("span", {}, i > 0 ? ", " : "", el("b", { text: t.title }), ` (${pc(t.criticality_index)})`)),
+          ". A plan built only around the deterministic critical path would never front-load these — the real reason a probabilistic pass is worth running, not just a stylistic alternative to CPM.")
+      : el("p", { text: "In this run, no task outside the deterministic critical path ever became critical under sampling — the single CPM pass already found every task that matters here." })));
+
+  const releaseTrain = sortedTasks.filter((t) => t.criticality_index >= 0.5);
+  out.append(el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "“Release train” recommendation" }),
+    el("p", { class: "small muted", text: "The principled answer to front-loading: whatever most consistently drives the schedule under real uncertainty, because that is where delay cascades downstream most often." }),
+    releaseTrain.length
+      ? el("ol", { class: "small" }, releaseTrain.map((t) => el("li", {}, el("b", { text: t.title }), ` — critical in ${pc(t.criticality_index)} of sampled runs. `, el("span", { class: "muted", text: t.duration_basis }))))
+      : el("p", { class: "small muted", text: "No single task is critical in a majority of runs — schedule risk here is distributed, not concentrated in one bottleneck." })));
+
+  return out;
+}
+
+/* ---------- Custom decomposition's live schedule estimate ----------
+   build_tree_edge.py's Monte Carlo needs real hand-authored durations and dependency edges, which
+   don't exist for arbitrary pasted text -- docs/custom-decomposition-design.md and
+   foundry/monte_carlo.py both deliberately refuse a schedule for exactly this reason (see BRIDGE.md
+   for the fuller reasoning). What DOES exist, live, per leaf: a real 'complexity' score answer and
+   a real 'dependency' choice answer (probes/lab_custom_decompose.py's leaf_questions()). This
+   section turns those into an estimated schedule through one disclosed, fixed rule -- never framed
+   as measured -- and reuses mcCpm/mcGanttBoard/mcHistogram unchanged, in-browser, so it's as fast
+   as the live decomposition itself (no extra model calls). */
+const CUSTOM_DURATION_ANCHORS = [0.25, 0.5, 1, 2, 4]; // very low..very high complexity (days) -- the
+                                                        // mirror image of build_tree_edge.py's own
+                                                        // complexity_band(), stated so the rule is
+                                                        // checkable, not just asserted.
+function customDurationAnchorAt(pos) {
+  const lo = Math.max(0, Math.min(CUSTOM_DURATION_ANCHORS.length - 2, Math.floor(pos)));
+  const frac = clamp01(pos - lo);
+  return CUSTOM_DURATION_ANCHORS[lo] + frac * (CUSTOM_DURATION_ANCHORS[lo + 1] - CUSTOM_DURATION_ANCHORS[lo]);
+}
+function customDurationBand(complexityMean) {
+  if (complexityMean == null) return { likely: 1, optimistic: 0.5, pessimistic: 2, basis: "No live complexity answer for this item (every model errored) -- a neutral “medium” default, not a real estimate." };
+  const pos = clamp01(complexityMean) * (CUSTOM_DURATION_ANCHORS.length - 1);
+  const round2 = (x) => Math.round(x * 100) / 100;
+  return {
+    likely: round2(customDurationAnchorAt(pos)), optimistic: round2(customDurationAnchorAt(Math.max(0, pos - 1))), pessimistic: round2(customDurationAnchorAt(Math.min(CUSTOM_DURATION_ANCHORS.length - 1, pos + 1))),
+    basis: `Estimated from this item's own live complexity answer (mean ${fmt.num(complexityMean, 2)} of 1.0) via the stated duration-band rule; optimistic/pessimistic use the band one complexity level either side. Not measured.`,
+  };
+}
+/* Verbatim port of build_tree_edge.py's cpm() -- same forward/backward pass, same semantics. */
+function mcCpm(byId) {
+  const order = [], seen = new Set();
+  const visit = (nid) => { if (seen.has(nid)) return; seen.add(nid); for (const [p] of byId[nid].predecessors || []) visit(p); order.push(nid); };
+  for (const nid of Object.keys(byId)) visit(nid);
+  const es = {}, ef = {};
+  for (const nid of order) {
+    const n = byId[nid];
+    let start = 0;
+    for (const [p, typ] of n.predecessors || []) start = Math.max(start, typ === "fs" ? ef[p] : es[p]);
+    es[nid] = start; ef[nid] = start + n.duration_days;
+  }
+  const span = order.length ? Math.max(...order.map((id) => ef[id])) : 0;
+  const successors = {}; for (const nid of Object.keys(byId)) successors[nid] = [];
+  for (const nid of Object.keys(byId)) for (const [p, typ] of byId[nid].predecessors || []) successors[p].push([nid, typ]);
+  const lf = {}, ls = {};
+  for (let i = order.length - 1; i >= 0; i--) {
+    const nid = order[i], n = byId[nid];
+    let finish = span;
+    for (const [s, typ] of successors[nid]) finish = Math.min(finish, typ === "fs" ? ls[s] : ls[s] + n.duration_days);
+    lf[nid] = finish; ls[nid] = finish - n.duration_days;
+  }
+  const out = {};
+  for (const nid of Object.keys(byId)) {
+    const flt = ls[nid] - es[nid];
+    out[nid] = { earliest_start_day: es[nid], earliest_finish_day: ef[nid], latest_start_day: ls[nid], latest_finish_day: lf[nid], total_float_days: flt, on_critical_path: flt <= 1e-6 };
+  }
+  return { cpm: out, span };
+}
+function mcTriangular(low, high, mode, rng) {
+  if (high <= low) return low;
+  const u = rng(), c = (mode - low) / (high - low);
+  return u < c ? low + Math.sqrt(u * (high - low) * (mode - low)) : high - Math.sqrt((1 - u) * (high - low) * (high - mode));
+}
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function seedFromString(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mcPercentile(sorted, p) {
+  if (!sorted.length) return null;
+  const k = (sorted.length - 1) * p, lo = Math.floor(k), hi = Math.min(lo + 1, sorted.length - 1);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (k - lo);
+}
+function mcJsHistogram(vals, nBins) {
+  const lo = vals[0], hi = vals[vals.length - 1];
+  if (hi <= lo) return [{ start: lo, end: lo + 1, count: vals.length }];
+  const width = (hi - lo) / nBins, bins = new Array(nBins).fill(0);
+  for (const v of vals) bins[Math.min(nBins - 1, Math.floor((v - lo) / width))]++;
+  return bins.map((c, i) => ({ start: lo + i * width, end: lo + (i + 1) * width, count: c }));
+}
+const CUSTOM_MC_RUNS = 3000; // fewer than build_monte_carlo.py's 10,000 -- this runs synchronously
+                              // in the browser on every finished decomposition, and needs to stay
+                              // comfortably sub-second even at ~40 leaves.
+/* Verbatim port of build_monte_carlo.py's sampling loop, over whatever `byId` was built for. */
+function mcRunSimulation(byId, nRuns, seedStr) {
+  const rng = mulberry32(seedFromString(seedStr));
+  const { cpm: detCpm, span: detSpan } = mcCpm(byId);
+  const spans = [], criticalCounts = {}, starts = {}, finishes = {};
+  for (const nid of Object.keys(byId)) { criticalCounts[nid] = 0; starts[nid] = []; finishes[nid] = []; }
+  for (let r = 0; r < nRuns; r++) {
+    const sampled = {};
+    for (const [nid, n] of Object.entries(byId)) sampled[nid] = { ...n, duration_days: mcTriangular(n.duration_optimistic_days, n.duration_pessimistic_days, n.duration_days, rng) };
+    const { cpm, span } = mcCpm(sampled);
+    spans.push(span);
+    for (const [nid, res] of Object.entries(cpm)) {
+      if (res.on_critical_path) criticalCounts[nid]++;
+      starts[nid].push(res.earliest_start_day); finishes[nid].push(res.earliest_finish_day);
+    }
+  }
+  spans.sort((a, b) => a - b);
+  for (const nid of Object.keys(byId)) { starts[nid].sort((a, b) => a - b); finishes[nid].sort((a, b) => a - b); }
+  const tasks = Object.entries(byId).map(([nid, n]) => {
+    const det = detCpm[nid];
+    return {
+      id: nid, title: n.title, group: n.group, phase: n.phase, duration_days: n.duration_days,
+      optimistic_days: n.duration_optimistic_days, pessimistic_days: n.duration_pessimistic_days, duration_basis: n.duration_basis,
+      criticality_index: criticalCounts[nid] / nRuns, deterministic_on_critical_path: det.on_critical_path,
+      deterministic_start_day: det.earliest_start_day, deterministic_finish_day: det.earliest_finish_day,
+      start_p10: mcPercentile(starts[nid], 0.1), start_p50: mcPercentile(starts[nid], 0.5), start_p90: mcPercentile(starts[nid], 0.9),
+      finish_p10: mcPercentile(finishes[nid], 0.1), finish_p50: mcPercentile(finishes[nid], 0.5), finish_p90: mcPercentile(finishes[nid], 0.9),
+    };
+  });
+  return {
+    n_runs: nRuns, deterministic: { span_days: detSpan },
+    distribution: { min: spans[0], max: spans[spans.length - 1], mean: spans.reduce((a, b) => a + b, 0) / spans.length, p10: mcPercentile(spans, 0.1), p50: mcPercentile(spans, 0.5), p80: mcPercentile(spans, 0.8), p90: mcPercentile(spans, 0.9) },
+    histogram: mcJsHistogram(spans, 20), tasks,
+  };
+}
+const humanizeId = (id) => id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+/* Builds the byId + ordered groups mcRunSimulation needs, from the live run state that
+   renderCustom() already accumulates. Category order = the real live priority-queue rank
+   (categories[cid].queue_rank) -- a real signal, not invented -- used as the default sequencing
+   between categories. Within a category, items are parallel by default; an item whose own live
+   dependency answer is "needs-other-item" is scheduled after its category siblings instead (still
+   a stated default, since the live answer never says which specific sibling). */
+function customScheduleData(runState, lib) {
+  const leaves = Object.values(runState.leaves).filter((lf) => lf.status !== "no_answer");
+  if (leaves.length < 2) return null;
+  const catOrder = lib.categories.filter((c) => runState.categories[c.id]).sort((a, b) => (runState.categories[a.id]?.queue_rank ?? 999) - (runState.categories[b.id]?.queue_rank ?? 999));
+  if (!catOrder.length) return null;
+  const byCat = {};
+  for (const lf of leaves) (byCat[lf.parent] ??= []).push(lf);
+  const catIds = catOrder.map((c) => c.id).filter((cid) => byCat[cid]?.length);
+  const lastOfCat = {};
+  for (const cid of catIds) lastOfCat[cid] = byCat[cid][byCat[cid].length - 1].id;
+  const byId = {};
+  catIds.forEach((cid, i) => {
+    const arr = byCat[cid];
+    const prevCatId = catIds[i - 1];
+    const crossPred = prevCatId ? [[lastOfCat[prevCatId], "fs"]] : [];
+    arr.forEach((lf, j) => {
+      const band = customDurationBand(lf.answers?.complexity?.mean);
+      const flagged = lf.answers?.dependency?.choice === "needs-other-item";
+      const siblingPreds = flagged ? arr.filter((s) => s.id !== lf.id).map((s) => [s.id, "fs"]) : [];
+      byId[lf.id] = {
+        id: lf.id, title: runState.leafText[lf.id] || lf.id, group: cid, phase: lf.answers?.phase?.choice ?? null,
+        duration_days: band.likely, duration_optimistic_days: band.optimistic, duration_pessimistic_days: band.pessimistic, duration_basis: band.basis,
+        predecessors: [...(j === 0 ? crossPred : []), ...siblingPreds],
+      };
+    });
+  });
+  return { byId, groups: catIds.map((cid) => ({ id: cid, title: humanizeId(cid) })) };
+}
+function customScheduleSection(runState, lib, endEvent) {
+  const built = customScheduleData(runState, lib);
+  if (!built) return el("p", { class: "small muted", text: "Not enough items decomposed yet for a schedule estimate (need at least 2, across at least 1 category)." });
+  const seedStr = (endEvent && endEvent.run_id) || Object.keys(built.byId).sort().join("|");
+  const mc = mcRunSimulation(built.byId, CUSTOM_MC_RUNS, seedStr);
+  const groupTitle = Object.fromEntries(built.groups.map((g) => [g.id, g.title]));
+  const sorted = [...mc.tasks].sort((a, b) => b.criticality_index - a.criticality_index);
+  const box = el("div");
+  box.append(
+    el("div", { class: "callout warn" },
+      el("p", { style: "margin:0" }, el("b", { text: "Estimated schedule — a stated rule, not measured. " }), "Arbitrary text has no real duration or dependency data the way ", el("a", { href: hashFor({ set: "decompose" }), text: "Decompose and loop" }), "'s hand-authored plan does, so every number below is derived from this run's own live model answers via one fixed rule, applied identically to every item — never a measured critical path."),
+      el("ul", { class: "small", style: "margin:6px 0 0 18px;padding:0" },
+        el("li", {}, el("b", { text: "Duration: " }), "each item's own live complexity answer maps to a duration band (0.25 / 0.5 / 1 / 2 / 4 days, very low to very high complexity); optimistic and pessimistic use the band one level either side."),
+        el("li", {}, el("b", { text: "Order: " }), "categories run in the order the live priority queue actually explored them, for real — not invented. Within a category, items default to parallel, unless an item's own live answer said it needs another item in this plan first, in which case it's scheduled after its category siblings."))),
+    el("p", { class: "legend" }, `${mc.n_runs.toLocaleString()} sampled runs, seeded from this run's own id (re-running the same text and settings reproduces the same numbers). All-likely total: `, el("b", { text: `${fmt.num(mc.deterministic.span_days, 1)} estimated days` }), `; sampled median `, el("b", { text: `${fmt.num(mc.distribution.p50, 1)} days` }), `, p90 `, el("b", { text: `${fmt.num(mc.distribution.p90, 1)} days` }), "."),
+    el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, mcHistogram(mc.histogram, mc.distribution, null))),
+    el("div", { class: "card" }, mcGanttBoard({ groups: built.groups, tasks: mc.tasks, n_runs: mc.n_runs })),
+    el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "Criticality index" }),
+      el("p", { class: "small muted", text: "Share of sampled runs where each item landed on that run's own critical path." }),
+      el("div", { style: "overflow-x:auto" },
+        el("table", { class: "data wrap" },
+          el("thead", {}, el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Category" }), el("th", { text: "Estimated / range (days)" }), el("th", { text: "Criticality index" }))),
+          el("tbody", {}, sorted.map((t) => el("tr", {},
+            el("td", { title: t.duration_basis }, t.title.length > 70 ? t.title.slice(0, 68) + "…" : t.title),
+            el("td", { class: "muted small" }, groupTitle[t.group] || t.group),
+            el("td", { class: "muted small", text: `${fmt.num(t.duration_days, 2)} (${fmt.num(t.optimistic_days, 2)}–${fmt.num(t.pessimistic_days, 2)})` }),
+            el("td", { style: "min-width:160px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)))))))));
+  return box;
+}
+
 /* ---------- structure: custom decomposition (orbit map) ---------- */
 const DL_PHASE_LABEL = { spike: "spike", decide: "decide", build: "build", validate: "validate", launch: "launch" };
 const heatAcc = (p) => p == null ? "var(--surface-2)" : `color-mix(in srgb, var(--accent) ${Math.round(clamp01(p) * 55)}%, var(--surface-2))`;
@@ -1928,7 +2310,7 @@ function customReadout(runState, lib, end) {
     if (flagged) box.append(el("div", { class: "callout warn" }, `${Jev.codeOf(m)} gave all 21 categories a nearly identical score, so it didn't tell them apart on this text.`));
   }
   if (runState.scope != null && runState.scope < 0.40) box.append(el("div", { class: "callout warn" }, `This library is for buildable things (a product, service, system or process) -- this text scored low on that (${fmt.num(runState.scope, 2)}), so these results may not mean much for it.`));
-  box.append(el("p", { class: "small muted", style: "margin-top:10px", text: "No right answers exist for your idea, so nothing here is scored as right or wrong. No schedule is computed either, because no durations exist." }));
+  box.append(el("p", { class: "small muted", style: "margin-top:10px", text: "No right answers exist for your idea, so nothing here is scored as right or wrong. The estimated schedule below is not a measured one either -- see its own disclosure for the stated rule it's derived by." }));
   return box;
 }
 
@@ -2066,12 +2448,14 @@ function renderCustom({ library: lib, examples }) {
       el("div", {}, el("b", { text: "3. Model numbers" }), el("br"), el("span", { class: "small muted", text: "probes/lab_custom_decompose.py → POST /v1/systemone. Live typed yes/no, choice and 0-4 scale answers. No prose." }))));
 
   let runState = null, mapObj = null;
+  const scheduleBox = el("div");
   const resetRun = () => {
     runState = { categories: {}, leaves: {}, leafText: {}, flatModels: {}, scope: null };
     mapObj = orbitMap(lib, (id) => { mapObj.select(id); detailPanel.replaceChildren(customDetail(runState, lib, id)); });
     mapBox.replaceChildren(mapObj.svg, legend);
     outlineBox.replaceChildren(el("p", { class: "small muted", text: "Nothing run yet." }));
     readoutBox.replaceChildren();
+    scheduleBox.replaceChildren();
   };
   resetRun();
 
@@ -2103,6 +2487,7 @@ function renderCustom({ library: lib, examples }) {
       lastEnd = ev;
       statusLine.textContent = `Stopped: ${ev.spent} of ${ev.budget} calls (${ev.reason}).`;
       readoutBox.replaceChildren(customReadout(runState, lib, ev));
+      scheduleBox.replaceChildren(el("h3", { text: "Estimated schedule" }), customScheduleSection(runState, lib, ev));
       afterRunControls(ev);
     }
   }
@@ -2151,7 +2536,7 @@ function renderCustom({ library: lib, examples }) {
 
   out.append(inputCard, el("div", { class: "dlGrid" },
     el("div", {}, viewSeg, mapBox, outlineBox),
-    detailPanel), readoutBox, provCard, afterBox);
+    detailPanel), readoutBox, scheduleBox, provCard, afterBox);
   return out;
 }
 
