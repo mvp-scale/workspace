@@ -1,0 +1,6 @@
+{
+  "id": "cf-memory",
+  "idea": "Exploit high-bandwidth RAM across many Cloudflare Edge Workers: explode a dataset too large for one machine into per-worker memory, run SIMD/MIMD-style anomaly detection and incremental training across workers, and persist only the deltas -- so a model can be trained on data that would not fit in one machine's memory. Target: live in 30 days.",
+  "customer": "ML/infrastructure engineers who need to train a model on a dataset too large for any single machine's memory, and need a working distributed setup live within 30 days without provisioning new hardware.",
+  "pieces": "not decomposed -- no independent Slicer has acted on this idea. See foundry/README.md, 'Slicer honesty correction.'"
+}
