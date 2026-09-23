@@ -136,7 +136,7 @@ const PRESETS = [
     i: "Is the customer asking to cancel their subscription right now?", o: "" },
 ];
 
-let status = null, armed = false, backendInfo = null, running = false, last = null, showErrors = false, showExtras = false, type = "choice";
+let status = null, backendInfo = null, running = false, last = null, showErrors = false, showExtras = false, type = "choice";
 
 /* ---------- storage (always optional) ---------- */
 const store = {
@@ -353,7 +353,7 @@ function remember(form, sum) {
 }
 function setRunning(on) {
   running = on; const n = loadedIds().length, h = hostedUp();
-  $("run").disabled = on || !n; $("run").textContent = on ? "Running…" : !n ? "No model is loaded" : armed ? `Confirm: run on ${n} models incl. hosted (paid)` : `Run on all ${n} loaded models`;
+  $("run").disabled = on || !n; $("run").textContent = on ? "Running…" : !n ? "No model is loaded" : `Run on all ${n} loaded models`;
   $("run-note").textContent = on ? "Waiting for every loaded model." : h.length ? `Includes ${h.map(id => Jev.codeOf(id)).join(", ")} (hosted, paid). Ctrl+Enter also runs.` : "Ctrl+Enter also runs.";
 }
 function setExports(on) { $("copy-json").disabled = !on; $("download-json").disabled = !on; }
@@ -362,8 +362,7 @@ async function run() {
   if (running) return;
   const f = readForm(), { state, question, errors } = buildQuestion(f);
   if (Object.keys(errors).length) { showErrors = true; showFieldErrors(errors); const first = ["state", "instructions", "options"].find(k => errors[k]); if (first) $(first).focus(); return; }
-  if (hostedUp().length && !armed) { armed = true; showErrors = false; showFieldErrors({}); setRunning(false); $("run").focus(); return; }
-  armed = false; showErrors = false; showFieldErrors({}); $("banner").replaceChildren(); pushHash(); setRunning(true);
+  showErrors = false; showFieldErrors({}); $("banner").replaceChildren(); pushHash(); setRunning(true);
   last = { state, question, rows: null, raw: null }; renderMatrix("running"); setExports(false);
   try {
     const raw = await api("/api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state, question }) });
