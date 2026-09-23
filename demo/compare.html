@@ -40,9 +40,6 @@
   table.cmp .answer { font-weight: 650; font-size: 14px; }
   table.cmp .placeholder { color: var(--text-3); }
   .col-head { display: flex; align-items: baseline; gap: 2px; flex-wrap: wrap; }
-  .extras dl { margin: 0 0 6px; font-size: 11.5px; } .extras dl > div { display: flex; flex-wrap: wrap; column-gap: 8px; } .extras dt { color: var(--text-3); } .extras dd { margin: 0; flex: 1 1 60px; font-family: var(--mono); overflow-wrap: anywhere; }
-  .extras h5 { margin: 6px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 600; }
-  .extras pre { margin: 0; white-space: pre-wrap; font-size: 11px; }
   .mstrip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
   .mchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; max-width: 100%; }
   .mchip.on { background: var(--surface); border-color: var(--border-strong); } .mchip.on .mname { font-weight: 600; }
@@ -59,7 +56,7 @@
   <div class="page-head">
     <div>
       <h1>Baseline compare</h1>
-      <p>One question, sent to every loaded model at once. The table compares what all of them return; anything else a model sends back is kept separately, under model-specific data. Ctrl+Enter or Cmd+Enter runs.</p>
+      <p>One question, sent to every loaded model at once. Ctrl+Enter or Cmd+Enter runs.</p>
     </div>
   </div>
 
@@ -89,7 +86,6 @@
       <div class="toolbar">
         <h2 id="res-h">Results</h2>
         <div class="actions">
-          <button class="btn" id="toggle-extras" type="button" aria-pressed="false" disabled>Model-specific data</button>
           <button class="btn" id="share" type="button">Copy share link</button>
           <button class="btn" id="copy-json" type="button" disabled>Copy JSON</button>
           <button class="btn" id="download-json" type="button" disabled>Download JSON</button>
@@ -135,7 +131,7 @@ const PRESETS = [
     i: "Is the customer asking to cancel their subscription right now?", o: "" },
 ];
 
-let status = null, backendInfo = null, running = false, last = null, showErrors = false, showExtras = false, type = "choice", leaderRank = {};
+let status = null, running = false, last = null, showErrors = false, type = "choice", leaderRank = {};
 
 /* ---------- storage (always optional) ---------- */
 const store = {
@@ -247,7 +243,6 @@ function renderStrip() {
 }
 function refreshUi() { renderStrip(); renderMatrix(); if (!running) setRunning(false); }
 async function loadStatus() { try { status = await api("/api/status"); } catch { /* keep what we had */ } refreshUi(); }
-async function loadBackends() { try { backendInfo = await api("/api/backends"); } catch { backendInfo = null; } }
 /* Leaderboard rank (by mean accuracy, same order as the leaderboard's own #1/#2/#3) -- a real,
    new fact next to a loaded model's code, not a restatement of anything else on this page. */
 async function loadLeaderboard() { try { leaderRank = Object.fromEntries((await api("/api/leaderboard")).map((r, i) => [r.id, i + 1])); } catch { leaderRank = {}; } refreshUi(); }
@@ -291,25 +286,6 @@ const agreeText = (s) => s.majority ? `${s.majority[1]} of ${s.total} agree on â
 
 /* ---------- the comparison matrix ---------- */
 const PH = () => el("span", { class: "placeholder", text: "â€“" });
-function extrasCell(r, name) {
-  if (!r) return PH();
-  if (!r.ok) return el("div", { class: "extras" }, el("h5", { text: "Technical detail" }), el("pre", { text: r.detail }));
-  /* Three things dropped after checking what they actually are, not just what they're labelled:
-     latency_ms repeats the Latency row above. "Reported model id" is either just this model's own
-     name again (semif, laya, verdict...) or the generic wire-protocol placeholder every backend
-     receives in its request ("jev-latest", echoed back by kev) -- never a real distinguishing
-     version except for the hosted model, not worth a whole row for one exception. usage.* is
-     actively misleading, not just redundant: demo/serve_inproc.py sets output_tokens to the
-     number of QUESTIONS answered (always 1 here), never a token count; input_tokens is a real
-     measured figure for semif but silently defaults to 0 for so1 and verdict, whose adapters never
-     set it at all -- so the same field means "measured" for one model and "never measured" for
-     another, with no way to tell which from the number alone. */
-  const response = r.extras?.response ? Object.fromEntries(Object.entries(r.extras.response).filter(([k]) => k !== "latency_ms" && !k.startsWith("usage."))) : null;
-  const groups = [["Response fields", response], ["Response headers", r.extras?.headers], ["Extra answer fields", r.extras?.answer]]
-    .filter(([, o]) => o && Object.keys(o).length);
-  return el("div", { class: "extras" }, groups.length ? groups.map(([h, o]) => [el("h5", { text: h }), el("dl", {}, Object.entries(o).map(([k, v]) => el("div", {}, el("dt", { text: k }), el("dd", { text: String(v) }))))]) : el("span", { class: "subtle small", text: "Nothing extra returned." }),
-    el("button", { class: "btn ghost", type: "button", onclick: () => copyCurl(name), text: "Copy curl" }));
-}
 function renderMatrix(phase) {
   phase = phase || (running ? "running" : last && last.rows ? "done" : "idle");
   const cols = [...new Set([...loadedIds(), ...(last && last.rows ? last.rows.map(r => r.backend) : [])])], by = last && last.rows ? Object.fromEntries(last.rows.map(r => [r.backend, r])) : {}, q = last && last.question, sum = last && last.rows ? summarise(last.rows) : null;
@@ -331,16 +307,11 @@ function renderMatrix(phase) {
     labels.forEach(l => body.push(row(l, r => failed(r, x => { const e = x.probs.find(p => p.label === l); return e ? meter(e.p, `${l}: ${fmt.pct(e.p)}`) : PH(); }), r => r && r.ok && r.top === l ? "top" : "")));
   }
   body.push(row("Latency", r => failed(r, x => el("span", {}, fmt.ms(x.latency == null ? null : x.latency / 1000), sum && sum.fastest === x ? el("span", { class: "badge accent", style: "margin-left:6px", text: "fastest" }) : null))));
-  if (showExtras) {
-    body.push(group("Model-specific: names and meaning differ per model, so these are not comparable"));
-    body.push(el("tr", {}, el("th", { scope: "row", text: "As returned" }), fill((r, n) => el("td", { class: "extras" }, phase === "running" ? skel() : extrasCell(r, n)))));
-  }
   const table = el("table", { class: "data cmp" }, el("caption", { class: "sr-only", text: "Comparison of every model's answer to the same question" }),
     el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "" }), cols.map(n => { const s = status && status[n]; return el("th", { scope: "col", title: s && !s.up ? `Not loaded: ${s.reason || "unknown"}` : null },
       el("span", { class: "col-head" }, el("span", { class: `dot ${s ? (s.up ? "up" : "down") : ""}`, "aria-hidden": "true" }), Jev.tag(n, { name: false }))); }))),
     el("tbody", {}, body));
   $("matrix").replaceChildren(table); $("matrix").setAttribute("aria-busy", String(phase === "running"));
-  $("toggle-extras").disabled = !(last && last.rows);
 }
 function renderSummary() {
   const s = last && last.rows ? summarise(last.rows) : null, box = $("summary");
@@ -354,12 +325,6 @@ function renderSummary() {
 
 /* ---------- actions ---------- */
 const exportJson = () => JSON.stringify({ state: last.state, question: last.question, results: last.raw }, null, 2);
-const shq = (s) => `'${String(s).replace(/'/g, "'\\''")}'`;
-function copyCurl(name) {
-  const info = backendInfo && backendInfo[name]; if (!info) { toast("This model's address is not available."); return; }
-  const body = { state: last.state, model: "jev-latest", questions: { decision: last.question } };
-  copy([`curl -sS -X POST ${shq(info.url.replace(/\/$/, "") + "/v1/systemone")} \\`, "  -H 'Content-Type: application/json' \\", "  -H \"Authorization: Bearer $API_KEY\" \\", `  -d ${shq(JSON.stringify(body))}`].join("\n"));
-}
 function renderRecent() {
   const list = store.read(), root = $("recent");
   $("clear-recent").disabled = !list.length; $("recent-count").textContent = list.length ? `(${list.length})` : "";
@@ -402,7 +367,6 @@ $("reset").onclick = () => { const p = PRESETS.find(x => x.id === $("preset").va
 ["state", "instructions", "options"].forEach(id => $(id).addEventListener("input", onEdit));
 $("form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
 $("form").addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); } });
-$("toggle-extras").onclick = () => { showExtras = !showExtras; $("toggle-extras").setAttribute("aria-pressed", String(showExtras)); renderMatrix(); };
 $("share").onclick = () => { pushHash(); copy(location.href); };
 $("copy-json").onclick = () => last && last.raw && copy(exportJson());
 $("download-json").onclick = () => last && last.raw && download("jev-compare.json", exportJson(), "application/json");
@@ -411,7 +375,7 @@ $("clear-recent").onclick = () => { store.write([]); renderRecent(); };
 
 const initial = decodeHash();
 if (initial) { writeForm(initial); $("preset").value = CUSTOM; syncPreset(); } else applyPreset(PRESETS[0].id);
-setRunning(false); renderRecent(); renderMatrix("idle"); loadBackends(); loadLeaderboard();
+setRunning(false); renderRecent(); renderMatrix("idle"); loadLeaderboard();
 Jev.ready.then(() => { status = Jev.status(); refreshUi(); Jev.onStatus((st) => { status = st; refreshUi(); }); });
 </script>
 </body>
