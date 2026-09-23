@@ -245,15 +245,14 @@ shape) before any code — delegated to a separate design pass this session; see
    design's own default decision (open question 1): its library is now read, read-only, by this
    module.
 
-**All 5 structures from the original backlog (8, 10, 11, 12, 13) are now shipped, verified live,
-and committed.** `STRUCTURES` in `scenarios.html` now has 8 entries: batch, decompose, cascade,
-baseline, funnel, window, hierarchy, time. One production loose end: `demo/server.py`'s real
-port-8100 process needs a restart to actually serve the two new endpoints
-(`/api/hierarchy`, `/api/time-study`) -- deferred until the background window_study/lab_time jobs
-finish (check `logs/window-study/run.log` and `logs/window-study/lab_time_followup.log`), since
-those jobs depend on the same server process for `/api/batch` and a restart would break them
-mid-run. Do this restart, then a final full-page regression pass with puppeteer, before starting
-the custom-decomposition build.
+**Everything is shipped, live, and committed.** `STRUCTURES` in `scenarios.html` has 9 entries:
+batch, decompose, cascade, baseline, funnel, window, hierarchy, time, custom. The background
+window_study/lab_time jobs finished (all 5 local models + hosted jev have complete data in
+`data/window-study/` and `data/probe-runs-v2/_time/`); the real `demo/server.py` (port 8100) was
+restarted cleanly afterward and all five new endpoints (`/api/hierarchy`, `/api/time-study`,
+`/api/decompose-library`, `/api/decompose-examples`, `/api/decompose-live`) verified with real
+HTTP 200s and a full puppeteer regression pass, including one live custom-decomposition run
+against the real production process. Nothing left from tonight's queue.
 
 **Tooling note for whoever continues this**: puppeteer + Chrome are now installed in this
 container (`/tmp/pptr-test/node_modules`, `/root/.cache/puppeteer`) specifically so UI changes here

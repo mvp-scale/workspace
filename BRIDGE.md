@@ -17,18 +17,17 @@ verified live** — see `docs/scenario-lab-structures-plan.md` for the per-item 
 this session also: restarted the kev-4b lineup (it was down from the prior session), re-validated
 decompose-and-loop live with the full 5-model lineup, then built all 6 pieces.
 
-**One loose end**: the real, long-running `demo/server.py` process (port 8100, running since
-2026-09-22, PID logged in shell history) needs a restart to actually *serve* the five new
-endpoints (`/api/hierarchy`, `/api/time-study`, `/api/decompose-library`, `/api/decompose-examples`,
-`/api/decompose-live`) in production. Every piece of new server code was verified against
-*temporary* second instances on other ports instead, specifically so the real server was never
-touched while `probes/window_study.py` (and its queued `probes/lab_time.py` follow-up) were
-running live batch jobs through it in the background. **Check `logs/window-study/run.log` and
-`logs/window-study/lab_time_followup.log` — once both say fully done, restart the real server**
-(`kill` the long-running PID, `python3 demo/server.py` again) and do one final
-puppeteer regression pass against the real port-8100 instance before trusting it in production. If
-this session's wakeup loop got to it first, it's already done — check the log tail below this
-file's own last edit for confirmation before assuming it's still pending.
+**No loose ends.** The real `demo/server.py` process was restarted once `window_study.py` and its
+`lab_time.py` follow-up both fully finished (the original follow-up watcher process died silently
+for an unclear reason — background jobs launched with `nohup ... & disown` in this container
+aren't guaranteed to survive; the original `window_study.py` job did survive the whole session, so
+this isn't universal, just something to watch for — re-launched it directly once `window_study.py`
+was confirmed done, and it completed in under a minute for `so1`/`laya`/`verdict`). All 5 loaded
+local models plus hosted `jev` now have both `data/window-study/*.json` and
+`data/probe-runs-v2/_time/*.json`. The real server was restarted cleanly, all five new endpoints
+verified with real HTTP 200s, and a full puppeteer regression pass across all 10 Scenario-lab
+pages plus a live custom-decomposition run (10/10 calls, zero errors) all passed against the real
+production port-8100 process. Everything shipped tonight is live.
 
 ## What actually shipped, briefly (full detail in commit messages and the plan doc)
 
@@ -105,8 +104,8 @@ again rather than ever restarting the real one speculatively.
   (`logs/window-study/lab_time_followup.log`) runs `probes/lab_time.py` for `so1`/`laya`/`verdict`
   once `window_study.py` fully finishes, so the two never compete for the same model's GPU time.
   Check both logs — if either is still running, let it finish before restarting the real server.
-- **`demo/server.py`** (port 8100, PID from `Sep22`): still the pre-tonight code as of this file's
-  last edit unless the wakeup loop already restarted it — see "the headline" above.
+- **`demo/server.py`** (port 8100): restarted 2026-09-23 ~02:46, running tonight's code, all new
+  endpoints verified live.
 
 ## Gotchas learned the hard way, this session
 
