@@ -81,23 +81,41 @@ already-good `boot_ci` 95% interval), `srcNote` pointing at `probes/window_study
 already-live `/api/window-study` endpoint verbatim (it needs no changes — it already returns
 per-backend stored JSON).
 
-### 8. Funnel (Monte Carlo) — reuses foundry's proven technique, but with real ground truth this time
+### 8. Funnel (Monte Carlo) — DONE, 2026-09-24
 
-Foundry's `monte_carlo.py` (read in full this session) already built the right *mechanism* — sample
-each item's probability as a distribution (triangular, bounded [0,1], width from cross-model
-disagreement), combine by a rule, rank drivers by their correlation² contribution to total variance
-(a real Sobol-style first-order sensitivity approximation) — but foundry has **no ground truth** to
-validate against (explicitly flagged in its own docstring). The scenario lab's probe sets **do**
-have real labels. So the honest, stronger version here: pick a probe set with a natural grouping
-(`probe_detail()` already returns a per-item `group` field, used today by `pairStats()` in
-scenarios.html for paired items — confirm during build which sets actually populate `group` and
-what it means for each, e.g. dark-patterns before/after pairs vs. ContractNLI checklist items per
-contract) — for each group, Monte Carlo-sample the joint outcome under a combination rule (e.g. "all
-must hold" for a checklist-style group), get a forecast with interval, **and check that forecast's
-calibration against the group's real combined label** — something foundry could never honestly do.
-Offline runner: none needed if item-level probabilities are already in `results.jsonl` (they are —
-`probs` per item, confirmed in `probe_detail()`). This can likely be built as pure post-processing
-over existing stored data, like cascade.
+Shipped as designed below. Verified live with puppeteer across two very different models: hosted
+`jev` came back **underconfident** (forecast 40.6 of 77, actual 51, outside the 90% interval on the
+high side) while `semif` came back **overconfident** (forecast 18.6, actual only 4, outside on the
+low side) — a genuinely interesting, real finding the compound-calibration view surfaces that a
+flat accuracy number wouldn't. CWE-family sensitivity ranking also produces real, varying
+per-model weak spots (e.g. semif: 0% actual on 8 of 10 CWE families; jev: a real spread from 25% to
+100%). No console/page errors, no regressions on the other four structures + overview + a per-set
+page, all re-checked after this change.
+
+### 8. Funnel (Monte Carlo) — original scoping notes: memsafety only, real pairs, real ground truth
+
+Checked every `build_*.py` in `probes/v2/`: only `build_memsafety.py` populates a real `group`
+value (`memsafety_cwe{N}_{seq}`, one per NIST Juliet CWE test case) — every other set's builder
+writes `"group": None`. Don't fabricate groupings on sets that don't have them (this project's own
+rule). Ship Funnel scoped honestly to `memsafety`'s real structure: each group is a **bad/good
+pair** — two items testing the same CWE pattern, one genuinely vulnerable, one fixed.
+
+Design (extends foundry's proven `monte_carlo.py` mechanism — sample each item's live probability
+as a distribution, combine by a rule, rank drivers by correlation² contribution to variance — but
+**with real ground truth to validate against, which foundry explicitly cannot do**): for each pair,
+Monte Carlo-sample "model correctly discriminates this pattern" = P(bad item scored vulnerable) ×
+P(good item scored not-vulnerable), using each item's own live probability as the sampling mean
+(same triangular-draw technique as foundry, no new cross-model spread source needed since these are
+single-model runs already in `results.jsonl`). This gives a **forecast probability per pair**, not
+just a point prediction. Then — the part foundry can't do — bucket pairs by forecast probability and
+plot **actual empirical rate of both-items-correct within each bucket**: a real reliability diagram
+for a *compound* event, genuinely harder than and different from any single-item calibration curve
+already in the app (see the existing `.rc` reliability-curve CSS class — confirm during build
+whether report.html/models.html already has a single-item version, so this can point at it as "here,
+extended to a compound event" rather than duplicate it). Rank CWE families by their contribution to
+the variance of the total correctly-discriminated-pair count, exactly as foundry's sensitivity
+technique already does. Zero new live calls — all from stored `results.jsonl` `probs` per item,
+grouped by the already-stored `group` field. Pure post-processing, like cascade and baseline.
 
 ### 12. Time — builds on the same dialogue data as manipulation_windows / Conversation flow
 
@@ -164,19 +182,26 @@ browser-native tree. This needs a real design pass (methodology choice, visual l
 shape) before any code — delegated to a separate design pass this session; see
 `docs/custom-decomposition-design.md` once it lands.
 
-## Build order
+## Build order — progress as of 2026-09-24, late session
 
-1. Validate decompose-and-loop (cheap, catches a latent bug before more gets built on the same
-   pattern).
-2. Baseline (13) — offline, deterministic, fastest, and it makes every other structure's story
-   sharper once a floor exists to compare against.
-3. Incremental state (10) — mostly already-computed data, pending the window_study.py shape check.
-4. Funnel/Monte Carlo (8) — reuses stored per-item probabilities, foundry's proven sensitivity
-   technique, but honestly validated against real labels this time.
-5. Time (12) — depends on whether manipulation_windows.json needs a small honest onset-label
-   addition first.
-6. Hierarchy (11) — needs a genuinely new offline runner, most novel of the five.
-7. Custom decomposition — biggest, most novel; build once its design pass lands.
+1. ~~Validate decompose-and-loop~~ DONE.
+2. ~~Baseline (13)~~ DONE, shipped and verified.
+3. Incremental state (10) — window_study.py running now for semif/so1/laya/verdict in the
+   background (`logs/window-study/run.log`); UI not built yet.
+4. ~~Funnel/Monte Carlo (8)~~ DONE, shipped and verified.
+5. Time (12) — not started. Depends on whether manipulation_windows.json needs a small honest
+   onset-label addition first (still to check).
+6. Hierarchy (11) — not started. Needs a genuinely new offline runner, most novel of the five.
+7. Custom decomposition — design complete (`docs/custom-decomposition-design.md`), build not
+   started. Biggest remaining piece.
+
+**Tooling note for whoever continues this**: puppeteer + Chrome are now installed in this
+container (`/tmp/pptr-test/node_modules`, `/root/.cache/puppeteer`) specifically so UI changes here
+can be visually verified with a real headless browser before committing, per CLAUDE.md's rule to
+test frontend changes in a browser, not just review the code. Use it for every remaining structure
+and for the custom-decomposition build — screenshot before/after, check `pageerror`/console-error
+listeners, and do a quick regression pass across the existing structures after each change (see the
+git log for the exact puppeteer invocation used for Baseline/Funnel).
 
 Each ships as: offline computation (new runner only where truly needed, per above) → `/api/*`
 endpoint in `demo/server.py` → `STRUCTURES` rail entry + render function in `scenarios.html`,

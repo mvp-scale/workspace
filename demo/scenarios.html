@@ -239,7 +239,7 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
-const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"]];
+const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"]];
 const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
@@ -262,7 +262,7 @@ const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1],
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13" };
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -425,6 +425,7 @@ mount(document.getElementById("root"), async () => {
         return res.map(r => r.status === "fulfilled" ? r.value : null);
       }, (details) => renderBaseline(details));
     }
+    else if (ST.set === "funnel") { mount(box, () => getDetail("memsafety"), renderFunnel); }
     else if (ST.set === "all") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
@@ -1229,6 +1230,107 @@ function renderBaseline(details) {
     el("div", { class: "scale", style: "margin-top:10px" }, el("span", { text: "At or below baseline" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Well above baseline" }), el("span", { class: "mid", text: "Centre = ties the floor" })),
     el("p", { class: "legend", style: "margin-top:6px", text: `Of ${above + atOrBelow} model-by-set cells, ${above} clearly beat the majority-class floor (95% interval fully above it); ${atOrBelow} do not.` })));
   return out;
+}
+
+/* ---------- structure: funnel (Monte Carlo over memsafety CWE pairs) ---------- */
+function meanOf(xs) { return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0; }
+function varianceOf(xs) { const m = meanOf(xs); return meanOf(xs.map((x) => (x - m) ** 2)); }
+function corrOf(xs, ys) {
+  const n = xs.length; if (n < 2) return 0;
+  const mx = meanOf(xs), my = meanOf(ys), cov = meanOf(xs.map((x, i) => (x - mx) * (ys[i] - my)));
+  const sx = Math.sqrt(varianceOf(xs)), sy = Math.sqrt(varianceOf(ys));
+  return (sx === 0 || sy === 0) ? 0 : cov / (sx * sy);
+}
+/* Deterministic seeded PRNG (mulberry32) so the same model+data always reproduces the same forecast. */
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function funnelPairs(d) {
+  const groups = {};
+  for (const it of d.items) { if (it.group == null) continue; (groups[it.group] ||= []).push(it); }
+  const pairs = [];
+  for (const [gid, its] of Object.entries(groups)) {
+    const bad = its.find((x) => x.id.endsWith("_b")), good = its.find((x) => x.id.endsWith("_g"));
+    if (!bad || !good) continue;
+    const cwe = (gid.match(/memsafety_(cwe\d+)_/) || [])[1] || "unknown";
+    pairs.push({ gid, cwe, bad, good });
+  }
+  return pairs;
+}
+function pairSample(d, mid, pair) {
+  const res = (d.results || {})[mid] || {};
+  const rb = res[pair.bad.id], rg = res[pair.good.id];
+  if (!rb || !rg || !rb.probs || !rg.probs) return null;
+  const pBad = clamp01(Number(rb.probs.yes)), pGoodSafe = clamp01(1 - Number(rg.probs.yes));
+  if (!isFinite(pBad) || !isFinite(pGoodSafe)) return null;
+  return { cwe: pair.cwe, combinedP: pBad * pGoodSafe, actual: (rb.correct && rg.correct) ? 1 : 0 };
+}
+function renderFunnel(d) {
+  const mids = orderModels(modelsIn(d));
+  const out = el("div");
+  out.append(el("h2", { text: "Funnel (Monte Carlo)" }),
+    el("p", { class: "muted", text: "Memory safety (NIST Juliet) is the one published set here with a real multi-item grouping: a genuinely vulnerable and a fixed variant of the same CWE pattern, sharing one group id. For each pair, this samples the compound event \"the model correctly discriminates this pattern\" from its own two stated probabilities, forecasts the total number of correctly-discriminated pairs with an interval, and checks that forecast's calibration against what the model actually got right. No other published set here has a real multi-item grouping to build this on, so it isn't shown for the rest — a fabricated grouping would just be noise wearing a Monte Carlo costume." }));
+  if (!mids.length) return out.append(empty("No memsafety runs yet", "Run demo/bench.sh or demo/bench-batch.sh for a local model on memsafety.")), out;
+  const pairs = funnelPairs(d);
+  const modelSel = el("select", { "aria-label": "Model" }, mids.map((m) => el("option", { value: m, text: Jev.codeOf(m) })));
+  const body = el("div");
+  const draw = () => {
+    const mid = modelSel.value;
+    const samples = pairs.map((p) => pairSample(d, mid, p)).filter(Boolean);
+    body.replaceChildren(funnelBody(mid, samples, pairs.length));
+  };
+  modelSel.onchange = draw;
+  out.append(el("div", { class: "row", style: "margin-bottom:10px" }, el("span", { class: "small muted", text: "Model: " }), modelSel), body);
+  draw();
+  return out;
+}
+function funnelBody(mid, samples, nPairs) {
+  if (!samples.length) return empty("No paired results", `${modelName(mid)} has no results on memsafety.`);
+  const N_DRAWS = 4000;
+  const rnd = mulberry32(0x5ee5ee + samples.length);
+  const totals = [], byCwe = {};
+  for (let i = 0; i < N_DRAWS; i++) {
+    let total = 0; const cweTotal = {};
+    for (const s of samples) { const hit = rnd() < s.combinedP ? 1 : 0; total += hit; cweTotal[s.cwe] = (cweTotal[s.cwe] || 0) + hit; }
+    totals.push(total);
+    for (const c in cweTotal) (byCwe[c] ||= []).push(cweTotal[c]);
+  }
+  const sortedTotals = [...totals].sort((a, b) => a - b);
+  const lo = sortedTotals[Math.floor(N_DRAWS * 0.05)], hi = sortedTotals[Math.min(N_DRAWS - 1, Math.ceil(N_DRAWS * 0.95) - 1)];
+  const forecastMean = meanOf(totals);
+  const actualTotal = samples.reduce((a, s) => a + s.actual, 0);
+  const inInterval = actualTotal >= lo && actualTotal <= hi;
+
+  const NB = 5;
+  const bins = Array.from({ length: NB }, () => ({ n: 0, sumP: 0, sumActual: 0 }));
+  for (const s of samples) { const b = bins[Math.min(NB - 1, Math.floor(s.combinedP * NB))]; b.n++; b.sumP += s.combinedP; b.sumActual += s.actual; }
+  const calTable = el("table", { class: "data wrap" }, el("thead", {}, el("tr", {}, el("th", { text: "Forecast probability (both correct)" }), el("th", { class: "num", text: "n pairs" }), el("th", { class: "num", text: "Mean forecast" }), el("th", { text: "Actual rate, both correct" }))),
+    el("tbody", {}, bins.map((b, i) => b.n ? el("tr", {}, el("td", { text: `${(i / NB).toFixed(1)} to ${((i + 1) / NB).toFixed(1)}` }), el("td", { class: "num", text: b.n }),
+      el("td", { class: "num", text: (b.sumP / b.n).toFixed(2) }),
+      el("td", { title: `${b.sumActual} of ${b.n}${b.n < 5 ? " (very few pairs, treat as noise)" : ""}`, style: "min-width:150px" }, Jev.meter(b.sumActual / b.n, `${pc(b.sumActual / b.n)}, n=${b.n}`))) : null)));
+
+  const totalSens = Object.entries(byCwe).map(([cwe, vals]) => ({ cwe, sensitivity: corrOf(vals, totals) ** 2 })).sort((a, b) => b.sensitivity - a.sensitivity);
+  const sensSum = totalSens.reduce((a, s) => a + s.sensitivity, 0) || 1;
+  const cweActual = {}; for (const s of samples) { (cweActual[s.cwe] ||= []).push(s.actual); }
+  const sensTable = el("table", { class: "data" }, el("thead", {}, el("tr", {}, el("th", { text: "CWE family" }), el("th", { class: "num", text: "n pairs" }), el("th", { text: "Share of forecast variance" }), el("th", { text: "Actual accuracy, this family" }))),
+    el("tbody", {}, totalSens.map((s) => { const acc = meanOf(cweActual[s.cwe] || []); return el("tr", {}, el("td", { text: s.cwe }), el("td", { class: "num", text: (cweActual[s.cwe] || []).length }),
+      el("td", { style: "min-width:120px" }, Jev.meter(s.sensitivity / sensSum, pc(s.sensitivity / sensSum))), el("td", { style: `background:${stepBg(stepOf(acc, 0.5))}`, text: pc(acc) })); })));
+
+  const frag = el("div");
+  frag.append(el("div", { class: "card" }, el("h4", { text: "Forecast vs. what actually happened" }),
+    el("p", { class: "small muted", text: `${N_DRAWS.toLocaleString()} Monte Carlo draws, each independently sampling every pair's compound "correctly discriminated" event from its own two stated probabilities.` }),
+    el("p", { class: "sentence" }, `Forecast: `, el("b", { text: `${forecastMean.toFixed(1)} of ${nPairs}` }), ` pairs correctly discriminated (90% interval `, el("b", { text: `${lo} to ${hi}` }), `). Actually observed: `,
+      el("b", { text: `${actualTotal} of ${samples.length}` }), inInterval ? " — inside the forecast interval." : " — outside the forecast interval."),
+    el("div", { class: "loopbar", style: "max-width:420px;margin-top:8px" }, el("span", { class: "fill", style: `width:${Math.min(100, (actualTotal / nPairs) * 100)}%` }),
+      el("span", { class: "mark", style: `left:${Math.min(100, (forecastMean / nPairs) * 100)}%`, title: `forecast mean ${forecastMean.toFixed(1)}` }))));
+  frag.append(el("div", { class: "card" }, el("h4", { text: "Is the forecast calibrated?" }),
+    el("p", { class: "small muted", text: "Pairs bucketed by their forecast probability of both-correct; the actual rate in each bucket should track the bucket's own probability if the compound forecast can be trusted." }),
+    el("div", { class: "table-wrap", style: "margin-top:6px" }, calTable)));
+  frag.append(el("div", { class: "card" }, el("h4", { text: "Which CWE families drive the forecast's uncertainty" }),
+    el("p", { class: "small muted", text: "Ranked by each family's contribution to the variance of the total-correct forecast across all draws (correlation² between that family's per-draw count and the overall total) — a real sensitivity-analysis technique, not just re-sorting by accuracy." }),
+    el("div", { class: "table-wrap", style: "margin-top:6px" }, sensTable)));
+  return frag;
 }
 
 /* ---------- overview ---------- */
