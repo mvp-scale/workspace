@@ -265,6 +265,44 @@ in distinct colours, the fixed `pipelineHero()` diagram visually matches `decomp
 console errors, and a spot-check of the Monte Carlo page (unrelated, shares the same CSS file)
 confirmed nothing else broke. Real server restarted via `./start.sh restart`.
 
+## Fifth round: the same readability pass, extended to Monte Carlo and Custom Decomposition
+
+The user liked the Decompose page's redesign and asked for the same treatment on the other two
+"Decomposition structures" pages, for consistency across the whole group. Both now use the same
+`chapterHeader()`/`soWhat()` vocabulary from the Decompose pass, adapted to each page's own shape:
+
+- **Monte Carlo**: now 3 numbered chapters, same pattern as Decompose --
+  "Chapter 1 of 3: Where this comes from" (data provenance, so-what: this only works because real
+  durations/edges exist for this one plan), "Chapter 2 of 3: One number becomes a range" (histogram,
+  so-what: the deterministic-vs-sampled gap), "Chapter 3 of 3: What actually drives the risk"
+  (Gantt + criticality table + hidden-risk finding + release-train recommendation, so-what: the
+  release train's #1 pick, restated crisply). Three so-whats, three different `--sN` tones (amber,
+  rose, orange), none repeating each other's wording.
+- **Custom Decomposition**: adapted rather than copied verbatim, since this page is an interactive
+  tool, not a fixed report -- results only exist after a run, so the chapter headers for its two
+  result phases ("Chapter 1 of 2: What we found" / "Chapter 2 of 2: What it might cost") are now
+  injected as the first child of `readoutBox`/`scheduleBox` on the `ev.t === "end"` (and, for
+  chapter 1, also the streaming `"node"`) handler, rather than as static page furniture -- so they
+  only appear once there's real content to sit under. `customReadout()`'s existing "highest risk"
+  paragraph became a proper `soWhat()`; `customScheduleSection()` gained a closing so-what for its
+  own top-criticality item, mirroring Monte Carlo's chapter 3.
+- **A real CSS bug caught and fixed along the way**: the original `.chapter:first-of-type` rule
+  (added during the Decompose pass) zeroes a chapter's top margin so the very first chapter of the
+  page sits flush under the cover section. That's correct for Decompose/Monte Carlo, where the
+  first chapter really is the first `.chapter` element on the page -- but Custom Decomposition's
+  `readoutBox`/`scheduleBox` are separate re-rendered `<div>`s, so their chapter headers would also
+  have matched `:first-of-type` (scoped per parent, not per page) and lost their spacing right
+  after real content (the map). Fixed by replacing the automatic `:first-of-type` selector with an
+  explicit `chapter-first` modifier class, passed only on the two calls that are genuinely first on
+  their page (Decompose's Chapter 1, Monte Carlo's Chapter 1) -- Custom Decomposition's two chapter
+  calls correctly keep normal spacing.
+
+Verified live: ran a real decomposition (60 then querying at completion, cf-memory text, 68/111
+items reached) and confirmed both chapters render with correct spacing and both so-whats show
+real computed data (highest-risk item, top-criticality schedule item); Monte Carlo's three
+chapters and three so-whats all render with distinct tones; no console errors on either page.
+Real server restarted via `./start.sh restart`.
+
 ## New: `/workspace/start.sh` -- use this from now on instead of ad-hoc nohup
 
 The back-and-forth above involved a lot of manual `nohup python3 demo/server.py &` / `ss -ltnp |

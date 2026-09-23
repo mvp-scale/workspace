@@ -147,7 +147,7 @@
      blue wall. Tone comes from the app's own categorical --s1..--s8 tokens, the same palette the
      flow diagrams already use. */
   .chapter { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); }
-  .chapter:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+  .chapter.chapter-first { margin-top: 0; padding-top: 0; border-top: none; }
   .chapter-kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin: 0 0 4px; }
   .chapter-title { margin: 0 0 6px; font-size: 21px; }
   .chapter-why { margin: 0 0 16px; font-size: 14px; color: var(--text-2); max-width: 68ch; }
@@ -1216,8 +1216,8 @@ function dataDrivenBanner(rows) {
 /* A big, spaced-out section header for a whole movement of the story (several h3/h4 sub-sections
    underneath it), with one plain-language sentence up front for why it's here before any detail --
    the "why we're about to show you this" framing, deliberately not technical. */
-function chapterHeader(kicker, title, why) {
-  return el("div", { class: "chapter" },
+function chapterHeader(kicker, title, why, first) {
+  return el("div", { class: "chapter" + (first ? " chapter-first" : "") },
     el("p", { class: "chapter-kicker", text: kicker }),
     el("h2", { class: "chapter-title", text: title }),
     el("p", { class: "chapter-why", text: why }));
@@ -1249,7 +1249,7 @@ function renderDecomposeTree(data) {
     flowHeader(decomposeFlow()));
 
   // CHAPTER 1 — the pitch itself, and the one thing it hinges on
-  out.append(chapterHeader("Chapter 1 of 3", "The pitch", "What was actually proposed, in plain words, and the one assumption everything else depends on."));
+  out.append(chapterHeader("Chapter 1 of 3", "The pitch", "What was actually proposed, in plain words, and the one assumption everything else depends on.", true));
 
   out.append(el("h4", { text: "As received" }), el("blockquote", { class: "qbox", text: pitch }),
     el("p", { class: "legend", text: "Lightly paraphrased. The 30-day target is the pitcher's, not mine." }),
@@ -1863,20 +1863,24 @@ function mcHistogram(hist, dist, horizon) {
 function renderMonteCarlo(data) {
   const out = el("div");
   out.append(el("h2", { text: "Monte Carlo (schedule risk)" }),
-    el("p", { class: "muted", text: "The real PMI/PMBOK technique (Monte Carlo Schedule Risk Analysis, “QSRA”): sample each task's duration from a triangular distribution thousands of times, run a real critical-path pass on every draw, and report a probability range instead of one deterministic number." }),
+    el("p", { class: "muted", text: "A single schedule hides how much a real plan can vary. This samples every task's honest uncertainty thousands of times and reports a range instead of one number — the real PMI/PMBOK technique, not a guess dressed up as one." }),
     dataDrivenBanner([["The plan tree (same 24 tasks and dependency edges as Decompose and loop)", "plan"], ["Optimistic / likely / pessimistic duration estimate per task", "durations"], ["10,000-run schedule risk simulation (histogram, percentiles, criticality index, Gantt risk bands)", "sampling"]]),
     flowHeader(monteCarloFlow()));
   if (!(data.tasks || []).length) return out.append(empty("No Monte Carlo run yet", "Run probes/decompose/build_monte_carlo.py.")), out;
   const dist = data.distribution, det = data.deterministic, horizon = data.horizon_working_days;
   const groupTitle = Object.fromEntries((data.groups || []).map((g) => [g.id, g.title]));
 
-  out.append(el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "Where this comes from" }),
-    el("p", { class: "small" }, "This runs against exactly one real dataset in this repo: ", el("code", { text: "build_tree_edge.py" }), "'s Cloudflare Edge Workers plan — 24 leaf tasks with real predecessor edges and hand-authored optimistic/likely/pessimistic duration estimates (see each task's rationale below). It is not generalized to any other foundry idea, which has no real duration or dependency data to sample from."),
-    el("p", { class: "small" }, "It is the same plan tree the ", el("a", { href: hashFor({ set: "decompose" }), text: "Decompose and loop" }), " structure walks node by node — this page doesn't decompose anything itself, it samples schedule risk over the plan that page's decomposition already produced."),
+  // CHAPTER 1 — why this dataset, and only this one, can honestly support real sampling
+  out.append(chapterHeader("Chapter 1 of 3", "Where this comes from", "Real sampling needs real inputs to sample from — here's exactly what this runs against, and why it's the one plan in this repo that can honestly support it.", true));
+  out.append(el("div", { class: "card" },
+    el("p", { class: "small" }, "This runs against exactly one real dataset in this repo: ", el("code", { text: "build_tree_edge.py" }), "'s Cloudflare Edge Workers plan — 24 leaf tasks with real predecessor edges and hand-authored optimistic/likely/pessimistic duration estimates. It is not generalized to any other foundry idea, which has no real duration or dependency data to sample from."),
+    el("p", { class: "small" }, "It's the same plan tree the ", el("a", { href: hashFor({ set: "decompose" }), text: "Decompose and loop" }), " structure walks node by node — this page doesn't decompose anything itself, it samples schedule risk over the plan that page's decomposition already produced."),
     el("p", { class: "small muted" }, `${data.n_runs.toLocaleString()} simulated runs, seed ${data.seed} (reproducible — rerun the script and the numbers reproduce exactly).`)));
+  out.append(soWhat("--s4", "This only works because real durations and real edges already exist for this one plan.", "That's why it isn't generalized to any other idea in this repo — most have neither."));
 
-  out.append(el("h3", { text: "One number becomes a range" }),
-    el("p", { class: "legend" }, "The deterministic pass (every task at its ", el("i", { text: "likely" }), " estimate) says ", el("b", { text: `${fmt.num(det.span_days, 1)} working days` }), ". Sampling every task's real uncertainty ", data.n_runs.toLocaleString(), " times instead gives a distribution: half the sampled runs finish by ", el("b", { text: `${fmt.num(dist.p50, 1)} days` }), ", and 90% finish by ", el("b", { text: `${fmt.num(dist.p90, 1)} days` }), " — both higher than the single deterministic figure, because pessimistic tails pull the distribution's mean above its mode."),
+  // CHAPTER 2 — the range a single deterministic schedule hides
+  out.append(chapterHeader("Chapter 2 of 3", "One number becomes a range", "A schedule built from “likely” estimates is still just one guess. Sampling every task's real uncertainty shows what a realistic range of outcomes actually looks like."));
+  out.append(el("p", { class: "legend" }, "The deterministic pass (every task at its ", el("i", { text: "likely" }), " estimate) says ", el("b", { text: `${fmt.num(det.span_days, 1)} working days` }), ". Sampling real uncertainty ", data.n_runs.toLocaleString(), " times instead gives half the runs finishing by ", el("b", { text: `${fmt.num(dist.p50, 1)} days` }), " and 90% by ", el("b", { text: `${fmt.num(dist.p90, 1)} days` }), " — both higher, because pessimistic tails pull the mean above the mode."),
     el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, mcHistogram(data.histogram, dist, horizon)),
       el("div", { class: "legend", style: "margin-top:6px" }, `p10 ${fmt.num(dist.p10, 1)}d · median ${fmt.num(dist.p50, 1)}d · p90 ${fmt.num(dist.p90, 1)}d · range sampled ${fmt.num(dist.min, 1)}–${fmt.num(dist.max, 1)}d against a ${horizon}-day target.`)),
     el("div", { class: "callout" + (dist.prob_within_horizon >= 0.8 ? "" : " warn") },
@@ -1884,14 +1888,18 @@ function renderMonteCarlo(data) {
         dist.prob_within_horizon >= 0.8
           ? "The 30-day target has real slack even under sampled uncertainty — consistent with the deterministic pass's own float finding."
           : "Sampled uncertainty puts the horizon genuinely at risk, which the single deterministic pass alone would not have shown.")));
+  out.append(soWhat(dist.prob_within_horizon >= 0.8 ? "--s5" : "--s7", dist.prob_within_horizon >= 0.8 ? `Even a realistic worst case has room — ${pc(dist.prob_within_horizon, 1)} of sampled runs land inside the target.` : `A realistic worst case genuinely misses the target — only ${pc(dist.prob_within_horizon, 1)} of sampled runs land inside it.`, `The single deterministic number (${fmt.num(det.span_days, 1)}d) never showed this either way.`));
 
   const sortedTasks = [...data.tasks].sort((a, b) => b.criticality_index - a.criticality_index);
   const hiddenRisk = sortedTasks.filter((t) => !t.deterministic_on_critical_path && t.criticality_index > 0);
-  out.append(el("h3", { text: "Impact on the critical path" }),
+
+  // CHAPTER 3 — which tasks actually drive the schedule, under real uncertainty
+  out.append(chapterHeader("Chapter 3 of 3", "What actually drives the risk", "Not every task on the calendar is equally risky. This finds the ones that are, from simulated outcomes — not from a guess a single schedule pass would make."));
+  out.append(el("h4", { text: "Impact on the critical path" }),
     el("p", { class: "legend", text: "The same plan, read two ways: the solid bar is the idealistic schedule (every task at its single-estimate duration, exactly what the Decompose Gantt above shows); the pale band behind it is where that task actually landed across every sampled run, coloured by how often it was critical. A wide, dark band on a task with a thin idealistic bar is real risk the deterministic view hides." }),
     el("div", { class: "card" }, mcGanttBoard(data)));
 
-  out.append(el("h3", { text: "Criticality index: which tasks actually drive the schedule" }),
+  out.append(el("h4", { text: "Criticality index" }),
     el("p", { class: "legend", text: "Share of the sampled runs where each task landed on that run's own critical path — not just the one deterministic path. A task can be critical some of the time without ever being critical in the single-estimate plan." }),
     el("div", { class: "card" }, el("div", { style: "overflow-x:auto" },
       el("table", { class: "data wrap" },
@@ -1903,7 +1911,7 @@ function renderMonteCarlo(data) {
           el("td", {}, t.deterministic_on_critical_path ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", text: "critical path" }) : el("span", { class: "muted small", text: "–" })),
           el("td", { style: "min-width:160px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)))))))));
 
-  out.append(el("div", { class: "callout" }, el("h3", { style: "margin-top:0", text: "What sampling reveals that one CPM pass doesn't" }),
+  out.append(el("div", { class: "callout" }, el("h4", { style: "margin-top:0", text: "What sampling reveals that one CPM pass doesn't" }),
     hiddenRisk.length
       ? el("p", {}, `${hiddenRisk.length} task${hiddenRisk.length === 1 ? "" : "s"} never appear on the single deterministic critical path, but land on the critical path in a real share of sampled runs: `,
           hiddenRisk.slice(0, 6).map((t, i) => el("span", {}, i > 0 ? ", " : "", el("b", { text: t.title }), ` (${pc(t.criticality_index)})`)),
@@ -1916,6 +1924,10 @@ function renderMonteCarlo(data) {
     releaseTrain.length
       ? el("ol", { class: "small" }, releaseTrain.map((t) => el("li", {}, el("b", { text: t.title }), ` — critical in ${pc(t.criticality_index)} of sampled runs. `, el("span", { class: "muted", text: t.duration_basis }))))
       : el("p", { class: "small muted", text: "No single task is critical in a majority of runs — schedule risk here is distributed, not concentrated in one bottleneck." })));
+
+  out.append(releaseTrain.length
+    ? soWhat("--s2", `"${releaseTrain[0].title}" drives this schedule more than anything else.`, `Critical in ${pc(releaseTrain[0].criticality_index)} of sampled runs — front-load it, because that's where delay cascades downstream.`)
+    : soWhat("--s2", "No single task dominates the risk here.", "Schedule risk is spread across the plan rather than concentrated in one bottleneck — there's no one thing to front-load."));
 
   return out;
 }
@@ -2098,6 +2110,10 @@ function customScheduleSection(runState, lib, endEvent) {
             el("td", { class: "muted small" }, groupTitle[t.group] || t.group),
             el("td", { class: "muted small", text: `${fmt.num(t.duration_days, 2)} (${fmt.num(t.optimistic_days, 2)}–${fmt.num(t.pessimistic_days, 2)})` }),
             el("td", { style: "min-width:160px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)))))))));
+  const top = sorted[0];
+  box.append(top && top.criticality_index > 0
+    ? soWhat("--s2", `"${top.title}" drives this estimate more than anything else.`, `Critical in ${pc(top.criticality_index)} of sampled runs, under the stated rule above — not a measurement, but the same heuristic applied consistently.`)
+    : soWhat("--s2", "No single item dominates this estimate.", "Estimated risk is spread across the plan rather than concentrated in one item."));
   return box;
 }
 
@@ -2323,19 +2339,20 @@ function customReadout(runState, lib, end) {
     const catText = lib.categories.find((c) => c.id === topId)?.text || topId;
     box.append(el("p", {}, "Strongest pull from your text, compared with a blank idea: ", el("b", { text: catText }), ` (lift ${topV.lift >= 0 ? "+" : ""}${fmt.num(topV.lift, 2)}).`));
   }
-  const riskLeaves = Object.entries(runState.leaves).filter(([, v]) => v.answers?.risk?.mean != null).sort((a, b) => b[1].answers.risk.mean - a[1].answers.risk.mean);
-  if (riskLeaves.length) {
-    const [topId, topV] = riskLeaves[0];
-    const text = Object.values(runState.leafText)[0] ? runState.leafText[topId] : topId;
-    const gateCount = Object.values(topV.answers.gate?.per_model || {}).length;
-    box.append(el("p", {}, "Highest risk if left undone: ", el("b", { text }), `, risk ${fmt.num(topV.answers.risk.mean, 2)}${gateCount ? `, ${Object.values(topV.answers.gate.per_model).filter((v) => v >= 0.5).length} of ${gateCount} models said a surprise here could force a redesign` : ""}.`));
-  }
   const splitCount = Object.values(runState.leaves).filter((v) => (v.split || []).length).length;
   if (nLeaves) box.append(el("p", { class: "small" }, `The models split (spread ≥ 0.3) on `, el("b", { text: `${splitCount} of ${nLeaves}` }), " items they answered."));
   for (const [m, flagged] of Object.entries(runState.flatModels || {})) {
     if (flagged) box.append(el("div", { class: "callout warn" }, `${Jev.codeOf(m)} gave all 21 categories a nearly identical score, so it didn't tell them apart on this text.`));
   }
   if (runState.scope != null && runState.scope < 0.40) box.append(el("div", { class: "callout warn" }, `This library is for buildable things (a product, service, system or process) -- this text scored low on that (${fmt.num(runState.scope, 2)}), so these results may not mean much for it.`));
+  const riskLeaves = Object.entries(runState.leaves).filter(([, v]) => v.answers?.risk?.mean != null).sort((a, b) => b[1].answers.risk.mean - a[1].answers.risk.mean);
+  if (riskLeaves.length) {
+    const [topId, topV] = riskLeaves[0];
+    const text = runState.leafText[topId] || topId;
+    const gateCount = Object.values(topV.answers.gate?.per_model || {}).length;
+    const gateHits = gateCount ? Object.values(topV.answers.gate.per_model).filter((v) => v >= 0.5).length : 0;
+    box.append(soWhat("--s5", `"${text}" is the highest risk if left undone.`, gateCount ? `${gateHits} of ${gateCount} models said a surprise here could force a redesign.` : ""));
+  }
   box.append(el("p", { class: "small muted", style: "margin-top:10px", text: "No right answers exist for your idea, so nothing here is scored as right or wrong. The estimated schedule below is not a measured one either -- see its own disclosure for the stated rule it's derived by." }));
   return box;
 }
@@ -2507,13 +2524,13 @@ function renderCustom({ library: lib, examples }) {
         if (Object.keys(ev.errors || {}).length) errBadge.replaceChildren(el("span", { class: "badge warn", title: JSON.stringify(ev.errors) }, `${Object.keys(ev.errors).length} error(s)`));
       }
       outlineBox.replaceChildren(buildCustomOutline(runState, lib));
-      readoutBox.replaceChildren(customReadout(runState, lib, lastEnd));
+      readoutBox.replaceChildren(chapterHeader("Chapter 1 of 2", "What we found", "The map above, read out in words: what your text pulled hardest toward, and what's riskiest if it stays undone."), customReadout(runState, lib, lastEnd));
     }
     if (ev.t === "end") {
       lastEnd = ev;
       statusLine.textContent = `Stopped: ${ev.spent} of ${ev.budget} calls (${ev.reason}).`;
-      readoutBox.replaceChildren(customReadout(runState, lib, ev));
-      scheduleBox.replaceChildren(el("h3", { text: "Estimated schedule" }), customScheduleSection(runState, lib, ev));
+      readoutBox.replaceChildren(chapterHeader("Chapter 1 of 2", "What we found", "The map above, read out in words: what your text pulled hardest toward, and what's riskiest if it stays undone."), customReadout(runState, lib, ev));
+      scheduleBox.replaceChildren(chapterHeader("Chapter 2 of 2", "What it might cost", "Not a measurement — a stated rule applied to what the models just answered, turned into a schedule you can actually look at."), customScheduleSection(runState, lib, ev));
       afterRunControls(ev);
     }
   }
