@@ -11,7 +11,7 @@
   /* Report layout only: numbered sections, reading width, code blocks, print wrapping. */
   .report { counter-reset: sec; }
   .report .section > header h2::before { counter-increment: sec; content: counter(sec) ". "; color: var(--text-3); font-weight: 500; }
-  .prose { max-width: 78ch; } .prose > * + * { margin-top: 12px; }
+  .prose > * + * { margin-top: 12px; }
   .point { font-weight: 650; color: var(--text); }
   .prose ul { margin: 0; padding-left: 20px; } .prose li + li { margin-top: 6px; }
   .rec h4 { margin-bottom: 4px; } .rec .pick { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin-bottom: 8px; }
@@ -263,7 +263,7 @@ function methodology(a, tiers) {
     const n = a.rows.find(r => r.tiers[t]?.n)?.tiers[t].n;
     return el("li", {}, el("strong", { text: `${info[t]?.label || t} (${n ?? "?"} decisions). ` }), info[t]?.note || "");
   });
-  const metric = (title, point, body) => el("div", { class: "card" }, el("h3", { text: title }), el("p", { class: "point" }, point), el("p", { class: "muted small" }, body));
+  const metric = (title, point, body) => el("div", { class: "card prose" }, el("h3", { text: title }), el("p", { class: "point" }, point), el("p", { class: "muted small" }, body));
   return section("method-h", "Methodology", "What was run and how each number is defined.",
     el("div", { class: "grid cols-2" },
       el("div", { class: "card prose" }, el("h3", { text: "Tiers" }), el("ul", {}, tierItems), el("p", { class: "muted small", text: "Datasets are frozen public files. Expected labels never change after a run." })),
