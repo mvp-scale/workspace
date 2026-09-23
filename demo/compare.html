@@ -26,7 +26,7 @@
   table.cmp .meter { min-width: 0; } table.cmp .meter-track { min-width: 30px; }
   table.cmp .answer { font-weight: 650; font-size: 14px; }
   table.cmp .placeholder { color: var(--text-3); }
-  .col-head { display: flex; align-items: baseline; gap: 2px; flex-wrap: wrap; } .col-sub { display: block; font-weight: 400; font-size: 11px; color: var(--text-3); }
+  .col-head { display: flex; align-items: baseline; gap: 2px; flex-wrap: wrap; }
   .extras dl { margin: 0 0 6px; font-size: 11.5px; } .extras dl > div { display: flex; flex-wrap: wrap; column-gap: 8px; } .extras dt { color: var(--text-3); } .extras dd { margin: 0; flex: 1 1 60px; font-family: var(--mono); overflow-wrap: anywhere; }
   .extras h5 { margin: 6px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 600; }
   .extras pre { margin: 0; white-space: pre-wrap; font-size: 11px; }
@@ -35,7 +35,6 @@
   .mchip.on { background: var(--surface); border-color: var(--border-strong); } .mchip.on .mname { font-weight: 600; }
   .mchip.off { border-style: dashed; opacity: .6; } .mchip.off .mname { color: var(--text-3); }
   .mstrip-h { flex-basis: 100%; margin: 0; color: var(--text-2); }
-  table.cmp .col-name { font-weight: 600; } table.cmp .col-sub { overflow-wrap: anywhere; }
   .recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .recent li { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .recent .what { min-width: 0; } .recent .what div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   details.recent-box summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
@@ -93,8 +92,6 @@
 <script>
 const { el, fmt, api, toast, copy, download, empty, meter } = Jev;
 const $ = (id) => document.getElementById(id);
-const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
-const mem = (s) => !s ? "" : s.hosted ? "hosted, paid" : s.gpu_mb ? gib(s.gpu_mb) : "CPU";
 const hostedUp = () => loadedIds().filter(id => status && status[id]?.hosted);
 const TYPES = { choice: "Choice", score: "Score", noul: "Yes / no" };
 const TYPE_HINT = { choice: "Pick exactly one option.", score: "Place it on an ordered scale.", noul: "A single 0 to 1 value. No options needed." };
@@ -181,16 +178,16 @@ const pushHash = () => { try { history.replaceState(null, "", encodeHash(readFor
 /* ---------- backends ---------- */
 const allIds = () => status ? Object.keys(status) : [];
 const loadedIds = () => allIds().filter(id => status[id]?.up);
-const codeTip = (ids) => ids.map(id => el("span", { class: "mtag", title: `${Jev.codeOf(id)} = ${Jev.nameOf(id)}` }, el("span", { class: "mcode", text: Jev.codeOf(id) })));
+/* The dot already says loaded/not; code + its own hover tooltip already says which model. No
+   need to also spell "loaded · 8.6 GiB" or "not loaded" in text next to it. */
 function renderStrip() {
-  const ids = allIds(), up = loadedIds(), used = up.reduce((n, id) => n + (status[id].gpu_mb || 0), 0), strip = $("strip");
+  const ids = allIds(), up = loadedIds(), strip = $("strip");
   if (!ids.length) { strip.replaceChildren(el("span", { class: "small subtle", text: "Model status is not available right now." })); }
-  else strip.replaceChildren(el("p", { class: "small mstrip-h" }, el("strong", { text: `${up.length} of ${ids.length} models loaded` }), ` · ${gib(used)} GPU memory in use`),
+  else strip.replaceChildren(el("p", { class: "small mstrip-h" }, el("strong", { text: `${up.length} of ${ids.length} models loaded` })),
     ...ids.map(id => { const s = status[id], on = !!s.up;
-      return el("span", { class: "mchip " + (on ? "on" : "off"), role: "listitem" }, el("span", { class: `dot ${on ? "up" : "down"}`, "aria-hidden": "true" }), Jev.tag(id),
-        el("span", { class: on ? "small muted" : "small subtle", text: on ? "loaded · " + mem(s) : "not loaded" })); }));
+      return el("span", { class: "mchip " + (on ? "on" : "off"), role: "listitem", title: on ? "Loaded" : `Not loaded${s.reason ? ": " + s.reason : ""}` }, el("span", { class: `dot ${on ? "up" : "down"}`, "aria-hidden": "true" }), Jev.tag(id, { name: false })); }));
   const off = ids.filter(id => !status[id].up);
-  $("notloaded").replaceChildren(...(off.length ? ["Not loaded: ", el("span", { style: "display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle" }, ...codeTip(off)), " (no column)."] : []));
+  $("notloaded").replaceChildren(...(off.length ? ["Not loaded (no column): ", el("span", { style: "display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle" }, ...off.map(id => Jev.tag(id, { name: false })))] : []));
 }
 function refreshUi() { renderStrip(); renderMatrix(); if (!running) setRunning(false); }
 async function loadStatus() { try { status = await api("/api/status"); } catch { /* keep what we had */ } refreshUi(); }
@@ -269,10 +266,8 @@ function renderMatrix(phase) {
     body.push(el("tr", {}, el("th", { scope: "row", text: "As returned" }), fill((r, n) => el("td", { class: "extras" }, phase === "running" ? skel() : extrasCell(r, n)))));
   }
   const table = el("table", { class: "data cmp" }, el("caption", { class: "sr-only", text: "Comparison of every model's answer to the same question" }),
-    el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "" }), cols.map(n => { const s = status && status[n]; return el("th", { scope: "col" },
-      el("span", { class: "col-head" }, el("span", { class: `dot ${s ? (s.up ? "up" : "down") : ""}`, "aria-hidden": "true" }), Jev.tag(n, { name: false })),
-      el("span", { class: "col-sub col-name", text: Jev.nameOf(n) }),
-      el("span", { class: "col-sub", text: s && !s.up ? `not loaded: ${s.reason || "unknown"}` : `loaded · ${mem(s) || "ready"}` })); }))),
+    el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "" }), cols.map(n => { const s = status && status[n]; return el("th", { scope: "col", title: s && !s.up ? `Not loaded: ${s.reason || "unknown"}` : null },
+      el("span", { class: "col-head" }, el("span", { class: `dot ${s ? (s.up ? "up" : "down") : ""}`, "aria-hidden": "true" }), Jev.tag(n, { name: false }))); }))),
     el("tbody", {}, body));
   $("matrix").replaceChildren(table); $("matrix").setAttribute("aria-busy", String(phase === "running"));
   $("toggle-extras").disabled = !(last && last.rows);
