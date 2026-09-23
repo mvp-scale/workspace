@@ -114,8 +114,13 @@
   .pipeline .arrow { stroke: var(--text-3); stroke-width: 1.6; fill: none; }
   .pipeline .loopback { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-dasharray: 4 3; }
   .pipeline .lbl { fill: var(--text-3); font-size: 10.5px; }
-  .flowicon-bg { fill: var(--surface); stroke: var(--border-strong); }
-  .flowicon-p { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .pipeline .stage { opacity: 0; animation: flowIn .4s ease-out forwards; animation-delay: calc(var(--i, 0) * 110ms); }
+  .pipeline .flow-edge { opacity: 0; animation: flowIn .4s ease-out forwards; animation-delay: calc(var(--i, 0) * 110ms + 70ms); }
+  .pipeline .flow-edge .flow-line, .pipeline .flow-edge .flow-head { stroke: var(--ec); stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .pipeline .flow-edge .flow-port { fill: var(--ec); }
+  .pipeline .flow-edge .flow-lbl { fill: var(--ec); font-size: 10.5px; font-weight: 650; }
+  @keyframes flowIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .pipeline .stage, .pipeline .flow-edge { animation: none; opacity: 1; } }
   .pipeline.wide { max-width: none; }
   /* Fig 1: assumption vs platform */
   .figwrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -495,7 +500,7 @@ function renderBatch(data) {
   const out = el("div");
   out.append(el("h2", { text: "Batch performance" }),
     el("p", { class: "muted", text: "One state, plus N−1 unlabelled filler questions added to the same call, scored only on the one labelled question — does accuracy hold up as the battery grows?" }),
-    flowHeader(batchFlow(), ["compute", "ask", "compare"]),
+    flowHeader(batchFlow()),
     el("p", { class: "legend", text: "Failed requests are counted separately and never scored as wrong." }));
   for (const setId of sets) {
     const models = orderModels(Object.keys(data[setId])), sizes = [...new Set(models.flatMap(m => data[setId][m].map(r => r.size)))].sort((a, b) => a - b);
@@ -654,151 +659,191 @@ function ganttBoard(data, onPick) {
 
 /* ---------- pipeline diagram: the model-scoring loop (demoted to section 9) ---------- */
 /* ---------- shared: compact left-to-right flow diagrams for each structure's "how this works" ---------- */
-/* A tiny fixed icon vocabulary, reused everywhere so it's learnable once: ask = a live model call,
-   compute = deterministic, no call, route = branches on a condition, sample = Monte Carlo draw,
-   compare = checked against a reference or baseline. */
-const FLOW_ICONS = {
-  ask: "M4 5h15v10H10l-3 4v-4H4z",
-  compute: "M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8|M12 3v3|M12 18v3|M3 12h3|M18 12h3|M6.5 6.5l1.8 1.8|M15.7 15.7l1.8 1.8|M6.5 17.5l1.8-1.8|M15.7 8.3l1.8-1.8",
-  route: "M12 4v6|M12 10l-6 6|M12 10l6 6",
-  sample: "M5 5h14v14H5z|M9 9m-1.7 0a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0|M15 15m-1.7 0a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0|M9 15m-1.7 0a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0|M15 9m-1.7 0a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0",
-  compare: "M4 12h16|M8 8l-4 4 4 4|M16 8l4 4-4 4",
-};
-const FLOW_ICON_LABEL = { ask: "live model call", compute: "computed, no call", route: "routes on a condition", sample: "sampled (Monte Carlo)", compare: "checked against a reference" };
-function flowIcon(name, cx, cy, size = 15) {
-  const s = size / 24;
-  const g = S("g", { class: "flowicon", transform: `translate(${cx - size / 2} ${cy - size / 2}) scale(${s})`, "aria-hidden": "true" },
-    S("circle", { cx: 12, cy: 12, r: 13, class: "flowicon-bg" }));
-  for (const d of FLOW_ICONS[name].split("|")) g.append(S("path", { d, class: "flowicon-p" }));
-  return g;
-}
-const flowBox = (x, y, w, h, title, sub) => S("g", { class: "stage" },
-  S("rect", { x, y, width: w, height: h, rx: 8 }),
+/* No icons -- category is carried by colour alone (a fixed, colourblind-checked 5-way palette
+   pulled from the app's own --s1..--s8 series tokens, chosen to avoid --good/--bad's green/red so
+   a verb is never mistaken for a correctness signal), with the verb itself as small text sitting
+   directly on its line -- ask = a live model call, compute = deterministic/no call, route =
+   branches on a condition, sample = Monte Carlo draw, compare = checked against a reference. */
+const FLOW_VERB_TOKEN = { ask: "--s1", compute: "--s4", route: "--s7", sample: "--s5", compare: "--s2" };
+const FLOW_VERB_WORD = { ask: "ask", compute: "figure out", route: "decide", sample: "sample", compare: "check" };
+const FLOW_W = 760, FLOW_H = 128; // one fixed canvas every diagram must fit inside, no exceptions -- no bespoke sizes
+let FLOW_SEQ = 0;
+const flowBox = (x, y, w, h, title, sub, i = FLOW_SEQ++) => S("g", { class: "stage", style: `--i:${i}` },
+  S("rect", { x, y, width: w, height: h, rx: 7 }),
   S("text", { class: "t", x: x + w / 2, y: y + h / 2 - (sub ? 6 : -4), "text-anchor": "middle" }, title),
   sub ? S("text", { class: "n", x: x + w / 2, y: y + h / 2 + 12, "text-anchor": "middle" }, sub) : null);
-const flowArrow = (x1, y1, x2, y2, icon) => S("g", {},
-  S("path", { class: "arrow", d: `M${x1} ${y1} L${x2 - 8} ${y2}` }),
-  S("path", { class: "arrow", d: `M${x2 - 10} ${y2 - 4} L${x2} ${y2} L${x2 - 10} ${y2 + 4}` }),
-  icon ? flowIcon(icon, (x1 + x2) / 2, (y1 + y2) / 2 - 13) : null,
-  icon ? S("title", {}, FLOW_ICON_LABEL[icon]) : null);
-function flowLegend(...names) {
-  return el("div", { class: "row", style: "gap:14px;flex-wrap:wrap;margin-top:8px" }, names.map((n) => {
-    const svg = S("svg", { width: 15, height: 15, viewBox: "0 0 15 15" }, flowIcon(n, 7.5, 7.5, 15));
-    return el("span", { class: "small muted", style: "display:inline-flex;align-items:center;gap:5px" }, svg, FLOW_ICON_LABEL[n]);
-  }));
+function flowHead(x2, y2, ux, uy) {
+  return S("path", { d: `M${x2 - uy * 4 - ux * 11} ${y2 + ux * 4 - uy * 11} L${x2} ${y2} L${x2 + uy * 4 - ux * 11} ${y2 - ux * 4 - uy * 11}`, class: "flow-head" });
 }
-function flowHeader(diagram, legendNames) {
-  return el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "How this works" }), diagram, flowLegend(...legendNames));
+/* A straight horizontal (or short diagonal) connector -- used between stages on the same row. */
+function flowArrow(x1, y1, x2, y2, verb, label, i = FLOW_SEQ++) {
+  const token = `var(${FLOW_VERB_TOKEN[verb]})`;
+  const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+  const ex = x2 - ux * 10, ey = y2 - uy * 10;
+  return S("g", { class: "flow-edge", style: `--i:${i}; --ec:${token}` },
+    S("path", { d: `M${x1} ${y1} L${ex} ${ey}`, class: "flow-line" }), flowHead(x2, y2, ux, uy),
+    S("circle", { cx: x1, cy: y1, r: 2.6, class: "flow-port" }), S("circle", { cx: x2, cy: y2, r: 2.6, class: "flow-port" }),
+    S("text", { class: "flow-lbl", x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 8, "text-anchor": "middle" }, label || FLOW_VERB_WORD[verb]));
+}
+/* A right-angle "elbow" connector with rounded corners -- the standard flowchart way to branch,
+   used whenever a stage forks into two outcomes. Routes: horizontal out of the source, one rounded
+   turn, vertical to the target's row, another rounded turn, horizontal into the target. */
+function flowElbow(x1, y1, trunkX, x2, y2, verb, label, i = FLOW_SEQ++) {
+  const token = `var(${FLOW_VERB_TOKEN[verb]})`, r = 10, dir = y2 > y1 ? 1 : -1;
+  const d = `M${x1} ${y1} H${trunkX - r} Q${trunkX} ${y1} ${trunkX} ${y1 + r * dir} V${y2 - r * dir} Q${trunkX} ${y2} ${trunkX + r} ${y2} H${x2 - 10}`;
+  return S("g", { class: "flow-edge", style: `--i:${i}; --ec:${token}` },
+    S("path", { d, class: "flow-line" }), flowHead(x2, y2, 1, 0),
+    S("circle", { cx: x1, cy: y1, r: 2.6, class: "flow-port" }), S("circle", { cx: x2, cy: y2, r: 2.6, class: "flow-port" }),
+    S("text", { class: "flow-lbl", x: trunkX + 8, y: (y1 + y2) / 2 + (dir > 0 ? -4 : 12), "text-anchor": "start" }, label || FLOW_VERB_WORD[verb]));
+}
+/* A plain connecting line with no arrowhead or label -- for a source feeding into a merge point,
+   where the single labelled flowArrow leaving the merge point already says what happens. */
+function flowLine(x1, y1, x2, y2, verb, i = FLOW_SEQ++) {
+  const token = `var(${FLOW_VERB_TOKEN[verb]})`;
+  return S("g", { class: "flow-edge", style: `--i:${i}; --ec:${token}` },
+    S("path", { d: `M${x1} ${y1} L${x2} ${y2}`, class: "flow-line" }),
+    S("circle", { cx: x1, cy: y1, r: 2.6, class: "flow-port" }));
+}
+/* The mirror of flowElbow -- a right-angle merge leg feeding INTO a shared junction, for a stage
+   with two sources. No arrowhead (the junction isn't a box); the single flowArrow leaving the
+   junction carries the arrowhead and the label. */
+function flowElbowIn(x1, y1, trunkX, x2, y2, verb, i = FLOW_SEQ++) {
+  const token = `var(${FLOW_VERB_TOKEN[verb]})`, r = 10, dir = y2 > y1 ? 1 : -1;
+  const d = `M${x1} ${y1} H${trunkX - r} Q${trunkX} ${y1} ${trunkX} ${y1 + r * dir} V${y2 - r * dir} Q${trunkX} ${y2} ${trunkX + r} ${y2} H${x2}`;
+  return S("g", { class: "flow-edge", style: `--i:${i}; --ec:${token}` },
+    S("path", { d, class: "flow-line" }), S("circle", { cx: x1, cy: y1, r: 2.6, class: "flow-port" }));
+}
+/* A self-loop below a stage -- out its bottom-right, back into its bottom-left -- for "repeat
+   until done" mechanisms. Always coloured as a route/decide step, since looping is itself the
+   outcome of a decision. */
+function flowLoop(xRight, xLeft, yBottom, label, i = FLOW_SEQ++) {
+  const token = `var(${FLOW_VERB_TOKEN.route})`, dropY = yBottom + 22;
+  const d = `M${xRight} ${yBottom} C ${xRight} ${dropY}, ${xLeft} ${dropY}, ${xLeft} ${yBottom}`;
+  return S("g", { class: "flow-edge", style: `--i:${i}; --ec:${token}` },
+    S("path", { d, class: "flow-line" }), flowHead(xLeft, yBottom, 0, -1),
+    S("circle", { cx: xRight, cy: yBottom, r: 2.6, class: "flow-port" }),
+    S("text", { class: "flow-lbl", x: (xRight + xLeft) / 2, y: dropY + 4, "text-anchor": "middle" }, label));
+}
+function flowHeader(diagram) {
+  return el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "How this works" }), diagram);
 }
 function batchFlow() {
-  const W = 860, H = 120, y = 38, h = 50;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "One state, a growing battery of questions, one call, scored on the first question only" },
-    flowBox(0, y, 150, h, "1 state", "the item's text"),
-    flowArrow(150, y + h / 2, 190, y + h / 2, "compute"),
-    flowBox(190, y, 220, h, "+N−1 filler questions", "unlabelled, just add load"),
-    flowArrow(410, y + h / 2, 450, y + h / 2, "ask"),
-    flowBox(450, y, 170, h, "1 call", "all N questions at once"),
-    flowArrow(620, y + h / 2, 660, y + h / 2, "compare"),
-    flowBox(660, y, 200, h, "score q0 only", "does accuracy degrade as N grows?"));
+  FLOW_SEQ = 0;
+  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "One item, extra filler questions added to the same call, graded only on the first answer" },
+    flowBox(0, y, 130, h, "one item", ""),
+    flowArrow(130, cy, 180, cy, "compute"),
+    flowBox(180, y, 200, h, "extra questions added in", "not graded — just extra work"),
+    flowArrow(380, cy, 430, cy, "ask"),
+    flowBox(430, y, 130, h, "one request", "every question at once"),
+    flowArrow(560, cy, 610, cy, "compare"),
+    flowBox(610, y, 150, h, "grade the first answer", "worse as load grows?"));
 }
 
 function cascadeFlow() {
-  const W = 900, H = 170, y = 65, h = 40, cy = y + h / 2, forkX = 320, topY = 38, botY = 132;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "Cheap model answers first; escalate to the strong model only below the confidence threshold" },
-    flowBox(0, y, 110, h, "item", ""),
-    flowArrow(110, cy, 150, cy, "ask"),
-    flowBox(150, y, 170, h, "cheap model", "answers every item"),
-    flowArrow(forkX, cy, 500, topY + h / 2, "route"),
-    S("text", { class: "lbl", x: 410, y: topY - 8, "text-anchor": "middle" }, "confidence ≥ threshold"),
-    flowBox(500, topY, 240, h, "keep the cheap answer", "counted as “cheap alone”"),
-    flowArrow(forkX, cy, 500, botY + h / 2, "route"),
-    S("text", { class: "lbl", x: 410, y: botY + h + 16, "text-anchor": "middle" }, "confidence < threshold — escalate"),
-    flowBox(500, botY, 240, h, "strong model re-answers", "counted as “escalated”"));
+  FLOW_SEQ = 0;
+  const h = 34, cy = FLOW_H / 2, topY = 28, botY = 100, trunkX = 340;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "A cheap model answers first; only a low-confidence answer gets a second opinion from the strong model" },
+    flowBox(0, cy - h / 2, 88, h, "item", ""),
+    flowArrow(88, cy, 128, cy, "ask"),
+    flowBox(128, cy - h / 2, 168, h, "cheap model answers", "asked first, every time"),
+    flowElbow(296, cy, trunkX, 430, topY, "route", "sure"),
+    flowBox(430, topY - h / 2, 322, h, "keep that answer", "no second opinion needed"),
+    flowElbow(296, cy, trunkX, 430, botY, "route", "unsure"),
+    flowBox(430, botY - h / 2, 322, h, "strong model answers too", "a second, costlier opinion"));
 }
 
 function baselineFlow() {
-  const W = 860, H = 170, topY = 15, botY = 105, h = 40, joinX = 560, joinY = 80;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "Majority-class floor computed from label counts, compared against the model's own stored accuracy" },
-    flowBox(0, topY, 150, h, "label counts", "from the stored set"),
-    flowArrow(150, topY + h / 2, 190, topY + h / 2, "compute"),
-    flowBox(190, topY, 230, h, "majority-class floor", "always guess the top label"),
-    S("path", { class: "arrow", d: `M420 ${topY + h / 2} L${joinX - 6} ${joinY}` }),
-    flowBox(0, botY, 230, h, "model's stored accuracy", "already answered elsewhere"),
-    S("path", { class: "arrow", d: `M230 ${botY + h / 2} L${joinX - 6} ${joinY}` }),
-    flowArrow(joinX - 6, joinY, joinX + 34, joinY, "compare"),
-    flowBox(joinX + 34, joinY - h / 2, 220, h, "beats baseline?", "95% interval must clear the floor"));
+  FLOW_SEQ = 0;
+  const h = 34, topY = 28, botY = 100, joinX = 480, trunkX = 440, cy = FLOW_H / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "The most common answer is checked against the model's own real accuracy" },
+    flowBox(0, topY - h / 2, 150, h, "count every label", "in the stored set"),
+    flowArrow(150, topY, 200, topY, "compute"),
+    flowBox(200, topY - h / 2, 206, h, "always guess it", "the trivial floor"),
+    flowElbowIn(406, topY, trunkX, joinX - 6, cy, "compare"),
+    flowBox(0, botY - h / 2, 220, h, "model's real accuracy", "already measured elsewhere"),
+    flowElbowIn(220, botY, trunkX, joinX - 6, cy, "compare"),
+    flowArrow(joinX - 6, cy, joinX + 44, cy, "compare"),
+    flowBox(joinX + 44, cy - h / 2, 236, h, "clearly better than the floor?", ""));
 }
 
 function funnelFlow() {
-  const W = 900, H = 170, topY = 15, botY = 105, h = 40, joinX = 220, joinY = 80;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "Two stored probabilities multiplied, sampled many times, checked against the real outcome" },
-    flowBox(0, topY, 160, h, "bad item", "P(flagged vulnerable)"),
-    S("path", { class: "arrow", d: `M160 ${topY + h / 2} L${joinX - 6} ${joinY}` }),
-    flowBox(0, botY, 160, h, "good item", "P(flagged safe)"),
-    S("path", { class: "arrow", d: `M160 ${botY + h / 2} L${joinX - 6} ${joinY}` }),
-    flowArrow(joinX - 6, joinY, 260, joinY, "compute"),
-    flowBox(260, joinY - h / 2, 170, h, "combined P", "both correct, multiplied"),
-    flowArrow(430, joinY, 470, joinY, "sample"),
-    flowBox(470, joinY - h / 2, 180, h, "4,000 draws", "forecast + 90% interval"),
-    flowArrow(650, joinY, 690, joinY, "compare"),
-    flowBox(690, joinY - h / 2, 170, h, "actual outcome", "was it really both correct?"));
+  FLOW_SEQ = 0;
+  const h = 34, topY = 28, botY = 100, joinX = 210, trunkX = 180, cy = FLOW_H / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "Two stored chances are combined, sampled many times, and checked against what really happened" },
+    flowBox(0, topY - h / 2, 150, h, "chance it's flagged bad", ""),
+    flowElbowIn(150, topY, trunkX, joinX - 6, cy, "sample"),
+    flowBox(0, botY - h / 2, 150, h, "chance it's flagged safe", ""),
+    flowElbowIn(150, botY, trunkX, joinX - 6, cy, "sample"),
+    flowArrow(joinX - 6, cy, joinX + 54, cy, "sample"),
+    flowBox(joinX + 54, cy - h / 2, 180, h, "forecast: how often both", "with a range, not one number"),
+    flowArrow(444, cy, 494, cy, "compare"),
+    flowBox(494, cy - h / 2, 266, h, "what really happened", "did it land in that range?"));
 }
 
 function windowFlow() {
-  const W = 940, H = 110, y = 35, h = 40;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "A trailing window of the dialogue is asked about at every turn; the peak score over the call is checked against the label" },
-    flowBox(0, y, 130, h, "dialogue", "turn by turn"),
-    flowArrow(130, y + h / 2, 160, y + h / 2, "compute"),
-    flowBox(160, y, 180, h, "trailing window", "last N words / sentences / turns"),
-    flowArrow(340, y + h / 2, 370, y + h / 2, "ask"),
-    flowBox(370, y, 140, h, "score", "at this turn"),
-    flowArrow(510, y + h / 2, 540, y + h / 2, "compute"),
-    flowBox(540, y, 170, h, "peak score", "max over the whole call"),
-    flowArrow(710, y + h / 2, 740, y + h / 2, "compare"),
-    flowBox(740, y, 170, h, "AUC", "vs. the dialogue's real label"));
+  FLOW_SEQ = 0;
+  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "A trailing window is asked about at every turn, and the strongest moment is checked against the true label" },
+    flowBox(0, y, 120, h, "the dialogue", "turn by turn"),
+    flowArrow(120, cy, 170, cy, "compute"),
+    flowBox(170, y, 200, h, "how much to look back", "words, sentences, or turns"),
+    flowArrow(370, cy, 420, cy, "ask"),
+    flowBox(420, y, 160, h, "ask, keep the strongest", "highest point in the call"),
+    flowArrow(580, cy, 630, cy, "compare"),
+    flowBox(630, y, 130, h, "how well that worked", ""));
 }
 
 function hierarchyFlow() {
-  const W = 900, H = 170, y = 65, h = 40, cy = y + h / 2, forkX = 320, topY = 38, botY = 132;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "A cheap gate question decides whether to predict none directly or reuse the existing detail answer" },
-    flowBox(0, y, 110, h, "item", ""),
-    flowArrow(110, cy, 150, cy, "ask"),
-    flowBox(150, y, 190, h, "gate question", "cheap, asked to every item"),
-    flowArrow(forkX + 20, cy, 520, topY + h / 2, "route"),
-    S("text", { class: "lbl", x: 430, y: topY - 8, "text-anchor": "middle" }, "gate says “none”"),
-    flowBox(520, topY, 220, h, "predict “none”", "no further call"),
-    flowArrow(forkX + 20, cy, 520, botY + h / 2, "route"),
-    S("text", { class: "lbl", x: 430, y: botY + h + 16, "text-anchor": "middle" }, "gate fires"),
-    flowBox(520, botY, 220, h, "reuse stored detail answer", "not re-asked — already on record"));
+  FLOW_SEQ = 0;
+  const h = 34, cy = FLOW_H / 2, topY = 28, botY = 100, trunkX = 340;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "A cheap gate question decides whether to predict none directly or reuse the existing detail answer" },
+    flowBox(0, cy - h / 2, 88, h, "item", ""),
+    flowArrow(88, cy, 128, cy, "ask"),
+    flowBox(128, cy - h / 2, 168, h, "cheap gate question", "asked every time"),
+    flowElbow(296, cy, trunkX, 430, topY, "route", "none"),
+    flowBox(430, topY - h / 2, 322, h, "predict “none”", "no further call"),
+    flowElbow(296, cy, trunkX, 430, botY, "route", "fires"),
+    flowBox(430, botY - h / 2, 322, h, "reuse the stored answer", "not re-asked, already on record"));
 }
 
 function timeFlow() {
-  const W = 900, H = 170, y = 65, h = 40, cy = y + h / 2, forkX = 320, topY = 38, botY = 132;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "The same running score, checked two different ways depending on the dialogue's real label" },
-    flowBox(0, y, 130, h, "dialogue", "turn by turn"),
-    flowArrow(130, cy, 170, cy, "ask"),
-    flowBox(170, y, 170, h, "running score", "“everything so far” each turn"),
-    flowArrow(forkX + 20, cy, 540, topY + h / 2, "compute"),
-    S("text", { class: "lbl", x: 440, y: topY - 8, "text-anchor": "middle" }, "if really manipulative"),
-    flowBox(540, topY, 220, h, "onset lag", "turns until it commits to an alarm"),
-    flowArrow(forkX + 20, cy, 540, botY + h / 2, "compute"),
-    S("text", { class: "lbl", x: 440, y: botY + h + 16, "text-anchor": "middle" }, "if really not manipulative"),
-    flowBox(540, botY, 220, h, "false alarms / 10 turns", "how often it crosses 0.5 anyway"));
+  FLOW_SEQ = 0;
+  const h = 34, cy = FLOW_H / 2, topY = 28, botY = 100, trunkX = 340;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "The same running score is read two different ways depending on the dialogue's real, already-known label" },
+    flowBox(0, cy - h / 2, 88, h, "dialogue", "turn by turn"),
+    flowArrow(88, cy, 128, cy, "ask"),
+    flowBox(128, cy - h / 2, 168, h, "score, running total", "everything said so far"),
+    flowElbow(296, cy, trunkX, 430, topY, "compute", "real"),
+    flowBox(430, topY - h / 2, 322, h, "onset lag", "how long until it sounds the alarm"),
+    flowElbow(296, cy, trunkX, 430, botY, "compute", "not"),
+    flowBox(430, botY - h / 2, 322, h, "false alarms", "how often it sounds anyway"));
 }
 
 function customFlow() {
-  const W = 900, H = 150, y = 20, h = 50, loopY = 95;
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "Your text is scored against the fixed library, one queued item at a time, until the budget runs out" },
-    flowBox(0, y, 150, h, "your text", "plus the fixed library"),
-    flowArrow(150, y + h / 2, 190, y + h / 2, "ask"),
-    flowBox(190, y, 230, h, "score 21 categories", "shape-guaranteed + ranked"),
-    flowArrow(420, y + h / 2, 460, y + h / 2, "route"),
-    flowBox(460, y, 210, h, "pop highest-priority item", "one shared queue"),
-    flowArrow(670, y + h / 2, 710, y + h / 2, "ask"),
-    flowBox(710, y, 170, h, "score it live", "category or leaf battery"),
-    S("text", { class: "lbl", x: 565, y: loopY + 30, "text-anchor": "middle" }, "budget remaining — pop the next item"),
-    S("path", { class: "loopback", d: `M700 ${y + h} C 700 ${loopY + 14}, 565 ${loopY + 14}, 565 ${y + h}` }),
-    S("path", { class: "loopback", d: `M558 ${y + h + 6} L565 ${y + h} L572 ${y + h + 6}` }));
+  FLOW_SEQ = 0;
+  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "Your text is scored against the fixed library, one queued item at a time, until the budget runs out" },
+    flowBox(0, y, 120, h, "your text", "plus the fixed library"),
+    flowArrow(120, cy, 170, cy, "ask"),
+    flowBox(170, y, 190, h, "score the whole library", "21 categories, ranked"),
+    flowArrow(360, cy, 410, cy, "route"),
+    flowBox(410, y, 160, h, "next item in line", "highest-ranked so far"),
+    flowArrow(570, cy, 620, cy, "ask"),
+    flowBox(620, y, 140, h, "score it live", ""),
+    flowLoop(685, 495, cy + h / 2, "budget left? do the next one"));
+}
+
+function decomposeFlow() {
+  FLOW_SEQ = 0;
+  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "Each plan item is checked live; simple ones stop, the rest get split further and checked again" },
+    flowBox(0, y, 150, h, "one plan item", "written by hand, fixed"),
+    flowArrow(150, cy, 186, cy, "ask"),
+    flowBox(186, y, 230, h, "simple enough to stop?", "checked live, every time"),
+    flowArrow(416, cy, 452, cy, "route", "yes"),
+    flowBox(452, y, 308, h, "done — one real requirement", ""),
+    flowLoop(386, 226, cy + h / 2, "no — split it and check the pieces"));
 }
 
 function pipelineHero() {
@@ -1118,7 +1163,7 @@ function renderDecomposeTree(data) {
   // 1: title + deck
   out.append(el("h2", { text: "Decompose and loop: can this be built at all?" }),
     el("p", { class: "muted", text: "One real engineering pitch, split into a plan, then checked — first against the platform it names, then by five decision models as a second reader. The 30-day schedule turns out not to be the binding constraint." }),
-    flowHeader(pipelineHero(), ["ask", "route"]));
+    flowHeader(decomposeFlow()));
 
   // 2: the pitch, verbatim
   out.append(el("h3", { text: "The pitch, as received" }), el("blockquote", { class: "qbox", text: pitch }),
@@ -1325,7 +1370,7 @@ function renderCascade(details) {
   const out = el("div");
   out.append(el("h2", { text: "Cascade (routing)" }),
     el("p", { class: "muted", text: "The cheap model answers every item; below the confidence threshold, the strong model re-answers instead of the cheap model's own answer being kept." }),
-    flowHeader(cascadeFlow(), ["ask", "route"]),
+    flowHeader(cascadeFlow()),
     el("p", { class: "legend", text: "Computed entirely from each model's existing stored answers on every set — no new requests. Cost is the share of items that had to escalate." }));
   const cheapSel = el("select", { "aria-label": "Cheap model" }, mids.map(m => el("option", { value: m, text: Jev.codeOf(m), selected: m === (mids.find(x => x === "verdict") || mids[mids.length - 1]) })));
   const strongSel = el("select", { "aria-label": "Strong model" }, mids.map(m => el("option", { value: m, text: Jev.codeOf(m), selected: m === (mids.find(x => x === "kev-4b") || mids[0]) })));
@@ -1386,7 +1431,7 @@ function renderBaseline(details) {
   const out = el("div");
   out.append(el("h2", { text: "Baseline (majority class)" }),
     el("p", { class: "muted", text: "The majority-class floor and each model's own stored accuracy are checked against each other — unlike chance (1/number of classes), this floor accounts for class imbalance, so it's the stronger test on skewed sets." }),
-    flowHeader(baselineFlow(), ["compute", "compare"]));
+    flowHeader(baselineFlow()));
   let above = 0, atOrBelow = 0;
   const rows = [];
   for (const { p, d } of sets) {
@@ -1467,7 +1512,7 @@ function renderFunnel(d) {
   const out = el("div");
   out.append(el("h2", { text: "Funnel (Monte Carlo)" }),
     el("p", { class: "muted", text: "Memory safety (NIST Juliet) is the one published set here with a real multi-item grouping: a genuinely vulnerable and a fixed variant of the same CWE pattern, sharing one group id." }),
-    flowHeader(funnelFlow(), ["compute", "sample", "compare"]),
+    flowHeader(funnelFlow()),
     el("p", { class: "legend", text: "No other published set here has a real multi-item grouping to build this on, so it isn't shown for the rest — a fabricated grouping would just be noise wearing a Monte Carlo costume." }));
   if (!mids.length) return out.append(empty("No memsafety runs yet", "Run demo/bench.sh or demo/bench-batch.sh for a local model on memsafety.")), out;
   const pairs = funnelPairs(d);
@@ -1543,7 +1588,7 @@ function renderWindowStudy(data) {
   const out = el("div");
   out.append(el("h2", { text: "Window size" }),
     el("p", { class: "muted", text: "How much trailing context does a manipulation verdict actually need? Peak score over the call, checked against the dialogue's real label." }),
-    flowHeader(windowFlow(), ["compute", "ask", "compare"]),
+    flowHeader(windowFlow()),
     el("div", { class: "callout", text: "This is not a compute-cost comparison — these models are stateless, prefill-only, one call per verdict, so every window definition re-reads its whole trailing text from scratch on every call; there is no persisted state to reuse between calls, so \"read only new words\" and \"re-read the window\" are the same operation here. What varies is how much context the window includes, not how it's read." }));
   if (!entries.length) return out.append(empty("No window-study runs yet", "Run probes/window_study.py --backend <name> (needs demo/server.py running).")), out;
   const ids = orderModels(entries.map((x) => x.id));
@@ -1581,7 +1626,7 @@ function renderHierarchy(data) {
   const out = el("div");
   out.append(el("h2", { text: "Hierarchy (gate)" }),
     el("p", { class: "muted", text: "Distinct from cascade (which escalates across models): this escalates across questions within one model. Built on persuasion_appeals — the one published set here with a genuine \"none\" class (20 of 140 items) alongside its 6 real technique labels." }),
-    flowHeader(hierarchyFlow(), ["ask", "route"]),
+    flowHeader(hierarchyFlow()),
     el("p", { class: "legend", text: "The gate question is cheap and asked live to every item; the detail half (the existing stored full 7-way answer) is never re-asked." }));
   if (!ids.length) return out.append(empty("No hierarchy runs yet", "Run probes/lab_hierarchy.py --backend <name> (needs demo/server.py running and stored persuasion_appeals results).")), out;
   const table = el("table", { class: "data wrap" },
@@ -1627,7 +1672,7 @@ function renderTimeStudy(data) {
   const out = el("div");
   out.append(el("h2", { text: "Time (onset and false alarms)" }),
     el("p", { class: "muted", text: "No dialogue here carries a turn-level onset label, only a whole-dialogue verdict — so this checks the running score against itself, two different ways depending on what the dialogue's real label turns out to be." }),
-    flowHeader(timeFlow(), ["ask", "compute"]),
+    flowHeader(timeFlow()),
     el("p", { class: "legend", text: "Onset lag is a share of the dialogue, and false alarms are per 10 turns, since these dialogues have no real timestamps (“per minute” would be a fabricated unit)." }));
   if (!ids.length) return out.append(empty("No time-study runs yet", "Run probes/lab_time.py --backend <name> (needs demo/server.py running).")), out;
   const table = el("table", { class: "data wrap" },
@@ -1943,7 +1988,7 @@ function renderCustom({ library: lib, examples }) {
   const out = el("div");
   out.append(el("h2", { text: "Custom decomposition" }),
     el("p", { class: "muted", text: "Paste an idea, a pitch, a requirement or a problem statement. It's scored live against a fixed generic library of 21 requirement categories and 90 requirements -- nothing about your text is written by anyone; the models only pick from a library that existed before you typed anything." }),
-    flowHeader(customFlow(), ["ask", "route"]));
+    flowHeader(customFlow()));
 
   let draft = ""; try { draft = localStorage.getItem("dl-draft") || ""; } catch {}
   const textarea = el("textarea", { id: "dlText", rows: 6, maxlength: 4000, placeholder: "Paste an idea, a pitch, a requirement or a problem statement", text: draft });
