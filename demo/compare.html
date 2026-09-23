@@ -294,10 +294,18 @@ const PH = () => el("span", { class: "placeholder", text: "–" });
 function extrasCell(r, name) {
   if (!r) return PH();
   if (!r.ok) return el("div", { class: "extras" }, el("h5", { text: "Technical detail" }), el("pre", { text: r.detail }));
-  /* latency_ms duplicates the Latency row already shown above for this exact column -- drop it
-     here rather than say the same number twice. */
-  const response = r.extras?.response ? Object.fromEntries(Object.entries(r.extras.response).filter(([k]) => k !== "latency_ms")) : null;
-  const groups = [["Reported model id", r.model ? { model: r.model } : null], ["Response fields", response], ["Response headers", r.extras?.headers], ["Extra answer fields", r.extras?.answer]]
+  /* Three things dropped after checking what they actually are, not just what they're labelled:
+     latency_ms repeats the Latency row above. "Reported model id" is either just this model's own
+     name again (semif, laya, verdict...) or the generic wire-protocol placeholder every backend
+     receives in its request ("jev-latest", echoed back by kev) -- never a real distinguishing
+     version except for the hosted model, not worth a whole row for one exception. usage.* is
+     actively misleading, not just redundant: demo/serve_inproc.py sets output_tokens to the
+     number of QUESTIONS answered (always 1 here), never a token count; input_tokens is a real
+     measured figure for semif but silently defaults to 0 for so1 and verdict, whose adapters never
+     set it at all -- so the same field means "measured" for one model and "never measured" for
+     another, with no way to tell which from the number alone. */
+  const response = r.extras?.response ? Object.fromEntries(Object.entries(r.extras.response).filter(([k]) => k !== "latency_ms" && !k.startsWith("usage."))) : null;
+  const groups = [["Response fields", response], ["Response headers", r.extras?.headers], ["Extra answer fields", r.extras?.answer]]
     .filter(([, o]) => o && Object.keys(o).length);
   return el("div", { class: "extras" }, groups.length ? groups.map(([h, o]) => [el("h5", { text: h }), el("dl", {}, Object.entries(o).map(([k, v]) => el("div", {}, el("dt", { text: k }), el("dd", { text: String(v) }))))]) : el("span", { class: "subtle small", text: "Nothing extra returned." }),
     el("button", { class: "btn ghost", type: "button", onclick: () => copyCurl(name), text: "Copy curl" }));
