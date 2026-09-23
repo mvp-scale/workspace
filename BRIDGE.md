@@ -1,161 +1,152 @@
 # BRIDGE: where we are, for the next session
 
-Updated 2026-09-24 (overnight autonomous session, user asleep throughout). Read `CLAUDE.md` too.
-This file is the narrative; `docs/scenario-lab-structures-plan.md` is the actionable, per-item
-backlog for tonight's work (now all DONE) and `docs/custom-decomposition-design.md` is the full
-design the custom-decomposition build was implemented from. `foundry/PLAN.md` is still the
-backlog for foundry's own unrelated open items (untouched this session, still open — see below).
+Updated 2026-09-23, end of a long session (started with an overnight autonomous build, continued
+into live design collaboration with the user in a real Chrome browser). Read `CLAUDE.md` too. Full
+detail for everything mentioned here is in the git log (`git log --oneline`) — this file is the
+narrative and the one open decision that needs the user's input before real work starts.
 
-## The headline: tonight's whole queue is done
+## Where things stand
 
-The user asked, before going to bed, for autonomous overnight work on: (1) the 5 missing
-Scenario-lab "structures" from `docs/scenario-lab-plan.md`'s old backlog (funnel/Monte Carlo,
-incremental state, hierarchy, time, baseline), and (2) a new "Custom decomposition" feature —
-freeform text in, decomposed live through the loaded models against a fixed generic library,
-rendered as an extremely visual, browser-native experience. **Both are done, shipped, and
-verified live** — see `docs/scenario-lab-structures-plan.md` for the per-item detail. In order,
-this session also: restarted the kev-4b lineup (it was down from the prior session), re-validated
-decompose-and-loop live with the full 5-model lineup, then built all 6 pieces.
+Everything from the overnight queue (5 Scenario-lab structures + the full custom-decomposition
+feature) shipped, is live, and is documented in the git log and in
+`docs/scenario-lab-structures-plan.md` / `docs/custom-decomposition-design.md` if you need the
+detail. After that, this session did a live design pass on all 9 structures' "How this works"
+diagrams together with the user, in a real Chrome session (not just automated screenshots):
 
-**No loose ends.** The real `demo/server.py` process was restarted once `window_study.py` and its
-`lab_time.py` follow-up both fully finished (the original follow-up watcher process died silently
-for an unclear reason — background jobs launched with `nohup ... & disown` in this container
-aren't guaranteed to survive; the original `window_study.py` job did survive the whole session, so
-this isn't universal, just something to watch for — re-launched it directly once `window_study.py`
-was confirmed done, and it completed in under a minute for `so1`/`laya`/`verdict`). All 5 loaded
-local models plus hosted `jev` now have both `data/window-study/*.json` and
-`data/probe-runs-v2/_time/*.json`. The real server was restarted cleanly, all five new endpoints
-verified with real HTTP 200s, and a full puppeteer regression pass across all 10 Scenario-lab
-pages plus a live custom-decomposition run (10/10 calls, zero errors) all passed against the real
-production port-8100 process. Everything shipped tonight is live.
+1. **v1** (icons + legend): small icon badges above each connector, a legend underneath explaining
+   them. Rejected on real feedback — icons weren't reading correctly at small size (the "route"
+   fork icon looked like a pedestrian-crossing sign), and it wasn't compact.
+2. **v2** (colour + elbow routing): dropped icons entirely — category is now carried by colour
+   alone, reusing the app's existing `--s1`..`--s8` categorical tokens, deliberately avoiding
+   `--good`/`--bad` (green/red) so a verb is never misread as a correctness signal. Branches and
+   merges route as real right-angle "elbow" connectors with rounded corners (the actual flowchart
+   standard), not raw diagonal lines. This direction came out of looking at real references
+   together: AWS reference-architecture diagrams, C4 model container diagrams, and a Hugging Face
+   blog's animated-SVG model visualizer (hfviewer) — the winning technique was "no icons, colour
+   + a plain-text verb sitting directly on the line."
+3. **v3** (compactness): every one of the 9 diagrams now shares one identical fixed canvas
+   (`FLOW_W=760, FLOW_H=104` in `demo/scenarios.html`), with an explicit, deliberate type
+   hierarchy (title 12px/700 weight, subtitle 9px, edge label 9px/700) instead of an inherited
+   default size. A real shipped bug got caught and fixed in this pass: several verb/branch labels
+   were wider than the gap between boxes and were rendering hidden behind the next box — every
+   default verb word is now a single short word (ask/figure out/decide/sample/check), and every
+   custom label was re-measured against its real available space.
 
-## What actually shipped, briefly (full detail in commit messages and the plan doc)
+**The shared toolkit** (all in `demo/scenarios.html`, search for these names): `FLOW_VERB_TOKEN`,
+`FLOW_VERB_WORD`, `FLOW_W`/`FLOW_H`, `flowBox`, `flowArrow`, `flowElbow` (branch), `flowElbowIn`
+(merge), `flowLine` (plain connector into a merge), `flowLoop` (self-loop), `flowHeader` (the
+"How this works" card wrapper). Every structure's diagram is its own small `xxxFlow()` function
+built from these. Read a couple of them (`hierarchyFlow()` for a branch, `baselineFlow()` for a
+merge, `customFlow()` for a loop) before touching any of this — the pattern is consistent and
+should stay that way.
 
-**Baseline (majority class)**: pure client-side, no new live calls — always-guess-the-most-common-
-label accuracy per set, compared against each model's stored accuracy. Stronger than the existing
-chance line on imbalanced sets.
+**A real gotcha hit twice this session, worth remembering**: `demo/scenarios.html` is a
+single-page app that only re-renders on a hash change. Navigating to the *same* `#set=x` hash
+twice in a row (or reloading without `ctrl+shift+r`) does **not** re-fetch the file or re-render —
+you'll see stale JS and think something's broken when it's actually just cache. Always hard-reload
+or navigate away and back when testing a change.
 
-**Funnel (Monte Carlo)**: honestly scoped to `memsafety` only — the one published set with a real
-multi-item grouping (NIST Juliet bad/good CWE pairs). Extends foundry's own `monte_carlo.py`
-technique with something foundry can never do: validate the forecast against real ground truth.
-Real finding: hosted `jev` came back underconfident, `semif` came back badly overconfident — a
-genuine, model-specific calibration result the compound view surfaces.
+**Also renamed this session**: "Funnel (Monte Carlo)" → **"Funnel (calibration forecast)"**. Real
+catch by the user: what that structure does (sample two stored probabilities, forecast a compound
+outcome, check calibration against what really happened) is genuine Monte Carlo *sampling* as a
+technique, but it isn't the thing "Monte Carlo simulation" means in project planning (PMI/PMBOK),
+which is the next task below. Same collision as foundry's own qualitative/quantitative distinction
+from two sessions ago — a technique name getting reused for a different technique.
 
-**Window size** (the honest reframe of "incremental state"): confirmed live that these models are
-stateless prefill-only with no KV-cache reuse between calls, so the literal "read only new words
-vs. re-read the window" comparison the old plan doc asked for isn't real — reframed around what
-`probes/window_study.py` actually measures (AUC by trailing-window definition).
+## The next task: build "Monte Carlo (schedule risk)" as its own new structure
 
-**Hierarchy (gate)**: new `probes/lab_hierarchy.py`, a live binary gate question on
-`persuasion_appeals` (the one set with a real "none" class), reusing the existing stored flat
-7-way answer as detail only if the gate fires. **Real, honest finding, reported plainly**:
-hierarchical accuracy was *lower* than flat for every model tested (deltas -35.0% to +0.0%,
-never positive) — splitting the question added a second, often weaker place to be wrong rather
-than helping.
+This is real, well-defined, and buildable on real data already in this repo — not a foundry-style
+fabrication risk, if scoped correctly (see the ground rule below).
 
-**Time (onset and false alarms)**: new `probes/lab_time.py`. No dialogue has a real turn-level
-onset label, so this measures something self-referential instead that needs no such label: how
-much of a manipulative dialogue plays out before a model's own running score commits to an alarm,
-and how often a non-manipulative dialogue's running score false-alarms, per 10 turns (never "per
-minute" — no real timestamps exist in this data).
+**The real technique** (PMI/PMBOK: Monte Carlo Schedule Risk Analysis, aka QSRA): sample each
+task's duration from a probability distribution (classically **triangular**: optimistic / most
+likely / pessimistic) many thousands of times, run a real critical-path (CPM) pass on every
+sampled set, and report two things instead of one deterministic schedule:
+1. A **probabilistic completion distribution** ("80% chance of finishing within N days") instead
+   of a single number.
+2. A **criticality index** per task — the share of simulation runs where that task landed on the
+   critical path. High-criticality-index tasks are the real, principled answer to the user's own
+   "release train" framing: front-load whatever most consistently drives the schedule, because
+   that's where delay cascades downstream most often. This is a standard, named technique, not
+   something being invented for this repo.
 
-**Custom decomposition**: the big one. `probes/lab_custom_decompose.py` is a from-scratch reimplementation
-of foundry's Slicer+Grinder walk mechanics (shape-guaranteed category selection, one shared
-priority queue, a real enforced budget) — read directly from `foundry/tools/world-knowledge.yaml`
-and `slicer.yaml`, **not** importing `foundry/layered_walk.py` (which mutates a module-global model
-list and writes its own ledger; a hybrid leaf battery from `lab_decompose.py` (gate/phase/risk/
-complexity/dependency, dropping `atomic` — measured at noise level in foundry's own diagnostic —
-and `parallel` — no real sibling group exists for freeform text). Since there's no ground truth,
-it computes lift-over-a-control, cross-model spread, a flat-scoring-model flag, and a scope
-warning instead of grading. **Live acceptance check passed exactly**: run on the same intake as
-`layered_walk.py --idea oncall-rotation --budget 60`, the new engine visited the identical 58 node
-ids in the identical order — byte-for-byte parity. Shipped with a full live-streaming UI: an
-animated radial "orbit map" of all 111 library items lighting up as calls resolve (the actual
-"extremely visual" ask), an accessible Outline view, a detail panel, a read-out card, spend-more/
-download controls. Verified interactively end-to-end with a real headless Chrome (see below).
+**Where the real data already exists**: `probes/decompose/build_tree_edge.py` — the *only* place
+in this repo with real, hand-authored per-task duration estimates (`duration_days`) **and** a real
+dependency graph (`fs`/`ss`/`informs` predecessor edges) **and** an existing deterministic CPM
+pass (its own `cpm()` function, already computing earliest/latest start/finish, float, and a crude
+3-point sensitivity at ×1/×1.5/×2). This is the Cloudflare Edge Workers worked example, 31 nodes,
+already live on the "Decompose and loop" Scenario-lab page.
 
-## New capability this session: real browser verification is now set up
+**Ground rule — do not skip this**: foundry's ideas (`oncall-rotation` etc.) have **no** real
+duration or dependency data at all. Do not fabricate any to make this technique "work" there too.
+This technique can only be honestly built against `build_tree_edge.py`'s one real worked example,
+exactly the same discipline that scoped Funnel to memsafety-only and Hierarchy to
+persuasion_appeals-only this session — one real dataset, stated plainly, not generalized past what
+the data supports.
 
-Puppeteer + a real headless Chrome got installed in this container specifically because CLAUDE.md
-requires testing frontend changes in an actual browser, not just reviewing code — `unzip` was
-missing (installed via apt), then `npx puppeteer browsers install chrome` worked. Location:
-`/tmp/pptr-test/node_modules`, Chrome cached at `/root/.cache/puppeteer`. **Use this for any future
-Scenario-lab UI work** — screenshot before/after, a `pageerror`/console-error listener, and a full
-regression pass across the other Structures pages after every change. This was used for every
-piece of UI shipped tonight, including one genuinely interactive test (typing real text, clicking
-Run, watching a live decomposition stream and animate, clicking a node, switching views, checking
-dark mode).
+**A real gap to resolve before writing simulation code — ask the user, don't guess**:
+`duration_days` today is a single point estimate per task, not the three-point
+(optimistic/likely/pessimistic) range real triangular sampling needs. Two honest options:
+(a) hand-author real three-point estimates for the 24 leaf tasks (more work, the most honest);
+(b) derive optimistic/pessimistic bounds from the existing point estimate via a stated, cited rule
+(e.g. a documented PM heuristic percentage), clearly labelled as a rule, not an independent
+estimate — the same honesty pattern foundry's `monte_carlo.py` already used for its COCOMO
+illustrative-scale citation. **Ask which one the user wants before building.**
 
-**The pattern for testing server.py changes without touching the real running process**: since the
-real `demo/server.py` (port 8100) must never be restarted while an experiment is running through
-it (this session had `window_study.py`/`lab_time.py` doing exactly that for hours), every server.py
-change tonight was verified by launching a *second*, temporary instance on another port
-(`DEMO_PORT=810X python3 demo/server.py &`, `disown`), testing against it, then killing *only* that
-PID (confirmed via `ps`/`curl` each time that the real instance was untouched). Use this pattern
-again rather than ever restarting the real one speculatively.
+**One real open question, never pinned down — ask this first, before anything else**: does this
+live as a **10th Scenario-lab structure** in `demo/scenarios.html`'s `STRUCTURES` array (reusing
+the exact "How this works" diagram template just built — `flowBox`/`flowArrow`/`flowElbow`/
+`FLOW_VERB_TOKEN`, etc. — for consistency with the other 9), or as a **separate page/section under
+`probes/decompose`**, outside Scenario Lab entirely? Claude's own recommendation last session was
+the latter (Scenario Lab's other 9 structures are all about benchmarking *model accuracy* on
+published datasets; this is project planning, a different kind of tool, driven by hand-authored
+data not model output) — the user said "I'm okay with that," but then used phrasing ("that
+structure") that could mean they actually want it as a 10th Scenario Lab entry after all. This was
+never explicitly confirmed either way. **Ask directly, first thing, in the new session.**
 
-## Infrastructure state
+## Starter prompt for the next session (paste this)
 
-- **kev-4b**: restarted successfully this session (was down from the prior session), full 5-model
-  lineup (`kev-4b`, `semif`, `so1`, `laya`, `verdict`) confirmed active, 28196/32607 MiB.
-- **`probes/window_study.py`**: ran for `semif`/`so1`/`laya`/`verdict` (only `kev-4b` and hosted
-  `jev` had data before tonight) as a detached background job, `logs/window-study/run.log`.
-  `verdict` (CPU-bound) is the slow one. A queued follow-up
-  (`logs/window-study/lab_time_followup.log`) runs `probes/lab_time.py` for `so1`/`laya`/`verdict`
-  once `window_study.py` fully finishes, so the two never compete for the same model's GPU time.
-  Check both logs — if either is still running, let it finish before restarting the real server.
-- **`demo/server.py`** (port 8100): restarted 2026-09-23 ~02:46, running tonight's code, all new
-  endpoints verified live.
+```
+Read /workspace/BRIDGE.md in full. Then read probes/decompose/build_tree_edge.py in full (the
+real CPM/dependency/duration data this task builds on -- its cpm() function is what you're
+extending from one deterministic run into many sampled runs). Skim demo/scenarios.html's
+FLOW_VERB_TOKEN/flowBox/flowArrow/flowElbow/flowHeader helpers and one or two of the existing
+XxxFlow() functions (hierarchyFlow for a branch, baselineFlow for a merge) so you understand the
+"How this works" diagram template already shipped this session, in case the new structure needs
+to match it.
 
-## Gotchas learned the hard way, this session
+First, before writing any code: ask the user directly whether "Monte Carlo (schedule risk)"
+should be a 10th Scenario-lab structure in demo/scenarios.html, or a separate page/section under
+probes/decompose outside Scenario Lab. This was left open at the end of the last session --
+BRIDGE.md has the context, but don't guess at the answer.
 
-- **A background job launched with `nohup ... & disown` is invisible to the harness's own
-  notification system** — it's a detached OS process, not a tracked background task, so nothing
-  auto-notifies on completion. Poll it explicitly (log tail, `ps`) on a real timer instead of
-  assuming a task-notification will arrive.
-- **Never assume a live-testable claim without actually testing it live.** The custom-decomposition
-  design doc was extremely thorough on paper; the actual value came from running the CLI parity
-  check for real (it could easily have silently diverged from `layered_walk.py` in some subtle way)
-  and from an actual interactive puppeteer run, not from the design reading well.
-- **A tuple-unpacking bug in freshly written code is exactly the kind of thing unit tests with a
-  fake dependency catch before a single real model call is wasted on it** — `test_lab_custom_decompose.py`
-  caught a `call_all_models` return-arity mismatch on the very first run, entirely offline.
-- **Reframing a plan-doc item honestly, once the data says the literal framing doesn't hold, beats
-  forcing the original framing.** Both "incremental state" (stateless models, no real KV-cache
-  comparison possible) and the hierarchical-gate result (real, negative finding) were reported as
-  what was actually true, not adjusted to match what the backlog assumed going in.
-- **Real infrastructure conflicts (two live jobs wanting the same long-running server process) are
-  worth designing around rather than serializing on blindly** — the temp-instance-on-another-port
-  pattern let UI/server work continue in parallel with the hours-long window_study job instead of
-  blocking on it.
+Second, also before writing simulation code: ask the user which of BRIDGE.md's two options they
+want for the optimistic/pessimistic duration gap (hand-author real three-point estimates for the
+24 leaf tasks, vs. a stated/cited rule deriving a range from the existing single point estimate).
 
-## What's still open (unrelated to tonight's queue, from prior sessions, still true)
+Then build the real technique: triangular-sample each task's duration many times, run
+build_tree_edge.py's cpm() on each sampled set, report a probabilistic completion distribution and
+a per-task criticality index (share of runs on the critical path) -- the real, principled basis
+for a "release train" recommendation (front-load the highest-criticality-index tasks).
 
-`foundry/PLAN.md`'s own backlog is untouched tonight: the `ATOMIC_THRESHOLD` drop/re-threshold
-decision (kev-4b's data is now available again after tonight's restart — this is now unblocked,
-next session could pick it up), the ~15-18 `world-knowledge.yaml` content edits identified but not
-applied, `sort_and_rank.py`'s hosted-model-skip bug, and a real second review of the 21-category
-library. The "learn from our foundry and update the demo" open question from the prior BRIDGE.md
-is, in effect, resolved by tonight's custom-decomposition build — not by picking either of the two
-directions that file laid out, but by a third path: a fresh, from-scratch reimplementation of
-foundry's walk *mechanics* inside the demo, deliberately not importing foundry's own code or
-touching `probes/decompose/`'s separate CPM/reference-plan system at all. Whether to *also* pursue
-either original direction (porting CPM/dependency machinery into foundry, or foundry's generic-
-library discipline into `probes/decompose/`) is still open, now a fresh question rather than a
-continuation.
+Ground rule, held all of last session, do not break it: only build this against
+build_tree_edge.py's one real worked example (Cloudflare Edge Workers, 31 nodes) -- never
+fabricate duration or dependency data for any foundry idea to make this "work" there too.
 
-**Stretch goals explicitly out of v1 scope** (from `docs/custom-decomposition-design.md` §5, in
-priority order if picked up later): a Board view (phase columns), a model-subset toggle, a Numbers
-view (sortable/exportable table), a compare-two-texts overlay, saved-run replay, leaf-level lift
-(21 more cached control calls), and an optional paid hosted-model escalation for "models split"
-leaves.
+Verify everything live in a real browser before calling it done -- puppeteer is already installed
+in this container (/tmp/pptr-test), or use the claude-in-chrome browser tools if available. Test
+against a temporary demo/server.py instance on a spare port, never the real running one (port
+8100), until the change is a pure static-file edit or you've confirmed the real process is safe to
+touch. Remember the SPA gotcha: a same-hash navigate does not re-render -- hard-reload
+(ctrl+shift+r) or navigate away and back between checks on the same page.
+```
 
-## Scenario lab
+## Everything else still open, unrelated to the above (unchanged from before, still true)
 
-`docs/scenario-lab-plan.md`'s original backlog (items 1-18) is now mostly superseded by
-`docs/scenario-lab-structures-plan.md` for the structures specifically (items 6-13). Its other
-items — overview orientation (item 1), family header labels (item 2), colour normalization (item
-3), new probe sets beyond the existing 15 (item 4: PII, support escalation, toxicity, prosocial
-safety, negotiation all still unbuilt), blind grading (item 14, still planning-stage only), and the
-lineup/benchmark items (15-18: jevbench is still 8+ commits behind upstream v1.3.0, which changes
-scoring) — remain genuinely open, not touched tonight.
+`foundry/PLAN.md`'s own backlog: the `ATOMIC_THRESHOLD` drop/re-threshold decision (kev-4b's data
+is available now, this is unblocked), the ~15-18 `world-knowledge.yaml` content edits identified
+but not applied, `sort_and_rank.py`'s hosted-model-skip bug. `docs/scenario-lab-plan.md`'s original
+backlog items 1-4, 14-18 (new probe sets, blind grading, jevbench version sync) remain untouched.
+The custom-decomposition stretch goals (Board view, model-subset toggle, Numbers view,
+compare-two-texts, ledger replay, leaf-level lift, hosted-model escalation) are still just that —
+stretch goals, not started.
