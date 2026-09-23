@@ -239,7 +239,7 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
-const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"]];
+const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"]];
 const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
@@ -262,7 +262,7 @@ const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1],
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z" };
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -417,6 +417,13 @@ mount(document.getElementById("root"), async () => {
         if (PROBES.length && res.every(r => r.status === "rejected")) throw res[0].reason;
         return res.map(r => r.status === "fulfilled" ? r.value : null);
       }, (details) => renderCascade(details));
+    }
+    else if (ST.set === "baseline") {
+      mount(box, async () => {
+        const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
+        if (PROBES.length && res.every(r => r.status === "rejected")) throw res[0].reason;
+        return res.map(r => r.status === "fulfilled" ? r.value : null);
+      }, (details) => renderBaseline(details));
     }
     else if (ST.set === "all") {
       mount(box, async () => {
@@ -1166,6 +1173,61 @@ function renderCascade(details) {
       el("span", { class: "slider", style: "min-width:220px" }, el("span", { class: "small muted", text: "Threshold" }), slider, out2)),
     el("div", { style: "overflow-x:auto" }, table)));
   redraw();
+  return out;
+}
+
+/* ---------- structure: baseline (majority class) ---------- */
+function majorityBaseline(p) {
+  const counts = Object.values(p.classes || {});
+  const n = counts.reduce((a, b) => a + b, 0);
+  const top = counts.length ? Math.max(...counts) : 0;
+  return n ? top / n : null;
+}
+function renderBaseline(details) {
+  const sets = PROBES.map((p, i) => ({ p, d: details[i] })).filter(x => x.d);
+  if (!sets.length) return empty("No stored runs yet", "Run demo/bench.sh or demo/bench-batch.sh for a local model.");
+  const mids = orderModels(sets.flatMap(x => modelsIn(x.d)));
+  const out = el("div");
+  out.append(el("h2", { text: "Baseline (majority class)" }),
+    el("p", { class: "muted", text: "The floor a model has to clear to show it knows anything: always guess each set's single most common label. Computed entirely from the stored label counts and each model's existing stored answers — no new requests. Unlike chance (1/number of classes), this floor accounts for class imbalance, so it's the stronger test on skewed sets." }));
+  let above = 0, atOrBelow = 0;
+  const rows = [];
+  for (const { p, d } of sets) {
+    const base = majorityBaseline(p);
+    if (base == null) continue;
+    const majLabel = Object.entries(p.classes || {}).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const perModel = {};
+    for (const m of mids) {
+      const s = statFor(d, m);
+      if (!s) continue;
+      const beats = s.lo > base;
+      perModel[m] = { ...s, beats };
+      if (beats) above++; else atOrBelow++;
+    }
+    rows.push({ p, base, majLabel, perModel });
+  }
+  const table = el("table", { class: "data" },
+    el("caption", { class: "legend", text: "\"Beats baseline\" needs the model's 95% interval to sit fully above the majority-class floor, not just its point estimate." }),
+    el("thead", {}, el("tr", {}, el("th", { text: "Set" }), el("th", { text: "n" }), el("th", { text: "Majority class" }), el("th", { text: "Baseline acc." }),
+      mids.map(m => el("th", { text: Jev.codeOf(m) })))));
+  const tbody = el("tbody");
+  for (const { p, base, majLabel, perModel } of rows) {
+    tbody.append(el("tr", {},
+      el("td", {}, meta(p.id).name),
+      el("td", { class: "muted", text: String(p.n) }),
+      el("td", { class: "muted small", text: `${majLabel} (${pc(base, 0)})` }),
+      el("td", { style: `background:${stepBg(0)}`, text: pc(base) }),
+      mids.map(m => {
+        const s = perModel[m];
+        if (!s) return el("td", { class: "muted", text: "–" });
+        const title = `${modelName(m)}: ${pc(s.acc, 1)} (${s.k}/${s.n}), 95% interval ${pc(s.lo, 1)} to ${pc(s.hi, 1)}, baseline ${pc(base, 1)} — ${s.beats ? "clearly beats" : "does not clearly beat"} the majority-class floor.`;
+        return el("td", { class: "cell" + (s.beats ? "" : " below"), style: `background:${stepBg(stepOf(s.acc, base))}`, title, text: pc(s.acc) });
+      })));
+  }
+  table.append(tbody);
+  out.append(el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, table),
+    el("div", { class: "scale", style: "margin-top:10px" }, el("span", { text: "At or below baseline" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Well above baseline" }), el("span", { class: "mid", text: "Centre = ties the floor" })),
+    el("p", { class: "legend", style: "margin-top:6px", text: `Of ${above + atOrBelow} model-by-set cells, ${above} clearly beat the majority-class floor (95% interval fully above it); ${atOrBelow} do not.` })));
   return out;
 }
 
