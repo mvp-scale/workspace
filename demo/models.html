@@ -24,11 +24,15 @@
   .step p { color: var(--text-2); margin-top: 4px; } .step .dg { margin-top: 8px; }
   .sauce { display: grid; gap: 14px 20px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
   .sauce + .sauce { margin-top: 10px; } .sauce h3 { font-size: 15px; } .sauce .lead { color: var(--text-2); margin-top: 4px; }
+  .sauce .term { color: var(--text-3); font-size: 12px; font-style: italic; margin-top: 2px; }
+  .sauce .guess { margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13px; color: var(--text-2); }
+  .sauce .guess b { color: var(--text); }
   .facts-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; } .facts-list li { color: var(--text-2); } .facts-list b { color: var(--text); font-weight: 600; }
   .used { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--text-2); }
   .diagrams { display: grid; gap: 8px; }
   .cards { display: grid; align-items: start; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); }
   .model[hidden], .jump a[hidden] { display: none; }
+  .model .warn { color: var(--warn); }
   .model { display: flex; flex-direction: column; gap: 8px; }
   .model h3 { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; font-size: 14.5px; } .model h3 .vendor { font-size: 12px; font-weight: 500; color: var(--text-3); }
   .model .tags { display: flex; flex-wrap: wrap; gap: 4px; } .model .sauce-line { color: var(--text); }
@@ -77,6 +81,14 @@
   <section class="section" aria-labelledby="sauce-h">
     <header><div><h2 id="sauce-h">The secret sauce: four ways to read out an answer</h2><p class="small">The models differ mainly in what reads the text and how the vectors become option scores (step 4).</p></div></header>
     <div id="sauces"></div>
+  </section>
+
+  <section class="section" aria-labelledby="knowledge-h">
+    <header><div><h2 id="knowledge-h">Reading out an answer is not the same as knowing it</h2></div></header>
+    <div class="card">
+      <p>The four techniques above answer one question: how a model's internal reading becomes a probability per option. A separate question is whether the base model knows enough about the subject to read the situation correctly in the first place.</p>
+      <p class="muted" style="margin-top:8px">That knowledge comes from pretraining, and it grows with model size and how broad the training data was. A 151M-parameter classifier can have a clean, well-calibrated read-out and still be wrong about something like neuroscience, simply because it never saw enough of that domain during training — no read-out technique fixes that. A multi-billion-parameter frozen LLM, even read out through the crude letter-logit method above, starts with far more world knowledge than a 151M-to-421M-parameter encoder. A good benchmark score says the read-out works; it says little about topics the base model never learned.</p>
+    </div>
   </section>
 
   <section class="section" aria-labelledby="res-h">
@@ -214,7 +226,7 @@ const rtext = (str) => String(str).replace(/\{([\w.-]+)\}/g, (_, id) => `${Jev.c
 const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
 const liveText = (id) => { const s = (Jev.status() || {})[id]; if (!s) return "Status unknown"; return s.up ? (s.hosted ? "Loaded now, hosted" : `Loaded now, ${s.gpu_mb ? gib(s.gpu_mb) : "CPU"}`) : "Not loaded"; };
 const liveChip = (id) => { const c = el("span", { class: "badge", "data-live": id }); const f = () => { const up = Jev.isUp(id); c.className = "badge" + (up ? " good" : ""); c.textContent = liveText(id); }; f(); Jev.onStatus(f); return c; };
-const identLine = (id) => { const p = el("p", { class: "small muted", "data-ident": id }); const f = () => { const s = (Jev.status() || {})[id]; p.hidden = !(s && s.up && s.identity); p.textContent = s && s.identity ? `Running as: ${s.identity}` : ""; }; f(); Jev.onStatus(f); return p; };
+const identLine = (id) => { const p = el("p", { class: "small warn", "data-ident": id }); const f = () => { const s = (Jev.status() || {})[id]; const bad = s && s.up && s.identity && s.identity_ok === false; p.hidden = !bad; p.textContent = bad ? `Flagged: running as ${s.identity}, which does not match its label.` : ""; }; f(); Jev.onStatus(f); return p; };
 
 /* ---------- Content ---------- */
 const short = (b) => (b || "").split(/ \+ | \(/)[0];
@@ -239,17 +251,22 @@ const STEPS = [
 ];
 const SAUCES = [
   { fam: "logits", title: "1 · Read the model's own answer-letter scores", diagrams: [dLogits],
-    lead: "Give each option a letter and ask a large language model to answer. Instead of letting it write, look at the scores it assigns to the letters A, B and C as its next word, ignore every other word, and turn those three into probabilities.",
-    points: [["No training.", "The base model is frozen, so any capable LLM can become a decision model."], ["One pass.", "All options are scored together from a single forward pass; nothing is generated."], ["The catch.", "It is limited to what the frozen model already knows and is sensitive to option order: JevBench measured 21% versus 72% on answer-judging items for {so1} when the order was reversed."]] },
+    term: "Industry term: multiple-choice prompting with answer-letter scoring (zero-shot)",
+    lead: "This is the standard way language-model benchmarks score multiple-choice questions. The situation, question and options go into one prompt, with each option labelled A, B, C. The model reads it in a single pass; at the point where its next word would be the answer, we read the scores it gives the tokens “A”, “B” and “C” and ignore the rest of its vocabulary. A softmax over just those few scores becomes the probabilities. The label words standing in for each class are called a verbalizer in the prompt-learning literature.",
+    points: [["No training.", "The base model is frozen, so any capable LLM can become a decision model."], ["One pass.", "All options are scored together from a single forward pass; nothing is generated."], ["A forced choice.", "Every other word in the vocabulary is discarded, so the model always lands on one of the given options, even when it would rather have said something else."], ["The catch.", "The model was never trained to answer as a letter, so letter scores pick up habits that have nothing to do with the question, such as favouring certain letters or positions. JevBench measured 21% versus 72% on answer-judging items for {so1} when the option order was reversed."]] },
   { fam: "pointer", title: "2 · Teach the model to point at the answer", diagrams: [dPointer, dMask],
-    lead: "Mark where each option starts with a boundary token. A small learned head reads the model's vectors at those tokens and scores each option, so the answer is a pointer into the input, not a word to generate. The LLM is lightly tuned with LoRA (small trainable adapter layers) and the head is trained with log loss on labelled decisions.",
-    points: [["Shared reading.", "On attention-only backbones a block-causal mask lets several questions share one copy of the state in one pass while stopping them seeing each other."], ["Hybrid backbones.", "{kev-4b} and {kev-0.8b} use Qwen3.5 hybrid (Gated DeltaNet) layers, which can't use that packed mask, so each question is read as its own row."], ["The catch.", "It needs labelled training data and a training run; the result depends on that recipe."]] },
+    term: "No single industry name — a pointer network head (Vinyals et al., 2015) on a LoRA-tuned LLM",
+    lead: "Mark where each option starts with a boundary token. A small learned head reads the model's hidden vectors at those tokens and scores each option, so the answer is a pointer into the input rather than a word to generate — the same idea behind pointer networks. The LLM itself is lightly tuned with LoRA, which freezes the original weights and trains a small set of low-rank adapter matrices beside them, changing only a few percent of the parameters. The head and adapters are trained with log loss on labelled decisions, so unlike the letter-score approach, the model is taught directly that its job is to put probability on the right option.",
+    points: [["Trained for the job.", "The head learns to output decision probabilities directly, rather than relying on the base model's habits with letter tokens."], ["Order stops being a signal.", "Each option is scored from its own position and content, not a letter that can carry a bias."], ["Shared reading.", "On attention-only backbones a block-causal mask lets several questions share one copy of the state in a single pass while keeping them from seeing each other; {kev-4b} and {kev-0.8b} use hybrid (Gated DeltaNet) layers that can't use that mask, so each question is read on its own."], ["The catch.", "It needs labelled training data and a training run, so results depend on that recipe; a mistake in the labels is learned as faithfully as a correct one. LoRA also changes only a thin slice of the model, so it sharpens how the model answers without adding much new knowledge."]] },
   { fam: "encoder", title: "3 · Read everything at once, in both directions", diagrams: [dEncoder],
-    lead: "An encoder isn't built to write text. Every token can attend to every other, so the state, the question and the options are read together. A head turns the vectors at option markers into one score per option.",
-    points: [["Small and cheap.", "These models are 151M to about 400M parameters here, against billions for the LLM-based approaches."], ["Same idea, different heads.", "{jeff} applies a sigmoid per option, scaled by a temperature of 3.2. {laya} takes a softmax over its markers. {verdict} adds an abstention slot that the benchmark drops."], ["The catch.", "Less world knowledge than a multi-billion-parameter LLM, and {laya} truncates each question to 512 tokens."]] },
+    term: "Industry term: cross-encoder classification — a fine-tuned bidirectional encoder, in the BERT family",
+    lead: "An encoder isn't built to write text: every token attends to every other, so the state, question and options are all read together in one pass — the same joint-reading design search engines use to rerank results, known as a cross-encoder. A head turns the vectors at the option markers into one score per option. How those scores become probabilities differs by model: a softmax makes the options compete for one shared total, while a sigmoid scores each option on its own as a yes-or-no. The encoder and head are trained on labelled examples, the standard recipe for fine-tuning a BERT-style model for classification.",
+    points: [["Small and cheap.", "These models are 151M to about 400M parameters here, against billions for the LLM-based approaches."], ["Both directions.", "A decoder reads left to right, so early words never see later ones; here the first word of the state can already take the last option into account."], ["Same idea, different heads.", "{jeff} applies a sigmoid per option, scaled by a temperature of 3.2 (temperature scaling, a standard calibration step). {laya} takes a softmax over its markers. {verdict} adds an abstention slot — a “none of these” option, sometimes called selective classification — that the benchmark drops."], ["The catch.", "Far less world knowledge than a multi-billion-parameter LLM, so the encoder can read the question perfectly and still not know the answer. Inputs are bounded too: {laya} truncates each question to 512 tokens, so a long state loses whatever falls past the cut."]] },
   { fam: "hosted", title: "4 · Hosted: a black box with a known interface", diagrams: [],
-    lead: "TypeSafe's {jev} is reached over an HTTPS API and its internals aren't published. We can describe only what it takes and returns: the state and typed questions go in, and a probability for every option comes out. It is priced per input token ($0.042 per million, output free, about 950 input tokens per decision in JevBench).",
-    points: [] },
+    term: "Not a read-out technique — a delivery model (a closed API)",
+    lead: "TypeSafe's {jev} is reached over an HTTPS API and its internals aren't published. We can describe only what it takes and returns: the state and typed questions go in, and a probability for every option comes out. It is priced per input token ($0.042 per million, output free, about 950 input tokens per decision in JevBench). We don't know which, if any, of the three techniques above it uses, or what base model sits underneath — the weights aren't available, so it can't be inspected or run locally.",
+    points: [["Known interface.", "It speaks the same typed request format as the local models, so it can be benchmarked side by side on identical items."], ["Unknown mechanism.", "Architecture, size and training data are not publicly documented."], ["The catch.", "You can measure it but not audit it: behaviour can change on the provider's side without notice, every decision costs money, and nothing here can say why it got an item right or wrong."]],
+    guess: "{jev} could be something like {laya}: an encoder that reads the state, question and options together and scores option markers, since the API returns a plain probability per option rather than text. But the per-input-token pricing doesn't tell us much on its own — the letter-score and pointer approaches above also generate no output tokens, so a decoder LLM read out through its logits would look identical from the outside. TypeSafe hasn't said what {jev} is; this is one plausible category of explanation, not a claim about how it actually works." },
 ];
 
 /* ---------- Data-driven pieces ---------- */
@@ -261,8 +278,10 @@ const usedBy = (rows, fam) => { const rs = famRows(rows, fam); if (!rs.length) r
 
 function sauces(d) {
   return el("div", {}, SAUCES.map(s => el("article", { class: "card sauce" },
-    el("div", {}, el("h3", { text: s.title }), el("p", { class: "lead" }, rich(s.lead)),
-      s.points.length ? el("ul", { class: "facts-list" }, s.points.map(([b, t]) => el("li", {}, el("b", { text: b + " " }), rich(t)))) : null, usedBy(d.rows, s.fam)),
+    el("div", {}, el("h3", { text: s.title }), s.term ? el("p", { class: "term" }, s.term) : null, el("p", { class: "lead" }, rich(s.lead)),
+      s.points.length ? el("ul", { class: "facts-list" }, s.points.map(([b, t]) => el("li", {}, el("b", { text: b + " " }), rich(t)))) : null,
+      s.guess ? el("p", { class: "guess" }, el("b", { text: "Our guess, unconfirmed. " }), rich(s.guess)) : null,
+      usedBy(d.rows, s.fam)),
     s.diagrams.length ? el("div", { class: "diagrams" }, s.diagrams.map(f => f())) : null)));
 }
 function famTable(d) {
