@@ -109,8 +109,8 @@
   /* Decompose-and-loop pipeline + loop results */
   .pipeline { display: block; width: 100%; height: auto; }
   .pipeline .stage rect { fill: var(--surface-2); stroke: var(--border); }
-  .pipeline .stage text.t { font-weight: 600; fill: var(--text); }
-  .pipeline .stage text.n { fill: var(--text-3); font-size: 10.5px; }
+  .pipeline .stage text.t { font-weight: 700; fill: var(--text); font-size: 12px; }
+  .pipeline .stage text.n { fill: var(--text-3); font-size: 9px; }
   .pipeline .arrow { stroke: var(--text-3); stroke-width: 1.6; fill: none; }
   .pipeline .loopback { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-dasharray: 4 3; }
   .pipeline .lbl { fill: var(--text-3); font-size: 10.5px; }
@@ -118,7 +118,7 @@
   .pipeline .flow-edge { opacity: 0; animation: flowIn .4s ease-out forwards; animation-delay: calc(var(--i, 0) * 110ms + 70ms); }
   .pipeline .flow-edge .flow-line, .pipeline .flow-edge .flow-head { stroke: var(--ec); stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
   .pipeline .flow-edge .flow-port { fill: var(--ec); }
-  .pipeline .flow-edge .flow-lbl { fill: var(--ec); font-size: 10.5px; font-weight: 650; }
+  .pipeline .flow-edge .flow-lbl { fill: var(--ec); font-size: 9px; font-weight: 700; }
   @keyframes flowIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
   @media (prefers-reduced-motion: reduce) { .pipeline .stage, .pipeline .flow-edge { animation: none; opacity: 1; } }
   .pipeline.wide { max-width: none; }
@@ -666,12 +666,12 @@ function ganttBoard(data, onPick) {
    branches on a condition, sample = Monte Carlo draw, compare = checked against a reference. */
 const FLOW_VERB_TOKEN = { ask: "--s1", compute: "--s4", route: "--s7", sample: "--s5", compare: "--s2" };
 const FLOW_VERB_WORD = { ask: "ask", compute: "figure out", route: "decide", sample: "sample", compare: "check" };
-const FLOW_W = 760, FLOW_H = 128; // one fixed canvas every diagram must fit inside, no exceptions -- no bespoke sizes
+const FLOW_W = 760, FLOW_H = 104; // one fixed canvas every diagram must fit inside, no exceptions -- no bespoke sizes
 let FLOW_SEQ = 0;
 const flowBox = (x, y, w, h, title, sub, i = FLOW_SEQ++) => S("g", { class: "stage", style: `--i:${i}` },
-  S("rect", { x, y, width: w, height: h, rx: 7 }),
-  S("text", { class: "t", x: x + w / 2, y: y + h / 2 - (sub ? 6 : -4), "text-anchor": "middle" }, title),
-  sub ? S("text", { class: "n", x: x + w / 2, y: y + h / 2 + 12, "text-anchor": "middle" }, sub) : null);
+  S("rect", { x, y, width: w, height: h, rx: 6 }),
+  S("text", { class: "t", x: x + w / 2, y: y + h / 2 - (sub ? 4 : -3), "text-anchor": "middle" }, title),
+  sub ? S("text", { class: "n", x: x + w / 2, y: y + h / 2 + 9, "text-anchor": "middle" }, sub) : null);
 function flowHead(x2, y2, ux, uy) {
   return S("path", { d: `M${x2 - uy * 4 - ux * 11} ${y2 + ux * 4 - uy * 11} L${x2} ${y2} L${x2 + uy * 4 - ux * 11} ${y2 - ux * 4 - uy * 11}`, class: "flow-head" });
 }
@@ -717,7 +717,7 @@ function flowElbowIn(x1, y1, trunkX, x2, y2, verb, i = FLOW_SEQ++) {
    until done" mechanisms. Always coloured as a route/decide step, since looping is itself the
    outcome of a decision. */
 function flowLoop(xRight, xLeft, yBottom, label, i = FLOW_SEQ++) {
-  const token = `var(${FLOW_VERB_TOKEN.route})`, dropY = yBottom + 22;
+  const token = `var(${FLOW_VERB_TOKEN.route})`, dropY = yBottom + 17;
   const d = `M${xRight} ${yBottom} C ${xRight} ${dropY}, ${xLeft} ${dropY}, ${xLeft} ${yBottom}`;
   return S("g", { class: "flow-edge", style: `--i:${i}; --ec:${token}` },
     S("path", { d, class: "flow-line" }), flowHead(xLeft, yBottom, 0, -1),
@@ -729,7 +729,7 @@ function flowHeader(diagram) {
 }
 function batchFlow() {
   FLOW_SEQ = 0;
-  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  const h = 28, cy = FLOW_H / 2, y = cy - h / 2;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "One item, extra filler questions added to the same call, graded only on the first answer" },
     flowBox(0, y, 130, h, "one item", ""),
     flowArrow(130, cy, 180, cy, "compute"),
@@ -742,7 +742,7 @@ function batchFlow() {
 
 function cascadeFlow() {
   FLOW_SEQ = 0;
-  const h = 34, cy = FLOW_H / 2, topY = 28, botY = 100, trunkX = 340;
+  const h = 28, cy = FLOW_H / 2, topY = 22, botY = 82, trunkX = 340;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "A cheap model answers first; only a low-confidence answer gets a second opinion from the strong model" },
     flowBox(0, cy - h / 2, 88, h, "item", ""),
     flowArrow(88, cy, 128, cy, "ask"),
@@ -755,7 +755,7 @@ function cascadeFlow() {
 
 function baselineFlow() {
   FLOW_SEQ = 0;
-  const h = 34, topY = 28, botY = 100, joinX = 480, trunkX = 440, cy = FLOW_H / 2;
+  const h = 28, topY = 22, botY = 82, joinX = 480, trunkX = 440, cy = FLOW_H / 2;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "The most common answer is checked against the model's own real accuracy" },
     flowBox(0, topY - h / 2, 150, h, "count every label", "in the stored set"),
     flowArrow(150, topY, 200, topY, "compute"),
@@ -769,7 +769,7 @@ function baselineFlow() {
 
 function funnelFlow() {
   FLOW_SEQ = 0;
-  const h = 34, topY = 28, botY = 100, joinX = 210, trunkX = 180, cy = FLOW_H / 2;
+  const h = 28, topY = 22, botY = 82, joinX = 210, trunkX = 180, cy = FLOW_H / 2;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "Two stored chances are combined, sampled many times, and checked against what really happened" },
     flowBox(0, topY - h / 2, 150, h, "chance it's flagged bad", ""),
     flowElbowIn(150, topY, trunkX, joinX - 6, cy, "sample"),
@@ -783,7 +783,7 @@ function funnelFlow() {
 
 function windowFlow() {
   FLOW_SEQ = 0;
-  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  const h = 28, cy = FLOW_H / 2, y = cy - h / 2;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "A trailing window is asked about at every turn, and the strongest moment is checked against the true label" },
     flowBox(0, y, 120, h, "the dialogue", "turn by turn"),
     flowArrow(120, cy, 170, cy, "compute"),
@@ -796,7 +796,7 @@ function windowFlow() {
 
 function hierarchyFlow() {
   FLOW_SEQ = 0;
-  const h = 34, cy = FLOW_H / 2, topY = 28, botY = 100, trunkX = 340;
+  const h = 28, cy = FLOW_H / 2, topY = 22, botY = 82, trunkX = 340;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "A cheap gate question decides whether to predict none directly or reuse the existing detail answer" },
     flowBox(0, cy - h / 2, 88, h, "item", ""),
     flowArrow(88, cy, 128, cy, "ask"),
@@ -809,7 +809,7 @@ function hierarchyFlow() {
 
 function timeFlow() {
   FLOW_SEQ = 0;
-  const h = 34, cy = FLOW_H / 2, topY = 28, botY = 100, trunkX = 340;
+  const h = 28, cy = FLOW_H / 2, topY = 22, botY = 82, trunkX = 340;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "The same running score is read two different ways depending on the dialogue's real, already-known label" },
     flowBox(0, cy - h / 2, 88, h, "dialogue", "turn by turn"),
     flowArrow(88, cy, 128, cy, "ask"),
@@ -822,7 +822,7 @@ function timeFlow() {
 
 function customFlow() {
   FLOW_SEQ = 0;
-  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  const h = 28, cy = FLOW_H / 2, y = cy - h / 2;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "Your text is scored against the fixed library, one queued item at a time, until the budget runs out" },
     flowBox(0, y, 120, h, "your text", "plus the fixed library"),
     flowArrow(120, cy, 170, cy, "ask"),
@@ -836,7 +836,7 @@ function customFlow() {
 
 function decomposeFlow() {
   FLOW_SEQ = 0;
-  const h = 34, cy = FLOW_H / 2, y = cy - h / 2;
+  const h = 28, cy = FLOW_H / 2, y = cy - h / 2;
   return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "Each plan item is checked live; simple ones stop, the rest get split further and checked again" },
     flowBox(0, y, 150, h, "one plan item", "written by hand, fixed"),
     flowArrow(150, cy, 186, cy, "ask"),
