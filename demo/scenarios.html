@@ -111,9 +111,6 @@
   .pipeline .stage rect { fill: var(--surface-2); stroke: var(--border); }
   .pipeline .stage text.t { font-weight: 700; fill: var(--text); font-size: 12px; }
   .pipeline .stage text.n { fill: var(--text-3); font-size: 9px; }
-  .pipeline .arrow { stroke: var(--text-3); stroke-width: 1.6; fill: none; }
-  .pipeline .loopback { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-dasharray: 4 3; }
-  .pipeline .lbl { fill: var(--text-3); font-size: 10.5px; }
   .pipeline .stage { opacity: 0; animation: flowIn .4s ease-out forwards; animation-delay: calc(var(--i, 0) * 110ms); }
   .pipeline .flow-edge { opacity: 0; animation: flowIn .4s ease-out forwards; animation-delay: calc(var(--i, 0) * 110ms + 70ms); }
   .pipeline .flow-edge .flow-line, .pipeline .flow-edge .flow-head { stroke: var(--ec); stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -144,6 +141,19 @@
   .gantt .bar { fill: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); stroke: var(--border); }
   .gantt .bar.crit { fill: color-mix(in srgb, var(--bad) 45%, var(--surface-2)); stroke: var(--bad); }
   .gantt .bar.gate { stroke: var(--bad); stroke-width: 2; }
+  /* Chapter dividers + "so what" bridges -- readability pass on the densest pages. A chapter is a
+     big, spaced-out movement in the story; a so-what is the one-line takeaway that bridges to the
+     next one, deliberately not always the same colour so a page of them doesn't read as one long
+     blue wall. Tone comes from the app's own categorical --s1..--s8 tokens, the same palette the
+     flow diagrams already use. */
+  .chapter { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .chapter:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+  .chapter-kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin: 0 0 4px; }
+  .chapter-title { margin: 0 0 6px; font-size: 21px; }
+  .chapter-why { margin: 0 0 16px; font-size: 14px; color: var(--text-2); max-width: 68ch; }
+  .sowhat { --sw: var(--accent); border-radius: 8px; padding: 12px 16px; margin: 20px 0 8px; border: 1px solid color-mix(in srgb, var(--sw) 30%, var(--border)); border-left: 3px solid var(--sw); background: color-mix(in srgb, var(--sw) 7%, var(--surface-2)); }
+  .sowhat-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--sw); margin: 0 0 4px; }
+  .sowhat p { margin: 0; }
   /* Monte Carlo idealistic-vs-risk Gantt (reuses .gantt / .bar / .bar.crit from the board above) */
   .mcgantt .band { stroke: var(--border); stroke-width: 0.5; }
   .mc-horizon { stroke: var(--bad); stroke-width: 1.5; }
@@ -890,25 +900,21 @@ function decomposeFlow() {
     flowLoop(386, 226, cy + h / 2, "no — split it and check the pieces"));
 }
 
+/* Same shape as decomposeFlow() at the top of the page -- this is the identical atomic/stop/split
+   loop, just labelled for the model's own live classifier call instead of the mechanism in
+   general. Built from the same flowBox/flowArrow/flowLoop toolkit as every other diagram on this
+   page, deliberately, so "how the loop works" and "how a model scores one node" visually read as
+   the same family instead of two different diagram styles explaining related things. */
 function pipelineHero() {
-  const W = 900, H = 130;
-  const stage = (x, w, title, sub) => S("g", { class: "stage" },
-    S("rect", { x, y: 20, width: w, height: 50, rx: 8 }),
-    S("text", { class: "t", x: x + w / 2, y: 42, "text-anchor": "middle" }, title),
-    S("text", { class: "n", x: x + w / 2, y: 58, "text-anchor": "middle" }, sub));
-  const arrow = (x1, x2, y) => S("g", {},
-    S("path", { class: "arrow", d: `M${x1} ${y} L${x2 - 8} ${y}` }),
-    S("path", { class: "arrow", d: `M${x2 - 10} ${y - 4} L${x2} ${y} L${x2 - 10} ${y + 4}` }));
-  return S("svg", { viewBox: `0 0 ${W} ${H}`, class: "pipeline", role: "img", "aria-label": "How a model scores one node: is it atomic, stop or split again" },
-    stage(10, 190, "Plan node", "hand-authored, fixed"),
-    arrow(200, 250, 45),
-    stage(250, 220, "Classifier: atomic?", "asked live at every node"),
-    arrow(470, 520, 45),
-    stage(520, 130, "Stop", "pseudo-atomic"),
-    S("text", { class: "lbl", x: 375, y: 98, "text-anchor": "middle" }, "no — loop back and split again"),
-    S("path", { class: "loopback", d: "M360 68 C 360 95, 265 95, 265 68" }),
-    S("path", { class: "loopback", d: "M258 74 L265 68 L272 74" }),
-    S("text", { class: "lbl", x: 590, y: 98, "text-anchor": "middle" }, "yes"));
+  FLOW_SEQ = 0;
+  const h = 28, cy = FLOW_H / 2, y = cy - h / 2;
+  return S("svg", { viewBox: `0 0 ${FLOW_W} ${FLOW_H}`, class: "pipeline", role: "img", "aria-label": "How a model scores one node: is it atomic, stop or split again" },
+    flowBox(0, y, 180, h, "plan node", "hand-authored, fixed"),
+    flowArrow(180, cy, 220, cy, "ask"),
+    flowBox(220, y, 260, h, "atomic?", "asked live at every node"),
+    flowArrow(480, cy, 520, cy, "route", "yes"),
+    flowBox(520, y, 240, h, "stop", "pseudo-atomic"),
+    flowLoop(350, 226, cy + h / 2, "no — split it and check the pieces"));
 }
 
 function loopResultsPanel(story) {
@@ -1207,6 +1213,25 @@ function dataDrivenBanner(rows) {
       el("li", {}, el("b", { text: label + ": " }), SRC[key].kind, " — ", el("span", { class: "muted", title: SRC[key].detail, style: "border-bottom:1px dashed var(--text-3);cursor:help" }, "hover for exactly what that means" ), ". (", el("code", { text: SRC[key].path }), ")"))));
 }
 
+/* A big, spaced-out section header for a whole movement of the story (several h3/h4 sub-sections
+   underneath it), with one plain-language sentence up front for why it's here before any detail --
+   the "why we're about to show you this" framing, deliberately not technical. */
+function chapterHeader(kicker, title, why) {
+  return el("div", { class: "chapter" },
+    el("p", { class: "chapter-kicker", text: kicker }),
+    el("h2", { class: "chapter-title", text: title }),
+    el("p", { class: "chapter-why", text: why }));
+}
+/* The one-line takeaway that bridges to the next chapter -- title is the plain-language bottom
+   line, detail is the short supporting clause. `tone` cycles through the app's own categorical
+   --s1..--s8 tokens (see FLOW_VERB_TOKEN) so a page with several of these doesn't read as one long
+   blue wall of "important" boxes. */
+function soWhat(tone, title, detail) {
+  return el("div", { class: "sowhat", style: `--sw:var(${tone})` },
+    el("p", { class: "sowhat-kicker", text: "So what" }),
+    el("p", {}, el("b", { text: title }), detail ? el("span", { class: "small muted", text: " " + detail }) : null));
+}
+
 function renderDecomposeTree(data) {
   const models = orderModels(Object.keys(data.models || {}));
   if (!models.length) return empty("No decompose-tree run yet", "Run probes/lab_decompose.py for the loaded models.");
@@ -1214,32 +1239,31 @@ function renderDecomposeTree(data) {
   const nodes = data.models[models[0]].nodes;
   const sched = data.schedule || {};
   const pitch = data.pitch || "";
+  const topGate = [...nodes.filter(n => n.kind === "leaf")].sort((a, b) => (b.blocks_count || 0) - (a.blocks_count || 0))[0];
   const out = el("div");
 
-  // 1: title + deck
+  // Cover: title, one human sentence for why this page exists, then provenance and the loop itself
   out.append(el("h2", { text: "Decompose and loop: can this be built at all?" }),
-    el("p", { class: "muted", text: "One real engineering pitch, split into a plan, then checked — first against the platform it names, then by five decision models as a second reader. The 30-day schedule turns out not to be the binding constraint." }),
+    el("p", { class: "muted", text: "Someone pitched a real idea. This page takes it apart into a dated plan, checks whether the schedule is really the risk, and asks whether a model is any use as a second reader." }),
     dataDrivenBanner([["The plan (31 nodes, text, durations, dependency edges)", "plan"], ["Schedule (span, critical path, float, sensitivity)", "schedule"], ["Model scoring (atomic / gate / phase / risk / complexity / dependency, per node)", "models"]]),
     flowHeader(decomposeFlow()));
 
-  // 2: the pitch, verbatim
-  out.append(el("h3", { text: "The pitch, as received" }), el("blockquote", { class: "qbox", text: pitch }),
-    el("p", { class: "legend", text: "A real pitch, lightly paraphrased. The 30-day target is the pitcher's, not mine." }));
+  // CHAPTER 1 — the pitch itself, and the one thing it hinges on
+  out.append(chapterHeader("Chapter 1 of 3", "The pitch", "What was actually proposed, in plain words, and the one assumption everything else depends on."));
 
-  // 2b: how this was built, up front, not buried
-  out.append(el("div", { class: "card" }, el("h3", { style: "margin-top:0", text: "How this page was built" }),
-    el("p", { class: "small muted", text: "Three different things happen on this page. They are not the same kind of claim, so they get separate sourcing every time they appear below." }),
-    el("div", { class: "srcgrid" },
-      el("div", {}, el("b", { text: "1. The plan" }), el("br"), srcNote("plan")),
-      el("div", {}, el("b", { text: "2. The schedule" }), el("br"), srcNote("schedule")),
-      el("div", {}, el("b", { text: "3. The model scoring" }), el("br"), srcNote("models"))),
-    el("p", { class: "small" }, "In short: ", el("b", { text: "I wrote the plan." }), " A computer computed the schedule from it. ", el("b", { text: "The models only graded it" }), " — they answered typed yes/no, multiple-choice and score questions about nodes I had already written; none of them proposed a single node.")));
+  out.append(el("h4", { text: "As received" }), el("blockquote", { class: "qbox", text: pitch }),
+    el("p", { class: "legend", text: "Lightly paraphrased. The 30-day target is the pitcher's, not mine." }),
+    el("details", { class: "ministep" }, el("summary", {}, el("span", { class: "small muted", text: "How this page was built — three kinds of claim, sourced separately — expand" })),
+      el("div", { class: "srcgrid" },
+        el("div", {}, el("b", { text: "1. The plan" }), el("br"), srcNote("plan")),
+        el("div", {}, el("b", { text: "2. The schedule" }), el("br"), srcNote("schedule")),
+        el("div", {}, el("b", { text: "3. The model scoring" }), el("br"), srcNote("models"))),
+      el("p", { class: "small" }, "I wrote the plan. A computer computed the schedule from it. The models only graded it — none of them proposed a single node.")));
 
-  // 3: plain words as a 3-step strip, detail on demand rather than run-on prose
   const step = (n, title, short, full) => el("details", { class: "ministep" },
     el("summary", {}, el("span", { class: "stepno", text: n }), el("span", { class: "stept" }, el("b", { text: title }), el("span", { class: "small muted", text: " — " + short })), el("span", { class: "stepmore small muted", text: "expand" })),
     el("p", { class: "small", text: full }));
-  out.append(el("h3", { text: "What it means in plain words" }),
+  out.append(el("h4", { text: "In plain words" }),
     el("div", { class: "ministeps" },
       step("1", "Explode", "split a too-big dataset into pieces small enough for one machine's memory each",
         "Some datasets are too big to fit in one machine's memory, so they get processed in slow passes off disk. The pitch's idea is to rent memory in tiny pieces from very many machines at once — hundreds or thousands of Cloudflare Workers, each holding one slice of the dataset in its own memory."),
@@ -1250,17 +1274,19 @@ function renderDecomposeTree(data) {
     figAssumption(),
     el("p", { class: "legend", text: "The gap between these two pictures is the whole question." }));
 
-  // 4: the assumption everything rests on — the lede stays visible, the reasoning is a click away
   out.append(el("div", { class: "callout warn" },
-    el("h3", { style: "margin-top:0", text: "The assumption everything rests on" }),
-    el("p", {}, "If “high-bandwidth RAM across many edge workers” isn't a real capability of this platform, this isn't a slower version of the pitch — it's a different architecture, and it has to be re-scoped before day 2, not after day 20."),
-    el("details", {}, el("summary", { class: "small" }, "Why I think that — expand"),
+    el("h4", { style: "margin-top:0", text: "The assumption everything rests on" }),
+    el("p", {}, "If workers really do share high-bandwidth memory, this is buildable roughly as pitched. If they don't, it's a different architecture — re-scoped before day 2, not after day 20."),
+    el("details", {}, el("summary", { class: "small" }, "Why I don't think they do — expand"),
       el("p", { class: "small" }, "Each Worker runs in an isolate with its own capped heap, and isolates are deliberately walled off from one another; there is no documented way for two of them to read or write the same physical memory. Anything one worker passes another goes over the network — through a Durable Object, a Queue, KV or R2. That is milliseconds and megabits, not nanoseconds and gigabytes."),
-      el("p", { class: "small muted" }, el("b", { text: "This is my reading of the platform, not a measurement. " }), "Nothing on this page has been run against Cloudflare. That is exactly why it is the first experiment in the plan below, not a conclusion."))));
+      el("p", { class: "small muted" }, el("b", { text: "This is my reading of the platform, not a measurement. " }), "Nothing on this page has been run against Cloudflare. That is exactly why it is the first experiment below, not a conclusion."))));
 
-  // 5: the plan + gantt (bars are clickable — they drive the worked example below)
+  out.append(soWhat("--s7", "One cheap experiment settles the pitch's central claim before anything else gets built.", "“Measure worker-to-worker transfer” — a one-day spike — either confirms shared memory is real or proves it isn't."));
+
+  // CHAPTER 2 — the plan turned into a dated schedule, and what's actually risky about it
   const weBox = workedExample(data, story, nodes);
-  out.append(el("h3", { text: `The plan: ${nodes.length} nodes, six workstreams, five phases` }), srcNote("plan"),
+  out.append(chapterHeader("Chapter 2 of 3", "The plan and the schedule", "The pitch broken into a dated, six-workstream plan, and whether the 30-day target actually holds."));
+  out.append(el("h4", { text: `${nodes.length} nodes, six workstreams, five phases` }), srcNote("plan"),
     ganttBoard(data, (id) => { weBox.weSelect(id); weBox.scrollIntoView({ behavior: "smooth", block: "nearest" }); }));
   out.append(el("div", { class: "strip" },
     el("p", { class: "small" }, "Total span: ", el("b", { text: `${sched.span_days} of ${data.horizon_working_days} working days` }), "."),
@@ -1279,13 +1305,13 @@ function renderDecomposeTree(data) {
   // 7: resource table
   out.append(resourceTable(data, story), srcNote("plan"));
 
-  // 8: open items
   out.append(openItemsSection(data, story));
 
-  // 9: second opinion
-  out.append(el("h3", { text: "Second opinion: five decision models read the same plan" }), srcNote("models"),
-    el("p", {}, "The models on this console are typed decision models: you hand one a piece of text (here, one node of the plan) and a typed question, and it returns probabilities — no prose. A yes/no question (“is this a single, indivisible piece of work?”) comes back as a number between 0 and 1. A multiple-choice question comes back as a probability per option. That makes them cheap to run over every node and easy to score, and it is why they are used here as a reviewer of the plan rather than as its author. The plan above was written by hand; the models only answered questions about it."),
-    el("p", { class: "small" }, "Every node below sends the model one real HTTP request with the node's text and its typed questions and gets back real probabilities — hover any answer for the exact numbers. Nothing in this section is precomputed narrative; it is all read live from ", el("code", { text: "tree_scored_edge.json" }), "."),
+  out.append(soWhat("--s5", `"${topGate ? topGate.title : "the top gate"}" blocks more of this plan than anything else.`, `Spend day one there — the rest is a routine ${sched.span_days}-day build with ${sched.float_days} days of room to be wrong, if it comes back the way expected.`));
+
+  // CHAPTER 3 — is a model any use as a second reader of a plan someone already wrote?
+  out.append(chapterHeader("Chapter 3 of 3", "Can a model help review it?", "Five decision models read the same plan and answered simple typed questions about it — never to write it, only to grade it."));
+  out.append(el("p", {}, "Ask one of these a typed question about a piece of text and it returns a probability — no prose. That makes it cheap to run over every node, and it's why it's used here as a reviewer, not an author. Nothing below was written by a model; they only graded what I'd already written."), srcNote("models"),
     codeLegend(models),
     el("div", { class: "card" }, el("h4", { text: "How a model scores one node" }), el("div", { style: "overflow-x:auto" }, pipelineHero()),
       el("details", {}, el("summary", { class: "small" }, "See the exact typed questions sent — not a summary, the real battery"),
@@ -1330,8 +1356,10 @@ function renderDecomposeTree(data) {
     el("p", { class: "small muted", text: "Each node's dot is the share of its typed answers this model got right. Hover a dot for the detail, including my reference call and why." }),
     el("div", { style: "margin-bottom:8px" }, modelPills), treeBox));
 
-  // 10: why five models
-  out.append(el("h3", { text: "Why five models, and not the other four" }));
+  out.append(soWhat("--s2", "As a second reader, these models catch real things sometimes and miss real things sometimes.", "Useful for a first pass over a plan someone already wrote — not a substitute for writing it."));
+
+  // Caveats — folded into one compact close instead of two separate sections
+  out.append(chapterHeader("Before you trust any of this", "Caveats", "What's absent, what's a guess, and what's too small a sample to mean anything statistically."));
   const roster = [
     ["KEV4B, SEMIF4, OAJEV4, LAYA4H, VERD2H", "scored", "loaded on this box and runnable live"],
     ["JEV113", "not run", "the hosted model is billed per request; this page sends one battery per node per model, and scripted runs against it are disallowed here. It can be run from the console on request."],
@@ -1341,11 +1369,10 @@ function renderDecomposeTree(data) {
   ];
   const rt = el("table", { class: "data" }, el("thead", {}, el("tr", {}, el("th", { text: "Code" }), el("th", { text: "State" }), el("th", { text: "Why" }))),
     el("tbody", {}, roster.map(([c, s, w]) => el("tr", {}, el("td", { text: c }), el("td", { class: "muted", text: s }), el("td", { class: "small", text: w })))));
-  out.append(el("div", { style: "overflow-x:auto" }, rt),
-    el("p", { class: "small muted", text: "These are absent measurements, not results. Nothing here says the four missing models would do worse — nobody asked them. JEFF4H cannot be loaded alongside the current five (the card has under 2 GiB spare once the lineup warms); running it would mean stopping the lineup first, and it sits 7th of 9 on published sets — not obviously worth the swap for this page." }));
-
-  // 11: what this page does not measure — the fine print, before the close, not the close itself
-  out.append(el("h3", { text: "What this page does not measure" }),
+  out.append(el("h4", { text: "Why five models, and not the other four" }),
+    el("div", { style: "overflow-x:auto" }, rt),
+    el("p", { class: "small muted", text: "Absent measurements, not results — nobody asked the other four. JEFF4H can't run alongside these five without stopping the lineup first, and sits 7th of 9 on published sets: not obviously worth the swap here." }));
+  out.append(el("h4", { text: "What this page does not measure" }),
     el("ul", {},
       el("li", {}, "No Cloudflare measurement has been run — every platform figure above is documented belief awaiting a spike."),
       el("li", {}, "Durations are one person's estimates, for one experienced engineer."),
@@ -1353,17 +1380,17 @@ function renderDecomposeTree(data) {
       el("li", {}, `${nodes.length} nodes is far too small for any statistical claim about the models, which is why no AUC or confidence interval appears anywhere on this page.`),
       el("li", {}, "The hosted model is not included (see above).")));
 
-  // 12: the bottom line — the one thing to remember, computed live from the plan and schedule above
   out.append(bottomLine(data, story, nodes));
 
   return out;
 }
 
+/* The one takeaway for the whole page, not a repeat of chapter 2's so-what — that one is local to
+   the schedule; this one ties all three chapters together (the platform assumption, the schedule
+   margin, and whether the models were worth reading at all). */
 function bottomLine(data, story, nodes) {
   const sched = data.schedule || {};
   const horizon = data.horizon_working_days || 20;
-  const leaves = nodes.filter(n => n.kind === "leaf");
-  const topGate = [...leaves].sort((a, b) => (b.blocks_count || 0) - (a.blocks_count || 0))[0];
   const spanPct = Math.round((sched.span_days / horizon) * 100);
   const barW = Math.min(100, spanPct);
   const pickShare = `${story.gatePickedGate.length} of ${story.models.length}`;
@@ -1371,11 +1398,10 @@ function bottomLine(data, story, nodes) {
     el("h3", { style: "margin-top:0", text: "The bottom line" }),
     el("p", { class: "bl-stat" }, el("b", { text: `${sched.span_days} of ${horizon} working days` }), el("span", { class: "small muted", text: ` — ${sched.float_days} days of margin` })),
     el("div", { class: "loopbar", style: "max-width:420px" }, el("span", { class: "fill", style: `width:${barW}%` })),
-    el("p", {}, "One answer decides the shape of everything else: ", el("b", { text: `"${topGate ? topGate.title : ""}"` }),
-      ` sits upstream of ${topGate ? topGate.blocks_count : "?"} of the other ${leaves.length - 1} items in this plan — more than any other single node.`),
-    el("p", {}, `${pickShare} models' own highest-priority pick matched one of the ${story.gateLeaves.length} real gates.`,
-      story.gatePickedGate.length === 0 ? " None of them did. If the plan were to trust a model's own alarm bell to say what to worry about first, on this evidence, it shouldn't — the dependency graph says more than the vibe." : ""),
-    el("p", { class: "bl-close" }, `So: spend one day on "${topGate ? topGate.title : "the top gate"}". Come back the way I expect, and the rest is a routine ${sched.span_days}-day build with ${sched.float_days} days of room to be wrong. Come back the other way, and the architecture changes — on day one, not day twenty.`),
+    el("p", {}, "Three things had to be true for this to ship in 30 days. The schedule has real margin — that part checks out. Whether the models were worth reading at all: ",
+      el("b", { text: pickShare }), ` picked the same gate I did`, story.gatePickedGate.length === 0 ? " — none of them did, so on this evidence, don't trust a model's own alarm bell over the dependency graph." : ".",
+      " And whether the platform actually gives workers shared memory: still open, pending one measurement."),
+    el("p", { class: "bl-close" }, `Calendar and models both check out fine. The architecture doesn't, yet — and that's the one worth resolving first.`),
     el("p", { class: "small muted", style: "margin-top:10px" }, "Every number above is read live from this run's data (", el("code", { text: "tree_scored_edge.json" }), " and the CPM pass in ", el("code", { text: "build_tree_edge.py" }), ") — nothing in this card is hand-picked for effect."));
 }
 

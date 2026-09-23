@@ -212,6 +212,59 @@ Nothing else about this feature is known to be incomplete. If picking this back 
 section, then diff the files above before touching anything else, in case the user made manual
 edits in between sessions.
 
+## Fourth round: readability pass on Decompose and loop (the densest page)
+
+The user's feedback, paraphrased: the content on the Decompose and loop page is good, not wrong,
+but too dense and compact for a first-time reader -- no breathing room, twelve flat sections in a
+row, only one "so what" at the very end, an inconsistent one-off SVG for "how a model scores one
+node", and prose that assumes too much patience. Asked for: bigger high-level sections that tell a
+story going down the page (why we're about to show you this, in plain human language, before any
+detail), content distilled rather than explained at length, and a "so what" bridge after each
+section -- deliberately not always the same blue callout, so a page of them doesn't itself become
+visual noise.
+
+Built, all in `demo/scenarios.html`:
+- **`pipelineHero()` rewritten** to use the same `flowBox`/`flowArrow`/`flowLoop` toolkit as every
+  other diagram on the page, instead of its own bespoke `stage()`/`arrow()` shapes and a separate,
+  less-refined CSS style (`.pipeline .arrow`/`.pipeline .loopback`, now removed as dead code). It's
+  literally the same atomic/stop/split loop as `decomposeFlow()` at the top of the page, just
+  labelled for the model's own classifier call -- now it visually reads as the same family instead
+  of two unrelated diagram styles explaining related things.
+- **`chapterHeader(kicker, title, why)`** -- a big, spaced-out section divider (48px top margin,
+  border-top rule) with a plain-language "why we're about to show you this" sentence before any
+  detail. The Decompose page is now 3 numbered chapters ("Chapter 1 of 3: The pitch", "Chapter 2 of
+  3: The plan and the schedule", "Chapter 3 of 3: Can a model help review it?") plus a compact
+  closing "Caveats" chapter, instead of 12 flat, undifferentiated `h3` sections.
+- **`soWhat(tone, title, detail)`** -- the one-line takeaway that bridges to the next chapter, in a
+  left-accent-bar card, bold headline + short supporting clause. `tone` cycles through the app's
+  own categorical `--s1`..`--s8` tokens (the same palette the flow-diagram verbs already use) so
+  the three so-whats on this page render in three different colours (violet, rose, amber) instead
+  of one repeated blue `callout`.
+- **`bottomLine()` rewritten** to stop repeating Chapter 2's so-what verbatim (both used to say
+  "spend one day on X, rest is a routine N-day build" -- exactly the redundancy the user was
+  pointing at). It now synthesizes across all three chapters instead: schedule margin (fine),
+  model-review trustworthiness (fine), platform assumption (still open) -- one distinct, final
+  "so what of so-whats" for the whole page, not a repeat of an earlier one.
+- Folded the old sections 10+11 ("Why five models" / "What this page does not measure") into one
+  compact "Caveats" chapter instead of two separate `h3` sections with their own intro paragraphs.
+- Trimmed the wordiest intro paragraphs (the model-scoring methodology paragraph went from five
+  sentences to two; the "why five models" note and a few others similarly cut). Did **not** touch
+  any of the actual content/tables/numbers underneath -- `gateCard`, `resourceTable`,
+  `openItemsSection`, `loopResultsPanel`, `disagreeTable`, `scorecardTable`, `buildTreeView` are
+  all unchanged, since the user was explicit that the content itself is good, only the density and
+  structure needed work.
+
+**A real bug caught while wiring this in**: the first pass added the "CHAPTER 2 of 3" *comment* in
+the code but never actually called `chapterHeader()` for it -- the divider silently vanished from
+the rendered page between Chapter 1's so-what and the Gantt board. Caught on the live screenshot
+(content jumped straight from the so-what into "31 nodes, six workstreams..." with no chapter
+break), fixed by actually adding the missing `out.append(chapterHeader(...))` call.
+
+Verified live: all three chapters + Caveats render with correct spacing, all three so-whats show
+in distinct colours, the fixed `pipelineHero()` diagram visually matches `decomposeFlow()`, no
+console errors, and a spot-check of the Monte Carlo page (unrelated, shares the same CSS file)
+confirmed nothing else broke. Real server restarted via `./start.sh restart`.
+
 ## New: `/workspace/start.sh` -- use this from now on instead of ad-hoc nohup
 
 The back-and-forth above involved a lot of manual `nohup python3 demo/server.py &` / `ss -ltnp |
