@@ -39,9 +39,6 @@
       <div><h2 id="table-h">Results by tier</h2><p class="small">Click a column heading to sort. Ranked by mean accuracy across the three tiers.</p></div>
     </header>
     <div id="table"></div>
-    <div class="callout warn" style="margin-top:16px">
-      <strong>Read latency with care.</strong> These latencies were measured when JEFF4H, KEV5H, KEV8H, KEV4B and JEV were called over HTTP and SEMIF4, OAJEV4, LAYA4H and VERD2H ran in-process (VERD2H on CPU). All of the loaded models are now served over HTTP, so live latencies include a little request overhead. The tiers have 48 to 111 decisions each, so gaps of a few points are within noise. These are the public tiers only, not the official JevBench Score.
-    </div>
   </section>
 
   <section class="section" aria-labelledby="fit-h">
@@ -221,26 +218,24 @@ function fit(rows, x) {
       sel.map((id, i) => { const m = memOf(id, x, st.bf16); return m.steady ? el("div", { class: "gpu-seg", title: `${Jev.codeOf(id)} ${info[id]?.name || id}: ${gbOf(m.steady).toFixed(1)} GiB`, style: `width:${Math.min(100, m.steady / cap * 100)}%;background:color-mix(in srgb, var(--accent) ${tints[i % tints.length]}%, var(--surface-2))`, text: Jev.codeOf(id) }) : null; }));
     const spare = cap - total, startup = sel.map(id => ({ id, m: memOf(id, x, st.bf16) })).sort((a, b) => b.m.startup - a.m.startup)[0];
     const summary = el("div", { class: "stack" },
-      el("p", {}, el("strong", { text: `${gbOf(total).toFixed(1)} of ${gbOf(cap).toFixed(1)} GiB` }), over ? el("span", { class: "gpu-over", text: `  over by ${gbOf(-spare).toFixed(1)} GiB: this will run out of memory` }) : ` used, ${gbOf(spare).toFixed(1)} GiB spare`, `. ${sel.length} local model${sel.length === 1 ? "" : "s"}, plus hosted Jev if you want it (no GPU).`),
-      startup && startup.m.startup > startup.m.steady * 1.2 ? el("p", { class: "small muted", text: `Start ${Jev.codeOf(startup.id)} (${info[startup.id]?.name || startup.id}) first: it needs ${gbOf(startup.m.startup).toFixed(1)} GiB for a few seconds while loading before it settles at ${gbOf(startup.m.steady).toFixed(1)} GiB.` }) : null,
-      el("p", { class: "small muted", text: "The safe budget is the sum of each model's peak. Their peaks rarely coincide, which is why an over-budget mix can seem fine until a long input arrives; that is what caused the earlier out-of-memory failures." }));
+      el("p", { title: "Budget = sum of each model's peak. Peaks rarely coincide, so an over-budget mix can look fine until a long input arrives." },
+        el("strong", { text: `${gbOf(total).toFixed(1)} of ${gbOf(cap).toFixed(1)} GiB` }), over ? el("span", { class: "gpu-over", text: `  over by ${gbOf(-spare).toFixed(1)} GiB` }) : ` used, ${gbOf(spare).toFixed(1)} GiB spare`, ` · ${sel.length} local model${sel.length === 1 ? "" : "s"}, plus hosted Jev (no GPU)`),
+      startup && startup.m.startup > startup.m.steady * 1.2 ? el("div", { class: "callout warn" }, `Start ${Jev.codeOf(startup.id)} first — needs ${gbOf(startup.m.startup).toFixed(1)} GiB briefly, settles at ${gbOf(startup.m.steady).toFixed(1)} GiB.`) : null);
     const capRow = el("div", { class: "segmented", role: "group", "aria-label": "GPU size" }, CAP_PRESETS.map((g) =>
       el("button", { type: "button", "aria-pressed": String(st.capGb === g), onclick: () => { st.capGb = g; st.on = greedy(); draw(); } }, `${g} GB${g === measuredGb ? " (this card)" : ""}`)));
     left.replaceChildren(el("div", { class: "card stack" }, el("h3", { text: "Models" }), chips,
       el("div", { class: "row" }, capRow, el("div", { class: "segmented", role: "group", "aria-label": "kev precision" },
-        el("button", { type: "button", "aria-pressed": String(st.bf16), onclick: () => { st.bf16 = true; draw(); }, text: "kev in bf16" }), el("button", { type: "button", "aria-pressed": String(!st.bf16), onclick: () => { st.bf16 = false; draw(); }, text: "kev in fp32" })),
+        el("button", { type: "button", "aria-pressed": String(st.bf16), title: "bf16 halves kev's memory with no measurable accuracy loss.", onclick: () => { st.bf16 = true; draw(); }, text: "kev in bf16" }), el("button", { type: "button", "aria-pressed": String(!st.bf16), onclick: () => { st.bf16 = false; draw(); }, text: "kev in fp32" })),
         el("button", { class: "btn", type: "button", onclick: () => { st.on = greedy(); draw(); }, text: "Best that fits" }), el("button", { class: "btn ghost", type: "button", onclick: () => { st.on = new Set(); draw(); }, text: "Clear" })),
-      el("p", { class: "small muted", text: "bf16 halves kev's memory; on 372 items across four sets it gave the same accuracy as fp32 with 97 to 100% identical answers. The benchmark numbers on this page used fp32." }),
       bar, summary, detailTable(sel, rows, x, st)));
     // similarity of the selected models
     const ag = x.agree?.agreement || {}, pairs = [];
     sel.forEach((a, i) => sel.slice(i + 1).forEach(b => { const v = ag[a]?.[b]; if (v != null) pairs.push([a, b, v]); }));
     pairs.sort((p, q) => q[2] - p[2]);
     right.replaceChildren(el("div", { class: "card stack" }, el("h3", { text: "Do they answer alike?" }),
-      el("p", { class: "small muted", text: "Share of published-set items where two models give the same answer. The more alike, the less a second one adds." }),
-      pairs.length ? el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ["Pair", "Same answer"].map((h, i) => el("th", { scope: "col", class: i ? "num" : null, text: h })))),
-        el("tbody", {}, pairs.slice(0, 12).map(([a, b, v]) => el("tr", {}, el("td", {}, Jev.tag(a, { name: false }), " · ", Jev.tag(b, { name: false })), el("td", { class: `num${v >= 0.75 ? " agree-hi" : ""}`, text: fmt.pct(v, 0) })))))) : Jev.empty("Select two or more models", "Agreement appears here."),
-      pairs.length ? el("p", { class: "small muted", text: "Highlighted pairs agree on 75% or more. On two-way questions two random models already agree about half the time, so 50% means unrelated." }) : null));
+      el("p", { class: "small muted", text: "Share of published-set items two models answer the same way." }),
+      pairs.length ? el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ["Pair", "Same answer"].map((h, i) => el("th", { scope: "col", class: i ? "num" : null, title: i ? "Highlighted: 75%+ agreement. Chance alone gives about 50% on a two-way question." : null, text: h })))),
+        el("tbody", {}, pairs.slice(0, 12).map(([a, b, v]) => el("tr", {}, el("td", {}, Jev.tag(a, { name: false }), " · ", Jev.tag(b, { name: false })), el("td", { class: `num${v >= 0.75 ? " agree-hi" : ""}`, text: fmt.pct(v, 0) })))))) : Jev.empty("Select two or more models", "Agreement appears here.")));
   };
   draw(); return root;
 }
