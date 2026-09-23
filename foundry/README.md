@@ -1,7 +1,13 @@
 # The Foundry
 
 A live, tool-driven idea-decomposition pipeline. Its own folder, separate from `demo/` and
-`probes/` -- not wired into the Scenario lab, and shouldn't be until this is proven out further.
+`probes/` -- not wired into the Scenario lab as a pipeline (`layered_walk.py` itself is still not
+imported anywhere outside `foundry/`). Its *library* (`tools/world-knowledge.yaml`,
+`tools/slicer.yaml`) is read, read-only, by `probes/lab_custom_decompose.py` -- the Scenario lab's
+"Custom decomposition" structure, which reimplements the walk mechanics against an injected model
+call rather than importing `layered_walk.py` (which mutates a module-global model list and writes
+its own ledger; importing it would either duplicate or collide with that state). See
+`docs/custom-decomposition-design.md` for the full reasoning.
 
 ## The one rule that matters most
 

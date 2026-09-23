@@ -227,8 +227,23 @@ shape) before any code — delegated to a separate design pass this session; see
    (PID logged at start, running since 2026-09-22) was untouched. **The real port-8100 server still
    needs a restart** to actually serve `/api/hierarchy` in production -- do this once
    `logs/window-study/run.log` shows all four remaining models finished, not before.
-7. Custom decomposition — design complete (`docs/custom-decomposition-design.md`), build not
-   started. Biggest remaining piece, and the only one left.
+7. ~~Custom decomposition~~ DONE, shipped as designed, full v1. `probes/lab_custom_decompose.py`
+   (core walk engine, hybrid of foundry's Slicer+Grinder mechanics + lab_decompose.py's leaf
+   battery minus atomic/parallel), `probes/test_lab_custom_decompose.py` (10 unit tests, no
+   models, all passing), `demo/server.py` (3 endpoints incl. a streaming NDJSON POST), and the
+   full `scenarios.html` UI (input card, live run controls, an animated radial "orbit map" of all
+   111 library items lighting up as calls resolve, an accessible Outline view, a detail panel, a
+   read-out card, provenance card, spend-more/download controls). **Live acceptance check passed
+   exactly**: the CLI run on oncall-rotation (same intake/models/budget as
+   `layered_walk.py --idea oncall-rotation --budget 60`) visited the identical 58 node ids in the
+   identical order -- byte-for-byte match, strong evidence the port is faithful. Verified live,
+   interactively, end-to-end with puppeteer against a fifth temporary server instance (port 8105,
+   killed after): typed real text, ran a live 15-20 call decomposition against loaded models,
+   watched the map fill in, clicked a node to open the detail panel, switched to Outline view,
+   checked dark mode -- zero console/page errors throughout, zero errors in any live run, full
+   regression pass across all 9 Structures entries clean. `foundry/README.md` updated per the
+   design's own default decision (open question 1): its library is now read, read-only, by this
+   module.
 
 **All 5 structures from the original backlog (8, 10, 11, 12, 13) are now shipped, verified live,
 and committed.** `STRUCTURES` in `scenarios.html` now has 8 entries: batch, decompose, cascade,

@@ -205,6 +205,37 @@
   .pair .members { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .member { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; display: grid; gap: 4px; align-content: start; }
   .member .mh { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  /* Custom decomposition: orbit map */
+  .dlGrid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .dlGrid { grid-template-columns: 1fr; } }
+  .dlPanel { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); position: sticky; top: 52px; max-height: calc(100vh - 64px); overflow-y: auto; }
+  svg.dl-map { display: block; width: 100%; max-width: 880px; height: auto; margin: 0 auto; }
+  .dl-core { fill: var(--surface-2); stroke: var(--border-strong); }
+  text.dl-core-t { font-size: 13px; fill: var(--text); text-anchor: middle; }
+  text.dl-cap { font-size: 10px; fill: var(--text-3); text-anchor: middle; }
+  .dl-wedge { stroke: var(--border); stroke-width: 0.5; }
+  text.dl-shape-lbl { font-size: 9.5px; fill: var(--text-2); text-anchor: middle; }
+  path.dl-link { fill: none; transition: stroke-width .3s, opacity .3s; }
+  .dl-node circle.dl-ring { fill: none; }
+  .dl-node text.dl-lbl { font-size: 8.5px; fill: var(--text-2); }
+  .dl-node { cursor: pointer; transform-box: fill-box; transform-origin: center; transition: transform .35s cubic-bezier(.2,1.4,.4,1); }
+  .dl-node.dl-enter { transform: scale(0); }
+  .dl-node:focus-visible circle.dl-hit { stroke: var(--focus); stroke-width: 2; }
+  .dl-node.state-ghost circle.dl-shape { fill: none; stroke: var(--border-strong); stroke-dasharray: 1.5 1.5; }
+  .dl-node.state-queued circle.dl-shape { fill: none; stroke-width: 1.5; }
+  .dl-node.state-visited circle.dl-shape { stroke: none; }
+  .dl-node.state-split circle.dl-shape { stroke: var(--text-2); stroke-dasharray: 3 2; }
+  .dl-node.state-gate circle.dl-ring.gate { stroke: var(--bad); stroke-width: 2; }
+  circle.dl-scan { fill: none; stroke: var(--accent); stroke-dasharray: 4 3; animation: dl-spin 1.1s linear infinite; }
+  @keyframes dl-spin { to { transform: rotate(360deg); } }
+  path.dl-tick { stroke-width: 3; fill: none; }
+  .dl-selected circle.dl-hit { stroke: var(--accent); stroke-width: 2; }
+  @media (prefers-reduced-motion: reduce) { .dl-node, .dl-node.dl-enter, path.dl-link, circle.dl-scan { transition: none !important; animation: none !important; transform: none !important; } }
+  @media print { .dlPanel, .dl-run-controls { display: none; } }
+  @media (max-width: 860px) { .dl-map-wrap.map-default { display: none; } }
+  /* Custom decomposition: input + run controls + read-out (reuse .card/.pillrow/.slider/.loopbar) */
+  .dl-charcount { font-size: 11px; color: var(--text-3); text-align: right; margin-top: 2px; }
+  .dl-status { min-height: 18px; }
   @media (max-width: 860px) {
     .lab { grid-template-columns: 1fr; gap: 10px; }
     .rail { display: none; }
@@ -239,7 +270,7 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
-const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"], ["time", "Time (onset and false alarms)", "time"]];
+const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"], ["time", "Time (onset and false alarms)", "time"], ["custom", "Custom decomposition", "orbit"]];
 const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
@@ -262,7 +293,7 @@ const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1],
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4", time: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0|M12 7v5l4 2" };
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4", time: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0|M12 7v5l4 2", orbit: "M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5|M12 3v3.5|M12 17.5V21|M3 12h3.5|M17.5 12H21|M5.6 5.6l2.5 2.5|M15.9 15.9l2.5 2.5" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -290,7 +321,7 @@ function wilson(k, n) {
 
 /* ---------- state and URL hash ---------- */
 const ST = { set: "all", model: null, t: 0.85, filter: "all", pairs: false, q: "", page: 0 };
-let PROBES = [], MODELS = [], INFO = {}, TOK = 0;
+let PROBES = [], MODELS = [], INFO = {}, TOK = 0, CUSTOM_ABORT = null;
 function parseHash() {
   const p = new URLSearchParams(location.hash.replace(/^#/, ""));
   const s = p.get("set");
@@ -408,6 +439,7 @@ mount(document.getElementById("root"), async () => {
   };
   const show = () => {
     buildRail();
+    CUSTOM_ABORT?.abort(); CUSTOM_ABORT = null;
     const box = el("div"); view.replaceChildren(box); const tok = ++TOK;
     if (ST.set === "batch") { mount(box, () => api("/api/batch-perf"), renderBatch); }
     else if (ST.set === "decompose") { mount(box, () => api("/api/decompose-tree"), renderDecomposeTree); }
@@ -429,6 +461,9 @@ mount(document.getElementById("root"), async () => {
     else if (ST.set === "window") { mount(box, () => api("/api/window-study"), renderWindowStudy); }
     else if (ST.set === "hierarchy") { mount(box, () => api("/api/hierarchy"), renderHierarchy); }
     else if (ST.set === "time") { mount(box, () => api("/api/time-study"), renderTimeStudy); }
+    else if (ST.set === "custom") {
+      mount(box, async () => ({ library: await api("/api/decompose-library"), examples: await api("/api/decompose-examples") }), renderCustom);
+    }
     else if (ST.set === "all") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
@@ -1445,6 +1480,467 @@ function renderTimeStudy(data) {
   }
   table.append(tbody);
   out.append(el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, table)));
+  return out;
+}
+
+/* ---------- structure: custom decomposition (orbit map) ---------- */
+const DL_PHASE_LABEL = { spike: "spike", decide: "decide", build: "build", validate: "validate", launch: "launch" };
+const heatAcc = (p) => p == null ? "var(--surface-2)" : `color-mix(in srgb, var(--accent) ${Math.round(clamp01(p) * 55)}%, var(--surface-2))`;
+const dlP = (angle, r, cx = 500, cy = 500) => { const rad = angle * Math.PI / 180; return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)]; };
+const dlShort = (id) => id.replace(/^[a-z]+-/, "").replace(/-/g, " ");
+
+function dlLayout(lib) {
+  const slots = [];
+  for (const c of lib.categories) {
+    for (const leaf of c.children) slots.push({ type: "leaf", id: leaf.id, catId: c.id });
+    slots.push({ type: "gap", catId: c.id });
+  }
+  const n = slots.length, step = 360 / n;
+  const angleAt = (i) => -90 + i * step;
+  const leafAngle = {}, catRange = {}, shapeRange = {};
+  let i = 0;
+  for (const c of lib.categories) {
+    const startIdx = i;
+    const leafAngles = c.children.map((_, k) => angleAt(startIdx + k));
+    i += c.children.length;
+    const gapIdx = i; i += 1;
+    const mean = leafAngles.length ? leafAngles.reduce((a, b) => a + b, 0) / leafAngles.length : angleAt(startIdx);
+    catRange[c.id] = { start: angleAt(startIdx), end: angleAt(gapIdx) + step, mean };
+    leafAngles.forEach((a, k) => { leafAngle[c.children[k].id] = a; });
+    const sh = c.shape || "(untagged)";
+    if (!shapeRange[sh]) shapeRange[sh] = { start: catRange[c.id].start, end: catRange[c.id].end };
+    else shapeRange[sh].end = catRange[c.id].end;
+  }
+  return { n, step, leafAngle, catRange, shapeRange };
+}
+
+function annularPath(a0, a1, r0, r1) {
+  const large = (a1 - a0) % 360 > 180 ? 1 : 0;
+  const [x0o, y0o] = dlP(a0, r1), [x1o, y1o] = dlP(a1, r1), [x1i, y1i] = dlP(a1, r0), [x0i, y0i] = dlP(a0, r0);
+  return `M${x0o} ${y0o} A${r1} ${r1} 0 ${large} 1 ${x1o} ${y1o} L${x1i} ${y1i} A${r0} ${r0} 0 ${large} 0 ${x0i} ${y0i} Z`;
+}
+
+/* Builds the whole 111-item ghost map up front; apply(event) updates it live as the walk streams
+   in. Returns {svg, apply(event), select(id, focus)} -- select() drives the detail panel. */
+function orbitMap(lib, onSelect) {
+  const layout = dlLayout(lib);
+  const catById = Object.fromEntries(lib.categories.map((c) => [c.id, c]));
+  const leafById = {};
+  for (const c of lib.categories) for (const l of c.children) leafById[l.id] = { ...l, catId: c.id };
+  const shapeIdx = Object.fromEntries(lib.shapes.map((s, i) => [s, (i % 8) + 1]));
+
+  const core = S("g", {}, S("circle", { class: "dl-core", cx: 500, cy: 500, r: 72 }));
+  const coreText = S("text", { class: "dl-core-t", x: 500, y: 496 });
+  const coreCap = S("text", { class: "dl-cap", x: 500, y: 516 });
+  core.append(coreText, coreCap);
+
+  const wedges = S("g", {});
+  for (const [shape, r] of Object.entries(layout.shapeRange)) {
+    const idx = shapeIdx[shape] || 1;
+    wedges.append(S("path", { class: "dl-wedge", d: annularPath(r.start, r.end, 118, 146), style: `fill:color-mix(in srgb, var(--s${idx}) 16%, var(--surface))` }));
+    const mid = (r.start + r.end) / 2, [lx, ly] = dlP(mid, 152);
+    wedges.append(S("text", { class: "dl-shape-lbl", x: lx, y: ly }, shape));
+  }
+
+  const catLinks = {}, leafLinks = {}, catNodes = {}, leafNodes = {};
+  const linksG = S("g", {}), catG = S("g", {}), leafG = S("g", {}), labelsG = S("g", {});
+
+  function makeNode(id, angle, r, kind, title) {
+    const [x, y] = dlP(angle, r);
+    const shapeCircle = S("circle", { class: "dl-shape", cx: x, cy: y, r: kind === "cat" ? 5 : 3 });
+    const ring = S("circle", { class: "dl-ring gate", cx: x, cy: y, r: (kind === "cat" ? 5 : 3) + 3, style: "display:none" });
+    const hit = S("circle", { class: "dl-hit", cx: x, cy: y, r: 11, fill: "transparent", stroke: "none" });
+    const scan = S("circle", { class: "dl-scan", cx: x, cy: y, r: (kind === "cat" ? 5 : 3) + 6, style: "display:none" });
+    const g = S("g", { class: "dl-node state-ghost dl-enter", tabindex: "0", role: "button", "aria-label": title }, shapeCircle, ring, scan, hit, S("title", {}, title));
+    g.addEventListener("click", () => onSelect(id));
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(id); } });
+    requestAnimationFrame(() => g.classList.remove("dl-enter"));
+    return { g, shapeCircle, ring, scan, x, y, angle, r: (kind === "cat" ? 5 : 3) };
+  }
+
+  for (const c of lib.categories) {
+    const r = layout.catRange[c.id];
+    const node = makeNode(c.id, r.mean, 235, "cat", c.text);
+    node.shapeCircle.style.fill = "none";
+    node.shapeCircle.style.stroke = "var(--border-strong)";
+    catNodes[c.id] = node;
+    catG.append(node.g);
+    const [cx0, cy0] = dlP(r.mean, 78);
+    const link = S("path", { class: "dl-link", d: `M${cx0} ${cy0} Q${dlP(r.mean, 160).join(" ")} ${node.x} ${node.y}`, stroke: `var(--s${shapeIdx[c.shape] || 1})`, "stroke-width": 0.6, opacity: 0.15 });
+    catLinks[c.id] = link;
+    linksG.append(link);
+  }
+  for (const [leafId, leaf] of Object.entries(leafById)) {
+    const a = layout.leafAngle[leafId];
+    const node = makeNode(leafId, a, 385, "leaf", leaf.text);
+    node.shapeCircle.style.fill = "none";
+    node.shapeCircle.style.stroke = "var(--border-strong)";
+    leafNodes[leafId] = node;
+    leafG.append(node.g);
+    const catNode = catNodes[leaf.catId];
+    const link = S("path", { class: "dl-link", d: `M${catNode.x} ${catNode.y} Q${dlP(a, 320).join(" ")} ${node.x} ${node.y}`, stroke: "var(--border-strong)", "stroke-width": 0.5, opacity: 0.12 });
+    leafLinks[leafId] = link;
+    linksG.append(link);
+  }
+
+  const gaugeG = S("g", {});
+  const ticks = [];
+  const SPACE = layout.n; // 111 -- close enough to lib.space (113) for a per-slot gauge tick
+  for (let k = 0; k < SPACE; k++) {
+    const a0 = -90 + (k / SPACE) * 360, a1 = -90 + ((k + 0.8) / SPACE) * 360;
+    const [x0, y0] = dlP(a0, 468), [x1, y1] = dlP(a1, 468);
+    const tick = S("path", { class: "dl-tick", d: `M${x0} ${y0} A468 468 0 0 1 ${x1} ${y1}`, style: "stroke:var(--border)" });
+    ticks.push(tick);
+    gaugeG.append(tick);
+  }
+  const gaugeLabel = S("text", { class: "dl-cap", x: 500, y: 536 }, "");
+
+  const svg = S("svg", { viewBox: "0 0 1000 1000", class: "dl-map", role: "img", "aria-label": "Orbit map: the whole candidate library, lighting up as the models score your text" },
+    gaugeG, wedges, linksG, catG, leafG, labelsG, core, gaugeLabel);
+
+  let selected = null;
+  function select(id) {
+    if (selected) { const prev = (catNodes[selected] || leafNodes[selected]); prev?.g.classList.remove("dl-selected"); }
+    selected = id;
+    const n = catNodes[id] || leafNodes[id];
+    n?.g.classList.add("dl-selected");
+  }
+
+  function setLeafLabel(leafId) {
+    const node = leafNodes[leafId];
+    if (!node || labelsG.querySelector(`[data-for="${leafId}"]`)) return;
+    const flip = Math.cos(node.angle * Math.PI / 180) < 0;
+    const [lx, ly] = dlP(node.angle, 400);
+    const t = S("text", { class: "dl-lbl", x: lx, y: ly, "data-for": leafId, "text-anchor": flip ? "end" : "start", transform: `rotate(${node.angle + (flip ? 180 : 0)} ${lx} ${ly})` }, dlShort(leafId));
+    labelsG.append(t);
+  }
+
+  function apply(ev) {
+    if (ev.t === "frame") {
+      coreText.textContent = ev.domain.choice ? `${ev.domain.choice}` : "…";
+      coreCap.textContent = ev.domain.choice ? `${ev.domain.choice} · ${fmt.pct(ev.domain.confidence)}${ev.domain.trusted ? "" : " (not trusted)"}` : "";
+    } else if (ev.t === "categories") {
+      for (const [cid, it] of Object.entries(ev.items)) {
+        const node = catNodes[cid]; if (!node) continue;
+        node.g.classList.remove("state-ghost"); node.g.classList.add("state-queued");
+        const idx = shapeIdx[catById[cid].shape] || 1;
+        const rad = 5 + 13 * clamp01((it.lift ?? 0) / 0.3);
+        node.shapeCircle.setAttribute("r", rad);
+        node.shapeCircle.style.stroke = it.guaranteed ? "var(--accent)" : `var(--s${idx})`;
+        if (it.guaranteed) node.shapeCircle.style.strokeWidth = "2";
+        catLinks[cid].style.opacity = String(0.25 + clamp01(it.gap.mean ?? 0) * 0.5);
+        catLinks[cid].setAttribute("stroke-width", String(0.6 + 3 * clamp01(it.gap.mean ?? 0)));
+      }
+    } else if (ev.t === "call" && ev.kind) {
+      const node = catNodes[ev.node] || leafNodes[ev.node];
+      if (node) node.scan.style.display = "";
+    } else if (ev.t === "node") {
+      if (ev.kind === "category") {
+        const node = catNodes[ev.id]; if (node) { node.scan.style.display = "none"; node.g.classList.remove("state-queued"); node.g.classList.add("state-visited"); node.shapeCircle.style.fill = node.shapeCircle.style.stroke; }
+        for (const [leafId, c] of Object.entries(ev.children || {})) {
+          const ln = leafNodes[leafId]; if (!ln) continue;
+          if (c.pushed) {
+            ln.g.classList.remove("state-ghost"); ln.g.classList.add("state-queued");
+            ln.shapeCircle.setAttribute("r", 3.5 + 5.5 * clamp01(c.rel.mean ?? 0));
+            leafLinks[leafId].style.opacity = "0.35";
+            leafLinks[leafId].setAttribute("stroke-width", String(0.5 + 2.5 * clamp01(c.rel.mean ?? 0)));
+            if ((c.rel.spread ?? 0) >= 0.3) leafLinks[leafId].setAttribute("stroke-dasharray", "3 2");
+          }
+        }
+      } else if (ev.kind === "leaf") {
+        const node = leafNodes[ev.id]; if (!node) return;
+        node.scan.style.display = "none";
+        node.g.classList.remove("state-queued"); node.g.classList.add("state-visited");
+        const risk = ev.answers.risk?.mean;
+        node.shapeCircle.style.fill = heatRisk(risk);
+        node.shapeCircle.style.stroke = "none";
+        if ((ev.answers.gate?.mean ?? 0) >= 0.5) { node.g.classList.add("state-gate"); node.ring.style.display = ""; }
+        if ((ev.split || []).length) { node.g.classList.add("state-split"); node.shapeCircle.style.stroke = "var(--text-2)"; node.shapeCircle.setAttribute("stroke-dasharray", "2 1.5"); }
+        setLeafLabel(ev.id);
+      }
+    } else if (ev.t === "end") {
+      for (let k = 0; k < Math.min(ev.spent, SPACE); k++) ticks[k].style.stroke = "var(--accent)";
+      for (let k = ev.spent; k < Math.min(ev.budget, SPACE); k++) ticks[k].style.stroke = "var(--border-strong)";
+      gaugeLabel.textContent = `${ev.spent} of ${ev.budget} calls · ${SPACE} possible`;
+    }
+  }
+  return { svg, apply, select };
+}
+
+function buildCustomOutline(runState, lib) {
+  const catById = Object.fromEntries(lib.categories.map((c) => [c.id, c]));
+  const render = (c) => {
+    const cs = runState.categories[c.id];
+    const kids = (c.children || []).filter((l) => runState.leaves[l.id]);
+    const row = el("div", { class: "dnode" },
+      el("span", { class: "dtitle", text: c.text }),
+      cs?.guaranteed ? el("span", { class: "dbadge", text: "guaranteed" }) : null,
+      el("span", { class: "ddot", style: `background:${heatAcc(cs?.gap?.mean)}`, title: cs ? `gap ${fmt.num(cs.gap.mean, 2)}, lift ${fmt.num(cs.lift, 2)}` : "not scored", text: cs ? pc(cs.gap.mean, 0) : "–" }));
+    if (!kids.length) return row;
+    return el("details", { class: "dgroup", open: "" }, el("summary", {}, row), el("div", { class: "dkids" }, kids.map((l) => {
+      const ls = runState.leaves[l.id];
+      return el("div", { class: "dnode" }, el("span", { class: "dtitle", text: l.text }),
+        ls?.answers?.phase?.choice ? el("span", { class: "dbadge", text: DL_PHASE_LABEL[ls.answers.phase.choice] || ls.answers.phase.choice }) : null,
+        ls?.gate ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", text: "gate" }) : null,
+        (ls?.split || []).length ? el("span", { class: "dbadge", text: "models split" }) : null,
+        el("span", { class: "ddot", style: `background:${heatRisk(ls?.answers?.risk?.mean)}`, title: ls ? `risk ${fmt.num(ls.answers.risk.mean, 2)}` : "queued", text: ls ? pc(ls.answers.risk.mean, 0) : "–" }));
+    })));
+  };
+  const visited = lib.categories.filter((c) => runState.categories[c.id]);
+  const unvisited = lib.categories.filter((c) => !runState.categories[c.id]);
+  const box = el("div", { class: "dtree" }, visited.map(render));
+  if (unvisited.length) box.append(el("details", { class: "dgroup" }, el("summary", {}, el("div", { class: "dnode" }, el("span", { class: "dtitle", text: `Not reached (${unvisited.length})` }))),
+    el("div", { class: "dkids" }, unvisited.map((c) => el("div", { class: "dnode" }, el("span", { class: "dtitle small muted", text: c.text }))))));
+  return box;
+}
+
+function customReadout(runState, lib, end) {
+  const box = el("div", { class: "card bottomline" }, el("h3", { style: "margin-top:0", text: "Read-out" }));
+  const nCats = Object.keys(runState.categories).length, nLeaves = Object.keys(runState.leaves).length;
+  box.append(el("p", { class: "bl-stat" }, el("b", { text: `${nCats + nLeaves} of 111` }), el("span", { class: "small muted", text: " library items reached" }),
+    end ? el("span", { class: "small muted" }, ` in ${el("b", { text: `${end.spent} of ${end.budget}` }).textContent} calls (${end.fresh_calls} new, ${end.cached_calls} from cache)` ) : null));
+  const lifts = Object.entries(runState.categories).filter(([, v]) => v.lift != null).sort((a, b) => b[1].lift - a[1].lift).slice(0, 3);
+  if (lifts.length) {
+    const [topId, topV] = lifts[0];
+    const catText = lib.categories.find((c) => c.id === topId)?.text || topId;
+    box.append(el("p", {}, "Strongest pull from your text, compared with a blank idea: ", el("b", { text: catText }), ` (lift ${topV.lift >= 0 ? "+" : ""}${fmt.num(topV.lift, 2)}).`));
+  }
+  const riskLeaves = Object.entries(runState.leaves).filter(([, v]) => v.answers?.risk?.mean != null).sort((a, b) => b[1].answers.risk.mean - a[1].answers.risk.mean);
+  if (riskLeaves.length) {
+    const [topId, topV] = riskLeaves[0];
+    const text = Object.values(runState.leafText)[0] ? runState.leafText[topId] : topId;
+    const gateCount = Object.values(topV.answers.gate?.per_model || {}).length;
+    box.append(el("p", {}, "Highest risk if left undone: ", el("b", { text }), `, risk ${fmt.num(topV.answers.risk.mean, 2)}${gateCount ? `, ${Object.values(topV.answers.gate.per_model).filter((v) => v >= 0.5).length} of ${gateCount} models said a surprise here could force a redesign` : ""}.`));
+  }
+  const splitCount = Object.values(runState.leaves).filter((v) => (v.split || []).length).length;
+  if (nLeaves) box.append(el("p", { class: "small" }, `The models split (spread ≥ 0.3) on `, el("b", { text: `${splitCount} of ${nLeaves}` }), " items they answered."));
+  for (const [m, flagged] of Object.entries(runState.flatModels || {})) {
+    if (flagged) box.append(el("div", { class: "callout warn" }, `${Jev.codeOf(m)} gave all 21 categories a nearly identical score, so it didn't tell them apart on this text.`));
+  }
+  if (runState.scope != null && runState.scope < 0.40) box.append(el("div", { class: "callout warn" }, `This library is for buildable things (a product, service, system or process) -- this text scored low on that (${fmt.num(runState.scope, 2)}), so these results may not mean much for it.`));
+  box.append(el("p", { class: "small muted", style: "margin-top:10px", text: "No right answers exist for your idea, so nothing here is scored as right or wrong. No schedule is computed either, because no durations exist." }));
+  return box;
+}
+
+function customDetail(runState, lib, id) {
+  if (!id) return el("div", { class: "small muted" }, "Click any item on the map or outline to see everything behind it.");
+  const cat = lib.categories.find((c) => c.id === id);
+  if (cat) {
+    const cs = runState.categories[id];
+    const box = el("div", {}, el("p", { class: "small muted" }, `shape → category`), el("h4", { style: "margin:4px 0", text: cat.text }), el("span", { class: "dbadge", text: "library text" }));
+    if (!cs) return el("div", {}, box, el("p", { class: "small muted", text: "Not scored yet." }));
+    const t = el("table", { class: "data wrap" }, el("thead", {}, el("tr", {}, el("th", { text: "" }), el("th", { text: "Gap (not yet true)" }))));
+    const tb = el("tbody", {}, Object.entries(cs.gap.per_model || {}).map(([m, v]) => el("tr", {}, el("td", {}, mtagShort(m)), el("td", { text: fmt.num(v, 2) }))));
+    t.append(tb);
+    return el("div", {}, box, el("p", { class: "small" }, `gap ${fmt.num(cs.gap.mean, 2)} · lift ${fmt.num(cs.lift, 2)} · boost ${fmt.num(cs.boost, 2)} · composite ${fmt.num(cs.composite, 2)} · ${cs.guaranteed ? "guaranteed" : "budget-ranked"}`), el("div", { style: "overflow-x:auto" }, t));
+  }
+  const ls = runState.leaves[id];
+  const text = runState.leafText[id] || id;
+  const box = el("div", {}, el("p", { class: "small muted" }, `shape → category → requirement`), el("h4", { style: "margin:4px 0", text }), el("span", { class: "dbadge", text: "library text" }));
+  if (!ls) return el("div", {}, box, el("p", { class: "small muted", text: "Not reached yet." }));
+  const rows = [["gate", ls.answers.gate], ["risk", ls.answers.risk], ["complexity", ls.answers.complexity], ["phase", ls.answers.phase], ["dependency", ls.answers.dependency]];
+  const t = el("table", { class: "data wrap" }, el("thead", {}, el("tr", {}, el("th", { text: "" }), el("th", { text: "Mean" }), el("th", { text: "Split?" }))));
+  const tb = el("tbody", {}, rows.map(([k, v]) => el("tr", {}, el("td", {}, k),
+    el("td", {}, v.choice !== undefined ? `${v.choice || "–"}` : fmt.num(v.mean, 2)),
+    el("td", { class: (ls.split || []).includes(k) ? "below" : "muted", text: (ls.split || []).includes(k) ? "models split" : "–" }))));
+  t.append(tb);
+  return el("div", {}, box, el("div", { style: "overflow-x:auto" }, t),
+    el("p", { class: "legend", text: "red = models split here, not \"wrong\"; there is no right answer to compare against" }),
+    el("details", {}, el("summary", { class: "small" }, "Request"), el("pre", { class: "notes" }, JSON.stringify(ls.body, null, 1))));
+}
+
+function estimateSeconds(models, budget, batchPerf) {
+  const p50 = { semif: 0.067, so1: 0.066, "kev-4b": 0.015, laya: 0.397, verdict: 0.258 };
+  const slowest = Math.max(...models.map((m) => p50[m] ?? 0.1));
+  const firstTwo = 35, rest = Math.max(0, budget - 2) * 5;
+  return Math.round(slowest * (firstTwo + rest));
+}
+
+async function streamDecompose(body, onEvent, signal) {
+  const res = await fetch("/api/decompose-live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `Request failed (${res.status})`); }
+  const reader = res.body.getReader(), decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+      if (line.trim()) onEvent(JSON.parse(line));
+    }
+  }
+  if (buf.trim()) onEvent(JSON.parse(buf));
+}
+
+function renderCustom({ library: lib, examples }) {
+  const out = el("div");
+  out.append(el("h2", { text: "Custom decomposition" }),
+    el("p", { class: "muted", text: "Paste an idea, a pitch, a requirement or a problem statement. It gets decomposed live, through the loaded local models, against a fixed generic library of 21 requirement categories and 90 requirements -- the same library and mechanism foundry's own build pipeline uses. Nothing about your text is written by anyone; the models only pick from a library that existed before you typed anything." }));
+
+  let draft = ""; try { draft = localStorage.getItem("dl-draft") || ""; } catch {}
+  const textarea = el("textarea", { id: "dlText", rows: 6, maxlength: 4000, placeholder: "Paste an idea, a pitch, a requirement or a problem statement", text: draft });
+  const charCount = el("div", { class: "dl-charcount", text: `${draft.length} / 4000` });
+  textarea.addEventListener("input", () => { charCount.textContent = `${textarea.value.length} / 4000`; try { localStorage.setItem("dl-draft", textarea.value); } catch {} });
+  const whoInput = el("input", { type: "text", id: "dlWho", placeholder: "e.g. internal support agents" });
+
+  const examplesRow = el("div", { class: "pillrow" }, examples.map((ex) => {
+    const btn = el("button", { type: "button", class: "pill" }, ex.id);
+    btn.addEventListener("click", () => { textarea.value = ex.idea; whoInput.value = ex.customer; charCount.textContent = `${ex.idea.length} / 4000`; try { localStorage.setItem("dl-draft", ex.idea); } catch {} });
+    return btn;
+  }));
+
+  const WEAK = { laya: "56.9% on published sets", verdict: "46.7% on published sets" };
+  let selectedModels = new Set();
+  const modelsRow = el("div", { class: "pillrow" });
+  const buildModelsRow = () => {
+    modelsRow.replaceChildren();
+    const up = Jev.status ? Jev.status() : {};
+    const loaded = MODELS.filter((m) => m.id !== "jev" && Jev.isUp(m.id));
+    if (!selectedModels.size) selectedModels = new Set(loaded.filter((m) => ["semif", "kev-4b", "so1"].includes(m.id)).map((m) => m.id));
+    if (!loaded.length) { modelsRow.append(empty("No local models are loaded", "Start them with demo/lineup.sh up.")); return; }
+    for (const m of loaded) {
+      const btn = el("button", { type: "button", class: "pill" + (selectedModels.has(m.id) ? " active" : "") }, mtagShort(m.id), WEAK[m.id] ? el("span", { class: "dbadge", title: `report_v2: ${WEAK[m.id]}`, text: "weak" }) : null);
+      btn.addEventListener("click", () => { selectedModels.has(m.id) ? selectedModels.delete(m.id) : selectedModels.add(m.id); buildModelsRow(); updateRunState(); });
+      modelsRow.append(btn);
+    }
+  };
+  buildModelsRow();
+  Jev.onStatus(buildModelsRow);
+
+  let budget = 60;
+  const budgetOut = el("output", {}, `${budget} calls`);
+  const estOut = el("span", { class: "small muted" }, "");
+  const budgetSlider = el("input", { type: "range", min: "3", max: "113", step: "1", value: budget, "aria-label": "Budget" });
+  const updateEstimate = () => { estOut.textContent = `≈ ${estimateSeconds([...selectedModels], budget)} s`; };
+  budgetSlider.addEventListener("input", () => { budget = parseInt(budgetSlider.value, 10); budgetOut.textContent = `${budget} calls`; updateEstimate(); });
+  updateEstimate();
+
+  const runBtn = el("button", { type: "button", class: "btn primary", text: "Run" });
+  const statusLine = el("p", { class: "small dl-status", "aria-live": "polite" });
+  const errBadge = el("span", {});
+  function updateRunState() { runBtn.disabled = !selectedModels.size || !textarea.value.trim(); }
+  textarea.addEventListener("input", updateRunState); updateRunState();
+
+  const inputCard = el("div", { class: "card" },
+    el("div", { class: "field" }, el("label", { for: "dlText", text: "Your text" }), textarea, charCount),
+    el("div", { class: "field", style: "margin-top:8px" }, el("label", { for: "dlWho", text: "Who is it for? (optional)" }), whoInput),
+    examples.length ? el("div", { style: "margin-top:8px" }, el("p", { class: "small muted", text: "Examples (real intakes from foundry/ideas):" }), examplesRow) : null,
+    el("div", { style: "margin-top:10px" }, el("p", { class: "small muted", text: "Models (loaded local only):" }), modelsRow, el("p", { class: "legend", text: "The hosted model is billed per call and isn't used here." })),
+    el("div", { class: "slider", style: "margin-top:10px" }, el("span", { class: "small muted", text: "Budget" }), budgetSlider, budgetOut, estOut),
+    el("p", { class: "legend", text: "113 = every item in the library. One call asks all selected models at once." }),
+    el("div", { class: "row", style: "margin-top:10px" }, runBtn, statusLine, el("span", { class: "spacer" }), errBadge));
+
+  const viewSeg = el("div", { class: "segmented" },
+    el("button", { type: "button", "aria-pressed": "true", text: "Map" }),
+    el("button", { type: "button", "aria-pressed": "false", text: "Outline" }));
+  const mapBox = el("div", { class: "dl-map-wrap map-default" });
+  const outlineBox = el("div", { style: "display:none" });
+  const legend = el("div", { class: "row", style: "gap:14px;flex-wrap:wrap;margin-top:8px" },
+    el("span", { class: "small muted" }, el("span", { class: "swatch plain" }), " fill = risk if left undone"),
+    el("span", { class: "small muted" }, "red ring = could force a redesign"),
+    el("span", { class: "small muted" }, "dashed = models split (spread ≥ 0.3)"),
+    el("span", { class: "small muted" }, "dotted = never reached"),
+    el("span", { class: "small muted" }, "outer ring = calls: spent / budget / possible"));
+  viewSeg.children[0].addEventListener("click", () => { viewSeg.children[0].setAttribute("aria-pressed", "true"); viewSeg.children[1].setAttribute("aria-pressed", "false"); mapBox.style.display = ""; outlineBox.style.display = "none"; });
+  viewSeg.children[1].addEventListener("click", () => { viewSeg.children[0].setAttribute("aria-pressed", "false"); viewSeg.children[1].setAttribute("aria-pressed", "true"); mapBox.style.display = "none"; outlineBox.style.display = ""; });
+
+  const readoutBox = el("div");
+  const detailPanel = el("div", { class: "dlPanel" }, customDetail(null, lib, null));
+  const provCard = el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "How this was built" }),
+    el("div", { class: "srcgrid" },
+      el("div", {}, el("b", { text: "1. Your text" }), el("br"), el("span", { class: "small muted", text: "The only input about your idea. Nothing else on this page was written for it." })),
+      el("div", {}, el("b", { text: "2. The library" }), el("br"), el("span", { class: "small muted" }, `foundry/tools/world-knowledge.yaml (sha ${lib.sha256.slice(0, 10)}). 21 requirement categories and 90 requirements, hand-written once, generic and reused for every idea. The models chose from it; they didn't add to it.`)),
+      el("div", {}, el("b", { text: "3. Model numbers" }), el("br"), el("span", { class: "small muted", text: "probes/lab_custom_decompose.py → POST /v1/systemone. Live typed yes/no, choice and 0-4 scale answers. No prose." }))));
+
+  let runState = null, mapObj = null;
+  const resetRun = () => {
+    runState = { categories: {}, leaves: {}, leafText: {}, flatModels: {}, scope: null };
+    mapObj = orbitMap(lib, (id) => { mapObj.select(id); detailPanel.replaceChildren(customDetail(runState, lib, id)); });
+    mapBox.replaceChildren(mapObj.svg, legend);
+    outlineBox.replaceChildren(el("p", { class: "small muted", text: "Nothing run yet." }));
+    readoutBox.replaceChildren();
+  };
+  resetRun();
+
+  let lastEnd = null;
+  function handleEvent(ev) {
+    mapObj.apply(ev);
+    if (ev.t === "frame") { runState.scope = ev.scope.mean; for (const m in ev.errors) {} }
+    if (ev.t === "categories") {
+      for (const [cid, it] of Object.entries(ev.items)) runState.categories[cid] = it;
+      for (const m of ev.flat_models) runState.flatModels[m] = true;
+      statusLine.textContent = `Call ${ev.seq} of ${budget} · scored 21 categories`;
+    }
+    if (ev.t === "call") {
+      const cat = lib.categories.find((c) => c.id === ev.node);
+      const leaf = Object.values(runState.leafText);
+      statusLine.textContent = `Call ${ev.seq} of ${budget} · asking about ${cat ? cat.text.slice(0, 50) : ev.node}`;
+    }
+    if (ev.t === "node") {
+      if (ev.kind === "category") {
+        for (const c of lib.categories) if (c.id === ev.id) for (const child of c.children) runState.leafText[child.id] = child.text;
+      } else if (ev.kind === "leaf") {
+        runState.leaves[ev.id] = ev;
+        if (Object.keys(ev.errors || {}).length) errBadge.replaceChildren(el("span", { class: "badge warn", title: JSON.stringify(ev.errors) }, `${Object.keys(ev.errors).length} error(s)`));
+      }
+      outlineBox.replaceChildren(buildCustomOutline(runState, lib));
+      readoutBox.replaceChildren(customReadout(runState, lib, lastEnd));
+    }
+    if (ev.t === "end") {
+      lastEnd = ev;
+      statusLine.textContent = `Stopped: ${ev.spent} of ${ev.budget} calls (${ev.reason}).`;
+      readoutBox.replaceChildren(customReadout(runState, lib, ev));
+      afterRunControls(ev);
+    }
+  }
+
+  const afterBox = el("div");
+  function afterRunControls(end) {
+    afterBox.replaceChildren();
+    if (end.frontier && end.frontier.length) {
+      const more20 = el("button", { class: "btn", type: "button", text: "Spend 20 more" });
+      const moreAll = el("button", { class: "btn", type: "button", text: "Spend to 113 (all)" });
+      more20.addEventListener("click", () => runNow(Math.min(113, budget + 20)));
+      moreAll.addEventListener("click", () => runNow(113));
+      const next = end.frontier.slice(0, 5).map((f) => { const t = lib.categories.find((c) => c.id === f.id)?.text || Object.values(runState.leafText).length ? runState.leafText[f.id] : f.id; return t || f.id; });
+      afterBox.append(el("div", { class: "row" }, more20, moreAll), el("p", { class: "small muted", text: "Next in line if you spend more: " + next.join("; ") }));
+    }
+    const dl = el("button", { class: "btn", type: "button", text: "Download run" });
+    dl.addEventListener("click", () => Jev.download("custom-decompose.jsonl", allEvents.map((e) => JSON.stringify(e)).join("\n"), "application/x-ndjson"));
+    afterBox.append(dl);
+  }
+
+  let allEvents = [];
+  async function runNow(b) {
+    budget = b; budgetSlider.value = String(b); budgetOut.textContent = `${b} calls`;
+    resetRun();
+    allEvents = [];
+    CUSTOM_ABORT?.abort();
+    CUSTOM_ABORT = new AbortController();
+    runBtn.textContent = "Stop"; runBtn.onclick = () => CUSTOM_ABORT?.abort();
+    textarea.disabled = true; whoInput.disabled = true; budgetSlider.disabled = true;
+    errBadge.replaceChildren();
+    statusLine.textContent = "Starting…";
+    let stoppedAt = 0;
+    try {
+      await streamDecompose({ text: textarea.value.trim(), who: whoInput.value.trim(), models: [...selectedModels], budget: b },
+        (ev) => { allEvents.push(ev); if (ev.t === "call") stoppedAt = ev.seq; handleEvent(ev); }, CUSTOM_ABORT.signal);
+    } catch (e) {
+      if (e.name === "AbortError") statusLine.textContent = `Stopped at call ${stoppedAt} of ${b}.`;
+      else out.prepend(el("div", { class: "callout bad", text: e.message }));
+    } finally {
+      runBtn.textContent = "Run"; runBtn.onclick = () => runNow(budget);
+      textarea.disabled = false; whoInput.disabled = false; budgetSlider.disabled = false;
+      CUSTOM_ABORT = null;
+    }
+  }
+  runBtn.onclick = () => runNow(budget);
+
+  out.append(inputCard, el("div", { class: "dlGrid" },
+    el("div", {}, viewSeg, mapBox, outlineBox),
+    detailPanel), readoutBox, provCard, afterBox);
   return out;
 }
 
