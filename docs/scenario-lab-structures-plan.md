@@ -186,8 +186,12 @@ shape) before any code — delegated to a separate design pass this session; see
 
 1. ~~Validate decompose-and-loop~~ DONE.
 2. ~~Baseline (13)~~ DONE, shipped and verified.
-3. Incremental state (10) — window_study.py running now for semif/so1/laya/verdict in the
-   background (`logs/window-study/run.log`); UI not built yet.
+3. ~~Incremental state (10)~~ DONE, shipped as "Window size" (the honestly-reframed version — see
+   above). Verified live with 2 of the eventual 6 models (kev-4b, jev — the two that already had
+   data); the page reads `/api/window-study` live, so it will pick up semif/so1/laya/verdict
+   automatically as `logs/window-study/run.log`'s background job finishes writing their JSON, no
+   further UI change needed. Handled the `jev-typesafe` legacy filename/backend-string correctly
+   (maps to canonical id `jev`, never displays the raw legacy string, per CLAUDE.md's own callout).
 4. ~~Funnel/Monte Carlo (8)~~ DONE, shipped and verified.
 5. Time (12) — not started. Depends on whether manipulation_windows.json needs a small honest
    onset-label addition first (still to check).
