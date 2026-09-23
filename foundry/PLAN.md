@@ -32,6 +32,20 @@ measurement has to happen before this is safe to build).
   to **4**. `report.py` and `sort_and_rank.py` both stayed compatible, unmodified except one
   additive line in `report.py`. See the commit for full detail. `ATOMIC_THRESHOLD` itself was
   deliberately left untouched this pass (still pending kev-4b's data).
+- **Built a demo qualitative Monte Carlo risk-concentration pass** (`monte_carlo.py`,
+  `tools/monte-carlo.yaml`): checked the real PMBOK distinction first (qualitative risk analysis =
+  ordinal scores for relative prioritization, no units; quantitative Monte Carlo = needs real
+  time/cost estimates, which this project has already refused to fabricate twice — see
+  `monte-carlo.yaml`'s `methodology_note`) and built only the qualitative version, honestly scoped.
+  `sort_and_rank.py` now persists its scoring (`runs/<idea>-sort.jsonl`) — previously printed to
+  terminal scrollback only. Samples each requirement's live risk/effort score as a distribution
+  (mean + cross-model spread, not a fixed number), ranks categories by contribution to the
+  *variance* of simulated exposure (a real sensitivity-analysis technique), and translates the
+  ranking onto a real, cited illustrative scale (COCOMO Organic mode, Boehm 1981, verified against
+  real sources — 10 KLOC -> ~27 person-months) — explicitly labeled illustrative, never a claim
+  about the actual idea's size. Verified at base level across all 7 ideas, including 2- and
+  3-requirement edge cases, no failures. Full writeup with real numbers:
+  `comparisons/jev-monte-carlo-showcase-2026-09-22.md`.
 
 ## Infrastructure blocker
 
