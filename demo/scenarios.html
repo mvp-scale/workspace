@@ -239,7 +239,7 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
-const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"], ["window", "Window size", "window"]];
+const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"]];
 const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
@@ -262,7 +262,7 @@ const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1],
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6" };
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -427,6 +427,7 @@ mount(document.getElementById("root"), async () => {
     }
     else if (ST.set === "funnel") { mount(box, () => getDetail("memsafety"), renderFunnel); }
     else if (ST.set === "window") { mount(box, () => api("/api/window-study"), renderWindowStudy); }
+    else if (ST.set === "hierarchy") { mount(box, () => api("/api/hierarchy"), renderHierarchy); }
     else if (ST.set === "all") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
@@ -1374,6 +1375,50 @@ function renderWindowStudy(data) {
     el("div", { class: "scale", style: "margin-top:10px" }, el("span", { text: "At chance" }), STEPS.map((i) => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = chance (0.5)" }))),
     el("div", { class: "card" }, el("h4", { text: "Best window per model" }),
       el("ul", {}, bestRows.map((b) => el("li", { class: "small" }, mtagShort(b.id), ` best at `, el("b", { text: WINDOW_LABEL[b.spec] || b.spec }), ` (AUC ${fmt.num(b.auc, 3)}, ${b.n} dialogues)`)))));
+  return out;
+}
+
+/* ---------- structure: hierarchy (cheap gate, detail only if it fires) ---------- */
+function renderHierarchy(data) {
+  const ids = orderModels(Object.keys(data || {}));
+  const out = el("div");
+  out.append(el("h2", { text: "Hierarchy (gate)" }),
+    el("p", { class: "muted", text: "Distinct from cascade (which escalates across models): this escalates across questions within one model. Built on persuasion_appeals (Persuasion for Good) — the one published set here with a genuine \"none\" class (20 of 140 items use no persuasion technique at all) alongside its 6 real technique labels. A cheap live gate question (\"any persuasion technique at all?\") is asked to every item; the existing stored full 7-way answer is reused as the detail prediction only when the gate fires, never re-asked." }));
+  if (!ids.length) return out.append(empty("No hierarchy runs yet", "Run probes/lab_hierarchy.py --backend <name> (needs demo/server.py running and stored persuasion_appeals results).")), out;
+  const table = el("table", { class: "data wrap" },
+    el("caption", { class: "legend", text: "Flat = the existing stored full 7-way choice, one call. Gate = the new live binary call alone, graded against \"is this none or a real technique\". Hierarchical = gate live + the existing detail answer reused only if the gate fires." }),
+    el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Flat accuracy" }), el("th", { text: "Gate accuracy" }), el("th", { text: "Hierarchical accuracy" }), el("th", { text: "Δ vs. flat" }), el("th", { text: "n" }))));
+  const tbody = el("tbody");
+  let anyPositive = false;
+  for (const id of ids) {
+    const r = data[id];
+    const delta = r.hier_accuracy - r.flat_accuracy;
+    if (delta > 0) anyPositive = true;
+    tbody.append(el("tr", {}, el("td", {}, mtagShort(id)),
+      el("td", { style: `background:${stepBg(stepOf(r.flat_accuracy, 1 / 7))}`, text: pc(r.flat_accuracy) }),
+      el("td", { style: `background:${stepBg(stepOf(r.gate_accuracy, 120 / 140))}`, title: "Graded against always-guess-“none”'s own 85.7% floor (120 of 140 items), since the classes are imbalanced.", text: pc(r.gate_accuracy) }),
+      el("td", { style: `background:${stepBg(stepOf(r.hier_accuracy, 1 / 7))}`, text: pc(r.hier_accuracy) }),
+      el("td", { class: delta >= 0 ? "" : "below", text: `${delta >= 0 ? "+" : ""}${pc(delta, 1)}` }),
+      el("td", { class: "muted", text: `${r.n}${r.n_failed ? ` (${r.n_failed} failed)` : ""}` })));
+  }
+  table.append(tbody);
+  out.append(el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, table)));
+  out.append(el("div", { class: "callout" + (anyPositive ? "" : " bad") },
+    el("p", {}, el("b", { text: anyPositive ? "Mixed result: " : "Real finding, stated plainly: " }),
+      anyPositive ? "hierarchical decomposition helps for at least one model here, but not all — see the table." :
+        "for every model measured, hierarchical decomposition (gate + reused detail) scored lower than just asking the flat 7-way question directly. Splitting the question doesn't reliably help here: it adds a second place for the model to be wrong (the gate itself, often a weaker discriminator than the flat call already is) on top of the original detail question, rather than replacing a harder call with two easier ones.")));
+  const breakdown = ids.map((id) => {
+    const recs = (data[id].records || []).filter((r) => !r.error);
+    const gateWrongOnNone = recs.filter((r) => r.expected === "none" && r.gate_fires).length;
+    const gateWrongOnTech = recs.filter((r) => r.expected !== "none" && !r.gate_fires).length;
+    const detailWrongGivenGateRight = recs.filter((r) => r.expected !== "none" && r.gate_fires && r.detail_pred !== r.expected).length;
+    return { id, gateWrongOnNone, gateWrongOnTech, detailWrongGivenGateRight, total: recs.length };
+  });
+  const bt = el("table", { class: "data" }, el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Gate false-fired on a neutral item" }), el("th", { text: "Gate missed a real technique" }), el("th", { text: "Gate right, detail still wrong" }))),
+    el("tbody", {}, breakdown.map((b) => el("tr", {}, el("td", {}, mtagShort(b.id)), el("td", { class: "muted", text: b.gateWrongOnNone }), el("td", { class: "muted", text: b.gateWrongOnTech }), el("td", { class: "muted", text: b.detailWrongGivenGateRight })))));
+  out.append(el("div", { class: "card" }, el("h4", { text: "Where the errors come from" }),
+    el("p", { class: "small muted", text: "Of 140 items each. A model with a strong flat score but a weak gate here is a real, specific finding: it can classify the technique once asked directly, but doesn't reliably know whether one is present at all when asked as a separate, simpler question." }),
+    el("div", { style: "overflow-x:auto" }, bt)));
   return out;
 }
 

@@ -195,7 +195,24 @@ shape) before any code — delegated to a separate design pass this session; see
 4. ~~Funnel/Monte Carlo (8)~~ DONE, shipped and verified.
 5. Time (12) — not started. Depends on whether manipulation_windows.json needs a small honest
    onset-label addition first (still to check).
-6. Hierarchy (11) — not started. Needs a genuinely new offline runner, most novel of the five.
+6. ~~Hierarchy (11)~~ DONE, shipped. Built on `persuasion_appeals` -- the one published set with a
+   genuine "none" class alongside real technique labels. New `probes/lab_hierarchy.py`: one live
+   gate call per item (binary "any technique at all?"), reusing the existing stored flat 7-way
+   answer as the "detail" prediction only when the gate fires. Ran live for all 5 loaded models.
+   **Real, honest finding**: hierarchical accuracy was LOWER than the flat baseline for every
+   single model (deltas from -35.0% to +0.0%, never positive) -- splitting the question adds a
+   second place to be wrong (the gate itself, sometimes badly anti-correlated, e.g. one model's
+   gate scored 31% against an 85.7% majority-class floor) rather than replacing one hard call with
+   two easier ones. Reported plainly, not reframed to look better.
+   **Verification note**: `demo/server.py`'s new `/api/hierarchy` endpoint could not be tested
+   against the real running server (port 8100) because `probes/window_study.py` was mid-run
+   against it in the background and restarting would have broken that job (BRIDGE.md's own rule:
+   never restart demo/server.py while an experiment runs through it). Verified instead against a
+   temporary second instance on port 8101 (`DEMO_PORT=8101 python3 demo/server.py`), then killed
+   that instance -- confirmed via `ps`/`curl` that only the temp instance died and the real server
+   (PID logged at start, running since 2026-09-22) was untouched. **The real port-8100 server still
+   needs a restart** to actually serve `/api/hierarchy` in production -- do this once
+   `logs/window-study/run.log` shows all four remaining models finished, not before.
 7. Custom decomposition — design complete (`docs/custom-decomposition-design.md`), build not
    started. Biggest remaining piece.
 

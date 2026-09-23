@@ -159,6 +159,12 @@ def window_study():
     return {f.stem: json.loads(f.read_text()) for f in sorted(d.glob("*.json"))} if d.is_dir() else {}
 
 
+def hierarchy_study():
+    """Stored results of probes/lab_hierarchy.py, keyed by backend."""
+    d = PROBE_RUNS / "_hierarchy"
+    return {f.stem: json.loads(f.read_text()) for f in sorted(d.glob("*.json"))} if d.is_dir() else {}
+
+
 def vram():
     """Measured GPU memory per model (demo/vram.py). steady = the most a running server needed under load."""
     f = HERE / "vram.json"
@@ -387,6 +393,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, json.loads(f.read_text()) if f.is_file() else {"dialogues": []})
         elif path == "/api/window-study":
             self._send(200, window_study())
+        elif path == "/api/hierarchy":
+            self._send(200, hierarchy_study())
         elif path == "/api/speeches":
             self._send(200, speeches())
         elif path == "/api/results":
