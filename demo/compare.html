@@ -100,8 +100,7 @@
       <div class="mstrip" id="strip" role="list" aria-label="Models and whether they are loaded"></div>
       <div class="summary small" id="summary" aria-live="polite"><span class="subtle">Run a question to compare the models.</span></div>
       <div class="table-wrap" style="margin-top:8px" id="matrix" aria-busy="false"></div>
-      <p class="small subtle" style="margin-top:8px" id="notloaded"></p>
-      <p class="small subtle" style="margin-top:4px">Every loaded model gets a column; models that are not loaded are listed above and skipped. See <a href="/">the leaderboard</a> and <a href="/models">how each model works</a>.</p>
+      <p class="small subtle" style="margin-top:8px">Every loaded model in the strip above gets a column; not-loaded ones are skipped. See <a href="/">the leaderboard</a> and <a href="/models">how each model works</a>.</p>
     </section>
   </div>
 </main>
@@ -136,7 +135,7 @@ const PRESETS = [
     i: "Is the customer asking to cancel their subscription right now?", o: "" },
 ];
 
-let status = null, backendInfo = null, running = false, last = null, showErrors = false, showExtras = false, type = "choice";
+let status = null, backendInfo = null, running = false, last = null, showErrors = false, showExtras = false, type = "choice", leaderRank = {};
 
 /* ---------- storage (always optional) ---------- */
 const store = {
@@ -232,16 +231,26 @@ const loadedIds = () => allIds().filter(id => status[id]?.up);
    need to also spell "loaded · 8.6 GiB" or "not loaded" in text next to it. */
 function renderStrip() {
   const ids = allIds(), up = loadedIds(), strip = $("strip");
-  if (!ids.length) { strip.replaceChildren(el("span", { class: "small subtle", text: "Model status is not available right now." })); }
-  else strip.replaceChildren(el("p", { class: "small mstrip-h" }, el("strong", { text: `${up.length} of ${ids.length} models loaded` })),
-    ...ids.map(id => { const s = status[id], on = !!s.up;
-      return el("span", { class: "mchip " + (on ? "on" : "off"), role: "listitem", title: on ? "Loaded" : `Not loaded${s.reason ? ": " + s.reason : ""}` }, el("span", { class: `dot ${on ? "up" : "down"}`, "aria-hidden": "true" }), Jev.tag(id, { name: false })); }));
-  const off = ids.filter(id => !status[id].up);
-  $("notloaded").replaceChildren(...(off.length ? ["Not loaded (no column): ", el("span", { style: "display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle" }, ...off.map(id => Jev.tag(id, { name: false })))] : []));
+  if (!ids.length) { strip.replaceChildren(el("span", { class: "small subtle", text: "Model status is not available right now." })); return; }
+  /* Loaded models first (best-ranked first among them), not-loaded after -- the strip is the one
+     place both groups appear at all, so ordering does the sorting work a separate list used to. */
+  const sorted = [...ids].sort((a, b) => {
+    const onA = !!status[a]?.up, onB = !!status[b]?.up;
+    if (onA !== onB) return onA ? -1 : 1;
+    return (leaderRank[a] ?? 99) - (leaderRank[b] ?? 99);
+  });
+  strip.replaceChildren(el("p", { class: "small mstrip-h" }, el("strong", { text: `${up.length} of ${ids.length} models loaded` })),
+    ...sorted.map(id => { const s = status[id], on = !!s.up, rank = leaderRank[id];
+      return el("span", { class: "mchip " + (on ? "on" : "off"), role: "listitem", title: on ? "Loaded" : `Not loaded${s.reason ? ": " + s.reason : ""}` },
+        el("span", { class: `dot ${on ? "up" : "down"}`, "aria-hidden": "true" }), Jev.tag(id, { name: false }),
+        on && rank ? el("span", { class: "small muted", text: `#${rank}` }) : null); }));
 }
 function refreshUi() { renderStrip(); renderMatrix(); if (!running) setRunning(false); }
 async function loadStatus() { try { status = await api("/api/status"); } catch { /* keep what we had */ } refreshUi(); }
 async function loadBackends() { try { backendInfo = await api("/api/backends"); } catch { backendInfo = null; } }
+/* Leaderboard rank (by mean accuracy, same order as the leaderboard's own #1/#2/#3) -- a real,
+   new fact next to a loaded model's code, not a restatement of anything else on this page. */
+async function loadLeaderboard() { try { leaderRank = Object.fromEntries((await api("/api/leaderboard")).map((r, i) => [r.id, i + 1])); } catch { leaderRank = {}; } refreshUi(); }
 
 /* ---------- normalising real responses ---------- */
 function plainError(raw) {
@@ -285,7 +294,10 @@ const PH = () => el("span", { class: "placeholder", text: "–" });
 function extrasCell(r, name) {
   if (!r) return PH();
   if (!r.ok) return el("div", { class: "extras" }, el("h5", { text: "Technical detail" }), el("pre", { text: r.detail }));
-  const groups = [["Reported model id", r.model ? { model: r.model } : null], ["Response fields", r.extras?.response], ["Response headers", r.extras?.headers], ["Extra answer fields", r.extras?.answer]]
+  /* latency_ms duplicates the Latency row already shown above for this exact column -- drop it
+     here rather than say the same number twice. */
+  const response = r.extras?.response ? Object.fromEntries(Object.entries(r.extras.response).filter(([k]) => k !== "latency_ms")) : null;
+  const groups = [["Reported model id", r.model ? { model: r.model } : null], ["Response fields", response], ["Response headers", r.extras?.headers], ["Extra answer fields", r.extras?.answer]]
     .filter(([, o]) => o && Object.keys(o).length);
   return el("div", { class: "extras" }, groups.length ? groups.map(([h, o]) => [el("h5", { text: h }), el("dl", {}, Object.entries(o).map(([k, v]) => el("div", {}, el("dt", { text: k }), el("dd", { text: String(v) }))))]) : el("span", { class: "subtle small", text: "Nothing extra returned." }),
     el("button", { class: "btn ghost", type: "button", onclick: () => copyCurl(name), text: "Copy curl" }));
@@ -391,7 +403,7 @@ $("clear-recent").onclick = () => { store.write([]); renderRecent(); };
 
 const initial = decodeHash();
 if (initial) { writeForm(initial); $("preset").value = CUSTOM; syncPreset(); } else applyPreset(PRESETS[0].id);
-setRunning(false); renderRecent(); renderMatrix("idle"); loadBackends();
+setRunning(false); renderRecent(); renderMatrix("idle"); loadBackends(); loadLeaderboard();
 Jev.ready.then(() => { status = Jev.status(); refreshUi(); Jev.onStatus((st) => { status = st; refreshUi(); }); });
 </script>
 </body>
