@@ -193,8 +193,22 @@ shape) before any code — delegated to a separate design pass this session; see
    further UI change needed. Handled the `jev-typesafe` legacy filename/backend-string correctly
    (maps to canonical id `jev`, never displays the raw legacy string, per CLAUDE.md's own callout).
 4. ~~Funnel/Monte Carlo (8)~~ DONE, shipped and verified.
-5. Time (12) — not started. Depends on whether manipulation_windows.json needs a small honest
-   onset-label addition first (still to check).
+5. ~~Time (12)~~ DONE, shipped. Confirmed no dialogue carries a turn-level onset label (checked
+   the actual keys: id/source_id/turns/n_turns/manipulative/technique/vulnerability/label_scope,
+   dialogue-level only) -- didn't fabricate one. Built `probes/lab_time.py` instead around a
+   self-referential measure that needs no onset ground truth: onset lag = how much of a
+   manipulative dialogue plays out before the model's own running "everything so far" score
+   crosses 0.5 and stays there for good (a committed alarm, not a one-turn blip); false-alarm rate
+   = how often a non-manipulative dialogue's running score crosses 0.5 at all, reported per 10
+   turns (not "per minute" -- there's no wall-clock time in this dataset, and claiming one would
+   be fabricating a unit). Ran live for semif and kev-4b (both free of the window_study.py job);
+   so1/laya/verdict queued as a detached follow-up job
+   (`logs/window-study/lab_time_followup.log`) that waits for window_study to fully finish before
+   running, so the two jobs never compete for the same model's GPU time. Verified UI against a
+   third temporary server instance (port 8102, killed after -- confirmed via `ps` that only the
+   temp instance died). `demo/server.py` needs one restart to serve both `/api/hierarchy` and
+   `/api/time-study` in production -- still deferred until `window_study.py` (and now its
+   `lab_time.py` follow-up) fully finish.
 6. ~~Hierarchy (11)~~ DONE, shipped. Built on `persuasion_appeals` -- the one published set with a
    genuine "none" class alongside real technique labels. New `probes/lab_hierarchy.py`: one live
    gate call per item (binary "any technique at all?"), reusing the existing stored flat 7-way
@@ -214,7 +228,17 @@ shape) before any code — delegated to a separate design pass this session; see
    needs a restart** to actually serve `/api/hierarchy` in production -- do this once
    `logs/window-study/run.log` shows all four remaining models finished, not before.
 7. Custom decomposition — design complete (`docs/custom-decomposition-design.md`), build not
-   started. Biggest remaining piece.
+   started. Biggest remaining piece, and the only one left.
+
+**All 5 structures from the original backlog (8, 10, 11, 12, 13) are now shipped, verified live,
+and committed.** `STRUCTURES` in `scenarios.html` now has 8 entries: batch, decompose, cascade,
+baseline, funnel, window, hierarchy, time. One production loose end: `demo/server.py`'s real
+port-8100 process needs a restart to actually serve the two new endpoints
+(`/api/hierarchy`, `/api/time-study`) -- deferred until the background window_study/lab_time jobs
+finish (check `logs/window-study/run.log` and `logs/window-study/lab_time_followup.log`), since
+those jobs depend on the same server process for `/api/batch` and a restart would break them
+mid-run. Do this restart, then a final full-page regression pass with puppeteer, before starting
+the custom-decomposition build.
 
 **Tooling note for whoever continues this**: puppeteer + Chrome are now installed in this
 container (`/tmp/pptr-test/node_modules`, `/root/.cache/puppeteer`) specifically so UI changes here

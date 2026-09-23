@@ -239,7 +239,7 @@ const { el, fmt, api, mount, empty } = Jev;
 
 /* ---------- constants and small helpers ---------- */
 const GROUPS = ["Security audit", "Conversation", "Reasoning", "Subtext", "Fraud and growth", "Document checklist", "Perspective validation", "Other"];
-const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"]];
+const STRUCTURES = [["batch", "Batch performance", "layers"], ["decompose", "Decompose and loop", "split"], ["cascade", "Cascade (routing)", "cascade"], ["baseline", "Baseline (majority class)", "baseline"], ["funnel", "Funnel (Monte Carlo)", "funnel"], ["window", "Window size", "window"], ["hierarchy", "Hierarchy (gate)", "hierarchy"], ["time", "Time (onset and false alarms)", "time"]];
 const STRUCTURE_IDS = new Set(STRUCTURES.map(s => s[0]));
 const META = {
   memsafety: ["Security audit", "Memory safety (NIST Juliet)", "Memory safety"],
@@ -262,7 +262,7 @@ const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1],
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4" };
+const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4", time: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0|M12 7v5l4 2" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -428,6 +428,7 @@ mount(document.getElementById("root"), async () => {
     else if (ST.set === "funnel") { mount(box, () => getDetail("memsafety"), renderFunnel); }
     else if (ST.set === "window") { mount(box, () => api("/api/window-study"), renderWindowStudy); }
     else if (ST.set === "hierarchy") { mount(box, () => api("/api/hierarchy"), renderHierarchy); }
+    else if (ST.set === "time") { mount(box, () => api("/api/time-study"), renderTimeStudy); }
     else if (ST.set === "all") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
@@ -1419,6 +1420,31 @@ function renderHierarchy(data) {
   out.append(el("div", { class: "card" }, el("h4", { text: "Where the errors come from" }),
     el("p", { class: "small muted", text: "Of 140 items each. A model with a strong flat score but a weak gate here is a real, specific finding: it can classify the technique once asked directly, but doesn't reliably know whether one is present at all when asked as a separate, simpler question." }),
     el("div", { style: "overflow-x:auto" }, bt)));
+  return out;
+}
+
+/* ---------- structure: time (onset lag and false alarms) ---------- */
+function renderTimeStudy(data) {
+  const ids = orderModels(Object.keys(data || {}));
+  const out = el("div");
+  out.append(el("h2", { text: "Time (onset and false alarms)" }),
+    el("p", { class: "muted", text: "No dialogue here carries a turn-level onset label, only a whole-dialogue verdict — inventing one would be a label this data doesn't have. So this measures something that doesn't need one: replaying all 200 manipulation_windows dialogues turn by turn over the whole conversation so far, each model's own running score is checked against itself. Onset lag: for a manipulative dialogue, how much of it plays out before the running score crosses 0.5 and stays there for good (a committed alarm, not a one-turn blip) — as a share of the dialogue, since these dialogues have no real timestamps. False alarms: for a non-manipulative dialogue, how often the running score crosses 0.5 at all, per 10 turns (not \"per minute\" — there is no wall-clock time in this data)." }));
+  if (!ids.length) return out.append(empty("No time-study runs yet", "Run probes/lab_time.py --backend <name> (needs demo/server.py running).")), out;
+  const table = el("table", { class: "data wrap" },
+    el("caption", { class: "legend", text: "Lower onset lag is better (alarms sooner); lower false-alarm rate is better; \"never commits\" is the share of real manipulative dialogues where the running score never settles above 0.5 through the end." }),
+    el("thead", {}, el("tr", {}, el("th", { text: "Model" }), el("th", { text: "Mean onset lag" }), el("th", { text: "Never commits" }), el("th", { text: "False alarms / 10 turns" }), el("th", { text: "Any false alarm" }), el("th", { text: "n manip. / non-manip." }))));
+  const tbody = el("tbody");
+  for (const id of ids) {
+    const r = data[id];
+    tbody.append(el("tr", {}, el("td", {}, mtagShort(id)),
+      el("td", { style: r.mean_onset_lag_share != null ? `background:${stepBg(-stepOf(r.mean_onset_lag_share, 0.5))}` : "", text: r.mean_onset_lag_share != null ? pc(r.mean_onset_lag_share) : "–" }),
+      el("td", { class: "muted", text: r.share_never_committed != null ? pc(r.share_never_committed) : "–" }),
+      el("td", { style: r.mean_false_alarms_per_10_turns != null ? `background:${stepBg(-stepOf(Math.min(1, r.mean_false_alarms_per_10_turns / 3), 0))}` : "", text: r.mean_false_alarms_per_10_turns != null ? fmt.num(r.mean_false_alarms_per_10_turns, 2) : "–" }),
+      el("td", { class: "muted", text: r.share_with_any_false_alarm != null ? pc(r.share_with_any_false_alarm) : "–" }),
+      el("td", { class: "muted", text: `${r.n_manipulative} / ${r.n_non_manipulative}` })));
+  }
+  table.append(tbody);
+  out.append(el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, table)));
   return out;
 }
 

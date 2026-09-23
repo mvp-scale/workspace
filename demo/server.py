@@ -165,6 +165,19 @@ def hierarchy_study():
     return {f.stem: json.loads(f.read_text()) for f in sorted(d.glob("*.json"))} if d.is_dir() else {}
 
 
+def time_study():
+    """Stored results of probes/lab_time.py, keyed by backend. Per-dialogue 'series' arrays are
+    dropped here (only used by lab_time.py itself for local inspection) to keep the payload small;
+    the page only needs the per-dialogue summary fields."""
+    d = PROBE_RUNS / "_time"
+    out = {}
+    for f in sorted(d.glob("*.json")) if d.is_dir() else []:
+        rec = json.loads(f.read_text())
+        rec["dialogues"] = [{k: v for k, v in dd.items() if k != "series"} for dd in rec.get("dialogues", [])]
+        out[f.stem] = rec
+    return out
+
+
 def vram():
     """Measured GPU memory per model (demo/vram.py). steady = the most a running server needed under load."""
     f = HERE / "vram.json"
@@ -395,6 +408,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, window_study())
         elif path == "/api/hierarchy":
             self._send(200, hierarchy_study())
+        elif path == "/api/time-study":
+            self._send(200, time_study())
         elif path == "/api/speeches":
             self._send(200, speeches())
         elif path == "/api/results":
