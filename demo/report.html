@@ -18,10 +18,6 @@
   .rec .pick .mtag { white-space: normal; flex-wrap: wrap; gap: 2px 8px; }
   .rec p + p { margin-top: 8px; } .rec .rule { color: var(--text-3); font-size: 13px; }
   .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .codeblock { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .codeblock > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
-  .codeblock pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 13px/1.6 var(--mono); }
-  .codeblock pre:focus-visible { outline-offset: -2px; }
   @media print {
     .report .section { break-inside: auto; }
     .table-wrap { overflow: visible; }
@@ -29,7 +25,6 @@
     table.data th, table.data td { white-space: normal; padding: 4px 6px; }
     table.data thead th { position: static; }
     table.data tr { break-inside: avoid; }
-    .codeblock pre { white-space: pre-wrap; overflow: visible; }
     .segmented { display: none; }
   }
 </style>
@@ -50,15 +45,10 @@
   </div>
 
   <div id="body" aria-live="polite"></div>
-
-  <section class="section" aria-labelledby="repro-h">
-    <header><div><h2 id="repro-h">Reproduce</h2><p class="small">Run from the repository root. Each script skips a run whose output folder already exists under <code>data/bench</code>; delete the folder to run it again.</p></div></header>
-    <div class="stack" id="repro"></div>
-  </section>
 </main>
 
 <script>
-const { el, fmt, mount, load, sortable, download, csv, copy, empty } = Jev;
+const { el, fmt, mount, load, sortable, download, csv, empty } = Jev;
 const TIERS = ["easy", "original", "hard"];
 const TOLERANCES = [5, 10, 15, 20];
 let DATA, TOL = 10, TIER_FILTER = "all";
@@ -322,17 +312,6 @@ function render(d) {
   setTol(TOL); showTier(TIER_FILTER);
   return frag;
 }
-
-/* ---------- reproduce ---------- */
-const COMMANDS = [
-  ["1. Install the open models (one isolated venv each)", "./dev-bench-setup.sh                 # or: ./dev-bench-setup.sh laya verdict semif so1"],
-  ["2. Run the HTTP-served models (JEFF4H, the KEV models, hosted JEV113)", "# jeff (:8000) and kev (:8009, :8010, :8011) servers must be running; jev needs TYPESAFE_API_KEY\nset -a; . .env; set +a\ndemo/bench.sh original easy hard      # or: MODELS=kev-4b demo/bench.sh hard"],
-  ["3. Run the in-process models, one at a time", "demo/bench-batch.sh laya verdict semif so1   # TIERS=\"hard\" to change tiers"],
-  ["4. Start the console", "TYPESAFE_API_KEY=... python3 demo/server.py   # then open http://127.0.0.1:8100/report"],
-];
-document.getElementById("repro").replaceChildren(...COMMANDS.map(([title, cmd]) => el("div", { class: "codeblock" },
-  el("header", {}, el("strong", { text: title }), el("button", { class: "btn", type: "button", "aria-label": `Copy command: ${title}`, onclick: () => copy(cmd), text: "Copy" })),
-  el("pre", { tabindex: "0", "aria-label": title }, el("code", { text: cmd })))));
 
 /* ---------- wiring ---------- */
 mount(document.getElementById("body"), async () => { await Jev.ready; return load(); }, render);
