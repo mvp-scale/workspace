@@ -48,7 +48,7 @@ def load_baselines():
     mc = yaml.safe_load((HERE / "tools" / "monte-carlo.yaml").read_text())
     shape_of = {c["id"]: c.get("shape") for c in world["gap_categories"]}
     baseline_of_shape = {b["shape"]: b for b in mc["shape_baselines"]}
-    return shape_of, baseline_of_shape
+    return shape_of, baseline_of_shape, mc["nominal_project"]
 
 
 def triangular_draw(mode, half_width):
@@ -66,7 +66,7 @@ def triangular_draw(mode, half_width):
 def run(idea, n_draws, seed):
     random.seed(seed)
     pieces = load_sort(idea)
-    shape_of, baseline_of_shape = load_baselines()
+    shape_of, baseline_of_shape, nominal_project = load_baselines()
 
     live_categories = {p["category"] for p in pieces}
     all_categories = set(shape_of.keys())
@@ -116,6 +116,7 @@ def run(idea, n_draws, seed):
         "sensitivity_by_category": sensitivity,
         "shape_of": shape_of, "baseline_of_shape": baseline_of_shape,
         "mean_exposure_by_category": {c: sum(v) / len(v) for c, v in exposures.items()},
+        "nominal_project": nominal_project,
     }
 
 
@@ -170,6 +171,18 @@ def main():
     print(f"{'shape':<16}{'risk_prior':>12}{'effort_prior':>14}")
     for shape, b in sorted(result["baseline_of_shape"].items()):
         print(f"{shape:<16}{b['risk_prior']:>12.2f}{b['effort_prior']:>14.2f}")
+
+    np_ = result["nominal_project"]
+    budget_pm = np_["computed_at_10_kloc"]["effort_person_months"]
+    print(f"\nILLUSTRATIVE SCALE -- {np_['model']}")
+    print(f"({np_['size_kloc']} KLOC reference point -> {budget_pm} person-months, "
+          f"{np_['computed_at_10_kloc']['duration_months']} months, "
+          f"{np_['computed_at_10_kloc']['average_staff']} avg staff -- NOT this idea's real size)")
+    print(f"{'category':<38}{'share of budget':>17}{'illustrative PM':>18}")
+    for cat, sens in ranked:
+        share = sens / total_sens
+        print(f"{cat:<38}{share:>16.1%} {share * budget_pm:>17.2f}")
+    print(f"({np_['disclaimer'].strip().splitlines()[0]}...)")
 
     print(f"\nTotal simulated exposure: mean={result['total_exposure_mean']:.3f}  "
           f"variance={result['total_exposure_var']:.5f}")

@@ -92,6 +92,37 @@ shape_baselines:
 # convention of keeping the live-call/mechanism spec in tools/*.yaml even when Python does the
 # actual work (see sorter.yaml's scoring_primitive).
 # =============================================================================================
+# =============================================================================================
+# ILLUSTRATIVE SCALE ONLY -- translates the relative exposure ranking above onto a real,
+# named-model reference project, so the numbers have some human sense of scale beyond "a
+# percentage of variance". This is NOT a claim about the actual size of the idea being run --
+# foundry has no way to count KLOC or function points for a given idea without generating
+# content, which the one rule forbids. It is a fixed, generic, real-sourced reference class
+# (COCOMO's own published formulas, Organic mode -- 2-50 KLOC, small team, non-rigid
+# requirements, the standard classification for a small/straightforward project), applied at a
+# representative point (10 KLOC) chosen because it roughly matches the scale of the ideas this
+# project actually runs (small internal tools, small-business apps), not tuned to make any
+# number look good. See B. Boehm, "Software Engineering Economics" (1981) for the model; verified
+# against real sources (search, this session) before use, not assumed from memory.
+# =============================================================================================
+nominal_project:
+  model: "COCOMO Organic mode (Boehm 1981) -- small, straightforward project, experienced team, non-rigid requirements"
+  size_kloc: 10  # representative point within Organic's 2-50 KLOC band; not this idea's real size
+  formulas:
+    effort_person_months: "E = 2.4 * KLOC^1.05"
+    duration_months: "D = 2.5 * E^0.38"
+    average_staff: "E / D"
+  computed_at_10_kloc:
+    effort_person_months: 26.9
+    duration_months: 8.7
+    average_staff: 3.1
+  disclaimer: >
+    Illustrative scale for one nominal small project, not a forecast for the idea actually being
+    run. A category's relative exposure share, translated onto this budget, tells you roughly
+    "if this were a 10-KLOC project shaped like the industry-standard small-project reference
+    class, this is what share of a ~27-person-month budget this gap area's relative weight would
+    correspond to" -- not "this idea will take 27 person-months."
+
 sampling_mechanism: >
   For each atomic requirement with a persisted live Sorter score: build a triangular distribution
   on [0,1] with mode = mean(risk_0to1) across models and half-width = cross-model disagreement
