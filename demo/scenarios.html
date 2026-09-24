@@ -76,6 +76,8 @@
   .weSide { padding: 2px 0 2px 12px; border-left: 2px solid var(--border); }
   .weSide p { margin: 0 0 8px; }
   .badges { display: flex; flex-wrap: wrap; gap: 4px; }
+  .point { font-weight: 650; color: var(--text); margin-top: 4px; }
+  .provenance { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
   pre.notes { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); max-height: 320px; overflow: auto; }
   /* Overview heat table */
@@ -228,8 +230,9 @@
   table.heat tr.rowgroup th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); padding: 5px 8px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   table.heat tr.avgrow td { border-top: 2px solid var(--border); font-weight: 600; }
   table.heat td.subj { text-align: left; padding: 6px 10px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  table.heat th.mh { text-align: left; padding: 6px 8px; white-space: nowrap; font-size: 12px; font-weight: 500; }
-  table.heat th.mh .msize { display: block; font-size: 10px; font-weight: 400; color: var(--text-3); margin-top: 2px; }
+  table.heat th.mcolh { text-align: left; padding: 8px 10px; white-space: nowrap; font-size: 13.5px; font-weight: 600; background: var(--surface-2); border-bottom: 2px solid var(--border-strong); text-transform: none; letter-spacing: normal; }
+  table.heat th.mcolh .msize { display: block; font-size: 11px; font-weight: 600; color: var(--text-2); margin-top: 3px; }
+  table.heat th.mcolh .mbase { display: block; font-size: 10px; font-weight: 400; color: var(--text-3); margin-top: 1px; }
   .scale { display: flex; align-items: center; gap: 0; margin-top: 10px; font-size: 11.5px; color: var(--text-3); }
   .scale i { width: 32px; height: 14px; display: block; border: 1px solid var(--surface); } .scale span { padding: 0 8px; } .scale .mid { margin-left: 12px; }
   td.idc { max-width: 170px; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
@@ -519,7 +522,7 @@ mount(document.getElementById("root"), async () => {
   const show = () => {
     buildRail();
     document.getElementById("caveat").textContent = ST.set === "world"
-      ? "Caveat: this is the original 2021 MMLU test set, not the harder MMLU-Pro successor -- a high score reflects what the model has stored, which may include exposure during training, not proof of live reasoning. About 6.49% of items have a documented ground-truth error (the MMLU-Redux audit). Subject sizes range from 100 to 1,534 items."
+      ? "Caveat: this is the original 2021 MMLU test set, not the harder MMLU-Pro successor, and it hasn't been revised since -- about 6.49% of items have a documented ground-truth error (the MMLU-Redux audit). Age affects subjects unevenly: stable fields barely move in 5 years, but machine_learning is frozen at 2020-2021 knowledge -- one item literally asks \"As of 2020, which architecture is best for classifying high-resolution images?\" with nothing on the years since. A high score also reflects what a model has stored, which may include exposure during training, not proof of live reasoning."
       : "Caveat: each set has only 64 to 154 items, so differences of a few points are within noise. Several sources are public and may appear in models' training data, and human labels can be noisy. Read intervals, not just point values.";
     CUSTOM_ABORT?.abort(); CUSTOM_ABORT = null;
     const box = el("div"); view.replaceChildren(box); const tok = ++TOK;
@@ -2699,9 +2702,11 @@ function renderWorldMap(details) {
   const groups = CAT_ORDER.map(cat => [cat, subs.filter(x => catOf(x) === cat)]).filter(([, list]) => list.length);
 
   const sizeLabel = (id) => INFO[id]?.params || "size not published";
+  const shortBase = (id) => { const b = INFO[id]?.base; return b ? b.split(/ \+ | \(/)[0] : null; };
   const head = el("tr", {}, el("th", { text: "Subject" }),
-    orderedModels.map(m => el("th", { class: "mh", title: `${modelName(m)}, ${sizeLabel(m)}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` },
-      mtagShort(m), el("span", { class: "msize" }, sizeLabel(m)))));
+    orderedModels.map(m => { const base = shortBase(m);
+      return el("th", { class: "mcolh", title: `${modelName(m)}, ${sizeLabel(m)}${base ? `, base ${base}` : ""}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` },
+        mtagShort(m), el("span", { class: "msize" }, sizeLabel(m)), base ? el("span", { class: "mbase" }, base) : null); }));
   const bodyRows = [];
   for (const [cat, list] of groups) {
     bodyRows.push(el("tr", { class: "rowgroup" }, el("th", { colspan: orderedModels.length + 1, text: `${cat} (${list.length})` })));
@@ -2733,7 +2738,9 @@ function renderWorldMap(details) {
   const wrap = el("div", { class: "stack" },
     el("section", { class: "section", style: "margin-top:0", "aria-labelledby": "wm-h" },
       el("header", {}, el("div", {}, el("h2", { id: "wm-h", text: "World knowledge: accuracy by subject" }),
-        el("p", { class: "small", text: "MMLU (Hendrycks et al., 2021) is the field's most widely used general-knowledge benchmark: 57 subjects, abstract algebra to world religions. This ran the complete public test set end to end — all 14,042 items, no sampling. Rows are grouped into MMLU's own 4 categories; columns are models, strongest average first, sized by base parameters where published. Click a cell to open that model on that subject." })),
+        el("p", { class: "point" }, "14,042 questions across 57 subjects — the complete public MMLU test set, nothing sampled."),
+        el("div", { class: "provenance" }, el("span", { class: "badge" }, "Published 2021 (Hendrycks et al.)"), el("span", { class: "badge" }, "Unrevised since"), el("span", { class: "badge accent" }, "The field's original general-knowledge benchmark")),
+        el("p", { class: "small", style: "margin-top:8px" }, "Rows are grouped into MMLU's own 4 categories; columns are models, strongest average first, code + size + base model shown per column. Click a cell to open that model on that subject.")),
         el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: exportCsv, text: "Export CSV" }))),
       subs.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any MMLU subject yet."),
       el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
