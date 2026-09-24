@@ -204,11 +204,32 @@
   .dgroup > summary .dnode::before { content: ""; position: absolute; left: 1px; top: 50%; width: 5px; height: 5px; margin-top: -3px; border-right: 1.5px solid var(--text-3); border-bottom: 1.5px solid var(--text-3); transform: rotate(-45deg); transition: transform .12s; }
   .dgroup[open] > summary .dnode::before { transform: rotate(45deg); margin-top: -2px; }
   .dnode:hover { background: var(--surface-2); }
+  .dnode-click, tr.dnode-click { cursor: pointer; }
+  .dnode-click:hover { background: var(--surface-2); }
+  .dnode-click:focus-visible, tr.dnode-click:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .dtitle { font-size: 13px; }
+  .dnode-flash { animation: dnode-flash 1.6s ease-out; }
+  @keyframes dnode-flash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
+  /* Results: a real table, one column per model that was actually asked, plus an agreement meter */
+  table.results th, table.results td { white-space: normal; }
+  table.results .res-cell { text-align: center; font-variant-numeric: tabular-nums; font-size: 12px; min-width: 52px; }
+  table.results tr.res-cat td { font-weight: 600; }
+  table.results tr.res-leaf td.res-leaf-title { padding-left: 26px; font-weight: 400; }
+  .res-caret { background: none; border: 0; color: var(--text-3); cursor: pointer; font: inherit; padding: 0 6px 0 0; }
+  .res-caret:hover { color: var(--text); }
+  /* Custom decomposition: merged effort/risk table (replaces a separate Gantt + table) */
+  table.sched tr.sched-group td { padding-top: 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); border-bottom-color: transparent; }
+  table.sched tr.sched-row:hover { background: var(--surface-2); }
+  table.sched tr.sched-detail td { background: var(--surface-2); padding-top: 8px; padding-bottom: 10px; }
+  .sched-bar { display: block; }
+  .sched-bar .bar { fill: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); stroke: var(--border); }
+  .sched-bar .bar.crit { fill: color-mix(in srgb, var(--bad) 45%, var(--surface-2)); stroke: var(--bad); }
   .dbadge { font-size: 10.5px; color: var(--text-3); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
   .dbadge.status-done, .dbadge.status-known { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, var(--border)); }
   .dbadge.status-blocked, .dbadge.status-needs_spike { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); }
   .dbadge.status-in_progress, .dbadge.status-needs_decision { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  .dbadge.tone-good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, var(--border)); }
+  .dbadge.tone-bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); }
   .ddot { margin-left: auto; flex: none; min-width: 34px; text-align: center; border-radius: 999px; padding: 2px 7px; font-size: 11px; font-variant-numeric: tabular-nums; cursor: help; }
   .dkids { display: grid; }
   /* Explorer */
@@ -245,9 +266,6 @@
   .member { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; display: grid; gap: 4px; align-content: start; }
   .member .mh { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   /* Custom decomposition: orbit map */
-  .dlGrid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
-  @media (max-width: 860px) { .dlGrid { grid-template-columns: 1fr; } }
-  .dlPanel { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); position: sticky; top: 52px; max-height: calc(100vh - 64px); overflow-y: auto; }
   svg.dl-map { display: block; width: 100%; max-width: 880px; height: auto; margin: 0 auto; }
   .dl-core { fill: var(--surface-2); stroke: var(--border-strong); }
   text.dl-core-t { font-size: 13px; fill: var(--text); text-anchor: middle; }
@@ -270,7 +288,7 @@
   path.dl-tick { stroke-width: 3; fill: none; }
   .dl-selected circle.dl-hit { stroke: var(--accent); stroke-width: 2; }
   @media (prefers-reduced-motion: reduce) { .dl-node, .dl-node.dl-enter, path.dl-link, circle.dl-scan { transition: none !important; animation: none !important; transform: none !important; } }
-  @media print { .dlPanel, .dl-run-controls { display: none; } }
+  @media print { .dl-run-controls { display: none; } }
   @media (max-width: 860px) { .dl-map-wrap.map-default { display: none; } }
   /* Custom decomposition: input + run controls + read-out (reuse .card/.pillrow/.slider/.loopbar) */
   .dl-charcount { font-size: 11px; color: var(--text-3); text-align: right; margin-top: 2px; }
@@ -2133,33 +2151,87 @@ function customScheduleData(runState, lib) {
   });
   return { byId, groups: catIds.map((cid) => ({ id: cid, title: humanizeId(cid) })) };
 }
+/* What's actually behind a high criticality index, using only data that's already real: the
+   item's own live "dependency" answer (a genuine blocker, not invented) and its live "gate"
+   answer (redesign risk), plus the one structural fact the simulation itself computed (whether
+   it sat on the critical path in the single-estimate pass). If none of that says anything for a
+   given item, this says so plainly instead of manufacturing a reason. */
+function criticalityDetail(t, runState) {
+  const ls = runState.leaves[t.id];
+  const parts = [];
+  const dep = ls?.answers?.dependency?.choice;
+  if (dep && dep !== "none") parts.push(el("li", {}, el("b", { text: "Blocker: " }), DEPENDENCY_LABEL[dep] || dep));
+  const gateMean = ls?.answers?.gate?.mean;
+  if (gateMean != null && gateMean >= 0.5) {
+    const per = ls.answers.gate.per_model || {};
+    const hits = Object.values(per).filter((v) => v >= 0.5).length;
+    parts.push(el("li", {}, el("b", { text: "Redesign risk: " }), `${hits} of ${Object.keys(per).length} model(s) said a surprise here could force a redesign, not just a delay.`));
+  }
+  if (t.deterministic_on_critical_path) parts.push(el("li", {}, el("b", { text: "Critical path: " }), "on it in the single-estimate pass, before any sampling."));
+  return el("div", {}, parts.length ? el("ul", { class: "small", style: "margin:0 0 0 18px;padding:0" }, parts)
+    : el("p", { class: "small muted", style: "margin:0", text: "Nothing flagged for this item — no blocker, no redesign risk, and it wasn't on the single-estimate critical path." }),
+    el("p", { class: "small muted", style: "margin:6px 0 0" }, `Criticality index: ${pc(t.criticality_index)} of sampled runs had this item on that run's own critical path.`));
+}
+/* One row per item: full text (no truncation), a compact shared-scale bar (still lets you see
+   what overlaps with what, without a "day 0 / day 1 / day 2" axis reading as a calendar forecast),
+   and the criticality meter. Click a row to expand criticalityDetail() in place -- no separate
+   panel or page. Replaces what used to be a separate Gantt chart plus a separate, differently-
+   sorted table listing the same items twice, plus a "models split" badge that's now the Results
+   view's job (it shows per-model agreement directly, not a repeated boolean here). */
+function mcScheduleTable(built, mc, runState) {
+  const maxDay = Math.max(0, ...mc.tasks.map((t) => t.finish_p90 ?? t.deterministic_finish_day));
+  const barW = 170;
+  const dayX = (d) => (maxDay ? clamp01(d / maxDay) * barW : 0);
+  const byGroup = {};
+  for (const t of mc.tasks) (byGroup[t.group] ??= []).push(t);
+  const rows = [];
+  for (const g of built.groups) {
+    const kids = byGroup[g.id]; if (!kids || !kids.length) continue;
+    rows.push(el("tr", { class: "sched-group" }, el("td", { colspan: 3, text: g.title })));
+    for (const t of kids) {
+      const bandX1 = dayX(t.start_p10), bandX2 = dayX(t.finish_p90);
+      const barX1 = dayX(t.deterministic_start_day), barX2 = dayX(t.deterministic_finish_day);
+      const bar = S("svg", { viewBox: `0 0 ${barW} 16`, width: barW, height: 16, class: "sched-bar", role: "img",
+          "aria-label": `relative effort ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)}, risk range ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)}` },
+        S("rect", { x: bandX1, y: 2, width: Math.max(1, bandX2 - bandX1), height: 12, rx: 2, style: `fill:${mcBandFill(t.criticality_index)}` },
+          S("title", {}, `risk range across ${mc.n_runs.toLocaleString()} sampled runs: ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)} relative effort-days (p10 to p90) -- not calendar dates`)),
+        S("rect", { x: barX1, y: 4, width: Math.max(1.5, barX2 - barX1), height: 8, rx: 1.5, class: "bar" + (t.deterministic_on_critical_path ? " crit" : "") },
+          S("title", {}, `single-estimate position: ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)} relative effort-days${t.deterministic_on_critical_path ? " · on the critical path" : ""}`)));
+      const tr = el("tr", { class: "sched-row dnode-click", tabIndex: 0, role: "button", "aria-expanded": "false" },
+        el("td", { title: t.duration_basis, text: t.title }),
+        el("td", {}, bar),
+        el("td", { style: "min-width:140px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)));
+      const detailRow = el("tr", { class: "sched-detail", style: "display:none" }, el("td", { colspan: 3 }, criticalityDetail(t, runState)));
+      const toggle = () => { const open = detailRow.style.display !== "none"; detailRow.style.display = open ? "none" : ""; tr.setAttribute("aria-expanded", String(!open)); };
+      tr.addEventListener("click", toggle);
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+      rows.push(tr, detailRow);
+    }
+  }
+  return el("div", {}, el("div", { style: "overflow-x:auto" },
+    el("table", { class: "data wrap sched" },
+      el("thead", {}, el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Relative effort — not a calendar" }), el("th", { text: "Criticality index" }))),
+      el("tbody", {}, rows))),
+    el("p", { class: "legend", style: "margin-top:6px" }, "Click a row for what's actually behind its criticality index."));
+}
 function customScheduleSection(runState, lib, endEvent) {
   const built = customScheduleData(runState, lib);
   if (!built) return el("p", { class: "small muted", text: "Not enough items decomposed yet for a schedule estimate (need at least 2, across at least 1 category)." });
   const seedStr = (endEvent && endEvent.run_id) || Object.keys(built.byId).sort().join("|");
   const mc = mcRunSimulation(built.byId, CUSTOM_MC_RUNS, seedStr);
-  const groupTitle = Object.fromEntries(built.groups.map((g) => [g.id, g.title]));
   const sorted = [...mc.tasks].sort((a, b) => b.criticality_index - a.criticality_index);
   const box = el("div");
   box.append(
     el("div", { class: "callout warn" },
-      el("p", { style: "margin:0" }, el("b", { text: "Estimated schedule — a stated rule, not measured. " }), "Arbitrary text has no real duration or dependency data the way ", el("a", { href: hashFor({ set: "decompose" }), text: "Decompose and loop" }), "'s hand-authored plan does, so every number below is derived from this run's own live model answers via one fixed rule, applied identically to every item — never a measured critical path."),
+      el("p", { style: "margin:0" }, el("b", { text: "Estimated effort — a stated rule, not measured. " }), "Arbitrary text has no real duration or dependency data the way ", el("a", { href: hashFor({ set: "decompose" }), text: "Decompose and loop" }), "'s hand-authored plan does, so every number below is relative effort derived from this run's own live model answers via one fixed rule, applied identically to every item — never a measured critical path, and not a calendar forecast."),
       el("ul", { class: "small", style: "margin:6px 0 0 18px;padding:0" },
-        el("li", {}, el("b", { text: "Duration: " }), "each item's own live complexity answer maps to a duration band (0.25 / 0.5 / 1 / 2 / 4 days, very low to very high complexity); optimistic and pessimistic use the band one level either side."),
+        el("li", {}, el("b", { text: "Effort: " }), "each item's own live complexity answer maps to a relative-effort band (0.25 / 0.5 / 1 / 2 / 4 day-equivalents, very low to very high complexity); optimistic and pessimistic use the band one level either side."),
         el("li", {}, el("b", { text: "Order: " }), "categories run in the order the live priority queue actually explored them, for real — not invented. Within a category, items default to parallel, unless an item's own live answer said it needs another item in this plan first, in which case it's scheduled after its category siblings."))),
-    el("p", { class: "legend" }, `${mc.n_runs.toLocaleString()} sampled runs, seeded from this run's own id (re-running the same text and settings reproduces the same numbers). All-likely total: `, el("b", { text: `${fmt.num(mc.deterministic.span_days, 1)} estimated days` }), `; sampled median `, el("b", { text: `${fmt.num(mc.distribution.p50, 1)} days` }), `, p90 `, el("b", { text: `${fmt.num(mc.distribution.p90, 1)} days` }), "."),
+    el("p", { class: "legend" }, `${mc.n_runs.toLocaleString()} sampled runs, seeded from this run's own id (re-running the same text and settings reproduces the same numbers). All-likely total: `, el("b", { text: `${fmt.num(mc.deterministic.span_days, 1)} relative effort-days` }), `; sampled median `, el("b", { text: `${fmt.num(mc.distribution.p50, 1)}` }), `, p90 `, el("b", { text: `${fmt.num(mc.distribution.p90, 1)}` }), " — relative effort, not calendar dates."),
     el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, mcHistogram(mc.histogram, mc.distribution, null))),
-    el("div", { class: "card" }, mcGanttBoard({ groups: built.groups, tasks: mc.tasks, n_runs: mc.n_runs })),
-    el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "Criticality index" }),
-      el("p", { class: "small muted", text: "Share of sampled runs where each item landed on that run's own critical path." }),
-      el("div", { style: "overflow-x:auto" },
-        el("table", { class: "data wrap" },
-          el("thead", {}, el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Category" }), el("th", { text: "Estimated / range (days)" }), el("th", { text: "Criticality index" }))),
-          el("tbody", {}, sorted.map((t) => el("tr", {},
-            el("td", { title: t.duration_basis }, t.title),
-            el("td", { class: "muted small" }, groupTitle[t.group] || t.group),
-            el("td", { class: "muted small", text: `${fmt.num(t.duration_days, 2)} (${fmt.num(t.optimistic_days, 2)}–${fmt.num(t.pessimistic_days, 2)})` }),
-            el("td", { style: "min-width:160px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)))))))));
+    el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "Effort and risk, by item" }),
+      el("p", { class: "small muted", text: "Every item this run reached, grouped the way the live priority queue actually explored them. The bar's pale band is the sampled risk range; the solid bar is the single-estimate position; red means it landed on the critical path in the single-estimate pass." }),
+      mcScheduleTable(built, mc, runState)));
   const top = sorted[0];
   box.append(top && top.criticality_index > 0
     ? soWhat("--s2", `"${top.title}" drives this estimate more than anything else.`, `Critical in ${pc(top.criticality_index)} of sampled runs, under the stated rule above — not a measurement, but the same heuristic applied consistently.`)
@@ -2169,6 +2241,16 @@ function customScheduleSection(runState, lib, endEvent) {
 
 /* ---------- structure: custom decomposition (orbit map) ---------- */
 const DL_PHASE_LABEL = { spike: "spike", decide: "decide", build: "build", validate: "validate", launch: "launch" };
+/* Verbatim from lab_custom_decompose.py's PHASE_CRITERIA -- what the model was actually asked to
+   pick between, so the badge means the same thing on hover as it did in the live question. */
+const DL_PHASE_DESC = {
+  spike: "Finding something out first — a measurement, an experiment, a check against documentation. Nothing is built or decided yet.",
+  decide: "A choice between real options that a person has to make; no new information is being gathered.",
+  build: "Writing the actual implementation, once what to build is already known.",
+  validate: "Checking that something already built actually works, at realistic scale or against a real baseline.",
+  launch: "Getting a working, validated system into production: deploy, rollback, runbook.",
+};
+const DEPENDENCY_LABEL = { "needs-user-decision": "blocked on a decision only the user can make", "needs-other-item": "depends on another item in this plan finishing first", "needs-external-check": "depends on an external resource or check not yet confirmed" };
 const heatAcc = (p) => p == null ? "var(--surface-2)" : `color-mix(in srgb, var(--accent) ${Math.round(clamp01(p) * 55)}%, var(--surface-2))`;
 const dlP = (angle, r, cx = 500, cy = 500) => { const rad = angle * Math.PI / 180; return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)]; };
 const dlShort = (id) => id.replace(/^[a-z]+-/, "").replace(/-/g, " ");
@@ -2351,30 +2433,105 @@ function orbitMap(lib, onSelect) {
   return { svg, apply, select };
 }
 
-function buildCustomOutline(runState, lib) {
-  const catById = Object.fromEntries(lib.categories.map((c) => [c.id, c]));
-  const render = (c) => {
+/* "Decision": a stated rule, not a new signal -- combines two answers that already exist (the
+   live phase/gap answer and the real agreement level) into one plain-language "what next" label.
+   Below the threshold, agreement itself overrides whatever phase or gap came back: if the models
+   don't agree, the number underneath isn't trustworthy yet, no matter what it says. */
+const RESULTS_AGREEMENT_THRESHOLD = 0.5;
+const DECISION_LABEL = { "needs-info": "Needs more info", spike: "Spike", decide: "Needs a decision", build: "Ready to build", validate: "Ready to validate", launch: "Ready to launch", expand: "Expand further", covered: "Likely covered" };
+const DECISION_DESC = {
+  "needs-info": "The selected models don't agree with each other here (agreement is below 50%), so the number underneath isn't trustworthy yet, whatever it says — worth another look or another pass before acting on it.",
+  spike: "Models agree, and this is still about finding something out — a measurement, an experiment, a documentation check. Nothing to build or decide yet.",
+  decide: "Models agree, and this needs a real choice between options from a person — no new information is being gathered.",
+  build: "Models agree, and what to build is already known — ready for implementation.",
+  validate: "Models agree, and this is about checking something already built actually works at realistic scale.",
+  launch: "Models agree, and this is about getting a working, validated system into production.",
+  expand: "Models agree there's a real, unaddressed gap here (≥ 50%) — worth decomposing into its own leaf requirements.",
+  covered: "Models agree this is already largely covered (< 50% gap) — probably not worth spending more budget on.",
+};
+const DECISION_TONE = { "needs-info": "bad", build: "good", validate: "good", launch: "good", covered: "good" };
+function leafDecision(ls) {
+  const spread = ls.answers.risk.spread;
+  if (spread != null && clamp01(1 - spread) < RESULTS_AGREEMENT_THRESHOLD) return "needs-info";
+  return ls.answers.phase?.choice || null;
+}
+function categoryDecision(cs) {
+  if (cs.gap.spread != null && clamp01(1 - cs.gap.spread) < RESULTS_AGREEMENT_THRESHOLD) return "needs-info";
+  return cs.gap.mean != null ? (cs.gap.mean >= 0.5 ? "expand" : "covered") : null;
+}
+function decisionCell(key) {
+  if (!key) return el("td", { class: "muted" }, "–");
+  const tone = DECISION_TONE[key];
+  return el("td", {}, el("span", { class: "dbadge" + (tone ? ` tone-${tone}` : ""), title: DECISION_DESC[key] || "", text: DECISION_LABEL[key] || key }));
+}
+/* The Results view: a real table -- Decision up front, then one column per model actually asked
+   in this run (each cell that model's own answer), then Agreement (1 - spread across models) --
+   not one blended number hidden behind a click. This is the actual destination a map click lands
+   on now; there is no separate side detail panel any more. Categories collapse/expand their
+   leaves via a caret, the same "see agreement at the parent vs. the sub-child" shape the old
+   Outline tree had. */
+function buildCustomResults(runState, lib) {
+  const modelIds = orderModels([
+    ...Object.values(runState.categories).flatMap((cs) => Object.keys(cs.gap.per_model || {})),
+    ...Object.values(runState.leaves).flatMap((ls) => Object.keys(ls.answers.risk.per_model || {})),
+  ]);
+  const cell = (v, colorFn) => el("td", { class: "res-cell", style: v == null ? "" : `background:${colorFn(v)}` }, v == null ? "–" : pc(v, 0));
+  const agreementCell = (spread) => spread == null ? el("td", { class: "res-cell muted" }, "–")
+    : el("td", { style: "min-width:120px" }, Jev.meter(clamp01(1 - spread), `${pc(clamp01(1 - spread), 0)} agreement`));
+  const rows = [];
+  const leafToCat = {}, categoryCaret = {};
+  for (const c of lib.categories.filter((c) => runState.categories[c.id])) {
     const cs = runState.categories[c.id];
     const kids = (c.children || []).filter((l) => runState.leaves[l.id]);
-    const row = el("div", { class: "dnode" },
-      el("span", { class: "dtitle", text: c.text }),
-      cs?.guaranteed ? el("span", { class: "dbadge", text: "guaranteed" }) : null,
-      el("span", { class: "ddot", style: `background:${heatAcc(cs?.gap?.mean)}`, title: cs ? `gap ${fmt.num(cs.gap.mean, 2)}, lift ${fmt.num(cs.lift, 2)}` : "not scored", text: cs ? pc(cs.gap.mean, 0) : "–" }));
-    if (!kids.length) return row;
-    return el("details", { class: "dgroup", open: "" }, el("summary", {}, row), el("div", { class: "dkids" }, kids.map((l) => {
+    const leafRows = [];
+    const caret = el("button", { type: "button", class: "res-caret", "aria-label": "Collapse", text: "▾" });
+    let open = true;
+    if (kids.length) caret.addEventListener("click", () => {
+      open = !open; caret.textContent = open ? "▾" : "▸";
+      for (const r of leafRows) r.style.display = open ? "" : "none";
+    });
+    categoryCaret[c.id] = caret;
+    rows.push(el("tr", { class: "res-cat", "data-id": c.id },
+      el("td", {}, kids.length ? caret : el("span", { style: "padding-left:16px" }), el("span", { class: "dtitle", text: c.text }), cs.guaranteed ? el("span", { class: "dbadge", title: "One of the top-scoring categories within its own shape (e.g. functional, non-functional, operational…), so it's explored early regardless of how it ranks against categories from other shapes — keeps the walk from skipping an entire shape. Not a confidence rating on the answer itself.", text: "guaranteed" }) : null),
+      decisionCell(categoryDecision(cs)),
+      ...modelIds.map((m) => cell((cs.gap.per_model || {})[m], heatAcc)),
+      agreementCell(cs.gap.spread)));
+    for (const l of kids) {
       const ls = runState.leaves[l.id];
-      return el("div", { class: "dnode" }, el("span", { class: "dtitle", text: l.text }),
-        ls?.answers?.phase?.choice ? el("span", { class: "dbadge", text: DL_PHASE_LABEL[ls.answers.phase.choice] || ls.answers.phase.choice }) : null,
-        ls?.gate ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", text: "gate" }) : null,
-        (ls?.split || []).length ? el("span", { class: "dbadge", text: "models split" }) : null,
-        el("span", { class: "ddot", style: `background:${heatRisk(ls?.answers?.risk?.mean)}`, title: ls ? `risk ${fmt.num(ls.answers.risk.mean, 2)}` : "queued", text: ls ? pc(ls.answers.risk.mean, 0) : "–" }));
-    })));
-  };
-  const visited = lib.categories.filter((c) => runState.categories[c.id]);
+      const gateMean = ls.answers.gate?.mean;
+      leafToCat[l.id] = c.id;
+      const lrow = el("tr", { class: "res-leaf", "data-id": l.id },
+        el("td", { class: "res-leaf-title" }, el("span", { class: "dtitle", text: l.text }),
+          (gateMean != null && gateMean >= 0.5) ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", title: "a surprise here could force a redesign, not just a delay", text: "redesign risk" }) : null),
+        decisionCell(leafDecision(ls)),
+        ...modelIds.map((m) => cell((ls.answers.risk.per_model || {})[m], heatRisk)),
+        agreementCell(ls.answers.risk.spread));
+      leafRows.push(lrow);
+      rows.push(lrow);
+    }
+  }
   const unvisited = lib.categories.filter((c) => !runState.categories[c.id]);
-  const box = el("div", { class: "dtree" }, visited.map(render));
-  if (unvisited.length) box.append(el("details", { class: "dgroup" }, el("summary", {}, el("div", { class: "dnode" }, el("span", { class: "dtitle", text: `Not reached (${unvisited.length})` }))),
-    el("div", { class: "dkids" }, unvisited.map((c) => el("div", { class: "dnode" }, el("span", { class: "dtitle small muted", text: c.text }))))));
+  if (unvisited.length) {
+    const kids = [];
+    const caret = el("button", { type: "button", class: "res-caret", "aria-label": "Expand", text: "▸" });
+    let open = false;
+    caret.addEventListener("click", () => { open = !open; caret.textContent = open ? "▾" : "▸"; for (const r of kids) r.style.display = open ? "" : "none"; });
+    rows.push(el("tr", {}, el("td", { colspan: modelIds.length + 3 }, caret, el("span", { class: "dtitle muted", text: `Not reached (${unvisited.length})` }))));
+    for (const c of unvisited) {
+      const r = el("tr", { style: "display:none" }, el("td", { class: "res-leaf-title" }, el("span", { class: "dtitle small muted", text: c.text })),
+        el("td", { class: "muted" }, "–"), ...modelIds.map(() => el("td", { class: "res-cell muted" }, "–")), el("td", { class: "res-cell muted" }, "–"));
+      kids.push(r); rows.push(r);
+    }
+  }
+  const table = el("table", { class: "data results" },
+    el("thead", {}, el("tr", {}, el("th", { text: "Item" }),
+      el("th", { title: "A stated rule, not a new measurement: combines each item's own phase/gap answer with its real agreement level. Low agreement overrides everything else, since a number the models don't agree on isn't trustworthy yet." }, "Decision"),
+      ...modelIds.map((m) => el("th", {}, mtagShort(m))),
+      el("th", { title: "How closely the selected models' own numbers cluster together (1 - spread), independent of whether that number itself is high or low. High agreement on a low number means the models consistently think this isn't much of a gap; low agreement means they don't agree with each other at all, regardless of the number." }, "Agreement"))),
+    el("tbody", {}, rows));
+  const box = el("div", { style: "overflow-x:auto" }, table);
+  box.leafToCat = leafToCat;
+  box.categoryCaret = categoryCaret;
   return box;
 }
 
@@ -2407,32 +2564,6 @@ function customReadout(runState, lib, end) {
   return box;
 }
 
-function customDetail(runState, lib, id) {
-  if (!id) return el("div", { class: "small muted" }, "Click any item on the map or outline to see everything behind it.");
-  const cat = lib.categories.find((c) => c.id === id);
-  if (cat) {
-    const cs = runState.categories[id];
-    const box = el("div", {}, el("p", { class: "small muted" }, `shape → category`), el("h4", { style: "margin:4px 0", text: cat.text }), el("span", { class: "dbadge", text: "library text" }));
-    if (!cs) return el("div", {}, box, el("p", { class: "small muted", text: "Not scored yet." }));
-    const t = el("table", { class: "data wrap" }, el("thead", {}, el("tr", {}, el("th", { text: "" }), el("th", { text: "Gap (not yet true)" }))));
-    const tb = el("tbody", {}, Object.entries(cs.gap.per_model || {}).map(([m, v]) => el("tr", {}, el("td", {}, mtagShort(m)), el("td", { text: fmt.num(v, 2) }))));
-    t.append(tb);
-    return el("div", {}, box, el("p", { class: "small" }, `gap ${fmt.num(cs.gap.mean, 2)} · lift ${fmt.num(cs.lift, 2)} · boost ${fmt.num(cs.boost, 2)} · composite ${fmt.num(cs.composite, 2)} · ${cs.guaranteed ? "guaranteed" : "budget-ranked"}`), el("div", { style: "overflow-x:auto" }, t));
-  }
-  const ls = runState.leaves[id];
-  const text = runState.leafText[id] || id;
-  const box = el("div", {}, el("p", { class: "small muted" }, `shape → category → requirement`), el("h4", { style: "margin:4px 0", text }), el("span", { class: "dbadge", text: "library text" }));
-  if (!ls) return el("div", {}, box, el("p", { class: "small muted", text: "Not reached yet." }));
-  const rows = [["gate", ls.answers.gate], ["risk", ls.answers.risk], ["complexity", ls.answers.complexity], ["phase", ls.answers.phase], ["dependency", ls.answers.dependency]];
-  const t = el("table", { class: "data wrap" }, el("thead", {}, el("tr", {}, el("th", { text: "" }), el("th", { text: "Mean" }), el("th", { text: "Split?" }))));
-  const tb = el("tbody", {}, rows.map(([k, v]) => el("tr", {}, el("td", {}, k),
-    el("td", {}, v.choice !== undefined ? `${v.choice || "–"}` : fmt.num(v.mean, 2)),
-    el("td", { class: (ls.split || []).includes(k) ? "below" : "muted", text: (ls.split || []).includes(k) ? "models split" : "–" }))));
-  t.append(tb);
-  return el("div", {}, box, el("div", { style: "overflow-x:auto" }, t),
-    el("p", { class: "legend", text: "red = models split here, not \"wrong\"; there is no right answer to compare against" }),
-    el("details", {}, el("summary", { class: "small" }, "Request"), el("pre", { class: "notes" }, JSON.stringify(ls.body, null, 1))));
-}
 
 function estimateSeconds(models, budget, batchPerf) {
   const p50 = { semif: 0.067, so1: 0.066, "kev-4b": 0.015, laya: 0.397, verdict: 0.258 };
@@ -2523,7 +2654,7 @@ function renderCustom({ library: lib, examples }) {
 
   const viewSeg = el("div", { class: "segmented" },
     el("button", { type: "button", "aria-pressed": "true", text: "Map" }),
-    el("button", { type: "button", "aria-pressed": "false", text: "Outline" }));
+    el("button", { type: "button", "aria-pressed": "false", text: "Results" }));
   const mapBox = el("div", { class: "dl-map-wrap map-default" });
   const outlineBox = el("div", { style: "display:none" });
   const legend = el("div", { class: "row", style: "gap:14px;flex-wrap:wrap;margin-top:8px" },
@@ -2532,11 +2663,23 @@ function renderCustom({ library: lib, examples }) {
     el("span", { class: "small muted" }, "dashed = models split (spread ≥ 0.3)"),
     el("span", { class: "small muted" }, "dotted = never reached"),
     el("span", { class: "small muted" }, "outer ring = calls: spent / budget / possible"));
-  viewSeg.children[0].addEventListener("click", () => { viewSeg.children[0].setAttribute("aria-pressed", "true"); viewSeg.children[1].setAttribute("aria-pressed", "false"); mapBox.style.display = ""; outlineBox.style.display = "none"; });
-  viewSeg.children[1].addEventListener("click", () => { viewSeg.children[0].setAttribute("aria-pressed", "false"); viewSeg.children[1].setAttribute("aria-pressed", "true"); mapBox.style.display = "none"; outlineBox.style.display = ""; });
+  const showMap = () => { viewSeg.children[0].setAttribute("aria-pressed", "true"); viewSeg.children[1].setAttribute("aria-pressed", "false"); mapBox.style.display = ""; outlineBox.style.display = "none"; };
+  const showResults = () => { viewSeg.children[0].setAttribute("aria-pressed", "false"); viewSeg.children[1].setAttribute("aria-pressed", "true"); mapBox.style.display = "none"; outlineBox.style.display = ""; };
+  viewSeg.children[0].addEventListener("click", showMap);
+  viewSeg.children[1].addEventListener("click", showResults);
+  /* A map click switches to Results and scrolls/opens straight to that item's row -- there is no
+     separate side panel any more; Results (formerly "Outline") is the one real destination. */
+  function focusResultRow(id) {
+    const root = outlineBox.firstElementChild;
+    const row = outlineBox.querySelector(`[data-id="${CSS.escape(id)}"]`);
+    if (!row) return;
+    if (row.style.display === "none") root?.categoryCaret?.[root.leafToCat?.[id]]?.click();
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
+    const cell = row.querySelector("td") || row;
+    cell.classList.remove("dnode-flash"); void cell.offsetWidth; cell.classList.add("dnode-flash");
+  }
 
   const readoutBox = el("div");
-  const detailPanel = el("div", { class: "dlPanel" }, customDetail(null, lib, null));
   const provCard = el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "How this was built" }),
     el("div", { class: "srcgrid" },
       el("div", {}, el("b", { text: "1. Your text" }), el("br"), el("span", { class: "small muted", text: "The only input about your idea. Nothing else on this page was written for it." })),
@@ -2545,9 +2688,10 @@ function renderCustom({ library: lib, examples }) {
 
   let runState = null, mapObj = null;
   const scheduleBox = el("div");
+  const selectItem = (id) => { mapObj?.select(id); showResults(); requestAnimationFrame(() => focusResultRow(id)); };
   const resetRun = () => {
     runState = { categories: {}, leaves: {}, leafText: {}, flatModels: {}, scope: null };
-    mapObj = orbitMap(lib, (id) => { mapObj.select(id); detailPanel.replaceChildren(customDetail(runState, lib, id)); });
+    mapObj = orbitMap(lib, selectItem);
     mapBox.replaceChildren(mapObj.svg, legend);
     outlineBox.replaceChildren(el("p", { class: "small muted", text: "Nothing run yet." }));
     readoutBox.replaceChildren();
@@ -2576,14 +2720,14 @@ function renderCustom({ library: lib, examples }) {
         runState.leaves[ev.id] = ev;
         if (Object.keys(ev.errors || {}).length) errBadge.replaceChildren(el("span", { class: "badge warn", title: JSON.stringify(ev.errors) }, `${Object.keys(ev.errors).length} error(s)`));
       }
-      outlineBox.replaceChildren(buildCustomOutline(runState, lib));
+      outlineBox.replaceChildren(buildCustomResults(runState, lib));
       readoutBox.replaceChildren(chapterHeader("Chapter 1 of 2", "What we found", "The map above, read out in words: what your text pulled hardest toward, and what's riskiest if it stays undone."), customReadout(runState, lib, lastEnd));
     }
     if (ev.t === "end") {
       lastEnd = ev;
       statusLine.textContent = `Stopped: ${ev.spent} of ${ev.budget} calls (${ev.reason}).`;
       readoutBox.replaceChildren(chapterHeader("Chapter 1 of 2", "What we found", "The map above, read out in words: what your text pulled hardest toward, and what's riskiest if it stays undone."), customReadout(runState, lib, ev));
-      scheduleBox.replaceChildren(chapterHeader("Chapter 2 of 2", "What it might cost", "Not a measurement — a stated rule applied to what the models just answered, turned into a schedule you can actually look at."), customScheduleSection(runState, lib, ev));
+      scheduleBox.replaceChildren(chapterHeader("Chapter 2 of 2", "What it might cost", "Not a measurement — a stated rule applied to what the models just answered, turned into a schedule you can actually look at."), customScheduleSection(runState, lib, ev, selectItem));
       afterRunControls(ev);
     }
   }
@@ -2630,9 +2774,7 @@ function renderCustom({ library: lib, examples }) {
   }
   runBtn.onclick = () => runNow(budget);
 
-  out.append(inputCard, el("div", { class: "dlGrid" },
-    el("div", {}, viewSeg, mapBox, outlineBox),
-    detailPanel), readoutBox, scheduleBox, provCard, afterBox);
+  out.append(inputCard, el("div", {}, viewSeg, mapBox, outlineBox), readoutBox, scheduleBox, provCard, afterBox);
   return out;
 }
 
