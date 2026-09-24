@@ -23,7 +23,7 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 import server  # noqa: E402 -- reuses server.py's own functions; never reimplement the same logic twice
 
-DIST = HERE.parent / "dist"
+DIST = HERE.parent / "docs"
 PAGES = ["index.html", "scenarios.html", "models.html", "report.html", "flow-recordings.html"]
 RECORDINGS_DIR = HERE.parent / "data" / "flow-recordings"
 
