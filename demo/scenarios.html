@@ -225,6 +225,9 @@
   table.heat td.macro { border-right: 2px solid var(--border); }
   table.heat th.vh { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; height: 110px; text-align: left; padding: 6px 2px; font-size: 11.5px; }
   table.heat th.fam { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); text-align: center; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+  table.heat tr.rowgroup th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); padding: 5px 8px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  table.heat tr.avgrow td { border-top: 2px solid var(--border); font-weight: 600; }
+  table.heat td.subj { text-align: left; padding: 6px 10px; white-space: nowrap; }
   .scale { display: flex; align-items: center; gap: 0; margin-top: 10px; font-size: 11.5px; color: var(--text-3); }
   .scale i { width: 32px; height: 14px; display: block; border: 1px solid var(--surface); } .scale span { padding: 0 8px; } .scale .mid { margin-left: 12px; }
   td.idc { max-width: 170px; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
@@ -329,11 +332,34 @@ const META = {
   politeness_deference: ["Perspective validation", "Politeness (Stanford Politeness Corpus)", "Politeness"],
   threat_civil: ["Perspective validation", "Threat (Jigsaw Civil Comments)", "Threat"],
 };
+/* All 57 MMLU subjects (build_mmlu.py), one probe set per subject, rolled up into the 4 official
+   MMLU categories (Hendrycks et al.'s own categories.py: github.com/hendrycks/test) so the rail
+   and heat map group by domain, not just a flat list of 57 subjects. */
+const MMLU_CATEGORY = {
+  abstract_algebra: "STEM", anatomy: "Other", astronomy: "STEM", business_ethics: "Other", clinical_knowledge: "Other",
+  college_biology: "STEM", college_chemistry: "STEM", college_computer_science: "STEM", college_mathematics: "STEM",
+  college_medicine: "Other", college_physics: "STEM", computer_security: "STEM", conceptual_physics: "STEM",
+  econometrics: "Social sciences", electrical_engineering: "STEM", elementary_mathematics: "STEM", formal_logic: "Humanities",
+  global_facts: "Other", high_school_biology: "STEM", high_school_chemistry: "STEM", high_school_computer_science: "STEM",
+  high_school_european_history: "Humanities", high_school_geography: "Social sciences", high_school_government_and_politics: "Social sciences",
+  high_school_macroeconomics: "Social sciences", high_school_mathematics: "STEM", high_school_microeconomics: "Social sciences",
+  high_school_physics: "STEM", high_school_psychology: "Social sciences", high_school_statistics: "STEM",
+  high_school_us_history: "Humanities", high_school_world_history: "Humanities", human_aging: "Other", human_sexuality: "Social sciences",
+  international_law: "Humanities", jurisprudence: "Humanities", logical_fallacies: "Humanities", machine_learning: "STEM",
+  management: "Other", marketing: "Other", medical_genetics: "Other", miscellaneous: "Other", moral_disputes: "Humanities",
+  moral_scenarios: "Humanities", nutrition: "Other", philosophy: "Humanities", prehistory: "Humanities",
+  professional_accounting: "Other", professional_law: "Humanities", professional_medicine: "Other", professional_psychology: "Social sciences",
+  public_relations: "Social sciences", security_studies: "Social sciences", sociology: "Social sciences", us_foreign_policy: "Social sciences",
+  virology: "Other", world_religions: "Humanities",
+};
+const MMLU_SUBJECTS = Object.keys(MMLU_CATEGORY);
+const prettySubject = (s) => s.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+for (const s of MMLU_SUBJECTS) META[`mmlu_${s}`] = [`MMLU: ${MMLU_CATEGORY[s]}`, `MMLU: ${prettySubject(s)}`, prettySubject(s)];
 const meta = (id) => { const m = META[id]; return m ? { group: m[0], name: m[1], short: m[2] } : { group: "Other", name: id, short: id }; };
 const CODE_SETS = new Set(["memsafety", "websec"]);
 const NS = "http://www.w3.org/2000/svg";
 /* Two small glyphs for the rail: a grid for the sets overview, stacked layers for a structure. */
-const RAIL_ICONS = { grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4", time: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0|M12 7v5l4 2", montecarlo: "M3 20h18|M5 20V16|M8.5 20V11|M12 20V6|M15.5 20V11|M19 20V16", orbit: "M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5|M12 3v3.5|M12 17.5V21|M3 12h3.5|M17.5 12H21|M5.6 5.6l2.5 2.5|M15.9 15.9l2.5 2.5" };
+const RAIL_ICONS = { world: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z|M3 12h18|M12 3c3 4 3 14 0 18|M12 3c-3 4-3 14 0 18", grid: "M4 4h7v7H4z|M13 4h7v7h-7z|M4 13h7v7H4z|M13 13h7v7h-7z", layers: "M12 4l8 4-8 4-8-4 8-4z|M4 12l8 4 8-4|M4 16l8 4 8-4", split: "M12 4v6|M12 10l-6 4v6|M12 10l6 4v6|M9 20h6", cascade: "M4 5h9v5H4z|M11 10h9v5h-9z|M4 15h9v5H4z", baseline: "M4 20h16|M7 20V10|M12 20V6|M17 20V13", funnel: "M4 4h16l-6 8v6l-4 2v-8z", window: "M4 4h16v16H4z|M4 10h16|M9 4v6", hierarchy: "M12 4v4|M6 12h12|M6 12v4h4v-4|M14 12v4h4v-4", time: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0|M12 7v5l4 2", montecarlo: "M3 20h18|M5 20V16|M8.5 20V11|M12 20V6|M15.5 20V11|M19 20V16", orbit: "M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5|M12 3v3.5|M12 17.5V21|M3 12h3.5|M17.5 12H21|M5.6 5.6l2.5 2.5|M15.9 15.9l2.5 2.5" };
 function railIcon(name) {
   const s = document.createElementNS(NS, "svg");
   for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", class: "railicon" }))
@@ -361,11 +387,11 @@ function wilson(k, n) {
 
 /* ---------- state and URL hash ---------- */
 const ST = { set: "all", model: null, t: 0.85, filter: "all", pairs: false, q: "", page: 0 };
-let PROBES = [], MODELS = [], INFO = {}, TOK = 0, CUSTOM_ABORT = null;
+let PROBES = [], MMLU_PROBES = [], MODELS = [], INFO = {}, TOK = 0, CUSTOM_ABORT = null;
 function parseHash() {
   const p = new URLSearchParams(location.hash.replace(/^#/, ""));
   const s = p.get("set");
-  ST.set = STRUCTURE_IDS.has(s) || (s && PROBES.some(x => x.id === s)) ? s : "all";
+  ST.set = STRUCTURE_IDS.has(s) || s === "world" || (s && (PROBES.some(x => x.id === s) || MMLU_PROBES.some(x => x.id === s))) ? s : "all";
   ST.model = p.get("model") || ST.model;
   const t = parseFloat(p.get("t")); if (isFinite(t)) ST.t = clamp01(t);
 }
@@ -448,7 +474,10 @@ mount(document.getElementById("root"), async () => {
   return { probes, models: models.models || [] };
 }, ({ probes, models }) => {
   MODELS = models; INFO = Object.fromEntries(models.map(m => [m.id, m]));
-  PROBES = [...probes].sort((a, b) => GROUPS.indexOf(meta(a.id).group) - GROUPS.indexOf(meta(b.id).group));
+  const isMmluId = (id) => id.startsWith("mmlu_");
+  PROBES = probes.filter(p => !isMmluId(p.id)).sort((a, b) => GROUPS.indexOf(meta(a.id).group) - GROUPS.indexOf(meta(b.id).group));
+  const MMLU_CAT_ORDER = ["STEM", "Humanities", "Social sciences", "Other"];
+  MMLU_PROBES = probes.filter(p => isMmluId(p.id)).sort((a, b) => MMLU_CAT_ORDER.indexOf(MMLU_CATEGORY[a.id.slice(5)]) - MMLU_CAT_ORDER.indexOf(MMLU_CATEGORY[b.id.slice(5)]) || a.id.localeCompare(b.id));
   parseHash();
   const view = el("div", { class: "view" }), rail = el("nav", { class: "rail", "aria-label": "Scenario sets" });
   const select = el("select", { class: "rail-select", "aria-label": "Scenario set", onchange: (e) => { location.hash = hashFor({ set: e.target.value }); } });
@@ -456,8 +485,10 @@ mount(document.getElementById("root"), async () => {
     rail.replaceChildren(); select.replaceChildren();
     const link = (id, name, n, icon) => el("a", { href: hashFor({ set: id }), "aria-current": ST.set === id ? "page" : null },
       icon ? railIcon(icon) : null, el("span", { class: "lbl", text: name }), n ? el("span", { class: "n", text: n }) : null);
-    rail.append(el("h4", { class: "sect", text: "Overview" }), link("all", "All sets", `${PROBES.length}`, "grid"));
-    select.append(el("option", { value: "all", text: "All sets (overview)", selected: ST.set === "all" }));
+    rail.append(el("h4", { class: "sect", text: "Overview" }), link("all", "All sets", `${PROBES.length}`, "grid"),
+      link("world", "World knowledge (MMLU)", `${MMLU_PROBES.length}`, "world"));
+    select.append(el("option", { value: "all", text: "All sets (overview)", selected: ST.set === "all" }),
+      el("option", { value: "world", text: "World knowledge (MMLU, overview)", selected: ST.set === "world" }));
     for (const [section, items] of STRUCTURE_SECTIONS) {
       rail.append(el("h4", { class: "sect", text: section }));
       const structOg = el("optgroup", { label: section }); select.append(structOg);
@@ -517,8 +548,14 @@ mount(document.getElementById("root"), async () => {
         if (PROBES.length && res.every(r => r.status === "rejected")) throw res[0].reason;
         return res.map(r => r.status === "fulfilled" ? r.value : null);
       }, (details) => renderOverview(details));
+    } else if (ST.set === "world") {
+      mount(box, async () => {
+        const res = await Promise.allSettled(MMLU_PROBES.map(p => getDetail(p.id)));
+        if (MMLU_PROBES.length && res.every(r => r.status === "rejected")) throw res[0].reason;
+        return res.map(r => r.status === "fulfilled" ? r.value : null);
+      }, (details) => renderWorldMap(details));
     } else {
-      const probe = PROBES.find(p => p.id === ST.set);
+      const probe = PROBES.find(p => p.id === ST.set) || MMLU_PROBES.find(p => p.id === ST.set);
       mount(box, () => getDetail(probe.id), (d) => renderSet(probe, d));
     }
     if (tok !== TOK) return;
@@ -2630,6 +2667,70 @@ function renderOverview(details) {
       ordered.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any set."),
       el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
       el("p", { class: "legend", style: "margin-top:6px", text: `Intervals are Wilson 95% (approximate). Of ${above + below + within} model-by-set cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.${failed ? ` ${failed} set(s) failed to load.` : ""}` })));
+  return wrap;
+}
+
+/* ---------- world knowledge (MMLU): a separate overview, subjects x models, kept apart from
+   "All sets" on purpose -- merging 57 academic subjects into the curated probe-set heat map would
+   bury the sets that page is actually about. Same heat-map mechanics as renderOverview, transposed:
+   rows are subjects grouped into the 4 official MMLU categories, columns are models. */
+function renderWorldMap(details) {
+  const subs = MMLU_PROBES.map((p, i) => ({ p, d: details[i] })).filter(x => x.d);
+  const failed = MMLU_PROBES.length - subs.length;
+  const mids = orderModels(subs.flatMap(x => modelsIn(x.d)));
+  const cell = {}; // cell[subjectId][model] = stat
+  for (const x of subs) { cell[x.p.id] = {}; for (const m of mids) cell[x.p.id][m] = statFor(x.d, m); }
+  const chance = (p) => 1 / nClasses(p);
+  const macroByModel = (m) => { const v = subs.map(x => ({ s: cell[x.p.id][m], c: chance(x.p) })).filter(z => z.s);
+    return v.length ? { acc: v.reduce((a, z) => a + z.s.acc, 0) / v.length, ch: v.reduce((a, z) => a + z.c, 0) / v.length, k: v.length } : null; };
+  const M = Object.fromEntries(mids.map(m => [m, macroByModel(m)]));
+  const orderedModels = [...mids].sort((a, b) => (M[b] ? M[b].acc : -1) - (M[a] ? M[a].acc : -1));
+
+  let above = 0, below = 0, within = 0;
+  for (const x of subs) for (const m of mids) { const s = cell[x.p.id][m]; if (!s) continue; const c = chance(x.p); if (s.lo > c) above++; else if (s.hi < c) below++; else within++; }
+
+  const CAT_ORDER = ["STEM", "Humanities", "Social sciences", "Other"];
+  const catOf = (x) => MMLU_CATEGORY[x.p.id.slice(5)];
+  const groups = CAT_ORDER.map(cat => [cat, subs.filter(x => catOf(x) === cat)]).filter(([, list]) => list.length);
+
+  const head = el("tr", {}, el("th", { "data-sort": "text", text: "Subject" }),
+    orderedModels.map(m => el("th", { "data-sort": "num", class: "vh", title: `${modelName(m)}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` }, mtagLive(m))));
+  const bodyRows = [];
+  for (const [cat, list] of groups) {
+    bodyRows.push(el("tr", { class: "rowgroup" }, el("th", { colspan: orderedModels.length + 1, text: `${cat} (${list.length})` })));
+    for (const x of list) {
+      const c = chance(x.p);
+      bodyRows.push(el("tr", {},
+        el("td", { class: "subj", title: `${x.p.n} items, ${nClasses(x.p)} classes, chance ${pc(c, 1)}`, text: meta(x.p.id).short }),
+        orderedModels.map(m => {
+          const s = cell[x.p.id][m];
+          if (!s) return el("td", { class: "cell na", "data-value": -1, title: `${modelName(m)} has no results on ${meta(x.p.id).name}` });
+          const title = `${modelName(m)} on ${meta(x.p.id).name}: ${s.k}/${s.n} correct = ${pc(s.acc, 1)}; Wilson 95% ${pc(s.lo, 1)} to ${pc(s.hi, 1)}; chance ${pc(c, 1)}`;
+          return el("td", { class: "cell" + (s.hi < c ? " below" : ""), "data-value": s.acc, style: `background:${stepBg(stepOf(s.acc, c))}`, title },
+            el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title }));
+        })));
+    }
+  }
+  bodyRows.push(el("tr", { class: "avgrow" }, el("td", { class: "subj", text: "Average" }),
+    orderedModels.map(m => { const mm = M[m];
+      return el("td", { class: "cell" + (mm ? "" : " na"), "data-value": mm ? mm.acc : -1, style: mm ? `background:${stepBg(stepOf(mm.acc, mm.ch))}` : "",
+        title: mm ? `Average over ${mm.k} of ${subs.length} subjects: ${pc(mm.acc, 1)} (mean chance ${pc(mm.ch)})` : "not run" }); })));
+  const table = el("table", { class: "data heat" }, el("thead", {}, head), el("tbody", {}, bodyRows));
+
+  const exportCsv = () => {
+    const h = ["subject", "category", "n_items", ...orderedModels.flatMap(m => [`${m}_acc`, `${m}_ci95_lo`, `${m}_ci95_hi`, `${m}_n`])];
+    const rows = [h, ...subs.map(x => [meta(x.p.id).short, catOf(x), x.p.n, ...orderedModels.flatMap(m => { const s = cell[x.p.id][m]; return s ? [s.acc.toFixed(4), s.lo.toFixed(4), s.hi.toFixed(4), s.n] : ["", "", "", ""]; })]),
+      ["average", "", "", ...orderedModels.flatMap(m => [M[m] ? M[m].acc.toFixed(4) : "", "", "", M[m] ? M[m].k : 0])]];
+    Jev.download("world-knowledge-accuracy.csv", Jev.csv(rows), "text/csv");
+  };
+  const wrap = el("div", { class: "stack" },
+    el("section", { class: "section", style: "margin-top:0", "aria-labelledby": "wm-h" },
+      el("header", {}, el("div", {}, el("h2", { id: "wm-h", text: "World knowledge: accuracy by subject" }),
+        el("p", { class: "small", text: "MMLU, the full public test set, no sampling. Rows are the 57 subjects grouped into MMLU's own 4 categories; columns are models, strongest average first. Click a cell to open that model on that subject." })),
+        el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: exportCsv, text: "Export CSV" }))),
+      subs.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any MMLU subject yet."),
+      el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
+      el("p", { class: "legend", style: "margin-top:6px", text: `Intervals are Wilson 95% (approximate). Of ${above + below + within} model-by-subject cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.${failed ? ` ${failed} subject(s) failed to load.` : ""}` })));
   return wrap;
 }
 

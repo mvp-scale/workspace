@@ -116,7 +116,10 @@ PROBE_RUNS = Path(os.environ.get("PROBE_RUNS", ROOT / "data" / "probe-runs-v2"))
 
 
 def read_jsonl(path):
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    # str.splitlines() also breaks on Unicode line/paragraph separators and NEL, which can appear
+    # raw inside a JSON string value (ensure_ascii=False) and would corrupt that record's JSON.
+    # A JSONL file only delimits records on '\n'.
+    return [json.loads(line) for line in path.read_text().split("\n") if line.strip()]
 
 
 def probe_sets():
