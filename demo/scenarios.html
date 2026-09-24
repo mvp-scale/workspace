@@ -213,12 +213,16 @@
   /* Results: a real table, one column per model that was actually asked, plus an agreement meter */
   table.results th, table.results td { white-space: normal; }
   table.results .res-cell { text-align: center; font-variant-numeric: tabular-nums; font-size: 12px; min-width: 52px; }
-  table.results tr.res-cat td { font-weight: 600; }
-  table.results tr.res-leaf td.res-leaf-title { padding-left: 26px; font-weight: 400; }
+  tr.res-shape, tr.res-cat { cursor: pointer; }
+  tr.res-shape:hover, tr.res-cat:hover { filter: brightness(1.08); }
+  tr.res-shape:focus-visible, tr.res-cat:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  table.results tr.res-shape td, table.sched tr.res-shape td { font-weight: 700; font-size: 13px; background: var(--surface-2); }
+  table.results tr.res-shape td:first-child, table.sched tr.res-shape td:first-child { border-left: 3px solid var(--s-color, var(--border)); padding-left: 7px; }
+  table.results tr.res-cat td, table.sched tr.res-cat td { font-weight: 600; }
+  td.res-leaf-title { padding-left: 26px; font-weight: 400; }
   .res-caret { background: none; border: 0; color: var(--text-3); cursor: pointer; font: inherit; padding: 0 6px 0 0; }
   .res-caret:hover { color: var(--text); }
   /* Custom decomposition: merged effort/risk table (replaces a separate Gantt + table) */
-  table.sched tr.sched-group td { padding-top: 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); border-bottom-color: transparent; }
   table.sched tr.sched-row:hover { background: var(--surface-2); }
   table.sched tr.sched-detail td { background: var(--surface-2); padding-top: 8px; padding-bottom: 10px; }
   .sched-bar { display: block; }
@@ -2117,6 +2121,20 @@ function mcRunSimulation(byId, nRuns, seedStr) {
   };
 }
 const humanizeId = (id) => id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+/* Shared group-row collapse for both the Results table and the schedule table below it, so the
+   two "same data, different lens" tables behave identically: starts collapsed, click anywhere on
+   the row (not just the caret) to toggle, keyboard-operable, and a setOpen(bool) that "Expand
+   all"/"Collapse all" or a parent group can drive directly. */
+function collapsible(rowEl, caretEl, onToggle) {
+  let open = false;
+  rowEl.tabIndex = 0; rowEl.setAttribute("role", "button"); rowEl.setAttribute("aria-expanded", "false");
+  const setOpen = (v) => {
+    open = v; caretEl.textContent = v ? "▾" : "▸"; rowEl.setAttribute("aria-expanded", String(v)); onToggle(v);
+  };
+  rowEl.addEventListener("click", (e) => { if (e.target.closest("button, a")) return; setOpen(!open); });
+  rowEl.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && !e.target.closest("button,a")) { e.preventDefault(); setOpen(!open); } });
+  return { setOpen, isOpen: () => open };
+}
 /* Builds the byId + ordered groups mcRunSimulation needs, from the live run state that
    renderCustom() already accumulates. Category order = the real live priority-queue rank
    (categories[cid].queue_rank) -- a real signal, not invented -- used as the default sequencing
@@ -2149,7 +2167,8 @@ function customScheduleData(runState, lib) {
       };
     });
   });
-  return { byId, groups: catIds.map((cid) => ({ id: cid, title: humanizeId(cid) })) };
+  const catById = Object.fromEntries(lib.categories.map((c) => [c.id, c]));
+  return { byId, groups: catIds.map((cid) => ({ id: cid, title: catById[cid]?.text || humanizeId(cid), shape: catById[cid]?.shape || "(untagged)" })) };
 }
 /* What's actually behind a high criticality index, using only data that's already real: the
    item's own live "dependency" answer (a genuine blocker, not invented) and its live "gate"
@@ -2172,47 +2191,85 @@ function criticalityDetail(t, runState) {
     : el("p", { class: "small muted", style: "margin:0", text: "Nothing flagged for this item — no blocker, no redesign risk, and it wasn't on the single-estimate critical path." }),
     el("p", { class: "small muted", style: "margin:6px 0 0" }, `Criticality index: ${pc(t.criticality_index)} of sampled runs had this item on that run's own critical path.`));
 }
-/* One row per item: full text (no truncation), a compact shared-scale bar (still lets you see
-   what overlaps with what, without a "day 0 / day 1 / day 2" axis reading as a calendar forecast),
-   and the criticality meter. Click a row to expand criticalityDetail() in place -- no separate
-   panel or page. Replaces what used to be a separate Gantt chart plus a separate, differently-
-   sorted table listing the same items twice, plus a "models split" badge that's now the Results
-   view's job (it shows per-model agreement directly, not a repeated boolean here). */
-function mcScheduleTable(built, mc, runState) {
+/* Same shape -> category grouping and collapse as the Results table above -- same look, a
+   different lens (relative effort + criticality instead of per-model agreement). One row per
+   item: full text (no truncation), a compact shared-scale bar (still lets you see what overlaps
+   with what, without a "day 0 / day 1 / day 2" axis reading as a calendar forecast), and the
+   criticality meter. Click an item row to expand criticalityDetail() in place -- no separate panel
+   or page. Group rows (shape/category) roll up average criticality instead, so you can see where
+   the gaps are before opening anything. Replaces what used to be a separate Gantt chart plus a
+   separate, differently-sorted table listing the same items twice, plus a "models split" badge
+   that's now the Results view's job (it shows per-model agreement directly, not repeated here). */
+function mcScheduleTable(built, mc, runState, lib) {
   const maxDay = Math.max(0, ...mc.tasks.map((t) => t.finish_p90 ?? t.deterministic_finish_day));
   const barW = 170;
   const dayX = (d) => (maxDay ? clamp01(d / maxDay) * barW : 0);
+  const meanOf = (vals) => vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const critCell = (crit, label) => crit == null ? el("td", { class: "res-cell muted" }, "–")
+    : el("td", { style: "min-width:140px" }, Jev.meter(crit, `${pc(crit, 0)}${label || ""}`));
   const byGroup = {};
   for (const t of mc.tasks) (byGroup[t.group] ??= []).push(t);
-  const rows = [];
-  for (const g of built.groups) {
-    const kids = byGroup[g.id]; if (!kids || !kids.length) continue;
-    rows.push(el("tr", { class: "sched-group" }, el("td", { colspan: 3, text: g.title })));
-    for (const t of kids) {
-      const bandX1 = dayX(t.start_p10), bandX2 = dayX(t.finish_p90);
-      const barX1 = dayX(t.deterministic_start_day), barX2 = dayX(t.deterministic_finish_day);
-      const bar = S("svg", { viewBox: `0 0 ${barW} 16`, width: barW, height: 16, class: "sched-bar", role: "img",
-          "aria-label": `relative effort ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)}, risk range ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)}` },
-        S("rect", { x: bandX1, y: 2, width: Math.max(1, bandX2 - bandX1), height: 12, rx: 2, style: `fill:${mcBandFill(t.criticality_index)}` },
-          S("title", {}, `risk range across ${mc.n_runs.toLocaleString()} sampled runs: ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)} relative effort-days (p10 to p90) -- not calendar dates`)),
-        S("rect", { x: barX1, y: 4, width: Math.max(1.5, barX2 - barX1), height: 8, rx: 1.5, class: "bar" + (t.deterministic_on_critical_path ? " crit" : "") },
-          S("title", {}, `single-estimate position: ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)} relative effort-days${t.deterministic_on_critical_path ? " · on the critical path" : ""}`)));
-      const tr = el("tr", { class: "sched-row dnode-click", tabIndex: 0, role: "button", "aria-expanded": "false" },
-        el("td", { title: t.duration_basis, text: t.title }),
-        el("td", {}, bar),
-        el("td", { style: "min-width:140px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)));
-      const detailRow = el("tr", { class: "sched-detail", style: "display:none" }, el("td", { colspan: 3 }, criticalityDetail(t, runState)));
-      const toggle = () => { const open = detailRow.style.display !== "none"; detailRow.style.display = open ? "none" : ""; tr.setAttribute("aria-expanded", String(!open)); };
-      tr.addEventListener("click", toggle);
-      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-      rows.push(tr, detailRow);
+  const shapeIdx = Object.fromEntries((lib.shapes || []).map((s, i) => [s, (i % 8) + 1]));
+  const groupsByShape = {};
+  for (const g of built.groups) if (byGroup[g.id]?.length) (groupsByShape[g.shape || "(untagged)"] ??= []).push(g);
+  const shapeOrder = (lib.shapes && lib.shapes.length ? lib.shapes : Object.keys(groupsByShape)).filter((s) => groupsByShape[s]?.length);
+  const rows = [], toggles = [];
+  for (const shape of shapeOrder) {
+    const groups = groupsByShape[shape];
+    const idx = shapeIdx[shape] || 1;
+    const shapeTasks = groups.flatMap((g) => byGroup[g.id]);
+    const shapeCaret = el("span", { class: "res-caret grp-caret", "aria-hidden": "true", text: "▸" });
+    const shapeChildren = [];
+    const shapeRow = el("tr", { class: "res-shape", style: `--s-color:var(--s${idx})` },
+      el("td", { colspan: 2 }, shapeCaret, el("span", { class: "dtitle", text: humanizeId(shape) }),
+        el("span", { class: "small muted", text: ` — ${groups.length} ${groups.length === 1 ? "category" : "categories"}` })),
+      critCell(meanOf(shapeTasks.map((t) => t.criticality_index)), " average criticality"));
+    const shapeToggle = collapsible(shapeRow, shapeCaret, (open) => { for (const c of shapeChildren) c.apply(open); });
+    toggles.push(shapeToggle);
+    rows.push(shapeRow);
+    for (const g of groups) {
+      const kids = byGroup[g.id];
+      const catCaret = el("span", { class: "res-caret grp-caret", "aria-hidden": "true", text: "▸" });
+      const catRows = [];
+      const catRow = el("tr", { class: "res-cat", style: "display:none" },
+        el("td", { style: "padding-left:20px" }, catCaret, el("span", { class: "dtitle", text: g.title })),
+        critCell(meanOf(kids.map((t) => t.criticality_index)), " average criticality"));
+      const catToggle = collapsible(catRow, catCaret, (open) => { for (const r of catRows) r.style.display = open ? "" : "none"; });
+      toggles.push(catToggle);
+      shapeChildren.push({ apply: (shapeOpen) => { catRow.style.display = shapeOpen ? "" : "none"; for (const r of catRows) r.style.display = (shapeOpen && catToggle.isOpen()) ? "" : "none"; } });
+      rows.push(catRow);
+      for (const t of kids) {
+        const bandX1 = dayX(t.start_p10), bandX2 = dayX(t.finish_p90);
+        const barX1 = dayX(t.deterministic_start_day), barX2 = dayX(t.deterministic_finish_day);
+        const bar = S("svg", { viewBox: `0 0 ${barW} 16`, width: barW, height: 16, class: "sched-bar", role: "img",
+            "aria-label": `relative effort ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)}, risk range ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)}` },
+          S("rect", { x: bandX1, y: 2, width: Math.max(1, bandX2 - bandX1), height: 12, rx: 2, style: `fill:${mcBandFill(t.criticality_index)}` },
+            S("title", {}, `risk range across ${mc.n_runs.toLocaleString()} sampled runs: ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)} relative effort-days (p10 to p90) -- not calendar dates`)),
+          S("rect", { x: barX1, y: 4, width: Math.max(1.5, barX2 - barX1), height: 8, rx: 1.5, class: "bar" + (t.deterministic_on_critical_path ? " crit" : "") },
+            S("title", {}, `single-estimate position: ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)} relative effort-days${t.deterministic_on_critical_path ? " · on the critical path" : ""}`)));
+        const tr = el("tr", { class: "sched-row dnode-click", style: "display:none", tabIndex: 0, role: "button", "aria-expanded": "false" },
+          el("td", { class: "res-leaf-title", title: t.duration_basis, text: t.title }),
+          el("td", {}, bar),
+          el("td", { style: "min-width:140px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)));
+        const detailRow = el("tr", { class: "sched-detail", style: "display:none" }, el("td", { colspan: 3 }, criticalityDetail(t, runState)));
+        const toggle = () => { const open = detailRow.style.display !== "none"; detailRow.style.display = open ? "none" : ""; tr.setAttribute("aria-expanded", String(!open)); };
+        tr.addEventListener("click", toggle);
+        tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+        catRows.push(tr, detailRow);
+        rows.push(tr, detailRow);
+      }
     }
   }
-  return el("div", {}, el("div", { style: "overflow-x:auto" },
-    el("table", { class: "data wrap sched" },
-      el("thead", {}, el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Relative effort — not a calendar" }), el("th", { text: "Criticality index" }))),
-      el("tbody", {}, rows))),
-    el("p", { class: "legend", style: "margin-top:6px" }, "Click a row for what's actually behind its criticality index."));
+  const expandAllBtn = el("button", { type: "button", class: "btn ghost" }, "Expand all");
+  const collapseAllBtn = el("button", { type: "button", class: "btn ghost" }, "Collapse all");
+  expandAllBtn.addEventListener("click", () => toggles.forEach((t) => t.setOpen(true)));
+  collapseAllBtn.addEventListener("click", () => toggles.forEach((t) => t.setOpen(false)));
+  return el("div", {}, el("div", { class: "row", style: "gap:8px;margin-bottom:8px" }, expandAllBtn, collapseAllBtn),
+    el("div", { style: "overflow-x:auto" },
+      el("table", { class: "data wrap sched" },
+        el("thead", {}, el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Relative effort — not a calendar" }), el("th", { text: "Criticality index" }))),
+        el("tbody", {}, rows))),
+    el("p", { class: "legend", style: "margin-top:6px" }, "Click a shape or category to expand it, or an item row for what's actually behind its criticality index."));
 }
 function customScheduleSection(runState, lib, endEvent) {
   const built = customScheduleData(runState, lib);
@@ -2231,7 +2288,7 @@ function customScheduleSection(runState, lib, endEvent) {
     el("div", { class: "card" }, el("div", { style: "overflow-x:auto" }, mcHistogram(mc.histogram, mc.distribution, null))),
     el("div", { class: "card" }, el("h4", { style: "margin-top:0", text: "Effort and risk, by item" }),
       el("p", { class: "small muted", text: "Every item this run reached, grouped the way the live priority queue actually explored them. The bar's pale band is the sampled risk range; the solid bar is the single-estimate position; red means it landed on the critical path in the single-estimate pass." }),
-      mcScheduleTable(built, mc, runState)));
+      mcScheduleTable(built, mc, runState, lib)));
   const top = sorted[0];
   box.append(top && top.criticality_index > 0
     ? soWhat("--s2", `"${top.title}" drives this estimate more than anything else.`, `Critical in ${pc(top.criticality_index)} of sampled runs, under the stated rule above — not a measurement, but the same heuristic applied consistently.`)
@@ -2476,62 +2533,91 @@ function buildCustomResults(runState, lib) {
     ...Object.values(runState.leaves).flatMap((ls) => Object.keys(ls.answers.risk.per_model || {})),
   ]);
   const cell = (v, colorFn) => el("td", { class: "res-cell", style: v == null ? "" : `background:${colorFn(v)}` }, v == null ? "–" : pc(v, 0));
-  const agreementCell = (spread) => spread == null ? el("td", { class: "res-cell muted" }, "–")
-    : el("td", { style: "min-width:120px" }, Jev.meter(clamp01(1 - spread), `${pc(clamp01(1 - spread), 0)} agreement`));
-  const rows = [];
-  const leafToCat = {}, categoryCaret = {};
-  for (const c of lib.categories.filter((c) => runState.categories[c.id])) {
-    const cs = runState.categories[c.id];
-    const kids = (c.children || []).filter((l) => runState.leaves[l.id]);
-    const leafRows = [];
-    const caret = el("button", { type: "button", class: "res-caret", "aria-label": "Collapse", text: "▾" });
-    let open = true;
-    if (kids.length) caret.addEventListener("click", () => {
-      open = !open; caret.textContent = open ? "▾" : "▸";
-      for (const r of leafRows) r.style.display = open ? "" : "none";
-    });
-    categoryCaret[c.id] = caret;
-    rows.push(el("tr", { class: "res-cat", "data-id": c.id },
-      el("td", {}, kids.length ? caret : el("span", { style: "padding-left:16px" }), el("span", { class: "dtitle", text: c.text }), cs.guaranteed ? el("span", { class: "dbadge", title: "One of the top-scoring categories within its own shape (e.g. functional, non-functional, operational…), so it's explored early regardless of how it ranks against categories from other shapes — keeps the walk from skipping an entire shape. Not a confidence rating on the answer itself.", text: "guaranteed" }) : null),
-      decisionCell(categoryDecision(cs)),
-      ...modelIds.map((m) => cell((cs.gap.per_model || {})[m], heatAcc)),
-      agreementCell(cs.gap.spread)));
-    for (const l of kids) {
-      const ls = runState.leaves[l.id];
-      const gateMean = ls.answers.gate?.mean;
-      leafToCat[l.id] = c.id;
-      const lrow = el("tr", { class: "res-leaf", "data-id": l.id },
-        el("td", { class: "res-leaf-title" }, el("span", { class: "dtitle", text: l.text }),
-          (gateMean != null && gateMean >= 0.5) ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", title: "a surprise here could force a redesign, not just a delay", text: "redesign risk" }) : null),
-        decisionCell(leafDecision(ls)),
-        ...modelIds.map((m) => cell((ls.answers.risk.per_model || {})[m], heatRisk)),
-        agreementCell(ls.answers.risk.spread));
-      leafRows.push(lrow);
-      rows.push(lrow);
+  const meanOf = (vals) => vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const agreementCell = (agreement, extra) => agreement == null ? el("td", { class: "res-cell muted" }, "–")
+    : el("td", { style: "min-width:120px" }, Jev.meter(agreement, `${pc(agreement, 0)} agreement${extra || ""}`));
+  const shapeIdx = Object.fromEntries((lib.shapes || []).map((s, i) => [s, (i % 8) + 1]));
+  const rows = [], toggles = [];
+  const leafToCat = {}, catToShape = {}, categoryCaret = {}, shapeCaret = {};
+  const visitedCats = lib.categories.filter((c) => runState.categories[c.id]);
+  const shapeOrder = (lib.shapes && lib.shapes.length ? lib.shapes : [...new Set(visitedCats.map((c) => c.shape || "(untagged)"))]);
+  for (const shape of shapeOrder.filter((s) => visitedCats.some((c) => (c.shape || "(untagged)") === s))) {
+    const cats = visitedCats.filter((c) => (c.shape || "(untagged)") === shape);
+    const idx = shapeIdx[shape] || 1;
+    const shapeChildren = [];
+    const shapeAgreement = meanOf(cats.map((c) => runState.categories[c.id].gap.spread).filter((s) => s != null).map((s) => clamp01(1 - s)));
+    const shapeGap = meanOf(cats.map((c) => runState.categories[c.id].gap.mean).filter((v) => v != null));
+    const shapeDecision = (shapeAgreement != null && shapeAgreement < RESULTS_AGREEMENT_THRESHOLD) ? "needs-info" : (shapeGap != null ? (shapeGap >= 0.5 ? "expand" : "covered") : null);
+    const shapeCaretEl = el("span", { class: "res-caret grp-caret", "aria-hidden": "true", text: "▸" });
+    const shapeRow = el("tr", { class: "res-shape", style: `--s-color:var(--s${idx})` },
+      el("td", {}, shapeCaretEl, el("span", { class: "dtitle", text: humanizeId(shape) }),
+        el("span", { class: "small muted", text: ` — ${cats.length} ${cats.length === 1 ? "category" : "categories"}` })),
+      decisionCell(shapeDecision),
+      ...modelIds.map((m) => cell(meanOf(cats.map((c) => (runState.categories[c.id].gap.per_model || {})[m]).filter((v) => v != null)), heatAcc)),
+      agreementCell(shapeAgreement, " across this shape's categories"));
+    const shapeToggle = collapsible(shapeRow, shapeCaretEl, (open) => { for (const c of shapeChildren) c.apply(open); });
+    toggles.push(shapeToggle);
+    shapeCaret[shape] = shapeToggle;
+    rows.push(shapeRow);
+    for (const c of cats) {
+      const cs = runState.categories[c.id];
+      const kids = (c.children || []).filter((l) => runState.leaves[l.id]);
+      const leafRows = [];
+      catToShape[c.id] = shape;
+      const catCaretEl = el("span", { class: "res-caret grp-caret", "aria-hidden": "true", text: "▸" });
+      const catRow = el("tr", { class: "res-cat", "data-id": c.id, style: "display:none" },
+        el("td", { style: "padding-left:20px" }, kids.length ? catCaretEl : el("span", { style: "padding-left:16px" }), el("span", { class: "dtitle", text: c.text }), cs.guaranteed ? el("span", { class: "dbadge", title: "One of the top-scoring categories within its own shape (e.g. functional, non-functional, operational…), so it's explored early regardless of how it ranks against categories from other shapes — keeps the walk from skipping an entire shape. Not a confidence rating on the answer itself.", text: "guaranteed" }) : null),
+        decisionCell(categoryDecision(cs)),
+        ...modelIds.map((m) => cell((cs.gap.per_model || {})[m], heatAcc)),
+        agreementCell(cs.gap.spread == null ? null : clamp01(1 - cs.gap.spread)));
+      let catToggle = null;
+      if (kids.length) { catToggle = collapsible(catRow, catCaretEl, (open) => { for (const r of leafRows) r.style.display = open ? "" : "none"; }); toggles.push(catToggle); categoryCaret[c.id] = catToggle; }
+      shapeChildren.push({ apply: (shapeOpen) => { catRow.style.display = shapeOpen ? "" : "none"; for (const r of leafRows) r.style.display = (shapeOpen && (catToggle?.isOpen() ?? false)) ? "" : "none"; } });
+      rows.push(catRow);
+      for (const l of kids) {
+        const ls = runState.leaves[l.id];
+        const gateMean = ls.answers.gate?.mean;
+        leafToCat[l.id] = c.id;
+        const lrow = el("tr", { class: "res-leaf", "data-id": l.id, style: "display:none" },
+          el("td", { class: "res-leaf-title" }, el("span", { class: "dtitle", text: l.text }),
+            (gateMean != null && gateMean >= 0.5) ? el("span", { class: "dbadge", style: "color:var(--bad);border-color:color-mix(in srgb, var(--bad) 40%, var(--border))", title: "a surprise here could force a redesign, not just a delay", text: "redesign risk" }) : null),
+          decisionCell(leafDecision(ls)),
+          ...modelIds.map((m) => cell((ls.answers.risk.per_model || {})[m], heatRisk)),
+          agreementCell(ls.answers.risk.spread == null ? null : clamp01(1 - ls.answers.risk.spread)));
+        leafRows.push(lrow);
+        rows.push(lrow);
+      }
     }
   }
   const unvisited = lib.categories.filter((c) => !runState.categories[c.id]);
   if (unvisited.length) {
     const kids = [];
-    const caret = el("button", { type: "button", class: "res-caret", "aria-label": "Expand", text: "▸" });
-    let open = false;
-    caret.addEventListener("click", () => { open = !open; caret.textContent = open ? "▾" : "▸"; for (const r of kids) r.style.display = open ? "" : "none"; });
-    rows.push(el("tr", {}, el("td", { colspan: modelIds.length + 3 }, caret, el("span", { class: "dtitle muted", text: `Not reached (${unvisited.length})` }))));
+    const caretEl = el("span", { class: "res-caret grp-caret", "aria-hidden": "true", text: "▸" });
+    const headRow = el("tr", {}, el("td", { colspan: modelIds.length + 3 }, caretEl, el("span", { class: "dtitle muted", text: `Not reached (${unvisited.length})` })));
+    collapsible(headRow, caretEl, (open) => { for (const r of kids) r.style.display = open ? "" : "none"; });
+    rows.push(headRow);
     for (const c of unvisited) {
       const r = el("tr", { style: "display:none" }, el("td", { class: "res-leaf-title" }, el("span", { class: "dtitle small muted", text: c.text })),
         el("td", { class: "muted" }, "–"), ...modelIds.map(() => el("td", { class: "res-cell muted" }, "–")), el("td", { class: "res-cell muted" }, "–"));
       kids.push(r); rows.push(r);
     }
   }
+  const expandAllBtn = el("button", { type: "button", class: "btn ghost" }, "Expand all");
+  const collapseAllBtn = el("button", { type: "button", class: "btn ghost" }, "Collapse all");
+  expandAllBtn.addEventListener("click", () => toggles.forEach((t) => t.setOpen(true)));
+  collapseAllBtn.addEventListener("click", () => toggles.forEach((t) => t.setOpen(false)));
   const table = el("table", { class: "data results" },
     el("thead", {}, el("tr", {}, el("th", { text: "Item" }),
       el("th", { title: "A stated rule, not a new measurement: combines each item's own phase/gap answer with its real agreement level. Low agreement overrides everything else, since a number the models don't agree on isn't trustworthy yet." }, "Decision"),
       ...modelIds.map((m) => el("th", {}, mtagShort(m))),
-      el("th", { title: "How closely the selected models' own numbers cluster together (1 - spread), independent of whether that number itself is high or low. High agreement on a low number means the models consistently think this isn't much of a gap; low agreement means they don't agree with each other at all, regardless of the number." }, "Agreement"))),
+      el("th", { title: "How closely the selected models' own numbers cluster together (1 - spread), independent of whether that number itself is high or low. High agreement on a low number means the models consistently think this isn't much of a gap; low agreement means they don't agree with each other at all, regardless of the number. Shape and category rows average this across what's underneath them." }, "Agreement"))),
     el("tbody", {}, rows));
-  const box = el("div", { style: "overflow-x:auto" }, table);
+  const box = el("div", {}, el("div", { class: "row", style: "gap:8px;margin-bottom:8px" }, expandAllBtn, collapseAllBtn),
+    el("div", { style: "overflow-x:auto" }, table));
   box.leafToCat = leafToCat;
+  box.catToShape = catToShape;
   box.categoryCaret = categoryCaret;
+  box.shapeCaret = shapeCaret;
   return box;
 }
 
@@ -2629,7 +2715,7 @@ function renderCustom({ library: lib, examples }) {
   buildModelsRow();
   Jev.onStatus(buildModelsRow);
 
-  let budget = 60;
+  let budget = 113;
   const budgetOut = el("output", {}, `${budget} calls`);
   const estOut = el("span", { class: "small muted" }, "");
   const budgetSlider = el("input", { type: "range", min: "3", max: "113", step: "1", value: budget, "aria-label": "Budget" });
@@ -2673,7 +2759,10 @@ function renderCustom({ library: lib, examples }) {
     const root = outlineBox.firstElementChild;
     const row = outlineBox.querySelector(`[data-id="${CSS.escape(id)}"]`);
     if (!row) return;
-    if (row.style.display === "none") root?.categoryCaret?.[root.leafToCat?.[id]]?.click();
+    const catId = root?.leafToCat?.[id] ?? id;
+    const shape = root?.catToShape?.[catId];
+    if (shape && row.style.display === "none") root?.shapeCaret?.[shape]?.setOpen(true);
+    if (root?.leafToCat?.[id] && row.style.display === "none") root?.categoryCaret?.[catId]?.setOpen(true);
     row.scrollIntoView({ block: "center", behavior: "smooth" });
     const cell = row.querySelector("td") || row;
     cell.classList.remove("dnode-flash"); void cell.offsetWidth; cell.classList.add("dnode-flash");

@@ -497,9 +497,10 @@ the fuller reasoning and the user decision that authorized this.
   comparison. If no model is loaded, the Run button is disabled and an `empty()` state says "No
   models are loaded. Start the local models with `demo/lineup.sh up`, or set `TYPESAFE_API_KEY`
   for the hosted model."
-- **Budget:** the existing `.slider` pattern with a range from 3 to 113, step 1, default 60. The
-  `output` shows "60 calls". Under it, a `.legend` reads "113 = every item in the library. One call
-  asks all selected models at once." Next to it is an **estimate**, "≈ 22 s". It's computed from
+- **Budget:** the existing `.slider` pattern with a range from 3 to 113, step 1, default 113 (the
+  full library) -- at local-model speeds a full run is a couple of seconds, so there's no reason to
+  default to a partial one. Under it, a `.legend` reads "113 = every item in the library. One call
+  asks all selected models at once." Next to it is an **estimate**. It's computed from
   measured seconds per question for each model (the p50 at size 20 from `/api/batch-perf`: semif
   67 ms, so1 66 ms, kev-4b 15 ms, laya 397 ms, verdict 258 ms per question), taking the slowest
   selected model, and assuming 14 + 21 questions for the first two calls and 5 for each later one.
