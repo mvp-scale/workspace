@@ -79,9 +79,9 @@
   details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
   pre.notes { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); max-height: 320px; overflow: auto; }
   /* Overview heat table */
-  table.heat td.cell { text-align: center; font-variant-numeric: tabular-nums; cursor: pointer; padding: 6px 8px; }
+  table.heat td.cell { text-align: center; font-variant-numeric: tabular-nums; cursor: pointer; padding: 6px 8px; font-size: 11px; }
   table.heat td.cell a { color: inherit; text-decoration: none; display: block; }
-  table.heat td.cell.na { color: var(--text-3); cursor: default; }
+  table.heat td.cell.na { color: var(--text-3); cursor: default; font-size: 12px; }
   table.heat td.below { color: var(--bad); font-weight: 600; }
   table.heat thead th { white-space: normal; vertical-align: bottom; }
   table.heat thead tr + tr th { top: 0; position: static; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-3); font-size: 11px; text-align: center; }
@@ -219,9 +219,9 @@
   
   .txtwrap .btn { min-height: 20px; padding: 0 6px; font-size: 12px; }
   th.fam { text-align: center; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-  table.heat { width: 100%; } table.heat td.cell { padding: 0; min-width: 44px; height: 28px; border: 1px solid var(--surface); }
-  table.heat td.cell a { height: 28px; }
-  table.heat td.cell.na { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border) 4px 5px); }
+  table.heat { width: 100%; } table.heat td.cell { padding: 0; min-width: 44px; height: 28px; line-height: 28px; border: 1px solid var(--surface); }
+  table.heat td.cell a { height: 28px; line-height: 28px; }
+  table.heat td.cell.na { background: repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--warn) 45%, transparent) 5px 6px); }
   table.heat td.macro { border-right: 2px solid var(--border); }
   table.heat th.vh { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; height: 110px; text-align: left; padding: 6px 2px; font-size: 11.5px; }
   table.heat th.fam { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); text-align: center; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
@@ -2643,13 +2643,13 @@ function renderOverview(details) {
     const mm = M[m];
     return el("tr", {},
       el("td", { "data-value": Jev.codeOf(m) }, el("div", { class: "model-name" }, mtagLive(m))),
-      el("td", { class: "cell macro" + (mm ? "" : " na"), "data-value": mm ? mm.acc : -1, style: mm ? `background:${stepBg(stepOf(mm.acc, mm.ch))}` : "", title: mm ? `Average over ${mm.k} of ${sets.length} sets: ${pc(mm.acc, 1)} (mean chance ${pc(mm.ch)}). Unweighted, so models that ran fewer sets are not directly comparable.` : "not run" }),
+      el("td", { class: "cell macro" + (mm ? "" : " na"), "data-value": mm ? mm.acc : -1, style: mm ? `background:${stepBg(stepOf(mm.acc, mm.ch))}` : "", title: mm ? `Average over ${mm.k} of ${sets.length} sets: ${pc(mm.acc, 1)} (mean chance ${pc(mm.ch)}). Unweighted, so models that ran fewer sets are not directly comparable.` : "not run" }, mm ? pc(mm.acc, 0) : "–"),
       sets.map(x => {
         const s = cell[m][x.p.id], c = chance(x.p);
-        if (!s) return el("td", { class: "cell na", "data-value": -1, title: `${modelName(m)} has no results on ${meta(x.p.id).name}` });
+        if (!s) return el("td", { class: "cell na", "data-value": -1, title: `${modelName(m)} has no results on ${meta(x.p.id).name}` }, "–");
         const title = `${modelName(m)} on ${meta(x.p.id).name}: ${s.k}/${s.n} correct = ${pc(s.acc, 1)}; Wilson 95% interval ${pc(s.lo, 1)} to ${pc(s.hi, 1)}; chance ${pc(c, 1)}`;
         return el("td", { class: "cell" + (s.hi < c ? " below" : ""), "data-value": s.acc, style: `background:${stepBg(stepOf(s.acc, c))}`, title },
-          el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title }));
+          el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title }, pc(s.acc, 0)));
       }));
   }));
   const table = el("table", { class: "data heat" }, el("thead", {}, headG, head1), body);
@@ -2705,17 +2705,17 @@ function renderWorldMap(details) {
         el("td", { class: "subj", title: `${x.p.n} items, ${nClasses(x.p)} classes, chance ${pc(c, 1)}`, text: meta(x.p.id).short }),
         orderedModels.map(m => {
           const s = cell[x.p.id][m];
-          if (!s) return el("td", { class: "cell na", "data-value": -1, title: `${modelName(m)} has no results on ${meta(x.p.id).name}` });
+          if (!s) return el("td", { class: "cell na", "data-value": -1, title: `${modelName(m)} has no results on ${meta(x.p.id).name}` }, "–");
           const title = `${modelName(m)} on ${meta(x.p.id).name}: ${s.k}/${s.n} correct = ${pc(s.acc, 1)}; Wilson 95% ${pc(s.lo, 1)} to ${pc(s.hi, 1)}; chance ${pc(c, 1)}`;
           return el("td", { class: "cell" + (s.hi < c ? " below" : ""), "data-value": s.acc, style: `background:${stepBg(stepOf(s.acc, c))}`, title },
-            el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title }));
+            el("a", { href: hashFor({ set: x.p.id, model: m }), "aria-label": title }, pc(s.acc, 0)));
         })));
     }
   }
   bodyRows.push(el("tr", { class: "avgrow" }, el("td", { class: "subj", text: "Average" }),
     orderedModels.map(m => { const mm = M[m];
       return el("td", { class: "cell" + (mm ? "" : " na"), "data-value": mm ? mm.acc : -1, style: mm ? `background:${stepBg(stepOf(mm.acc, mm.ch))}` : "",
-        title: mm ? `Average over ${mm.k} of ${subs.length} subjects: ${pc(mm.acc, 1)} (mean chance ${pc(mm.ch)})` : "not run" }); })));
+        title: mm ? `Average over ${mm.k} of ${subs.length} subjects: ${pc(mm.acc, 1)} (mean chance ${pc(mm.ch)})` : "not run" }, mm ? pc(mm.acc, 0) : "–"); })));
   const table = el("table", { class: "data heat" }, el("thead", {}, head), el("tbody", {}, bodyRows));
 
   const exportCsv = () => {
