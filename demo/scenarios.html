@@ -2702,7 +2702,7 @@ function renderWorldMap(details) {
   const groups = CAT_ORDER.map(cat => [cat, subs.filter(x => catOf(x) === cat)]).filter(([, list]) => list.length);
 
   const sizeLabel = (id) => INFO[id]?.params || "size not published";
-  const shortBase = (id) => { const b = INFO[id]?.base; return b ? b.split(/ \+ | \(/)[0] : null; };
+  const shortBase = (id) => { const b = INFO[id]?.base; return b ? b.split(/ \+ | \(/)[0].split(",")[0].replace(/^[\w.-]+\//, "") : null; };
   const head = el("tr", {}, el("th", { text: "Subject" }),
     orderedModels.map(m => { const base = shortBase(m);
       return el("th", { class: "mcolh", title: `${modelName(m)}, ${sizeLabel(m)}${base ? `, base ${base}` : ""}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` },
