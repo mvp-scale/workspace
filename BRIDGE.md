@@ -1,8 +1,205 @@
 # BRIDGE: where we are, for the next session
 
-Updated 2026-09-23, continuing the same day's session, after a second live-feedback round from the
-user. Read `CLAUDE.md` too. Full detail is in the git log (`git log --oneline`) once this is
-committed — this file is the narrative.
+Updated 2026-09-24. Read `CLAUDE.md` too. Full detail is in the git log (`git log --oneline`) --
+everything below is committed, `git status --short` is clean. This file is the narrative.
+
+## Sixth round (new day): World Knowledge (MMLU) -- built, shipped, iterated live with the user;
+## a business-domain and a coding/architecture-knowledge extension both explored and correctly
+## stopped short of building anything unproven
+
+Started from an exploratory question ("is there a test that measures whether a model actually
+knows a domain?") and ended up shipping a full second benchmark dimension alongside the existing
+15 published probe sets, plus two honest "we looked, the data isn't there yet" research passes.
+
+### What shipped: full MMLU, no sampling, as its own "World knowledge" view
+
+`probes/v2/build_mmlu.py` (new) pulls the complete public MMLU test split (`cais/mmlu`, Hendrycks
+et al. 2021, MIT licence) via `datasets.load_dataset` -- **all 57 subjects, 14,042 items, no
+sampling** -- into 57 separate probe sets (`mmlu_<subject>.jsonl`, one per subject, matching this
+project's one-file-per-set convention), each item lettered A-D to match the site's own "read the
+model's own answer-letter scores" technique. One shared `probes/v2/mmlu.md` (server.py's existing
+notes-lookup already resolves shared docs by id prefix, e.g. `sarcasm_*` already did this) covers
+licence, sampling (none), format, and checked caveats -- including a grounded one found by actually
+reading items, not guessing: `machine_learning` is frozen at 2020-2021 knowledge (item
+`mmlu_machine_learning-test-4` literally asks "As of 2020, which architecture is best for
+classifying high-resolution images?"), while stable fields barely age in 5 years. Also cites the
+real MMLU-Redux audit figure (~6.49% of items have a documented ground-truth error) rather than a
+guessed "low single digits."
+
+**A real bug found and fixed while wiring this in**: `server.py`'s `read_jsonl` used
+`str.splitlines()`, which also splits on Unicode line/paragraph separators and NEL -- one real
+MMLU question (`mmlu_management`) contains a raw NEL character and corrupted that file's parsing.
+Fixed to split strictly on `\n` (a JSONL file only delimits records that way); this was a latent
+bug in existing infrastructure, not something specific to the new data.
+
+**Kept deliberately separate from "All sets"**: first wired all 57 subjects in as extra columns on
+the existing "All sets" heat map (grouped under 4 new categories), but the user pushed back hard --
+mixing 57 academic subjects into the page about the 15 curated probe sets (and the Cascade/Baseline
+structure views, which iterate the same list) dilutes the thing that page is actually for. Pulled
+MMLU back out of `PROBES` entirely and gave it a dedicated **"World knowledge (MMLU)"** overview,
+a peer of "All sets" in the rail's Overview section, not nested under it: `renderWorldMap()` in
+`demo/scenarios.html`, the transpose of `renderOverview()` -- **subjects as rows** grouped into
+MMLU's own **4 official categories** (STEM/Humanities/Social sciences/Other, pulled from
+Hendrycks's own `categories.py` on GitHub, not guessed or invented), **models as columns**,
+ordered strongest-average-first, same click-through into the per-item explorer "All sets" already
+has. `MMLU_PROBES` is now a separate global from `PROBES`; the fallback per-set route (`ST.set`
+not matching a known structure) checks both lists.
+
+**Then iterated to "compact and consistent" over several live rounds**, each verified with a
+browser screenshot before moving to the next:
+- Model headers: dropped the code+name pattern (`mtagLive`) for code-only (`mtagShort`, the same
+  pattern every other dense table on this page already uses) -- full name still on hover.
+- Subject column capped at 150px with ellipsis truncation (was unbounded `white-space:nowrap`, so
+  "High school government and politics" was setting the width for all 57 rows).
+- Column headers switched from the "All sets" page's rotated/vertical style (built for dozens of
+  narrow set columns) to plain horizontal text -- unnecessary with only 6-9 model columns.
+- Added model **size** and **base model** under each code, so base-model overlap is visible at a
+  glance: SemIf, so1 and kev-4b all read `Qwen3.5-4B(-Base)`, confirming they share one foundation
+  model despite three different read-out techniques -- directly visualizes the "How they work"
+  page's own "reading isn't knowing" thesis. Trimmed the base-model string down to just the model
+  class (`Qwen/Qwen3.5-4B (frozen, BF16)` -> `Qwen3.5-4B`; `GLiClass ModernBERT-base, fine-tuned
+  (heman10x/...)` -> `GLiClass ModernBERT-base`) after the user flagged the redundant HF org
+  prefix and trailing clauses.
+- Top-aligned every header cell (`vertical-align:top`, scoped via `:has(th.mcolh)` so the
+  unrelated "All sets" table isn't touched) after the user noticed Jev's shorter 2-line block
+  (no base model, since it's undisclosed) wasn't lining up with the 3-line columns next to it.
+- Every heat-map cell (both "All sets" and World knowledge) now prints its accuracy percentage as
+  visible text, and empty ("no results") cells switched from a subtle border-grey stripe to a
+  distinct amber stripe (`color-mix` with `--warn`) plus a plain "-" mark -- the user correctly
+  flagged that a real, badly-scoring cell and a genuinely-empty cell looked identical at a glance
+  (confirmed with a real example: `jev x machine_learning` was 0/112 attempted, not just low-
+  scoring, and looked the same as a real near-chance cell elsewhere on the row).
+- Replaced the prose subtitle with a bold headline stat ("14,042 questions across 57 subjects --
+  the complete public MMLU test set, nothing sampled") plus three provenance badges (Published
+  2021, Unrevised since, The field's original general-knowledge benchmark) -- the user wanted
+  MMLU's pedigree "celebrated," not buried in a sentence. Also made the page-wide caveat banner
+  (previously static HTML shared across every Scenario Lab view, so it wrongly said "each set has
+  only 64 to 154 items" on this page) view-aware instead.
+- **A real class-name collision caught mid-fix**: the new header class was named `.mh`, which
+  turned out to already be used elsewhere in `scenarios.html` for an unrelated flex row. Renamed
+  to `.mcolh` before it caused a real bug, not after.
+
+### Budget ledger: a real structural discovery, not a workaround
+
+Running the full 6-model set surfaced a genuine design fact in `jevbench/budget.py`: `Ledger.cap`
+is `min(every cap_usd ever recorded in this ledger file, plus the current call's cap_usd)` -- a
+**ratchet that only ever tightens, never loosens**. The very first Jev run (via `bench.sh`'s
+hardcoded `--cap-usd 1`) permanently capped the shared ledger at $1; passing a higher `--cap-usd`
+on a later call is silently ignored, confirmed by directly reading the ledger's own `cap` events
+rather than guessing. This is clearly deliberate (CLAUDE.md already calls the ledger "shared
+across all runs" on purpose) so the fix was not to route around it quietly -- asked the user first,
+who authorized a **separate ledger file** (`ledger-jev-topup.jsonl`) as an explicit, one-time,
+user-approved exception, scoped only to finishing Jev's known gap (24 subjects, ~$0.31).
+
+**Two real operational mistakes made and fixed in the same pass, both disclosed live as they
+happened**: (1) `demo/lineup.sh down` stops all 5 lineup services, not just the 4 intended for the
+local in-process batch -- killed kev-4b's own concurrent MMLU run mid-flight. Cleaned up the 27
+corrupted (0-result) output directories it left and queued a watcher script
+(`logs/mmlu-run-kev4b-after.sh`) that waited for the lineup to restart and then resumed kev-4b
+automatically (it did, unattended, and finished correctly). (2) An overly broad `pkill` aimed at
+the broken kev-4b process also matched and killed the legitimate Jev run -- relaunched immediately;
+`bench.sh`'s skip-if-exists behaviour correctly avoided re-charging the one subject that had
+already completed.
+
+### Parallelization: user explicitly funded and authorized this ($30 total on the account, ~$1.14
+### spent across everything by the end), then asked whether Jev could be parallelized
+
+Checked TypeSafe's own docs (`docs.typesafe.ai` and its `llms.txt` index) directly rather than
+assume: **no published numeric rate limit exists** -- their own docs list "rate limit thresholds"
+and "quota information" as explicitly missing sections. `jevbench/runner.py` already stops a given
+subject's run cleanly on HTTP 429/401/403 or 3 consecutive failures (no retry storm), and the
+harness's own traffic pattern is already one-request-at-a-time within a subject. Built
+`logs/jev-parallel-topup.sh`: parallelizes **across subjects** (each an independent
+`jevbench.cli run` process, the shared ledger already handles concurrent reserve/settle safely via
+`fcntl.flock`), not by touching the harness's own serial per-item loop. Started at a conservative
+4-way concurrency with an explicit circuit breaker (`grep`s each finished subject's log for the
+harness's own "STOP: access/rate limit" message; if found, stops launching new subjects but lets
+in-flight ones finish, leaving the rest as honest gaps rather than pushing through). Result: **all
+9 remaining Jev subjects finished, zero rate-limit hits** -- real evidence there's headroom to push
+concurrency higher next time.
+
+**Final state: Jev and kev-4b both fully complete, 0/57 gaps each** (kev-4b's last straggler,
+`computer_security`, was a leftover from the lineup-restart mistake above, fixed with one direct
+`jevbench.cli run` call once the kev-4b service was confirmed healthy again). SemIf, so1, Laya and
+Verdict were already complete from the original batch run earlier in this round. Total spend
+across the whole MMLU effort plus everything already in the shared ledger: **~$1.14**.
+
+### Two "should we extend the taxonomy" explorations -- both correctly stopped short of building
+### anything, on the evidence, not on hesitation
+
+**Business/decision-relevant domains** (forked research, `subagent_type: fork`, not inline): the
+user had another AI agent draft a proposal for ~10-15 additional MMLU-adjacent domains (Art, Vet
+Medicine, Sports Science, Agriculture, Environmental Science, Urban Planning, Tourism, Metrology,
+Fire/Safety Engineering, Education, Language & Literature). Reviewed it before researching anything
+-- flagged that C-Eval/CMMLU/ArabicMMLU are language-*localized* MMLU variants (same subjects,
+different language, not new knowledge, and the user explicitly doesn't want "languages"), and that
+Metrology/Fire-Safety-Engineering look like they'd fail the proposal's own "don't count vertical
+specializations" rule. User then reframed the actual filter: **business/decision relevance**, and
+a much leaner target (~500-600 items, not thousands). MMLU already covers core business subjects
+(business_ethics, marketing, management, professional_accounting, econometrics, both macro/micro-
+economics, professional_law, international_law, public_relations) so the fork searched genuinely
+missing business-adjacent ground instead: finance/CFA, insurance, HR/employment law, project
+management, supply chain, ESG. **Finding: the strict bar (real, public, licensed, human-authored,
+fixed-choice, publisher-supplied gold answer) is much harder to clear for professional/business
+knowledge than it was for MMLU's academic subjects** -- almost everything valuable there is gated
+behind proprietary certifying bodies (CFA Institute, SHRM, PMI) with no free public question bank.
+Only one domain cleanly survives: **contract/practical legal reasoning via LegalBench** (CC BY 4.0,
+real, low hundreds of usable items after curating down to actual fixed-choice subtasks -- most
+LegalBench tasks aren't classic MCQ -- and must explicitly exclude any subtask built on ContractNLI
+since that's already used by this project's `checklist_contractnli` set). One tempting compromise
+flagged, not resolved: **ESG/ESGenius** (1,136 real, recent-2025 items, genuinely new ground) but
+its questions are LLM-*generated*, only expert-*validated* afterward -- a real deviation from the
+"no manufactured content" standard every other set here holds to. **Not decided**: whether to take
+just LegalBench (~100-250 items), also accept the ESG exception, or search the domains the fork
+didn't get to (real estate, corporate governance, risk management, auditing-vs-accounting).
+
+**Coding/architecture decision-making** (identified as a real gap, research explicitly deferred to
+a fresh session -- nothing built yet): user asked "is there a security coding dataset," which
+turned out to already exist and already be fully run -- `memsafety` (NIST SARD Juliet Test Suite
+for C/C++, public domain, 154 items) and `websec` (OWASP Benchmark Java v1.2, GPL-2.0, 80 items)
+are both complete across all 9 models today, currently living under "Security audit" in the main
+"All sets" page, not yet folded into World Knowledge. **A striking real finding surfaced while
+checking this**: most models sit at or near 50% (chance) on real vulnerability detection --
+Verdict 50/48%, kev-0.5b/0.8b 50%/50-51%, jeff 49%/55%, Laya 54%/50% -- only Jev (82%/76%), so1
+(66%/61%) and kev-4b (66%/61%) show real signal above chance on memsafety/websec respectively.
+Proposed folding these into World Knowledge as a 5th "Security & code" category (zero new spend,
+pure UI wiring, same pattern as the 4 MMLU categories) -- **not yet built, needs user confirmation**.
+
+But the user then clarified that's not actually the gap they meant: memsafety/websec test "is this
+code vulnerable," not the "computer software problem solving, algorithmic detection" they're after
+for routing coding decisions inside an agentic framework -- something closer to solutions-architect
+judgment (does the model know that "healthcare + audit trail" points toward a modular monolith on
+managed Kubernetes rather than JAMstack, that edge compute means a per-request CPU cap rather than
+a wall-clock timeout, etc.). User shared a real external reference file (`kit_playbooks.yaml`, from
+an unrelated project of theirs -- architecture patterns, hosting models, tooling, industry
+defaults) purely as an illustration of the target depth, not as source material -- correctly flagged
+that this file itself can't be used as a benchmark source even though it's well-constructed,
+because its "gold answers" are self-authored defaults, not an independent published benchmark
+(the same reasoning that already downgraded this project's own old `probes/build.py` hand-written
+sets). **No public, licensed benchmark for architecture/systems-design decision reasoning is known
+to exist yet** -- closest real-world analog (cloud certification exams: AWS/Azure/GCP solutions
+architect) is vendor-proprietary, same "gated behind a certifying body" pattern the business-domain
+search kept hitting. Also surfaced, but not yet acted on: Humanity's Last Exam (flagged and set
+aside during the business-domain pass) might fit a *different* axis -- "esoteric synthesis" of
+disjoint sparse knowledge (the user's own SIMD-MIMD/hyperplane/multi-zone-crypto example) rather
+than general world-knowledge coverage, and probably shouldn't be conflated with the architecture-
+decision-reasoning search into one "hard questions" bucket.
+
+**A conceptual thread worth preserving, not yet formalized into anything built**: the user's own
+"shotgunning" framing (break a compound, unanswerable question into atomic binary sub-decisions,
+compose the final answer deterministically from primitives each answered with real confidence) is
+already exactly what "Decompose and loop" does in this codebase -- not a new mechanism to build,
+a new way to *frame* validating existing decomposition capability. Reframes "should we test compound
+architecture-decision knowledge" into two more tractable, separable questions: is the model
+well-calibrated on atomic technical primitives (MMLU-subject-style, more findable), versus can it
+safely synthesize sparse disjoint knowledge under compound constraints (harder, maybe no clean
+dataset exists, HLE is the closest known candidate).
+
+**Explicitly told to stop here and start fresh**: user wants a new session/context before either
+research thread (architecture-decision benchmark search, or the LegalBench/ESG decision) is
+picked up, plus a forward-looking note about eventually deploying this console publicly (mentioned
+Cloudflare) "so people could see the overall approach" -- not scoped or started, just the stated
+direction for whenever that comes up.
 
 ## Third round: honesty audit + the harder ask (live Gantt for custom decomposition)
 
