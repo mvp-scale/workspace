@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scenario lab · Jev Bench Console</title>
 <meta name="description" content="Accuracy and confidence calibration of each model on published, labelled datasets.">
-<link rel="stylesheet" href="/static/app.css">
-<script src="/static/app.js"></script>
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
 <style>
   /* Layout the shared CSS lacks. Colours come from shared tokens only. */
   .lab { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px; align-items: start; }
@@ -438,7 +438,7 @@ const mtagShort = (id) => el("span", { class: "mtag", title: modelName(id) }, li
 
 /* ---------- data ---------- */
 const detailCache = new Map();
-const getDetail = (id) => { if (!detailCache.has(id)) detailCache.set(id, api("/api/probe?set=" + encodeURIComponent(id)).catch(e => { detailCache.delete(id); throw e; })); return detailCache.get(id); };
+const getDetail = (id) => { if (!detailCache.has(id)) detailCache.set(id, api("api/probe/" + encodeURIComponent(id) + ".json").catch(e => { detailCache.delete(id); throw e; })); return detailCache.get(id); };
 const modelsIn = (d) => Object.keys(d.results || {}).filter(m => d.results[m] && Object.keys(d.results[m]).length);
 const orderModels = (ids) => [...new Set(ids)].sort((a, b) => { const ia = MODELS.findIndex(m => m.id === a), ib = MODELS.findIndex(m => m.id === b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
 
@@ -498,7 +498,7 @@ const mcBandFill = (ci) => `color-mix(in srgb, var(--bad) ${Math.round(clamp01(c
 /* ---------- boot ---------- */
 mount(document.getElementById("root"), async () => {
   await Jev.ready;
-  const [probes, models] = await Promise.all([api("/api/probes"), api("/api/models")]);
+  const [probes, models] = await Promise.all([api("api/probes"), api("api/models")]);
   return { probes, models: models.models || [] };
 }, ({ probes, models }) => {
   MODELS = models; INFO = Object.fromEntries(models.map(m => [m.id, m]));
@@ -549,8 +549,8 @@ mount(document.getElementById("root"), async () => {
       : "Caveat: each set has only 64 to 154 items, so differences of a few points are within noise. Several sources are public and may appear in models' training data, and human labels can be noisy. Read intervals, not just point values.";
     CUSTOM_ABORT?.abort(); CUSTOM_ABORT = null;
     const box = el("div"); view.replaceChildren(box); const tok = ++TOK;
-    if (ST.set === "batch") { mount(box, () => api("/api/batch-perf"), renderBatch); }
-    else if (ST.set === "decompose") { mount(box, () => api("/api/decompose-tree"), renderDecomposeTree); }
+    if (ST.set === "batch") { mount(box, () => api("api/batch-perf"), renderBatch); }
+    else if (ST.set === "decompose") { mount(box, () => api("api/decompose-tree"), renderDecomposeTree); }
     else if (ST.set === "cascade") {
       mount(box, async () => {
         const res = await Promise.allSettled(PROBES.map(p => getDetail(p.id)));
@@ -566,12 +566,12 @@ mount(document.getElementById("root"), async () => {
       }, (details) => renderBaseline(details));
     }
     else if (ST.set === "funnel") { mount(box, () => getDetail("memsafety"), renderFunnel); }
-    else if (ST.set === "window") { mount(box, () => api("/api/window-study"), renderWindowStudy); }
-    else if (ST.set === "hierarchy") { mount(box, () => api("/api/hierarchy"), renderHierarchy); }
-    else if (ST.set === "time") { mount(box, () => api("/api/time-study"), renderTimeStudy); }
-    else if (ST.set === "montecarlo") { mount(box, () => api("/api/monte-carlo"), renderMonteCarlo); }
+    else if (ST.set === "window") { mount(box, () => api("api/window-study"), renderWindowStudy); }
+    else if (ST.set === "hierarchy") { mount(box, () => api("api/hierarchy"), renderHierarchy); }
+    else if (ST.set === "time") { mount(box, () => api("api/time-study"), renderTimeStudy); }
+    else if (ST.set === "montecarlo") { mount(box, () => api("api/monte-carlo"), renderMonteCarlo); }
     else if (ST.set === "custom") {
-      mount(box, async () => ({ library: await api("/api/decompose-library"), examples: await api("/api/decompose-examples") }), renderCustom);
+      mount(box, async () => ({ library: await api("api/decompose-library"), examples: await api("api/decompose-examples") }), renderCustom);
     }
     else if (ST.set === "all") {
       mount(box, async () => {
@@ -2659,7 +2659,7 @@ function estimateSeconds(models, budget, batchPerf) {
 }
 
 async function streamDecompose(body, onEvent, signal) {
-  const res = await fetch("/api/decompose-live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+  const res = await fetch("api/decompose-live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `Request failed (${res.status})`); }
   const reader = res.body.getReader(), decoder = new TextDecoder();
   let buf = "";

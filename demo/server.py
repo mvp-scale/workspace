@@ -424,6 +424,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, probe_detail(dict(x.split("=", 1) for x in q.split("&") if "=" in x).get("set", "")))
             except KeyError:
                 self._send(404, {"error": "unknown set"})
+        elif path.startswith("/api/probe/"):
+            # Path form (rather than ?set=) so the same relative URL works unmodified as a static
+            # file too -- a static host can't route a query string, but a literal path it can.
+            set_id = path[len("/api/probe/"):]
+            if set_id.endswith(".json"):
+                set_id = set_id[: -len(".json")]
+            try:
+                self._send(200, probe_detail(set_id))
+            except KeyError:
+                self._send(404, {"error": "unknown set"})
         elif path == "/api/vram":
             self._send(200, vram())
         elif path == "/api/batch-perf":

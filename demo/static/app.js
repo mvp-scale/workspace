@@ -78,9 +78,9 @@
   /* ---- Models: one registry, one naming scheme (codes from models.json), live status from /api/status ---- */
   let FACTS = {}, ORDER = [], STATUS = null, RULE = "";
   const subs = new Set();
-  const refreshStatus = async () => { try { STATUS = await api("/api/status"); ORDER = Object.keys(STATUS); subs.forEach(f => f(STATUS)); } catch { /* keep the last known status */ } };
+  const refreshStatus = async () => { try { STATUS = await api("api/status"); ORDER = Object.keys(STATUS); subs.forEach(f => f(STATUS)); } catch { /* keep the last known status */ } };
   const ready = (async () => {
-    try { const m = await api("/api/models"); m.models.forEach(x => { FACTS[x.id] = x; }); RULE = m.code_rule || ""; } catch { /* ids are shown instead */ }
+    try { const m = await api("api/models"); m.models.forEach(x => { FACTS[x.id] = x; }); RULE = m.code_rule || ""; } catch { /* ids are shown instead */ }
     await refreshStatus();
   })();
   setInterval(refreshStatus, 10000);
@@ -145,7 +145,7 @@
   }
   /* Shared data: leaderboard rows merged with the model fact sheet. Cached per page load. */
   let cache;
-  const load = () => cache ||= Promise.all([api("/api/leaderboard"), api("/api/models")]).then(([rows, meta]) => {
+  const load = () => cache ||= Promise.all([api("api/leaderboard"), api("api/models")]).then(([rows, meta]) => {
     const info = Object.fromEntries(meta.models.map(m => [m.id, m]));
     return { rows: rows.map(r => ({ ...r, info: info[r.id] || { id: r.id, name: r.id } })), models: meta.models, tiers: meta.tiers };
   }).catch(e => { cache = null; throw e; });

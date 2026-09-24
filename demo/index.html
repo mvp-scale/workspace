@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Leaderboard · Jev Bench Console</title>
 <meta name="description" content="Local benchmark results for typed decision models on the public JevBench tiers.">
-<link rel="stylesheet" href="/static/app.css">
-<script src="/static/app.js"></script>
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
 <style>
   /* Layout the shared CSS lacks: the GPU planner bar. Colours come from shared tokens. */
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -150,7 +150,7 @@ function families(rows, tier) {
 }
 
 const LOCAL = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "semif", "so1", "laya", "verdict"];
-const extra = () => Promise.all([Jev.api("/api/vram"), Jev.api("/api/probe-macro"), Jev.api("/api/agreement")]).then(([vram, macro, agree]) => ({ vram, macro, agree })).catch(() => null);
+const extra = () => Promise.all([Jev.api("api/vram"), Jev.api("api/probe-macro"), Jev.api("api/agreement")]).then(([vram, macro, agree]) => ({ vram, macro, agree })).catch(() => null);
 const gbOf = (mb) => mb / 1024;
 
 /* Memory a model needs while running. kev models default to the bf16 variant (measured to match fp32 answers). */
