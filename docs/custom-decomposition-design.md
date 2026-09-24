@@ -187,8 +187,12 @@ Each question's `instructions` is prefixed with `<leaf text>\n\n`, following lab
 `python3 probes/lab_custom_decompose.py --text-file idea.txt [--who "..."] [--intake foundry/ideas/<id>.json] --models semif,kev-4b,so1 --budget 60 --out data/probe-runs-v2/_custom_decompose/<slug>.jsonl`.
 It writes exactly the event stream from §2.4, one per line. It does `import server` itself, as
 lab_decompose does, and passes `ask=lambda m, it: server.one_item(m, server.BACKENDS[m], it)`.
-It refuses hosted backends the same way `lab_decompose.main()` does. The output stays outside
-`data/bench/`.
+The output stays outside `data/bench/`.
+
+> **Update:** the CLI and server originally refused any `hosted` backend here (cost-safety
+> default, since a live run could otherwise make unbounded paid calls with no budget-ledger tie-in).
+> `jev` is now allowed, since the run's own `budget` parameter (3-113 calls total) already bounds
+> the cost regardless of which models are selected.
 
 ### 2.2 Server wiring (`demo/server.py`, about 60 lines)
 
@@ -211,7 +215,6 @@ Validation, in this order:
 |---|---|
 | bad JSON, `text` empty or > 4000, `who` > 1000, `budget` not an int in 3..113, `models` not a non-empty list of ≤5 | 400 `{"error": "need JSON {text, who?, models:[...], budget:3-113}"}` |
 | a model not in `BACKENDS` | 404 `unknown backend X` |
-| a model with `BACKENDS[m].get("hosted")` | 400 `hosted model is not available here` (the same policy as lab_decompose; `jev` is never sent) |
 | a model not `up` in `status()` | 409 `X is not loaded` |
 | `_decompose_lock.acquire(blocking=False)` fails | 409 `another decomposition is running; try again when it finishes` |
 | PyYAML missing | 503 |
@@ -483,14 +486,17 @@ the fuller reasoning and the user decision that authorized this.
 - **Examples:** a `.pillrow` of `.pill` buttons from `/api/decompose-examples`, labelled by id
   ("oncall-rotation", …). A click fills both fields. The note next to them: "Real intakes from
   foundry/ideas."
-- **Models:** a `.pillrow` of `.pill` toggles, **loaded local models only**. It's built from
-  `Jev.status()` and refreshed through `Jev.onStatus`, and each pill shows `mtagShort(id)`. The
-  default selection is semif, kev-4b and so1 (P1–P3, following foundry's `MODELS` and its
+- **Models:** a `.pillrow` of `.pill` toggles, **any loaded model, local or hosted**. It's built
+  from `Jev.status()` and refreshed through `Jev.onStatus`, and each pill shows `mtagShort(id)`.
+  The default selection is semif, kev-4b and so1 (P1–P3, following foundry's `MODELS` and its
   report_v2 grounding), whichever of them are loaded. laya and verdict can be selected but show a
-  `.dbadge` "weak on published sets", with a `title` citing report_v2 (56.9% and 46.7%). `jev` is
-  **not listed**; a one-line `.legend` explains why ("The hosted model is billed per call and isn't
-  used here"). If no local model is loaded, the Run button is disabled and an `empty()` state
-  says "No local models are loaded. Start them with `demo/lineup.sh up`."
+  `.dbadge` "weak on published sets", with a `title` citing report_v2 (56.9% and 46.7%). `jev`
+  shows a `.dbadge` "paid" (billed per call, unlike the local models). A one-line `.legend` states
+  that every selected model is asked at once per node, and when more than one is selected their
+  answers are combined to drive the decomposition while each model's own answer is kept for
+  comparison. If no model is loaded, the Run button is disabled and an `empty()` state says "No
+  models are loaded. Start the local models with `demo/lineup.sh up`, or set `TYPESAFE_API_KEY`
+  for the hosted model."
 - **Budget:** the existing `.slider` pattern with a range from 3 to 113, step 1, default 60. The
   `output` shows "60 calls". Under it, a `.legend` reads "113 = every item in the library. One call
   asks all selected models at once." Next to it is an **estimate**, "≈ 22 s". It's computed from

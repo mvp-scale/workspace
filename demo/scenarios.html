@@ -702,7 +702,7 @@ function ganttBoard(data, onPick) {
   const groups = nodes.filter(n => n.layer === 1);
   const byGroup = {}; for (const g of groups) byGroup[g.id] = leaves.filter(n => n.parent === g.id);
   const horizon = data.horizon_working_days || 20;
-  const rowH = 22, headH = 26, W = 900, L = 210, R = 20;
+  const rowH = 22, headH = 26, W = 960, L = 280, R = 20;
   const dayW = (W - L - R) / horizon;
   const rows = []; let y = headH;
   const lanes = [];
@@ -730,7 +730,9 @@ function ganttBoard(data, onPick) {
     const g = S("g", { class: "gbar" + (onPick ? " pickable" : "") },
       S("rect", { x: x1, y: ry + 3, width: Math.max(2, x2 - x1), height: rowH - 7, rx: 3, class: "bar" + (crit ? " crit" : "") + (n.gate ? " gate" : "") },
         S("title", {}, `${n.title}\nday ${fmt.num(n.earliest_start_day, 1)} to ${fmt.num(n.earliest_finish_day, 1)} · float ${fmt.num(n.total_float_days, 1)}d${crit ? " · critical path" : ""}${n.gate ? " · gate" : ""}\n\nWhy this node exists, in my own words: ${n.risk_reason || ""}\nEvidence needed: ${EVIDENCE_LABEL[n.evidence] || n.evidence || "—"}\nDone when: ${n.exit_criteria || "—"}\n\n(Hand-authored — see "How this page was built" above.)${onPick ? "\n\nClick to explore this node below." : ""}`)),
-      S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" }, n.title.length > 30 ? n.title.slice(0, 28) + "…" : n.title));
+      S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" },
+        n.title.length > 44 ? n.title.slice(0, 42) + "…" : n.title,
+        S("title", {}, n.title)));
     if (onPick) g.addEventListener("click", () => onPick(n.id));
     return g;
   });
@@ -1835,7 +1837,7 @@ function mcGanttBoard(data) {
   const tasks = [...data.tasks].sort((a, b) => a.deterministic_start_day - b.deterministic_start_day);
   const byGroup = {};
   for (const g of data.groups || []) byGroup[g.id] = tasks.filter((t) => t.group === g.id);
-  const rowH = 22, headH = 26, W = 900, L = 210, R = 20, laneRowH = 18;
+  const rowH = 22, headH = 26, W = 960, L = 280, R = 20, laneRowH = 18;
   const maxDay = Math.max(...(horizon != null ? [horizon] : []), ...tasks.map((t) => t.finish_p90 ?? t.deterministic_finish_day));
   const dayW = (W - L - R) / maxDay;
   const dayX = (d) => L + d * dayW;
@@ -1868,7 +1870,9 @@ function mcGanttBoard(data) {
         S("title", {}, `${t.title}\nrisk range across ${data.n_runs.toLocaleString()} sampled runs: day ${fmt.num(t.start_p10, 1)}–${fmt.num(t.finish_p90, 1)} (p10 start to p90 finish)\ncriticality index: ${pc(t.criticality_index)} of runs had this task on that run's own critical path`)),
       S("rect", { x: barX1, y: ry + 6, width: Math.max(2, barX2 - barX1), height: rowH - 13, rx: 2, class: "bar" + (crit ? " crit" : "") },
         S("title", {}, `${t.title}\nidealistic schedule (every task at its single-estimate duration): day ${fmt.num(t.deterministic_start_day, 1)}–${fmt.num(t.deterministic_finish_day, 1)}${crit ? " · on the deterministic critical path" : ""}`)),
-      S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" }, t.title.length > 30 ? t.title.slice(0, 28) + "…" : t.title));
+      S("text", { x: L - 6, y: ry + rowH - 9, "text-anchor": "end", class: "gantt-row-label" },
+        t.title.length > 44 ? t.title.slice(0, 42) + "…" : t.title,
+        S("title", {}, t.title)));
   });
   const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, class: "gantt mcgantt", role: "img", "aria-label": "For every task: a pale band for its risk range across simulated runs, and a solid bar for the single idealistic schedule" },
     grid, laneLabels, horizonLine, bars);
@@ -2152,7 +2156,7 @@ function customScheduleSection(runState, lib, endEvent) {
         el("table", { class: "data wrap" },
           el("thead", {}, el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Category" }), el("th", { text: "Estimated / range (days)" }), el("th", { text: "Criticality index" }))),
           el("tbody", {}, sorted.map((t) => el("tr", {},
-            el("td", { title: t.duration_basis }, t.title.length > 70 ? t.title.slice(0, 68) + "…" : t.title),
+            el("td", { title: t.duration_basis }, t.title),
             el("td", { class: "muted small" }, groupTitle[t.group] || t.group),
             el("td", { class: "muted small", text: `${fmt.num(t.duration_days, 2)} (${fmt.num(t.optimistic_days, 2)}–${fmt.num(t.pessimistic_days, 2)})` }),
             el("td", { style: "min-width:160px" }, Jev.meter(t.criticality_index, `${pc(t.criticality_index)} of runs`)))))))));
@@ -2474,16 +2478,19 @@ function renderCustom({ library: lib, examples }) {
   }));
 
   const WEAK = { laya: "56.9% on published sets", verdict: "46.7% on published sets" };
+  const PAID = { jev: "hosted; billed per call, unlike the local models" };
   let selectedModels = new Set();
   const modelsRow = el("div", { class: "pillrow" });
   const buildModelsRow = () => {
     modelsRow.replaceChildren();
     const up = Jev.status ? Jev.status() : {};
-    const loaded = MODELS.filter((m) => m.id !== "jev" && Jev.isUp(m.id));
+    const loaded = MODELS.filter((m) => Jev.isUp(m.id));
     if (!selectedModels.size) selectedModels = new Set(loaded.filter((m) => ["semif", "kev-4b", "so1"].includes(m.id)).map((m) => m.id));
-    if (!loaded.length) { modelsRow.append(empty("No local models are loaded", "Start them with demo/lineup.sh up.")); return; }
+    if (!loaded.length) { modelsRow.append(empty("No models are loaded", "Start the local models with demo/lineup.sh up, or set TYPESAFE_API_KEY for the hosted model.")); return; }
     for (const m of loaded) {
-      const btn = el("button", { type: "button", class: "pill" + (selectedModels.has(m.id) ? " active" : "") }, mtagShort(m.id), WEAK[m.id] ? el("span", { class: "dbadge", title: `report_v2: ${WEAK[m.id]}`, text: "weak" }) : null);
+      const btn = el("button", { type: "button", class: "pill" + (selectedModels.has(m.id) ? " active" : "") }, mtagShort(m.id),
+        WEAK[m.id] ? el("span", { class: "dbadge", title: `report_v2: ${WEAK[m.id]}`, text: "weak" }) : null,
+        PAID[m.id] ? el("span", { class: "dbadge", title: PAID[m.id], text: "paid" }) : null);
       btn.addEventListener("click", () => { selectedModels.has(m.id) ? selectedModels.delete(m.id) : selectedModels.add(m.id); buildModelsRow(); updateRunState(); });
       modelsRow.append(btn);
     }
@@ -2509,7 +2516,7 @@ function renderCustom({ library: lib, examples }) {
     el("div", { class: "field" }, el("label", { for: "dlText", text: "Your text" }), textarea, charCount),
     el("div", { class: "field", style: "margin-top:8px" }, el("label", { for: "dlWho", text: "Who is it for? (optional)" }), whoInput),
     examples.length ? el("div", { style: "margin-top:8px" }, el("p", { class: "small muted", text: "Examples (real intakes from foundry/ideas):" }), examplesRow) : null,
-    el("div", { style: "margin-top:10px" }, el("p", { class: "small muted", text: "Models (loaded local only):" }), modelsRow, el("p", { class: "legend", text: "The hosted model is billed per call and isn't used here." })),
+    el("div", { style: "margin-top:10px" }, el("p", { class: "small muted", text: "Models — pick one to run alone, or several to combine for higher confidence:" }), modelsRow, el("p", { class: "legend", text: "Every selected model is asked at once, per node; when more than one is selected their answers are combined to drive the decomposition, with each model's own answer kept for comparison. Jev (hosted) is billed per call; local models are not." })),
     el("div", { class: "slider", style: "margin-top:10px" }, el("span", { class: "small muted", text: "Budget" }), budgetSlider, budgetOut, estOut),
     el("p", { class: "legend", text: "113 = every item in the library. One call asks all selected models at once." }),
     el("div", { class: "row", style: "margin-top:10px" }, runBtn, statusLine, el("span", { class: "spacer" }), errBadge));

@@ -499,8 +499,6 @@ class Handler(BaseHTTPRequestHandler):
         for m in models:
             if m not in BACKENDS:
                 return self._send(404, {"error": f"unknown backend {m}"})
-            if BACKENDS[m].get("hosted"):
-                return self._send(400, {"error": "hosted model is not available here"})
         up = {n: v.get("up") for n, v in status().items()}
         not_loaded = [m for m in models if not up.get(m)]
         if not_loaded:

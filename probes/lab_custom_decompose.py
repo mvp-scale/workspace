@@ -513,8 +513,6 @@ def main():
         cfg = server.BACKENDS.get(m)
         if not cfg:
             sys.exit(f"unknown backend {m}")
-        if cfg.get("hosted"):
-            sys.exit(f"refusing: {m} is the hosted backend, not available here")
 
     ask = _cli_ask(server)
     out_path = Path(a.out) if a.out else (ROOT / "data" / "probe-runs-v2" / "_custom_decompose" / f"{hashlib.sha256(text.encode()).hexdigest()[:10]}.jsonl")
