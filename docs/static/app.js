@@ -1,6 +1,6 @@
 /* Jev Bench Console — shared helpers. Every page loads this first: <script src="/static/app.js"></script> */
 (() => {
-  const NAV = [["/index.html", "Leaderboard"], ["/scenarios.html", "Scenario lab"], ["/flow-recordings.html", "Conversation flow"], ["/models.html", "How they work"], ["/report.html", "Report"]];
+  const NAV = [["index.html", "Leaderboard"], ["scenarios.html", "Scenario lab"], ["flow-recordings.html", "Conversation flow"], ["models.html", "How they work"], ["report.html", "Report"]];
 
   const el = (tag, attrs, ...kids) => {
     const n = document.createElement(tag);
@@ -131,11 +131,11 @@
 
   /* Header + footer shell, injected once so every page shares one source of truth. */
   function shell() {
-    const path = location.pathname.replace(/\/$/, "") || "/";
+    const path = location.pathname.split("/").pop() || "index.html";
     document.body.prepend(
       el("a", { class: "skip", href: "#main", text: "Skip to content" }),
       el("header", { class: "topbar" }, el("div", { class: "topbar-inner" },
-        el("a", { class: "brand", href: "/index.html" }, "Jev Bench ", el("span", { text: "Console" })),
+        el("a", { class: "brand", href: "index.html" }, "Jev Bench ", el("span", { text: "Console" })),
         el("nav", { class: "nav", "aria-label": "Primary" }, NAV.map(([h, t]) => el("a", { href: h, "aria-current": h === path ? "page" : null, text: t }))),
         ...modelsControl(), theme())));
     document.body.append(el("footer", { class: "footer" }, el("div", { class: "footer-inner" },

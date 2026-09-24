@@ -104,7 +104,7 @@ function table(rows, x) {
         el("td", { class: "rank", "data-value": i + 1, text: i + 1 }),
         el("td", { "data-value": r.info.name },
           hosted ? null : el("span", { class: `dot ${Jev.isUp(r.id) ? "up" : ""}`, title: Jev.isUp(r.id) ? "Loaded now" : "Not loaded now", "aria-label": Jev.isUp(r.id) ? "Loaded now" : "Not loaded now" }),
-          el("span", { class: "model-name" }, el("a", { href: `/models.html#${r.id}` }, Jev.tag(r.id)))),
+          el("span", { class: "model-name" }, el("a", { href: `models.html#${r.id}` }, Jev.tag(r.id)))),
         el("td", { "data-value": r.mean_accuracy, style: "min-width:200px" }, meter(r.mean_accuracy)),
         acc("easy"), acc("original"), acc("hard"),
         el("td", { class: "num", "data-value": hard.ece ?? "", text: fmt.num(hard.ece) }),

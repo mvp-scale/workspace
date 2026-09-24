@@ -1,17 +1,26 @@
-"""Static export of the read-only parts of the demo, for Cloudflare Pages (or any static host).
+"""Static export of the read-only parts of the demo, for GitHub Pages, Cloudflare Pages, or any
+other static host.
 
     python3 demo/build_static.py
 
-Regenerates `dist/` from scratch out of whatever's currently in data/bench/, data/probe-runs-v2/
-and probes/v2/ -- run again any time that data changes; dist/ itself is never hand-edited (it's
-gitignored, like data/). Every JSON file below is produced by calling the exact same functions
+Regenerates the generated part of docs/ (its api/ and static/ subfolders, and the page files named
+in PAGES below) out of whatever's currently in data/bench/, data/probe-runs-v2/ and probes/v2/ --
+run again any time that data changes. docs/ also holds real, hand-written project docs unrelated
+to this build (custom-decomposition-design.md and friends); this script only ever touches the
+specific paths it generates, never the whole directory, and re-adding + re-committing docs/ is how
+a rebuild reaches GitHub. Every JSON file below is produced by calling the exact same functions
 demo/server.py's live GET routes call -- nothing here is reimplemented or recomputed differently.
+
+Every internal link (nav, the Leaderboard's per-model links) is a relative path on purpose: this
+same output needs to work whether it's served from a domain root (Cloudflare Pages, a GitHub user
+site) or from a path prefix (a GitHub Pages *project* site, e.g. <user>.github.io/<repo>/) --
+an absolute path like "/models.html" only resolves correctly in the first case.
 
 Ships the four pages that have no live model calls anywhere in them -- Leaderboard, Scenario lab,
 How they work, Report -- as plain static files: no key, no GPU, no server process needed to view
 them. Baseline compare is deliberately not included; it's a genuinely live page (a free-typed
 question to every backend) with no static equivalent. Conversation flow ships as a *recorded*
-summary (flow_recordings.html) built from whatever real exports sit in data/flow-recordings/ --
+summary (flow-recordings.html) built from whatever real exports sit in data/flow-recordings/ --
 see demo/flow.html's own "Export" button for how those are produced; nothing here calls a model.
 """
 import json
@@ -35,18 +44,27 @@ def write_json(rel_path, data):
 
 
 def main():
-    if DIST.exists():
-        shutil.rmtree(DIST)
-    DIST.mkdir(parents=True)
+    # docs/ also holds real, hand-written project docs (custom-decomposition-design.md and
+    # friends) that have nothing to do with this build -- never rmtree the whole directory (that
+    # deleted them once already). Only remove the specific things this script itself generates.
+    DIST.mkdir(parents=True, exist_ok=True)
+    for sub in ("api", "static"):
+        if (DIST / sub).exists():
+            shutil.rmtree(DIST / sub)
+    for page in PAGES:
+        (DIST / page).unlink(missing_ok=True)
 
     for page in PAGES:
         html = (HERE / page).read_text()
         if page == "index.html":
             # Same clean-URL-vs-real-filename issue as app.js's NAV: the Leaderboard's per-model
             # links point at /models#<id>, which only resolves on a host that maps clean URLs to
-            # .html files (Cloudflare Pages does; a plain static server doesn't).
+            # .html files (Cloudflare Pages does; a plain static server doesn't). Relative (not
+            # /models.html) so it also works when the whole site is served under a path prefix,
+            # e.g. a GitHub Pages *project* site at <user>.github.io/<repo>/ rather than the
+            # domain root -- an absolute /models.html would resolve to the wrong origin-root path.
             old_link = "href: `/models#${r.id}`"
-            new_link = "href: `/models.html#${r.id}`"
+            new_link = "href: `models.html#${r.id}`"
             assert old_link in html, "model-card link in index.html has changed -- update build_static.py's substitution"
             html = html.replace(old_link, new_link)
         (DIST / page).write_text(html)
@@ -60,12 +78,21 @@ def main():
             # resolves to scenarios.html automatically -- but a plain static file server (or
             # file://) can't. Point the copy shipped in dist/ at the real filenames instead, and
             # drop the two pages that only exist live (Baseline compare, Conversation flow) so
-            # there are no dead links in a build that's meant to stand alone.
+            # there are no dead links in a build that's meant to stand alone. Relative, not
+            # /index.html etc: an absolute root path breaks under any path-prefixed deployment,
+            # e.g. a GitHub Pages *project* site at <user>.github.io/<repo>/ -- "/index.html"
+            # there resolves to <user>.github.io/index.html, not .../<repo>/index.html. Relative
+            # paths resolve correctly regardless of what prefix the site is served under, since
+            # every page here sits flat in the same directory.
             js = f.read_text()
             old_nav = '  const NAV = [["/", "Leaderboard"], ["/compare", "Baseline compare"], ["/scenarios", "Scenario lab"], ["/flow", "Conversation flow"], ["/models", "How they work"], ["/report", "Report"]];'
-            new_nav = '  const NAV = [["/index.html", "Leaderboard"], ["/scenarios.html", "Scenario lab"], ["/flow-recordings.html", "Conversation flow"], ["/models.html", "How they work"], ["/report.html", "Report"]];'
+            new_nav = '  const NAV = [["index.html", "Leaderboard"], ["scenarios.html", "Scenario lab"], ["flow-recordings.html", "Conversation flow"], ["models.html", "How they work"], ["report.html", "Report"]];'
             assert old_nav in js, "NAV literal in app.js has changed -- update build_static.py's substitution"
-            js = js.replace(old_nav, new_nav).replace('href: "/" }, "Jev Bench "', 'href: "/index.html" }, "Jev Bench "')
+            js = js.replace(old_nav, new_nav).replace('href: "/" }, "Jev Bench "', 'href: "index.html" }, "Jev Bench "')
+            old_active = 'const path = location.pathname.replace(/\\/$/, "") || "/";'
+            new_active = 'const path = location.pathname.split("/").pop() || "index.html";'
+            assert old_active in js, "active-nav path literal in app.js has changed -- update build_static.py's substitution"
+            js = js.replace(old_active, new_active)
             (static_out / "app.js").write_text(js)
         else:
             shutil.copy2(f, static_out / f.name)
@@ -106,9 +133,9 @@ def main():
         write_json("api/flow-recordings/index.json", [])
         print("note: no data/flow-recordings/ directory -- Conversation flow page will show empty")
 
-    n = sum(1 for _ in DIST.rglob("*") if _.is_file())
-    size_mb = sum(f.stat().st_size for f in DIST.rglob("*") if f.is_file()) / 1e6
-    print(f"Wrote {n} files ({size_mb:.1f} MB) to {DIST}")
+    generated = [DIST / p for p in PAGES] + [f for sub in ("api", "static") for f in (DIST / sub).rglob("*") if f.is_file()]
+    size_mb = sum(f.stat().st_size for f in generated) / 1e6
+    print(f"Wrote {len(generated)} files ({size_mb:.1f} MB) to {DIST} (leaving any other content there untouched)")
 
 
 if __name__ == "__main__":
