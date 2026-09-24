@@ -2695,7 +2695,7 @@ function renderWorldMap(details) {
   const groups = CAT_ORDER.map(cat => [cat, subs.filter(x => catOf(x) === cat)]).filter(([, list]) => list.length);
 
   const head = el("tr", {}, el("th", { text: "Subject" }),
-    orderedModels.map(m => el("th", { class: "mh", title: `${modelName(m)}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` }, mtagLive(m))));
+    orderedModels.map(m => el("th", { class: "mh", title: `${modelName(m)}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` }, mtagShort(m))));
   const bodyRows = [];
   for (const [cat, list] of groups) {
     bodyRows.push(el("tr", { class: "rowgroup" }, el("th", { colspan: orderedModels.length + 1, text: `${cat} (${list.length})` })));
