@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard · Jev Bench Console</title>
+<meta name="description" content="Local benchmark results for typed decision models on the public JevBench tiers.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  /* Layout the shared CSS lacks: the GPU planner bar. Colours come from shared tokens. */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: inherit; display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-2); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+  .chip .gb { font-variant-numeric: tabular-nums; color: var(--text-3); font-size: 12px; } .chip .acc { font-size: 12px; color: var(--text-3); }
+  .gpu-bar { display: flex; height: 34px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-2); position: relative; }
+  .gpu-seg { display: flex; align-items: center; padding: 0 8px; font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; border-right: 1px solid var(--surface); }
+  .gpu-over { color: var(--bad); font-weight: 600; }
+  .fit-grid { display: grid; gap: 10px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 900px) { .fit-grid { grid-template-columns: 1fr; } }
+  table.data td.agree-hi { background: var(--accent-soft); font-weight: 600; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>Benchmark leaderboard</h1>
+      <p>Nine typed decision models, benchmarked on the public JevBench tiers.</p>
+    </div>
+  </div>
+
+  <section aria-labelledby="kpi-h" id="kpis" class="grid cols-3" aria-busy="true">
+    <h2 id="kpi-h" class="sr-only">Highlights</h2>
+  </section>
+
+  <section class="section" aria-labelledby="table-h">
+    <header>
+      <div><h2 id="table-h">Results by tier</h2><p class="small">Click a column heading to sort. Ranked by mean accuracy across the three tiers.</p></div>
+    </header>
+    <div id="table"></div>
+  </section>
+
+  <section class="section" aria-labelledby="fit-h">
+    <header>
+      <div><h2 id="fit-h">What fits in the GPU</h2><p class="small">Measured memory per model on this RTX 5090, and how many can run at once. Pick models to see the total, or use a preset.</p></div>
+    </header>
+    <div id="fit"></div>
+  </section>
+
+  <section class="section" aria-labelledby="scatter-h">
+    <header><div><h2 id="scatter-h">Accuracy against speed</h2><p class="small">Hard-tier accuracy against median latency. Up and to the left is better.</p></div></header>
+    <div class="card" id="scatter"></div>
+  </section>
+
+  <section class="section" aria-labelledby="fam-h">
+    <header>
+      <div><h2 id="fam-h">Accuracy by decision family</h2><p class="small">Where each model is strong or weak. Each family holds only a handful of decisions per tier, so treat single cells as indicative.</p></div>
+      <div class="segmented" role="group" aria-label="Tier" id="fam-tier"></div>
+    </header>
+    <div id="families"></div>
+  </section>
+</main>
+
+<script>
+const { el, fmt, mount, load, sortable, meter, empty } = Jev;
+const TIERS = ["easy", "original", "hard"];
+const TIER_LABEL = { easy: "Easy", original: "Original", hard: "Hard" };
+const lowerIsBetter = (rows, pick) => rows.map(pick).filter(v => v != null).reduce((a, b) => Math.min(a, b), Infinity);
+
+/* Each card's note states a fact that ISN'T already a column in the table below (kind/licence,
+   not accuracy/latency/ECE, which the table already shows) -- so the card and the table each say
+   something different instead of the card just previewing the row. */
+function kpis(rows) {
+  const complete = rows.filter(r => TIERS.every(t => r.tiers[t]));
+  const best = complete[0];
+  const speed = [...complete].sort((a, b) => (a.tiers.hard?.p50_s ?? 9) - (b.tiers.hard?.p50_s ?? 9))[0];
+  const calibrated = [...complete].sort((a, b) => (a.tiers.hard?.ece ?? 9) - (b.tiers.hard?.ece ?? 9))[0];
+  const card = (label, value, note) => el("div", { class: "card kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), el("div", { class: "note", text: note }));
+  const about = (r) => [Jev.codeOf(r.id), r.info.kind, r.info.licence].filter(Boolean).join(" · ");
+  return [
+    card("Most accurate", best.info.name, about(best)),
+    card("Fastest", speed.info.name, about(speed)),
+    card("Best calibrated", calibrated.info.name, about(calibrated)),
+  ];
+}
+
+/* GPU / Hosted / CPU -- the one distinction that actually matters for "where does this run",
+   derived from the same real measurement memFor() already uses for the memory column, not a
+   second guess at it. */
+const servedCategory = (id, x) => id === "jev" ? "Hosted" : (memOf(id, x)?.steady === 0 ? "CPU" : "GPU");
+
+function table(rows, x) {
+  const head = ["#", "Model", "Mean accuracy", "Easy", "Original", "Hard", "Hard ECE", "Median latency", "GPU memory", "Published sets", "Runs on"];
+  const sorts = [ "num", "text", "num", "num", "num", "num", "num", "num", "num", "num", "text" ];
+  const t = el("table", { class: "data" },
+    el("caption", { class: "sr-only", text: "Benchmark results by model and tier" }),
+    el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { scope: "col", "data-sort": sorts[i], class: i >= 2 && i <= 9 ? "num" : (i === 0 ? "rank" : null), text: h })))),
+    el("tbody", {}, rows.map((r, i) => {
+      const hard = r.tiers.hard || {};
+      const acc = (tier) => el("td", { class: "num", "data-value": r.tiers[tier]?.accuracy ?? "", text: fmt.pct(r.tiers[tier]?.accuracy) });
+      const hosted = r.id === "jev";
+      return el("tr", {},
+        el("td", { class: "rank", "data-value": i + 1, text: i + 1 }),
+        el("td", { "data-value": r.info.name },
+          hosted ? null : el("span", { class: `dot ${Jev.isUp(r.id) ? "up" : ""}`, title: Jev.isUp(r.id) ? "Loaded now" : "Not loaded now", "aria-label": Jev.isUp(r.id) ? "Loaded now" : "Not loaded now" }),
+          el("span", { class: "model-name" }, el("a", { href: `/models.html#${r.id}` }, Jev.tag(r.id)))),
+        el("td", { "data-value": r.mean_accuracy, style: "min-width:200px" }, meter(r.mean_accuracy)),
+        acc("easy"), acc("original"), acc("hard"),
+        el("td", { class: "num", "data-value": hard.ece ?? "", text: fmt.num(hard.ece) }),
+        el("td", { class: "num", "data-value": hard.p50_s ?? "", text: fmt.ms(hard.p50_s) }),
+        (() => { const m = memFor(r.id, x); return el("td", { class: "num", "data-value": m ? m.gb : "", title: m ? m.tip : "Not measured", text: m ? m.label : "–" }); })(),
+        el("td", { class: "num", "data-value": x?.macro?.[r.id]?.macro ?? "", title: x?.macro?.[r.id] ? `Mean over ${x.macro[r.id].n_sets} published probe sets` : "Not run", text: fmt.pct(x?.macro?.[r.id]?.macro) }),
+        el("td", { "data-value": servedCategory(r.id, x), title: r.info.served_as || "", text: servedCategory(r.id, x) }));
+    })));
+  const wrap = el("div", { class: "table-wrap" }, t); sortable(t);
+  return wrap;
+}
+
+function scatter(rows) {
+  const pts = rows.filter(r => r.tiers.hard?.p50_s && r.tiers.hard.accuracy != null);
+  if (!pts.length) return empty("Nothing to plot yet", "Run a benchmark to see results here.");
+  const W = 1400, H = 300, m = { l: 48, r: 24, t: 10, b: 38 };
+  const xs = pts.map(p => Math.log10(p.tiers.hard.p50_s * 1000)), x0 = Math.floor(Math.min(...xs) * 2) / 2 - .1, x1 = Math.ceil(Math.max(...xs) * 2) / 2 + .1;
+  const X = v => m.l + (Math.log10(v * 1000) - x0) / (x1 - x0) * (W - m.l - m.r), Y = a => m.t + (1 - a) * (H - m.t - m.b);
+  const ns = "http://www.w3.org/2000/svg", s = (tag, attrs, text) => { const n = document.createElementNS(ns, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; return n; };
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": "Scatter plot of hard-tier accuracy against median latency" });
+  for (let a = 0; a <= 1; a += .25) { svg.append(s("line", { x1: m.l, x2: W - m.r, y1: Y(a), y2: Y(a), stroke: "var(--border)" }), s("text", { x: m.l - 10, y: Y(a) + 4, "text-anchor": "end", fill: "var(--text-3)", "font-size": 11 }, Math.round(a * 100) + "%")); }
+  for (const ms of [10, 30, 100, 300, 1000, 3000]) { const lx = X(ms / 1000); if (lx < m.l || lx > W - m.r) continue; svg.append(s("line", { x1: lx, x2: lx, y1: m.t, y2: H - m.b, stroke: "var(--border)" }), s("text", { x: lx, y: H - m.b + 16, "text-anchor": "middle", fill: "var(--text-3)", "font-size": 11 }, ms >= 1000 ? ms / 1000 + " s" : ms + " ms")); }
+  svg.append(s("text", { x: (W + m.l) / 2, y: H - 4, "text-anchor": "middle", fill: "var(--text-2)", "font-size": 11 }, "Median latency (log scale, lower is faster)"),
+             s("text", { transform: `translate(12 ${H / 2}) rotate(-90)`, "text-anchor": "middle", fill: "var(--text-2)", "font-size": 11 }, "Hard-tier accuracy"));
+  pts.forEach((p, i) => {
+    const cx = X(p.tiers.hard.p50_s), cy = Y(p.tiers.hard.accuracy), g = s("g", {});
+    g.append(s("title", {}, `${Jev.codeOf(p.id)} ${p.info.name}: ${fmt.pct(p.tiers.hard.accuracy)} accuracy, ${fmt.ms(p.tiers.hard.p50_s)} median`),
+             s("circle", { cx, cy, r: 5, fill: i === 0 ? "var(--accent)" : "var(--surface)", stroke: "var(--accent)", "stroke-width": 2 }),
+             s("text", { x: cx + 10, y: cy + 4, fill: "var(--text)", "font-size": 11.5 }, Jev.codeOf(p.id)));
+    svg.append(g);
+  });
+  return svg;
+}
+
+function families(rows, tier) {
+  const fams = [...new Set(rows.flatMap(r => Object.keys(r.tiers[tier]?.families || {})))].sort();
+  if (!fams.length) return empty("No family breakdown", "This tier has no per-family results yet.");
+  const cell = (v) => el("td", { class: "num", style: v == null ? "" : `background:color-mix(in srgb, var(--accent) ${Math.round(v * 38)}%, transparent)`, text: fmt.pct(v, 0) });
+  const t = el("table", { class: "data" }, el("caption", { class: "sr-only", text: `Accuracy by decision family, ${TIER_LABEL[tier]} tier` }),
+    el("thead", {}, el("tr", {}, [el("th", { scope: "col", text: "Model" }), ...fams.map(f => el("th", { scope: "col", class: "num", text: f.replace(/_/g, " ") }))])),
+    el("tbody", {}, rows.filter(r => r.tiers[tier]).map(r => el("tr", {}, [el("td", { class: "model-name" }, Jev.tag(r.id, { name: false })), ...fams.map(f => cell(r.tiers[tier].families[f]))]))));
+  return el("div", { class: "table-wrap" }, t);
+}
+
+const LOCAL = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "semif", "so1", "laya", "verdict"];
+const extra = () => Promise.all([Jev.api("api/vram"), Jev.api("api/probe-macro"), Jev.api("api/agreement")]).then(([vram, macro, agree]) => ({ vram, macro, agree })).catch(() => null);
+const gbOf = (mb) => mb / 1024;
+
+/* Memory a model needs while running. kev models default to the bf16 variant (measured to match fp32 answers). */
+function memOf(id, x, bf16 = true) {
+  const v = x?.vram?.models || {}, isKev = id.startsWith("kev-"), m = isKev && bf16 && v[id + "-bf16"] ? v[id + "-bf16"] : v[id];
+  return m ? { steady: m.steady_peak_mb, startup: m.startup_peak_mb, cpu: m.cpu_rss_peak_mb, bf16: isKev && bf16 && !!v[id + "-bf16"] } : null;
+}
+/* The visible label is just the number -- "Runs on" already says hosted/GPU/CPU, so this column
+   doesn't need to say it again. bf16/fp32 detail moves to the tooltip, not the cell. */
+function memFor(id, x) {
+  if (id === "jev") return { gb: 0, label: "0", tip: "Runs on the vendor's servers; no local GPU." };
+  const m = memOf(id, x); if (!m) return null;
+  if (m.steady === 0) return { gb: 0, label: "0", tip: `CPU only: about ${gbOf(m.cpu).toFixed(1)} GiB of RAM.` };
+  const fp32 = x.vram.models[id]; const gb = gbOf(m.steady);
+  return { gb, label: gb.toFixed(1) + " GiB", tip: `Measured peak under load: ${gb.toFixed(1)} GiB${m.bf16 ? ", bf16" : ""}.` + (m.bf16 && fp32 ? ` The fp32 default behind the benchmark numbers needs ${gbOf(fp32.steady_peak_mb).toFixed(1)} GiB.` : "") };
+}
+
+/* The one place the selected models' supporting numbers actually live -- everything the chips
+   and the bar used to repeat, said once, in a real sortable table. Code only (the name is one
+   click away in the leaderboard itself); sortable, so "which of these is best on hard" or
+   "which is fastest" is just a column-header click, not a separate view. */
+function detailTable(sel, rows, x, st) {
+  if (!sel.length) return Jev.empty("No models selected", "Pick models above to see their memory, accuracy and latency here.");
+  const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+  const head = ["Model", "GPU memory", "Mean accuracy", "Easy", "Original", "Hard", "Hard latency"];
+  const t = el("table", { class: "data" },
+    el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { scope: "col", "data-sort": i ? "num" : "text", class: i ? "num" : null, text: h })))),
+    el("tbody", {}, sel.map((id) => {
+      const m = memOf(id, x, st.bf16), r = byId[id], hard = r?.tiers.hard || {};
+      const acc = (tier) => el("td", { class: "num", "data-value": r?.tiers[tier]?.accuracy ?? "", text: fmt.pct(r?.tiers[tier]?.accuracy) });
+      return el("tr", {}, el("td", {}, Jev.tag(id, { name: false })),
+        el("td", { class: "num", "data-value": m?.steady ?? 0, text: m?.steady ? gbOf(m.steady).toFixed(1) + " GiB" : "CPU" }),
+        el("td", { class: "num", "data-value": r?.mean_accuracy ?? "", text: fmt.pct(r?.mean_accuracy) }),
+        acc("easy"), acc("original"), acc("hard"),
+        el("td", { class: "num", "data-value": hard.p50_s ?? "", text: fmt.ms(hard.p50_s) }));
+    })));
+  const wrap = el("div", { class: "table-wrap" }, t); sortable(t);
+  return wrap;
+}
+
+function fit(rows, x) {
+  if (!x) return Jev.empty("GPU measurements unavailable", "Run demo/vram.py to measure memory per model.");
+  const info = Object.fromEntries(rows.map(r => [r.id, r.info]));
+  /* Not just this machine's card -- pick a target size and plan against that instead. This
+     box's own measured total is offered too, alongside the common sizes, never assumed. */
+  const measuredGb = Math.round(gbOf(x.vram.gpu_total_mb));
+  const CAP_PRESETS = [...new Set([16, 24, 32, 48, measuredGb])].sort((a, b) => a - b);
+  const st = { on: new Set(), bf16: true, reserve: 1536, capGb: 32 };
+  const macro = (id) => x.macro?.[id]?.macro ?? 0;
+  const greedy = () => { const cap = st.capGb * 1024; const out = new Set(); let used = 0;
+    for (const id of [...LOCAL].sort((a, b) => macro(b) - macro(a))) { const m = memOf(id, x, st.bf16); if (m && used + m.steady <= cap - st.reserve) { out.add(id); used += m.steady; } }
+    return out; };
+  st.on = greedy();
+  const root = el("div", { class: "fit-grid" }), left = el("div", { class: "stack" }), right = el("div", { class: "stack" }); root.append(left, right);
+  const draw = () => {
+    const cap = st.capGb * 1024;
+    const sel = LOCAL.filter(id => st.on.has(id)), total = sel.reduce((n, id) => n + (memOf(id, x, st.bf16)?.steady || 0), 0), over = total > cap;
+    /* The chip's only job is "is this model in the mix" -- memory and accuracy for the selected
+       models live in one place, the table below, not repeated on every toggle button too. */
+    const chips = el("div", { class: "chips" }, LOCAL.map(id =>
+      el("button", { type: "button", class: "chip", "aria-pressed": String(st.on.has(id)), onclick: () => { st.on.has(id) ? st.on.delete(id) : st.on.add(id); draw(); } },
+        Jev.tag(id, { name: false }))));
+    const tints = [88, 68, 50, 34, 78, 58, 42, 28];
+    const bar = el("div", { class: "gpu-bar", role: "img", "aria-label": `${gbOf(total).toFixed(1)} of ${gbOf(cap).toFixed(1)} GiB used by the selected models` },
+      sel.map((id, i) => { const m = memOf(id, x, st.bf16); return m.steady ? el("div", { class: "gpu-seg", title: `${Jev.codeOf(id)} ${info[id]?.name || id}: ${gbOf(m.steady).toFixed(1)} GiB`, style: `width:${Math.min(100, m.steady / cap * 100)}%;background:color-mix(in srgb, var(--accent) ${tints[i % tints.length]}%, var(--surface-2))`, text: Jev.codeOf(id) }) : null; }));
+    const spare = cap - total, startup = sel.map(id => ({ id, m: memOf(id, x, st.bf16) })).sort((a, b) => b.m.startup - a.m.startup)[0];
+    const summary = el("div", { class: "stack" },
+      el("p", { title: "Budget = sum of each model's peak. Peaks rarely coincide, so an over-budget mix can look fine until a long input arrives." },
+        el("strong", { text: `${gbOf(total).toFixed(1)} of ${gbOf(cap).toFixed(1)} GiB` }), over ? el("span", { class: "gpu-over", text: `  over by ${gbOf(-spare).toFixed(1)} GiB` }) : ` used, ${gbOf(spare).toFixed(1)} GiB spare`, ` · ${sel.length} local model${sel.length === 1 ? "" : "s"}, plus hosted Jev (no GPU)`),
+      startup && startup.m.startup > startup.m.steady * 1.2 ? el("div", { class: "callout warn" }, `Start ${Jev.codeOf(startup.id)} first — needs ${gbOf(startup.m.startup).toFixed(1)} GiB briefly, settles at ${gbOf(startup.m.steady).toFixed(1)} GiB.`) : null);
+    const capRow = el("div", { class: "segmented", role: "group", "aria-label": "GPU size" }, CAP_PRESETS.map((g) =>
+      el("button", { type: "button", "aria-pressed": String(st.capGb === g), onclick: () => { st.capGb = g; st.on = greedy(); draw(); } }, `${g} GB${g === measuredGb ? " (this card)" : ""}`)));
+    left.replaceChildren(el("div", { class: "card stack" }, el("h3", { text: "Models" }), chips,
+      el("div", { class: "row" }, capRow, el("div", { class: "segmented", role: "group", "aria-label": "kev precision" },
+        el("button", { type: "button", "aria-pressed": String(st.bf16), title: "bf16 halves kev's memory with no measurable accuracy loss.", onclick: () => { st.bf16 = true; draw(); }, text: "kev in bf16" }), el("button", { type: "button", "aria-pressed": String(!st.bf16), onclick: () => { st.bf16 = false; draw(); }, text: "kev in fp32" })),
+        el("button", { class: "btn", type: "button", onclick: () => { st.on = greedy(); draw(); }, text: "Best that fits" }), el("button", { class: "btn ghost", type: "button", onclick: () => { st.on = new Set(); draw(); }, text: "Clear" })),
+      bar, summary, detailTable(sel, rows, x, st)));
+    // similarity of the selected models
+    const ag = x.agree?.agreement || {}, pairs = [];
+    sel.forEach((a, i) => sel.slice(i + 1).forEach(b => { const v = ag[a]?.[b]; if (v != null) pairs.push([a, b, v]); }));
+    pairs.sort((p, q) => q[2] - p[2]);
+    right.replaceChildren(el("div", { class: "card stack" }, el("h3", { text: "Do they answer alike?" }),
+      el("p", { class: "small muted", text: "Share of published-set items two models answer the same way." }),
+      pairs.length ? el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ["Pair", "Same answer"].map((h, i) => el("th", { scope: "col", class: i ? "num" : null, title: i ? "Highlighted: 75%+ agreement. Chance alone gives about 50% on a two-way question." : null, text: h })))),
+        el("tbody", {}, pairs.slice(0, 12).map(([a, b, v]) => el("tr", {}, el("td", {}, Jev.tag(a, { name: false }), " · ", Jev.tag(b, { name: false })), el("td", { class: `num${v >= 0.75 ? " agree-hi" : ""}`, text: fmt.pct(v, 0) })))))) : Jev.empty("Select two or more models", "Agreement appears here.")));
+  };
+  draw(); return root;
+}
+
+const kpiRoot = document.getElementById("kpis");
+mount(document.getElementById("table"), () => Promise.all([load(), extra(), Jev.ready]).then(([d, x]) => ({ ...d, x })), (d) => {
+  document.getElementById("fit").replaceChildren(fit(d.rows, d.x));
+  kpiRoot.append(...kpis(d.rows)); kpiRoot.removeAttribute("aria-busy");
+  document.getElementById("scatter").replaceChildren(scatter(d.rows));
+  const seg = document.getElementById("fam-tier"), fam = document.getElementById("families");
+  const show = (t) => { [...seg.children].forEach(b => b.setAttribute("aria-pressed", b.dataset.tier === t)); fam.replaceChildren(families(d.rows, t)); };
+  TIERS.slice().reverse().forEach(t => seg.append(el("button", { type: "button", "data-tier": t, onclick: () => show(t), text: TIER_LABEL[t] })));
+  show("hard");
+  return table(d.rows, d.x);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversation flow (recorded) · Jev Bench Console</title>
+<meta name="description" content="Recorded conversation-flow runs: the same detector battery flow.html runs live, played back from a saved export -- no live model calls, no key, no GPU needed to view it.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  /* Same rules scenarios.html defines locally -- shared app.css doesn't have a pill/badge yet. */
+  .pillrow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font: inherit; cursor: pointer; }
+  .pill:hover { background: var(--surface-2); color: var(--text); }
+  .pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .dbadge { font-size: 10.5px; color: var(--text-3); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+  table.data.wrap td, table.data.wrap th { white-space: normal; vertical-align: top; }
+</style>
+</head>
+<body>
+<main class="page" id="app"><div id="body"></div></main>
+<script>
+(() => {
+  const { el, fmt, api, mount, empty } = Jev;
+
+  function fmtT(t) { const s = Math.max(0, Math.floor(t)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
+
+  function recordingCard(rec) {
+    const box = el("div", { class: "card" });
+    box.append(el("h3", { style: "margin-top:0" }, rec.source),
+      el("p", { class: "small muted" }, `Model: `, el("b", { text: rec.settings.model }), ` · window ${rec.settings.window} · checkpoints ${rec.settings.checkpoints} · alert threshold ${fmt.pct(rec.settings.alert_at)} · ${rec.requests.length} checks, ${rec.flags.length} flagged`));
+    if (!rec.flags.length) {
+      box.append(empty("Nothing flagged", "No detector crossed the alert threshold in this run."));
+      return box;
+    }
+    const rows = [...rec.flags].sort((a, b) => a.t - b.t);
+    const t = el("table", { class: "data wrap" },
+      el("thead", {}, el("tr", {}, el("th", { text: "Time" }), el("th", { text: "Speaker" }), el("th", { text: "Detector" }), el("th", { text: "Quote" }), el("th", { text: "Probability" }))),
+      el("tbody", {}, rows.map((f) => el("tr", {},
+        el("td", { class: "small muted", text: fmtT(f.t) }),
+        el("td", { text: f.person || f.spk || "—" }),
+        el("td", { text: f.label || f.det }),
+        el("td", { class: "small", text: `"${f.quote}"` }),
+        el("td", { class: "small muted", text: fmt.pct(f.p) })))));
+    box.append(el("div", { style: "overflow-x:auto;margin-top:10px" }, t));
+    return box;
+  }
+
+  function render(data) {
+    const out = el("div");
+    out.append(el("h2", { text: "Conversation flow — recorded runs" }),
+      el("p", { class: "muted" }, "The live page (", el("code", { text: "/flow" }), ") plays a transcript word by word and calls the loaded models at each checkpoint as it goes. That needs a live server and a GPU (or a billed hosted call), so it isn't part of this static build. What's below is real: the exact same detector battery, run once, saved, and played back here as a static table -- not simulated, not re-scored."),
+      el("div", { class: "callout warn" }, el("p", { style: "margin:0" }, el("b", { text: "Recorded, not live. " }), "Every row came from a real ", el("code", { text: "POST /v1/systemone" }), " call made during the original run. Nothing here was re-run or re-scored for this page.")));
+
+    const bySource = {};
+    for (const r of data.recordings) (bySource[r.source] ??= []).push(r);
+
+    const nav = el("div", { class: "pillrow", style: "margin:14px 0" });
+    const body = el("div");
+    let active = null;
+    const show = (idx) => {
+      active = idx;
+      [...nav.children].forEach((b, i) => b.classList.toggle("active", i === idx));
+      body.replaceChildren(recordingCard(data.recordings[idx]));
+    };
+    data.recordings.forEach((r, i) => {
+      const btn = el("button", { type: "button", class: "pill" }, `${r.source} — ${r.settings.model.toUpperCase()}`, el("span", { class: "dbadge", text: `${r.flags.length} flagged` }));
+      btn.addEventListener("click", () => show(i));
+      nav.append(btn);
+    });
+    out.append(nav, body);
+    if (data.recordings.length) show(0);
+    else out.append(empty("No recordings yet", "Run demo/flow.html live and Export, then add the file to data/flow-recordings/."));
+    return out;
+  }
+
+  mount(document.getElementById("body"), async () => {
+    const index = await api("api/flow-recordings/index.json");
+    const recordings = await Promise.all(index.map((r) => api(`api/flow-recordings/${r.file}`)));
+    return { recordings };
+  }, render);
+})();
+</script>
+</body>
+</html>

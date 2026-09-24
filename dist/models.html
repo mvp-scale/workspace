@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How they work · Jev Bench Console</title>
+<meta name="description" content="How typed decision models turn text into probabilities, built up from the fundamentals to each model's secret sauce.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  /* Layout and diagram styling the shared CSS lacks. Colours come from shared tokens only. */
+  .dg { display: block; width: 100%; max-height: 210px; }
+  .dg text { font-family: var(--font); }
+  .dg .t { fill: var(--text); font-size: 11.5px; } .dg .s { fill: var(--text-3); font-size: 10px; } .dg .m { font-family: var(--mono); }
+  .dg .b { font-weight: 600; } .dg .a { fill: var(--accent); }
+  .dg rect.box { fill: var(--surface); stroke: var(--border-strong); } .dg rect.hl { fill: var(--accent-soft); stroke: var(--accent); } .dg rect.soft { fill: var(--surface-2); stroke: var(--border); }
+  .dg .bar { fill: var(--accent); } .dg .bar.mut { fill: var(--border-strong); }
+  .dg .ar { stroke: var(--text-3); fill: none; stroke-width: 1.2; } .dg .arc { stroke: var(--accent); fill: none; stroke-width: 1; opacity: .55; } .dg .ah { fill: var(--text-3); }
+  .dg .cell { fill: var(--accent); } .dg .cell.g { fill: var(--good); } .dg .cell.w { fill: var(--warn); } .dg .cell.off { fill: var(--surface-2); }
+  .scroll-x { overflow-x: auto; } .scroll-x .dg { min-width: 720px; }
+  .defs { position: absolute; width: 0; height: 0; }
+  .steps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); }
+  .step h3 { display: flex; gap: 8px; align-items: baseline; } .step .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .step p { color: var(--text-2); margin-top: 4px; } .step .dg { margin-top: 8px; }
+  .sauce { display: grid; gap: 14px 20px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+  .sauce + .sauce { margin-top: 10px; } .sauce h3 { font-size: 15px; } .sauce .lead { color: var(--text-2); margin-top: 4px; }
+  .sauce .term { color: var(--text-3); font-size: 12px; font-style: italic; margin-top: 2px; }
+  .sauce .guess { margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13px; color: var(--text-2); }
+  .sauce .guess b { color: var(--text); }
+  .facts-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; } .facts-list li { color: var(--text-2); } .facts-list b { color: var(--text); font-weight: 600; }
+  .used { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--text-2); }
+  .diagrams { display: grid; gap: 8px; }
+  .cards { display: grid; align-items: start; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); }
+  .model[hidden], .jump a[hidden] { display: none; }
+  .model .warn { color: var(--warn); }
+  .model { display: flex; flex-direction: column; gap: 8px; }
+  .model h3 { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; font-size: 14.5px; } .model h3 .vendor { font-size: 12px; font-weight: 500; color: var(--text-3); }
+  .model .tags { display: flex; flex-wrap: wrap; gap: 4px; } .model .sauce-line { color: var(--text); }
+  .flow { list-style: none; margin: 0; padding: 0; display: flex; align-items: stretch; gap: 4px; }
+  .flow li { display: flex; align-items: center; gap: 4px; flex: 1 1 0; min-width: 0; }
+  .flow .node { flex: 1; min-width: 0; align-self: stretch; padding: 4px 7px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 11.5px; line-height: 1.3; overflow-wrap: anywhere; }
+  .flow .node.out { background: var(--accent-soft); border-color: var(--accent); } .flow .node strong { display: block; font-weight: 600; } .flow .node span { color: var(--text-3); }
+  .flow .arrow { color: var(--text-3); }
+  .bench { display: grid; gap: 3px; } .bench .r { display: grid; grid-template-columns: 62px 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--text-2); }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); } .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+  details.more { border-top: 1px solid var(--border); padding-top: 6px; } details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
+  details.more ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-2); } details.more li + li { margin-top: 3px; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; font-size: 12px; } .facts dt { color: var(--text-3); } .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .jump { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 8px 0 10px; font-size: 12.5px; }
+  table.data.fam td, table.data.fam th { white-space: normal; vertical-align: top; }
+  @media (max-width: 860px) { .sauce { grid-template-columns: 1fr; } .flow { flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>How they work</h1>
+      <p>Nine models, four techniques — the ideas they share, and the trick that sets each apart.</p>
+    </div>
+    <div class="actions"><button class="btn" id="print" type="button">Print</button></div>
+  </div>
+  <div class="callout" style="margin-bottom:14px">Diagram numbers are illustrative. Model facts come from each model's own repository or card; where something isn't published, we say so.</div>
+
+  <section class="section" style="margin-top:0" aria-labelledby="codes-h">
+    <header><div><h2 id="codes-h">Model codes</h2><p class="small" id="codes-rule">Every model has a code of at most six characters: family letters plus a size. B means billions of parameters and H means hundreds of millions, so KEV4B is a 4 billion parameter model and LAYA4H one of about 400 million. The table shows what is loaded in memory right now.</p></div></header>
+    <div id="codes"></div>
+  </section>
+
+  <section class="section" aria-labelledby="big-h">
+    <header><div><h2 id="big-h">The big picture</h2><p class="small">A decision model reads a situation and a question with fixed options, and returns a probability for every option. It never writes prose, so software can act on the numbers directly.</p></div></header>
+    <div class="card scroll-x" id="hero"></div>
+    <div class="grid cols-3" style="margin-top:10px" id="parts"></div>
+  </section>
+
+  <section class="section" aria-labelledby="steps-h">
+    <header><div><h2 id="steps-h">Six ideas that every model shares</h2><p class="small">Read these once and the rest of the page is variations on step 4.</p></div></header>
+    <div class="steps" id="steps"></div>
+  </section>
+
+  <section class="section" aria-labelledby="sauce-h">
+    <header><div><h2 id="sauce-h">The secret sauce: four ways to read out an answer</h2><p class="small">The models differ mainly in what reads the text and how the vectors become option scores (step 4).</p></div></header>
+    <div id="sauces"></div>
+  </section>
+
+  <section class="section" aria-labelledby="knowledge-h">
+    <header><div><h2 id="knowledge-h">Reading out an answer is not the same as knowing it</h2></div></header>
+    <div class="card">
+      <p>The four techniques above answer one question: how a model's internal reading becomes a probability per option. A separate question is whether the base model knows enough about the subject to read the situation correctly in the first place.</p>
+      <p class="muted" style="margin-top:8px">That knowledge comes from pretraining, and it grows with model size and how broad the training data was. A 151M-parameter classifier can have a clean, well-calibrated read-out and still be wrong about something like neuroscience, simply because it never saw enough of that domain during training — no read-out technique fixes that. A multi-billion-parameter frozen LLM, even read out through the crude letter-logit method above, starts with far more world knowledge than a 151M-to-421M-parameter encoder. A good benchmark score says the read-out works; it says little about topics the base model never learned.</p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="res-h">
+    <header><div><h2 id="res-h">What each technique did in our runs</h2><p class="small">Computed from the benchmark results. With only a few models per technique and 48 to 111 decisions per tier, this describes our runs; it does not prove the technique causes the result.</p></div></header>
+    <div id="famtable"></div>
+  </section>
+
+  <section class="section" aria-labelledby="mm-h">
+    <header>
+      <div><h2 id="mm-h">Model by model</h2><p class="small">Ordered by mean accuracy in our benchmark, best first.</p></div>
+      <div class="segmented" role="group" aria-label="Filter by technique" id="filter"></div>
+    </header>
+    <nav class="jump" id="jump" aria-label="Jump to a model"></nav>
+    <div class="cards" id="cards"></div>
+  </section>
+</main>
+
+<script>
+const { el, fmt, mount, load, meter } = Jev;
+
+/* ---------- SVG helpers ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const S = (tag, attrs = {}, ...kids) => {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) if (v != null) n.setAttribute(k, v);
+  for (const k of kids.flat(Infinity)) if (k != null) n.append(k.nodeType ? k : document.createTextNode(k));
+  return n;
+};
+const svg = (w, h, label, ...kids) => S("svg", { viewBox: `0 0 ${w} ${h}`, class: "dg", role: "img", "aria-label": label }, ...kids);
+const txt = (x, y, t, cls = "t", anchor = "start") => S("text", { x, y, class: cls, "text-anchor": anchor }, t);
+const box = (x, y, w, h, cls = "") => S("rect", { x, y, width: w, height: h, rx: 4, class: `box ${cls}` });
+const arrow = (x1, y1, x2, y2) => S("path", { d: `M${x1} ${y1} L${x2} ${y2}`, class: "ar", "marker-end": "url(#ah)" });
+const chip = (x, y, w, t, cls = "soft") => S("g", {}, S("rect", { x, y, width: w, height: 22, rx: 4, class: `box ${cls}` }), txt(x + w / 2, y + 15, t, "t m", "middle"));
+const softmax = (v) => { const e = v.map(Math.exp), z = e.reduce((a, b) => a + b, 0); return e.map(x => x / z); };
+const RAW = [2.4, 1.7, 0.2], NAMES = ["refund", "escalate", "reply"], PROB = softmax(RAW);
+/* Rows of labelled horizontal bars. items: [{k, v, max, mut}] */
+const rows = (x, y, items, w, fv, step = 17) => S("g", {}, items.map((it, i) => [
+  txt(x, y + i * step + 10, it.k, "s"),
+  S("rect", { x: x + 54, y: y + i * step + 2, width: Math.max(1, w * it.v / it.max), height: 9, rx: 2, class: `bar${it.mut ? " mut" : ""}` }),
+  txt(x + 54 + w * it.v / it.max + 5, y + i * step + 10, fv(it.v), "s")]));
+const scoreRows = (x, y, w = 70) => rows(x, y, RAW.map((v, i) => ({ k: NAMES[i], v, max: 2.4 })), w, v => v.toFixed(1));
+const probRows = (x, y, w = 70) => rows(x, y, PROB.map((v, i) => ({ k: NAMES[i], v, max: 1 })), w, v => Math.round(v * 100) + "%");
+const grid = (x, y, n, c, on, cls = () => "cell") => S("g", {}, Array.from({ length: n * n }, (_, i) => {
+  const r = Math.floor(i / n), k = i % n; return S("rect", { x: x + k * c, y: y + r * c, width: c - 1.5, height: c - 1.5, class: on(r, k) ? cls(r, k) : "cell off" }); }));
+const globalDefs = () => { const d = S("svg", { class: "defs", "aria-hidden": "true" }, S("defs", {}, S("marker", { id: "ah", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" }, S("path", { d: "M0 0 L10 5 L0 10 z", class: "ah" })))); document.body.prepend(d); };
+
+/* ---------- Diagrams ---------- */
+function dHero() {
+  return svg(1000, 130, "A state and a question with options go into a reader, which produces a score for each option, which become probabilities",
+    box(4, 6, 230, 52), txt(14, 26, "State", "t b"), txt(14, 46, "“I was charged twice. Please help ASAP.”", "s"),
+    box(4, 72, 230, 52), txt(14, 92, "Question + options", "t b"), txt(14, 112, "What should we do first?  refund · escalate · reply", "s"),
+    arrow(234, 32, 296, 60), arrow(234, 98, 296, 70),
+    box(298, 24, 200, 82, "hl"), txt(398, 52, "Reader", "t b", "middle"), txt(398, 72, "reads everything in one pass", "s", "middle"), txt(398, 88, "no text is written", "s", "middle"),
+    arrow(498, 65, 546, 65),
+    box(548, 18, 190, 94), txt(558, 36, "A score per option", "t b"), scoreRows(558, 46, 78),
+    arrow(738, 65, 776, 65),
+    box(778, 18, 218, 94, "hl"), txt(788, 36, "Probabilities, sum to 100%", "t b"), probRows(788, 46, 90));
+}
+function dTokens() {
+  const toks = ["I", "was", "charged", "twice", "."], ids = [40, 691, 12847, 9401, 13], w = [26, 40, 62, 50, 24]; let x = 6; const out = [];
+  toks.forEach((t, i) => { out.push(chip(x, 8, w[i], t), txt(x + w[i] / 2, 44, ids[i], "s m", "middle")); x += w[i] + 6; });
+  return svg(260, 74, "A sentence split into tokens, each with a number", out, txt(6, 66, "token → number (example ids)", "s"));
+}
+function dVectors() {
+  const cols = ["I", "was", "charged", "twice"], fills = [[.9, .2, .5, .1], [.3, .8, .2, .6], [.7, .6, .9, .2], [.2, .4, .7, .8]];
+  return svg(260, 92, "Each token becomes a column of numbers", cols.map((t, i) => [txt(30 + i * 60, 12, t, "s", "middle"),
+    fills[i].map((f, j) => S("rect", { x: 18 + i * 60, y: 20 + j * 14, width: 24, height: 12, rx: 2, class: "cell", opacity: 0.15 + f * 0.85 }))]), txt(130, 88, "one vector per token", "s", "middle"));
+}
+function dAttention() {
+  const n = 6, c = 13;
+  return svg(260, 108, "Two grids: a decoder token sees only earlier tokens, an encoder token sees all tokens",
+    txt(6, 10, "Decoder: sees the past", "s"), grid(6, 16, n, c, (r, k) => k <= r),
+    txt(140, 10, "Encoder: sees all", "s"), grid(140, 16, n, c, () => true),
+    txt(6, 104, "row = token reading, column = token it can see", "s"));
+}
+function dReadout() {
+  const on = [2, 4, 7], out = [];
+  for (let i = 0; i < 9; i++) out.push(S("rect", { x: 6 + i * 27, y: 8, width: 22, height: 22, rx: 3, class: on.includes(i) ? "box hl" : "box soft" }));
+  on.forEach((p, i) => out.push(arrow(17 + p * 27, 32, 70 + i * 60, 54)));
+  return svg(260, 108, "Selected vectors become one score per option", out, S("g", {}, on.map((_, i) => [S("rect", { x: 46 + i * 60, y: 56, width: 48, height: 12, rx: 2, class: "bar", opacity: 0.4 + i * 0.25 }), txt(70 + i * 60, 82, NAMES[i], "s", "middle")])),
+    txt(6, 102, "pick vectors → one score per option", "s"));
+}
+function dSoftmax() {
+  return svg(260, 92, "Scores are turned into probabilities that sum to one", txt(6, 12, "scores", "s"), scoreRows(6, 18, 40), txt(122, 12, "softmax", "s", "middle"), arrow(112, 44, 138, 44),
+    txt(146, 12, "probabilities", "s"), probRows(146, 18, 40), txt(6, 84, "p = eᵃ ÷ Σ eᵃ  (sums to 100%)", "s m"));
+}
+function dCalibration() {
+  const row = (y, name, says, right) => [txt(6, y + 8, name, "s"), S("rect", { x: 100, y, width: 130 * says, height: 8, rx: 2, class: "bar mut" }), S("rect", { x: 100, y: y + 11, width: 130 * right, height: 8, rx: 2, class: "bar" }), txt(236, y + 8, `says ${Math.round(says * 100)}%`, "s"), txt(236, y + 19, `right ${Math.round(right * 100)}%`, "s")];
+  return svg(300, 78, "A calibrated model is right as often as it says; an overconfident one is not", row(8, "Calibrated", .8, .8), row(42, "Overconfident", .8, .55), txt(6, 74, "grey = stated confidence, blue = actually right", "s"));
+}
+function dLogits() {
+  const chips = [["state …", 56], ["question …", 70], ["A refund", 62], ["B escalate", 74], ["C reply", 58], ["Answer:", 56]]; let x = 6; const out = [];
+  chips.forEach(([t, w], i) => { out.push(chip(x, 6, w, t, i >= 2 && i < 5 ? "hl" : "soft")); x += w + 6; });
+  const V = [["A", 2.4, 0], ["B", 1.7, 0], ["C", 0.2, 0], ["The", 1.2, 1], ["Yes", 0.6, 1], ["…", 0.4, 1]];
+  const bars = V.map((v, i) => [txt(28, 56 + i * 15 + 9, v[0], "s m", "end"), S("rect", { x: 34, y: 56 + i * 15 + 1, width: 34 * v[1], height: 9, rx: 2, class: v[2] ? "bar mut" : "bar" }), v[2] ? txt(34 + 34 * v[1] + 5, 56 + i * 15 + 9, "ignored", "s") : null]);
+  return svg(520, 150, "The model's next-word scores for the letters A, B and C are read and all other words are ignored", out,
+    arrow(345, 30, 345, 44), txt(352, 42, "next word, scored by the LLM", "s"), txt(6, 50, "its scores for each possible next word", "s"), bars,
+    arrow(190, 100, 250, 100), txt(220, 92, "keep A, B, C", "s", "middle"),
+    box(254, 78, 120, 62, "hl"), txt(262, 94, "softmax over A B C", "t b"), txt(262, 110, "62%  31%  7%", "s m"), txt(262, 126, "one forward pass", "s"),
+    txt(392, 100, "no training, no generation", "s"));
+}
+function dPointer() {
+  const chips = [["state …", 62], ["‹opt›", 44], ["refund", 56], ["‹opt›", 44], ["escalate", 68], ["‹opt›", 44], ["reply", 52]]; let x = 6; const xs = [], out = [];
+  chips.forEach(([t, w], i) => { const mark = t === "‹opt›"; out.push(chip(x, 6, w, t, mark ? "hl" : "soft")); if (mark) xs.push(x + w / 2); x += w + 6; });
+  return svg(520, 150, "A learned head reads the vectors at option boundary tokens and scores each option", out,
+    xs.map(px => arrow(px, 30, px, 66)), box(6, 68, 380, 30, "hl"), txt(196, 88, "pointer head (learned): a score at each boundary token", "t", "middle"),
+    xs.map(px => arrow(px, 98, px, 116)), S("g", {}, xs.map((px, i) => S("rect", { x: px - 22, y: 118, width: 44 * RAW[i] / 2.4, height: 10, rx: 2, class: "bar" }))),
+    txt(6, 144, "‹opt› marks where an option starts; LoRA adapters lightly tune the LLM", "s"), txt(396, 88, "highest score = answer", "s"));
+}
+function dMask() {
+  const n = 10, c = 12, blk = r => r < 4 ? 0 : r < 7 ? 1 : 2, on = (r, k) => k <= r && (k < 4 || blk(r) === blk(k));
+  const cls = (r, k) => k < 4 ? "cell" : blk(k) === 1 ? "cell g" : "cell w";
+  return svg(300, 140, "A block-causal mask lets two questions share the state but not see each other", grid(6, 6, n, c, on, cls),
+    S("rect", { x: 140, y: 12, width: 10, height: 10, class: "cell" }), txt(156, 21, "shared state", "s"),
+    S("rect", { x: 140, y: 30, width: 10, height: 10, class: "cell g" }), txt(156, 39, "question 1", "s"),
+    S("rect", { x: 140, y: 48, width: 10, height: 10, class: "cell w" }), txt(156, 57, "question 2", "s"),
+    txt(140, 84, "both read the state once;", "s"), txt(140, 98, "neither sees the other", "s"), txt(140, 112, "(attention-only backbones)", "s"));
+}
+function dEncoder() {
+  const chips = [["state …", 62], ["question", 62], ["‹m›", 34], ["refund", 56], ["‹m›", 34], ["escalate", 68], ["‹m›", 34], ["reply", 50]]; let x = 6; const out = [], cs = [];
+  chips.forEach(([t, w], i) => { out.push(chip(x, 40, w, t, t === "‹m›" ? "hl" : "soft")); cs.push(x + w / 2); x += w + 6; });
+  const arc = (a, b) => S("path", { d: `M${cs[a]} 40 Q${(cs[a] + cs[b]) / 2} ${40 - 6 * Math.abs(b - a) - 8} ${cs[b]} 40`, class: "arc" });
+  return svg(520, 150, "An encoder lets every token see every other, then a head scores the option markers", txt(6, 12, "every token sees every other, both directions", "s"),
+    [[0, 3], [1, 5], [2, 7], [3, 6], [0, 7], [4, 5]].map(([a, b]) => arc(a, b)), out,
+    [2, 4, 6].map(i => arrow(cs[i], 64, cs[i], 84)), box(6, 86, 380, 26), txt(196, 103, "encoder output at each marker → head → one score per option", "t", "middle"),
+    txt(6, 138, `‹m› = option marker · ${Jev.codeOf('jeff')}: sigmoid + temperature 3.2 · ${Jev.codeOf('laya')}: softmax over markers`, "s"));
+}
+
+/* ---------- Naming helpers: {id} tokens in prose become code + name tags ---------- */
+const nameRe = () => { const ms = Object.entries(Jev.status() || {}).map(([id]) => [id, Jev.nameOf(id)]).filter(([, n]) => n && n.length > 3).sort((x, y) => y[1].length - x[1].length);
+  const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); return { ms, re: ms.length ? new RegExp(`(\\{[\\w.-]+\\}|(?<![\\w-])(?:${ms.map(m => esc(m[1])).join("|")})(?![\\w-]))`, "g") : /(\{[\w.-]+\})/g }; };
+/* Prose: {id} tokens and any registry display name become code + name tags. */
+const rich = (str) => { const { ms, re } = nameRe(); return String(str).split(re).map(p => { if (/^\{[\w.-]+\}$/.test(p)) return Jev.tag(p.slice(1, -1)); const m = ms.find(x => x[1] === p); return m ? Jev.tag(m[0]) : p; }); };
+const rtext = (str) => String(str).replace(/\{([\w.-]+)\}/g, (_, id) => `${Jev.codeOf(id)} ${Jev.nameOf(id)}`);
+const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
+const liveText = (id) => { const s = (Jev.status() || {})[id]; if (!s) return "Status unknown"; return s.up ? (s.hosted ? "Loaded now, hosted" : `Loaded now, ${s.gpu_mb ? gib(s.gpu_mb) : "CPU"}`) : "Not loaded"; };
+const liveChip = (id) => { const c = el("span", { class: "badge", "data-live": id }); const f = () => { const up = Jev.isUp(id); c.className = "badge" + (up ? " good" : ""); c.textContent = liveText(id); }; f(); Jev.onStatus(f); return c; };
+const identLine = (id) => { const p = el("p", { class: "small warn", "data-ident": id }); const f = () => { const s = (Jev.status() || {})[id]; const bad = s && s.up && s.identity && s.identity_ok === false; p.hidden = !bad; p.textContent = bad ? `Flagged: running as ${s.identity}, which does not match its label.` : ""; }; f(); Jev.onStatus(f); return p; };
+
+/* ---------- Content ---------- */
+const short = (b) => (b || "").split(/ \+ | \(/)[0];
+const FAM = {
+  hosted: { name: "Hosted API", short: "Hosted", flow: m => [["State + question", "typed options"], ["Hosted model", "internals not published"], ["Probabilities", "one per option", 1]] },
+  logits: { name: "Read the LLM's letter scores", short: "Letter logits", flow: m => [["State + options", "lettered A, B, C"], ["Frozen LLM", short(m.base)], ["Letter scores", "next-word logits"], ["Probabilities", "softmax", 1]] },
+  pointer: { name: "Pointer head", short: "Pointer head", flow: m => [["State + options", "‹opt› marked"], ["LoRA-tuned LLM", short(m.base)], ["Pointer head", "learned"], ["Probabilities", "softmax", 1]] },
+  encoder: { name: "Encoder with option head", short: "Encoder", flow: m => [["State + options", "with markers"], ["Encoder", short(m.base)], ["Option head", "one score each"], ["Probabilities", "per option", 1]] },
+};
+const PARTS = [
+  ["The reader", "A neural network that turns text into vectors. Decoder LLMs read left to right; encoders read in both directions."],
+  ["The readout", "The step that turns the reader's vectors into one score per option. This is where each model's secret sauce lives."],
+  ["The calibration", "Whether the probabilities can be trusted: 70% should mean right about 70% of the time. It decides if you can set thresholds."],
+];
+const STEPS = [
+  ["Text becomes tokens", "Text is cut into tokens, small pieces of words, and each is mapped to a number the model can look up.", dTokens],
+  ["Tokens become vectors", "A transformer turns each token into a vector, a list of numbers that encodes what the token means in this context.", dVectors],
+  ["Attention decides who sees whom", "Attention lets a token look at others. Decoders may look only backwards; encoders look both ways. A mask can restrict this further.", dAttention],
+  ["A readout scores the options", "To answer, we pick particular vectors and turn each into one score per option. How this readout works is where the models differ.", dReadout],
+  ["Softmax makes probabilities", "Softmax turns the scores into probabilities that add up to 100%, so every option gets a share.", dSoftmax],
+  ["Calibration keeps them honest", "A model is calibrated when 70% confidence is right about 70% of the time. Expected calibration error (ECE) measures the gap; lower is better.", dCalibration],
+];
+const SAUCES = [
+  { fam: "logits", title: "1 · Read the model's own answer-letter scores", diagrams: [dLogits],
+    term: "Industry term: multiple-choice prompting with answer-letter scoring (zero-shot)",
+    lead: "This is the standard way language-model benchmarks score multiple-choice questions. The situation, question and options go into one prompt, with each option labelled A, B, C. The model reads it in a single pass; at the point where its next word would be the answer, we read the scores it gives the tokens “A”, “B” and “C” and ignore the rest of its vocabulary. A softmax over just those few scores becomes the probabilities. The label words standing in for each class are called a verbalizer in the prompt-learning literature.",
+    points: [["No training.", "The base model is frozen, so any capable LLM can become a decision model."], ["One pass.", "All options are scored together from a single forward pass; nothing is generated."], ["A forced choice.", "Every other word in the vocabulary is discarded, so the model always lands on one of the given options, even when it would rather have said something else."], ["The catch.", "The model was never trained to answer as a letter, so letter scores pick up habits that have nothing to do with the question, such as favouring certain letters or positions. JevBench measured 21% versus 72% on answer-judging items for {so1} when the option order was reversed."]] },
+  { fam: "pointer", title: "2 · Teach the model to point at the answer", diagrams: [dPointer, dMask],
+    term: "No single industry name — a pointer network head (Vinyals et al., 2015) on a LoRA-tuned LLM",
+    lead: "Mark where each option starts with a boundary token. A small learned head reads the model's hidden vectors at those tokens and scores each option, so the answer is a pointer into the input rather than a word to generate — the same idea behind pointer networks. The LLM itself is lightly tuned with LoRA, which freezes the original weights and trains a small set of low-rank adapter matrices beside them, changing only a few percent of the parameters. The head and adapters are trained with log loss on labelled decisions, so unlike the letter-score approach, the model is taught directly that its job is to put probability on the right option.",
+    points: [["Trained for the job.", "The head learns to output decision probabilities directly, rather than relying on the base model's habits with letter tokens."], ["Order stops being a signal.", "Each option is scored from its own position and content, not a letter that can carry a bias."], ["Shared reading.", "On attention-only backbones a block-causal mask lets several questions share one copy of the state in a single pass while keeping them from seeing each other; {kev-4b} and {kev-0.8b} use hybrid (Gated DeltaNet) layers that can't use that mask, so each question is read on its own."], ["The catch.", "It needs labelled training data and a training run, so results depend on that recipe; a mistake in the labels is learned as faithfully as a correct one. LoRA also changes only a thin slice of the model, so it sharpens how the model answers without adding much new knowledge."]] },
+  { fam: "encoder", title: "3 · Read everything at once, in both directions", diagrams: [dEncoder],
+    term: "Industry term: cross-encoder classification — a fine-tuned bidirectional encoder, in the BERT family",
+    lead: "An encoder isn't built to write text: every token attends to every other, so the state, question and options are all read together in one pass — the same joint-reading design search engines use to rerank results, known as a cross-encoder. A head turns the vectors at the option markers into one score per option. How those scores become probabilities differs by model: a softmax makes the options compete for one shared total, while a sigmoid scores each option on its own as a yes-or-no. The encoder and head are trained on labelled examples, the standard recipe for fine-tuning a BERT-style model for classification.",
+    points: [["Small and cheap.", "These models are 151M to about 400M parameters here, against billions for the LLM-based approaches."], ["Both directions.", "A decoder reads left to right, so early words never see later ones; here the first word of the state can already take the last option into account."], ["Same idea, different heads.", "{jeff} applies a sigmoid per option, scaled by a temperature of 3.2 (temperature scaling, a standard calibration step). {laya} takes a softmax over its markers. {verdict} adds an abstention slot — a “none of these” option, sometimes called selective classification — that the benchmark drops."], ["The catch.", "Far less world knowledge than a multi-billion-parameter LLM, so the encoder can read the question perfectly and still not know the answer. Inputs are bounded too: {laya} truncates each question to 512 tokens, so a long state loses whatever falls past the cut."]] },
+  { fam: "hosted", title: "4 · Hosted: a black box with a known interface", diagrams: [],
+    term: "Not a read-out technique — a delivery model (a closed API)",
+    lead: "TypeSafe's {jev} is reached over an HTTPS API and its internals aren't published. We can describe only what it takes and returns: the state and typed questions go in, and a probability for every option comes out. It is priced per input token ($0.042 per million, output free, about 950 input tokens per decision in JevBench). We don't know which, if any, of the three techniques above it uses, or what base model sits underneath — the weights aren't available, so it can't be inspected or run locally.",
+    points: [["Known interface.", "It speaks the same typed request format as the local models, so it can be benchmarked side by side on identical items."], ["Unknown mechanism.", "Architecture, size and training data are not publicly documented."], ["The catch.", "You can measure it but not audit it: behaviour can change on the provider's side without notice, every decision costs money, and nothing here can say why it got an item right or wrong."]],
+    guess: "{jev} could be something like {laya}: an encoder that reads the state, question and options together and scores option markers, since the API returns a plain probability per option rather than text. But the per-input-token pricing doesn't tell us much on its own — the letter-score and pointer approaches above also generate no output tokens, so a decoder LLM read out through its logits would look identical from the outside. TypeSafe hasn't said what {jev} is; this is one plausible category of explanation, not a claim about how it actually works." },
+];
+
+/* ---------- Data-driven pieces ---------- */
+const range = (vals, f) => { const v = vals.filter(x => x != null); if (!v.length) return "–"; const lo = Math.min(...v), hi = Math.max(...v); return lo === hi ? f(lo) : `${f(lo)} – ${f(hi)}`; };
+const famRows = (rows, fam) => rows.filter(r => r.info.family === fam);
+const usedBy = (rows, fam) => { const rs = famRows(rows, fam); if (!rs.length) return null;
+  return el("div", { class: "used" }, el("span", { text: "Used by" }), rs.map(r => el("a", { class: "badge", href: `#${r.id}` }, Jev.tag(r.id))),
+    el("span", { text: `· in our runs: ${range(rs.map(r => r.mean_accuracy), v => fmt.pct(v, 0))} mean accuracy, ${range(rs.map(r => r.tiers.hard?.p50_s), fmt.ms)} median` })); };
+
+function sauces(d) {
+  return el("div", {}, SAUCES.map(s => el("article", { class: "card sauce" },
+    el("div", {}, el("h3", { text: s.title }), s.term ? el("p", { class: "term" }, s.term) : null, el("p", { class: "lead" }, rich(s.lead)),
+      s.points.length ? el("ul", { class: "facts-list" }, s.points.map(([b, t]) => el("li", {}, el("b", { text: b + " " }), rich(t)))) : null,
+      s.guess ? el("p", { class: "guess" }, el("b", { text: "Our guess, unconfirmed. " }), rich(s.guess)) : null,
+      usedBy(d.rows, s.fam)),
+    s.diagrams.length ? el("div", { class: "diagrams" }, s.diagrams.map(f => f())) : null)));
+}
+function famTable(d) {
+  const head = ["Technique", "Models", "Mean accuracy", "Hard accuracy", "Hard ECE", "Median latency", "Parameters"];
+  return el("div", { class: "table-wrap" }, el("table", { class: "data fam" }, el("caption", { class: "sr-only", text: "Results by technique" }),
+    el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { scope: "col", class: i > 1 && i < 6 ? "num" : null, text: h })))),
+    el("tbody", {}, Object.entries(FAM).map(([k, f]) => { const rs = famRows(d.rows, k); if (!rs.length) return null;
+      return el("tr", {}, el("td", { class: "model-name", text: f.name }), el("td", {}, rs.map((r, i) => [i ? " " : null, Jev.tag(r.id)])),
+        el("td", { class: "num", text: range(rs.map(r => r.mean_accuracy), v => fmt.pct(v, 1)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.accuracy), v => fmt.pct(v, 1)) }),
+        el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.ece), v => fmt.num(v)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.p50_s), fmt.ms) }),
+        el("td", { text: [...new Set(rs.map(r => r.info.params).filter(Boolean))].join(", ") || "not published" })); }))));
+}
+function flow(m) {
+  const nodes = FAM[m.family].flow(m);
+  return el("ol", { class: "flow", "aria-label": "How input becomes probabilities" }, nodes.map(([t, s, out], i) => el("li", {},
+    el("div", { class: `node${out ? " out" : ""}` }, el("strong", { text: t }), s ? el("span", { text: s }) : null), i < nodes.length - 1 ? el("span", { class: "arrow", "aria-hidden": "true", text: "→" }) : null)));
+}
+function card(r, rank) {
+  const m = r.info, t = r.tiers, hard = t.hard || {};
+  const tier = (id, label) => el("div", { class: "r" }, el("span", { text: label }), t[id] ? meter(t[id].accuracy, `${label} accuracy ${fmt.pct(t[id].accuracy)}`) : el("span", { class: "subtle", text: "not run" }));
+  const facts = [["Licence", m.licence], ["Interface", m.interface], ["Base", m.base], ["Price", m.price], ["Published", m.public_score != null ? `JevBench v1.2 score ${m.public_score}, rank ${m.public_rank} (published by JevBench, not measured here)` : null]].filter(f => f[1]);
+  return el("article", { class: "card model", id: m.id },
+    el("h3", {}, Jev.tag(m.id), el("span", { class: "vendor", text: m.vendor })),
+    el("div", { class: "tags" }, liveChip(m.id), el("span", { class: `badge ${m.open ? "good" : ""}`, text: m.open ? "Open" : "Closed" }), m.params ? el("span", { class: "badge", text: m.params }) : null,
+      el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: `Ranked #${rank} in our runs` })),
+    identLine(m.id), el("p", { class: "sauce-line" }, rich(m.sauce)), flow(m),
+    el("div", { class: "bench" }, tier("easy", "Easy"), tier("original", "Original"), tier("hard", "Hard")),
+    el("div", { class: "stats" }, el("span", {}, "Hard ECE ", el("b", { text: fmt.num(hard.ece) })), el("span", {}, "Median ", el("b", { text: fmt.ms(hard.p50_s) })), el("span", {}, "Mean ", el("b", { text: fmt.pct(r.mean_accuracy) }))),
+    el("details", { class: "more" }, el("summary", { text: "How it works, in detail" }), el("ul", {}, m.how.map(h => el("li", {}, rich(h)))),
+      el("dl", { class: "facts" }, facts.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]), m.repo ? [el("dt", { text: "Source" }), el("dd", {}, el("a", { href: m.repo, target: "_blank", rel: "noopener", text: m.repo.replace(/^https?:\/\//, "") }))] : null)));
+}
+
+function cards(d) {
+  const grid = document.getElementById("cards"), jump = document.getElementById("jump"), seg = document.getElementById("filter");
+  const cs = d.rows.map((r, i) => card(r, i + 1));
+  grid.replaceChildren(...cs);
+  jump.replaceChildren(...d.rows.map(r => el("a", { href: `#${r.id}`, title: `${Jev.codeOf(r.id)} = ${Jev.nameOf(r.id)}` }, Jev.tag(r.id))));
+  const fams = ["all", ...Object.keys(FAM)].filter(f => f === "all" || famRows(d.rows, f).length);
+  const set = (f) => { [...seg.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === f)));
+    d.rows.forEach((r, i) => { const on = f === "all" || r.info.family === f; cs[i].hidden = !on; jump.children[i].hidden = !on; }); };
+  seg.replaceChildren(...fams.map(f => el("button", { type: "button", "data-f": f, onclick: () => set(f), text: `${f === "all" ? "All" : FAM[f].short} (${f === "all" ? d.rows.length : famRows(d.rows, f).length})` })));
+  set("all");
+  const reveal = () => { const t = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (!t) return; if (t.hidden) set("all"); t.scrollIntoView(); };
+  window.addEventListener("hashchange", reveal); if (location.hash) reveal();
+}
+
+function codesTable(d) {
+  const st = Jev.status() || {}, ids = d.models.map(m => m.id);
+  const wrap = el("div", { class: "table-wrap" }, el("table", { class: "data fam" }, el("caption", { class: "sr-only", text: "Model codes" }),
+    el("thead", {}, el("tr", {}, ["Code", "Name", "Size", "How it is served", "State"].map(h => el("th", { scope: "col", text: h })))),
+    el("tbody", {}, d.models.map(m => el("tr", {}, el("td", {}, el("span", { class: "mcode", text: Jev.codeOf(m.id) })), el("td", { text: Jev.nameOf(m.id) }), el("td", { text: m.params || (st[m.id]?.hosted ? "not published" : "–") }),
+      el("td", { text: m.served_as || (st[m.id]?.hosted ? "hosted API" : "–") }), el("td", {}, liveChip(m.id)))))));
+  return wrap;
+}
+globalDefs();
+document.getElementById("print").onclick = () => window.print();
+Jev.ready.then(() => {
+document.getElementById("hero").replaceChildren(dHero());
+document.getElementById("parts").replaceChildren(...PARTS.map(([h, p], i) => el("div", { class: "card" }, el("h3", { text: `${i + 1}. ${h}` }), el("p", { class: "muted", style: "margin-top:4px", text: p }))));
+document.getElementById("steps").replaceChildren(...STEPS.map(([h, p, f], i) => el("div", { class: "card step" }, el("h3", {}, el("span", { class: "n", text: i + 1 }), h), el("p", { text: p }), f())));
+mount(document.getElementById("sauces"), load, (d) => { document.getElementById("codes").replaceChildren(codesTable(d)); document.getElementById("famtable").replaceChildren(famTable(d)); cards(d); return sauces(d); });
+});
+</script>
+</body>
+</html>
