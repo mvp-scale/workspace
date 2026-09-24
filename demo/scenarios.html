@@ -227,7 +227,8 @@
   table.heat th.fam { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); text-align: center; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
   table.heat tr.rowgroup th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); padding: 5px 8px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   table.heat tr.avgrow td { border-top: 2px solid var(--border); font-weight: 600; }
-  table.heat td.subj { text-align: left; padding: 6px 10px; white-space: nowrap; }
+  table.heat td.subj { text-align: left; padding: 6px 10px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  table.heat th.mh { text-align: left; padding: 6px 8px; white-space: nowrap; font-size: 12px; font-weight: 500; }
   .scale { display: flex; align-items: center; gap: 0; margin-top: 10px; font-size: 11.5px; color: var(--text-3); }
   .scale i { width: 32px; height: 14px; display: block; border: 1px solid var(--surface); } .scale span { padding: 0 8px; } .scale .mid { margin-left: 12px; }
   td.idc { max-width: 170px; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
@@ -2693,8 +2694,8 @@ function renderWorldMap(details) {
   const catOf = (x) => MMLU_CATEGORY[x.p.id.slice(5)];
   const groups = CAT_ORDER.map(cat => [cat, subs.filter(x => catOf(x) === cat)]).filter(([, list]) => list.length);
 
-  const head = el("tr", {}, el("th", { "data-sort": "text", text: "Subject" }),
-    orderedModels.map(m => el("th", { "data-sort": "num", class: "vh", title: `${modelName(m)}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` }, mtagLive(m))));
+  const head = el("tr", {}, el("th", { text: "Subject" }),
+    orderedModels.map(m => el("th", { class: "mh", title: `${modelName(m)}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` }, mtagLive(m))));
   const bodyRows = [];
   for (const [cat, list] of groups) {
     bodyRows.push(el("tr", { class: "rowgroup" }, el("th", { colspan: orderedModels.length + 1, text: `${cat} (${list.length})` })));
