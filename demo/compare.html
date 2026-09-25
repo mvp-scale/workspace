@@ -48,6 +48,12 @@
   .recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .recent li { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .recent .what { min-width: 0; } .recent .what div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   details.recent-box summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
+  #state.code { font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace); font-size: 12.5px; line-height: 1.5; white-space: pre; overflow-wrap: normal; }
+  .hl-wrap.code > * { white-space: pre; overflow-wrap: normal; word-wrap: normal; }
+  .hl-wrap.code textarea { overflow: auto; }
+  .field[hidden] { display: none; }  /* the shared .field { display: flex } otherwise beats the hidden attribute */
+  .checks { margin: 4px 0 0; padding-left: 22px; display: grid; gap: 2px; font-size: 12.5px; color: var(--text-2); }
+  .checks li b { color: var(--text); font-weight: 600; }
   @media (max-width: 980px) { .workbench { grid-template-columns: minmax(0, 1fr); } .qpane { position: static; max-height: none; } }
 </style>
 </head>
@@ -56,7 +62,7 @@
   <div class="page-head">
     <div>
       <h1>Baseline compare</h1>
-      <p>One question, sent to every loaded model at once. Ctrl+Enter or Cmd+Enter runs.</p>
+      <p>One question, or a whole set of checks on a piece of code, sent to every loaded model at once. Ctrl+Enter or Cmd+Enter runs.</p>
     </div>
   </div>
 
@@ -66,17 +72,22 @@
         <div class="field" style="flex:1"><label for="preset">Scenario</label><select id="preset"></select></div>
         <button class="btn ghost" id="reset" type="button" style="align-self:flex-end">Reset</button>
       </div>
-      <div class="field"><label for="state">State: the situation to decide on</label>
+      <div class="field"><label for="state" id="state-l">State: the situation to decide on</label>
         <div class="hl-wrap"><div class="hl-backdrop" id="state-hl" aria-hidden="true"></div><textarea id="state" rows="6" spellcheck="false"></textarea></div>
         <p class="field-error" id="err-state" hidden></p></div>
-      <div class="field"><span class="small" style="font-weight:500;color:var(--text-2)" id="type-l">Question type</span>
+      <div class="field" id="type-field"><span class="small" style="font-weight:500;color:var(--text-2)" id="type-l">Question type</span>
         <div class="segmented" id="type" role="group" aria-labelledby="type-l">
           <button type="button" data-type="choice">Choice</button><button type="button" data-type="score">Score</button><button type="button" data-type="noul">Yes / no</button>
         </div><span class="hint" id="type-hint"></span></div>
-      <div class="field"><label for="instructions">Instructions: what to decide</label><textarea id="instructions" rows="2"></textarea><p class="field-error" id="err-instructions" hidden></p></div>
+      <div class="field" id="instr-field"><label for="instructions">Instructions: what to decide</label><textarea id="instructions" rows="2"></textarea><p class="field-error" id="err-instructions" hidden></p></div>
       <div class="field" id="options-field"><label for="options" id="options-l">Options</label><span class="hint" id="options-hint"></span>
         <div class="hl-wrap"><div class="hl-backdrop" id="options-hl" aria-hidden="true"></div><textarea id="options" rows="5" spellcheck="false"></textarea></div>
         <p class="field-error" id="err-options" hidden></p></div>
+      <div class="field" id="battery-field" hidden>
+        <span class="small" style="font-weight:500;color:var(--text-2)">Asked about this code, all in one request</span>
+        <span class="hint">Ten yes/no checks (Yes means a problem was found) and one decision. Edit the code above and run again to see the answers change.</span>
+        <ol class="checks" id="battery-list"></ol>
+      </div>
       <div class="row"><button class="btn primary" id="run" type="submit">Run on all models</button><span class="small subtle" id="run-note"></span></div>
       <details class="recent-box"><summary>Recent runs <span class="subtle" id="recent-count"></span></summary><div style="margin-top:8px" id="recent"></div>
         <div style="margin-top:8px"><button class="btn ghost" id="clear-recent" type="button">Clear</button></div></details>
@@ -105,33 +116,98 @@
 const { el, fmt, api, toast, copy, download, empty, meter } = Jev;
 const $ = (id) => document.getElementById(id);
 const hostedUp = () => loadedIds().filter(id => status && status[id]?.hosted);
-const TYPES = { choice: "Choice", score: "Score", noul: "Yes / no" };
+const TYPES = { choice: "Choice", score: "Score", noul: "Yes / no", battery: "Security review" };
 const TYPE_HINT = { choice: "Pick exactly one option.", score: "Place it on an ordered scale.", noul: "A single 0 to 1 value. No options needed." };
 const OPTIONS_HELP = { choice: ["Options", "One per line. “label: description” — the label before the colon is highlighted."], score: ["Levels", "One per line, lowest first."] };
 const STORE_KEY = "jev-compare-recent", MAX_RECENT = 8, CUSTOM = "custom";
 
 const PRESETS = [
-  { id: "triage", label: "Support triage: billing complaint", t: "choice",
-    s: "Ticket #48213, priority queue.\nCustomer: \"This is the second month you've charged me twice for the Team plan. I emailed on the 3rd and nobody replied. If this isn't fixed today I'm disputing it with my bank and cancelling.\"\nAccount: 14 seats, customer for 3 years, no previous disputes.\nBilling system: two successful charges of $126.00 on the 1st.",
-    i: "What should the support team do first with this ticket?",
-    o: "refund: refund the duplicate charge and apologise\nescalate: hand to a billing specialist or team lead now\nreply: send a standard reply asking for more details\nclose: close the ticket as resolved" },
-  { id: "policy", label: "Content policy: user post", t: "choice",
-    s: "A user posted in a public cooking forum: \"Anyone who uses margarine instead of butter is an idiot and shouldn't be allowed in a kitchen. Also, DM me for my discount code, I get paid per signup.\"\nThe post has 3 reports. The account is 2 weeks old and has no prior warnings.",
-    i: "What moderation action fits this post best?",
-    o: "allow: leave the post up\nremove: remove the post and warn the user\nlimit: remove the referral content and limit the account\nban: ban the account" },
-  { id: "routing", label: "Routing: inbound message intent", t: "choice",
-    s: "Inbound chat message: \"Hi, I upgraded to Pro yesterday but the export to CSV is still greyed out and my invoice shows the old price. Also is there a discount for nonprofits?\"",
-    i: "Which team should own this conversation first?",
-    o: "billing: invoices, prices, discounts\ntechnical: product bugs and feature access\nsales: plans, upgrades and quotes\naccount: login, seats and permissions" },
-  { id: "urgency", label: "Ordinal score: incident urgency", t: "score",
-    s: "Monitoring alert: the checkout API error rate rose from 0.2% to 6% over 15 minutes. It affects about 1 in 16 payment attempts. Latency is normal. No customer reports yet. It is 02:10 local time on a Tuesday.",
-    i: "How urgent is this incident?", o: "Informational\nLow\nModerate\nHigh\nCritical" },
-  { id: "yesno", label: "Yes / no: cancellation request", t: "noul",
-    s: "Customer message: \"I've been thinking about whether the Team plan is worth it for us. We use it a few times a month. What would happen to our saved reports if we ever stopped paying?\"",
-    i: "Is the customer asking to cancel their subscription right now?", o: "" },
+  { id: "triage", label: "Support: what to do with a complaint", t: "choice",
+    s: "Customer: \"You charged me twice this month and nobody answered my email. Fix it today or I'm cancelling.\"\nBilling system: two identical charges of $49.",
+    i: "What should support do first?",
+    o: "refund: refund the duplicate charge and apologise\nescalate: hand to a team lead now\nreply: ask the customer for more details\nclose: close the ticket" },
+  { id: "routing", label: "Support: which team gets this message", t: "choice",
+    s: "Chat message: \"My invoice shows the old price after I upgraded yesterday. Can you correct it?\"",
+    i: "Which team should own this?",
+    o: "billing: invoices, prices and refunds\ntechnical: bugs and how the product works\nsales: plans, upgrades and quotes\naccount: logins and permissions" },
+  { id: "spam", label: "Email: is it spam?", t: "noul",
+    s: "Email subject: \"YOU WON! Claim your $1,000 gift card now\"\nSender: promo@free-prizes-4u.example\nBody: \"Click the link within 24 hours to claim. No purchase needed.\"",
+    i: "Is this email spam?", o: "" },
+  { id: "sentiment", label: "Reviews: how does the customer feel", t: "choice",
+    s: "Review: \"Setup took five minutes and the support team answered in under an hour. Really impressed.\"",
+    i: "What is the sentiment of this review?",
+    o: "positive: happy with the product or service\nneutral: no strong feeling either way\nnegative: unhappy or frustrated" },
+  { id: "policy", label: "Content: what to do with a post", t: "choice",
+    s: "A user posted in a public forum: \"Everyone who disagrees with me is a moron and should get off this site.\"\nThe post has 2 reports. The account has no earlier warnings.",
+    i: "What should the moderator do?",
+    o: "allow: leave the post up\nwarn: remove the post and warn the user\nlimit: restrict the account for a while\nban: ban the account" },
+  { id: "urgency", label: "Operations: how urgent is this alert", t: "score",
+    s: "Alert: the checkout page is down for every customer. Nobody can pay. It started 5 minutes ago and orders have stopped completely.",
+    i: "How urgent is this?", o: "Low\nModerate\nHigh\nCritical" },
+  { id: "lead", label: "Sales: is this a good lead", t: "choice",
+    s: "Form submission: \"We're a 200-person company and want to replace our current tool by the end of next month. Can someone call me this week? Budget is approved.\"",
+    i: "How should sales treat this lead?",
+    o: "hot: call today\nwarm: follow up this week\ncold: add to the newsletter" },
+  { id: "fraud", label: "Payments: approve, review or block", t: "choice",
+    s: "Order: $2,400 of gift cards, shipped to a new address in another country.\nThe card was reported stolen this morning. The billing name does not match the shipping name.",
+    i: "What should happen to this order?",
+    o: "approve: looks safe, process it normally\nreview: unclear, hold it for a person to check\nblock: clearly fraud, decline it" },
+  { id: "sqli", label: "Code security: SQL built from user input (10 checks)", t: "battery",
+    s: `@app.route("/user")
+def get_user():
+    user_id = request.args.get("id")
+    email = request.args.get("email")
+    query = f"SELECT * FROM users WHERE id = {user_id}"
+    try:
+        row = db.execute(query).fetchone()
+        return jsonify(row)
+    except Exception as e:
+        logger.error(f"Lookup failed for {email}: {e}")
+        return f"Database error: {e}. Query was: {query}", 500`,
+    i: "Security review: 10 yes/no checks and a decision", o: "",
+    b: { id: "sqli",
+      checks: [
+      { id: "c1", label: "User input in the SQL text", i: "Is text from the user placed directly into the SQL query?" },
+      { id: "c2", label: "Attacker can change the query", i: "Could an attacker change what the query does?" },
+      { id: "c3", label: "Other users' data exposed", i: "Could an attacker read other users' records with this code?" },
+      { id: "c4", label: "Error shows the query", i: "Does the error message sent back to the caller reveal the query or database details?" },
+      { id: "c5", label: "Personal data in logs", i: "Does the code write personal data, such as an email address, to the logs?" },
+      { id: "c6", label: "Any caller can read any record", i: "Can any caller read any record, without a permission check?" },
+      { id: "c7", label: "Input not validated", i: "Is the user input used without any validation or type check?" },
+      { id: "c8", label: "Returns the whole row", i: "Does the query return every column of the row, including fields the caller may not need?" },
+      { id: "c9", label: "Scanner would flag it", i: "Would a standard security scanner flag this code?" },
+      { id: "c10", label: "Unsafe for production", i: "Is this code unsafe to run in production as written?" } ],
+      decision: { i: "What should happen to this code?", o: "ship: safe to merge as it is\nfix: needs changes before it can be merged\nblock: exploitable now, do not deploy" } } },
+  { id: "eval", label: "Code security: eval() on user input (10 checks)", t: "battery",
+    s: `@app.route("/calc")
+def calc():
+    expr = request.args.get("expr", "")
+    try:
+        result = eval(expr)
+        return {"result": result}
+    except Exception as e:
+        return {
+            "error": str(e),
+            "trace": traceback.format_exc(),
+            "user": current_user.email,
+        }, 500`,
+    i: "Security review: 10 yes/no checks and a decision", o: "",
+    b: { id: "eval",
+      checks: [
+      { id: "c1", label: "User text run as code", i: "Is text from the user run as code?" },
+      { id: "c2", label: "Attacker can run commands", i: "Could an attacker run commands on the server?" },
+      { id: "c3", label: "Secrets can be read", i: "Could an attacker use this endpoint to steal the server's passwords or API keys?" },
+      { id: "c4", label: "Input not filtered", i: "Is the input passed along with no filter or safe parser?" },
+      { id: "c5", label: "Stack trace in the reply", i: "Does the error reply include an internal stack trace?" },
+      { id: "c6", label: "Personal data in the reply", i: "Does the error reply include personal data, such as the user's email address?" },
+      { id: "c7", label: "Unlimited requests and input", i: "Can a caller send unlimited requests or arbitrarily large input?" },
+      { id: "c8", label: "One request can crash it", i: "Could a single request freeze or crash the server?" },
+      { id: "c9", label: "Scanner would flag it", i: "Would a standard security scanner flag this code?" },
+      { id: "c10", label: "Unsafe for production", i: "Is this code unsafe to run in production as written?" } ],
+      decision: { i: "What should happen to this code?", o: "ship: safe to merge as it is\nfix: needs changes before it can be merged\nblock: exploitable now, do not deploy" } } },
 ];
 
-let status = null, running = false, last = null, showErrors = false, type = "choice", leaderRank = {};
+let status = null, running = false, last = null, showErrors = false, type = "choice", leaderRank = {}, battery = null;
 
 /* ---------- storage (always optional) ---------- */
 const store = {
@@ -140,15 +216,25 @@ const store = {
 };
 
 /* ---------- form ---------- */
-const readForm = () => ({ s: $("state").value, t: type, i: $("instructions").value, o: $("options").value });
-const writeForm = (f) => { $("state").value = f.s; $("instructions").value = f.i; $("options").value = f.o; setType(f.t); highlightAll(); };
-const sameForm = (a, b) => a.s === b.s && a.t === b.t && a.i === b.i && (a.t === "noul" || a.o === b.o);
+const readForm = () => ({ s: $("state").value, t: type, i: $("instructions").value, o: $("options").value, b: battery });
+const writeForm = (f) => { battery = f.b || null; $("state").value = f.s; $("instructions").value = f.i; $("options").value = f.o; setType(f.t); highlightAll(); };
+const sameForm = (a, b) => a.s === b.s && a.t === b.t && (a.t === "battery" ? !!a.b && !!b.b && a.b.id === b.b.id : a.i === b.i && (a.t === "noul" || a.o === b.o));
 const lines = (text) => text.split("\n").map(l => l.trim()).filter(Boolean);
 function setType(t) {
   type = t;
+  const isB = t === "battery";
   [...$("type").children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.type === t)));
-  $("type-hint").textContent = TYPE_HINT[t]; $("options-field").hidden = t === "noul";
-  if (t !== "noul") { $("options-l").textContent = OPTIONS_HELP[t][0]; $("options-hint").textContent = OPTIONS_HELP[t][1]; }
+  $("type-field").hidden = isB; $("instr-field").hidden = isB; $("battery-field").hidden = !isB;
+  $("options-field").hidden = isB || t === "noul";
+  $("state-l").textContent = isB ? "State: the code to review (you can edit it)" : "State: the situation to decide on";
+  $("state").classList.toggle("code", isB); document.querySelector("#state").closest(".hl-wrap").classList.toggle("code", isB); $("state").rows = isB ? 14 : 6;
+  if (isB) renderBatteryList();
+  else { $("type-hint").textContent = TYPE_HINT[t]; if (t !== "noul") { $("options-l").textContent = OPTIONS_HELP[t][0]; $("options-hint").textContent = OPTIONS_HELP[t][1]; } }
+}
+function renderBatteryList() {
+  const ol = $("battery-list"); if (!battery) { ol.replaceChildren(); return; }
+  ol.replaceChildren(...battery.checks.map(c => el("li", {}, el("b", { text: c.label + ": " }), c.i)),
+    el("li", { style: "list-style:none;margin-left:-22px;margin-top:4px" }, el("b", { text: "Then a decision: " }), battery.decision.i));
 }
 
 /* ---------- highlighting: still free-form textareas (paste a whole block in) -- a transparent
@@ -161,19 +247,19 @@ const escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace
 /* Key and quote spans are built separately and only concatenated at the end -- running the quote
    regex on text that already contains the key span's own HTML (its class="..." attribute is
    itself a quoted string) would match across the tag and corrupt it. */
-function highlightLine(line, withQuotes) {
-  const m = /^([^:]{1,60}):/.exec(line);
+function highlightLine(line, withQuotes, withKeys = true) {
+  const m = withKeys ? /^([^:]{1,60}):/.exec(line) : null;
   const keyPart = m ? `<span class="hl-key">${escapeHtml(m[1])}:</span>` : "";
   let restHtml = escapeHtml(line.slice(m ? m[0].length : 0));
   if (withQuotes) restHtml = restHtml.replace(/"([^"]*)"/g, (_, inner) => `<span class="hl-quote">&quot;${inner}&quot;</span>`);
   return keyPart + restHtml;
 }
-function highlightText(raw, withQuotes) {
-  return raw.split("\n").map((l) => highlightLine(l, withQuotes)).join("\n") + (raw === "" || raw.endsWith("\n") ? "​" : "");
+function highlightText(raw, withQuotes, withKeys = true) {
+  return raw.split("\n").map((l) => highlightLine(l, withQuotes, withKeys)).join("\n") + (raw === "" || raw.endsWith("\n") ? "​" : "");
 }
 function syncHighlight(id, withQuotes) {
   const ta = $(id), hl = $(id + "-hl");
-  hl.innerHTML = highlightText(ta.value, withQuotes);
+  hl.innerHTML = highlightText(ta.value, withQuotes, !(id === "state" && type === "battery"));
   hl.scrollTop = ta.scrollTop; hl.scrollLeft = ta.scrollLeft;
 }
 const highlightAll = () => { syncHighlight("state", true); syncHighlight("options", false); };
@@ -183,7 +269,16 @@ const highlightAll = () => { syncHighlight("state", true); syncHighlight("option
   ta.addEventListener("scroll", () => syncHighlight(id, withQuotes));
   new ResizeObserver(() => syncHighlight(id, withQuotes)).observe(ta);
 });
+const parseOptions = (text) => lines(text).map(l => { const k = l.indexOf(":"); return k === -1 ? [l, ""] : [l.slice(0, k).trim(), l.slice(k + 1).trim()]; });
 function buildQuestion(f) {
+  if (f.t === "battery" && f.b) {
+    const errors = {}, state = f.s.trim(), questions = {};
+    if (!state) errors.state = "Add the code to review.";
+    f.b.checks.forEach(c => { questions[c.id] = { type: "noul", instructions: c.i }; });
+    const decision = { type: "choice", instructions: f.b.decision.i, criteria: Object.fromEntries(parseOptions(f.b.decision.o)) };
+    questions.decision = decision;
+    return { state, question: decision, questions, errors };
+  }
   const errors = {}, state = f.s.trim(), instructions = f.i.trim(), question = { type: f.t, instructions };
   if (!state) errors.state = "Add the situation to decide on.";
   if (!instructions) errors.instructions = "Add instructions that say what to decide.";
@@ -212,10 +307,12 @@ const onEdit = () => { showFieldErrors(buildQuestion(readForm()).errors); syncPr
 function applyPreset(id) { const p = PRESETS.find(x => x.id === id); if (!p) return; $("preset").value = id; writeForm(p); showErrors = false; showFieldErrors({}); }
 
 /* ---------- share link ---------- */
-const encodeHash = (f) => "#q=" + encodeURIComponent(JSON.stringify(f));
+const encodeHash = (f) => "#q=" + encodeURIComponent(JSON.stringify(f.t === "battery" && f.b ? { s: f.s, t: "battery", i: f.i, o: "", bid: f.b.id } : { s: f.s, t: f.t, i: f.i, o: f.o }));
 function decodeHash() {
   const m = /^#q=(.+)$/.exec(location.hash); if (!m) return null;
-  try { const v = JSON.parse(decodeURIComponent(m[1])); if (v && typeof v.s === "string" && typeof v.i === "string" && typeof v.o === "string" && Object.hasOwn(TYPES, v.t)) return { s: v.s, t: v.t, i: v.i, o: v.o }; } catch { /* fall back to a preset */ }
+  try { const v = JSON.parse(decodeURIComponent(m[1]));
+    if (v && v.t === "battery" && typeof v.s === "string") { const p = PRESETS.find(x => x.id === v.bid && x.b); if (p) return { s: v.s, t: "battery", i: p.i, o: "", b: p.b }; }
+    if (v && typeof v.s === "string" && typeof v.i === "string" && typeof v.o === "string" && Object.hasOwn(TYPES, v.t)) return { s: v.s, t: v.t, i: v.i, o: v.o }; } catch { /* fall back to a preset */ }
   return null;
 }
 const pushHash = () => { try { history.replaceState(null, "", encodeHash(readForm())); } catch { /* address bar stays as is */ } };
@@ -273,6 +370,13 @@ function normalise(r, q) {
   const probs = probEntries(a, q), best = probs.reduce((m, x) => (m == null || x.p > m.p ? x : m), null);
   return { ...out, top: (q.type === "choice" ? a.choice : null) ?? best?.label ?? "No answer", probs };
 }
+function normaliseBattery(r, b) {
+  const dq = { type: "choice", criteria: Object.fromEntries(parseOptions(b.decision.o)) };
+  const dec = normalise({ backend: r.backend, extras: r.extras, model: r.model, latency_ms: r.latency_ms, error: r.error, answer: r.answers && r.answers.decision }, dq);
+  if (!dec.ok) return dec;
+  const checks = {}; b.checks.forEach(c => { const a = r.answers[c.id]; checks[c.id] = a && typeof a.noul === "number" ? a.noul : null; });
+  return { ...dec, checks, flags: b.checks.filter(c => checks[c.id] != null && checks[c.id] >= 0.5).length };
+}
 function summarise(rows) {
   const ok = rows.filter(r => r.ok); if (!ok.length) return null;
   const groups = new Map(); ok.forEach(r => groups.set(r.top, (groups.get(r.top) || 0) + 1));
@@ -295,7 +399,16 @@ function renderMatrix(phase) {
   const row = (label, fn, cls) => el("tr", {}, el("th", { scope: "row", text: label }), fill((r, n) => cell(r, fn, typeof cls === "function" ? cls(r) : cls)));
   const group = (label) => el("tr", { class: "group" }, el("th", { scope: "colgroup", colspan: cols.length + 1, text: label }));
   const failed = (r, fn) => r.ok ? fn(r) : el("span", { class: "small subtle", text: "–" });
-  const body = [group("Comparable: every model returns these")];
+  const B = last && last.battery, body = [];
+  if (B) {
+    body.push(group("What the models found (Yes = a problem)"));
+    body.push(row("Flags raised", r => failed(r, x => el("span", { class: `badge ${x.flags >= 7 ? "bad" : x.flags >= 4 ? "warn" : "good"}`, text: `${x.flags} of ${B.checks.length}` }))));
+    B.checks.forEach(c => body.push(el("tr", {}, el("th", { scope: "row", text: c.label, title: c.i }), fill((r) => cell(r, x => failed(x, y => {
+      const p = y.checks[c.id];
+      return p == null ? el("span", { class: "small subtle", text: "no answer" }) : el("div", {}, el("span", { class: `badge ${p >= 0.5 ? "bad" : "good"}`, text: p >= 0.5 ? "Yes" : "No" }), meter(p, `${c.label}: ${fmt.pct(p)} yes`));
+    }))))));
+  }
+  body.push(group(B ? "Decision" : "Comparable: every model returns these"));
 
   body.push(el("tr", {}, el("th", { scope: "row", text: "Top answer" }), fill((r) => el("td", {}, phase === "running" ? skel() : !r ? PH() : !r.ok
     ? el("div", {}, el("span", { class: "badge bad", text: "No answer" }), el("div", { class: "small muted", style: "margin-top:4px", text: r.error }))
@@ -324,7 +437,7 @@ function renderSummary() {
 }
 
 /* ---------- actions ---------- */
-const exportJson = () => JSON.stringify({ state: last.state, question: last.question, results: last.raw }, null, 2);
+const exportJson = () => JSON.stringify({ state: last.state, question: last.questions || last.question, results: last.raw }, null, 2);
 function renderRecent() {
   const list = store.read(), root = $("recent");
   $("clear-recent").disabled = !list.length; $("recent-count").textContent = list.length ? `(${list.length})` : "";
@@ -345,14 +458,14 @@ function setExports(on) { $("copy-json").disabled = !on; $("download-json").disa
 
 async function run() {
   if (running) return;
-  const f = readForm(), { state, question, errors } = buildQuestion(f);
+  const f = readForm(), { state, question, questions, errors } = buildQuestion(f), isB = f.t === "battery" && !!f.b;
   if (Object.keys(errors).length) { showErrors = true; showFieldErrors(errors); const first = ["state", "instructions", "options"].find(k => errors[k]); if (first) $(first).focus(); return; }
   showErrors = false; showFieldErrors({}); $("banner").replaceChildren(); pushHash(); setRunning(true);
-  last = { state, question, rows: null, raw: null }; renderMatrix("running"); setExports(false);
+  last = { state, question, questions: isB ? questions : null, battery: isB ? f.b : null, rows: null, raw: null }; renderMatrix("running"); setExports(false);
   try {
-    const raw = await api("/api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state, question }) });
+    const raw = await api("/api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(isB ? { state, questions } : { state, question }) });
     if (!Array.isArray(raw)) throw new Error("The server sent an unexpected response.");
-    last.raw = raw; last.rows = raw.filter(r => !(r.error === "Not loaded" && !(status && status[r.backend]?.up))).map(r => normalise(r, question));
+    last.raw = raw; last.rows = raw.filter(r => !(r.error === "Not loaded" && !(status && status[r.backend]?.up))).map(r => isB ? normaliseBattery(r, f.b) : normalise(r, question));
     remember(f, summarise(last.rows)); setExports(true);
   } catch (e) {
     last = null; $("banner").replaceChildren(el("div", { class: "callout bad", role: "alert" }, el("strong", { text: "The comparison could not run. " }), e.message, " ", el("button", { class: "btn", type: "button", onclick: run, text: "Try again" })));

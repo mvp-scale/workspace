@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice pipeline mockup</title>
+<style>
+  :root { color-scheme: dark; }
+  body { background: #111; color: #e8e8e8; font: 14px/1.4 -apple-system, system-ui, sans-serif; margin: 0; padding: 20px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: #999; margin-bottom: 16px; font-size: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  button { background: #2a2a2a; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+  button:hover { background: #333; }
+  button:disabled { opacity: .4; cursor: default; }
+  .status { font-size: 12px; padding: 4px 10px; border-radius: 12px; background: #222; }
+  .status.live { background: #2d4a2d; color: #8f8; }
+  .status.err { background: #4a2d2d; color: #f88; }
+  .panes { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
+  .transcript { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 14px; min-height: 300px; max-height: 60vh; overflow-y: auto; }
+  .line { margin-bottom: 8px; }
+  .line .spk { font-weight: 600; margin-right: 6px; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+  .line.partial { opacity: .55; font-style: italic; }
+  .speakers { display: flex; flex-direction: column; gap: 4px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 14px; }
+  .spkbar { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .spkbar .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .spkbar .fill { flex: 1; height: 6px; background: #2a2a2a; border-radius: 3px; overflow: hidden; }
+  .spkbar .fill i { display: block; height: 100%; width: 0%; }
+  pre { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 6px; padding: 8px; font-size: 11px; max-height: 160px; overflow: auto; color: #7c9; }
+  fieldset { border: 1px solid #333; border-radius: 8px; margin: 0 0 12px; padding: 10px 14px; }
+  legend { font-size: 12px; color: #999; padding: 0 6px; }
+  .presets { margin-bottom: 10px; }
+  .presets button { font-size: 12px; padding: 5px 10px; }
+  .presets button.active { background: #2d4a6b; border-color: #5a8fc7; }
+  .sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+  .field { font-size: 11px; color: #999; }
+  .field-top { display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .field-top span:last-child { color: #ddd; font-variant-numeric: tabular-nums; }
+  .field input[type=range] { width: 100%; accent-color: #61afef; }
+  .zone { position: relative; height: 10px; background: #0a0a0a; border-radius: 3px; margin-top: 3px; overflow: hidden; border: 1px solid #222; }
+  .zone i { position: absolute; top: 0; bottom: 0; background: rgba(97,175,239,.65); border-left: 2px solid #8ec4f5; border-right: 2px solid #8ec4f5; }
+  .zone-label { font-size: 10px; color: #666; margin-top: 1px; }
+</style>
+</head>
+<body>
+  <h1>Voice pipeline mockup</h1>
+  <div class="sub">Mic -&gt; Nemotron-3-Diarization + Parakeet streaming ASR. Not wired into the console yet.</div>
+
+  <fieldset>
+    <legend>Mic self-test (bypasses the ML pipeline entirely -- checks only whether the browser is capturing clean audio)</legend>
+    <div class="row" style="margin:0">
+      <button id="recordBtn">Record 3s</button>
+      <button id="playBtn" disabled>Play back</button>
+      <button id="dlBtn" disabled>Download WAV</button>
+      <button id="clipBtn" title="Sends a known ~20s speech clip through the same websocket, no mic needed">Send test clip</button>
+      <span id="recStatus" class="sub" style="margin:0">If playback sounds garbled/distorted/silent, the problem is capture, not the models.</span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Model settings (live-reconfigurable -- Apply reloads both models, a few seconds). Shaded band on each slider = the range that's actually been verified working in this pipeline, not just NVIDIA's published number.</legend>
+    <div class="row presets" style="margin-bottom:10px">
+      <span class="sub" style="margin:0">Presets (NVIDIA's published latency profiles):</span>
+      <button type="button" data-preset="balanced">Balanced (1.04s) -- verified, default</button>
+      <button type="button" data-preset="fast">Fast (0.64s) -- unverified, failed once here</button>
+      <button type="button" data-preset="ultra">Ultra (0.32s) -- unverified</button>
+      <button type="button" data-preset="legacy_small_buffers">Legacy small-buffer (pre-Balanced default)</button>
+    </div>
+    <div class="sliders" id="sliders"></div>
+    <div class="row" style="margin:12px 0 0">
+      <button id="applySettings">Apply &amp; restart session</button>
+      <button id="resetDefaults">Reset to defaults</button>
+      <span id="settingsStatus" class="sub" style="margin:0"></span>
+    </div>
+  </fieldset>
+
+  <div class="row">
+    <label class="sub" style="margin:0">Audio source:
+      <select id="srcMode">
+        <option value="both" selected>Mic + call audio device (you and the call)</option>
+        <option value="dev">Call audio via audio device only (no sharing prompt)</option>
+        <option value="mic">Microphone only</option>
+        <option value="tab">Share a browser tab (fallback, shows a picker)</option>
+      </select>
+    </label>
+    <label class="sub" style="margin:0">Call audio device: <select id="callDevice"><option value="">(none)</option></select></label>
+    <label class="sub" style="margin:0">Mic device: <select id="micDevice"><option value="">default</option></select></label>
+  </div>
+  <div class="row sub" style="margin-top:-6px">
+    The call device is a virtual input that carries what Zoom/Teams plays -- Mac: BlackHole (Multi-Output so you still hear it); Windows: "Stereo Mix" or VB-Cable. Use headphones so the mic doesn't re-capture the speakers.
+  </div>
+  <div class="row">
+    <button id="start">Start listening</button>
+    <button id="stop" disabled>Stop</button>
+    <button id="reset">Reset session</button>
+    <span id="status" class="status">idle</span>
+    <span id="lag" class="sub"></span>
+  </div>
+  <div class="row">
+    <span class="sub" style="width:70px">mic level</span>
+    <div style="flex:1;max-width:300px;height:8px;background:#222;border-radius:4px;overflow:hidden"><i id="level" style="display:block;height:100%;width:0%;background:#61afef;transition:width .05s"></i></div>
+    <span class="sub">blue = OK, red = likely clipping</span>
+  </div>
+  <div class="panes">
+    <div class="transcript" id="transcript"></div>
+    <div>
+      <div class="speakers" id="speakers"></div>
+      <pre id="debug">no messages yet</pre>
+    </div>
+  </div>
+
+<script>
+const COLORS = ["#e06c75","#61afef","#98c379","#e5c07b","#c678dd","#56b6c2","#d19a66","#abb2bf"];
+const N_SPK = 8;
+
+let audioCtx, processor, running = false;
+let streams = [], sources = [];
+let startWarning = '';
+let ws = null;
+let lastSendTime = performance.now();
+let lastKnownSpeaker = 0;
+let defaultsCache = null;
+const transcriptEl = document.getElementById("transcript");
+const speakersEl = document.getElementById("speakers");
+const statusEl = document.getElementById("status");
+const debugEl = document.getElementById("debug");
+const lagEl = document.getElementById("lag");
+const levelEl = document.getElementById("level");
+let curLine = null, lastSpk = null;
+
+function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = "status" + (cls ? " " + cls : ""); }
+
+function renderSpeakers(probs) {
+  speakersEl.replaceChildren();
+  const last = probs && probs.length ? probs[probs.length - 1] : new Array(N_SPK).fill(0);
+  for (let i = 0; i < N_SPK; i++) {
+    const row = document.createElement("div"); row.className = "spkbar";
+    const sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = COLORS[i];
+    const label = document.createElement("span"); label.style.width = "26px"; label.textContent = "V" + (i + 1);
+    const fill = document.createElement("span"); fill.className = "fill";
+    const bar = document.createElement("i"); bar.style.background = COLORS[i]; bar.style.width = Math.round((last[i] || 0) * 100) + "%";
+    fill.appendChild(bar); row.append(sw, label, fill);
+    speakersEl.appendChild(row);
+  }
+}
+
+function appendText(speaker, text, isFinal) {
+  // Each ASR event carries only the newly-decoded fragment since the last event, not the full
+  // running hypothesis -- fragments accumulate onto the current line rather than replace it.
+  if (!text && !isFinal) return;
+  if (!curLine || lastSpk !== speaker) {
+    curLine = document.createElement("div"); curLine.className = "line partial";
+    const spk = document.createElement("span"); spk.className = "spk"; spk.textContent = "V" + (speaker + 1);
+    spk.style.background = COLORS[speaker % COLORS.length]; spk.style.color = "#111";
+    const txt = document.createElement("span"); txt.className = "txt";
+    curLine.append(spk, txt); transcriptEl.appendChild(curLine);
+  }
+  if (text) curLine.querySelector(".txt").textContent += text;
+  curLine.classList.toggle("partial", !isFinal);
+  lastSpk = speaker;
+  if (isFinal) curLine = null;
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+}
+
+function floatTo16(f32) {
+  const out = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++) { const s = Math.max(-1, Math.min(1, f32[i])); out[i] = s < 0 ? s * 32768 : s * 32767; }
+  return out;
+}
+
+function dominant(speakers) {
+  if (!speakers || !speakers.length) return 0;
+  const counts = {};
+  for (const s of speakers) counts[s] = (counts[s] || 0) + 1;
+  return Number(Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]);
+}
+
+// min/max span the full range worth exploring; "ideal" is the shaded band -- for chunk_len/
+// right_context that's [Ultra..Balanced], the three streaming presets NVIDIA publishes and that
+// have actually been tried against this pipeline (Balanced verified working under real-time
+// pacing; Fast measurably failed once -- see pipeline.py's DEFAULT_SETTINGS comment). For
+// fifo_len/spkcache_len/update_period, "ideal" spans both the verified-working legacy defaults
+// and the verified-working Balanced preset, since both are known-good, just different profiles.
+const SETTING_META = {
+  diar_chunk_len:               { key: "s_dcl", label: "diar chunk_len (frames, x80ms)",      min: 1,    max: 20,  step: 1,    ideal: [3, 9] },
+  diar_chunk_right_context:     { key: "s_drc", label: "diar right_context (frames, x80ms)",   min: 0,    max: 10,  step: 1,    ideal: [1, 4] },
+  diar_fifo_len:                { key: "s_dfl", label: "diar fifo_len (frames)",               min: 0,    max: 264, step: 4,    ideal: [150, 264] },
+  diar_spkcache_len:            { key: "s_dsl", label: "diar spkcache_len (frames)",           min: 32,   max: 264, step: 4,    ideal: [200, 264] },
+  diar_spkcache_update_period:  { key: "s_dup", label: "diar update_period (frames)",          min: 50,   max: 300, step: 2,    ideal: [144, 222] },
+  asr_chunk_size_in_secs:       { key: "s_acs", label: "asr chunk_size_in_secs (sec)",         min: 0.02, max: 0.5, step: 0.01, ideal: [0.06, 0.12] },
+  speaker_smoothing:            { key: "s_sm",  label: "speaker label responsiveness (0=sticky, 1=instant; no reload)", min: 0.05, max: 1, step: 0.05, ideal: [0.3, 0.7] },
+};
+
+function buildSliders() {
+  const container = document.getElementById("sliders");
+  container.replaceChildren();
+  for (const [name, m] of Object.entries(SETTING_META)) {
+    const wrap = document.createElement("div"); wrap.className = "field";
+    const top = document.createElement("div"); top.className = "field-top";
+    const label = document.createElement("span"); label.textContent = m.label;
+    const val = document.createElement("span"); val.id = m.key + "_v";
+    top.append(label, val);
+    const input = document.createElement("input");
+    input.type = "range"; input.id = m.key; input.min = m.min; input.max = m.max; input.step = m.step;
+    input.oninput = () => { val.textContent = input.value; };
+    const zone = document.createElement("div"); zone.className = "zone";
+    const band = document.createElement("i");
+    const span = m.max - m.min;
+    band.style.left = (100 * (m.ideal[0] - m.min) / span) + "%";
+    band.style.width = (100 * (m.ideal[1] - m.ideal[0]) / span) + "%";
+    zone.appendChild(band);
+    const zlabel = document.createElement("div"); zlabel.className = "zone-label";
+    zlabel.textContent = `range ${m.min}-${m.max}, verified-good band ${m.ideal[0]}-${m.ideal[1]}`;
+    wrap.append(top, input, zone, zlabel);
+    container.appendChild(wrap);
+  }
+}
+
+function fillSettingsForm(s) {
+  for (const [name, m] of Object.entries(SETTING_META)) {
+    const v = s[name] ?? (m.ideal[0] + m.ideal[1]) / 2;
+    document.getElementById(m.key).value = v;
+    document.getElementById(m.key + "_v").textContent = v;
+  }
+}
+
+function readSettingsForm() {
+  const out = {};
+  for (const [name, m] of Object.entries(SETTING_META)) out[name] = Number(document.getElementById(m.key).value);
+  return out;
+}
+
+let presetsCache = null;
+function applyPresetToForm(name) {
+  if (!presetsCache || !presetsCache[name]) return;
+  const preset = presetsCache[name];
+  for (const [k, v] of Object.entries(preset)) {
+    const m = SETTING_META[k];
+    if (m) { document.getElementById(m.key).value = v; document.getElementById(m.key + "_v").textContent = v; }
+  }
+  document.querySelectorAll(".presets button").forEach((b) => b.classList.toggle("active", b.dataset.preset === name));
+}
+
+const stats = { asr: 0, asrText: 0, diar: 0 };
+let debugLast = { diar: null, asr: null, other: null }, debugDirty = false;
+function paintDebug() {
+  if (!debugDirty) return;
+  debugDirty = false;
+  debugEl.textContent = `events: asr=${stats.asr} (with text=${stats.asrText}) diar=${stats.diar}\n` +
+    JSON.stringify(debugLast, null, 1).slice(0, 1800);
+}
+setInterval(paintDebug, 250); // throttled: never repaint per-message
+
+function handleResult(data) {
+  // Empty ASR events arrive ~12/s (one per 80ms step); only count them, never repaint for them.
+  if (data.kind === "asr") { stats.asr++; if (data.text) { stats.asrText++; debugLast.asr = data; debugDirty = true; } }
+  else if (data.kind === "diar") { stats.diar++; debugLast.diar = { smoothed_speaker: data.smoothed_speaker, frames: (data.speakers || []).length }; debugDirty = true; }
+  else { debugLast.other = data; debugDirty = true; }
+  if (data.kind === "error" || data.error) { setStatus(data.error, "err"); return; }
+  if (data.kind === "settings") { defaultsCache = data.defaults; presetsCache = data.presets; fillSettingsForm(data.settings); return; }
+  if (data.kind === "configured") {
+    const s = document.getElementById("settingsStatus");
+    if (data.ok) { s.textContent = "applied " + JSON.stringify(data.settings); fillSettingsForm(data.settings); }
+    else { s.textContent = "failed: " + data.error; }
+    return;
+  }
+  if (data.kind === "diar") { lastKnownSpeaker = data.smoothed_speaker ?? dominant(data.speakers); renderSpeakers(data.speaker_probs); return; }
+  if (data.kind === "asr") { appendText(lastKnownSpeaker, data.text, data.is_final); return; }
+}
+
+function connectWs() {
+  return new Promise((resolve, reject) => {
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(proto + "//" + location.host + "/ws");
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => resolve(ws);
+    ws.onerror = () => reject(new Error("websocket error"));
+    ws.onclose = () => { if (running) setStatus("connection closed", "err"); };
+    ws.onmessage = (ev) => { try { handleResult(JSON.parse(ev.data)); } catch (e) { console.error(e); } };
+  });
+}
+
+// Runs on the dedicated audio rendering thread (not main), so it can't glitch/drop samples
+// under main-thread contention the way the deprecated ScriptProcessorNode could -- that
+// glitching is a real, likely cause of "garbled" transcription, not just a deprecation warning.
+const WORKLET_SRC = `
+class PCMCapture extends AudioWorkletProcessor {
+  process(inputs) {
+    const ch = inputs[0] && inputs[0][0];
+    if (ch && ch.length) this.port.postMessage(ch.slice());
+    return true;
+  }
+}
+registerProcessor('pcm-capture', PCMCapture);
+`;
+const WORKLET_URL = URL.createObjectURL(new Blob([WORKLET_SRC], { type: "application/javascript" }));
+let sendBuf = [];
+let silentGain = null;
+
+function rms(f32) {
+  let s = 0; for (let i = 0; i < f32.length; i++) s += f32[i] * f32[i];
+  return Math.sqrt(s / f32.length);
+}
+
+// Raw signal, not telephony-processed: echoCancellation/noiseSuppression/autoGainControl are
+// WebRTC voice-call features tuned to suppress/compress audio for bandwidth and double-talk, not
+// to preserve fidelity for capture/ASR -- they can distort or clip speech. Off everywhere here.
+const RAW_AUDIO_CONSTRAINTS = { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+
+async function acquireStreams(mode) {
+  const out = [];
+  const fail = (e) => { out.forEach((st) => st.getTracks().forEach((t) => t.stop())); throw e; };
+  const dev = (id) => (id ? { ...RAW_AUDIO_CONSTRAINTS, deviceId: { exact: id } } : RAW_AUDIO_CONSTRAINTS);
+  try {
+    if (mode === "mic" || mode === "both") {
+      out.push(await navigator.mediaDevices.getUserMedia({ audio: dev(document.getElementById("micDevice").value) }));
+    }
+    if (mode === "dev" || mode === "both") {
+      let id = document.getElementById("callDevice").value;
+      if (!id) {
+        // Device names are hidden until the browser has granted mic permission once: unlock, re-list, auto-pick.
+        (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop());
+        await refreshMicDevices();
+        id = document.getElementById("callDevice").value;
+      }
+      if (id && mode === "both" && id === document.getElementById("micDevice").value) {
+        throw new Error("Call audio device is the same as the Mic device -- it would transcribe you twice. Pick a virtual input (Stereo Mix / VB-Cable / BlackHole).");
+      }
+      if (!id) {
+        const names = [...document.getElementById("callDevice").options].slice(1).map((o) => o.text).join(" | ") || "none";
+        const msg = "No loopback/virtual input found (Stereo Mix / VB-Cable / BlackHole). Inputs the browser can see: " + names;
+        if (mode === "dev") throw new Error(msg);
+        startWarning = msg + " -- running with the mic only.";
+      } else {
+        out.push(await navigator.mediaDevices.getUserMedia({ audio: dev(id) }));
+      }
+    }
+    if (mode === "tab") {
+      // Fallback only: Chrome forces a share picker and requires video:true; we keep just the audio.
+      const d = await navigator.mediaDevices.getDisplayMedia({
+        video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      });
+      if (!d.getAudioTracks().length) {
+        d.getTracks().forEach((t) => t.stop());
+        throw new Error("The share had no audio. Choose a Chrome TAB and tick 'Share tab audio'.");
+      }
+      d.getVideoTracks().forEach((t) => t.stop());
+      d.getAudioTracks()[0].addEventListener("ended", () => { if (running) stop(); });
+      out.push(new MediaStream(d.getAudioTracks()));
+    }
+  } catch (e) { fail(e); }
+  return out;
+}
+
+const VIRTUAL_RE = /blackhole|vb-?audio|cable|loopback|stereo mix|what u hear|virtual|soundflower|voicemeeter/i;
+const store = { get: (k) => { try { return localStorage.getItem("voice." + k) || ""; } catch { return ""; } },
+                set: (k, v) => { try { localStorage.setItem("voice." + k, v); } catch {} } };
+async function refreshMicDevices() {
+  try {
+    const mic = document.getElementById("micDevice"), call = document.getElementById("callDevice");
+    const mode = document.getElementById("srcMode");
+    const curMic = mic.value || store.get("mic"), curCall = call.value || store.get("call");
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput" && d.deviceId !== "communications");
+    const opts = (first) => [new Option(first, ""), ...devs.map((d, i) => new Option(d.label || "input " + (i + 1), d.deviceId))];
+    mic.replaceChildren(...opts("default")); call.replaceChildren(...opts("(none found -- see setup note)"));
+    mic.value = curMic;
+    // Default the call device to a virtual/loopback input only -- never to a real microphone,
+    // which would transcribe your own voice twice.
+    const auto = devs.find((d) => VIRTUAL_RE.test(d.label) && d.deviceId !== mic.value);
+    call.value = curCall || (auto ? auto.deviceId : "");
+    if (!mode.dataset.init) { mode.value = store.get("mode") || "both"; mode.dataset.init = "1"; }
+  } catch (e) { /* labels need mic permission; harmless */ }
+}
+["micDevice", "callDevice", "srcMode"].forEach((id) => {
+  const k = { micDevice: "mic", callDevice: "call", srcMode: "mode" }[id];
+  document.getElementById(id).addEventListener("change", (e) => store.set(k, e.target.value));
+});
+
+async function start() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) await connectWs();
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  await audioCtx.audioWorklet.addModule(WORKLET_URL);
+  startWarning = '';
+  streams = await acquireStreams(document.getElementById("srcMode").value);
+  sources = streams.map((st) => audioCtx.createMediaStreamSource(st));
+  refreshMicDevices();
+  processor = new AudioWorkletNode(audioCtx, "pcm-capture");
+  if (audioCtx.sampleRate !== 16000) setStatus(`warning: context is ${audioCtx.sampleRate}Hz, not 16000 -- audio will be mis-sized`, "err");
+  sendBuf = [];
+  processor.port.onmessage = (e) => {
+    const f32 = e.data;
+    levelEl.style.width = Math.min(100, Math.round(rms(f32) * 400)) + "%";
+    levelEl.style.background = rms(f32) > 0.9 ? "#e06c75" : "#61afef"; // flag likely clipping
+    sendBuf.push(f32);
+    let total = sendBuf.reduce((n, b) => n + b.length, 0);
+    if (total >= 2048) {
+      const merged = new Float32Array(total);
+      let off = 0; for (const b of sendBuf) { merged.set(b, off); off += b.length; }
+      sendBuf = [];
+      if (ws && ws.readyState === WebSocket.OPEN) { ws.send(floatTo16(merged).buffer); lastSendTime = performance.now(); }
+    }
+  };
+  // No client-side exact-chunk bookkeeping needed: the server accumulates whatever arrives on
+  // the persistent WS connection and slices it into each model's own required exact stride
+  // (pipeline.feed) -- independently per model, so this works regardless of the Settings panel.
+  silentGain = audioCtx.createGain(); silentGain.gain.value = 0; // keep the graph active without audible mic feedback through the speakers
+  sources.forEach((src) => src.connect(processor)); processor.connect(silentGain); silentGain.connect(audioCtx.destination);
+  running = true;
+  setStatus("listening @ " + audioCtx.sampleRate + "Hz" + (startWarning ? " -- " + startWarning : ""), startWarning ? "err" : "live");
+  document.getElementById("start").disabled = true; document.getElementById("stop").disabled = false;
+}
+
+function stop() {
+  running = false;
+  if (processor) { processor.disconnect(); processor.port.onmessage = null; }
+  sources.forEach((src) => src.disconnect()); sources = [];
+  if (silentGain) silentGain.disconnect();
+  streams.forEach((st) => st.getTracks().forEach((t) => t.stop())); streams = [];
+  if (audioCtx) audioCtx.close();
+  // WS stays open -- Settings panel and Reset still work without the mic running.
+  levelEl.style.width = "0%";
+  setStatus("stopped");
+  document.getElementById("start").disabled = false; document.getElementById("stop").disabled = true;
+}
+
+// ---------- mic self-test: record raw capture, play it back / download it, entirely bypassing
+// the ML pipeline. If this sounds garbled, the problem is browser/OS capture, not the models. ----------
+let recordedFloat = null;
+
+function encodeWav(float32, sampleRate) {
+  const int16 = floatTo16(float32);
+  const buf = new ArrayBuffer(44 + int16.length * 2);
+  const view = new DataView(buf);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0, "RIFF"); view.setUint32(4, 36 + int16.length * 2, true); writeStr(8, "WAVE");
+  writeStr(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  writeStr(36, "data"); view.setUint32(40, int16.length * 2, true);
+  let off = 44; for (let i = 0; i < int16.length; i++, off += 2) view.setInt16(off, int16[i], true);
+  return new Blob([buf], { type: "audio/wav" });
+}
+
+async function recordSelfTest(seconds) {
+  const recordBtn = document.getElementById("recordBtn"), playBtn = document.getElementById("playBtn"), dlBtn = document.getElementById("dlBtn");
+  const recStatus = document.getElementById("recStatus");
+  recordBtn.disabled = true; playBtn.disabled = true; dlBtn.disabled = true;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    await ctx.audioWorklet.addModule(WORKLET_URL);
+    const testStream = await navigator.mediaDevices.getUserMedia({ audio: RAW_AUDIO_CONSTRAINTS });
+    const src = ctx.createMediaStreamSource(testStream);
+    const node = new AudioWorkletNode(ctx, "pcm-capture");
+    const chunks = [];
+    node.port.onmessage = (e) => chunks.push(e.data);
+    const silent = ctx.createGain(); silent.gain.value = 0;
+    src.connect(node); node.connect(silent); silent.connect(ctx.destination);
+    recStatus.textContent = `recording ${seconds}s -- speak now...`;
+    await new Promise((r) => setTimeout(r, seconds * 1000));
+    node.disconnect(); src.disconnect(); silent.disconnect();
+    testStream.getTracks().forEach((t) => t.stop());
+    const rate = ctx.sampleRate;
+    await ctx.close();
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const data = new Float32Array(total);
+    let off = 0; for (const c of chunks) { data.set(c, off); off += c.length; }
+    recordedFloat = { data, rate };
+    recStatus.textContent = `recorded ${(total / rate).toFixed(1)}s @ ${rate}Hz -- press "Play back" and listen for garbling/distortion`;
+    playBtn.disabled = false; dlBtn.disabled = false;
+  } catch (e) {
+    recStatus.textContent = String(e);
+  } finally {
+    recordBtn.disabled = false;
+  }
+}
+
+function playRecording() {
+  if (!recordedFloat) return;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: recordedFloat.rate });
+  const buf = ctx.createBuffer(1, recordedFloat.data.length, recordedFloat.rate);
+  buf.copyToChannel(recordedFloat.data, 0);
+  const src = ctx.createBufferSource();
+  src.buffer = buf; src.connect(ctx.destination); src.start();
+  src.onended = () => ctx.close();
+}
+
+function downloadRecording() {
+  if (!recordedFloat) return;
+  const blob = encodeWav(recordedFloat.data, recordedFloat.rate);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "mic_self_test.wav";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+async function sendTestClip() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) await connectWs();
+  const pcm = new Uint8Array(await (await fetch("/warmup.pcm")).arrayBuffer());
+  setStatus("sending test clip...", "live");
+  for (let off = 0; off < pcm.length && ws.readyState === WebSocket.OPEN; off += 8192) {
+    ws.send(pcm.slice(off, off + 8192).buffer);
+    await new Promise((r) => setTimeout(r, 256)); // real-time pace (4096 samples @16kHz)
+  }
+  setStatus("test clip sent");
+}
+window.sendTestClip = sendTestClip;
+document.getElementById("clipBtn").onclick = () => sendTestClip().catch((e) => setStatus(String(e), "err"));
+setInterval(() => console.log("[voice]", JSON.stringify(stats), "transcript chars:", transcriptEl.textContent.length, "lines:", transcriptEl.children.length), 2000);
+
+document.getElementById("recordBtn").onclick = () => recordSelfTest(3);
+document.getElementById("playBtn").onclick = playRecording;
+document.getElementById("dlBtn").onclick = downloadRecording;
+
+document.getElementById("applySettings").onclick = async () => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) await connectWs();
+  document.getElementById("settingsStatus").textContent = "applying (reloading both models, a few seconds)...";
+  ws.send(JSON.stringify({ cmd: "configure", settings: readSettingsForm() }));
+};
+document.getElementById("resetDefaults").onclick = () => { if (defaultsCache) fillSettingsForm(defaultsCache); };
+document.querySelectorAll(".presets button").forEach((b) => { b.onclick = () => applyPresetToForm(b.dataset.preset); });
+
+document.getElementById("start").onclick = () => start().catch((e) => setStatus(String(e), "err"));
+document.getElementById("reset").onclick = () => {
+  transcriptEl.replaceChildren(); curLine = null;
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ cmd: "reset" }));
+};
+document.getElementById("stop").onclick = stop;
+
+renderSpeakers([]);
+buildSliders();
+refreshMicDevices();
+connectWs().catch((e) => setStatus(String(e), "err"));
+</script>
+</body>
+</html>

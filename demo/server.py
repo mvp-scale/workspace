@@ -542,12 +542,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, {"error": "not found"})
         try:
             req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-            body = {"state": req["state"], "model": "jev-latest", "questions": {"decision": req["question"]}}
-        except (ValueError, KeyError):
-            return self._send(400, {"error": "need JSON {state, question}"})
+            qs = req.get("questions")
+            if qs is not None:  # a battery: many questions about one state, answered together in one call per model
+                assert isinstance(qs, dict) and 0 < len(qs) <= 20 and all(isinstance(v, dict) and v.get("type") in ("choice", "score", "noul") for v in qs.values())
+                body, whole = {"state": req["state"], "model": "jev-latest", "questions": qs}, True
+            else:
+                body, whole = {"state": req["state"], "model": "jev-latest", "questions": {"decision": req["question"]}}, False
+        except (ValueError, KeyError, AssertionError, TypeError):
+            return self._send(400, {"error": "need JSON {state, question} or {state, questions:{id: question}}"})
         up = {n: v.get("up") for n, v in status().items()}
         with ThreadPoolExecutor(len(BACKENDS)) as ex:
-            futs = [ex.submit(call, n, c, body) if up.get(n) else None for n, c in BACKENDS.items()]
+            futs = [ex.submit(call, n, c, body, whole) if up.get(n) else None for n, c in BACKENDS.items()]
             self._send(200, [f.result() if f else {"backend": n, "error": "Not loaded"} for f, n in zip(futs, BACKENDS)])
 
     def log_message(self, *a):

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Live speaker transcription</title>
+<style>
+  :root { color-scheme: dark; }
+  body { background: #111; color: #e8e8e8; font: 14px/1.45 -apple-system, system-ui, sans-serif; margin: 0; padding: 20px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  a { color: #7db7ee; }
+  .sub { color: #999; font-size: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  button, select { background: #2a2a2a; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 7px 12px; font-size: 13px; }
+  button { cursor: pointer; } button:hover { background: #333; } button:disabled { opacity: .4; cursor: default; }
+  .status { font-size: 12px; padding: 4px 10px; border-radius: 12px; background: #222; }
+  .status.live { background: #2d4a2d; color: #8f8; } .status.err { background: #4a2d2d; color: #f88; }
+  fieldset { border: 1px solid #333; border-radius: 8px; margin: 0 0 12px; padding: 10px 14px; }
+  legend { font-size: 12px; color: #999; padding: 0 6px; }
+  .panes { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+  .transcript { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 14px; min-height: 320px; max-height: 62vh; overflow-y: auto; }
+  .seg { margin-bottom: 10px; display: flex; gap: 8px; }
+  .seg .chip { flex: none; font-weight: 600; padding: 1px 8px; border-radius: 4px; font-size: 11px; height: 18px; color: #111; }
+  .seg .t { color: #777; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .seg.live .txt { opacity: .6; font-style: italic; }
+  .cards { display: flex; flex-direction: column; gap: 6px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .card { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .card .dot { width: 10px; height: 10px; border-radius: 50%; background: #333; flex: none; }
+  .card.on .dot { box-shadow: 0 0 8px currentColor; background: currentColor; }
+  .grp { margin: 12px 0 4px; font-size: 12px; color: #9ab; border-bottom: 1px solid #2a2a2a; padding-bottom: 2px; }
+  .set { display: grid; grid-template-columns: 240px 1fr; gap: 2px 14px; margin-bottom: 8px; font-size: 12px; align-items: center; }
+  .settop { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .settop .val { color: #fff; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; }
+  .badge.ok { background: #1f3a24; color: #8fd19e; } .badge.diff { background: #4a3a1a; color: #f0c674; }
+  .set input[type=range] { width: 100%; accent-color: #61afef; }
+  .zone { position: relative; height: 8px; background: #0a0a0a; border: 1px solid #222; border-radius: 3px; margin-top: 2px; }
+  .zone i { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1px; background: #8fd19e; border-radius: 2px; }
+  .zone::after { content: "NVIDIA guide"; position: absolute; right: 4px; top: -1px; font-size: 8px; color: #555; }
+  .stops button { padding: 3px 10px; font-size: 12px; } .stops button.sel { background: #2d4a6b; border-color: #5a8fc7; }
+  .help { grid-column: 1 / -1; color: #777; font-size: 11px; margin-top: -2px; }
+  .pill { font-size: 12px; padding: 4px 12px; border-radius: 12px; }
+  .pill.ok { background: #1f3a24; color: #8fd19e; } .pill.diff { background: #4a3a1a; color: #f0c674; }
+  .why { color: #8a8a8a; font-size: 11px; margin-top: 8px; line-height: 1.5; }
+  pre { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 6px; padding: 8px; font-size: 11px; max-height: 150px; overflow: auto; color: #7c9; white-space: pre-wrap; margin: 0; }
+</style>
+</head>
+<body>
+  <h1>Live speaker-attributed transcription</h1>
+  <div class="sub">Nemotron-3-Diarization + multitalker Parakeet, coupled through NeMo's <code>SpeakerTaggedASR</code> exactly as in NVIDIA's
+    <a href="https://huggingface.co/nvidia/Nemotron-3-Diarization/blob/main/ASR_INTEGRATION_GUIDE.md" target="_blank" rel="noopener">ASR Integration Guide</a>
+    (source of truth; verbatim copies + checksums in <code>reference/</code>).</div>
+
+  <fieldset style="margin-top:12px">
+    <legend>Settings vs NVIDIA's production configuration</legend>
+    <details id="setDetails">
+    <summary style="cursor:pointer;display:flex;gap:10px;align-items:center;flex-wrap:wrap;list-style-position:inside">
+      <span id="align" class="pill ok">loading...</span>
+      <span id="rt" class="sub"></span>
+      <span class="sub">(click to open all settings)</span>
+    </summary>
+    <div id="settings"></div>
+    <div class="row" style="margin:10px 0 0">
+      <button id="applySet" disabled>Apply changes (restarts the session)</button>
+      <button id="resetGuide">Reset to NVIDIA guide</button>
+      <span id="setMsg" class="sub"></span>
+    </div>
+    <div class="why"><b>What "production-aligned" means here</b> (from the guide): ASR and diarization are one coupled pipeline; the ASR keeps a separate stream per speaker, conditioned on the diarizer's speaker activity; their frame geometry must stay aligned and is validated by NeMo (an invalid combination is rejected and the previous settings are kept); each client gets its own session; models are shared. Green marker = NVIDIA's value. "guide table" settings are documented by NVIDIA; "guide example" ones only appear with a value in its example config, so their help text comes from NeMo's source.</div>
+      </details>
+  </fieldset>
+
+  <fieldset>
+    <legend>Test without a mic</legend>
+    <div class="row" style="margin:0">
+      <button id="clip2">Send 2-voice test (male / female / male)</button>
+      <button id="clip1">Send 1-voice test</button>
+      <button id="recordBtn">Record 3s mic self-test</button>
+      <button id="playBtn" disabled>Play back</button>
+      <button id="dlBtn" disabled>Download WAV</button>
+      <span id="recStatus" class="sub"></span>
+    </div>
+  </fieldset>
+
+  <div class="row">
+    <label class="sub">Audio source:
+      <select id="srcMode">
+        <option value="both" selected>Mic + call audio device (needs a loopback device, e.g. Stereo Mix/VB-Cable)</option>
+        <option value="dev">Call audio via audio device only (needs a loopback device)</option>
+        <option value="mic">Microphone only</option>
+        <option value="screen">Mic + screen/system audio (no install -- pick "Entire Screen" + "Share system audio" in the browser's dialog)</option>
+        <option value="tab">Screen/system audio only, no mic (same no-install dialog)</option>
+      </select></label>
+    <label class="sub">Call audio device: <select id="callDevice"><option value="">(none)</option></select></label>
+    <label class="sub">Mic device: <select id="micDevice"><option value="">default</option></select></label>
+  </div>
+  <div class="row">
+    <button id="start">Start listening</button>
+    <button id="stop" disabled>Stop</button>
+    <button id="reset">New session</button>
+    <span id="status" class="status">idle</span>
+    <span class="sub" style="margin-left:8px">mic level</span>
+    <div style="width:200px;height:8px;background:#222;border-radius:4px;overflow:hidden"><i id="level" style="display:block;height:100%;width:0%;background:#61afef"></i></div>
+  </div>
+
+  <div class="sub" id="path" style="margin:-4px 0 10px">Audio path: not started.</div>
+
+  <div class="panes">
+    <div>
+      <label class="sub"><input type="checkbox" id="merge" checked> Merge consecutive lines from the same speaker (untick to see NeMo's raw segments, split at each pause)</label>
+      <div class="transcript" id="transcript" style="margin-top:6px"></div>
+    </div>
+    <div>
+      <div class="cards" id="cards"><span class="sub">Speakers appear as they're detected.</span></div>
+      <pre id="debug">no messages yet</pre>
+    </div>
+  </div>
+
+<script>
+const COLORS = ["#e06c75","#61afef","#98c379","#e5c07b","#c678dd","#56b6c2","#d19a66","#abb2bf"];
+const $ = (id) => document.getElementById(id);
+let ws = null, audioCtx, processor, running = false, streams = [], sources = [], silentGain = null, sendBuf = [];
+let startWarning = "", lastAudioS = 0;
+const tx = { peak: 0, clipped: 0, samples: 0, msgs: 0, t0: 0, desc: "" };
+const stats = { transcripts: 0, segments: 0, errors: 0 };
+
+function setStatus(text, cls) { $("status").textContent = text; $("status").className = "status" + (cls ? " " + cls : ""); }
+const spkNum = (s) => Number(String(s).replace(/\D/g, "")) || 0;
+const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+
+// ---------- rendering (all data via textContent, never innerHTML) ----------
+let lastSegs = [], lastAudioSeen = 0;
+function turns(segs) {
+  if (!$("merge").checked) return segs.map((x) => ({ ...x }));
+  const out = [];
+  for (const x of segs) {
+    const last = out[out.length - 1];
+    if (last && last.speaker === x.speaker) { last.words += " " + x.words; last.end_time = x.end_time; }
+    else out.push({ ...x });
+  }
+  return out;
+}
+function renderTranscript(segments, audioS) {
+  lastSegs = segments; lastAudioSeen = audioS; lastAudioS = audioS;
+  const el = $("transcript"), stick = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
+  const sorted = [...segments].sort((a, b) => a.start_time - b.start_time);
+  const segs = turns(sorted);
+  el.replaceChildren(...segs.map((s) => {
+    const d = document.createElement("div");
+    d.className = "seg" + (s.end_time >= audioS - 1.3 ? " live" : "");
+    const chip = document.createElement("span"); chip.className = "chip";
+    const n = spkNum(s.speaker); chip.textContent = "Speaker " + (n + 1); chip.style.background = COLORS[n % COLORS.length];
+    const body = document.createElement("div");
+    const t = document.createElement("span"); t.className = "t"; t.textContent = `${fmt(s.start_time)}-${fmt(s.end_time)}`;
+    const txt = document.createElement("div"); txt.className = "txt"; txt.textContent = s.words;
+    body.append(t, txt); d.append(chip, body); return d;
+  }));
+  if (stick) el.scrollTop = el.scrollHeight;
+  const seen = {};
+  for (const s of sorted) { const n = spkNum(s.speaker); seen[n] = Math.max(seen[n] ?? 0, s.end_time); }
+  const ids = Object.keys(seen).map(Number).sort((a, b) => a - b);
+  $("cards").replaceChildren(...ids.map((n) => {
+    const on = seen[n] >= audioS - 1.3;
+    const c = document.createElement("div"); c.className = "card" + (on ? " on" : ""); c.style.color = COLORS[n % COLORS.length];
+    const dot = document.createElement("span"); dot.className = "dot";
+    const lab = document.createElement("span"); lab.style.color = "#ddd"; lab.textContent = `Speaker ${n + 1}` + (on ? " (speaking)" : "");
+    c.append(dot, lab); return c;
+  }));
+  stats.transcripts++; stats.segments = segs.length;
+}
+$("merge").onchange = () => renderTranscript(lastSegs, lastAudioSeen);
+
+// ---------- settings panel: built from the server's metadata; every control shows NVIDIA's value ----------
+let SETTINGS = null, draft = {};
+const fmtv = (v) => (typeof v === "boolean" ? (v ? "on" : "off") : String(v));
+const same = (a, b) => Math.abs(Number(a) - Number(b)) < 1e-9;
+function refreshRow(m) {
+  const row = document.querySelector(`.set[data-key="${m.key}"]`); if (!row) return;
+  const g = SETTINGS.guide[m.key], v = draft[m.key], ok = same(v, g);
+  row.querySelector(".val").textContent = fmtv(v);
+  const b = row.querySelector(".badge"); b.textContent = ok ? "matches NVIDIA" : "NVIDIA: " + fmtv(g); b.className = "badge " + (ok ? "ok" : "diff");
+  row.querySelectorAll(".stops button").forEach((x) => x.classList.toggle("sel", Number(x.dataset.v) === Number(v)));
+}
+function refreshAlign() {
+  const diffs = SETTINGS.meta.filter((m) => !same(draft[m.key], SETTINGS.guide[m.key])).map((m) => m.label);
+  const pill = $("align");
+  if (!diffs.length) { pill.textContent = "Production-aligned: every setting matches NVIDIA's guide"; pill.className = "pill ok"; pill.title = ""; }
+  else { pill.textContent = `${diffs.length} setting${diffs.length > 1 ? "s" : ""} differ from NVIDIA's guide (hover for the list)`; pill.className = "pill diff"; pill.title = diffs.join("\n"); }
+  $("applySet").disabled = SETTINGS.meta.every((m) => same(draft[m.key], SETTINGS.values[m.key]));
+}
+function buildSettings(g) {
+  SETTINGS = g; draft = { ...g.values };
+  const root = $("settings"); root.replaceChildren();
+  let grp = null;
+  for (const m of g.meta) {
+    if (m.group !== grp) { grp = m.group; const h = document.createElement("div"); h.className = "grp"; h.textContent = grp; root.appendChild(h); }
+    const row = document.createElement("div"); row.className = "set"; row.dataset.key = m.key;
+    const top = document.createElement("div"); top.className = "settop";
+    const lab = document.createElement("span"); lab.textContent = m.label;
+    const val = document.createElement("span"); val.className = "val";
+    const badge = document.createElement("span"); badge.className = "badge";
+    top.append(lab, val, badge);
+    let ctl;
+    if (m.kind === "range") {
+      ctl = document.createElement("div");
+      const inp = document.createElement("input"); inp.type = "range"; inp.min = m.min; inp.max = m.max; inp.step = m.step; inp.value = draft[m.key];
+      inp.oninput = () => { draft[m.key] = Number(inp.value); refreshRow(m); refreshAlign(); };
+      const zone = document.createElement("div"); zone.className = "zone"; const tick = document.createElement("i");
+      tick.style.left = (100 * (g.guide[m.key] - m.min) / (m.max - m.min)) + "%"; zone.appendChild(tick);
+      ctl.append(inp, zone);
+    } else if (m.kind === "stops") {
+      ctl = document.createElement("div"); ctl.className = "stops";
+      for (const st of m.stops) {
+        const b = document.createElement("button"); b.type = "button"; b.dataset.v = st;
+        b.textContent = st + (st === g.guide[m.key] ? " (NVIDIA)" : "");
+        b.onclick = () => { draft[m.key] = st; refreshRow(m); refreshAlign(); }; ctl.appendChild(b);
+      }
+    } else {
+      ctl = document.createElement("label");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!draft[m.key];
+      cb.onchange = () => { draft[m.key] = cb.checked; refreshRow(m); refreshAlign(); };
+      ctl.append(cb, document.createTextNode(" on"));
+    }
+    const help = document.createElement("div"); help.className = "help"; help.textContent = `${m.help}  [source: ${m.src}]`;
+    row.append(top, ctl, help); root.appendChild(row); refreshRow(m);
+  }
+  refreshAlign();
+}
+$("applySet").onclick = () => { $("setMsg").textContent = "applying (rebuilding the session)..."; send({ cmd: "configure", settings: draft }); };
+$("resetGuide").onclick = () => { $("setMsg").textContent = "resetting to NVIDIA's guide..."; send({ cmd: "reset_to_guide" }); };
+
+let dbg = {}, dbgDirty = false;
+setInterval(() => { if (!dbgDirty) return; dbgDirty = false; $("debug").textContent = JSON.stringify({ stats, ...dbg }, null, 1).slice(0, 1500); }, 300);
+setInterval(() => console.log("[voice]", JSON.stringify(stats), "audio_s", lastAudioS), 2000);
+
+function handleResult(m) {
+  if (m.kind === "transcript") {
+    renderTranscript(m.segments, m.audio_s); dbg.latest_audio_s = m.audio_s; dbgDirty = true;
+    if (m.step_ms) {
+      const pct = Math.round(100 * m.step_ms / m.hop_ms);
+      $("rt").textContent = `real-time margin: ${m.step_ms} ms compute per ${m.hop_ms} ms output interval (${pct}% of real time${pct > 80 ? " -- too tight, will lag" : ""})`;
+    }
+    return;
+  }
+  if (m.kind === "settings" || m.kind === "configured") {
+    buildSettings(m.settings); dbg.settings = m.settings.values; dbgDirty = true;
+    if (m.kind === "configured") $("setMsg").textContent = m.ok ? "applied" : m.error;
+    return;
+  }
+  if (m.kind === "error") { stats.errors++; setStatus(m.error, "err"); dbg.error = m.error; dbgDirty = true; return; }
+  dbg.last = m; dbgDirty = true;
+}
+
+function connectWs() {
+  return new Promise((resolve, reject) => {
+    ws = new WebSocket((location.protocol === "https:" ? "wss:" : "ws:") + "//" + location.host + "/ws");
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => resolve(ws);
+    ws.onerror = () => reject(new Error("websocket error"));
+    ws.onclose = () => { if (running) setStatus("connection closed", "err"); };
+    ws.onmessage = (ev) => { try { handleResult(JSON.parse(ev.data)); } catch (e) { console.error(e); } };
+  });
+}
+const send = (obj) => ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(obj));
+
+// ---------- audio capture (worklet on the audio thread; raw, no browser voice processing) ----------
+const WORKLET_URL = URL.createObjectURL(new Blob([`
+class PCMCapture extends AudioWorkletProcessor {
+  process(inputs) { const ch = inputs[0] && inputs[0][0]; if (ch && ch.length) this.port.postMessage(ch.slice()); return true; }
+}
+registerProcessor('pcm-capture', PCMCapture);`], { type: "application/javascript" }));
+const RAW = { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+const floatTo16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); o[i] = s < 0 ? s * 32768 : s * 32767; } return o; };
+const rms = (f) => { let s = 0; for (let i = 0; i < f.length; i++) s += f[i] * f[i]; return Math.sqrt(s / f.length); };
+
+const VIRTUAL_RE = /blackhole|vb-?audio|cable|loopback|stereo mix|what u hear|virtual|soundflower|voicemeeter/i;
+const store = { get: (k) => { try { return localStorage.getItem("voice." + k) || ""; } catch { return ""; } }, set: (k, v) => { try { localStorage.setItem("voice." + k, v); } catch {} } };
+async function refreshDevices() {
+  try {
+    const mic = $("micDevice"), call = $("callDevice");
+    const curMic = mic.value || store.get("mic"), curCall = call.value || store.get("call");
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput" && d.deviceId !== "communications");
+    const opts = (first) => [new Option(first, ""), ...devs.map((d, i) => new Option(d.label || "input " + (i + 1), d.deviceId))];
+    mic.replaceChildren(...opts("default")); call.replaceChildren(...opts("(none found -- see setup note)"));
+    mic.value = curMic;
+    const auto = devs.find((d) => VIRTUAL_RE.test(d.label) && d.deviceId !== mic.value);
+    call.value = curCall || (auto ? auto.deviceId : "");
+    if (!$("srcMode").dataset.init) { $("srcMode").value = store.get("mode") || "both"; $("srcMode").dataset.init = "1"; }
+  } catch {}
+}
+[["micDevice", "mic"], ["callDevice", "call"], ["srcMode", "mode"]].forEach(([id, k]) => $(id).addEventListener("change", (e) => store.set(k, e.target.value)));
+
+async function acquireStreams(mode) {
+  const out = [], dev = (id) => (id ? { ...RAW, deviceId: { exact: id } } : RAW);
+  try {
+    if (mode === "mic" || mode === "both") out.push(await navigator.mediaDevices.getUserMedia({ audio: dev($("micDevice").value) }));
+    if (mode === "dev" || mode === "both") {
+      let id = $("callDevice").value;
+      if (!id) { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop()); await refreshDevices(); id = $("callDevice").value; }
+      if (id && mode === "both" && id === $("micDevice").value) throw new Error("Call audio device is the same as the Mic device -- it would transcribe you twice.");
+      if (!id) {
+        const names = [...$("callDevice").options].slice(1).map((o) => o.text).join(" | ") || "none";
+        const msg = "No loopback/virtual input found (Stereo Mix / VB-Cable / BlackHole). Inputs seen: " + names;
+        if (mode === "dev") throw new Error(msg);
+        startWarning = msg + " -- running with the mic only.";
+      } else out.push(await navigator.mediaDevices.getUserMedia({ audio: dev(id) }));
+    }
+    if (mode === "screen" || mode === "tab") {
+      if (mode === "screen") out.push(await navigator.mediaDevices.getUserMedia({ audio: dev($("micDevice").value) }));
+      // getDisplayMedia's own picker offers Tab / Window / Entire Screen -- "Entire Screen" +
+      // its "Share system audio" checkbox captures whatever Windows is playing (Zoom, Teams,
+      // anything), no virtual audio driver or reboot needed. Picking a Chrome tab instead only
+      // captures that tab's audio (fine for a browser-based call, not a native desktop app).
+      const d = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      if (!d.getAudioTracks().length) {
+        d.getTracks().forEach((t) => t.stop());
+        throw new Error("The share had no audio. Pick \"Entire Screen\" (not a window) and tick \"Share system audio\", or pick a Chrome tab and tick \"Share tab audio\".");
+      }
+      d.getVideoTracks().forEach((t) => t.stop());
+      d.getAudioTracks()[0].addEventListener("ended", () => { if (running) stop(); });
+      out.push(new MediaStream(d.getAudioTracks()));
+    }
+  } catch (e) { out.forEach((s) => s.getTracks().forEach((t) => t.stop())); throw e; }
+  return out;
+}
+
+async function start() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) await connectWs();
+  startWarning = "";
+  streams = await acquireStreams($("srcMode").value);
+  audioCtx = new AudioContext({ sampleRate: 16000 });
+  await audioCtx.audioWorklet.addModule(WORKLET_URL);
+  sources = streams.map((s) => audioCtx.createMediaStreamSource(s));
+  refreshDevices();
+  tx.peak = 0; tx.clipped = 0; tx.samples = 0; tx.msgs = 0; tx.t0 = performance.now();
+  tx.desc = streams.map((st) => { const t = st.getAudioTracks()[0], g = t.getSettings();
+    return `${t.label || "input"} [device ${g.sampleRate || "?"} Hz, ${g.channelCount || "?"} ch, echoCancel=${g.echoCancellation}, noiseSuppress=${g.noiseSuppression}, autoGain=${g.autoGainControl}]`; }).join("  +  ");
+  processor = new AudioWorkletNode(audioCtx, "pcm-capture");
+  if (audioCtx.sampleRate !== 16000) setStatus(`warning: audio context is ${audioCtx.sampleRate}Hz, not 16000`, "err");
+  sendBuf = [];
+  processor.port.onmessage = (e) => {
+    const f = e.data, r = rms(f);
+    for (let i = 0; i < f.length; i++) { const a = Math.abs(f[i]); if (a > tx.peak) tx.peak = a; if (a >= 0.999) tx.clipped++; }
+    $("level").style.width = Math.min(100, Math.round(r * 400)) + "%"; $("level").style.background = r > 0.9 ? "#e06c75" : "#61afef";
+    sendBuf.push(f);
+    const total = sendBuf.reduce((n, b) => n + b.length, 0);
+    if (total >= 2048) {
+      const m = new Float32Array(total); let o = 0; for (const b of sendBuf) { m.set(b, o); o += b.length; }
+      sendBuf = [];
+      if (ws && ws.readyState === WebSocket.OPEN) { ws.send(floatTo16(m).buffer); tx.msgs++; tx.samples += m.length; }
+    }
+  };
+  silentGain = audioCtx.createGain(); silentGain.gain.value = 0;
+  sources.forEach((s) => s.connect(processor)); processor.connect(silentGain); silentGain.connect(audioCtx.destination);
+  running = true;
+  setStatus("listening" + (startWarning ? " -- " + startWarning : ""), startWarning ? "err" : "live");
+  $("start").disabled = true; $("stop").disabled = false;
+}
+
+function stop() {
+  running = false;
+  if (processor) { processor.disconnect(); processor.port.onmessage = null; }
+  sources.forEach((s) => s.disconnect()); sources = [];
+  if (silentGain) silentGain.disconnect();
+  streams.forEach((s) => s.getTracks().forEach((t) => t.stop())); streams = [];
+  if (audioCtx) audioCtx.close();
+  send({ cmd: "flush" }); // emit the last partial hop's words
+  $("level").style.width = "0%"; setStatus("stopped");
+  $("start").disabled = false; $("stop").disabled = true;
+}
+
+// ---------- known-content test clips (no mic) ----------
+async function sendClip(name) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) await connectWs();
+  const pcm = new Uint8Array(await (await fetch("/clip/" + name)).arrayBuffer());
+  setStatus("sending " + name + "...", "live");
+  for (let off = 0; off < pcm.length && ws.readyState === WebSocket.OPEN; off += 8192) {
+    ws.send(pcm.slice(off, off + 8192).buffer);
+    await new Promise((r) => setTimeout(r, 256)); // real-time pace (4096 samples @16kHz)
+  }
+  send({ cmd: "flush" }); setStatus("clip sent");
+}
+window.sendClip = sendClip;
+$("clip2").onclick = () => sendClip("twovoice.pcm").catch((e) => setStatus(String(e), "err"));
+$("clip1").onclick = () => sendClip("warmup.pcm").catch((e) => setStatus(String(e), "err"));
+
+// ---------- mic self-test: record raw capture, play back / download; bypasses the models entirely ----------
+let rec = null;
+function encodeWav(f32, rate) {
+  const i16 = floatTo16(f32), buf = new ArrayBuffer(44 + i16.length * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); v.setUint32(4, 36 + i16.length * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, i16.length * 2, true);
+  i16.forEach((s, i) => v.setInt16(44 + i * 2, s, true));
+  return new Blob([buf], { type: "audio/wav" });
+}
+$("recordBtn").onclick = async () => {
+  const rb = $("recordBtn"); rb.disabled = true; $("playBtn").disabled = true; $("dlBtn").disabled = true;
+  try {
+    const ctx = new AudioContext({ sampleRate: 16000 }); await ctx.audioWorklet.addModule(WORKLET_URL);
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { ...RAW, ...($("micDevice").value ? { deviceId: { exact: $("micDevice").value } } : {}) } });
+    const src = ctx.createMediaStreamSource(st), node = new AudioWorkletNode(ctx, "pcm-capture"), chunks = [];
+    node.port.onmessage = (e) => chunks.push(e.data);
+    const g = ctx.createGain(); g.gain.value = 0; src.connect(node); node.connect(g); g.connect(ctx.destination);
+    $("recStatus").textContent = "recording 3s -- speak now..."; await new Promise((r) => setTimeout(r, 3000));
+    node.disconnect(); src.disconnect(); st.getTracks().forEach((t) => t.stop()); const rate = ctx.sampleRate; await ctx.close();
+    const n = chunks.reduce((a, c) => a + c.length, 0), data = new Float32Array(n); let o = 0; for (const c of chunks) { data.set(c, o); o += c.length; }
+    rec = { data, rate }; $("recStatus").textContent = `recorded ${(n / rate).toFixed(1)}s @ ${rate}Hz -- play it back and listen for garbling`;
+    $("playBtn").disabled = false; $("dlBtn").disabled = false;
+  } catch (e) { $("recStatus").textContent = String(e); } finally { rb.disabled = false; }
+};
+$("playBtn").onclick = () => { if (!rec) return; const ctx = new AudioContext({ sampleRate: rec.rate }), b = ctx.createBuffer(1, rec.data.length, rec.rate); b.copyToChannel(rec.data, 0); const s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(); s.onended = () => ctx.close(); };
+$("dlBtn").onclick = () => { if (!rec) return; const a = document.createElement("a"); a.href = URL.createObjectURL(encodeWav(rec.data, rec.rate)); a.download = "mic_self_test.wav"; document.body.appendChild(a); a.click(); a.remove(); };
+
+$("start").onclick = () => start().catch((e) => setStatus(String(e), "err"));
+$("stop").onclick = stop;
+$("reset").onclick = () => { $("transcript").replaceChildren(); $("cards").replaceChildren(); send({ cmd: "reset" }); };
+
+setInterval(() => {
+  if (!running) return;
+  const secs = (performance.now() - tx.t0) / 1000, rate = tx.samples / Math.max(secs, 0.001);
+  const warn = tx.clipped > 0 ? " -- CLIPPING: " + tx.clipped + " samples hit full scale (lower the source volume)" : "";
+  $("path").textContent = `Sending raw PCM: 16-bit little-endian, mono, no codec. Browser context ${audioCtx.sampleRate} Hz -> server expects 16000 Hz. ` +
+    `Actual rate ${Math.round(rate)} samples/s in ${tx.msgs} messages of ${tx.msgs ? Math.round(tx.samples / tx.msgs) * 2 : 0} bytes. Peak ${tx.peak.toFixed(2)}. ` +
+    `Inputs: ${tx.desc}${warn}`;
+}, 500);
+
+refreshDevices();
+connectWs().catch((e) => setStatus(String(e), "err"));
+</script>
+</body>
+</html>

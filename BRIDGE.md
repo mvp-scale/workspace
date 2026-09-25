@@ -1,13 +1,15 @@
 # BRIDGE: where we are, for the next session
 
-Updated 2026-09-24. Read `CLAUDE.md` first — it's the authoritative map of the repo layout,
+Updated 2026-09-25. Read `CLAUDE.md` first — it's the authoritative map of the repo layout,
 commands, and architecture; this file is only the narrative of *why* things are the way they are
-and what's still open. Everything below is committed; `git status --short` is clean.
+and what's still open. **Not yet committed** — this update and the voice work it describes are
+uncommitted on disk; check `git status --short` before assuming otherwise.
 
 This file was compacted on 2026-09-24: the previous version's long round-by-round history (MMLU
 world knowledge, the Decompose/Monte Carlo readability passes, the honesty-audit round, etc.) is
 still fully recoverable from `git log` if a specific rationale is ever needed again — it isn't
-reproduced here because none of it is load-bearing for what comes next (see "Next" below).
+reproduced here because none of it is load-bearing for what's currently in progress (see "Voice
+pipeline" below).
 
 ## Where things stand
 
@@ -99,9 +101,72 @@ Two research questions were explicitly parked mid-investigation and never picked
 `world-knowledge.yaml` content edits, `sort_and_rank.py`'s hosted-model-skip bug) and
 `docs/scenario-lab-plan.md`'s original items 1-4 and 14-18 are untouched, unchanged from before.
 
-## Next: voice
+## Voice pipeline: live speaker-attributed transcription, in progress
 
-The user's next project is adding a **new, voice-based demo area** to the console — intentionally
-not scoped yet beyond that one sentence. See the starter prompt handed to the next session for
-how this should actually begin (investigation before any building, same pattern that worked well
-for the static-deployment work above).
+The "next: voice" project from the previous update is now a real, working prototype at
+`/workspace/voice/` (separate from `demo/`, not yet wired into the console). Not a finished
+feature — read this section before touching it, several non-obvious things were learned the
+hard way.
+
+**The code has moved past a simpler design mid-session — treat current files as ground truth.**
+What's running now is NVIDIA's actual coupled multitalker pipeline (`mt_pipeline.py`, using
+`LiveMultitalkerSession`/`SpeakerTaggedASR` per NVIDIA's own `ASR_INTEGRATION_GUIDE.md`), not the
+earlier two-independent-models version this session started with. `voice/reference/` holds
+verbatim copies of NVIDIA's guide, both model READMEs, and a `PROD_BEST_PRACTICES.md` +
+`SOURCES.md` — read those for the current architecture's rationale, not this file's blow-by-blow.
+
+**Models**: `nvidia/Nemotron-3-Diarization` (8-speaker Sortformer, needs NeMo installed from
+GitHub `main` — PyPI's 3.0.0 release predates the RoPE support this model's encoder needs) +
+`nvidia/multitalker-parakeet-streaming-0.6b-v1` (coupled streaming ASR, not the standalone
+`parakeet_realtime_eou_120m-v1` this session tried first).
+
+**Real pitfalls hit and fixed, worth knowing before changing settings or chunk sizing**:
+- Both streaming services' internal feature buffers advance by a **fixed stride** set at init
+  (derived from `chunk_size_in_secs`/`chunk_len`) — call `.diarize()`/`.transcribe()` with
+  anything other than exactly that many samples and the feature window silently desyncs from the
+  real audio (no exception, just empty/garbled decoding).
+- NVIDIA's own published "very low latency" diarization preset (chunk_len=6) was A/B tested here
+  under real-time-paced audio and measurably broke ASR output (word fragments vanished) — likely
+  a real-time compute-budget issue (640ms window too tight for this heavier buffer config on this
+  hardware), not a wrong-parameters issue. The "low latency"/"Balanced" preset (chunk_len=9,
+  1.04s budget) verified working correctly and is the current default. Re-verify before trusting
+  Fast/Ultra presets for a live mic rather than assuming NVIDIA-published means safe here.
+- Lowering `max_num_speakers` below the checkpoint's trained 8 does **not** reduce compute — it
+  silently breaks diarization output entirely (confirmed by direct test). Not exposed as a
+  setting for this reason.
+- Audio transport is a single persistent WebSocket with a decoupled recv/inference/send 3-loop
+  architecture (matches NVIDIA's own reference and a real production streaming-Parakeet
+  deployment) — an earlier single-blocking-loop version caused connection resets under real load,
+  because inference blocking the same loop that receives audio backs up the mic-side buffer.
+- The ASR's `<EOU>`/`<EOB>` end-marker can appear inside the decoded text string itself, not just
+  as a separate flag — strip it, but only when present (an earlier unconditional `.strip()` broke
+  word-boundary spacing between fragments).
+- Real diarization jitter (a continuous speaker's label flipping chunk-to-chunk) is expected and
+  was never exercised until a real multi-speaker test — an EMA smoother over per-speaker
+  confidence is in place; tune `SPEAKER_EMA_ALPHA` if it's too sluggish or too jittery.
+
+**What the mockup UI has**: live-reconfigurable settings (sliders with shaded "verified-good"
+bands, not raw numbers), preset buttons for NVIDIA's four latency profiles labeled honestly
+(verified vs. untested-here), a mic self-test (record 3s, play back, download WAV — bypasses the
+whole ML pipeline, for isolating capture-quality problems from model problems), and known-content
+test clips (`warmup.pcm`, `twovoice.pcm`) to replay without needing a live mic.
+
+**Audio capture options** (the user wants to demo live Zoom/Teams call audio, said "tomorrow" as
+of 2026-09-24): the audio-source selector supports mic-only, a virtual-loopback-device path
+("both"/"dev" — needs Stereo Mix, VB-CABLE, or similar), and a **no-install** path via Chrome's
+`getDisplayMedia` screen-share dialog ("screen"/"tab" — pick "Entire Screen" + "Share system
+audio", zero drivers, zero reboot, already verified working end-to-end). The user is installing
+VB-CABLE as the more polished option for the actual demo but confirmed the no-install path works
+as a fallback. **VB-CABLE requires a reboot** (their own install page says so — an earlier claim
+in this session that it usually doesn't was wrong and got corrected).
+
+**Where things stand right now**: the voice server is stopped and the GPU fully freed — the user
+asked to switch to showing a friend the jevbench lineup instead (`kev-4b`, `semif`, `so1`, `laya`,
+`verdict` — all confirmed up via `demo/lineup.sh up`, ~28GB/32.6GB). The user is currently
+rebooting their own laptop (not this box) to activate VB-CABLE, then planned to test multi-speaker
+diarization against a YouTube news panel before the real call. To resume voice work: stop the
+lineup (`demo/lineup.sh down`) to free GPU headroom again, then `cd /workspace/voice && .venv/bin/python -u server.py`.
+
+**Not yet done**: wiring this into `demo/flow.html`'s transcript-source abstraction (still the
+long-term integration target per the original plan) — this is still a standalone prototype at
+`voice/`, deliberately not touched in `demo/` yet.
