@@ -1,0 +1,100 @@
+{
+  "name": "Customer service · Frustration to resolution",
+  "description": "For support calls: how upset the customer is, what the agent does about it, and whether it is resolved or escalating.",
+  "detectors": [
+    {
+      "library": "anger"
+    },
+    {
+      "library": "politeness"
+    },
+    {
+      "key": "v_apology",
+      "name": "Apology",
+      "what": "the speaker apologises",
+      "example": "I'm really sorry about that.",
+      "scope": "person",
+      "icon": "heart"
+    },
+    {
+      "key": "v_thanks",
+      "name": "Thanks",
+      "what": "the speaker thanks someone",
+      "example": "Thank you for your patience.",
+      "scope": "person",
+      "icon": "smile"
+    },
+    {
+      "key": "v_fix",
+      "name": "Offers a fix",
+      "what": "the speaker offers a fix, refund, replacement or other solution",
+      "example": "I can refund you today.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "v_escalate",
+      "name": "Asks for a manager",
+      "what": "the speaker asks to speak to a manager, supervisor or someone more senior",
+      "example": "I want to speak to your supervisor.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "v_leave",
+      "name": "Threatens to leave",
+      "what": "the speaker says they will cancel, leave or take their business elsewhere",
+      "example": "If this isn't fixed I'm cancelling.",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "key": "v_repeat",
+      "name": "Repeat problem",
+      "what": "the speaker says the problem has happened before or that they have already contacted the company about it",
+      "example": "This is the third time I've called about this.",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "v_confused",
+      "name": "Confusion",
+      "what": "the speaker says they do not understand something",
+      "example": "I don't understand what this charge is.",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "v_hold",
+      "name": "Asks to wait",
+      "what": "the speaker asks the other person to hold or wait",
+      "example": "Please bear with me while I check.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "k_empathy",
+      "name": "Empathy",
+      "what": "the speaker acknowledges or shows understanding of another person's feelings",
+      "example": "I can tell this has been really hard for you.",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "k_question",
+      "name": "Question",
+      "what": "the speaker asks a question or asks for information",
+      "example": "Where did you buy the code?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "k_commitment",
+      "name": "Commitment",
+      "what": "the speaker promises or commits to doing something",
+      "example": "I will send it over by tomorrow.",
+      "scope": "person",
+      "icon": "check"
+    }
+  ]
+}

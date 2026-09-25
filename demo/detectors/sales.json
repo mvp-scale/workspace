@@ -1,0 +1,82 @@
+{
+  "name": "Sales call · Discovery to close",
+  "description": "For sales conversations: discovery, pain, objections, price, buying signals and next steps, plus the pressure tactics that can appear.",
+  "detectors": [
+    {
+      "key": "l_discovery",
+      "name": "Discovery question",
+      "what": "the speaker asks about the other person's needs, situation or problem",
+      "example": "What's the biggest challenge with your current process?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "l_pain",
+      "name": "States a problem",
+      "what": "the speaker describes a problem, pain point or frustration with their current situation",
+      "example": "Our reports take two days to produce.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "l_objection",
+      "name": "Objection",
+      "what": "the speaker raises a reason not to buy or proceed",
+      "example": "It's more than we budgeted.",
+      "scope": "person",
+      "icon": "shield"
+    },
+    {
+      "key": "l_price",
+      "name": "Price mentioned",
+      "what": "the speaker mentions a price, cost or budget",
+      "example": "That comes to about eight thousand a year.",
+      "scope": "person",
+      "icon": "coin"
+    },
+    {
+      "key": "l_competitor",
+      "name": "Competitor mentioned",
+      "what": "the speaker mentions a competing product or provider",
+      "example": "We're also looking at another vendor.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "l_signal",
+      "name": "Buying signal",
+      "what": "the speaker signals interest in buying, such as asking about pricing, terms or getting started",
+      "example": "How soon could we get started?",
+      "scope": "person",
+      "icon": "star"
+    },
+    {
+      "key": "l_next",
+      "name": "Next step agreed",
+      "what": "the speaker agrees or proposes a specific next step",
+      "example": "Let's schedule a demo for Tuesday.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "l_stall",
+      "name": "Stalls the decision",
+      "what": "the speaker delays a decision or says they need to think or consult others",
+      "example": "I need to run it by my boss first.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "library": "urgency"
+    },
+    {
+      "library": "scarcity"
+    },
+    {
+      "library": "social_proof"
+    },
+    {
+      "library": "persuasion"
+    }
+  ]
+}

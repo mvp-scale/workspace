@@ -1,0 +1,97 @@
+{
+  "name": "Interview · Answer quality",
+  "description": "How a candidate's answers are phrased: specific or vague, ownership, results, learning. Language behaviours only, never a hiring decision.",
+  "detectors": [
+    {
+      "key": "j_example",
+      "name": "Specific example",
+      "what": "the speaker describes a specific situation, with details of what happened",
+      "example": "Last spring our checkout failed during a sale and I led the fix.",
+      "scope": "person",
+      "icon": "target"
+    },
+    {
+      "key": "j_result",
+      "name": "States a result",
+      "what": "the speaker states an outcome or result, ideally with a number",
+      "example": "We cut errors by forty percent.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "j_owner",
+      "name": "Takes ownership",
+      "what": "the speaker says what they personally did or were responsible for",
+      "example": "I owned the migration plan.",
+      "scope": "person",
+      "icon": "key"
+    },
+    {
+      "key": "j_team",
+      "name": "Credits others",
+      "what": "the speaker credits other people or the team for a result",
+      "example": "The team really pulled together on that.",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "j_vague",
+      "name": "Vague answer",
+      "what": "the speaker answers in general terms without a specific example or detail",
+      "example": "I generally just work hard and get things done.",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "j_blame",
+      "name": "Blames others",
+      "what": "the speaker attributes a problem to other people rather than themselves",
+      "example": "It failed because the other team dropped the ball.",
+      "scope": "person",
+      "icon": "hook"
+    },
+    {
+      "key": "j_learn",
+      "name": "Reflects or learns",
+      "what": "the speaker says what they learned or would do differently",
+      "example": "Looking back, I would have raised it earlier.",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "key": "j_strength",
+      "name": "Claims a strength",
+      "what": "the speaker states a strength or skill they have",
+      "example": "I'm very good at untangling complex data.",
+      "scope": "person",
+      "icon": "star"
+    },
+    {
+      "key": "j_askback",
+      "name": "Asks about the role",
+      "what": "the speaker asks a question about the role, team or company",
+      "example": "What does success look like in the first six months?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "k_uncertain",
+      "name": "Uncertainty",
+      "what": "the speaker expresses uncertainty, hedges, or says they are not sure",
+      "example": "I'm not sure, maybe it was Tuesday.",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "k_deflect",
+      "name": "Deflection",
+      "what": "the speaker avoids answering, changes the subject, or deflects responsibility",
+      "example": "That's not my department, ask someone else.",
+      "scope": "person",
+      "icon": "target"
+    },
+    {
+      "library": "politeness"
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "name": "Conflict · De-escalation",
+  "description": "For heated conversations: anger and threat, blame and insults, and the moves that calm things down.",
+  "detectors": [
+    {
+      "library": "anger"
+    },
+    {
+      "library": "threat"
+    },
+    {
+      "library": "fear"
+    },
+    {
+      "library": "sarcasm"
+    },
+    {
+      "key": "x_blame",
+      "name": "Blames",
+      "what": "the speaker blames another person for a problem",
+      "example": "This is all your fault.",
+      "scope": "person",
+      "icon": "hook"
+    },
+    {
+      "key": "x_insult",
+      "name": "Personal insult",
+      "what": "the speaker insults or belittles a person",
+      "example": "You're an idiot.",
+      "scope": "person",
+      "icon": "mask"
+    },
+    {
+      "key": "x_absolute",
+      "name": "Absolute language",
+      "what": "the speaker uses always or never about another person",
+      "example": "You never listen to me.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "x_calm",
+      "name": "Asks to calm down",
+      "what": "the speaker asks someone to calm down, lower their voice or slow down",
+      "example": "Let's all take a breath.",
+      "scope": "person",
+      "icon": "heart"
+    },
+    {
+      "key": "x_boundary",
+      "name": "Sets a boundary",
+      "what": "the speaker says what they will or will not accept",
+      "example": "I won't continue if you shout.",
+      "scope": "person",
+      "icon": "lock"
+    },
+    {
+      "key": "x_common",
+      "name": "Finds common ground",
+      "what": "the speaker points out something both sides agree on or want",
+      "example": "We both want this resolved.",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "x_request",
+      "name": "Clear request",
+      "what": "the speaker asks for a specific change in behaviour",
+      "example": "Please tell me before you change the plan.",
+      "scope": "person",
+      "icon": "megaphone"
+    },
+    {
+      "key": "v_apology",
+      "name": "Apology",
+      "what": "the speaker apologises",
+      "example": "I'm really sorry about that.",
+      "scope": "person",
+      "icon": "heart"
+    },
+    {
+      "key": "k_empathy",
+      "name": "Empathy",
+      "what": "the speaker acknowledges or shows understanding of another person's feelings",
+      "example": "I can tell this has been really hard for you.",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "k_disagree",
+      "name": "Disagreement",
+      "what": "the speaker disagrees with, objects to, or pushes back on something that was said",
+      "example": "No, that's not what happened.",
+      "scope": "person",
+      "icon": "bolt"
+    }
+  ]
+}

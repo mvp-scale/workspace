@@ -1,0 +1,98 @@
+{
+  "name": "Negotiation · Offers and leverage",
+  "description": "For negotiations: offers, counters, concessions, conditions, ultimatums and time pressure.",
+  "detectors": [
+    {
+      "key": "n_offer",
+      "name": "Makes an offer",
+      "what": "the speaker proposes specific terms or a price",
+      "example": "I can do ninety thousand.",
+      "scope": "person",
+      "icon": "coin"
+    },
+    {
+      "key": "n_counter",
+      "name": "Counter-offer",
+      "what": "the speaker rejects terms and proposes different ones",
+      "example": "That's too low, how about a hundred and ten?",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "key": "n_concede",
+      "name": "Concession",
+      "what": "the speaker gives something up or agrees to a request in exchange for progress",
+      "example": "Fine, I can drop the setup fee.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "n_conditional",
+      "name": "Conditional offer",
+      "what": "the speaker makes an offer that depends on something in return",
+      "example": "If you commit to two years, I'll lower the rate.",
+      "scope": "person",
+      "icon": "key"
+    },
+    {
+      "key": "n_final",
+      "name": "Final offer",
+      "what": "the speaker says this is the final offer or that there is no room to move",
+      "example": "That's my final offer.",
+      "scope": "person",
+      "icon": "lock"
+    },
+    {
+      "key": "n_walk",
+      "name": "Threatens to walk away",
+      "what": "the speaker says they will end the talks or leave if they do not get what they want",
+      "example": "Otherwise I'll have to look elsewhere.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "n_deadline",
+      "name": "Time limit",
+      "what": "the speaker sets or refers to a time limit for a decision",
+      "example": "I need an answer by five.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "n_justify",
+      "name": "Justifies a position",
+      "what": "the speaker gives a reason for a price or position",
+      "example": "That price reflects the extra support included.",
+      "scope": "person",
+      "icon": "chat"
+    },
+    {
+      "key": "n_rapport",
+      "name": "Builds rapport",
+      "what": "the speaker makes friendly personal conversation or a compliment to build a relationship",
+      "example": "I've really enjoyed working with your team.",
+      "scope": "person",
+      "icon": "smile"
+    },
+    {
+      "library": "urgency"
+    },
+    {
+      "library": "threat"
+    },
+    {
+      "library": "manipulation"
+    },
+    {
+      "library": "persuasion"
+    },
+    {
+      "key": "k_agree",
+      "name": "Agreement",
+      "what": "the speaker agrees with or accepts what was said",
+      "example": "Yes, that sounds right to me.",
+      "scope": "person",
+      "icon": "star"
+    }
+  ]
+}

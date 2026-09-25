@@ -1,0 +1,110 @@
+{
+  "name": "Coaching · Feedback conversations",
+  "description": "For manager 1:1s and mentoring: goals, specific feedback, reflection, and how the other person responds.",
+  "detectors": [
+    {
+      "key": "c_goal",
+      "name": "Sets a goal",
+      "what": "the speaker states a goal or what they want to achieve",
+      "example": "I want to lead the next project.",
+      "scope": "person",
+      "icon": "target"
+    },
+    {
+      "key": "c_feedback",
+      "name": "Gives feedback",
+      "what": "the speaker tells someone how their work or behaviour came across",
+      "example": "In the meeting you interrupted Dana twice.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "c_reflect",
+      "name": "Reflects back",
+      "what": "the speaker repeats or paraphrases what the other person said to show they understood",
+      "example": "So what I'm hearing is you feel overlooked.",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "c_advice",
+      "name": "Gives advice",
+      "what": "the speaker tells someone what they should do",
+      "example": "You should talk to her directly.",
+      "scope": "person",
+      "icon": "megaphone"
+    },
+    {
+      "key": "o_open_q",
+      "name": "Open question",
+      "what": "the speaker asks a question that invites explanation rather than a yes or no answer",
+      "example": "How did you decide on that approach?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "o_praise",
+      "name": "Specific praise",
+      "what": "the speaker praises a specific thing someone did or said",
+      "example": "I liked how you showed your working.",
+      "scope": "person",
+      "icon": "star"
+    },
+    {
+      "key": "c_excuse",
+      "name": "Makes an excuse",
+      "what": "the speaker explains a shortfall by pointing to circumstances rather than their own actions",
+      "example": "I would have finished but the tools kept breaking.",
+      "scope": "person",
+      "icon": "hook"
+    },
+    {
+      "key": "c_defensive",
+      "name": "Defensive reply",
+      "what": "the speaker pushes back on feedback or justifies themselves instead of considering it",
+      "example": "That's not fair, I did exactly what was asked.",
+      "scope": "person",
+      "icon": "shield"
+    },
+    {
+      "key": "c_admit",
+      "name": "Owns a mistake",
+      "what": "the speaker admits a mistake or their part in a problem",
+      "example": "I should have flagged the delay sooner.",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "j_owner",
+      "name": "Takes ownership",
+      "what": "the speaker says what they personally did or were responsible for",
+      "example": "I owned the migration plan.",
+      "scope": "person",
+      "icon": "key"
+    },
+    {
+      "key": "c_next",
+      "name": "Agrees a next step",
+      "what": "the speaker agrees a specific next step or follow-up",
+      "example": "Let's meet Thursday to review your draft.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "k_empathy",
+      "name": "Empathy",
+      "what": "the speaker acknowledges or shows understanding of another person's feelings",
+      "example": "I can tell this has been really hard for you.",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "k_commitment",
+      "name": "Commitment",
+      "what": "the speaker promises or commits to doing something",
+      "example": "I will send it over by tomorrow.",
+      "scope": "person",
+      "icon": "check"
+    }
+  ]
+}

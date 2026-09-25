@@ -1,0 +1,84 @@
+{
+  "name": "Public debate · Claims and dodges",
+  "description": "For interviews and debates: claims and evidence, rebuttals and concessions, and the moves that avoid or inflame.",
+  "detectors": [
+    {
+      "key": "d_claim",
+      "name": "Factual claim",
+      "what": "the speaker states something as a fact that could be checked",
+      "example": "Unemployment has halved since 2019.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "d_evidence",
+      "name": "Cites evidence",
+      "what": "the speaker refers to a study, statistic, source or expert as support",
+      "example": "According to the latest census, the number is lower.",
+      "scope": "person",
+      "icon": "box"
+    },
+    {
+      "key": "d_rebut",
+      "name": "Rebuts",
+      "what": "the speaker directly counters what the other person just said",
+      "example": "That's simply not what the data shows.",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "key": "d_concede",
+      "name": "Concedes a point",
+      "what": "the speaker admits the other side is right about something",
+      "example": "Fair point, I'll grant you that.",
+      "scope": "person",
+      "icon": "smile"
+    },
+    {
+      "key": "d_analogy",
+      "name": "Analogy or story",
+      "what": "the speaker uses an analogy, story or example to make a point",
+      "example": "It's like running a household budget.",
+      "scope": "person",
+      "icon": "chat"
+    },
+    {
+      "key": "x_absolute",
+      "name": "Absolute language",
+      "what": "the speaker uses always or never about another person",
+      "example": "You never listen to me.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "x_insult",
+      "name": "Personal insult",
+      "what": "the speaker insults or belittles a person",
+      "example": "You're an idiot.",
+      "scope": "person",
+      "icon": "mask"
+    },
+    {
+      "key": "k_deflect",
+      "name": "Deflection",
+      "what": "the speaker avoids answering, changes the subject, or deflects responsibility",
+      "example": "That's not my department, ask someone else.",
+      "scope": "person",
+      "icon": "target"
+    },
+    {
+      "key": "k_disagree",
+      "name": "Disagreement",
+      "what": "the speaker disagrees with, objects to, or pushes back on something that was said",
+      "example": "No, that's not what happened.",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "library": "persuasion"
+    },
+    {
+      "library": "sarcasm"
+    }
+  ]
+}

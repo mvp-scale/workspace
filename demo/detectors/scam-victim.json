@@ -1,0 +1,65 @@
+{
+  "name": "Scam call · Victim signals",
+  "description": "What the person being scammed says: going along, doubt, stalling, verifying and giving details away. Pair it with the caller pack.",
+  "detectors": [
+    {
+      "library": "fear"
+    },
+    {
+      "key": "k_uncertain",
+      "name": "Uncertainty",
+      "what": "the speaker expresses uncertainty, hedges, or says they are not sure",
+      "example": "I'm not sure, maybe it was Tuesday.",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "k_question",
+      "name": "Question",
+      "what": "the speaker asks a question or asks for information",
+      "example": "Where did you buy the code?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "sv_comply",
+      "name": "Goes along",
+      "what": "the speaker agrees to do what the caller asks",
+      "example": "OK, I'm doing it now.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "sv_doubt",
+      "name": "Doubts the caller",
+      "what": "the speaker questions whether the caller is genuine",
+      "example": "How do I know you're really from the bank?",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "sv_verify",
+      "name": "Plans to verify",
+      "what": "the speaker says they will check independently, such as calling back on an official number",
+      "example": "I'll call the bank myself on the number on my card.",
+      "scope": "person",
+      "icon": "shield"
+    },
+    {
+      "key": "sv_stall",
+      "name": "Stalls",
+      "what": "the speaker delays or says they need time before doing what is asked",
+      "example": "Let me think about it first.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "sv_disclose",
+      "name": "Shares sensitive details",
+      "what": "the speaker reads out or agrees to share a code, password or account detail",
+      "example": "The code is four, two, nine, one.",
+      "scope": "person",
+      "icon": "key"
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "name": "Board · Governance and oversight",
+  "description": "For board and committee meetings: motions, votes, figures, challenge to management, compliance, interests and dissent.",
+  "detectors": [
+    {
+      "key": "b_motion",
+      "name": "Motion or proposal",
+      "what": "the speaker formally proposes a motion, resolution or course of action",
+      "example": "I move that we approve the budget.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "b_vote",
+      "name": "Vote or approval",
+      "what": "the speaker calls for a vote or states that something is approved, carried or rejected",
+      "example": "All in favour? The motion carries.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "b_figure",
+      "name": "Cites a figure",
+      "what": "the speaker states a financial figure, percentage or quantity",
+      "example": "Revenue was twelve point four million.",
+      "scope": "person",
+      "icon": "coin"
+    },
+    {
+      "key": "b_challenge",
+      "name": "Challenges management",
+      "what": "the speaker questions or challenges a claim or plan put forward by management",
+      "example": "What evidence supports that forecast?",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "key": "b_assure",
+      "name": "Seeks assurance",
+      "what": "the speaker asks for confirmation or assurance that something is under control",
+      "example": "Can management confirm the audit is on track?",
+      "scope": "person",
+      "icon": "shield"
+    },
+    {
+      "key": "b_compliance",
+      "name": "Legal or compliance point",
+      "what": "the speaker refers to a law, regulation, policy or compliance requirement",
+      "example": "We need to check this against the new disclosure rules.",
+      "scope": "person",
+      "icon": "lock"
+    },
+    {
+      "key": "b_interest",
+      "name": "Interest declared",
+      "what": "the speaker discloses or asks about a personal or financial interest in a decision",
+      "example": "I should declare I hold shares in that supplier.",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "b_defer",
+      "name": "Defers a decision",
+      "what": "the speaker proposes postponing or referring a decision elsewhere",
+      "example": "Let's table this until next quarter.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "b_dissent",
+      "name": "Dissent recorded",
+      "what": "the speaker says they vote against or want their objection noted",
+      "example": "I want my objection minuted.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "m_risk",
+      "name": "Risk or concern",
+      "what": "the speaker raises a risk, worry or possible problem",
+      "example": "I'm worried we'll miss the launch window.",
+      "scope": "person",
+      "icon": "shield"
+    },
+    {
+      "key": "m_action",
+      "name": "Action item",
+      "what": "the speaker assigns a task to a specific person or asks someone to take an action",
+      "example": "Priya, can you send the draft to legal?",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "m_deadline",
+      "name": "Deadline set",
+      "what": "the speaker states a date or time by which something must happen",
+      "example": "We need this by Friday.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "k_disagree",
+      "name": "Disagreement",
+      "what": "the speaker disagrees with, objects to, or pushes back on something that was said",
+      "example": "No, that's not what happened.",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "key": "k_uncertain",
+      "name": "Uncertainty",
+      "what": "the speaker expresses uncertainty, hedges, or says they are not sure",
+      "example": "I'm not sure, maybe it was Tuesday.",
+      "scope": "person",
+      "icon": "eye"
+    }
+  ]
+}

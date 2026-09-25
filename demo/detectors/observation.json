@@ -1,0 +1,97 @@
+{
+  "name": "Observation · Teaching and training",
+  "description": "For observing a teacher, trainer or facilitator: questioning, feedback, checking understanding and keeping people engaged.",
+  "detectors": [
+    {
+      "key": "o_open_q",
+      "name": "Open question",
+      "what": "the speaker asks a question that invites explanation rather than a yes or no answer",
+      "example": "How did you decide on that approach?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "o_check",
+      "name": "Check for understanding",
+      "what": "the speaker checks that others understood, such as asking them to explain or confirm",
+      "example": "Can you put that in your own words?",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "o_explain",
+      "name": "Explanation",
+      "what": "the speaker explains how or why something works",
+      "example": "This works because the pressure equalises.",
+      "scope": "person",
+      "icon": "chat"
+    },
+    {
+      "key": "o_example",
+      "name": "Example given",
+      "what": "the speaker gives a concrete example or analogy",
+      "example": "Think of it like water in a pipe.",
+      "scope": "person",
+      "icon": "box"
+    },
+    {
+      "key": "o_instruct",
+      "name": "Instruction",
+      "what": "the speaker gives a direct instruction about what to do",
+      "example": "Open your books to page twelve.",
+      "scope": "person",
+      "icon": "megaphone"
+    },
+    {
+      "key": "o_redirect",
+      "name": "Redirects attention",
+      "what": "the speaker redirects someone's behaviour or attention back to the task",
+      "example": "Eyes up front please.",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "o_invite",
+      "name": "Invites participation",
+      "what": "the speaker invites a quiet or new person to contribute",
+      "example": "Sam, what do you think?",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "o_praise",
+      "name": "Specific praise",
+      "what": "the speaker praises a specific thing someone did or said",
+      "example": "I liked how you showed your working.",
+      "scope": "person",
+      "icon": "star"
+    },
+    {
+      "key": "o_correct",
+      "name": "Corrective feedback",
+      "what": "the speaker tells someone what to change or that something is wrong",
+      "example": "Not quite, look at the second step again.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "o_encourage",
+      "name": "Encouragement",
+      "what": "the speaker encourages someone to keep trying or reassures them about a mistake",
+      "example": "That's okay, try it once more.",
+      "scope": "person",
+      "icon": "heart"
+    },
+    {
+      "key": "k_empathy",
+      "name": "Empathy",
+      "what": "the speaker acknowledges or shows understanding of another person's feelings",
+      "example": "I can tell this has been really hard for you.",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "library": "politeness"
+    }
+  ]
+}

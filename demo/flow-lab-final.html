@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversation flow (final mock-up) · Jev Bench Console</title>
+<meta name="description" content="A real transcript replayed word by word through the loaded models. Detectors have a colour and an icon; each person's own window is scored, and person cards show which detectors they hit. Signals rise, hold and fade, with a heat-strip history and the exact request sent to the model.">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<script src="/static/voice-source.js"></script>
+<style>
+  /* Layout the shared CSS lacks. Colours come from shared tokens only (detector colours are --s1 to --s8; icons tell detectors apart beyond that). */
+  [hidden] { display: none !important; }
+  .footer { display: none; }
+  .page.cockpit { max-width: none; padding: 8px var(--gutter) 10px; }
+  .cp { display: flex; flex-direction: column; gap: 8px; height: calc(100dvh - 42px - 18px); min-height: 800px; }
+  .cp .top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: flex-end; }
+  .cp .top h1 { font-size: 17px; }
+  .cp .sub { color: var(--text-3); font-size: 12px; }
+  @media (max-width: 1700px) { .cp .top .sub { display: none; } }
+  .cp .ctl { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-end; margin-left: auto; }
+  .cp .field select { min-width: 120px; max-width: 230px; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; font: 500 12px var(--mono); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); min-height: 30px; }
+  .pill .rec { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+  .pill.on .rec { background: var(--bad); animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; transform: scale(.8); } }
+  .notice { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  .chk { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-2); cursor: pointer; }
+
+  .pn { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .pn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 12px 0; min-height: 26px; position: relative; }
+  .pn > header .r { margin-left: auto; font-size: 12px; color: var(--text-3); }
+  .pn > .bd { padding: 6px 12px 10px; flex: 1; min-height: 0; display: flex; min-width: 0; position: relative; }
+  .pn > .bd > * { flex: 1; min-width: 0; }
+
+  /* Detectors and people */
+  .stage { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr); grid-template-rows: auto minmax(0, 1fr) clamp(146px, 17vh, 220px); grid-template-areas: "top top" "conv rail" "chart chart"; }
+  .toppn { padding: 6px 12px 8px; display: grid; gap: 6px; grid-area: top; }
+  .trow { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+  .trow h4 { padding-top: 6px; }
+  .dets { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; max-height: 76px; overflow: auto; min-height: 30px; }
+  .dchip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); position: relative; }
+  .dchip.custom { border-style: dashed; }
+  .dchip .ic { color: var(--c); display: grid; place-items: center; }
+  .dchip .nm { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+  .dchip .mt { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--surface-2); border-radius: 0 0 5px 5px; overflow: hidden; }
+  .dchip .mt i { display: block; height: 100%; background: var(--c); transform-origin: left; transform: scaleX(0); }
+  .dchip .x { border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); cursor: pointer; padding: 0; font-size: 12px; line-height: 1; width: 16px; height: 16px; border-radius: 50%; position: absolute; right: -6px; top: -7px; opacity: 0; z-index: 2; display: grid; place-items: center; }
+  .dchip:hover .x, .dchip .x:focus-visible { opacity: 1; } .dchip .x:hover { color: var(--bad); border-color: var(--bad); }
+  .dchip.hot { background: color-mix(in srgb, var(--c) 14%, var(--surface)); border-color: var(--c); }
+  .dchip.quiet .nm { color: var(--text-2); font-weight: 500; } .dchip.quiet .ic { opacity: .75; }
+  .people { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; min-height: 52px; }
+  .pcard { flex: 0 0 auto; width: 206px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px 4px; background: var(--surface-2); }
+  .pcard.speaking { border-color: var(--accent); background: var(--accent-soft); }
+  .pcard .h1 { display: flex; align-items: center; gap: 6px; min-height: 20px; }
+  .pnum { min-width: 22px; height: 18px; padding: 0 5px; border-radius: 9px; background: color-mix(in srgb, var(--v, var(--text-2)) 30%, var(--surface)); border: 1px solid var(--v, var(--text-2)); color: var(--text); font: 700 10.5px var(--mono); display: grid; place-items: center; flex: none; }
+  .pcard .rt { font: 500 10px var(--mono); color: var(--accent); margin-left: auto; }
+  .pcard b { font-size: 12px; font-weight: 650; }
+  .hits { display: flex; gap: 3px; flex-wrap: wrap; min-height: 20px; }
+  .hit { display: inline-flex; align-items: center; gap: 3px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+  .hit svg { color: var(--c); } .hit .t { font: 500 10px var(--mono); color: var(--text-2); }
+  .hit.cool { opacity: .5; }
+  .nohit { font-size: 11px; color: var(--text-3); }
+
+  .glide { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); }
+  .glide > .track { will-change: transform; padding-top: 8px; }
+  .msg { display: flex; margin: 5px 0; --v: var(--text-2); } .msg.coach { justify-content: flex-end; }
+  .bub { max-width: min(88%, 680px); padding: 4px 10px 6px; border-radius: 12px 12px 12px 4px; background: color-mix(in srgb, var(--v) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--v) 30%, var(--border)); font-size: clamp(14px, 0.4vw + 11px, 17px); line-height: 1.55; }
+  .msg.coach .bub { border-radius: 12px 12px 4px 12px; }
+  .meta { display: flex; align-items: center; gap: 6px; font: 500 10.5px var(--mono); color: var(--text-3); line-height: 1.6; } .meta .pnum { height: 15px; min-width: 20px; font-size: 10px; }
+  .meta .nmx { font-family: var(--font); font-weight: 600; letter-spacing: .02em; color: var(--text-2); }
+  .txt { position: relative; } .txt .ghost { visibility: hidden; user-select: none; padding-right: 8px; } .txt .words { position: absolute; left: 0; top: 0; width: 100%; }
+  .w { display: inline-block; animation: wordin .26s ease-out both; } @keyframes wordin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .showwin .w.out { color: var(--text-3); }
+  .caret { display: inline-block; width: 0; height: 1.05em; position: relative; vertical-align: text-bottom; } .caret::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: var(--accent); animation: caret 1s steps(2) infinite; } @keyframes caret { 50% { opacity: 0; } }
+  .ph { box-shadow: inset 0 -2px 0 var(--c); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .readnote { font-size: 11px; color: var(--text-3); padding: 0 12px 6px; }
+
+  .rail { grid-area: rail; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 210px; }
+  .stackroot { position: relative; overflow: hidden; }
+  .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 0 6px 0 8px; background: var(--surface); height: 34px; overflow: hidden; display: flex; align-items: center; gap: 7px; }
+  .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); }
+  .moment .ic { color: var(--c); display: grid; place-items: center; flex: none; }
+  .moment .nm { font-weight: 650; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .moment .who { font: 700 11px var(--mono); color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; flex: none; }
+  .moment .pc { font: 600 11px var(--mono); color: var(--text); flex: none; }
+  .moment .cnt { font: 500 10.5px var(--mono); color: var(--text-3); flex: none; }
+  .moment .age { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); white-space: nowrap; flex: none; }
+  .moment .btn { font-size: 11px; padding: 0 4px; line-height: 16px; min-height: 0; flex: none; }
+  .moment.cool .nm { color: var(--text-2); font-weight: 500; }
+  .moment .hold { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); } .moment .hold i { display: block; height: 100%; background: var(--c); transform-origin: left; }
+  .scroll { overflow: auto; min-height: 0; }
+  .cnote { border-left: 5px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-sm); padding: 8px 10px; display: grid; gap: 4px; }
+  .cnote.caution { border-left-color: var(--bad); background: var(--bad-soft); } .cnote.notice { border-left-color: var(--warn); background: var(--warn-soft); }
+  .cwin { display: flex; justify-content: space-between; font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
+  .chead { font-size: clamp(22px, 1.9vw, 28px); font-weight: 780; letter-spacing: -.02em; line-height: 1.05; }
+  .ctext { font-size: 14px; line-height: 1.3; font-weight: 500; }
+  .cwhy { font-size: 12px; color: var(--text-2); min-height: 16px; }
+  .ctimer .trk { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--text) 14%, transparent); overflow: hidden; } .ctimer .trk i { display: block; height: 100%; background: var(--text); transform-origin: left; }
+  .bt { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 2px 0 4px; }
+  .split { position: relative; height: 9px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+  .split i { position: absolute; top: 0; bottom: 0; width: 100%; } .split .th { left: 0; background: var(--text-3); transform-origin: left; transform: scaleX(.5); } .split .me { right: 0; background: var(--accent); transform-origin: right; transform: scaleX(.5); }
+  .bl { font: 500 11px var(--mono); color: var(--text-2); margin: 4px 0 6px; min-height: 14px; } .tip { font-size: 12.5px; min-height: 18px; }
+  .ck { display: grid; grid-template-columns: 16px 1fr auto auto; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; align-items: center; }
+  .ck .g { font: 700 12px var(--mono); color: var(--text-3); } .ck.done .g { color: var(--good); } .ck .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .ck button { border: 0; background: transparent; color: var(--text-3); cursor: pointer; }
+  .rf { font-size: 12px; color: var(--text-2); padding: 2px 0; overflow-wrap: anywhere; }
+
+  /* Tabbed card */
+  .tabs2 { display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 8px; flex-wrap: wrap; }
+  .tabs2 button { border: 0; background: transparent; padding: 6px 9px; font: inherit; font-size: 12.5px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs2 button[aria-selected=true] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+  .tabpane { padding: 6px 12px 8px; overflow: auto; flex: 1; min-height: 0; }
+  .mrow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-bottom: 6px; }
+  .mrow .l { font-size: 12px; color: var(--text-3); } .mrow .segmented button { padding: 3px 8px; }
+  .mbtn { display: inline-flex; gap: 6px; align-items: baseline; } .mbtn small { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .est { font: 500 11px var(--mono); color: var(--text-2); }
+  .li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .li .ts { font: 500 11px var(--mono); color: var(--text-3); }
+  .li .q { color: var(--text-2); overflow-wrap: anywhere; } .li .ic { display: inline-block; vertical-align: -2px; margin-right: 4px; color: var(--c); }
+  .dform { display: grid; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .dform label { font-size: 12px; font-weight: 500; color: var(--text-2); display: grid; gap: 2px; }
+  .icons { display: flex; flex-wrap: wrap; gap: 4px; }
+  .icons button { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 5px; padding: 3px; cursor: pointer; color: var(--text-2); display: grid; place-items: center; }
+  .icons button[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .chartwrap { position: relative; flex: 1; min-height: 0; padding: 2px 10px 6px; } .chartwrap canvas { position: absolute; inset: 2px 10px 6px; width: calc(100% - 20px); height: calc(100% - 8px); }
+  .key { font-size: 12px; color: var(--text-2); }
+  .tabsbar { display: none; }
+  @media (max-width: 1100px) {
+    .cp { min-height: 0; }
+    .cp .ctl { margin-left: 0; }
+    .stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "x"; }
+    .stage > [data-pane] { grid-area: x; display: none; }
+    .stage[data-tab="talk"] > [data-pane="talk"], .stage[data-tab="signals"] > [data-pane="signals"], .stage[data-tab="cues"] > [data-pane="cues"], .stage[data-tab="history"] > [data-pane="history"] { display: flex; flex-direction: column; }
+    .stage[data-tab="signals"] > [data-pane="signals"] { display: grid; align-content: start; overflow: auto; }
+    .stage[data-tab="cues"] > [data-pane="cues"] { overflow: auto; }
+    .dets { max-height: none; }
+    .cols { grid-template-columns: 1fr; flex: 0 0 auto; }
+    .tabsbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+    .tabsbar button { border: 0; background: transparent; padding: 10px 4px; font: inherit; font-size: 12px; color: var(--text-3); border-top: 2px solid transparent; cursor: pointer; }
+    .tabsbar button[aria-selected=true] { color: var(--text); border-top-color: var(--text); font-weight: 600; }
+  }
+  @media (max-width: 560px) { .trow { grid-template-columns: 1fr; } .bub { max-width: 92%; } .cp .top .sub { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .w, .caret::after, .pill.on .rec { animation: none; } }
+
+  /* Tab panes: one job each */
+  .tabs2 button .n { margin-left: 5px; font: 500 10.5px var(--mono); color: var(--text-3); } .tabs2 button[aria-selected=true] .n { color: var(--text-2); }
+  .tabpane.col { display: flex; flex-direction: column; gap: 6px; }
+  .sec { display: flex; justify-content: space-between; align-items: baseline; }
+  .fl { border-left: 4px solid var(--c); padding: 4px 8px 5px; margin: 4px 0; background: var(--surface); border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .fl .ts, .evx .ts { font: 500 11px var(--mono); color: var(--text-3); padding-top: 1px; }
+  .fl .fh { display: flex; align-items: center; gap: 7px; font-size: 12.5px; } .fl .ic { color: var(--c); display: grid; place-items: center; }
+  .fl .vc, .fl .cnt { font: 600 10.5px var(--mono); color: var(--text-2); } .fl .vc { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; } .fl .pc { font: 600 11px var(--mono); margin-left: auto; } .fl .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .fl .q { color: var(--text-2); font-size: 12.5px; overflow-wrap: anywhere; }
+  .drow { display: grid; grid-template-columns: 22px auto auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .drow .ic { color: var(--c); display: grid; place-items: center; } .drow .small { text-align: right; }
+  .libchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .libchip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; padding: 4px 9px; border: 1px dashed var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text-2); cursor: pointer; } .libchip:hover { border-style: solid; color: var(--text); background: var(--surface-2); }
+  .dnew { margin-top: 10px; } .dnew > summary { cursor: pointer; font-weight: 600; font-size: 12.5px; color: var(--accent); }
+  .frow { display: flex; gap: 14px; flex-wrap: wrap; }
+  .models { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .mbig { display: inline-flex; align-items: baseline; gap: 6px; font: inherit; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; } .mbig b { font: 700 13px var(--mono); } .mbig small { font: 500 10.5px var(--mono); color: var(--text-3); } .mbig small.paid { color: var(--warn); }
+  .mbig[aria-checked=true] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .mstat { display: flex; align-items: center; gap: 4px; min-height: 18px; margin-bottom: 4px; }
+  .twocol { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
+  .bigval { font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; } .bigslider { width: 100%; min-height: 24px; margin: 2px 0; }
+  .help { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .reqbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .reqhead { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+  pre.req { flex: 1; min-height: 60px; overflow: auto; margin: 0; }
+  .evx { padding: 6px 0; border-bottom: 1px solid var(--border); } .evx .eh { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; font-size: 13px; }
+  .evx .er { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 0 48px; } .evx .lbl { font-size: 11px; color: var(--text-3); }
+  .drow button.x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; } .drow button.x:hover { color: var(--bad); }
+  .moment .sup { display: inline-flex; align-items: center; gap: 2px; font: 600 11px var(--mono); color: var(--text-3); flex: none; }
+  .moment.shifted { opacity: .7; }
+
+  /* ---- live additions (from the Flow lab) ---- */
+  .mockbanner { font-size: 12px; color: var(--text-2); background: var(--warn-soft); border: 1px solid var(--warn); border-radius: var(--radius-sm); padding: 3px 10px; align-self: center; }
+  .livepanel { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-end; }
+  .livepanel input[type=text] { min-width: 280px; }
+  .tent { font-style: italic; color: var(--text-3); font-size: 13px; padding: 4px 12px 6px; border-top: 1px dashed var(--border); min-height: 26px; }
+  .tent .pnum { margin-right: 6px; font-style: normal; display: inline-grid; }
+  .pcard .vstat { font: 500 10.5px var(--mono); color: var(--text-3); min-height: 14px; } .pcard.stale { opacity: .6; } .pcard .vstat.ret { color: var(--warn); font-weight: 600; }
+  .vcap { font: 600 11px var(--mono); padding-top: 6px; white-space: nowrap; } .vcap.warn { color: var(--warn); } .vcap.bad { color: var(--bad); }
+  .liveerr { font-size: 12px; color: var(--bad); background: var(--surface); border: 1px solid var(--bad); border-radius: var(--radius-sm); padding: 4px 10px; }
+  /* one stable header + one fixed-height source bar: both modes occupy the same space, so switching never re-flows the page */
+  .cp .hdr { display: flex; align-items: center; gap: 10px 14px; min-height: 40px; }
+  .hdr .hl { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; } .hdr .hr { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; }
+  .hdr h1 { font-size: 17px; margin: 0; white-space: nowrap; }
+  .srcbar { display: grid; min-height: 60px; align-items: end; }
+  .srcbar > .layer, .srcbar > .livepanel { grid-area: 1 / 1; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: flex-end; align-content: flex-end; min-width: 0; transition: opacity .18s ease; }
+  .srcbar .off { opacity: 0; visibility: hidden; pointer-events: none; }
+  .srcbar textarea { height: 34px; min-height: 34px; resize: none; }
+  .slot { min-width: 340px; display: flex; flex-direction: column; }
+  .inlinenote { position: relative; font-size: 12px; color: var(--text-2); }
+  .inlinenote summary { cursor: pointer; list-style: none; padding: 2px 9px; border: 1px solid var(--warn); border-radius: 99px; background: var(--warn-soft); white-space: nowrap; }
+  .inlinenote summary::-webkit-details-marker { display: none; }
+  .inlinenote[open] p { position: absolute; z-index: 30; top: 30px; left: 0; width: min(560px, 80vw); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 10px; margin: 0; box-shadow: 0 8px 28px rgba(0,0,0,.4); }
+  .hdr { flex-wrap: wrap; } .hdr .hr { flex-wrap: nowrap; }
+  .hsrc { display: flex; align-items: center; gap: 8px; flex: 1 1 380px; min-width: 0; }
+  .hsrc > select { flex: 0 0 230px; max-width: 260px; }
+  .slot { flex: 1 1 200px; min-width: 200px; max-width: 540px; display: flex; flex-direction: row; align-items: center; gap: 6px; min-height: 34px; max-height: 34px; }
+  .slot textarea { height: 34px; min-height: 34px; resize: none; padding-top: 6px; }
+  .slot #paste, .slot .field { flex: 1 1 auto !important; }
+  .slot > * { min-width: 0; } .slot .field { flex: 1 1 auto; } .slot .field > label { display: none; }
+  .slot input[type=text], .slot select, .slot textarea { width: 100%; } .slot input[type=file] { width: 100%; }
+  .slot .row1 { display: flex; gap: 6px; flex: 1 1 auto; } .slot .row1 select { flex: 1 1 auto; min-width: 0; }
+  .hdr .pill { min-width: 150px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menuwrap { position: relative; } .menu { position: absolute; right: 0; top: 38px; z-index: 40; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 4px; min-width: 210px; box-shadow: 0 8px 28px rgba(0,0,0,.4); }
+  .menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 4px; cursor: pointer; } .menu button:hover, .menu button:focus-visible { background: var(--surface-2); }
+  .playsec { margin-bottom: 12px; }
+  .dgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; } .dgrid .drow { padding: 3px 0; }
+  @media (max-width: 1500px) { .dgrid { grid-template-columns: minmax(0, 1fr); } }
+  .noticebar { position: relative; height: 0; z-index: 25; } .noticebar > * { position: absolute; left: 0; right: 0; top: 6px; }
+  .noticebar > :empty { display: none; }
+  @keyframes stagefade { from { opacity: 0; } to { opacity: 1; } } .stage.fadein { animation: stagefade .24s ease-out; }
+  .rail .cols { min-height: 270px; }
+  .rail.lvbig .cols { display: none; } .rail.lvbig > .pn { flex: 1 1 auto !important; }
+  table.lv td { padding-top: 1px; padding-bottom: 1px; }
+  table.lv { border-collapse: collapse; width: 100%; font-size: 12px; } table.lv th { font: 600 10.5px var(--font); color: var(--text-3); text-align: center; padding: 2px 4px; } table.lv td { padding: 2px 4px; border-bottom: 1px solid var(--border); } table.lv td.c { text-align: center; font: 600 11px var(--mono); border-radius: 3px; min-width: 40px; } table.lv td.n { white-space: nowrap; }
+  .cnt-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; font-size: 12.5px; } .cnt-grid .k { color: var(--text-2); } .cnt-grid .v { font: 600 12px var(--mono); text-align: right; }
+  .cnt-grid .h { grid-column: 1 / -1; font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-top: 8px; }
+  .dchip .pv { font: 600 10.5px var(--mono); color: var(--text-3); min-width: 18px; text-align: right; } .dchip.hot .pv { color: var(--text); }
+</style>
+</head>
+<body>
+<main class="page cockpit"><div id="app"></div></main>
+<script>
+(() => {
+  const { el, fmt, api, toast, copy, download } = Jev;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const mmss = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+  const words = (s) => String(s).split(/\s+/).filter(Boolean);
+  const SENT_END = /[.!?…]["')\]]*$/;
+  const LIVE_SRCS = [["youtube", "YouTube link"], ["file", "Audio file"], ["lib", "Library file"], ["mic", "Microphone"], ["tab", "Tab / call audio"]];
+  const HOLD = 30, MAXDET = 20, CONC = 3, PER_Q = 110, MAX_VOICES = 8, HITS = 6, WINDOW_GAP = 30, MAX_QUEUE = 4;
+  const SPEEDS = [["0.5", "0.5x"], ["1", "1x"], ["2", "2x"], ["4", "4x"], ["30", "Max"]];
+  const WINS = ["w5", "w10", "w20", "w40", "s1", "s2", "s3"];
+  const winName = (s) => `last ${s.slice(1)} ${{ w: "word", s: "sentence" }[s[0]]}${s.slice(1) === "1" ? "" : "s"}`;
+  const short = (n) => String(n).replace(/ \(.*\)/, "");
+  const cvar = (slot) => `--c:var(--s${(slot % 8) + 1})`;
+  let TARIFF = 0.042;
+
+  /* ---------- icons: a small object palette. Colour says which detector family, the icon says which detector ---------- */
+  const circ = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+  const ICONS = {
+    flame: "M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3 2-4 .3 1.2 1 2 1.8 2C11 8.5 11.5 5.5 12 3z", alert: "M12 4 3 20h18L12 4z|M12 10v4|M12 17v.5", clock: circ(12, 12, 9) + "|M12 7v5l3.5 2",
+    shield: "M12 3l8 3v6c0 4.5-3.2 7.5-8 9-4.8-1.5-8-4.5-8-9V6l8-3z|M12 8v5|M12 16v.5", heart: "M12 20s-8-4.8-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.2 12 20 12 20z",
+    mask: "M4 6c4-2 12-2 16 0v5c0 4.5-3.5 8-8 8s-8-3.5-8-8V6z|M8 11h2|M14 11h2|M9 15c1.5 1.2 4.5 1.2 6 0", hook: "M12 3v11a4 4 0 1 1-4-4|M9 5h6",
+    smile: circ(12, 12, 9) + "|M8 14.5c2 1.5 6 1.5 8 0|M9 9.5h.5|M14.5 9.5h.5", box: "M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5v-9z|M3 7.5l9 4.5 9-4.5|M12 12v9",
+    users: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z|M3 20c0-3.2 2.7-5 6-5s6 1.8 6 5|M16 5.5a3 3 0 0 1 0 5.5|M18 15.3c2 .6 3.3 2 3.3 4.7", megaphone: "M3 10v4l11 5V5L3 10z|M14 8c3 0 5 1.5 5 4s-2 4-5 4|M6 14.5l1.2 5h3l-1-4.2",
+    coin: circ(12, 12, 9) + "|M12 7v10|M9.5 9.5c0-1.2 1.2-2 2.5-2s2.5.8 2.5 2c0 3-5 1.8-5 4.5 0 1.2 1.2 2 2.5 2s2.5-.8 2.5-2", check: circ(12, 12, 9) + "|M8 12.5l3 3 5-6",
+    help: circ(12, 12, 9) + "|M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7|M12 17v.5", flag: "M5 21V4|M5 4h12l-2.5 4L17 12H5", star: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z",
+    bell: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2z|M10 21h4", lock: "M6 11h12v9H6z|M8.5 11V8a3.5 3.5 0 0 1 7 0v3", eye: "M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z|" + circ(12, 12, 3),
+    bolt: "M13 2L4 14h7l-1 8 9-12h-7l1-8z", key: circ(8, 15, 4) + "|M11 12l9-9|M16 7l3 3", chat: "M4 5h16v11H9l-5 4V5z", target: circ(12, 12, 9) + "|" + circ(12, 12, 4.5),
+  };
+  const ICON_NAMES = Object.keys(ICONS), NS = "http://www.w3.org/2000/svg", P2D = {};
+  function iconEl(name, size = 15) {
+    const s = document.createElementNS(NS, "svg"); for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) s.setAttribute(k, v);
+    for (const d of (ICONS[name] || ICONS.flag).split("|")) { const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); s.append(p); } return s;
+  }
+  function drawIcon(ctx, name, x, y, size, color) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(size / 24, size / 24); ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const d of (ICONS[name] || ICONS.flag).split("|")) { const k = name + d; ctx.stroke(P2D[k] ||= new Path2D(d)); } ctx.restore();
+  }
+
+  /* Nine validated question sets, eleven detectors. `scope` says what text the detector was validated on: one person's words, or a whole dialogue. */
+  const QSETS = { manipulation: "manipulation_dialogue", phishing: "phishing", sarcasm: "sarcasm_isarcasm", threat: "threat_civil", anger: "emotion_anger", fear: "emotion_fear", politeness: "politeness_deference", darkpatterns: "darkpatterns", persuasion: "persuasion_appeals" };
+  const PERSP = [
+    { id: "manipulation", icon: "mask", name: "Manipulation", q: "manipulation", read: "noul", scope: "call", about: "Does one speaker try to manipulate the other? Validated on whole dialogues, so it reads the whole call, not one person." },
+    { id: "phishing", icon: "hook", name: "Deceptive request", q: "phishing", read: "noul", scope: "person", about: "Is the text trying to get credentials or money through deception?" },
+    { id: "sarcasm", icon: "smile", name: "Sarcasm", q: "sarcasm", read: "noul", scope: "person", about: "Does the speaker mean the opposite of the literal words?" },
+    { id: "threat", icon: "shield", name: "Threat", q: "threat", read: "noul", scope: "person", about: "Does the text threaten to harm the listener?", caveat: "The threat set has label noise, so treat its accuracy as a rough guide." },
+    { id: "anger", icon: "flame", name: "Anger", q: "anger", read: "noul", scope: "person", about: "Does the text express anger?" },
+    { id: "fear", icon: "alert", name: "Fear", q: "fear", read: "noul", scope: "person", about: "Does the text express fear or nervousness?" },
+    { id: "politeness", icon: "heart", name: "Politeness", q: "politeness", read: "noul", scope: "person", about: "Is the speaker polite and deferential to the person addressed?" },
+    { id: "urgency", icon: "clock", name: "Urgency", q: "darkpatterns", read: "urgency", scope: "person", about: "P(urgency) from the dark-pattern question: a deadline pushing a quick decision.", caveat: "Validated on short shopping-site text." },
+    { id: "scarcity", icon: "box", name: "Scarcity", q: "darkpatterns", read: "scarcity", scope: "person", about: "P(scarcity) from the dark-pattern question: something may run out.", caveat: "Validated on short shopping-site text." },
+    { id: "social_proof", icon: "users", name: "Social proof", q: "darkpatterns", read: "social_proof", scope: "person", about: "P(social_proof) from the dark-pattern question: what others did or said.", caveat: "Validated on short shopping-site text." },
+    { id: "persuasion", icon: "megaphone", name: "Persuasive move", q: "persuasion", read: "appeal", scope: "person", about: "1 minus P(none) from the persuasion-appeal question.", caveat: "Validated on donation appeals to a charity; other contexts are outside what was measured." },
+  ];
+  const P_BY = Object.fromEntries(PERSP.map(p => [p.id, p]));
+  const DEFAULTS = ["anger", "fear", "urgency", "threat", "politeness", "manipulation", "persuasion", "sarcasm"];
+
+  const S = { showWin: false, src: null, dlg: null, coach: null, names: false, model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "replay", fresh: false, stale: 120, cap: 150, k: 2, liveSrc: "youtube", pace: "realtime", armed: false, playing: false, t: 0, done: false, dets: [], kps: [], seq: 0, tab: "flag", view: "det", reqSel: "latest" };
+  let D = null, T = null, W = [], DUR = 0, ptr = 0, raf = 0, last = performance.now(), runner = null, ui = {}, QS = {}, QALL = {}, EVENTS = [], SP = { list: [], by: {} };
+  const C = new Map(), CPS = [], FLAGS = [], LAGS = {}, QUEUE = [], LOGW = [], rows = [], peopleSpans = {}, cards = [], SPOKE = [], PC = {};
+  let active = 0, ctl = null, failed = 0, pending = 0, maxPending = 0, moSeq = 0, nextSample = 0, checksDone = 0, pre = null, cpN = 0, glide = null, stack = null, chart = null, curSpk = null;
+  const kv = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  /* ---------- speakers: diarization gives ids, not names, so each is "Person N" ---------- */
+  function buildSpeakers() {
+    SP = { list: [], by: {} };
+    T.speakers.forEach((name, i) => { const p = { name, n: i + 1, label: `V${i + 1}` }; SP.list.push(p); SP.by[name] = p; });
+    if (window.__cockpit) window.__cockpit.SP = SP;
+  }
+  const numOf = (spk) => SP.by[spk] ? SP.by[spk].n : "?";
+  const code = (spk) => spk === "_call" ? "Call" : "V" + numOf(spk);
+  const namesKnown = () => !!T && T.meta.kind !== "dialogue" && T.meta.kind !== "live";
+  const nm = (spk) => S.names && namesKnown() ? spk : "";
+  const OTHER_SLOTS = [2, 3, 4, 5, 6, 7, 8, 1];
+  const vcol = (spk) => { if (isCoach(spk)) return "var(--accent)"; const others = SP.list.filter(p => p.name !== S.coach), i = others.findIndex(p => p.name === spk); return i < 0 ? "var(--text-2)" : `var(--s${OTHER_SLOTS[i % 8]})`; };
+  const lab = (spk) => spk === "_call" ? "Whole call" : nm(spk) || code(spk);
+  const isCoach = (spk) => spk === S.coach;
+
+  /* ---------- transcript, timeline ---------- */
+  function makeTranscript(turns, meta) {
+    const ts = turns.map(t => ({ speaker: String(t.speaker), text: words(t.text).join(" "), words: words(t.text) }));
+    return { turns: ts, meta, speakers: [...new Set(ts.map(t => t.speaker))] };
+  }
+  function parsePaste(text) {
+    const turns = [];
+    for (const raw of text.split(/\n/)) {
+      const line = raw.trim(); if (!line) continue;
+      const m = line.match(/^([^:]{1,40}):\s*(.*)$/);
+      if (m) { if (m[2].trim()) turns.push({ speaker: m[1].trim(), text: m[2].trim() }); }
+      else if (turns.length) turns[turns.length - 1].text += " " + line; else turns.push({ speaker: "Speaker", text: line });
+    }
+    return turns;
+  }
+  function currentTranscript() {
+    if (S.src === "paste") return makeTranscript(parsePaste(S.paste), { kind: "paste", title: "Pasted text" });
+    if (S.src === "dlg") { const d = D.dialogues.find(x => x.id === S.dlg) || D.dialogues[0]; return makeTranscript(d.turns, { kind: "dialogue", title: "Library dialogue " + d.id, d }); }
+    const s = D.scenes.find(x => x.slug === S.src) || D.scenes[0]; return makeTranscript(s.turns, { kind: "scene", title: s.title, s });
+  }
+  /* The timeline is what a live speech-to-text source would produce: words with a speaker and a time. Replay generates it at about 150 words a minute. */
+  function buildTimeline() {
+    W = []; let t = 0.05;
+    T.turns.forEach((tu, i) => {
+      tu.t0 = t;
+      tu.words.forEach((w, k) => { W.push({ i, k, w, spk: tu.speaker, t }); t += 0.18 + 0.045 * w.replace(/\W/g, "").length; if (/[,;]$/.test(w)) t += 0.1; if (SENT_END.test(w)) t += 0.35; });
+      tu.t1 = t; t += 0.8;
+    });
+    DUR = t;
+    const ev = (T.meta.s && T.meta.s.documented_events) || [];
+    EVENTS = ev.map((e, n) => ({ n: n + 1, t: (T.turns[e.turn_index] || T.turns[0]).t0, turn: e.turn_index, what: e.what_happened, quote: e.evidence_quote, url: e.evidence_source_url }));
+  }
+
+  /* ---------- detectors: one definition each, a state per person ---------- */
+  const newState = () => ({ latest: 0, marks: [], disp: 0, lastFire: -1e9, above: null, n: 0 });
+  const cs = (d, spk) => d.st[spk] ||= newState();
+  const stFor = (d, spk) => cs(d, d.scope === "call" ? "_call" : spk);
+  const freeSlot = () => { const used = S.dets.map(d => d.slot); let i = S.dets.length; return i; };
+  function newDet(o) { return { key: o.key, pid: o.pid || null, label: o.label, icon: o.icon, slot: o.slot, scope: o.scope || "person", q: o.q, read: o.read || "noul", custom: !!o.custom, about: o.about || "", example: o.example || "", caveat: o.caveat || "", st: {}, agg: { disp: 0, above: null, lastFire: -1e9, who: null, n: 0, hist: [], lastP: null } }; }
+  function addLibrary(pid, quiet) {
+    const p = P_BY[pid]; if (!p) return false;
+    if (S.dets.some(d => d.pid === pid)) { if (!quiet) toast(`${p.name} is already on.`); return false; }
+    if (S.dets.length >= MAXDET) { if (!quiet) toast(`${MAXDET} detectors is the most. Remove one first.`); return false; }
+    S.dets.push(newDet({ key: pid, pid, label: p.name, icon: p.icon, slot: S.dets.length, scope: p.scope, q: p.q, read: p.read, about: p.about, caveat: p.caveat })); return true;
+  }
+  const customQ = (what, example) => ({ type: "noul", instructions: `Does the text match this description: ${what}`, criteria: { true: `The text matches: ${what}.${example ? ` Example: "${example}"` : ""}`, false: `The text does not match: ${what}` } });
+  function addCustom(name, what, example, icon, scope, fixedKey) {
+    name = name.trim(); what = what.trim(); example = (example || "").trim();
+    if (!name || !what) { toast("Give it a name and say what it should detect."); return null; }
+    if (S.dets.length >= MAXDET) { toast(`${MAXDET} detectors is the most. Remove one first.`); return null; }
+    const key = fixedKey || "c" + (++S.seq); QALL[key] = customQ(what, example);
+    const d = newDet({ key, label: name.length > 22 ? name.slice(0, 21) + "…" : name, icon: icon && ICONS[icon] ? icon : ICON_NAMES[(S.dets.length * 5 + 3) % ICON_NAMES.length], slot: S.dets.length, scope: scope || "person", q: key, custom: true, about: what, example }); d.name = name; S.dets.push(d); return d;
+  }
+  /* The core sixteen: nine validated library detectors + seven of our own wording (unvalidated). Scarcity and social proof stay in the library but are off: validated only on shopping-site text. */
+  const CORE_VALIDATED = ["anger", "fear", "threat", "politeness", "sarcasm", "phishing", "persuasion", "urgency", "manipulation"];
+  const CORE_NEW = [
+    { key: "k_question", name: "Question", icon: "help", what: "the speaker asks a question or asks for information" }, { key: "k_commitment", name: "Commitment", icon: "check", what: "the speaker promises or commits to doing something" },
+    { key: "k_disagree", name: "Disagreement", icon: "bolt", what: "the speaker disagrees with, objects to, or pushes back on something that was said" }, { key: "k_agree", name: "Agreement", icon: "star", what: "the speaker agrees with or accepts what was said" },
+    { key: "k_uncertain", name: "Uncertainty", icon: "eye", what: "the speaker expresses uncertainty, hedges, or says they are not sure" }, { key: "k_empathy", name: "Empathy", icon: "users", what: "the speaker acknowledges or shows understanding of another person's feelings" },
+    { key: "k_deflect", name: "Deflection", icon: "target", what: "the speaker avoids answering, changes the subject, or deflects responsibility" },
+  ];
+  function addCore(key) { const c = CORE_NEW.find(x => x.key === key); if (!c || S.dets.some(d => d.key === key)) return null; return addCustom(c.name, c.what, "", c.icon, "person", key); }
+  function loadCore() { S.dets = []; for (const pid of CORE_VALIDATED) addLibrary(pid, true); for (const c of CORE_NEW) addCore(c.key); }
+  /* Replay keeps classic's eight defaults; Live starts from the core sixteen. Neither is touched once you change the detectors yourself. */
+  function defaultDets(mode) { S.dets = []; if (mode === "live") loadCore(); else for (const id of DEFAULTS) addLibrary(id, true); }
+  /* one entry of a detector file or a suggestion: {library} or {name, what, example, scope, icon, key}; null when skipped (already on, invalid or full) */
+  function addSpec(x) {
+    if (!x || typeof x !== "object") return null;
+    if (x.library) return addLibrary(x.library, true) ? S.dets[S.dets.length - 1] : null;
+    if (typeof x.name !== "string" || typeof x.what !== "string") return null;
+    if (x.key && S.dets.some(d => d.key === x.key)) return null;
+    if (S.dets.some(d => (d.name || d.label).toLowerCase() === x.name.trim().toLowerCase())) return null;
+    return addCustom(x.name.slice(0, 40), x.what.slice(0, 240), String(x.example || "").slice(0, 240), x.icon, x.scope === "call" ? "call" : "person", /^[a-z0-9_]{1,40}$/.test(x.key || "") ? x.key : null);
+  }
+  const exportDoc = () => ({ name: "My detectors", description: "Exported from Conversation flow", detectors: S.dets.map(d => d.pid ? { library: d.pid } : { key: d.key, name: d.name || d.label, what: d.about, example: d.example || "", scope: d.scope, icon: d.icon }) });
+  /* on add during a live session: score each recent voice's current window once with only the new questions (one call per voice, however many were added) */
+  function testMany(ds) {
+    if (!ds.length || S.mode !== "live" || !runner || (isHosted() && !S.armed)) return;
+    const lastTurn = (spk) => { for (let i = T.turns.length - 1; i >= 0; i--) if (T.turns[i].speaker === spk) return i; return -1; };
+    const mk = (scope, spk, state, qids) => { const i = lastTurn(spk); if (i < 0) return null; const k = T.turns[i].words.length - 1; return { scope, spk, state, qids: [...new Set(qids)], i, k0: Math.max(0, k - winWords() + 1), k, stLast: V.audioS, test: true }; };
+    const per = ds.filter(d => d.scope === "person"), call = ds.filter(d => d.scope === "call");
+    if (per.length) for (const spk of Object.keys(runner.people).filter(k => runner.people[k].words.length >= 3).slice(-3)) { const c = mk("person", spk, personWindow(runner.people[spk].words, S.win), per.map(d => d.q)); if (c && words(c.state).length >= 3) { LN.testChecks++; submit(c); } }
+    if (call.length && runner.flat.length >= 3) { const c = mk("call", runner.flat[runner.flat.length - 1].spk, callWindow(runner.flat, S.win), call.map(d => d.q)); if (c) { LN.testChecks++; submit(c); } }
+  }
+  function addKeyPoint(text) {
+    text = text.trim(); if (!text) return false; const key = "k" + (++S.seq);
+    QALL[key] = { type: "noul", instructions: `Does the speaker say or clearly convey this: ${text}`, criteria: { true: `The text matches: ${text}`, false: `The text does not match: ${text}` } };
+    S.kps.push({ key, q: key, text, done: false, doneAt: 0 }); return true;
+  }
+  function removeDet(key) { S.touched = true; S.dets = S.dets.filter(d => d.key !== key); renderDets(); renderDetTab(); renderPeople(); afterConfig(); }
+  const detsFor = (chk) => S.dets.filter(d => d.scope === (chk.scope === "call" ? "call" : "person"));
+
+  /* Trust: measured accuracy of the detector on its own validation set, for the selected model. Custom detectors have none. */
+  const wilson = (k, n, z = 1.96) => { const p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - m) / d, (c + m) / d]; };
+  function trust(d) {
+    if (d.custom) return { text: "unvalidated", warn: true, title: "Your own wording: no validation set exists, so there is no measured accuracy. Treat it as a hint." };
+    const set = D.sets[QSETS[d.q]], res = set && set.results && set.results[S.model], cav = d.caveat ? " " + d.caveat : "";
+    if (!res || !Object.keys(res).length) return { text: "not measured", warn: true, title: `No published results for this model on the ${QSETS[d.q]} set.${cav}` };
+    const rs = Object.values(res), n = rs.length, k = rs.filter(r => r.correct).length, chance = 1 / (set.items[0].labels.length || 2), ci = wilson(k, n), near = ci[0] <= chance && chance <= ci[1];
+    return { text: `acc ${fmt.pct(k / n, 0)}${near ? ", near chance" : ""}`, warn: near, title: `${k} of ${n} correct on the ${QSETS[d.q]} validation set. 95% interval ${fmt.pct(ci[0], 0)} to ${fmt.pct(ci[1], 0)}; chance is ${fmt.pct(chance, 0)}.${near ? " The interval includes chance." : ""}${cav} Per-person windows are new: the set was validated on whole texts.` };
+  }
+
+  /* ---------- windows and the checkpoint runner (shared by live playback and precompute) ---------- */
+  function personWindow(ws, spec) {
+    const kind = spec[0], n = parseInt(spec.slice(1), 10);
+    if (kind === "w") return ws.slice(-n).join(" ");
+    return ws.join(" ").trim().split(/(?<=[.!?…])\s+/).filter(Boolean).slice(-n).join(" ");
+  }
+  function callWindow(flat, spec) {
+    const kind = spec[0], n = parseInt(spec.slice(1), 10), take = kind === "w" ? n : n * 40, tail = flat.slice(-take);
+    let out = [], prev = null; for (const x of tail) { if (x.spk !== prev) { out.push(`${x.spk}:`); prev = x.spk; } out.push(x.w); }
+    const txt = out.join(" "); return kind === "w" ? txt : txt.split(/(?<=[.!?…])\s+/).filter(Boolean).slice(-n).join(" ");
+  }
+  const qidsFor = (chk) => [...new Set([...detsFor(chk).map(d => d.q), ...(chk.scope === "person" && isCoach(chk.spk) ? S.kps.map(k => k.q) : [])])];
+  function makeRunner() {
+    const R = { people: {}, flat: [], dsince: 0, prev: null };
+    const trig = (since, end, turnEnd) => S.cp === "words" ? since >= S.n : ((end || turnEnd) && since >= 3) || since >= 12;
+    R.feed = (wd) => {
+      const p = (R.people[wd.spk] ||= { words: [], since: 0, k0: 0, i0: -1, lastT: null }), end = SENT_END.test(wd.w), turnEnd = wd.last !== undefined ? wd.last : wd.k === T.turns[wd.i].words.length - 1;
+      if (S.mode === "live" && p.lastT != null && wd.t - p.lastT > WINDOW_GAP) { p.words = []; p.since = 0; }      // a long silence: do not blend an old sentence into a new one
+      p.lastT = wd.t;
+      if (wd.k === 0 || (R.prev && R.prev.spk === wd.spk && R.prev.i === wd.i && R.prev.end)) { p.k0 = wd.k; p.i0 = wd.i; }
+      R.prev = { spk: wd.spk, i: wd.i, end }; p.words.push(wd.w); R.flat.push({ spk: wd.spk, w: wd.w }); p.since++; R.dsince++;
+      const out = [];
+      if (trig(p.since, end, turnEnd)) {
+        p.since = 0; const chk = { scope: "person", spk: wd.spk, i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, stLast: wd.t, state: personWindow(p.words, S.win) };
+        chk.qids = qidsFor(chk); if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
+      }
+      if (trig(R.dsince, end, turnEnd)) {
+        R.dsince = 0; const chk = { scope: "call", spk: wd.spk, i: wd.i, k0: p.i0 === wd.i ? p.k0 : 0, k: wd.k, stLast: wd.t, state: callWindow(R.flat, S.win) };
+        chk.qids = qidsFor(chk); if (chk.qids.length && words(chk.state).length >= 3) out.push(chk);
+      }
+      return out;
+    };
+    return R;
+  }
+
+  /* ---------- the request: exactly what is sent to the model's POST /v1/systemone ---------- */
+  const sysBody = (state, qids) => ({ state, model: "jev-latest", questions: Object.fromEntries(qids.map(q => [q, QALL[q]])) });
+  function validateReq(b) {
+    const p = [];
+    if (!(typeof b.state === "string" ? b.state.trim() : b.state && typeof b.state === "object")) p.push("state must be a non-empty string, object or array");
+    if (typeof b.model !== "string" || !b.model) p.push("model must be a string");
+    const qs = b.questions; if (!qs || typeof qs !== "object" || !Object.keys(qs).length) p.push("questions must be a non-empty object");
+    else for (const [k, q] of Object.entries(qs)) {
+      if (!["noul", "choice", "score"].includes(q.type)) { p.push(`${k}: type must be noul, choice or score`); continue; }
+      if (q.instructions != null && !["string", "object"].includes(typeof q.instructions)) p.push(`${k}: instructions must be a string, object or array`);
+      if (q.type === "noul" && q.criteria && !(typeof q.criteria === "object" && ("true" in q.criteria || "false" in q.criteria))) p.push(`${k}: noul criteria needs true and/or false`);
+      if (q.type === "choice" && !(q.criteria && typeof q.criteria === "object" && Object.keys(q.criteria).length >= 1 && Object.keys(q.criteria).length <= 255)) p.push(`${k}: choice criteria needs 1 to 255 options`);
+      if (q.type === "score" && !(Array.isArray(q.criteria) && q.criteria.length >= 1)) p.push(`${k}: score criteria needs a list of levels`);
+    }
+    return p;
+  }
+
+  /* ---------- calling the server ---------- */
+  const ckey = (state) => S.model + "\u0001" + state;
+  const rec = (state) => { const k = ckey(state); if (!C.has(k)) C.set(k, { answers: {}, err: null }); return C.get(k); };
+  const isHosted = () => !!(Jev.status() || {})[S.model]?.hosted;
+  const isUp = () => Jev.isUp(S.model);
+  const missing = (chk) => { const r = C.get(ckey(chk.state)); return chk.qids.filter(q => !(r && r.answers[q])); };
+  async function fetchState(state, qids, signal) {
+    const r0 = rec(state), miss = qids.filter(q => !r0.answers[q]); if (!miss.length) return 0;
+    const res = await api("/api/batch", { method: "POST", headers: { "Content-Type": "application/json" }, signal, body: JSON.stringify({ backend: S.model, items: [{ state, questions: Object.fromEntries(miss.map(q => [q, QALL[q]])) }] }) });
+    const r = Array.isArray(res) ? res[0] : null; if (!r || r.error) throw new Error((r && r.error) || "No result returned");
+    Object.assign(r0.answers, r.answers || {}); if (miss.some(q => !r0.answers[q])) throw new Error("Missing answer in response");
+    return 1;
+  }
+  function readDet(d, ans) {
+    if (!ans) return null;
+    if (d.custom || d.read === "noul") { const v = Number(ans.noul); return Number.isFinite(v) ? { score: v } : null; }
+    const pr = ans.probabilities; if (!pr) return null;
+    if (d.read === "appeal") { let top = null, tp = -1; for (const [k, v] of Object.entries(pr)) if (k !== "none" && v > tp) { top = k; tp = v; } return { score: clamp(1 - (pr.none ?? 0), 0, 1), label: top }; }
+    const v = pr[d.read]; return Number.isFinite(v) ? { score: v, label: ans.choice } : null;
+  }
+  function submit(chk) {
+    chk.n = ++cpN; chk.t = S.t; chk.wall = performance.now(); chk.model = S.model; chk.req = sysBody(chk.state, chk.qids); CPS.push(chk); if (S.tab === "req") renderReq();
+    if (!missing(chk).length) { apply(chk, 0); return; }
+    if (S.mode === "live") while (QUEUE.length >= MAX_QUEUE) { QUEUE.shift().dropped = true; LN.dropped++; }      // behind: drop the oldest, never let paid calls pile up
+    QUEUE.push(chk); pending = QUEUE.length + active; maxPending = Math.max(maxPending, pending); pump();
+  }
+  function pump() {
+    while (active < CONC && QUEUE.length) {
+      if (S.mode === "live" && LN.calls >= S.cap) { LN.capHit = true; LN.dropped += QUEUE.length; QUEUE.length = 0; pending = active; break; }
+      const chk = QUEUE.shift(); active++; if (S.mode === "live") { LN.calls++; LN.tokens += PER_Q * missing(chk).length + 2 * words(chk.state).length; } ctl = ctl || new AbortController(); const c = ctl;
+      fetchState(chk.state, chk.qids, c.signal).then(() => { if (!c.signal.aborted && chk.model === S.model) apply(chk, performance.now() - chk.wall); })
+        .catch(e => { if (!c.signal.aborted) { failed++; ui.err && (ui.err.textContent = `A check failed: ${e.message}`); } })
+        .finally(() => { if (ctl === c) { active--; pending = QUEUE.length + active; pump(); } });
+    }
+  }
+  function apply(chk, lagMs) {
+    checksDone++; if (lagMs) { (LAGS[S.model] ||= []).push(lagMs); if (S.mode === "live") { LN.e2e.push(S.t - chk.stLast); LN.wall.push(lagMs); } } const r = C.get(ckey(chk.state)); chk.answers = {};
+    for (const d of detsFor(chk)) {
+      const v = readDet(d, r && r.answers[d.q]); if (!v) continue; chk.answers[d.key] = v.score;
+      const st = stFor(d, chk.spk); d.agg.lastP = v.score; st.n++; st.latest = v.score; st.marks.push({ t: S.t, p: v.score }); if (st.marks.length > 60) st.marks.shift();
+      if (v.score >= S.gate) fire(d, chk, v);
+    }
+    if (chk.scope === "person" && isCoach(chk.spk)) for (const k of S.kps) { const v = readDet({ custom: true }, r && r.answers[k.q]); if (v && v.score >= S.gate && !k.done) { k.done = true; k.doneAt = S.t; renderKp(); } }
+    if (S.tab === "req") renderReq();
+  }
+
+  /* ---------- level, hold, fire ---------- */
+  const env = (p, age) => age < 0 ? 0 : age <= 8 ? p : p * Math.exp(-(age - 8) / 6);
+  const vis = (x) => x >= S.gate ? x : 0;
+  function tickDets(dt) {
+    const k = 1 - Math.exp(-dt / 0.18), sample = S.playing && nextSample <= S.t;
+    for (const d of S.dets) {
+      let best = 0, who = null, lf = -1e9;
+      for (const spk in d.st) {
+        const st = d.st[spk], m = st.marks[st.marks.length - 1], tgt = m ? env(m.p, S.t - m.t) : 0; st.disp += (tgt - st.disp) * k;
+        if (st.disp > best) { best = st.disp; who = spk; } if (st.lastFire > lf) lf = st.lastFire;
+      }
+      const a = d.agg; a.disp = best; a.who = who; a.lastFire = lf; a.n = Object.values(d.st).reduce((s, x) => s + x.n, 0);
+      if (a.disp >= S.gate && a.above == null) a.above = S.t; else if (a.disp < S.gate - 0.05) a.above = null;
+    }
+    if (sample) while (nextSample <= S.t) { for (const d of S.dets) { d.agg.hist.push([nextSample, d.agg.disp, d.agg.who]); if (d.agg.hist.length > 700) d.agg.hist.shift(); } nextSample += 0.2; }
+  }
+  function fire(d, chk, v) {
+    const st = stFor(d, chk.spk); st.lastFire = S.t; const who = d.scope === "call" ? "_call" : chk.spk;
+    const quote = T.turns[chk.i].words.slice(chk.k0, chk.k + 1).join(" "), fl = { id: ++moSeq, det: d.key, label: d.label, icon: d.icon, slot: d.slot, spk: who, at: chk.spk, t: S.t, p: v.score, quote, i: chk.i, model: S.model };
+    FLAGS.push(fl); highlight(chk, d, v.score); addLog(fl); renderHits(who);
+    if (d.scope !== "call" && isCoach(chk.spk)) return;
+    for (const o of cards) if (o.spk === who && o.det !== d.key && !o.pinned && !o.shifted) { o.shifted = true; o.t = Math.min(o.t, S.t - (HOLD - 4)); o.el.classList.add("shifted"); o.sup.replaceChildren("→", iconEl(d.icon, 12)); o.sup.title = `Shifting to ${d.label}`; o.sup.hidden = false; }
+    const c = cards.find(x => x.det === d.key && x.spk === who && !x.shifted && S.t - x.t < 12);
+    if (c) { c.n++; c.t = S.t; c.p = v.score; c.cnt.textContent = "×" + c.n; c.pc.textContent = Math.round(v.score * 100) + "%"; }
+    else newCard(d, chk, fl, who);
+  }
+  function highlight(chk, d, p) {
+    const row = rows[chk.i]; if (!row) return; const a = row.spans[chk.k0], b = row.spans[chk.k]; if (!a || !b) return;
+    let wrap = a.parentNode.classList && a.parentNode.classList.contains("ph") ? a.parentNode : null;
+    if (wrap && b.parentNode === wrap) { /* sentence already covered */ }
+    else if (wrap && b.parentNode === wrap.parentNode) { for (let n = wrap.nextSibling; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; } }
+    else if (!wrap && a.parentNode === b.parentNode) { wrap = el("span", { class: "ph", style: cvar(d.slot) }); a.parentNode.insertBefore(wrap, a); for (let n = a; n;) { const nx = n.nextSibling; wrap.append(n); if (n === b) break; n = nx; } }
+    else return;
+    const line = `${d.label} ${Math.round(p * 100)}% (${Jev.codeOf(S.model)})`, cur = wrap.getAttribute("title") || ""; if (!cur.includes(d.label + " ")) wrap.setAttribute("title", cur ? cur + "\n" + line : line);
+  }
+
+  /* ---------- absolutely stacked cards: moved by transform so neighbours never reflow; they roll on, hold, then fold away ---------- */
+  function Stack(root, gap) {
+    const items = []; root.classList.add("stackroot");
+    const layout = () => { let y = 0; for (const it of items) { if (it.leaving) continue; it.h = it.el.offsetHeight; it.ty = y; y += it.h + gap; } };
+    new ResizeObserver(layout).observe(root);
+    return {
+      items,
+      add(node) { node.style.cssText += ";position:absolute;left:0;right:0;top:0;opacity:0;will-change:transform,opacity"; root.append(node); const it = { el: node, h: node.offsetHeight, y: -(node.offsetHeight + gap), ty: 0, o: 0, leaving: false }; items.unshift(it); layout(); return it; },
+      remove(it) { it.leaving = true; it.ty = it.y - 12; setTimeout(() => { const i = items.indexOf(it); if (i >= 0) items.splice(i, 1); it.el.remove(); layout(); }, 420); layout(); },
+      clear() { items.splice(0).forEach(it => it.el.remove()); },
+      hidden() { const H = root.clientHeight; return items.filter(it => !it.leaving && it.ty + it.h > H + 2).length; },
+      frame(dt) { const k = 1 - Math.exp(-dt / 0.17), H = root.clientHeight; for (const it of items) { it.y += (it.ty - it.y) * k; const want = it.leaving ? 0 : it.ty + it.h > H + 2 ? 0 : 1; it.o += (want - it.o) * k * 1.3; it.el.style.transform = `translate3d(0,${it.y.toFixed(1)}px,0)`; it.el.style.opacity = it.o.toFixed(3); } },
+    };
+  }
+  function newCard(d, chk, fl, who) {
+    const bar = el("i"), age = el("span", { class: "age" }, "00:00"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
+    const cnt = el("span", { class: "cnt" }), sup = el("span", { class: "sup", hidden: true }), pc = el("span", { class: "pc", text: Math.round(fl.p * 100) + "%" }), whoEl = el("span", { class: "who", title: lab(who), text: who === "_call" ? "ALL" : code(who) });
+    const node = el("article", { class: "moment", style: cvar(d.slot), title: `${d.label}: ${d.about}`, "data-flag": fl.id },
+      el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), who === "_call" ? null : whoEl, cnt, sup, pc, age, pin, el("button", { class: "btn ghost", type: "button", onclick: () => { stack.remove(card.it); const i = cards.indexOf(card); if (i >= 0) cards.splice(i, 1); }, text: "Done" }), el("div", { class: "hold", "aria-hidden": "true" }, bar));
+    const card = { det: d.key, spk: who, t: S.t, p: fl.p, n: 1, el: node, bar, age, cnt, pc, sup, who: whoEl, pinned: false, shifted: false, last: "", it: null };
+    pin.addEventListener("click", () => { card.pinned = !card.pinned; pin.setAttribute("aria-pressed", String(card.pinned)); pin.textContent = card.pinned ? "Pinned" : "Pin"; });
+    card.it = stack.add(node); cards.push(card);
+  }
+  function tickCards() {
+    for (const c of [...cards]) {
+      if (!c.pinned && S.t - c.t >= HOLD + 5) { stack.remove(c.it); cards.splice(cards.indexOf(c), 1); continue; }
+      const a = S.t - c.t, hot = a < HOLD || c.pinned; c.bar.style.transform = `scaleX(${c.pinned ? 1 : clamp(1 - a / HOLD, 0, 1).toFixed(3)})`;
+      const txt = mmss(a); if (txt !== c.last) { c.age.textContent = txt; c.last = txt; } if (c.el.classList.contains("cool") === hot) c.el.classList.toggle("cool", !hot);
+    }
+    const n = stack.hidden(), t = n ? `+${n} earlier` : ""; if (ui.more.textContent !== t) ui.more.textContent = t;
+  }
+
+  /* ---------- glide: the thread moves by transform, never by scrollTop ---------- */
+  function Glide(view, track) {
+    let y = 0, tgt = 0, dirty = true; const ro = new ResizeObserver(() => { dirty = true; }); ro.observe(track); ro.observe(view);
+    return { dirty() { dirty = true; }, reset() { y = 0; tgt = 0; track.style.transform = ""; dirty = true; },
+      frame(dt) { if (dirty) { tgt = Math.max(0, track.offsetHeight - view.clientHeight + 6); dirty = false; } y += (tgt - y) * (1 - Math.exp(-dt / 0.25)); if (Math.abs(tgt - y) < 0.05) y = tgt; track.style.transform = `translate3d(0,${(-y).toFixed(2)}px,0)`; window.__glideY = { g: y }; } };
+  }
+
+  /* ---------- the thread ---------- */
+  const winWords = () => S.win[0] === "w" ? parseInt(S.win.slice(1), 10) : parseInt(S.win.slice(1), 10) * 20;
+  const readAll = () => { for (const k in peopleSpans) { const a = peopleSpans[k], lim = Math.max(0, a.length - winWords()); a.forEach((sp, i) => sp.classList.toggle("out", i < lim)); } };
+  function onWord(wd) {
+    if (!SPOKE.includes(wd.spk)) { SPOKE.push(wd.spk); renderPeople(); }
+    let row = rows[wd.i];
+    if (!row) {
+      const tu = T.turns[wd.i], wordsEl = el("div", { class: "words", style: tu.live ? "position:static" : "" }); if (ui.caret.parentNode) ui.caret.remove();
+      row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (isCoach(tu.speaker) ? " coach" : ""), style: `--v:${vcol(tu.speaker)}` },
+        el("div", { class: "bub" }, el("div", { class: "meta" }, el("span", { class: "pnum", "aria-hidden": "true", text: code(tu.speaker) }), el("span", { class: "nmx", "data-nm-spk": tu.speaker, title: tu.speaker, text: nm(tu.speaker) }), el("span", { text: mmss(tu.t0) })), el("div", { class: "txt" }, tu.live ? null : el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
+      rows[wd.i] = row; ui.track.append(row.el); curSpk = tu.speaker;
+      for (const k in PC) PC[k].node.classList.toggle("speaking", k === tu.speaker);
+    }
+    const sp = el("span", { class: "w", text: wd.w }); row.spans[wd.k] = sp; row.words.append(document.createTextNode(wd.k ? " " : ""), sp, ui.caret); glide.dirty();
+    (peopleSpans[wd.spk] ||= []).push(sp);
+    const lim = Math.max(0, peopleSpans[wd.spk].length - winWords()); if (lim > 0) peopleSpans[wd.spk][lim - 1].classList.add("out");
+    LOGW.push({ t: wd.t, spk: wd.spk });
+    for (const chk of runner.feed(wd)) submit(chk);
+  }
+
+  /* ---------- detectors bar and person cards ---------- */
+  let DCH = {};
+  function renderDets() {
+    ui.dets.replaceChildren(); DCH = {};
+    for (const d of S.dets) {
+      const t = trust(d), bar = el("i"), pv = el("span", { class: "pv", text: "–", title: "Latest score from the model (0-100)" });
+      const node = el("div", { class: "dchip quiet" + (d.custom ? " custom" : ""), style: cvar(d.slot), title: `${d.label}\n${d.about}\n${d.scope === "call" ? "Reads the whole call." : "Scored on each person's own window."}\n${t.text}` },
+        el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), pv, el("div", { class: "mt", "aria-hidden": "true" }, bar),
+        el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, title: "Remove " + d.label, onclick: (e) => { e.stopPropagation(); removeDet(d.key); }, text: "×" }));
+      DCH[d.key] = { d, node, bar, pv, c: {} }; ui.dets.append(node);
+    }
+    if (!S.dets.length) ui.dets.append(el("span", { class: "small muted", style: "padding-top:6px", text: "No detectors. Add one." }));
+  }
+  function updateDets() {
+    for (const k in DCH) {
+      const L = DCH[k], a = L.d.agg;
+      const shown = vis(a.disp), raw = a.lastP == null ? 0 : a.lastP; L.bar.style.transform = `scaleX(${clamp(raw, 0, 1).toFixed(3)})`; L.bar.style.opacity = raw >= S.gate ? 1 : 0.45; const pt = a.lastP == null ? "–" : String(Math.round(raw * 100)); if (L.c.pt !== pt) { L.pv.textContent = pt; L.c.pt = pt; }
+      const hot = shown > 0, q = shown === 0; if (L.c.h !== hot) { L.node.classList.toggle("hot", hot); L.c.h = hot; } if (L.c.q !== q) { L.node.classList.toggle("quiet", q); L.c.q = q; }
+    }
+  }
+  function renderPeople() {
+    ui.people.replaceChildren(); for (const k in PC) delete PC[k];
+    const list = [...SPOKE, ...(S.dets.some(d => d.scope === "call") ? ["_call"] : [])];
+    for (const spk of list) {
+      const hits = el("div", { class: "hits" }), call = spk === "_call";
+      const node = el("div", { class: "pcard" + (curSpk === spk ? " speaking" : ""), style: call ? "" : `--v:${vcol(spk)}`, title: call ? "Detectors that read the whole call" : `${code(spk)} (${spk})` },
+        el("div", { class: "h1" }, call ? el("span", { class: "pnum", "aria-hidden": "true", text: "∑" }) : el("span", { class: "pnum", "aria-hidden": "true", text: code(spk) }), call ? el("b", { text: "Whole call" }) : el("b", { "data-nm-spk": spk, text: nm(spk) }), isCoach(spk) && !call ? el("span", { class: "rt", text: "coached" }) : null), hits);
+      const vstat = el("div", { class: "vstat" }); if (!call && S.mode === "live") node.append(vstat); PC[spk] = { node, hits, vstat }; ui.people.append(node); renderHits(spk);
+    }
+    if (!list.length) ui.people.append(el("span", { class: "small muted", style: "padding-top:4px", text: "Each voice that speaks gets a card. Detector hits appear on it." }));
+  }
+  function renderHits(spk) {
+    const P = PC[spk]; if (!P) return; const fl = FLAGS.filter(f => f.spk === spk).slice(-HITS).reverse();
+    P.hits.replaceChildren(...(fl.length ? fl.map(f => el("span", { class: "hit", style: cvar(f.slot), "data-t": f.t, title: `${f.label} ${Math.round(f.p * 100)}% at ${mmss(f.t)}${spk === "_call" ? ` (heard on ${lab(f.at)})` : ""}\n“${f.quote}”` }, iconEl(f.icon, 12), el("span", { class: "t", text: mmss(f.t) }))) : [el("span", { class: "nohit", text: "no hits yet" })]));
+  }
+  function tickHits() { for (const k in PC) PC[k].hits.querySelectorAll(".hit").forEach(h => h.classList.toggle("cool", S.t - (+h.dataset.t) > HOLD)); }
+  function renderKp() {
+    ui.kp.replaceChildren(...S.kps.map(k => el("div", { class: "ck" + (k.done ? " done" : ""), title: "Unvalidated: your own wording" }, el("span", { class: "g", text: k.done ? "✓" : "○" }), el("span", { text: k.text }), el("span", { class: "ts", text: k.done ? mmss(k.doneAt) : "" }), el("button", { type: "button", "aria-label": "Remove key point", onclick: () => { S.kps = S.kps.filter(x => x !== k); renderKp(); afterConfig(); }, text: "×" }))));
+    const d = S.kps.filter(x => x.done).length; ui.kprog.textContent = S.kps.length ? `${d} of ${S.kps.length} covered` : "";
+  }
+  function afterConfig() { renderModels(); refreshEst(); }
+
+  /* ---------- tabbed card ---------- */
+  /* ---------- tabs. Each has one job: Flagged = what just happened. Detectors = what I am watching for. Settings = the levers. Request = what is sent. Events = did the detectors catch what really happened ---------- */
+  let LOGROW = {};
+  function addLog(fl) {
+    const key = fl.det + "|" + fl.spk, r = LOGROW[key], pct = Math.round(fl.p * 100) + "%";
+    if (r && S.t - r.t < 12) { r.n++; r.t = S.t; r.cnt.textContent = "×" + r.n; r.pc.textContent = pct; r.ts.textContent = mmss(S.t); r.q.textContent = "“" + fl.quote + "”"; return; }
+    const ts = el("span", { class: "ts", text: mmss(fl.t) }), cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: pct }), q = el("div", { class: "q", text: "“" + fl.quote + "”" });
+    const row = el("div", { class: "fl", style: cvar(fl.slot), "data-flag": fl.id }, el("div", { class: "fh" }, el("span", { class: "ic" }, iconEl(fl.icon, 16)), el("b", { text: fl.label }), el("span", { class: "vc", title: lab(fl.spk), text: fl.spk === "_call" ? "ALL" : code(fl.spk) }), cnt, pc, ts), q);
+    LOGROW[key] = { t: fl.t, n: 1, ts, cnt, pc, q }; ui.log.prepend(row); ui.pane_flag.scrollTop = 0;
+  }
+  function renderEvents() {
+    ui.evs.replaceChildren(...(EVENTS.length ? EVENTS.map(e => {
+      let res;
+      if (S.t < e.t) res = el("span", { class: "small muted", text: "Not reached yet" });
+      else {
+        const seen = new Map(); for (const f of FLAGS) if (f.t >= e.t - 2 && f.t <= e.t + 25) { const k = f.det + f.spk; if (!seen.has(k)) seen.set(k, f); }
+        res = seen.size ? el("div", { class: "hits" }, ...[...seen.values()].map(f => el("span", { class: "hit", style: cvar(f.slot), title: `${f.label} on ${lab(f.spk)}, ${Math.round(f.p * 100)}%, ${f.t >= e.t ? Math.round(f.t - e.t) + " s after" : Math.round(e.t - f.t) + " s before"} the event` }, iconEl(f.icon, 12), el("span", { class: "t", text: `${f.spk === "_call" ? "ALL" : code(f.spk)} ${f.t >= e.t ? "+" : "−"}${Math.abs(Math.round(f.t - e.t))}s` }))))
+          : el("span", { class: "small", text: S.t < e.t + 25 ? "Nothing flagged yet…" : "No detector flagged it" });
+      }
+      return el("div", { class: "evx" }, el("div", { class: "eh" }, el("span", { class: "ts", text: mmss(e.t) }), el("b", { text: `E${e.n} ${e.what}`, title: "“" + e.quote + "”" })), el("div", { class: "er" }, el("span", { class: "lbl", text: "Flagged within 25 s" }), res, el("a", { class: "small", href: e.url, target: "_blank", rel: "noopener", text: "source" })));
+    }) : [el("p", { class: "muted small", text: "Only real scenes have documented events, from cited sources. Pick one to see whether the detectors caught what actually happened." })]));
+  }
+  let formIcon = "";
+  function renderDetTab() {
+    ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow", style: cvar(d.slot), title: d.about + (d.example ? ` Example: “${d.example}”` : "") }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each voice" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: () => removeDet(d.key), text: "×" })); }));
+    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)), leftNew = CORE_NEW.filter(c => !S.dets.some(d => d.key === c.key)).map(c => ({ id: c.key, name: c.name, icon: c.icon, about: c.what + " (unvalidated)", core: true }));
+    ui.dlib.replaceChildren(...(left.length + leftNew.length ? [...left, ...leftNew].map(p => el("button", { class: "libchip", type: "button", title: p.about, onclick: () => { const d = p.core ? addCore(p.id) : (addLibrary(p.id) ? S.dets[S.dets.length - 1] : null); if (d) { S.touched = true; renderDets(); renderDetTab(); renderPeople(); afterConfig(); testMany([d]); } } }, iconEl(p.icon, 14), p.name)) : [el("span", { class: "small muted", text: "All library detectors are on." })]));
+    ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
+  }
+  function renderReq() {
+    if (!ui.reqPre) return;
+    if (!CPS.length) { ui.reqPre.textContent = "No checks yet. Press Play; each check sent to the model appears here exactly as sent."; ui.reqBadge.replaceChildren(el("span", { class: "badge", text: "waiting" })); ui.reqSelEl.replaceChildren(); ui.reqCur = null; return; }
+    const last30 = CPS.slice(-30).reverse(); if (ui.reqSelEl.childElementCount !== last30.length + 1 || S.reqSel === "latest") ui.reqSelEl.replaceChildren(el("option", { value: "latest", text: "latest" }), ...last30.map(c => el("option", { value: c.n, text: `#${c.n} · ${mmss(c.t)} · ${c.scope === "call" ? "call" : code(c.spk)}` }))); ui.reqSelEl.value = S.reqSel;
+    const chk = S.reqSel === "latest" ? CPS[CPS.length - 1] : CPS.find(c => c.n === +S.reqSel) || CPS[CPS.length - 1], body = chk.req, probs = validateReq(body), nq = Object.keys(body.questions).length;
+    ui.reqPre.textContent = JSON.stringify(body, null, 2);
+    ui.reqBadge.replaceChildren(probs.length ? el("span", { class: "badge bad", text: `${probs.length} problem${probs.length > 1 ? "s" : ""}: ${probs.join("; ")}` }) : el("span", { class: "badge good", text: "Well formed" }), el("span", { class: "small muted", text: `check #${chk.n} · ${chk.scope === "call" ? "whole call" : code(chk.spk)} · ${mmss(chk.t)} · ${nq} question${nq > 1 ? "s" : ""} · ${words(body.state).length} words${chk.answers ? " · answered" : ""}` }));
+    ui.reqCur = chk;
+  }
+  function updateTabs() { const n = { flag: FLAGS.length, det: S.dets.length, ev: EVENTS.length }; ui.tabs.querySelectorAll(".n").forEach(e => { const v = n[e.dataset.n]; const t = v ? String(v) : ""; if (e.textContent !== t) e.textContent = t; }); }
+  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); for (const k of ["flag", "lvl", "det", "set", "req", "cnt", "ev"]) ui["pane_" + k].hidden = k !== t; if (t !== "lvl" && ui.rail) ui.rail.classList.remove("lvbig"); if (t === "lvl") renderLevels(); if (t === "cnt") renderCounters(); if (t === "req") renderReq(); if (t === "det") renderDetTab(); if (t === "ev") renderEvents(); }
+
+  /* ---------- history: heat strip of every detector, or ticks per person ---------- */
+  function Chart(canvas) {
+    const ctx = canvas.getContext("2d"); let W_ = 0, H_ = 0, dpr = 1, css = {}, cols = [], cAt = 0, mx = null, my = null;
+    new ResizeObserver(() => { dpr = devicePixelRatio || 1; W_ = canvas.clientWidth; H_ = canvas.clientHeight; canvas.width = W_ * dpr; canvas.height = H_ * dpr; }).observe(canvas);
+    canvas.addEventListener("mousemove", (e) => { const r = canvas.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }); canvas.addEventListener("mouseleave", () => { mx = my = null; });
+    const read = () => { const c_ = getComputedStyle(document.documentElement); cols = [1, 2, 3, 4, 5, 6, 7, 8].map(i => c_.getPropertyValue("--s" + i).trim());
+      css = { line: c_.getPropertyValue("--border").trim(), t2: c_.getPropertyValue("--text-2").trim(), t3: c_.getPropertyValue("--text-3").trim(), surf: c_.getPropertyValue("--surface").trim(), surf2: c_.getPropertyValue("--surface-2").trim(), ink: c_.getPropertyValue("--text").trim(), mono: c_.getPropertyValue("--mono").trim() }; };
+    const at = (s, tt) => { if (!s.length) return null; let lo = 0, hi = s.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (s[m][0] < tt) lo = m + 1; else hi = m; } return s[lo]; };
+    const tipBox = (lines, x, y, W2) => { ctx.font = `11px ${css.mono}`; const w = Math.min(320, Math.max(...lines.map(l => ctx.measureText(l).width)) + 16), h = lines.length * 14 + 8, bx = x > W2 / 2 ? x - w - 10 : x + 12, by = clamp(y - h / 2, 2, H_ - h - 2);
+      ctx.fillStyle = css.surf; ctx.strokeStyle = css.line; ctx.beginPath(); ctx.roundRect(bx, by, w, h, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = css.ink; ctx.textAlign = "left"; ctx.textBaseline = "top"; lines.forEach((l, i) => ctx.fillText(l.length > 44 ? l.slice(0, 43) + "…" : l, bx + 8, by + 5 + i * 14)); };
+    return { draw() {
+      if (!W_ || !H_) return; if (performance.now() - cAt > 500) { read(); cAt = performance.now(); }
+      const win = 60, t = S.t, pad = { l: 104, r: 10, t: 4, b: 16 }, pw = W_ - pad.l - pad.r, x = (tt) => pad.l + pw - ((t - tt) / win) * pw;
+      const byDet = S.view === "det", list = byDet ? S.dets : [...SPOKE, ...(S.dets.some(d => d.scope === "call") ? ["_call"] : [])], n = Math.max(list.length, 1), rh = clamp((H_ - pad.t - pad.b) / n, 4, 26), plotH = rh * list.length;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W_, H_); ctx.textBaseline = "middle";
+      if (!list.length) { ctx.fillStyle = css.t3; ctx.font = `12px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(byDet ? "Add a detector to see its history." : "Each person appears here once they speak.", pad.l, H_ / 2); return; }
+      ctx.save(); ctx.beginPath(); ctx.rect(pad.l, 0, pw + 1, H_); ctx.clip();
+      list.forEach((it, r) => {
+        const y0 = pad.t + r * rh; ctx.fillStyle = css.surf2; ctx.fillRect(pad.l, y0 + 1, pw, rh - 2);
+        if (byDet) {
+          const col = cols[it.slot % 8], h = it.agg.hist; ctx.fillStyle = col;
+          for (let i = 0; i < h.length; i++) { if (h[i][0] < t - win - 1) continue; const x0 = x(h[i][0]), x1 = i + 1 < h.length ? x(h[i + 1][0]) : x(t), lv = h[i][1]; if (lv < S.gate) continue; ctx.globalAlpha = 0.35 + 0.65 * Math.min(1, (lv - S.gate) / Math.max(0.05, 1 - S.gate)); ctx.fillRect(x0, y0 + 1, Math.max(1, x1 - x0 + 0.6), rh - 2); }
+          if (it.agg.disp >= S.gate) { ctx.globalAlpha = 0.35 + 0.65 * Math.min(1, (it.agg.disp - S.gate) / Math.max(0.05, 1 - S.gate)); ctx.fillRect(x(t) - 3, y0 + 1, 3, rh - 2); } ctx.globalAlpha = 1;
+        }
+      });
+      if (!byDet) for (const f of FLAGS) { if (f.t < t - win || f.t > t) continue; const r = list.indexOf(f.spk); if (r < 0) continue; const y0 = pad.t + r * rh, col = cols[f.slot % 8]; if (rh >= 11) drawIcon(ctx, f.icon, x(f.t) - 6, y0 + (rh - 11) / 2, 11, col); else { ctx.fillStyle = col; ctx.fillRect(x(f.t) - 1.5, y0 + 1, 3, rh - 2); } }
+      for (const e of EVENTS) { if (e.t < t - win || e.t > t) continue; const xx = Math.round(x(e.t)) + .5; ctx.strokeStyle = css.ink; ctx.globalAlpha = .55; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, pad.t + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = css.t2; ctx.font = `10px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("E" + e.n, xx + 3, pad.t + 1); }
+      ctx.restore();
+      ctx.textBaseline = "middle"; list.forEach((it, r) => { const y0 = pad.t + r * rh; if (byDet) { const col = cols[it.slot % 8]; if (rh >= 7) drawIcon(ctx, it.icon, 4, y0 + (rh - Math.min(rh - 1, 14)) / 2, Math.min(rh - 1, 14), col); if (rh >= 10) { ctx.fillStyle = css.t2; ctx.font = `10px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it.label.length > 13 ? it.label.slice(0, 12) + "…" : it.label, 22, y0 + rh / 2); } } else if (rh >= 9) { ctx.fillStyle = css.t2; ctx.font = `10.5px ${css.mono}`; ctx.textAlign = "left"; ctx.fillText(it === "_call" ? "Whole call" : code(it), 6, y0 + rh / 2); } });
+      ctx.textBaseline = "top"; ctx.fillStyle = css.t3; ctx.font = `10px ${css.mono}`; ctx.textAlign = "center"; for (let tt = Math.max(0, Math.ceil((t - win) / 15) * 15); tt <= t; tt += 15) { const xx = x(tt); if (xx > pad.l + 14 && xx < W_ - pad.r - 30) ctx.fillText(mmss(tt), xx, pad.t + plotH + 3); } ctx.textAlign = "right"; ctx.fillText("now", W_ - pad.r, pad.t + plotH + 3);
+      if (mx != null && mx > pad.l && mx < W_ - pad.r && my > pad.t && my < pad.t + plotH) {
+        const r = Math.floor((my - pad.t) / rh), it = list[r], tt = t - ((W_ - pad.r - mx) / pw) * win; ctx.strokeStyle = css.t3; ctx.beginPath(); ctx.moveTo(mx + .5, pad.t); ctx.lineTo(mx + .5, pad.t + plotH); ctx.stroke();
+        if (byDet) { const s = at(it.agg.hist, tt), near = FLAGS.filter(f => f.det === it.key && Math.abs(f.t - tt) < 4).pop(); tipBox([`${it.label}${it.scope === "call" ? " (whole call)" : ""}`, s && s[1] >= S.gate ? `${s[2] ? lab(s[2]) + " · " : ""}${Math.round(s[1] * 100)}% at ${mmss(tt)}` : `below the threshold at ${mmss(tt)}`, ...(near ? [`“${near.quote}”`] : [])], mx, my, W_); }
+        else { const near = FLAGS.filter(f => f.spk === it && Math.abs(x(f.t) - mx) < 8).pop(); tipBox([it === "_call" ? "Whole call" : lab(it), ...(near ? [`${near.label} ${Math.round(near.p * 100)}% at ${mmss(near.t)}`, `“${near.quote}”`] : [`no hit near ${mmss(tt)}`])], mx, my, W_); }
+      }
+    } };
+  }
+
+  /* ---------- coaching: plain rules on measured signals (the clock and the detectors), not a model. One instruction at a time, with a time horizon ---------- */
+  function coachMetrics() {
+    const lo = S.t - 30, lo2 = S.t - 20; let me = 0, ot = 0, m2 = 0;
+    for (let k = LOGW.length - 1; k >= 0 && LOGW[k].t >= lo; k--) { const mine = LOGW[k].spk === S.coach; mine ? me++ : ot++; if (mine && LOGW[k].t >= lo2) m2++; }
+    return { me, ot, share: me + ot ? me / (me + ot) : null, wpm: S.t >= 12 ? m2 * 3 : null };
+  }
+  const hotOf = (pid, coached) => { let v = 0, who = null; for (const d of S.dets) { if (d.pid !== pid || d.scope !== "person") continue; for (const spk in d.st) { if ((spk === S.coach) !== coached) continue; const x = d.st[spk].disp; if (x > v) { v = x; who = spk; } } } return { v, who }; };
+  const callHot = (pid) => { const d = S.dets.find(x => x.pid === pid && x.scope === "call"); return d ? d.agg.disp : 0; };
+  function pickAction() {
+    const m = coachMetrics(), G = S.gate, a = hotOf("anger", false), th = hotOf("threat", false), f = hotOf("fear", false), u = hotOf("urgency", false), ac = hotOf("anger", true), w = a.v >= th.v ? a : th;
+    const A = (key, prio, head, horizon, text, why, tone) => ({ key, prio, head, horizon, text, why, tone });
+    if (w.v >= G) return A("deesc", 1, "DE-ESCALATE", 20, `Lower your voice and pace. Acknowledge what ${lab(w.who)} said before you answer.`, `${code(w.who)} is over the threshold on ${a.v >= th.v ? "anger" : "threat"}.`, "caution");
+    if (ac.v >= G) return A("steady", 2, "STEADY YOUR TONE", 15, "Take a breath. Shorter sentences, lower pitch, no interrupting.", `${code(S.coach)} is over the threshold on anger.`, "caution");
+    if (callHot("manipulation") >= G) return A("hold", 3, "DON'T BE RUSHED", 30, "Pause before you agree. Ask exactly what is being asked and what happens if you wait.", "The call reads as pressure or manipulation.", "notice");
+    if (u.v >= G) return A("urg", 3, "SLOW IT DOWN", 30, "Don't let the deadline set your pace. Ask for time, or for it in writing.", `${code(u.who)} is pushing urgency.`, "notice");
+    if (f.v >= G) return A("reassure", 4, "REASSURE", 20, `Speak calmly and confirm what happens next for ${lab(f.who)}.`, `${code(f.who)} sounds anxious.`, "notice");
+    if (m.share != null && m.me + m.ot >= 15 && m.share > 0.65) return A("listen", 5, "LISTEN", 30, "You have done most of the talking. Ask one open question, then let them finish.", `${code(S.coach)} spoke ${Math.round(m.share * 100)}% of the last 30 s.`, "calm");
+    if (m.wpm != null && m.wpm > 170) return A("pace", 6, "SLOW DOWN", 15, "You are speaking fast. Pause between points.", `${code(S.coach)} is at about ${m.wpm} words a minute.`, "notice");
+    if (m.share != null && m.ot >= 25 && m.share < 0.2) return A("charge", 7, "TAKE CHARGE", 20, "You have said little. Summarise where things stand and steer to the next step.", `${code(S.coach)} spoke ${Math.round(m.share * 100)}% of the last 30 s.`, "calm");
+    const kp = S.kps.find(k => !k.done); if (kp) return A("cover", 8, "COVER NEXT", 30, kp.text, "The next key point not yet made.", "calm");
+    return A("listen0", 9, "LISTEN", 15, "Nothing needs action. Listen for the next cue.", "No detector is over the threshold.", "calm");
+  }
+  let coachNext = 0, coachCur = null, coachC = {};
+  function paintCoach(a, elapsed) {
+    const key = a.head + a.text + a.why + a.tone; if (coachC.key !== key) { ui.cHead.textContent = a.head; ui.cText.textContent = a.text; ui.cWhy.textContent = a.why; ui.cBox.className = "cnote " + a.tone; coachC.key = key; }
+    const left = a.horizon ? Math.max(0, a.horizon - elapsed) : 0, win = a.horizon ? `next ${a.horizon} s` : "", lt = a.horizon ? `${Math.ceil(left)} s left` : "";
+    if (coachC.win !== win) { ui.cWin.textContent = win; coachC.win = win; } if (coachC.lt !== lt) { ui.cLeft.textContent = lt; coachC.lt = lt; } ui.cBar.style.transform = `scaleX(${a.horizon ? (left / a.horizon).toFixed(3) : 0})`;
+  }
+  function updateCoach() {
+    if (performance.now() < coachNext) return; coachNext = performance.now() + 400;
+    if (S.mode === "live" && (S.playing || S.t > 0) && !S.coach) { coachCur = null; paintCoach({ head: "PICK A VOICE", text: "Voices are anonymous. Once you know which one is you, choose it in the Coaching menu.", why: "", tone: "calm", horizon: 0 }, 0); return; }
+    if (S.mode === "live" && !S.playing && S.t === 0) { coachCur = null; paintCoach({ head: "READY", text: "Press Start. Coaching starts when speech does.", why: "", tone: "calm", horizon: 0 }, 0); return; }
+    if (!S.playing && S.t === 0) { coachCur = null; paintCoach({ head: "READY", text: "Press Play. Coaching starts when speech does.", why: "", tone: "calm", horizon: 0 }, 0); return; }
+    if (S.done) { paintCoach({ head: "CALL ENDED", text: S.mode === "live" ? "Press Start live to run again." : "Press Replay to run it again.", why: "", tone: "calm", horizon: 0 }, 0); return; }
+    const want = pickAction(), c = coachCur, over = !c || S.t < c.since || S.t - c.since >= c.horizon;
+    if (!c || over || want.prio < c.prio) coachCur = { ...want, since: S.t }; else if (want.key === c.key) { c.text = want.text; c.why = want.why; }
+    paintCoach(coachCur, S.t - coachCur.since);
+  }
+
+  /* ---------- run control ---------- */
+  function resetRun() {
+    if (ctl) ctl.abort(); ctl = null; QUEUE.length = 0; active = 0; pending = 0; failed = 0; checksDone = 0; maxPending = 0; if (ui.err) ui.err.textContent = "";
+    coachCur = null; S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; cpN = 0; CPS.length = 0; FLAGS.length = 0; LOGW.length = 0; cards.length = 0; moSeq = 0; rows.length = 0; SPOKE.length = 0; curSpk = null;
+    for (const k in peopleSpans) delete peopleSpans[k];
+    for (const d of S.dets) { d.st = {}; d.agg = { disp: 0, above: null, lastFire: -1e9, who: null, n: 0, hist: [], lastP: null }; } for (const k of S.kps) { k.done = false; k.doneAt = 0; }
+    for (const k in VOICES) delete VOICES[k]; Object.assign(LN, { calls: 0, dropped: 0, capHit: false, returns: 0, tokens: 0, e2e: [], wall: [], testChecks: 0, maxQueue: 0 }); V.words = 0; V.flips = 0; V.prevSpk = null;
+    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); LOGROW = {}; renderPeople(); renderKp(); renderEvents(); if (S.tab === "req") renderReq(); }
+  }
+  function refreshCoach() {
+    ui.coachSel.replaceChildren(...(S.mode === "live" ? [el("option", { value: "", text: "pick a voice" })] : []), ...SP.list.map(p => el("option", { value: p.name, text: nm(p.name) ? `${p.label} · ${p.name}` : p.label }))); ui.coachSel.value = S.coach || ""; if (ui.namesCb) { ui.namesCb.disabled = !namesKnown(); ui.namesCb.parentNode.style.opacity = namesKnown() ? 1 : .45; }
+    const n = SP.list.length; ui.spkNote.textContent = `${n} speaker${n > 1 ? "s" : ""}` + (S.mode === "live" ? " so far" : "");
+  }
+  function rebuild() { T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0]; refreshCoach(); resetRun(); writeHash(); updatePlay(); refreshEst(); }
+  function relabel() { document.querySelectorAll("[data-nm-spk]").forEach(e => { e.textContent = nm(e.dataset.nmSpk); }); refreshCoach(); renderPeople(); writeHash(); }
+  const speedF = () => Number(S.speed);
+  function play() { if (S.done) resetRun(); S.playing = true; last = performance.now(); updatePlay(); }
+  function pause() { S.playing = false; updatePlay(); }
+  function finish() { S.done = true; S.playing = false; updatePlay(); }
+
+  const est = (list) => { let tok = 0; for (const c of list) tok += PER_Q * c.qids.length + 2 * words(c.state).length; return tok; };
+  function dryRun() { const R = makeRunner(), out = []; for (const wd of W) out.push(...R.feed(wd)); return out; }
+  const money = (x) => x < 0.01 ? "$" + x.toFixed(5) : x < 10 ? "$" + x.toFixed(3) : "$" + x.toFixed(2);
+  function refreshEst() {
+    if (!ui.est || !T) return; const nq = new Set(S.dets.filter(d => d.scope === "person").map(d => d.q)).size, tok = nq * PER_Q + 2 * winWords(), perMin = S.cp === "sentence" ? 13 : Math.round(150 / S.n);
+    ui.est.textContent = `~${tok} tokens a check · ${isHosted() ? "about " + money(tok * perMin * 2 * TARIFF / 1e6) + " per call minute (two people)" : "free: runs on this machine"}`;
+  }
+  function showConfirm(list) {
+    const tok = est(list), cost = tok * TARIFF / 1e6;
+    ui.confirm.replaceChildren(el("div", { class: "callout warn notice" }, el("span", {}, el("strong", { text: `${Jev.codeOf(S.model)} is hosted and billed per token. ` }), `This run makes about ${list.length} checks, roughly ${tok.toLocaleString("en-US")} input tokens, about ${money(cost)} at the tariff. Continue?`),
+      el("button", { class: "btn primary", type: "button", onclick: () => { S.armed = true; ui.confirm.replaceChildren(); onPlay(); }, text: "Confirm and play" }), el("button", { class: "btn", type: "button", onclick: () => ui.confirm.replaceChildren(), text: "Cancel" })));
+  }
+  async function precompute(list, signal) {
+    const uniq = new Map(); for (const c of list) { const cur = uniq.get(c.state) || { state: c.state, qids: new Set() }; c.qids.forEach(q => cur.qids.add(q)); uniq.set(c.state, cur); }
+    const todo = [...uniq.values()].filter(u => [...u.qids].some(q => !(C.get(ckey(u.state)) || { answers: {} }).answers[q])); pre = { done: 0, total: todo.length, failed: 0 }; renderStatus();
+    let idx = 0; await Promise.all(Array.from({ length: CONC }, async () => { while (idx < todo.length && !signal.aborted) { const u = todo[idx++]; try { await fetchState(u.state, [...u.qids], signal); } catch (e) { if (signal.aborted) return; pre.failed++; } pre.done++; renderStatus(); } }));
+    const p = pre; pre = null; renderStatus(); return p;
+  }
+  async function onPlay() {
+    if (S.playing) { pause(); return; }
+    if (S.mode !== "live" && !isUp()) { toast(`${Jev.codeOf(S.model)} is not loaded right now. Choose a loaded model.`); return; }
+    if (S.mode === "live") return onLive();
+    const list = dryRun(), needy = list.filter(c => missing(c).length);
+    if (S.mode === "replay" && !S.fresh && needy.length) {
+      if (isHosted() && !S.armed) { showConfirm(needy); return; }
+      ctl = ctl || new AbortController(); const c = ctl, r = await precompute(needy, c.signal); if (c.signal.aborted) return; if (r.failed) toast(`${r.failed} call${r.failed > 1 ? "s" : ""} failed; those checks will be retried while playing.`);
+    } else if (S.mode === "replay" && S.fresh && isHosted() && !S.armed) { showConfirm(list); return; }
+    play();
+  }
+  function renderStatus() {
+    const box = ui.status; if (!box) return;
+    if (pre) { box.replaceChildren(el("span", { text: `Precomputing ${Jev.codeOf(S.model)}: ${pre.done} of ${pre.total}` + (pre.failed ? `, ${pre.failed} failed` : "") }), el("button", { class: "btn", type: "button", onclick: () => { if (ctl) ctl.abort(); ctl = null; pre = null; renderStatus(); }, text: "Cancel" })); return; }
+    box.replaceChildren();
+  }
+  function updatePlay() {
+    if (!ui.play) return; const hosted = isHosted();
+    if (S.mode === "live") { ui.play.textContent = V.state === "running" || V.state === "starting" ? "Stop" : S.done ? "Start again" : "Start"; return; }
+    ui.play.textContent = S.playing ? "Pause" : S.done ? "Replay" : S.t > 0 ? "Resume" : !S.fresh ? "Precompute and play" : hosted && !S.armed ? "Play (scores as it goes, paid)" : "Play";
+  }
+
+  /* ---------- model chips, settings ---------- */
+  const p50 = (a) => { if (!a || !a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  function renderModels() {
+    if (!ui.models) return; const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up);
+    ui.models.replaceChildren(...up.map(id => { const l = p50(LAGS[id]); return el("button", { type: "button", role: "radio", class: "mbig", "aria-checked": String(id === S.model), "aria-pressed": String(id === S.model), title: `${Jev.codeOf(id)} = ${Jev.nameOf(id)}${st[id].hosted ? " (hosted, paid)" : ""}${st[id].identity_ok === false ? " — does not match its label" : ""}`, onclick: () => setModel(id) },
+      el("b", { text: Jev.codeOf(id) }), st[id].hosted ? el("small", { class: "paid", text: "paid" }) : null, l ? el("small", { text: Math.round(l) + " ms" }) : null); }));
+    const s = st[S.model] || {}; ui.mstate.replaceChildren(el("span", { class: "dot " + (s.up ? "up" : "down"), "aria-hidden": "true" }), s.up ? (s.hosted ? "Hosted, billed per token." : `Loaded · ${s.identity || ""}${s.gpu_mb ? ` · ${(s.gpu_mb / 1024).toFixed(1)} GiB` : ""}`) : `${Jev.codeOf(S.model)} is not loaded`, s.identity_ok === false ? " · identity does not match its label" : "");
+  }
+  function setModel(id) { if (id === S.model) return; S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderDets(); renderDetTab(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
+  function bestWindow() {
+    const e = D.study && Object.values(D.study).find(x => x && String(x.backend).toLowerCase().replace("jev (typesafe)", "jev") === S.model);
+    if (e && e.windows) { const c = WINS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
+    return "w20";
+  }
+  function refreshWinSeg() { ui.winSeg.replaceChildren(...WINS.map(w => el("button", { type: "button", "aria-pressed": String(w === S.win), title: winName(w), onclick: () => { S.win = w; S.winTouched = true; resetRun(); refreshWinSeg(); readAll(); writeHash(); refreshEst(); }, text: w[0] === "w" ? w.slice(1) + "w" : w.slice(1) + "s" }))); ui.readnote.textContent = `Bright text is what the model reads: the ${winName(S.win)} of each voice.`; ui.winHelp.textContent = `Reads each voice's ${winName(S.win)}.`; }
+
+  /* ---------- hash and export ---------- */
+  function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return Object.fromEntries([...p.entries()]); }
+  function writeHash() { const p = new URLSearchParams(); p.set("src", S.src); if (S.src === "dlg") p.set("dlg", S.dlg); p.set("model", S.model); p.set("win", S.win); p.set("cp", S.cp); p.set("n", S.n); p.set("gate", S.gate); p.set("speed", S.speed); p.set("mode", S.mode); p.set("ls", S.liveSrc); if (S.coach) p.set("coach", S.coach); p.set("names", S.names ? "1" : "0"); history.replaceState(null, "", "#" + p.toString()); }
+  function exportData() {
+    return { exported: new Date().toISOString(), note: "Per-person windows; scores are model probabilities, not verdicts. Speakers are diarized ids (Person N). Each request is exactly what is sent to the model's POST /v1/systemone.", settings: { model: S.model, window: S.win, checkpoints: S.cp, n: S.n, alert_at: S.gate, mode: S.mode, coached: SP.by[S.coach] && SP.by[S.coach].label }, source: T.meta.title, speakers: SP.list.map(p => ({ label: p.label, source_name: p.name })),
+      detectors: S.dets.map(d => ({ key: d.key, label: d.label, icon: d.icon, scope: d.scope, custom: d.custom, question: QALL[d.q] ? QALL[d.q].instructions : d.q })),
+      requests: CPS.map(c => ({ n: c.n, t: +c.t.toFixed(2), person: c.scope === "call" ? "whole call" : SP.by[c.spk] && SP.by[c.spk].label, well_formed: validateReq(c.req).length === 0, request: c.req, scores: c.answers || null })),
+      flags: FLAGS.map(f => ({ ...f, person: f.spk === "_call" ? "whole call" : SP.by[f.spk] && SP.by[f.spk].label })), lag_ms_p50: Object.fromEntries(Object.entries(LAGS).map(([k, v]) => [k, Math.round(p50(v))])), failed_checks: failed };
+  }
+
+  /* ---------- mode: Replay (a saved conversation) or Live (real audio) ---------- */
+  function applyMode() {
+    const live = S.mode === "live";
+    ui.srcSelEl.value = live ? "live:" + S.liveSrc : S.src; updateSlot(); ui.tent.style.visibility = live ? "visible" : "hidden";
+    ui.playSec.replaceChildren(live ? ui.playLive : ui.playReplay);
+    ui.pillLbl.textContent = live ? "LIVE " : "REPLAY "; if (!live) ui.readnote2.textContent = "";
+    renderPeople(); refreshCoach(); updatePlay(); if (S.tab === "ev") renderEvents();
+  }
+  function setMode(k) {
+    if (S.mode === k) return; if (S.mode === "live") stopLive();
+    S.mode = k; S.armed = false; if (k === "live") liveReset(); else rebuild(); applyMode(); writeHash();
+    ui.stage.classList.remove("fadein"); void ui.stage.offsetWidth; ui.stage.classList.add("fadein");
+  }
+  /* one Source list drives everything: choosing live audio switches to Live, choosing a saved conversation switches to Replay */
+  function onSourceChange(v) {
+    if (v.startsWith("live:")) { S.liveSrc = v.slice(5); if (S.mode !== "live") setMode("live"); else { if (V.state === "running" || V.state === "starting") stopLive(); updateSlot(); writeHash(); updatePlay(); } }
+    else { S.src = v; if (S.mode !== "replay") setMode("replay"); else { rebuild(); updateSlot(); } }
+  }
+  /* the slot next to the source list shows only the detail that source needs; its size never changes */
+  function updateSlot() {
+    const v = S.mode === "live" ? "live:" + S.liveSrc : S.src, scene = !v.startsWith("live:") && v !== "dlg" && v !== "paste";
+    ui.dlgField.hidden = v !== "dlg"; ui.pasteField.hidden = v !== "paste"; ui.ytF.hidden = v !== "live:youtube"; ui.fileF.hidden = v !== "live:file"; ui.libF.hidden = v !== "live:lib";
+    ui.hint.hidden = !(scene || v === "live:mic" || v === "live:tab");
+    ui.hint.textContent = scene ? (T ? `${T.turns.length} lines · ${SP.list.length} voices · real scene with cited events` : "") : v === "live:mic" ? "Uses your microphone (needs https or localhost)." : v === "live:tab" ? "Choose a tab and tick “Share tab audio”." : "";
+  }
+  function seg2(items, get, set) { const w = el("div", { class: "segmented", role: "group" }); const draw = () => w.replaceChildren(...items.map(([v, t]) => el("button", { type: "button", "aria-pressed": String(get() === v), onclick: () => { set(v); draw(); }, text: t }))); draw(); return w; }
+  function buildLivePanel() {
+    ui.yt = el("input", { type: "text", placeholder: "YouTube link  (youtube.com or youtu.be)", "aria-label": "YouTube link" });
+    ui.file = el("input", { type: "file", accept: "audio/*,video/*,.m4a,.mp4,.mp3,.wav,.ogg,.flac,.webm", "aria-label": "Audio or video file" });
+    ui.lib = el("select", { "aria-label": "Audio library file" }); let prev = null;
+    ui.libPrev = el("button", { class: "btn ghost", type: "button", title: "Preview this file", "aria-label": "Preview this file", text: "▶", onclick: () => { if (prev && !prev.paused) { ui.libAudio.pause(); return; } if (!ui.lib.value) return; prev = new Audio("/audio/" + encodeURIComponent(ui.lib.value)); prev.onended = () => { ui.libPrev.textContent = "▶"; }; prev.play().catch(() => {}); ui.libPrev.textContent = "■"; } });
+    ui.libAudio = { pause: () => { if (prev) { prev.pause(); prev = null; } ui.libPrev.textContent = "▶"; } };      // startLive() stops any preview
+    ui.lib.onchange = () => ui.libAudio.pause();
+    ui.libLoad = async () => { try { const r = await api("/api/audio-files"); ui.lib.replaceChildren(el("option", { value: "", text: r.files.length ? "pick a library file…" : "library is empty (put files in data/audio)" }), ...r.files.map(f => el("option", { value: f.file, text: `${f.file} · ${mmss(f.duration || 0)} · ${(f.size / 1048576).toFixed(1)} MB` }))); } catch (e) { ui.liveErr.textContent = "Audio library: " + e.message; } };
+    ui.ytF = ui.yt; ui.fileF = ui.file; ui.libF = el("div", { class: "row1" }, ui.lib, ui.libPrev); ui.hint = el("span", { class: "small muted" });
+    ui.wsurl = el("input", { type: "text", value: `ws://${location.hostname || "127.0.0.1"}:8200/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
+    ui.liveStat = el("span"); ui.liveErr = el("div", { class: "liveerr", role: "alert" });
+    ui.slot.append(ui.dlgField, ui.pasteField, ui.ytF, ui.fileF, ui.libF, ui.hint);
+    /* Settings > Playback: what applies to the current source */
+    const paceSeg = seg2([["realtime", "Real time"], ["max", "As fast as it processes"]], () => S.pace, (v) => { S.pace = v; });
+    const lc = el("input", { type: "checkbox", checked: true, "aria-label": "Play the audio", onchange: () => { PLAY.on = lc.checked; if (!PLAY.on) playClose(); } }), ld = el("input", { type: "number", min: 0, max: 5, step: 0.5, value: 0, style: "width:58px", "aria-label": "Audio delay in seconds", onchange: () => { PLAY.delay = clamp(parseFloat(ld.value) || 0, 0, 5); } });
+    ui.playLive = el("div", {}, el("div", { class: "bt", text: "Playback" }), el("div", { class: "mrow" }, el("span", { class: "l", text: "Pace" }), paceSeg),
+      el("div", { class: "help", text: "Real time lets you listen along. As fast as it processes runs a saved file in seconds, with no sound. Microphone and tab audio are always real time." }),
+      el("div", { class: "mrow", style: "margin-top:6px" }, el("label", { class: "chk", title: "Plays the same audio the model hears, at the same moment (real-time pace, files and links). Words appear a second or two later, which is the real transcription lag." }, lc, "Play the audio while it is transcribed"), el("span", { class: "l", text: "delay (s)" }), ld));
+    ui.playReplay = el("div", {}, el("div", { class: "bt", text: "Playback" }), el("div", { class: "mrow" }, el("span", { class: "l", text: "Speed" }), ui.speedSeg),
+      el("label", { class: "chk", title: "Instead of precomputing every check first, call the model as playback reaches each one." }, ui.freshCb, "Score while it plays (instead of precomputing first)"));
+    const stIn = el("input", { type: "number", min: 30, max: 1800, step: 30, value: S.stale, style: "width:70px", "aria-label": "Stale after seconds", onchange: () => { S.stale = clamp(parseInt(stIn.value, 10) || 120, 30, 1800); } }), kIn = el("input", { type: "number", min: 0, max: 8, value: S.k, style: "width:56px", "aria-label": "Words held back", onchange: () => { S.k = clamp(parseInt(kIn.value, 10) || 0, 0, 8); } });
+    ui.pane_set.append(el("details", { class: "dnew", style: "margin-top:10px" }, el("summary", { text: "Live audio: advanced" }), el("div", { class: "mrow", style: "margin-top:6px" }, el("span", { class: "l", text: "Voice server" }), ui.wsurl),
+      el("div", { class: "mrow" }, el("span", { class: "l", text: "A voice label counts as stale after (s of silence)" }), stIn, el("span", { class: "l", text: "our heuristic; NVIDIA gives no expiry time" })), el("div", { class: "mrow" }, el("span", { class: "l", text: "Words held back before they commit (applies at the next Start)" }), kIn)));
+    ui.libLoad();
+  }
+  /* ---------- Levels: every detector against every voice, latest score ---------- */
+  function renderLevels() {
+    const cols = [...SPOKE]; if (S.dets.some(d => d.scope === "call")) cols.push("_call");
+    const head = el("tr", {}, el("th", { text: "" }), ...cols.map(c => el("th", { text: c === "_call" ? "Call" : code(c) })), el("th", { text: "checks" }));
+    const body = S.dets.map(d => el("tr", { style: cvar(d.slot) }, el("td", { class: "n" }, iconEl(d.icon, 13), " " + d.label + (d.custom ? " ?" : "")), ...cols.map(c => {
+      const st = d.st[c], ok = st && st.n, pp = ok ? st.latest : null;
+      return el("td", { class: "c", style: ok ? `background:color-mix(in srgb, var(--c) ${Math.round(clamp(pp, 0, 1) * 70)}%, transparent);${pp >= S.gate ? "outline:2px solid var(--c);" : ""}` : "", title: ok ? `${d.label} on ${c === "_call" ? "the whole call" : code(c)}: ${Math.round(pp * 100)}% (${st.n} checks, peak ${Math.round(Math.max(...st.marks.map(m => m.p)) * 100)}%)` : "not scored yet", text: ok ? String(Math.round(pp * 100)) : "·" });
+    }), el("td", { class: "c", text: String(Object.values(d.st).reduce((n, x) => n + x.n, 0)) })));
+    const big = ui.rail && ui.rail.classList.contains("lvbig");
+    ui.lvl.replaceChildren(el("div", { class: "mrow" }, el("button", { class: "btn ghost", type: "button", text: big ? "Collapse (show coaching and cue cards)" : "Expand to the full column", onclick: () => { ui.rail.classList.toggle("lvbig"); renderLevels(); } })), el("table", { class: "lv" }, el("thead", {}, head), el("tbody", {}, ...body)), el("p", { class: "help", text: `Latest score per detector and voice, 0-100. Outlined = at or above the minimum threshold (${Math.round(S.gate * 100)}). "?" = your own wording, unvalidated. Voices appear as they speak.` }));
+  }
+  /* ---------- Counters ---------- */
+  const med = (a) => { if (!a.length) return null; const x = [...a].sort((p, q) => p - q); return x[Math.floor(x.length / 2)]; }, p90 = (a) => { if (!a.length) return null; const x = [...a].sort((p, q) => p - q); return x[Math.min(x.length - 1, Math.floor(x.length * 0.9))]; }, f1 = (x, u = "") => x == null ? "–" : x.toFixed(1) + u;
+  function counters() {
+    const st = V.stab ? V.stab.stats() : { committed: 0, rewrites: 0, punctUpdates: 0, speakerFlips: 0, lagMean: 0, lagMax: 0 }, wall = V.wall0 ? (performance.now() - V.wall0) / 1000 : 0, mins = Math.max(S.t, 1) / 60, cost = LN.tokens * TARIFF / 1e6, tail = V.stab ? V.stab.tail().length : 0;
+    if (S.mode !== "live") return [["Live counters", null], ["Switch to Live mode to see audio, stabiliser and hosted-call counters here.", ""], ["Replay", null], ["checks made", String(cpN)], ["answered / failed", `${checksDone} / ${failed}`], ["voices", String(SPOKE.length)]];
+    return [
+      ["Audio and lag", null], ["audio position", f1(V.audioS, " s")], ["audio played to you", PLAY.ctx ? `${f1(PLAY.sec, " s")} (${PLAY.ctx.state})` : "off"], ["wall time", f1(wall, " s")], ["audio ÷ wall (speed)", wall > 1 ? f1(V.audioS / wall, "x") : "–"],
+      ["model step (compute / hop)", `${f1(V.stepMs, " ms")} / ${V.hopMs || "–"} ms`], ["speech → committed word (mean / max)", `${f1(st.lagMean, " s")} / ${f1(st.lagMax, " s")}`],
+      ["speech → detector result (median / p90) *", `${f1(med(LN.e2e), " s")} / ${f1(p90(LN.e2e), " s")}`], ["API round trip (median / p90)", `${f1(med(LN.wall) && med(LN.wall) / 1000, " s")} / ${f1(p90(LN.wall) && p90(LN.wall) / 1000, " s")}`],
+      ["Stabiliser", null], ["words committed / tentative", `${st.committed} / ${tail}`], ["committed words rewritten (letters)", String(st.rewrites)], ["…only punctuation changed", String(st.punctUpdates)], ["…speaker changed", String(st.speakerFlips)],
+      ["voice slots in use (max 8)", String(SPOKE.length)], [`voices that returned after > ${S.stale} s silent`, String(LN.returns)], ["label changes per minute (between committed words)", f1(V.flips / mins)],
+      ["Hosted checks", null], ["checkpoints made", String(cpN)], ["calls sent / cap", `${LN.calls} / ${S.cap}${LN.capHit ? "  CAP REACHED" : ""}`], ["answered / failed", `${checksDone} / ${failed}`], ["dropped (behind or cap)", String(LN.dropped)],
+      ["estimated tokens", String(LN.tokens)], ["estimated spend (tariff-based)", money(cost)], ["…per audio hour at this rate", S.t > 30 ? money(cost / (S.t / 3600)) : "–"], ["* speech → result is meaningful at real-time pace only", ""],
+    ];
+  }
+  function renderCounters() {
+    const out = []; for (const [k, v] of counters()) out.push(v === null ? el("div", { class: "h", text: k }) : el("div", { class: "k", text: k }), v === null ? null : el("div", { class: "v", text: v }));
+    ui.cnt.replaceChildren(...out.filter(Boolean));
+  }
+  const liveStats = () => ({ when: new Date().toISOString(), source: S.liveSrc, pace: S.pace, settings: { window: S.win, cadence: S.cp, n: S.n, k: S.k, gate: S.gate, stale_s: S.stale }, detectors: S.dets.map(d => ({ key: d.key, custom: d.custom })), counters: Object.fromEntries(counters().filter(r => r[1] !== null && r[1] !== "").map(r => [r[0], r[1]])), stabiliser: V.stab && V.stab.stats(), checks: CPS.map(c => ({ n: c.n, at: c.t, scope: c.scope, nq: c.qids.length, words: words(c.state).length, answered: !!c.answers })) });
+
+  /* ================= LIVE: real audio through the voice server (tested in the Flow lab) ================= */
+  const V = { ws: null, stab: null, state: "idle", msg: "", audioS: 0, snapWall: 0, wall0: 0, words: 0, flips: 0, prevSpk: null, stepMs: 0, hopMs: 0, mic: null }, VOICES = {}, LT = new Map();
+  const LN = { calls: 0, dropped: 0, capHit: false, returns: 0, tokens: 0, e2e: [], wall: [], testChecks: 0, maxQueue: 0 };
+  const audioNow = () => V.audioS + (V.state === "running" && V.snapWall ? Math.min(1.2, (performance.now() - V.snapWall) / 1000) : 0);
+  function liveReset() {
+    T = { turns: [], meta: { kind: "live", title: "Live audio" }, speakers: [] }; LT.clear(); SP = { list: [], by: {} }; W = []; DUR = 0; EVENTS = []; S.coach = null;
+    Object.assign(V, { audioS: 0, snapWall: 0, wall0: performance.now() }); V.stab = VoiceSource.createStabiliser({ K: S.k });
+    resetRun(); refreshCoach(); renderEvents(); renderTail(); if (ui.liveErr) ui.liveErr.textContent = "";
+  }
+  /* a stabiliser word becomes the same event shape replay produces, into a transcript that grows */
+  function liveWord(wd) {
+    if (!SP.by[wd.spk]) { const n = (parseInt(String(wd.spk).split("_")[1], 10) || 0) + 1, pp = { name: wd.spk, n, label: "V" + n }; SP.list.push(pp); SP.by[wd.spk] = pp; T.speakers.push(wd.spk); refreshCoach(); }
+    let i = LT.get(wd.turnId);
+    if (i === undefined) { i = T.turns.length; LT.set(wd.turnId, i); T.turns.push({ speaker: wd.spk, text: "", words: [], t0: wd.st, t1: wd.st, live: true }); }
+    const tu = T.turns[i], k = tu.words.length; tu.words.push(wd.w); tu.text += (k ? " " : "") + wd.w; tu.t1 = wd.st;
+    const vo = (VOICES[wd.spk] ||= { first: wd.st, last: wd.st, words: 0, returned: null });
+    if (vo.words && wd.st - vo.last > S.stale) { vo.returned = { gap: wd.st - vo.last, at: wd.st }; LN.returns++; }
+    vo.last = wd.st; vo.words++; V.words++;
+    if (V.prevSpk && V.prevSpk !== wd.spk) V.flips++; V.prevSpk = wd.spk;
+    onWord({ i, k, w: wd.w, spk: wd.spk, t: wd.st, last: wd.last });
+  }
+  function renderTail() {
+    if (!ui.tent) return; const t = V.stab ? V.stab.tail() : [], groups = [];
+    for (const x of t) { const g = groups[groups.length - 1]; if (g && g.spk === x.spk) g.w.push(x.w); else groups.push({ spk: x.spk, w: [x.w] }); }
+    ui.tent.replaceChildren(...(groups.length ? groups.map(g => el("span", {}, el("span", { class: "pnum", style: `--v:${vcol(g.spk)}`, text: code(g.spk) }), g.w.join(" ") + " ")) : [el("span", { text: S.mode === "live" ? "tentative words appear here until they settle" : "" })]));
+  }
+  function onSnapshot(m) {
+    V.audioS = m.audio_s; V.snapWall = performance.now(); V.stepMs = m.step_ms; V.hopMs = m.hop_ms;
+    for (const wd of V.stab.feed(m)) liveWord(wd);
+    renderTail();
+  }
+  /* voice ages. NVIDIA documents a fixed-size speaker memory and at most 8 labels but no expiry time; the stale threshold is our own heuristic (Settings). */
+  function updateVoices() {
+    if (S.mode !== "live") { const c = SPOKE.length, t = c ? `${c} voice${c === 1 ? "" : "s"}` : ""; if (ui.vcap.textContent !== t) ui.vcap.textContent = t; ui.vcap.className = "vcap"; return; }
+    const now = audioNow(), n = SPOKE.length;
+    for (const spk in PC) {
+      const vo = VOICES[spk], P = PC[spk]; if (spk === "_call" || !vo || !P.vstat) continue;
+      const age = now - vo.last, ret = vo.returned && now - vo.returned.at < 90;
+      const txt = ret ? `returned after ${mmss(vo.returned.gap)} · identity unverified` : age < 3 ? "speaking now" : age <= S.stale ? `heard ${mmss(age)} ago` : `silent ${mmss(age)} · label may be reused`;
+      if (P.vstat.textContent !== txt) P.vstat.textContent = txt;
+      P.vstat.classList.toggle("ret", !!ret); P.node.classList.toggle("stale", !ret && age > S.stale);
+      P.node.title = `${code(spk)} (${spk}): first heard ${mmss(vo.first)}, ${vo.words} words. Labels come from the diarizer's memory of earlier speakers; NVIDIA gives no expiry time, so after ${S.stale} s of silence this label is shown as possibly reused.`;
+    }
+    const full = n >= MAX_VOICES; ui.vcap.textContent = `${n} of ${MAX_VOICES} voices${full ? " · full" : ""}`; ui.vcap.className = "vcap" + (full ? " bad" : n >= MAX_VOICES - 1 ? " warn" : "");
+    ui.vcap.title = "The diarizer supports at most 8 voices and numbers them by first arrival. Beyond 8, new voices can be missed or merged into an existing label (NVIDIA guide).";
+    const note = full ? "All 8 voice slots are in use: any further new voice may be merged into an existing label." : ""; if (ui.readnote2 && ui.readnote2.textContent !== note) ui.readnote2.textContent = note;
+  }
+  /* listen: the server sends back the exact paced PCM it feeds the model (file / YouTube / library, real time only) */
+  const PLAY = { ctx: null, next: 0, sec: 0, on: true, delay: 0 };
+  function playOpen() { playClose(); if (!PLAY.on) return; try { PLAY.ctx = new AudioContext(); PLAY.ctx.resume(); PLAY.next = 0; PLAY.sec = 0; } catch { PLAY.ctx = null; } }
+  function playClose() { if (PLAY.ctx) { try { PLAY.ctx.close(); } catch {} } PLAY.ctx = null; }
+  function playChunk(ab) {
+    const c = PLAY.ctx; if (!c || ab.byteLength < 2) return; const i16 = new Int16Array(ab, 0, ab.byteLength >> 1), buf = c.createBuffer(1, i16.length, 16000), ch = buf.getChannelData(0);
+    for (let i = 0; i < i16.length; i++) ch[i] = i16[i] / 32768;
+    if (!PLAY.next || PLAY.next < c.currentTime) PLAY.next = c.currentTime + 0.25 + PLAY.delay;
+    const src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination); src.start(PLAY.next); PLAY.next += buf.duration; PLAY.sec += buf.duration;
+  }
+  const setState = (st, msg) => { V.state = st; V.msg = msg || ""; S.playing = st === "running"; if (st === "idle" && V.audioS > 0) S.done = true; if (ui.liveStat) ui.liveStat.textContent = msg ? `${st} · ${msg}` : st; updatePlay(); updatePill(); };
+  function updatePill() { if (S.mode !== "live" || !ui.pillLbl) return; const t = V.state === "running" ? "LIVE " : V.msg ? V.msg + " · " : "LIVE "; if (ui.pillLbl.textContent !== t) { ui.pillLbl.textContent = t; ui.pill.title = V.msg || ""; } }
+  const wsUrl = () => ui.wsurl.value.trim();
+  function connect() {
+    return new Promise((resolve, reject) => {
+      if (V.ws && V.ws.readyState === WebSocket.OPEN) return resolve(V.ws);
+      let ws; try { ws = new WebSocket(wsUrl()); } catch (e) { return reject(e); }
+      ws.binaryType = "arraybuffer"; V.ws = ws; let opened = false;
+      ws.onopen = () => { opened = true; resolve(ws); };
+      ws.onerror = () => { if (!opened) reject(new Error(`Cannot reach the voice server at ${wsUrl()}. Is it running (port 8200), and is that port reachable from this browser?`)); };
+      ws.onclose = () => { if (V.ws === ws) { V.ws = null; if (V.state === "running" || V.state === "starting") setState("idle", "voice server disconnected"); } };
+      ws.onmessage = (e) => { if (typeof e.data !== "string") { playChunk(e.data); return; } let m; try { m = JSON.parse(e.data); } catch { return; }
+        if (m.kind === "transcript") onSnapshot(m);
+        else if (m.kind === "flush") { for (const wd of V.stab.flush()) liveWord(wd); renderTail(); }
+        else if (m.kind === "ingest") onIngest(m);
+        else if (m.kind === "error") ui.liveErr.textContent = "Voice server: " + m.error; };
+    });
+  }
+  function onIngest(m) {
+    if (m.state === "error") { setState("idle", "ingest failed"); ui.liveErr.textContent = m.error; }
+    else if (m.state === "retrying") ui.liveErr.textContent = m.note;
+    else if (m.state === "uploading") setState("starting", "uploading file");
+    else if (m.state === "started") { setState("running", `${m.source}, ${m.pace === "max" ? "as fast as possible" : "real time"}`); ui.liveErr.textContent = ""; }
+    else if (m.state === "done") setState("idle", `finished at ${mmss(m.pos_s || V.audioS)}`);
+    else if (m.state === "stopped") setState("idle", "stopped");
+  }
+  async function startLive() {
+    ui.liveErr.textContent = ""; const wantPlay = ["youtube", "file", "lib"].includes(S.liveSrc) && S.pace === "realtime" && PLAY.on;
+    if (wantPlay) playOpen(); else playClose();        // the AudioContext must be created inside the click to be allowed to play
+    try {
+      setState("starting", "connecting"); const ws = await connect(); liveReset(); ws.send(JSON.stringify({ cmd: "reset" }));
+      if (S.liveSrc === "youtube") { const url = ui.yt.value.trim(); if (!url) throw new Error("Paste a YouTube link."); ws.send(JSON.stringify({ cmd: "ingest", kind: "youtube", url, pace: S.pace, play: wantPlay })); setState("starting", "fetching from YouTube"); }
+      else if (S.liveSrc === "file" || S.liveSrc === "lib") {
+        let blob, fname;
+        if (S.liveSrc === "lib") { if (!ui.lib.value) throw new Error("Pick a file from the audio library."); const r = await fetch("/audio/" + encodeURIComponent(ui.lib.value)); if (!r.ok) throw new Error("Could not read that library file."); blob = await r.blob(); fname = ui.lib.value; ui.libAudio.pause(); }
+        else { blob = ui.file.files[0]; if (!blob) throw new Error("Choose an audio or video file."); fname = blob.name; }
+        if (blob.size > 300 * 1024 * 1024) throw new Error("File is over 300 MB.");
+        ws.send(JSON.stringify({ cmd: "ingest", kind: "file", name: fname, pace: S.pace, play: wantPlay })); setState("starting", "uploading file");
+        const buf = await blob.arrayBuffer(); for (let o = 0; o < buf.byteLength; o += 262144) { ws.send(buf.slice(o, o + 262144)); if (ws.bufferedAmount > 8e6) await new Promise(r => setTimeout(r, 30)); }
+        ws.send(JSON.stringify({ cmd: "ingest_end" }));
+      } else await startMic(ws);
+    } catch (e) { setState("idle", "not started"); ui.liveErr.textContent = e.message || String(e); }
+  }
+  async function stopLive() {
+    if (V.mic) await stopMic(); else if (V.ws && V.ws.readyState === WebSocket.OPEN) V.ws.send(JSON.stringify({ cmd: "ingest_stop" }));
+    playClose(); setState("idle", "stopped");
+  }
+  function onLive() {
+    if (V.state === "running" || V.state === "starting") { stopLive(); return; }
+    if (isHosted() && !S.armed) { showLiveConfirm(); return; }
+    startLive();
+  }
+  function showLiveConfirm() {
+    const capIn = el("input", { type: "number", min: 10, max: 300, step: 10, value: S.cap, style: "width:70px", "aria-label": "Session cap in calls" }), est = el("span", { class: "est" });
+    const refresh = () => { const nq = new Set(S.dets.filter(d => d.scope === "person").map(d => d.q)).size, tok = PER_Q * nq + 2 * winWords(), cap = clamp(parseInt(capIn.value, 10) || 150, 10, 300); est.textContent = `≈ ${tok} tokens a check, at most ≈ ${money(tok * cap * TARIFF / 1e6)}`; }; capIn.oninput = refresh; refresh();
+    ui.confirm.replaceChildren(el("div", { class: "callout warn notice" }, el("span", {}, el("strong", { text: `${Jev.codeOf(S.model)} is hosted and billed per token. ` }), "Live scoring makes one call per check (about every ", String(S.n), " words per voice). Session cap (calls): ", capIn, " ", est), el("button", { class: "btn primary", type: "button", onclick: () => { S.cap = clamp(parseInt(capIn.value, 10) || 150, 10, 300); S.armed = true; ui.confirm.replaceChildren(); startLive(); }, text: "Confirm and start" }), el("button", { class: "btn", type: "button", onclick: () => ui.confirm.replaceChildren(), text: "Cancel" })));
+  }
+  /* mic or shared tab/call audio: raw PCM frames over the same socket (needs https or localhost) */
+  const WORKLET = URL.createObjectURL(new Blob([`class P extends AudioWorkletProcessor{process(i){const c=i[0]&&i[0][0];if(c&&c.length)this.port.postMessage(c.slice());return true}}registerProcessor('pcm-capture',P)`], { type: "application/javascript" }));
+  const f16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const x = Math.max(-1, Math.min(1, f[i])); o[i] = x < 0 ? x * 32768 : x * 32767; } return o; };
+  async function startMic(ws) {
+    if (!navigator.mediaDevices) throw new Error("The microphone needs https or localhost. Open this page as http://localhost:8100/flow.");
+    const streams = [];
+    if (S.liveSrc === "mic") streams.push(await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } }));
+    if (S.liveSrc === "tab") { const d = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); d.getVideoTracks().forEach(t => t.stop()); if (!d.getAudioTracks().length) throw new Error("No audio in the share. Choose a tab and tick 'Share tab audio'."); streams.push(new MediaStream(d.getAudioTracks())); }
+    const ctx = new AudioContext({ sampleRate: 16000 }); await ctx.audioWorklet.addModule(WORKLET);
+    const node = new AudioWorkletNode(ctx, "pcm-capture"), gain = ctx.createGain(); gain.gain.value = 0; let buf = [];
+    node.port.onmessage = (e) => { buf.push(e.data); const n = buf.reduce((a, b) => a + b.length, 0); if (n >= 2048) { const m = new Float32Array(n); let o = 0; for (const b of buf) { m.set(b, o); o += b.length; } buf = []; if (ws.readyState === WebSocket.OPEN) ws.send(f16(m).buffer); } };
+    const srcs = streams.map(x => ctx.createMediaStreamSource(x)); srcs.forEach(x => x.connect(node)); node.connect(gain); gain.connect(ctx.destination);
+    V.mic = { ctx, streams, node, srcs }; setState("running", ctx.sampleRate === 16000 ? "listening" : `listening (context ${ctx.sampleRate} Hz, expected 16000)`);
+  }
+  async function stopMic() {
+    const m = V.mic; V.mic = null; if (!m) return; m.srcs.forEach(x => x.disconnect()); m.streams.forEach(x => x.getTracks().forEach(t => t.stop())); await m.ctx.close();
+    if (V.ws && V.ws.readyState === WebSocket.OPEN) V.ws.send(JSON.stringify({ cmd: "flush" }));
+  }
+
+  /* ---------- boot ---------- */
+  async function loadAll() {
+    const ids = [...new Set(Object.values(QSETS))]; await Jev.ready;
+    const [scenes, dlg, study, models, ...sets] = await Promise.all([api("/api/scenes"), api("/api/dialogues"), api("/api/window-study").catch(() => ({})), api("/api/models").catch(() => null), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
+    try { const j = models && models.models.find(m => m.id === "jev"), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
+    const topics = await fetch("/static/dialogue-topics.json").then(r => r.ok ? r.json() : null).catch(() => null);
+    return { scenes, dialogues: dlg.dialogues || [], topics: (topics && topics.topics) || {}, study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
+  }
+  function init(data) {
+    D = data; D.lib = D.dialogues.filter(d => d.n_turns >= 6); Object.entries(QSETS).forEach(([q, set]) => { QS[q] = D.sets[set].items[0].question; QALL[q] = QS[q]; });
+    const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up), h = readHash();
+    if (!up.length) return el("div", { class: "stack" }, Jev.empty("No backend is up", "Every model backend is unreachable right now. Start one, then check again."));
+    S.model = up.includes(h.model) ? h.model : up.includes("kev-4b") ? "kev-4b" : up.find(k => !st[k].hosted) || up[0];
+    const srcs = [...D.scenes.map(s => s.slug), "dlg", "paste"]; S.src = srcs.includes(h.src) ? h.src : (D.scenes.find(s => s.slug.startsWith("apollo")) || D.scenes[0] || { slug: "dlg" }).slug;
+    S.dlg = D.lib.some(d => d.id === h.dlg) ? h.dlg : D.lib[0] && D.lib[0].id; if (S.src === "dlg" && !S.dlg) S.src = "paste";
+    if (WINS.includes(h.win)) { S.win = h.win; S.winTouched = true; } else S.win = bestWindow();
+    if (h.cp === "words" || h.cp === "sentence") S.cp = h.cp; if (h.n && Number.isFinite(+h.n)) S.n = clamp(Math.round(+h.n), 3, 20); if (h.gate && Number.isFinite(+h.gate)) S.gate = clamp(+h.gate, 0.3, 0.95);
+    if (SPEEDS.some(([v]) => v === h.speed)) S.speed = h.speed; if (h.mode === "replay" || h.mode === "live") S.mode = h.mode; if (LIVE_SRCS.some(([v]) => v === h.ls)) S.liveSrc = h.ls; S.names = h.names !== "0"; S.coach = h.coach || null;
+    S.paste = kv.get("cockpit.paste") || "";
+    loadCore();
+    T = currentTranscript(); buildTimeline(); buildSpeakers(); if (!SP.by[S.coach]) S.coach = T.speakers[0];
+    return build();
+  }
+  function build() {
+    const srcSel = el("select", { id: "src", "aria-label": "Source", onchange: () => onSourceChange(srcSel.value) },
+      el("optgroup", { label: "Saved conversations · Replay" }, D.scenes.map(s => el("option", { value: s.slug, text: s.title + (s.control ? " [control]" : "") }))),
+      el("optgroup", { label: "More saved conversations" }, el("option", { value: "dlg", text: `Movie dialogues (${D.lib.length})` }), el("option", { value: "paste", text: "Pasted text" })), el("optgroup", { label: "Live audio" }, LIVE_SRCS.map(([v, t]) => el("option", { value: "live:" + v, text: t })))); srcSel.value = S.mode === "live" ? "live:" + S.liveSrc : S.src;
+    const snip = (d) => { const c = d.turns.slice(0, 4).map(t => t.text.replace(/\s+/g, " ")), t = c.find(x => x.split(" ").length >= 5) || c.reduce((a, b) => b.length > a.length ? b : a, ""); return "“" + (t.length > 46 ? t.slice(0, 45).trim() + "…" : t) + "”"; };
+    const topicOf = (d) => (D.topics[d.id] && D.topics[d.id].topic) || "Other", groups = {};
+    D.lib.forEach(d => (groups[topicOf(d)] ||= []).push(d));
+    const order = Object.keys(groups).sort((a, b) => (a === "Other") - (b === "Other") || groups[b].length - groups[a].length);
+    const dlgSel = el("select", { id: "dlg", "aria-label": "Movie dialogue", title: "Movie-script excerpts (MentalManip). Topics are guesses from a local model; the manipulation label stays hidden.", onchange: () => { S.dlg = dlgSel.value; rebuild(); } },
+      order.map(tp => el("optgroup", { label: `${tp} (${groups[tp].length})` }, groups[tp].map(d => el("option", { value: d.id, text: `${snip(d)} · ${new Set(d.turns.map(t => t.speaker)).size} voices · ${d.n_turns} lines` })))));
+    dlgSel.value = S.dlg;
+    ui.dlgField = el("div", { class: "field" }, el("label", { for: "dlg", text: "Dialogue (topic guessed)" }), dlgSel);
+    const ta = el("textarea", { id: "paste", rows: 3, "aria-label": "Pasted text", placeholder: "Agent: Hello, this is your bank.\nCaller: Who is this?" }); ta.value = S.paste; let tt; ta.addEventListener("input", () => { S.paste = ta.value; kv.set("cockpit.paste", S.paste); clearTimeout(tt); tt = setTimeout(() => { if (S.src === "paste") rebuild(); }, 400); });
+    ui.pasteField = el("div", { class: "field", style: "flex:1 1 320px" }, el("label", { for: "paste", text: 'Transcript, one "Speaker: text" per line' }), ta);
+    ui.spkNote = el("span", { class: "small subtle", style: "align-self:center" });
+    ui.play = el("button", { class: "btn primary", type: "button", id: "play", onclick: onPlay }, "Play");
+    const speed = el("div", { class: "segmented", role: "group", "aria-label": "Playback speed" }, SPEEDS.map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.speed === v), "data-s": v, text: t, onclick: () => { S.speed = v; speed.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === v))); writeHash(); } })));
+    const mode = el("div", { class: "segmented", role: "group", "aria-label": "Mode" }, [["replay", "Replay"], ["live", "Live"]].map(([k, t]) => el("button", { type: "button", "aria-pressed": String(S.mode === k), "data-m": k, text: t, title: k === "replay" ? "A saved conversation: real scene, library dialogue or pasted text. Answers can be precomputed, so playback is instant and free to repeat." : "Real audio (YouTube link, audio file, library, microphone or tab) transcribed by the voice server as it plays, with the detectors scoring each voice's words as they arrive.", onclick: () => setMode(k) }))); ui.modeSeg = mode;
+    const namesCb = el("input", { type: "checkbox", id: "names", onchange: () => { S.names = namesCb.checked; relabel(); } }); namesCb.checked = S.names; ui.namesCb = namesCb;
+    ui.clock = el("span", { class: "num", text: "00:00" }); ui.pillLbl = el("span", { text: "REPLAY " }); ui.pill = el("span", { class: "pill" }, el("span", { class: "rec" }), ui.pillLbl, ui.clock); ui.behind = el("span", { class: "small muted", role: "status" });
+    ui.confirm = el("div", { role: "status" }); ui.status = el("div", { class: "notice small", role: "status" }); ui.err = el("span", { class: "small err", role: "alert" });
+    ui.srcSelEl = srcSel; ui.speedSeg = speed; ui.slot = el("div", { class: "slot" });
+    ui.freshCb = el("input", { type: "checkbox", onchange: (e) => { S.fresh = e.target.checked; S.armed = false; updatePlay(); } });
+    const closeMenu = () => { ui.menu.hidden = true; ui.menuBtn.setAttribute("aria-expanded", "false"); };
+    const menuItem = (t, fn) => el("button", { type: "button", role: "menuitem", onclick: () => { closeMenu(); fn(); }, text: t });
+    ui.menuBtn = el("button", { class: "btn", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", title: "More actions", "aria-label": "More actions", text: "⋯", onclick: (e) => { e.stopPropagation(); ui.menu.hidden = !ui.menu.hidden; ui.menuBtn.setAttribute("aria-expanded", String(!ui.menu.hidden)); } });
+    ui.menu = el("div", { class: "menu", role: "menu", hidden: true }, menuItem("Start over", () => { if (S.mode === "live") { stopLive(); liveReset(); } else resetRun(); updatePlay(); }),
+      menuItem("Export session (JSON)", () => download(`conversation-flow-${Date.now()}.json`, JSON.stringify(S.mode === "live" ? liveStats() : exportData(), null, 1), "application/json")), menuItem("Copy link to this view", () => copy(location.href)));
+    document.addEventListener("click", closeMenu); document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+    const top = el("div", { class: "hdr" }, el("div", { class: "hl" }, el("h1", { text: "Conversation flow", title: "Detectors have a colour and an icon. Signals rise, hold and fade so there is time to react." })),
+      el("div", { class: "hsrc" }, srcSel, ui.slot), el("div", { class: "hr" }, ui.play, ui.pill, el("div", { class: "menuwrap" }, ui.menuBtn, ui.menu)));
+    const note = el("details", { class: "inlinenote" }, el("summary", { text: "ⓘ Technique signals, not verdicts" }),
+      el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy in the Detectors tab; your own detectors are unvalidated (marked ?). Speakers are diarized voices, shown as V1, V2 (names only for scripted scenes). Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model. The Request tab shows exactly what is sent to the model." }));
+    /* top: detectors bar and person cards */
+    ui.dets = el("div", { class: "dets", id: "dets" }); ui.people = el("div", { class: "people", id: "people" });
+    const addBtn = el("button", { class: "btn", type: "button", id: "add-det", title: "Add a detector", "aria-label": "Add a detector", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dname.focus(), 50); }, text: "+" });
+    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, addBtn)), el("div", { class: "trow" }, el("h4", { text: "Voices" }), ui.people, ui.vcap = el("span", { class: "vcap" })));
+    /* conversation */
+    ui.track = el("div", { class: "track" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" }); ui.tent = el("div", { class: "tent" }); ui.readnote2 = el("div", { class: "readnote", style: "color:var(--bad)" });
+    const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.tent, ui.readnote2, ui.readnote);
+    /* rail: cue cards for everyone else, coaching for the person you pick, tabbed card */
+    ui.moms = el("div", { id: "moms" }); ui.more = el("span", { class: "r" });
+    const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), ui.more), el("div", { class: "bd" }, ui.moms));
+    ui.cHead = el("div", { class: "chead", text: "READY" }); ui.cText = el("div", { class: "ctext" }); ui.cWhy = el("div", { class: "cwhy" }); ui.cBar = el("i"); ui.cLeft = el("span", { class: "num" }); ui.cWin = el("span"); ui.cBox = el("div", { class: "cnote calm", role: "status", "aria-live": "polite", title: "Plain rules on the clock and the detectors (talk share, pace, alerts). Not a model." });
+    ui.cBox.append(el("div", { class: "cwin" }, ui.cWin, ui.cLeft), ui.cHead, ui.cText, el("div", { class: "ctimer", "aria-hidden": "true" }, el("div", { class: "trk" }, ui.cBar)), ui.cWhy);
+    ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" });
+    const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addKeyPoint(kpIn.value); kpIn.value = ""; renderKp(); afterConfig(); } } });
+    ui.coachSel = el("select", { id: "coach", "aria-label": "Who do you want to coach?", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.coach = ui.coachSel.value || null; if (S.mode === "live") { coachCur = null; writeHash(); return; } resetRun(); refreshCoach(); writeHash(); updatePlay(); } });
+    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Real scenes are scripted, so their speakers are known and shown by name. Untick to see only voice codes (V1, V2), which is what live speech-to-text will give." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, ui.cBox, el("div", { class: "bt", style: "margin-top:10px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
+    /* tabs: Flagged | Detectors | Settings | Request | Events */
+    ui.log = el("div"); ui.pane_flag = el("div", { class: "tabpane" }, ui.log);
+    ui.dlist = el("div", { class: "dgrid" }); ui.dlib = el("div", { class: "libchips" }); ui.dcount = el("span", { class: "small muted" });
+    ui.dname = el("input", { type: "text", id: "det-name", placeholder: "Name, e.g. Budget mentioned", "aria-label": "Detector name" }); const dwhat = el("textarea", { id: "det-what", rows: 2, placeholder: "What should it detect? e.g. The speaker states a price, budget or amount of money.", "aria-label": "What should it detect" }); const dex = el("input", { type: "text", id: "det-example", placeholder: "An example that should trigger it", "aria-label": "Example" });
+    let dscope = "person"; const scopeSeg = el("span", { class: "segmented", role: "group", "aria-label": "Applies to" }); const drawScope = () => scopeSeg.replaceChildren(...[["person", "Each voice"], ["call", "Whole call"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(v === dscope), onclick: () => { dscope = v; drawScope(); }, text: t }))); drawScope();
+    const iconBox = el("div", { class: "icons", role: "group", "aria-label": "Icon" }); const drawIcons = () => iconBox.replaceChildren(...ICON_NAMES.map(n => el("button", { type: "button", title: n, "aria-label": "Icon " + n, "aria-pressed": String(n === formIcon), onclick: () => { formIcon = formIcon === n ? "" : n; drawIcons(); } }, iconEl(n, 16)))); drawIcons();
+    ui.dmsg = el("span", { class: "small muted", role: "status" });
+    const say = (t, bad) => { ui.dmsg.textContent = t; ui.dmsg.style.color = bad ? "var(--bad)" : ""; };
+    const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, icons: ICON_NAMES }) });
+    const refreshAll = () => { renderDets(); renderDetTab(); renderPeople(); afterConfig(); };
+    const applied = (ds, verb) => { S.touched = true; refreshAll(); testMany(ds); return `${verb} ${ds.length} detector${ds.length === 1 ? "" : "s"}: from the next checkpoint${S.mode === "live" && ds.length && runner && Object.keys(runner.people).length && (!isHosted() || S.armed) ? ", and tried once now on each recent voice" : ""}.`; };
+    async function draftInto() {
+      const name = ui.dname.value.trim(); if (!name) { say("Type a name first.", true); return null; }
+      say("Drafting…"); let r; try { r = await post("/api/detector-draft", { name }); } catch (e) { say("Draft failed: " + e.message, true); return null; }
+      const d = r.detector; dwhat.value = d.what; dex.value = d.example || ""; dscope = d.scope; formIcon = d.icon || ""; drawScope(); drawIcons();
+      say(r.ai ? "Drafted by AI. Edit anything, then press Add." : (r.note || "Plain template filled in; edit it, then press Add."), !r.ai); return r;
+    }
+    const doAdd = async () => {
+      if (!ui.dname.value.trim()) { say("Give it a name.", true); return; }
+      if (!dwhat.value.trim()) { const r = await draftInto(); if (!r || !r.ai) return; }       // name only: AI drafts it, then it is added; a plain template is left for you to edit
+      const d = addCustom(ui.dname.value, dwhat.value, dex.value, formIcon, dscope);
+      if (d) { ui.dname.value = ""; dwhat.value = ""; dex.value = ""; formIcon = ""; drawIcons(); say(applied([d], "Added") + " Your own detectors are unvalidated (dashed outline)."); }
+    };
+    let proposals = []; const sctx = el("input", { type: "text", placeholder: "Describe the conversation: phone scams, a sales call, a job interview…", "aria-label": "Conversation description" }); ui.sugg = el("div", { class: "libchips" });
+    const drawSugg = () => ui.sugg.replaceChildren(...proposals.map(pp => el("button", { class: "libchip", type: "button", title: `${pp.what}${pp.example ? `\ne.g. “${pp.example}”` : ""}`, onclick: () => { const d = addSpec(pp); proposals = proposals.filter(x => x !== pp); drawSugg(); say(d ? applied([d], "Added") : "Skipped: already on, or the list is full.", !d); } }, iconEl(pp.icon && ICONS[pp.icon] ? pp.icon : "flag", 14), pp.name)), ...(proposals.length ? [el("button", { class: "btn", type: "button", text: "Add all", onclick: () => { const ds = proposals.map(addSpec).filter(Boolean); proposals = []; drawSugg(); say(applied(ds, "Added")); } })] : []));
+    const suggest = async () => { ui.dsuggest.open = true; say("Asking for suggestions…"); try { const r = await post("/api/detector-suggest", { context: sctx.value, n: 8, existing: S.dets.map(d => d.name || d.label) }); proposals = r.detectors || []; drawSugg(); say(r.ai ? `${proposals.length} suggestions: click one to add it, or Add all.` : (r.note || "No suggestions."), !r.ai || !proposals.length); } catch (e) { say("Suggest failed: " + e.message, true); } };
+    ui.fsel = el("select", { "aria-label": "Detector file" }); ui.aiNote = el("span", { class: "small muted" });
+    ui.loadFiles = async () => { try { const r = await api("/api/detector-files"); ui.fsel.replaceChildren(...r.files.map(f => el("option", { value: f.file, title: f.description, text: `${f.name} (${f.count}) · ${f.file}` }))); ui.aiNote.textContent = r.ai ? `AI drafts on (${r.ai_model}, ${r.ai_used}/${r.ai_cap} used)` : "AI drafts off: no ANTHROPIC_API_KEY on the server, so a name gets a plain template"; } catch (e) { say("Could not list detector files: " + e.message, true); } };
+    const useFile = async (replace) => {
+      const f = ui.fsel.value; if (!f) return;
+      try { const doc = await api("/api/detector-file?file=" + encodeURIComponent(f)); if (replace) S.dets = []; const ds = doc.detectors.map(addSpec).filter(Boolean); say(applied(ds, replace ? `Loaded “${doc.name}”:` : `Added from “${doc.name}”:`) + (doc.skipped ? ` ${doc.skipped} invalid entries skipped.` : "")); } catch (e) { say(e.message, true); }
+    };
+    const fileIn = el("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: async () => { const f = fileIn.files[0]; fileIn.value = ""; if (!f) return; try { const doc = JSON.parse(await f.text()); if (!Array.isArray(doc.detectors)) throw new Error("a detector file needs a top-level `detectors` list"); const ds = doc.detectors.slice(0, 40).map(addSpec).filter(Boolean); say(applied(ds, `Imported “${doc.name || f.name}”:`)); } catch (e) { say("Could not import that file: " + e.message, true); } } });
+    const sname = el("input", { type: "text", placeholder: "file name, e.g. my-detectors", style: "width:170px", "aria-label": "Save as file name" }); let overwrite = false;
+    const saveFile = async () => { try { const r = await post("/api/detector-save", { file: sname.value, doc: exportDoc(), overwrite }); overwrite = false; say(`Saved ${r.count} detectors to demo/detectors/${r.file}`); ui.loadFiles(); } catch (e) { if (/already exists/.test(e.message)) { overwrite = true; say(e.message + ". Press Save again to overwrite it.", true); } else say("Save failed: " + e.message, true); } };
+    ui.dfiles = el("div", { class: "dform" }, el("div", { class: "sec" }, el("b", { text: "Or start from a set" }), ui.aiNote),
+      el("div", { class: "mrow" }, ui.fsel, el("button", { class: "btn", type: "button", text: "Use this set", title: "Replace the current detectors with this set", onclick: () => useFile(true) }), el("button", { class: "btn ghost", type: "button", text: "Add it to mine", onclick: () => useFile(false) })),
+      el("details", { class: "dnew" }, el("summary", { text: "More: import, save, reset" }), el("div", { class: "mrow", style: "margin-top:6px" }, el("button", { class: "btn ghost", type: "button", text: "Import a JSON file…", onclick: () => fileIn.click() }), fileIn, el("button", { class: "btn ghost", type: "button", text: "Download current", onclick: () => download("detectors.json", JSON.stringify(exportDoc(), null, 2), "application/json") }), sname, el("button", { class: "btn ghost", type: "button", text: "Save to demo/detectors", onclick: saveFile }), el("button", { class: "btn ghost", type: "button", text: "Refresh list", onclick: () => ui.loadFiles() })),
+        el("div", { class: "mrow" }, el("button", { class: "btn", type: "button", text: "Load the core 16", onclick: () => { loadCore(); say(applied([], "Loaded the core 16 (9 validated, 7 unvalidated);").replace(" 0 detectors:", "")); } }), el("button", { class: "btn ghost", type: "button", text: "Clear all", onclick: () => { S.dets = []; say(applied([], "Removed all;").replace(" 0 detectors:", "")); } }))));
+    ui.dsuggest = el("details", { class: "dnew" }, el("summary", { text: "Suggest detectors for this kind of conversation" }), el("div", { class: "frow", style: "margin-top:6px" }, sctx, el("button", { class: "btn", type: "button", onclick: suggest, text: "Suggest 8" })), ui.sugg);
+    ui.dguide = el("details", { class: "dnew" }, el("summary", { text: "What makes a good detector?" }), el("div", { class: "small", style: "display:grid;gap:4px;padding-top:6px" },
+      el("span", { text: "One observable behaviour in the words, phrased “the speaker …”, that a stranger could answer yes or no from 20 to 40 words." }), el("span", { text: "Good: “the speaker asks for money, gift cards, cryptocurrency, or a payment code”." }),
+      el("span", { text: "Weak: “the speaker is lying” (truth is not in the words), “is angry and threatening” (two detectors), “is bad” (too vague)." }), el("span", { text: "An example sentence helps. Your own detectors are unvalidated, so treat their scores as a hint, not a measurement." })));
+    ui.dnew = el("div", { class: "dform", style: "border-top:0;margin-top:6px;padding-top:0" }, el("b", { text: "Add a detector" }),
+      el("div", { class: "frow", style: "align-items:center;flex-wrap:nowrap" }, ui.dname, el("button", { class: "btn primary", type: "button", id: "det-add", onclick: doAdd, text: "Add" }), el("button", { class: "btn", type: "button", style: "white-space:nowrap", onclick: draftInto, text: "Draft first" })),
+      el("div", { class: "help", text: "A name is enough: AI drafts what it should detect. Add now, or draft first to review it." }),
+      el("details", { class: "dnew" }, el("summary", { text: "Write the description yourself" }), el("div", { class: "dform", style: "border:0;margin:0;padding:6px 0 0" }, el("label", {}, "What should it detect?", dwhat), el("label", {}, "An example that should trigger it", dex), el("div", { class: "frow" }, el("label", {}, "Applies to", scopeSeg), el("label", {}, "Icon (optional)", iconBox)))));
+    ui.pane_det = el("div", { class: "tabpane", hidden: true }, ui.dnew, ui.dmsg, el("div", { class: "sec", style: "margin-top:10px" }, el("span", { class: "bt", text: "Watching for" }), ui.dcount), ui.dlist, ui.dfiles, ui.dsuggest, el("div", { class: "bt", style: "margin-top:10px", text: "Quick add" }), ui.dlib, ui.dguide);
+    /* settings: the levers, in order of how often they are changed */
+    ui.models = el("div", { class: "models", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("div", { class: "mstat small muted" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per voice" }); ui.winHelp = el("div", { class: "help" });
+    const cadSeg = el("span", { class: "segmented", role: "group", "aria-label": "How often to score" }); const nIn = el("input", { type: "number", min: "3", max: "20", step: "1", "aria-label": "Words between checks", style: "width:56px;min-height:28px", onchange: () => { S.n = clamp(Math.round(+nIn.value) || 5, 3, 20); nIn.value = S.n; resetRun(); writeHash(); refreshEst(); } }); nIn.value = S.n; nIn.hidden = S.cp !== "words";
+    const drawCad = () => { cadSeg.replaceChildren(...[["sentence", "sentence"], ["words", "N words"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(S.cp === v), onclick: () => { S.cp = v; nIn.hidden = v !== "words"; drawCad(); resetRun(); writeHash(); refreshEst(); }, text: t }))); }; drawCad();
+    const gv = el("div", { class: "bigval num", text: Math.round(S.gate * 100) + "%" }); const gate = el("input", { type: "range", class: "bigslider", min: "0.3", max: "0.95", step: "0.05", "aria-label": "Minimum threshold", oninput: () => { S.gate = +gate.value; gv.textContent = Math.round(S.gate * 100) + "%"; writeHash(); } }); gate.value = S.gate;
+    const dimCb = el("input", { type: "checkbox", id: "dim", onchange: () => { S.showWin = dimCb.checked; ui.track.classList.toggle("showwin", S.showWin); ui.readnote.hidden = !S.showWin; } });
+    ui.est = el("div", { class: "est" });
+    ui.pane_set = el("div", { class: "tabpane", hidden: true }, (ui.playSec = el("div", { class: "playsec" })), el("div", { class: "bt", text: "Model" }), ui.models, ui.mstate,
+      el("div", { class: "twocol" }, el("div", {}, el("div", { class: "bt", text: "Minimum threshold" }), gv, gate, el("div", { class: "help", text: "A detector shows and flags only at or above this. Everything below is ignored." })),
+        el("div", {}, el("div", { class: "bt", text: "What the model reads" }), ui.winSeg, ui.winHelp, el("div", { class: "mrow", style: "margin-top:8px" }, el("span", { class: "l", text: "Check every" }), cadSeg, nIn))),
+      el("div", { class: "foot" }, ui.est, el("label", { class: "chk" }, dimCb, "Dim older text"), ui.behind, ui.err));
+    /* request: what exactly is sent */
+    ui.reqPre = el("pre", { class: "req", tabindex: "0", "aria-label": "Request body" }); ui.reqBadge = el("div", { class: "reqhead" }); ui.reqSelEl = el("select", { "aria-label": "Which check", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.reqSel = ui.reqSelEl.value; renderReq(); } });
+    ui.pane_req = el("div", { class: "tabpane col", hidden: true }, el("div", { class: "reqbar" }, ui.reqBadge, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy" }), el("button", { class: "btn", type: "button", title: "Every check as sent, with its scores", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all" })), el("div", { class: "small muted mono" }, "POST /v1/systemone"), ui.reqPre);
+    /* events: did the detectors catch what really happened */
+    ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, ui.evs);
+    ui.lvl = el("div"); ui.pane_lvl = el("div", { class: "tabpane", hidden: true }, ui.lvl); ui.cnt = el("div", { class: "cnt-grid" }); ui.pane_cnt = el("div", { class: "tabpane", hidden: true }, ui.cnt, el("div", { class: "foot" }, el("button", { class: "btn", type: "button", text: "Download live stats (JSON)", onclick: () => download(`flow-live-stats-${Date.now()}.json`, JSON.stringify(liveStats(), null, 2), "application/json") })));
+    ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["lvl", "Levels"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["cnt", "Counters"], ["ev", "Events"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k) }, t, el("span", { class: "n", "data-n": k }))));
+    const cap = el("section", { class: "pn", style: "flex:1 1 clamp(280px,38vh,480px);min-height:240px" }, ui.tabs, ui.pane_flag, ui.pane_lvl, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_cnt, ui.pane_ev);
+    const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap); ui.rail = rail;
+    /* history */
+    const chartCv = el("canvas"); const viewSeg = el("span", { class: "segmented", role: "group", "aria-label": "History view" }, [["det", "By detector"], ["person", "By person"]].map(([k, t]) => el("button", { type: "button", "data-v": k, "aria-pressed": String(S.view === k), text: t, onclick: () => { S.view = k; viewSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === k))); } })));
+    const hist = el("section", { class: "pn", "data-pane": "history", style: "grid-area:chart" }, el("header", {}, el("h4", { text: "Last 60 seconds" }), viewSeg, el("span", { class: "key r" }, "Shown only at or above the minimum threshold; brighter is higher. Hover for who and what." + (EVENTS.length ? " E = documented event." : ""))), el("div", { class: "chartwrap" }, chartCv));
+    ui.stage = el("main", { class: "stage", "data-tab": "talk" }, toppn, conv, rail, hist);
+    ui.tabsbar = el("nav", { class: "tabsbar", "aria-label": "Sections" }, [["talk", "Talk"], ["signals", "Signals"], ["cues", "Cues"], ["history", "History"]].map(([k, t]) => el("button", { type: "button", "data-t": k, "aria-selected": String(k === "talk"), text: t, onclick: () => { ui.stage.dataset.tab = k; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === k))); } })));
+    top.querySelector(".hl").append(note); ui.noticebar = el("div", { class: "noticebar" }, ui.confirm, ui.status);
+    const root = el("div", { class: "cp" }, top, ui.noticebar, ui.stage, ui.tabsbar);
+    window.refreshSrcPanels = () => { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; }; window.refreshSrcPanels();
+    buildLivePanel(); ui.noticebar.append(ui.liveErr);
+    ui.readnote.hidden = true; glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 4); chart = Chart(chartCv);
+    runner = makeRunner(); refreshCoach(); renderDets(); renderDetTab(); renderPeople(); renderKp(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
+    Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
+    document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
+    applyMode(); if (S.mode === "live") liveReset(); renderDets(); renderDetTab(); ui.loadFiles();
+    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { classicDefaults: () => defaultDets("replay"), addSpec, loadCore, exportDoc, testMany, S, V, VOICES, LN, dryRun: () => dryRun(), setMode: (k) => setMode(k), onSnapshot: (m) => onSnapshot(m), get T() { return T; }, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
+    return root;
+  }
+  window.refreshSrcPanels = () => {};
+  let hitTick = 0, tabTick = 0;
+  function frame(now) {
+    raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (S.mode === "live") S.t = audioNow(); else if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
+    if (now - (frame.vt || 0) > 500) { frame.vt = now; updateVoices(); }
+    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); if (S.tab === "ev") renderEvents(); if (S.tab === "lvl") renderLevels(); if (S.tab === "cnt") renderCounters(); }
+    const c = mmss(S.t); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
+    const b = pending ? `${pending} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
+  }
+  Jev.mount(document.getElementById("app"), loadAll, init);
+})();
+</script>
+</body>
+</html>

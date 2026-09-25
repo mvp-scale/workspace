@@ -1,0 +1,76 @@
+{
+  "name": "Operations · Emergency and control room",
+  "description": "For cockpit, control-room and dispatch traffic: status, commands, read-backs, warnings and plans under pressure.",
+  "detectors": [
+    {
+      "key": "e_status",
+      "name": "Status report",
+      "what": "the speaker reports the current state or a reading of a system or situation",
+      "example": "Engine two is showing zero thrust.",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "key": "e_command",
+      "name": "Command",
+      "what": "the speaker gives a direct command or instruction to act",
+      "example": "Turn left heading zero two zero.",
+      "scope": "person",
+      "icon": "megaphone"
+    },
+    {
+      "key": "e_ack",
+      "name": "Acknowledgement",
+      "what": "the speaker acknowledges or repeats back an instruction",
+      "example": "Roger, turning left zero two zero.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "e_request",
+      "name": "Request for information",
+      "what": "the speaker asks for a status, position or information",
+      "example": "Can you confirm your altitude?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "e_warning",
+      "name": "Warning",
+      "what": "the speaker warns of danger or urges caution",
+      "example": "Watch out, terrain ahead.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "e_plan",
+      "name": "States a plan",
+      "what": "the speaker states what they intend to do next",
+      "example": "We're going to try to land in the river.",
+      "scope": "person",
+      "icon": "target"
+    },
+    {
+      "key": "e_standby",
+      "name": "Stand by",
+      "what": "the speaker asks someone to wait or stand by",
+      "example": "Standby, we're checking.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "k_uncertain",
+      "name": "Uncertainty",
+      "what": "the speaker expresses uncertainty, hedges, or says they are not sure",
+      "example": "I'm not sure, maybe it was Tuesday.",
+      "scope": "person",
+      "icon": "eye"
+    },
+    {
+      "library": "urgency"
+    },
+    {
+      "library": "fear"
+    }
+  ]
+}

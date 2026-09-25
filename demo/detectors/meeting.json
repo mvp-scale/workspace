@@ -1,0 +1,118 @@
+{
+  "name": "Meeting · Decisions and follow-through",
+  "description": "For team and project meetings: what was decided, who owes what by when, and where the meeting stalls or drifts.",
+  "detectors": [
+    {
+      "key": "m_decision",
+      "name": "Decision made",
+      "what": "the speaker states that a decision has been made or announces what the group will do",
+      "example": "OK, so we're going with option B.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "m_action",
+      "name": "Action item",
+      "what": "the speaker assigns a task to a specific person or asks someone to take an action",
+      "example": "Priya, can you send the draft to legal?",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "m_deadline",
+      "name": "Deadline set",
+      "what": "the speaker states a date or time by which something must happen",
+      "example": "We need this by Friday.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "m_blocker",
+      "name": "Blocker raised",
+      "what": "the speaker says something is preventing progress or depends on someone else",
+      "example": "We can't move until security signs off.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "m_risk",
+      "name": "Risk or concern",
+      "what": "the speaker raises a risk, worry or possible problem",
+      "example": "I'm worried we'll miss the launch window.",
+      "scope": "person",
+      "icon": "shield"
+    },
+    {
+      "key": "m_owner",
+      "name": "Ownership unclear",
+      "what": "the speaker asks who is responsible for something or says nobody owns it",
+      "example": "Who actually owns the billing migration?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "m_recap",
+      "name": "Recap",
+      "what": "the speaker summarises what has been discussed or agreed so far",
+      "example": "So to recap, we agreed on three things.",
+      "scope": "person",
+      "icon": "box"
+    },
+    {
+      "key": "m_tangent",
+      "name": "Off-topic tangent",
+      "what": "the speaker moves to a subject unrelated to the topic under discussion",
+      "example": "Speaking of which, did you see the game last night?",
+      "scope": "person",
+      "icon": "chat"
+    },
+    {
+      "key": "m_thanks",
+      "name": "Recognition",
+      "what": "the speaker thanks or praises a person or team for their work",
+      "example": "Great work on the demo, everyone.",
+      "scope": "person",
+      "icon": "smile"
+    },
+    {
+      "key": "k_question",
+      "name": "Question",
+      "what": "the speaker asks a question or asks for information",
+      "example": "Where did you buy the code?",
+      "scope": "person",
+      "icon": "help"
+    },
+    {
+      "key": "k_commitment",
+      "name": "Commitment",
+      "what": "the speaker promises or commits to doing something",
+      "example": "I will send it over by tomorrow.",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "k_agree",
+      "name": "Agreement",
+      "what": "the speaker agrees with or accepts what was said",
+      "example": "Yes, that sounds right to me.",
+      "scope": "person",
+      "icon": "star"
+    },
+    {
+      "key": "k_disagree",
+      "name": "Disagreement",
+      "what": "the speaker disagrees with, objects to, or pushes back on something that was said",
+      "example": "No, that's not what happened.",
+      "scope": "person",
+      "icon": "bolt"
+    },
+    {
+      "key": "k_uncertain",
+      "name": "Uncertainty",
+      "what": "the speaker expresses uncertainty, hedges, or says they are not sure",
+      "example": "I'm not sure, maybe it was Tuesday.",
+      "scope": "person",
+      "icon": "eye"
+    }
+  ]
+}
