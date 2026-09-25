@@ -167,6 +167,8 @@ rebooting their own laptop (not this box) to activate VB-CABLE, then planned to 
 diarization against a YouTube news panel before the real call. To resume voice work: stop the
 lineup (`demo/lineup.sh down`) to free GPU headroom again, then `cd /workspace/voice && .venv/bin/python -u server.py`.
 
+**Next (planned, not started)**: two modes in `demo/flow.html` (Replay = saved conversation, Live = real audio from mic/call, an uploaded file, or a YouTube link), proven first in an isolated `demo/flow-lab.html` with live-added detectors on paid Jev. Full plan: `docs/voice-flow-integration-plan.md` (measured transcript behaviour, ingest design and safeguards, phases; test fixture `voice/fixtures/twovoice-snapshots.json`).
+
 **Not yet done**: wiring this into `demo/flow.html`'s transcript-source abstraction (still the
 long-term integration target per the original plan) — this is still a standalone prototype at
 `voice/`, deliberately not touched in `demo/` yet.
