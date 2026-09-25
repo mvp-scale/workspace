@@ -9,6 +9,7 @@ One persistent WebSocket per client at /ws:
                                | {"cmd":"ingest","kind":"youtube","url":...,"pace":"realtime"|"max"}
                                | {"cmd":"ingest","kind":"file","name":...,"pace":...} then binary FILE bytes, then
                                  {"cmd":"ingest_end"}   (binary frames are file bytes, not PCM, while a file ingest runs)
+                               | (either ingest also takes "start_s" (skip ahead) and "length_s" (stop after))
                                | (add "play":true to either ingest, real-time pace only: the paced PCM comes back to the
                                  client as binary frames, the same bytes at the same moment the model receives them)
                                | {"cmd":"ingest_stop"}                          (see ingest.py for caps/allowlist)
@@ -146,9 +147,9 @@ async def ws_handler(websocket):
                     ingest = None
                     await emit({"kind": "ingest", "state": "error", "error": bad})
                     return
-                await ingest.start_youtube(item["url"].strip(), pace)
+                await ingest.start_youtube(item["url"].strip(), pace, item.get("start_s"), item.get("length_s"))
             elif kind == "file":
-                await ingest.start_file(str(item.get("name", ""))[:200], pace)
+                await ingest.start_file(str(item.get("name", ""))[:200], pace, item.get("start_s"), item.get("length_s"))
             else:
                 ingest = None
                 await emit({"kind": "ingest", "state": "error", "error": "kind must be 'youtube' or 'file'"})

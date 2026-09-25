@@ -24,9 +24,28 @@ QUEUE_HIGH = 3                        # "max" pace: feed only while the session 
 
 
 
-def ffmpeg_cmd(src: str) -> list:
-    return ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-i", src, "-vn",
-            "-t", str(MAX_AUDIO_S), "-f", "s16le", "-ar", str(RATE), "-ac", "1", "pipe:1"]
+MAX_START_S = 12 * 3600
+
+
+def clamp_times(start_s, length_s):
+    """Sanitise the requested start offset and length (seconds). Length is bounded by the audio cap."""
+    try:
+        start = min(max(float(start_s or 0), 0.0), MAX_START_S)
+    except (TypeError, ValueError):
+        start = 0.0
+    try:
+        length = float(length_s) if length_s else 0.0
+    except (TypeError, ValueError):
+        length = 0.0
+    length = min(length, MAX_AUDIO_S) if length > 0 else MAX_AUDIO_S
+    return start, length
+
+
+def ffmpeg_cmd(src: str, start: float = 0.0, length: float = MAX_AUDIO_S) -> list:
+    # -ss before -i seeks a file directly; on a pipe ffmpeg reads and discards up to that point (fast: network speed)
+    ss = ["-ss", f"{start:.2f}"] if start > 0 else []
+    return ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", *ss, "-i", src, "-vn",
+            "-t", f"{length:.2f}", "-f", "s16le", "-ar", str(RATE), "-ac", "1", "pipe:1"]
 
 
 def check_youtube_url(url) -> str | None:
@@ -76,6 +95,7 @@ class Ingest:
         self.stderr = b""
         self.err_tasks = []
         self.attempt, self.url = 0, None
+        self.start, self.length, self.filter_duration = 0.0, float(MAX_AUDIO_S), True
         self.yt_proc, self.yt_stderr = None, b""
         self.finished = False
         self.spool = self.spool_dir = self.spool_path = None
@@ -85,8 +105,10 @@ class Ingest:
     def active(self) -> bool:
         return self.kind is not None and not self.finished
 
-    async def start_youtube(self, url, pace):
+    async def start_youtube(self, url, pace, start_s=0, length_s=0):
         self.kind, self.url = "youtube", url
+        self.start, self.length = clamp_times(start_s, length_s)
+        self.filter_duration = self.start == 0 and not length_s      # a partial run takes only what it needs, so the total length does not matter
         await self._spawn_youtube(pace, None)
 
     async def _spawn_youtube(self, pace, client):
@@ -95,12 +117,12 @@ class Ingest:
         extra = ["--extractor-args", f"youtube:player_client={client}"] if client else []
         yt_args = [sys.executable, "-m", "yt_dlp", "-f", "bestaudio/best", "--no-playlist", "--no-warnings",
                    "--socket-timeout", "20", "--js-runtimes", "node", *extra,
-                   "--match-filter", "is_live", "--match-filter", f"duration<=?{MAX_AUDIO_S}", "-o", "-", "--", url]
+                   *(["--match-filter", "is_live", "--match-filter", f"duration<=?{MAX_AUDIO_S}"] if self.filter_duration else []), "-o", "-", "--", url]
         r, w = os.pipe()
         yt = await asyncio.create_subprocess_exec(*yt_args, stdout=w, stderr=asyncio.subprocess.PIPE,
                                                   stdin=asyncio.subprocess.DEVNULL, start_new_session=True)
         os.close(w)
-        ff = await asyncio.create_subprocess_exec(*ffmpeg_cmd("pipe:0"), stdin=r, stdout=asyncio.subprocess.PIPE,
+        ff = await asyncio.create_subprocess_exec(*ffmpeg_cmd("pipe:0", self.start, self.length), stdin=r, stdout=asyncio.subprocess.PIPE,
                                                   stderr=asyncio.subprocess.PIPE, start_new_session=True)
         os.close(r)
         self.procs += [yt, ff]
@@ -108,10 +130,11 @@ class Ingest:
         self.err_tasks = [asyncio.create_task(self._drain_err(yt)), asyncio.create_task(self._drain_err(ff))]
         self.tasks += self.err_tasks + [asyncio.create_task(self._feed(ff, pace, yt))]
 
-    async def start_file(self, name, pace):
+    async def start_file(self, name, pace, start_s=0, length_s=0):
         """Uploaded bytes are spooled to a private temp file and decoded from there when the upload ends:
         MP4/M4A keep their index at the end and cannot be read from a pipe."""
         self.kind, self.pace = "file", pace
+        self.start, self.length = clamp_times(start_s, length_s)
         self.spool_dir = tempfile.mkdtemp(prefix="voice-ingest-")
         self.spool_path = os.path.join(self.spool_dir, "upload.bin")
         self.spool = open(self.spool_path, "wb")
@@ -131,7 +154,7 @@ class Ingest:
         if self.spool is None or self.tasks:
             return
         self.spool.close()
-        ff = await asyncio.create_subprocess_exec(*ffmpeg_cmd(self.spool_path), stdin=asyncio.subprocess.DEVNULL,
+        ff = await asyncio.create_subprocess_exec(*ffmpeg_cmd(self.spool_path, self.start, self.length), stdin=asyncio.subprocess.DEVNULL,
                                                   stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                                                   start_new_session=True)
         self.procs.append(ff)
@@ -157,7 +180,7 @@ class Ingest:
 
     async def _feed(self, ff, pace, yt):
         t0, sent, last_prog, total, carry, retried = time.monotonic(), 0.0, 0.0, 0, b"", False
-        await self.emit({"kind": "ingest", "state": "started", "source": self.kind, "pace": pace})
+        await self.emit({"kind": "ingest", "state": "started", "source": self.kind, "pace": pace, "start_s": self.start})
         try:
             while True:
                 try:
