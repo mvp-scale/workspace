@@ -6,8 +6,16 @@ One persistent WebSocket per client at /ws:
                      text    = JSON command: {"cmd":"get_settings"} | {"cmd":"reset"} | {"cmd":"flush"}
                                | {"cmd":"configure","settings":{...partial mt_pipeline.GUIDE keys...}}
                                | {"cmd":"reset_to_guide"}
-  server -> client:  {"kind":"transcript","segments":[{speaker,start_time,end_time,words}],
+                               | {"cmd":"ingest","kind":"youtube","url":...,"pace":"realtime"|"max"}
+                               | {"cmd":"ingest","kind":"file","name":...,"pace":...} then binary FILE bytes, then
+                                 {"cmd":"ingest_end"}   (binary frames are file bytes, not PCM, while a file ingest runs)
+                               | (add "play":true to either ingest, real-time pace only: the paced PCM comes back to the
+                                 client as binary frames, the same bytes at the same moment the model receives them)
+                               | {"cmd":"ingest_stop"}                          (see ingest.py for caps/allowlist)
+  server -> client:  binary = PCM playback (only when ingest asked for play)
+                     {"kind":"transcript","segments":[{speaker,start_time,end_time,words}],
                       "audio_s":float,"step_ms":float,"hop_ms":float}   after every completed model step
+                     {"kind":"ingest","state":"started"|"running"|"done"|"stopped"|"error",pos_s?,error?}
                      {"kind":"settings"|"configured",...} / {"kind":"reset"|"flush",...} / {"kind":"error",...}
 
 Per the guide: models are loaded once per process; each connection gets its own session (speaker
@@ -28,6 +36,7 @@ from websockets.asyncio.server import serve
 from websockets.datastructures import Headers
 from websockets.http11 import Response
 
+import ingest as ing
 import mt_pipeline as mt
 
 HERE = Path(__file__).parent
@@ -108,16 +117,74 @@ async def ws_handler(websocket):
 
     await websocket.send(json.dumps({"kind": "settings", "settings": geometry()}))
 
+    ingest = None                                # the active ing.Ingest, if any (one per session)
+
+    async def emit(ev: dict):
+        await out_q.put(ev)
+
+    async def stop_ingest():
+        nonlocal ingest
+        if ingest is not None:
+            was, ingest = ingest, None
+            await was.stop()
+
+    async def handle_ingest(item: dict):
+        nonlocal ingest
+        cmd = item["cmd"]
+        if cmd == "ingest":
+            if ingest is not None and ingest.active:
+                await emit({"kind": "ingest", "state": "error", "error": "an ingest is already running; stop it first"})
+                return
+            pace = "max" if item.get("pace") == "max" else "realtime"
+            kind = item.get("kind")
+            async def send_audio(b: bytes):                # optional playback: the paced PCM, back to the page
+                await out_q.put(b)
+            ingest = ing.Ingest(queue, emit, send_audio if item.get("play") else None)
+            if kind == "youtube":
+                bad = ing.check_youtube_url(item.get("url"))
+                if bad:
+                    ingest = None
+                    await emit({"kind": "ingest", "state": "error", "error": bad})
+                    return
+                await ingest.start_youtube(item["url"].strip(), pace)
+            elif kind == "file":
+                await ingest.start_file(str(item.get("name", ""))[:200], pace)
+            else:
+                ingest = None
+                await emit({"kind": "ingest", "state": "error", "error": "kind must be 'youtube' or 'file'"})
+        elif cmd == "ingest_end":
+            if ingest is not None and ingest.kind == "file":
+                await ingest.file_end()
+        elif cmd == "ingest_stop":
+            await stop_ingest()
+            await emit({"kind": "ingest", "state": "stopped"})
+
     async def recv_loop():
         async for message in websocket:
             if isinstance(message, (bytes, bytearray)):
                 stats["msgs"] += 1
+                if ingest is not None and ingest.active:
+                    if ingest.kind == "file":          # binary frames are file bytes during a file ingest
+                        err = ingest.file_chunk(bytes(message))
+                        if err:
+                            await stop_ingest()
+                            await emit({"kind": "ingest", "state": "error", "error": err})
+                    continue                            # otherwise raw PCM is ignored while ingest owns the session
                 await queue.put(bytes(message))
             elif isinstance(message, str):
                 try:
-                    await queue.put(json.loads(message))
+                    item = json.loads(message)
                 except json.JSONDecodeError:
-                    pass
+                    continue
+                if not isinstance(item, dict):
+                    continue
+                if str(item.get("cmd", "")).startswith("ingest"):
+                    await handle_ingest(item)
+                    continue
+                if item.get("cmd") in ("reset", "configure", "reset_to_guide"):
+                    await stop_ingest()
+                await queue.put(item)
+        await stop_ingest()
         await queue.put(None)
 
     async def inference_loop():
@@ -140,6 +207,8 @@ async def ws_handler(websocket):
                         await asyncio.to_thread(session.accept_audio, np.zeros(int(1.3 * mt.SAMPLE_RATE), dtype=np.int16))
                         await out_q.put(snapshot())
                         await out_q.put({"kind": "flush", "ok": True})
+                    elif cmd == "_ingest_done":
+                        await out_q.put({"kind": "ingest", "state": "done", "pos_s": item.get("pos_s")})
                     elif cmd in ("configure", "reset_to_guide"):
                         try:
                             incoming = dict(mt.GUIDE) if cmd == "reset_to_guide" else {
@@ -182,7 +251,7 @@ async def ws_handler(websocket):
             if r is None:
                 break
             try:
-                await websocket.send(json.dumps(r))
+                await websocket.send(r if isinstance(r, (bytes, bytearray)) else json.dumps(r))
             except websockets.exceptions.ConnectionClosed:
                 break
 
