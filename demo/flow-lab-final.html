@@ -208,6 +208,33 @@
   .menuwrap { position: relative; } .menu { position: absolute; right: 0; top: 38px; z-index: 40; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 4px; min-width: 210px; box-shadow: 0 8px 28px rgba(0,0,0,.4); }
   .menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 4px; cursor: pointer; } .menu button:hover, .menu button:focus-visible { background: var(--surface-2); }
   .playsec { margin-bottom: 12px; }
+  /* conversation: one neutral bubble style. Voice colour lives in the lanes above; detector colour only on highlighted words; you = right, accent edge, "You" */
+  .msg { margin: 3px 0; }
+  .bub { padding: 3px 9px 4px; border-radius: 10px 10px 10px 3px; background: var(--surface-2); border: 1px solid var(--border); max-width: min(86%, 640px); }
+  .msg.coach .bub { border-radius: 10px 10px 3px 10px; border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+  .meta .pnum { position: relative; padding-left: 15px; background: var(--surface); border-color: var(--border-strong); color: var(--text-2); }
+  .meta .pnum::before, .tent .pnum::before { content: ""; position: absolute; left: 5px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--v, var(--text-3)); }
+  .tent .pnum { position: relative; padding-left: 15px; background: var(--surface); border-color: var(--border-strong); color: var(--text-2); }
+  .msg.coach .meta .pnum { padding-left: 8px; color: var(--accent); border-color: var(--accent); background: var(--accent-soft); font-weight: 700; } .msg.coach .meta .pnum::before { display: none; }
+  .txt { font-size: 14px; line-height: 1.36; }
+  .msg.old { margin: 2px 0; } .msg.old .bub { padding: 1px 8px 2px; border-radius: 8px; } .msg.old .txt { font-size: 12px; line-height: 1.28; color: var(--text-2); }
+  .msg.old .meta { font-size: 9.5px; line-height: 1.15; } .msg.old .meta .pnum { height: 13px; min-width: 0; font-size: 9px; padding-left: 12px; } .msg.old .meta .pnum::before { left: 4px; width: 5px; height: 5px; margin-top: -2.5px; }
+  .tent { border-top: 0; padding: 4px 4px 2px; min-height: 22px; }
+  /* coaching: compact and a fixed height, so the tabs below never jump */
+  .rail .cols { grid-template-columns: minmax(0, 1fr); flex: 0 0 auto; min-height: 0; height: 250px; }
+  .rail .cols .pn > header { padding-bottom: 2px; } .rail .cols .bd { padding: 4px 12px 8px; }
+  .cnote { padding: 6px 10px; gap: 2px; } .chead { font-size: clamp(17px, 1.4vw, 21px) !important; } .ctext { font-size: 13px; line-height: 1.28; } .cwhy { font-size: 11px; min-height: 14px; }
+  .cnext { padding: 4px 10px 5px; margin-top: 6px; } .cnext .t { font-size: 12.5px; line-height: 1.28; }
+  .cwins { display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: baseline; margin-top: 8px; font-size: 12px; } .cwins .lab { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+  .cwins .win { display: inline-flex; gap: 4px; padding: 0; } .cwins .win .ts { margin-left: 2px; }
+  .cyou { margin: 0; font-size: 12px; } .cyou .pnum { height: 16px; }
+  .rail .cols .pn { min-height: 0; }
+  .vstream { position: relative; height: 88px; min-width: 0; } .vstream canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .dchip.pulse { animation: chippulse .9s ease-out; } @keyframes chippulse { 0% { box-shadow: 0 0 0 0 var(--c); } 100% { box-shadow: 0 0 0 9px transparent; } }
+  .cyou { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; } .cyou .pnum { --v: var(--accent); }
+  .cnext { border-left: 5px solid var(--border-strong); padding: 6px 10px 7px; margin-top: 8px; background: var(--surface-2); border-radius: var(--radius-sm); }
+  .cnext .k { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); } .cnext .t { font-size: 13.5px; font-weight: 500; margin-top: 2px; }
+  .cwins .win b { color: var(--good); } .cwins .win .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
   .dgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; } .dgrid .drow { padding: 3px 0; }
   @media (max-width: 1500px) { .dgrid { grid-template-columns: minmax(0, 1fr); } }
   .noticebar { position: relative; height: 0; z-index: 25; } .noticebar > * { position: absolute; left: 0; right: 0; top: 6px; }
@@ -281,7 +308,7 @@
   const P_BY = Object.fromEntries(PERSP.map(p => [p.id, p]));
   const DEFAULTS = ["anger", "fear", "urgency", "threat", "politeness", "manipulation", "persuasion", "sarcasm"];
 
-  const S = { showWin: false, src: null, dlg: null, coach: null, names: false, model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "replay", fresh: false, stale: 120, cap: 150, k: 2, liveSrc: "youtube", pace: "realtime", armed: false, playing: false, t: 0, done: false, dets: [], kps: [], seq: 0, tab: "flag", view: "det", reqSel: "latest" };
+  const S = { showWin: false, src: null, dlg: null, coach: null, names: false, model: null, win: "w20", winTouched: false, cp: "sentence", n: 5, gate: 0.8, speed: "1", mode: "replay", fresh: false, stale: 120, cap: 150, jev: true, k: 2, liveSrc: "youtube", pace: "realtime", armed: false, playing: false, t: 0, done: false, dets: [], kps: [], seq: 0, tab: "flag", view: "det", reqSel: "latest" };
   let D = null, T = null, W = [], DUR = 0, ptr = 0, raf = 0, last = performance.now(), runner = null, ui = {}, QS = {}, QALL = {}, EVENTS = [], SP = { list: [], by: {} };
   const C = new Map(), CPS = [], FLAGS = [], LAGS = {}, QUEUE = [], LOGW = [], rows = [], peopleSpans = {}, cards = [], SPOKE = [], PC = {};
   let active = 0, ctl = null, failed = 0, pending = 0, maxPending = 0, moSeq = 0, nextSample = 0, checksDone = 0, pre = null, cpN = 0, glide = null, stack = null, chart = null, curSpk = null;
@@ -392,7 +419,7 @@
     S.kps.push({ key, q: key, text, done: false, doneAt: 0 }); return true;
   }
   function removeDet(key) { S.touched = true; S.dets = S.dets.filter(d => d.key !== key); renderDets(); renderDetTab(); renderPeople(); afterConfig(); }
-  const detsFor = (chk) => S.dets.filter(d => d.scope === (chk.scope === "call" ? "call" : "person"));
+  const detsFor = (chk) => chk.scope === "coach" ? [] : S.dets.filter(d => d.scope === (chk.scope === "call" ? "call" : "person"));
 
   /* Trust: measured accuracy of the detector on its own validation set, for the selected model. Custom detectors have none. */
   const wilson = (k, n, z = 1.96) => { const p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [(c - m) / d, (c + m) / d]; };
@@ -492,7 +519,7 @@
     }
   }
   function apply(chk, lagMs) {
-    checksDone++; if (lagMs) { (LAGS[S.model] ||= []).push(lagMs); if (S.mode === "live") { LN.e2e.push(S.t - chk.stLast); LN.wall.push(lagMs); } } const r = C.get(ckey(chk.state)); chk.answers = {};
+    checksDone++; if (lagMs) { (LAGS[S.model] ||= []).push(lagMs); if (S.mode === "live") { LN.e2e.push(S.t - chk.stLast); LN.wall.push(lagMs); } } const r = C.get(ckey(chk.state)); chk.answers = {}; if (chk.scope === "coach") { applyCoach(chk, r); return; }
     for (const d of detsFor(chk)) {
       const v = readDet(d, r && r.answers[d.q]); if (!v) continue; chk.answers[d.key] = v.score;
       const st = stFor(d, chk.spk); d.agg.lastP = v.score; st.n++; st.latest = v.score; st.marks.push({ t: S.t, p: v.score }); if (st.marks.length > 60) st.marks.shift();
@@ -522,6 +549,7 @@
     const st = stFor(d, chk.spk); st.lastFire = S.t; const who = d.scope === "call" ? "_call" : chk.spk;
     const quote = T.turns[chk.i].words.slice(chk.k0, chk.k + 1).join(" "), fl = { id: ++moSeq, det: d.key, label: d.label, icon: d.icon, slot: d.slot, spk: who, at: chk.spk, t: S.t, p: v.score, quote, i: chk.i, model: S.model };
     FLAGS.push(fl); highlight(chk, d, v.score); addLog(fl); renderHits(who);
+    noteWin(d, chk); pulse(d.key, who);
     if (d.scope !== "call" && isCoach(chk.spk)) return;
     for (const o of cards) if (o.spk === who && o.det !== d.key && !o.pinned && !o.shifted) { o.shifted = true; o.t = Math.min(o.t, S.t - (HOLD - 4)); o.el.classList.add("shifted"); o.sup.replaceChildren("→", iconEl(d.icon, 12)); o.sup.title = `Shifting to ${d.label}`; o.sup.hidden = false; }
     const c = cards.find(x => x.det === d.key && x.spk === who && !x.shifted && S.t - x.t < 12);
@@ -552,7 +580,12 @@
       frame(dt) { const k = 1 - Math.exp(-dt / 0.17), H = root.clientHeight; for (const it of items) { it.y += (it.ty - it.y) * k; const want = it.leaving ? 0 : it.ty + it.h > H + 2 ? 0 : 1; it.o += (want - it.o) * k * 1.3; it.el.style.transform = `translate3d(0,${it.y.toFixed(1)}px,0)`; it.el.style.opacity = it.o.toFixed(3); } },
     };
   }
+  function restyleRows() { for (let i = 0; i < rows.length; i++) { const r = rows[i], tu = T.turns[i]; if (!r || !tu) continue; const me = isCoach(tu.speaker); r.el.classList.toggle("coach", me); if (r.lab) r.lab.textContent = me ? "You" : code(tu.speaker); } }
+  function compactOld() { let n = 0; for (let i = rows.length - 1; i >= 0; i--) { if (!rows[i]) continue; n++; rows[i].el.classList.toggle("old", n > 6); } }
+  const PULSE = {};
+  function pulse(key, spk) { const L = DCH[key]; if (L) { L.node.classList.remove("pulse"); void L.node.offsetWidth; L.node.classList.add("pulse"); } PULSE[spk] = performance.now(); }
   function newCard(d, chk, fl, who) {
+    pulse(d.key, who); return;      // cue cards were retired: the Flagged tab carries the same hits with their text; the chip pulses instead
     const bar = el("i"), age = el("span", { class: "age" }, "00:00"), pin = el("button", { class: "btn ghost", type: "button", "aria-pressed": "false", text: "Pin" });
     const cnt = el("span", { class: "cnt" }), sup = el("span", { class: "sup", hidden: true }), pc = el("span", { class: "pc", text: Math.round(fl.p * 100) + "%" }), whoEl = el("span", { class: "who", title: lab(who), text: who === "_call" ? "ALL" : code(who) });
     const node = el("article", { class: "moment", style: cvar(d.slot), title: `${d.label}: ${d.about}`, "data-flag": fl.id },
@@ -574,7 +607,7 @@
   function Glide(view, track) {
     let y = 0, tgt = 0, dirty = true; const ro = new ResizeObserver(() => { dirty = true; }); ro.observe(track); ro.observe(view);
     return { dirty() { dirty = true; }, reset() { y = 0; tgt = 0; track.style.transform = ""; dirty = true; },
-      frame(dt) { if (dirty) { tgt = Math.max(0, track.offsetHeight - view.clientHeight + 6); dirty = false; } y += (tgt - y) * (1 - Math.exp(-dt / 0.25)); if (Math.abs(tgt - y) < 0.05) y = tgt; track.style.transform = `translate3d(0,${(-y).toFixed(2)}px,0)`; window.__glideY = { g: y }; } };
+      frame(dt) { if (dirty) { tgt = Math.max(0, track.offsetHeight - view.clientHeight * 0.8 + 6); dirty = false; } y += (tgt - y) * (1 - Math.exp(-dt / 0.25)); if (Math.abs(tgt - y) < 0.05) y = tgt; track.style.transform = `translate3d(0,${(-y).toFixed(2)}px,0)`; window.__glideY = { g: y }; } };
   }
 
   /* ---------- the thread ---------- */
@@ -587,7 +620,7 @@
       const tu = T.turns[wd.i], wordsEl = el("div", { class: "words", style: tu.live ? "position:static" : "" }); if (ui.caret.parentNode) ui.caret.remove();
       row = { spans: [], words: wordsEl, el: el("div", { class: "msg" + (isCoach(tu.speaker) ? " coach" : ""), style: `--v:${vcol(tu.speaker)}` },
         el("div", { class: "bub" }, el("div", { class: "meta" }, el("span", { class: "pnum", "aria-hidden": "true", text: code(tu.speaker) }), el("span", { class: "nmx", "data-nm-spk": tu.speaker, title: tu.speaker, text: nm(tu.speaker) }), el("span", { text: mmss(tu.t0) })), el("div", { class: "txt" }, tu.live ? null : el("div", { class: "ghost", "aria-hidden": "true", text: tu.text }), wordsEl))) };
-      rows[wd.i] = row; ui.track.append(row.el); curSpk = tu.speaker;
+      rows[wd.i] = row; ui.track.insertBefore(row.el, ui.tent); row.lab = row.el.querySelector(".pnum"); if (isCoach(tu.speaker)) row.lab.textContent = "You"; curSpk = tu.speaker;
       for (const k in PC) PC[k].node.classList.toggle("speaking", k === tu.speaker);
     }
     const sp = el("span", { class: "w", text: wd.w }); row.spans[wd.k] = sp; row.words.append(document.createTextNode(wd.k ? " " : ""), sp, ui.caret); glide.dirty();
@@ -718,6 +751,73 @@
     } };
   }
 
+  /* ---------- voice lanes: eight fixed lanes, the last 60 s, faded by age (no cards) ---------- */
+  function Lanes(canvas) {
+    const ctx = canvas.getContext("2d"); let W_ = 0, H_ = 0, dpr = 1, css = {}, cAt = 0, mx = null, my = null;
+    new ResizeObserver(() => { dpr = devicePixelRatio || 1; W_ = canvas.clientWidth; H_ = canvas.clientHeight; canvas.width = W_ * dpr; canvas.height = H_ * dpr; }).observe(canvas);
+    canvas.addEventListener("mousemove", (e) => { const r = canvas.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }); canvas.addEventListener("mouseleave", () => { mx = my = null; });
+    const rd = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const read = () => { css = { line: rd("--border"), t2: rd("--text-2"), t3: rd("--text-3"), surf: rd("--surface"), surf2: rd("--surface-2"), ink: rd("--text"), accent: rd("--accent"), mono: rd("--mono") }; };
+    const colOf = (spk) => { const m = /^var\((--[\w-]+)\)$/.exec(vcol(spk)); return m ? rd(m[1]) : css.t2; };
+    return { draw() {
+      if (!W_ || !H_) return; if (performance.now() - cAt > 500) { read(); cAt = performance.now(); }
+      let win = 60, t = S.t, pad = { l: 78, r: 8, t: 2, b: 2 }, pw = W_ - pad.l - pad.r, x = (tt) => pad.l + pw - ((t - tt) / win) * pw, rh = (H_ - pad.t - pad.b) / MAX_VOICES, lanes = SP.list.map(q => q.name);
+      if (lanes.length > MAX_VOICES) { const seen = new Set(); for (let i = T.turns.length - 1; i >= 0 && seen.size < MAX_VOICES; i--) { const tu = T.turns[i]; if (tu.t0 != null && tu.t0 <= t) seen.add(tu.speaker); } lanes = lanes.filter(n => seen.has(n)).slice(0, MAX_VOICES); }      // more than eight voices: the eight most recently heard, in first-heard order
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W_, H_); ctx.textBaseline = "middle";
+      for (let r = 0; r < MAX_VOICES; r++) { ctx.fillStyle = css.surf2; ctx.fillRect(pad.l, pad.t + r * rh + 1, pw, rh - 2); }
+      const per = {}; for (let i = T.turns.length - 1; i >= 0; i--) { const tu = T.turns[i]; if (tu.t1 != null && tu.t1 < t - win - 2) break; (per[tu.speaker] ||= []).push(tu); }
+      lanes.forEach((spk, r) => {
+        const y0 = pad.t + r * rh, col = colOf(spk), coach = isCoach(spk), vo = S.mode === "live" ? VOICES[spk] : null, stale = vo && t - vo.last > S.stale;
+        ctx.save(); ctx.beginPath(); ctx.rect(pad.l, 0, pw + 1, H_); ctx.clip(); ctx.fillStyle = col;
+        for (const tu of per[spk] || []) { const a = tu.t0, b = Math.min((tu.t1 == null ? tu.t0 : tu.t1) + 0.4, t); if (a > t || b < t - win) continue; ctx.globalAlpha = clamp(0.28 + 0.72 * (1 - (t - b) / win), 0.28, 1); const x0 = x(Math.max(a, t - win)), x1 = x(b); ctx.fillRect(x0, y0 + 1, Math.max(2, x1 - x0), rh - 2); }
+        ctx.restore(); ctx.globalAlpha = 1;
+        if (coach) { ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.strokeRect(pad.l + 0.5, y0 + 1.5, pw - 1, rh - 3); }
+        ctx.globalAlpha = stale ? 0.5 : 1; ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(4, y0 + 1, 26, rh - 2, 4); ctx.fill(); ctx.fillStyle = "#000"; ctx.font = `700 ${Math.min(10, rh - 2)}px ${css.mono}`; ctx.textAlign = "center"; ctx.fillText(code(spk), 17, y0 + rh / 2 + 0.5);
+        ctx.textAlign = "left"; ctx.fillStyle = coach ? col : css.t3; ctx.font = `600 ${Math.min(10, rh - 2)}px ${css.mono}`; ctx.fillText(coach ? "you" : stale ? "quiet" : "", 35, y0 + rh / 2 + 0.5); ctx.globalAlpha = 1;
+      });
+      ctx.textBaseline = "top"; ctx.fillStyle = css.t3; ctx.font = `10px ${css.mono}`; ctx.textAlign = "right"; ctx.fillText("now", W_ - pad.r, H_ - 11);
+      if (mx != null && my != null && mx < pad.l) { const r = Math.floor((my - pad.t) / rh), spk = lanes[r]; if (spk) { const vo = VOICES[spk], n = (T.turns.filter(tu => tu.speaker === spk)).reduce((a, tu) => a + tu.words.length, 0), lines = [`${code(spk)}${isCoach(spk) ? " (you)" : ""}  ${spk}`, `${n} words${vo ? ` · last heard ${mmss(t - vo.last)} ago` : ""}`]; ctx.font = `11px ${css.mono}`; const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16, h = lines.length * 14 + 8; ctx.fillStyle = css.surf; ctx.strokeStyle = css.line; ctx.beginPath(); ctx.roundRect(pad.l + 6, clamp(my - h / 2, 2, H_ - h - 2), w, h, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = css.ink; ctx.textAlign = "left"; ctx.textBaseline = "top"; lines.forEach((l, i) => ctx.fillText(l, pad.l + 14, clamp(my - h / 2, 2, H_ - h - 2) + 5 + i * 14)); } }
+    } };
+  }
+
+  /* ---------- coaching: wins, and Jev's read of the last minute (Live only) ---------- */
+  const CWINS = [], JC = { play: null, next: null, phase: null, t: -1e9, at: -1e9, spk: null, n: 0, sig: "" };
+  const WINKEYS = { k_question: ["Asked a question", 30], o_open_q: ["Asked an open question", 30], k_empathy: ["Showed empathy", 30], k_commitment: ["Made a commitment", 30], o_praise: ["Gave specific praise", 30], j_owner: ["Took ownership", 30], c_admit: ["Owned a mistake", 30], c_reflect: ["Reflected back", 30], o_check: ["Checked understanding", 30], v_apology: ["Apologised", 30], x_calm: ["Calmed things down", 30], m_recap: ["Summarised", 30], politeness: ["Stayed polite", 90] };
+  function noteWin(d, chk) { if (chk.test || !isCoach(chk.spk) || !WINKEYS[d.key]) return; const [text, gap] = WINKEYS[d.key], last = [...CWINS].reverse().find(w => w.key === d.key); if (last && S.t - last.t < gap) return; CWINS.push({ key: d.key, text, t: S.t }); renderWins(); }
+  function renderWins() { if (!ui.cWins) return; ui.cWins.replaceChildren(el("span", { class: "lab", text: "Wins" }), ...(CWINS.length ? CWINS.slice(-4).reverse().map(w => el("span", { class: "win" }, el("b", { text: "✓" }), el("span", { text: w.text }), el("span", { class: "ts", text: mmss(w.t) }))) : [el("span", { class: "small muted", text: "show up here as you do them well" })])); }
+  const PLAYS = { listen: "Stay quiet and let the other person finish", open_q: "Ask one open question (how or what) and then listen", summarise: "Summarise what has been said and check it is right", clarify: "Ask for one specific detail (who, what or when)", acknowledge: "Acknowledge the other person's feelings before responding", slow: "Slow down and pause before answering", steer: "Steer back to the topic and propose the next step", commit: "Agree one specific next step with a time", hold: "Do not agree yet: ask for time, or for the details in writing", continue: "Carry on as you are: nothing needs to change" };
+  const NEXTQ = { keep_talking: "keeps talking", ask_question: "asks a question", push_back: "pushes back or disagrees", agree: "agrees or accepts", escalate: "becomes more heated or starts pressuring", withdraw: "goes quiet or withdraws", change_subject: "changes the subject" };
+  const PHASES = { opening: "just starting: greetings and setting up", discovery: "exploring the situation with questions", discussion: "discussing and exchanging views", disagreement: "disagreeing or in tension", decision: "working towards a decision or commitment", closing: "wrapping up" };
+  const PLAY_TXT = { listen: ["LISTEN", "Let them finish. Say nothing for the next 20 seconds.", "calm"], open_q: ["ASK ONE OPEN QUESTION", "Ask a how or what question, then stop talking.", "calm"], summarise: ["SUMMARISE", "Sum up what you have heard so far and check it is right.", "calm"], clarify: ["CLARIFY", "Ask for one specific detail: who, what or when.", "calm"], acknowledge: ["ACKNOWLEDGE", "Name what the other person is feeling before you answer.", "notice"], slow: ["SLOW DOWN", "Pause before you answer. Shorter sentences.", "notice"], steer: ["STEER BACK", "Bring it back to the topic and propose the next step.", "calm"], commit: ["AGREE A NEXT STEP", "Agree one specific next step, with a time.", "calm"], hold: ["DON'T AGREE YET", "Ask for time, or for the details in writing.", "notice"] };
+  const NEXT_TXT = { keep_talking: "They are likely to keep talking. Let them, and note the key point.", ask_question: "They are likely to ask you a question. Have your answer ready.", push_back: "They are likely to push back. Acknowledge first, then give one reason.", agree: "They are likely to agree. Confirm the next step before it drifts.", escalate: "This may get more heated. Lower your pace now.", withdraw: "They may go quiet. Ask an open question.", change_subject: "They may change the subject. Decide whether to follow it or steer back." };
+  const coachQs = (me) => { const k = "cq_" + me; return { [k + "_play"]: { type: "choice", instructions: `This is a conversation. The person being coached is ${me}. Which single action would help ${me} most in the next 20 seconds?`, criteria: PLAYS }, [k + "_next"]: { type: "choice", instructions: `Considering everyone except ${me}: what is the other party most likely to do next?`, criteria: NEXTQ }, [k + "_phase"]: { type: "choice", instructions: "Where is this conversation right now?", criteria: PHASES } }; };
+  function coachTick() {
+    if (S.mode !== "live" || !S.jev || !S.coach || V.state !== "running" || !runner || (isHosted() && !S.armed)) return;
+    if (S.t - JC.at < 15 || runner.flat.length < 25) return;
+    const qs = coachQs(S.coach); Object.assign(QALL, qs); JC.at = S.t;
+    submit({ scope: "coach", spk: S.coach, state: callWindow(runner.flat, "w60"), qids: Object.keys(qs), i: Math.max(0, T.turns.length - 1), k0: 0, k: 0, stLast: V.audioS, coach: true });
+  }
+  function applyCoach(chk, r) {
+    const top = (q) => { const a = r && r.answers[q], pr = a && a.probabilities; if (!pr) return null; let k = null, pp = -1; const e = Object.entries(pr).sort((m, n) => n[1] - m[1]); k = e[0] && e[0][0]; pp = e[0] ? e[0][1] : 0; return { key: k, p: pp, gap: e[1] ? pp - e[1][1] : pp }; }, b = "cq_" + chk.spk;
+    JC.play = top(b + "_play"); JC.next = top(b + "_next"); JC.phase = top(b + "_phase"); JC.t = S.t; JC.spk = chk.spk; JC.n++; JC.sig = ""; renderNext();
+  }
+  function jevAction() {
+    const pl = JC.play; if (!S.jev || S.mode !== "live" || !pl || JC.spk !== S.coach || S.t - JC.t > 45 || pl.key === "continue" || pl.p < 0.3 || pl.gap < 0.04 || !PLAY_TXT[pl.key]) return null;
+    const [head, text, tone] = PLAY_TXT[pl.key], ph = JC.phase && JC.phase.p >= 0.4 ? ` It reads as ${JC.phase.key}.` : "";
+    return { key: "jev_" + pl.key, prio: 4.5, head, horizon: 20, text, why: `Jev's read of the last minute (${Math.round(pl.p * 100)}% for this move, ${Math.round(pl.gap * 100)} points ahead of the next).${ph}`, tone };
+  }
+  function renderNext() {
+    if (!ui.cNext) return; const live = S.mode === "live" && S.jev; ui.cNext.hidden = !live; if (!live) return;
+    const n = JC.next, ph = JC.phase, fresh = n && JC.spk === S.coach && S.t - JC.t <= 60, sig = fresh ? `${n.key}|${Math.round(n.p * 100)}|${ph && ph.key}` : S.coach ? "wait" : "pick";
+    if (JC.sig === sig) return; JC.sig = sig;
+    ui.cNext.replaceChildren(el("div", { class: "k", text: fresh ? `Next · ${ph && ph.p >= 0.4 ? ph.key : "reading"} · ${Math.round(n.p * 100)}% sure` : "Next" }), el("div", { class: "t" + (fresh ? "" : " muted"), text: fresh ? (NEXT_TXT[n.key] || "") : S.coach ? "Jev is reading the conversation…" : "Pick your voice to get a forward look." }));
+  }
+  function paintYou() {
+    const sig = S.coach + "|" + S.mode + "|" + (S.mode === "live" && VOICES[S.coach] ? (S.t - VOICES[S.coach].last < 3 ? "now" : Math.floor((S.t - VOICES[S.coach].last) / 5)) : ""); if (ui.cYou.dataset.sig === sig) return; ui.cYou.dataset.sig = sig;
+    if (!S.coach || !SP.by[S.coach]) { ui.cYou.replaceChildren(); return; } const vo = S.mode === "live" ? VOICES[S.coach] : null;
+    ui.cYou.replaceChildren(el("span", { class: "pnum", "aria-hidden": "true", text: code(S.coach) }), el("b", { text: "You" }), el("span", { class: "muted small", text: vo ? (S.t - vo.last < 3 ? "speaking now" : `quiet for ${mmss(S.t - vo.last)}`) : "" }));
+  }
+
   /* ---------- coaching: plain rules on measured signals (the clock and the detectors), not a model. One instruction at a time, with a time horizon ---------- */
   function coachMetrics() {
     const lo = S.t - 30, lo2 = S.t - 20; let me = 0, ot = 0, m2 = 0;
@@ -740,7 +840,7 @@
     const kp = S.kps.find(k => !k.done); if (kp) return A("cover", 8, "COVER NEXT", 30, kp.text, "The next key point not yet made.", "calm");
     return A("listen0", 9, "LISTEN", 15, "Nothing needs action. Listen for the next cue.", "No detector is over the threshold.", "calm");
   }
-  let coachNext = 0, coachCur = null, coachC = {};
+  let coachNext = 0, coachCur = null, coachC = {}, voices = null;
   function paintCoach(a, elapsed) {
     const key = a.head + a.text + a.why + a.tone; if (coachC.key !== key) { ui.cHead.textContent = a.head; ui.cText.textContent = a.text; ui.cWhy.textContent = a.why; ui.cBox.className = "cnote " + a.tone; coachC.key = key; }
     const left = a.horizon ? Math.max(0, a.horizon - elapsed) : 0, win = a.horizon ? `next ${a.horizon} s` : "", lt = a.horizon ? `${Math.ceil(left)} s left` : "";
@@ -751,8 +851,8 @@
     if (S.mode === "live" && (S.playing || S.t > 0) && !S.coach) { coachCur = null; paintCoach({ head: "PICK A VOICE", text: "Voices are anonymous. Once you know which one is you, choose it in the Coaching menu.", why: "", tone: "calm", horizon: 0 }, 0); return; }
     if (S.mode === "live" && !S.playing && S.t === 0) { coachCur = null; paintCoach({ head: "READY", text: "Press Start. Coaching starts when speech does.", why: "", tone: "calm", horizon: 0 }, 0); return; }
     if (!S.playing && S.t === 0) { coachCur = null; paintCoach({ head: "READY", text: "Press Play. Coaching starts when speech does.", why: "", tone: "calm", horizon: 0 }, 0); return; }
-    if (S.done) { paintCoach({ head: "CALL ENDED", text: S.mode === "live" ? "Press Start live to run again." : "Press Replay to run it again.", why: "", tone: "calm", horizon: 0 }, 0); return; }
-    const want = pickAction(), c = coachCur, over = !c || S.t < c.since || S.t - c.since >= c.horizon;
+    if (S.done) { paintCoach({ head: "CALL ENDED", text: S.mode === "live" ? "Press Start again to run it again." : "Press Replay to run it again.", why: "", tone: "calm", horizon: 0 }, 0); return; }
+    paintYou(); renderNext(); const rl = pickAction(), jv = jevAction(), want = jv && jv.prio < rl.prio ? jv : rl, c = coachCur, over = !c || S.t < c.since || S.t - c.since >= c.horizon;
     if (!c || over || want.prio < c.prio) coachCur = { ...want, since: S.t }; else if (want.key === c.key) { c.text = want.text; c.why = want.why; }
     paintCoach(coachCur, S.t - coachCur.since);
   }
@@ -763,8 +863,9 @@
     coachCur = null; S.playing = false; S.done = false; S.t = 0; ptr = 0; nextSample = 0; cpN = 0; CPS.length = 0; FLAGS.length = 0; LOGW.length = 0; cards.length = 0; moSeq = 0; rows.length = 0; SPOKE.length = 0; curSpk = null;
     for (const k in peopleSpans) delete peopleSpans[k];
     for (const d of S.dets) { d.st = {}; d.agg = { disp: 0, above: null, lastFire: -1e9, who: null, n: 0, hist: [], lastP: null }; } for (const k of S.kps) { k.done = false; k.doneAt = 0; }
+    CWINS.length = 0; Object.assign(JC, { play: null, next: null, phase: null, t: -1e9, at: -1e9, spk: null, sig: "" }); if (ui.cWins) { renderWins(); renderNext(); }
     for (const k in VOICES) delete VOICES[k]; Object.assign(LN, { calls: 0, dropped: 0, capHit: false, returns: 0, tokens: 0, e2e: [], wall: [], testChecks: 0, maxQueue: 0 }); V.words = 0; V.flips = 0; V.prevSpk = null;
-    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(); glide.reset(); stack.clear(); ui.log.replaceChildren(); LOGROW = {}; renderPeople(); renderKp(); renderEvents(); if (S.tab === "req") renderReq(); }
+    runner = makeRunner(); if (ui.track) { ui.track.replaceChildren(ui.tent); glide.reset(); stack.clear(); ui.log.replaceChildren(); LOGROW = {}; renderPeople(); renderKp(); renderEvents(); if (S.tab === "req") renderReq(); }
   }
   function refreshCoach() {
     ui.coachSel.replaceChildren(...(S.mode === "live" ? [el("option", { value: "", text: "pick a voice" })] : []), ...SP.list.map(p => el("option", { value: p.name, text: nm(p.name) ? `${p.label} · ${p.name}` : p.label }))); ui.coachSel.value = S.coach || ""; if (ui.namesCb) { ui.namesCb.disabled = !namesKnown(); ui.namesCb.parentNode.style.opacity = namesKnown() ? 1 : .45; }
@@ -890,6 +991,8 @@
     ui.playReplay = el("div", {}, el("div", { class: "bt", text: "Playback" }), el("div", { class: "mrow" }, el("span", { class: "l", text: "Speed" }), ui.speedSeg),
       el("label", { class: "chk", title: "Instead of precomputing every check first, call the model as playback reaches each one." }, ui.freshCb, "Score while it plays (instead of precomputing first)"));
     const stIn = el("input", { type: "number", min: 30, max: 1800, step: 30, value: S.stale, style: "width:70px", "aria-label": "Stale after seconds", onchange: () => { S.stale = clamp(parseInt(stIn.value, 10) || 120, 30, 1800); } }), kIn = el("input", { type: "number", min: 0, max: 8, value: S.k, style: "width:56px", "aria-label": "Words held back", onchange: () => { S.k = clamp(parseInt(kIn.value, 10) || 0, 0, 8); } });
+    const jevCb = el("input", { type: "checkbox", checked: true, "aria-label": "Jev coaching", onchange: () => { S.jev = jevCb.checked; JC.sig = ""; renderNext(); } });
+    ui.playLive.append(el("label", { class: "chk", style: "margin-top:8px", title: "Every 15 s Jev answers three fixed-menu questions about the last minute: which move helps the coached voice, what the other party will probably do, and where the conversation is. It adds one hosted call per 15 s." }, jevCb, "Jev coaching: read the situation every 15 s (one extra call)"));
     ui.pane_set.append(el("details", { class: "dnew", style: "margin-top:10px" }, el("summary", { text: "Live audio: advanced" }), el("div", { class: "mrow", style: "margin-top:6px" }, el("span", { class: "l", text: "Voice server" }), ui.wsurl),
       el("div", { class: "mrow" }, el("span", { class: "l", text: "A voice label counts as stale after (s of silence)" }), stIn, el("span", { class: "l", text: "our heuristic; NVIDIA gives no expiry time" })), el("div", { class: "mrow" }, el("span", { class: "l", text: "Words held back before they commit (applies at the next Start)" }), kIn)));
     ui.libLoad();
@@ -915,7 +1018,7 @@
       ["model step (compute / hop)", `${f1(V.stepMs, " ms")} / ${V.hopMs || "–"} ms`], ["speech → committed word (mean / max)", `${f1(st.lagMean, " s")} / ${f1(st.lagMax, " s")}`],
       ["speech → detector result (median / p90) *", `${f1(med(LN.e2e), " s")} / ${f1(p90(LN.e2e), " s")}`], ["API round trip (median / p90)", `${f1(med(LN.wall) && med(LN.wall) / 1000, " s")} / ${f1(p90(LN.wall) && p90(LN.wall) / 1000, " s")}`],
       ["Stabiliser", null], ["words committed / tentative", `${st.committed} / ${tail}`], ["committed words rewritten (letters)", String(st.rewrites)], ["…only punctuation changed", String(st.punctUpdates)], ["…speaker changed", String(st.speakerFlips)],
-      ["voice slots in use (max 8)", String(SPOKE.length)], [`voices that returned after > ${S.stale} s silent`, String(LN.returns)], ["label changes per minute (between committed words)", f1(V.flips / mins)],
+      ["voice slots in use (max 8)", String(SPOKE.length)], ["Jev coaching reads", String(JC.n)], [`voices that returned after > ${S.stale} s silent`, String(LN.returns)], ["label changes per minute (between committed words)", f1(V.flips / mins)],
       ["Hosted checks", null], ["checkpoints made", String(cpN)], ["calls sent / cap", `${LN.calls} / ${S.cap}${LN.capHit ? "  CAP REACHED" : ""}`], ["answered / failed", `${checksDone} / ${failed}`], ["dropped (behind or cap)", String(LN.dropped)],
       ["estimated tokens", String(LN.tokens)], ["estimated spend (tariff-based)", money(cost)], ["…per audio hour at this rate", S.t > 30 ? money(cost / (S.t / 3600)) : "–"], ["* speech → result is meaningful at real-time pace only", ""],
     ];
@@ -1118,19 +1221,21 @@
     /* top: detectors bar and person cards */
     ui.dets = el("div", { class: "dets", id: "dets" }); ui.people = el("div", { class: "people", id: "people" });
     const addBtn = el("button", { class: "btn", type: "button", id: "add-det", title: "Add a detector", "aria-label": "Add a detector", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dname.focus(), 50); }, text: "+" });
-    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, addBtn)), el("div", { class: "trow" }, el("h4", { text: "Voices" }), ui.people, ui.vcap = el("span", { class: "vcap" })));
+    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, addBtn)), el("div", { class: "trow" }, el("h4", { text: "Voices" }), (ui.vsWrap = el("div", { class: "vstream" })), ui.vcap = el("span", { class: "vcap" })));
     /* conversation */
-    ui.track = el("div", { class: "track" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" }); ui.tent = el("div", { class: "tent" }); ui.readnote2 = el("div", { class: "readnote", style: "color:var(--bad)" });
-    const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.tent, ui.readnote2, ui.readnote);
+    ui.track = el("div", { class: "track" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" }); ui.tent = el("div", { class: "tent" }); ui.track.append(ui.tent); ui.readnote2 = el("div", { class: "readnote", style: "color:var(--bad)" });
+    const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.readnote2, ui.readnote);
     /* rail: cue cards for everyone else, coaching for the person you pick, tabbed card */
     ui.moms = el("div", { id: "moms" }); ui.more = el("span", { class: "r" });
     const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), ui.more), el("div", { class: "bd" }, ui.moms));
-    ui.cHead = el("div", { class: "chead", text: "READY" }); ui.cText = el("div", { class: "ctext" }); ui.cWhy = el("div", { class: "cwhy" }); ui.cBar = el("i"); ui.cLeft = el("span", { class: "num" }); ui.cWin = el("span"); ui.cBox = el("div", { class: "cnote calm", role: "status", "aria-live": "polite", title: "Plain rules on the clock and the detectors (talk share, pace, alerts). Not a model." });
+    ui.cHead = el("div", { class: "chead", text: "READY" }); ui.cText = el("div", { class: "ctext" }); ui.cWhy = el("div", { class: "cwhy" }); ui.cBar = el("i"); ui.cLeft = el("span", { class: "num" }); ui.cWin = el("span"); ui.cBox = el("div", { class: "cnote calm", role: "status", "aria-live": "polite", title: "Plain rules on the clock and the detectors (talk share, pace, alerts). In Live, Jev also reads the last minute and chooses among fixed moves when it is confident." });
     ui.cBox.append(el("div", { class: "cwin" }, ui.cWin, ui.cLeft), ui.cHead, ui.cText, el("div", { class: "ctimer", "aria-hidden": "true" }, el("div", { class: "trk" }, ui.cBar)), ui.cWhy);
     ui.kp = el("div"); ui.kprog = el("span", { class: "small muted" });
     const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addKeyPoint(kpIn.value); kpIn.value = ""; renderKp(); afterConfig(); } } });
-    ui.coachSel = el("select", { id: "coach", "aria-label": "Who do you want to coach?", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.coach = ui.coachSel.value || null; if (S.mode === "live") { coachCur = null; writeHash(); return; } resetRun(); refreshCoach(); writeHash(); updatePlay(); } });
-    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, el("label", { class: "chk", title: "Real scenes are scripted, so their speakers are known and shown by name. Untick to see only voice codes (V1, V2), which is what live speech-to-text will give." }, namesCb, "names"), ui.coachSel)), el("div", { class: "bd scroll", style: "display:block" }, ui.cBox, el("div", { class: "bt", style: "margin-top:10px" }, "Key points ", ui.kprog), ui.kp, el("div", { style: "margin-top:6px" }, kpIn)));
+    ui.coachSel = el("select", { id: "coach", "aria-label": "Who do you want to coach?", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.coach = ui.coachSel.value || null; if (S.mode === "live") { coachCur = null; restyleRows(); paintYou(); writeHash(); return; } resetRun(); refreshCoach(); writeHash(); updatePlay(); } });
+    ui.cYou = el("div", { class: "cyou" }); ui.cNext = el("div", { class: "cnext" }); ui.cWins = el("div", { class: "cwins" });
+    const coach = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Coaching" }), el("span", { class: "r", style: "display:inline-flex;gap:8px;align-items:center" }, ui.cYou, el("label", { class: "chk", title: "Real scenes are scripted, so their speakers are known and shown by name. Untick to see only voice codes (V1, V2), which is what live speech-to-text will give." }, namesCb, "names"), el("span", { class: "small muted", text: "you are" }), ui.coachSel)),
+      el("div", { class: "bd scroll", style: "display:block" }, ui.cBox, ui.cNext, ui.cWins, el("details", { class: "dnew", style: "margin-top:10px" }, el("summary", { text: "Key points to cover" }), ui.kp, el("div", { style: "margin-top:6px" }, kpIn), ui.kprog)));
     /* tabs: Flagged | Detectors | Settings | Request | Events */
     ui.log = el("div"); ui.pane_flag = el("div", { class: "tabpane" }, ui.log);
     ui.dlist = el("div", { class: "dgrid" }); ui.dlib = el("div", { class: "libchips" }); ui.dcount = el("span", { class: "small muted" });
@@ -1197,8 +1302,8 @@
     ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, ui.evs);
     ui.lvl = el("div"); ui.pane_lvl = el("div", { class: "tabpane", hidden: true }, ui.lvl); ui.cnt = el("div", { class: "cnt-grid" }); ui.pane_cnt = el("div", { class: "tabpane", hidden: true }, ui.cnt, el("div", { class: "foot" }, el("button", { class: "btn", type: "button", text: "Download live stats (JSON)", onclick: () => download(`flow-live-stats-${Date.now()}.json`, JSON.stringify(liveStats(), null, 2), "application/json") })));
     ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["lvl", "Levels"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["cnt", "Counters"], ["ev", "Events"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k) }, t, el("span", { class: "n", "data-n": k }))));
-    const cap = el("section", { class: "pn", style: "flex:1 1 clamp(280px,38vh,480px);min-height:240px" }, ui.tabs, ui.pane_flag, ui.pane_lvl, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_cnt, ui.pane_ev);
-    const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, cues, coach), cap); ui.rail = rail;
+    const cap = el("section", { class: "pn", style: "flex:1 1 0;min-height:260px" }, ui.tabs, ui.pane_flag, ui.pane_lvl, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_cnt, ui.pane_ev);
+    const rail = el("div", { class: "rail", "data-pane": "cues" }, el("div", { class: "cols" }, coach), cap); ui.rail = rail;
     /* history */
     const chartCv = el("canvas"); const viewSeg = el("span", { class: "segmented", role: "group", "aria-label": "History view" }, [["det", "By detector"], ["person", "By person"]].map(([k, t]) => el("button", { type: "button", "data-v": k, "aria-pressed": String(S.view === k), text: t, onclick: () => { S.view = k; viewSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === k))); } })));
     const hist = el("section", { class: "pn", "data-pane": "history", style: "grid-area:chart" }, el("header", {}, el("h4", { text: "Last 60 seconds" }), viewSeg, el("span", { class: "key r" }, "Shown only at or above the minimum threshold; brighter is higher. Hover for who and what." + (EVENTS.length ? " E = documented event." : ""))), el("div", { class: "chartwrap" }, chartCv));
@@ -1208,21 +1313,21 @@
     const root = el("div", { class: "cp" }, top, ui.noticebar, ui.stage, ui.tabsbar);
     window.refreshSrcPanels = () => { ui.dlgField.hidden = S.src !== "dlg"; ui.pasteField.hidden = S.src !== "paste"; }; window.refreshSrcPanels();
     buildLivePanel(); ui.noticebar.append(ui.liveErr);
-    ui.readnote.hidden = true; glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 4); chart = Chart(chartCv);
+    ui.readnote.hidden = true; glide = Glide(ui.view, ui.track); stack = Stack(ui.moms, 4); chart = Chart(chartCv); { const cv = el("canvas"); ui.vsWrap.append(cv); voices = Lanes(cv); }
     runner = makeRunner(); refreshCoach(); renderDets(); renderDetTab(); renderPeople(); renderKp(); renderEvents(); renderModels(); refreshWinSeg(); refreshEst(); setTab("flag"); updatePlay(); writeHash();
     Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
     document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
     applyMode(); if (S.mode === "live") liveReset(); renderDets(); renderDetTab(); ui.loadFiles();
-    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { classicDefaults: () => defaultDets("replay"), addSpec, loadCore, exportDoc, testMany, S, V, VOICES, LN, dryRun: () => dryRun(), setMode: (k) => setMode(k), onSnapshot: (m) => onSnapshot(m), get T() { return T; }, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
+    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { drawLanes: () => voices.draw(), feedReplay: (n) => { for (let k = 0; k < n && ptr < W.length; k++) onWord(W[ptr++]); compactOld(); }, JC, coachQs, applyCoach, jevAction, coachTick, WINS: CWINS, classicDefaults: () => defaultDets("replay"), addSpec, loadCore, exportDoc, testMany, S, V, VOICES, LN, dryRun: () => dryRun(), setMode: (k) => setMode(k), onSnapshot: (m) => onSnapshot(m), get T() { return T; }, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
     return root;
   }
   window.refreshSrcPanels = () => {};
   let hitTick = 0, tabTick = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (S.mode === "live") S.t = audioNow(); else if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
-    if (now - (frame.vt || 0) > 500) { frame.vt = now; updateVoices(); }
-    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); if (S.tab === "ev") renderEvents(); if (S.tab === "lvl") renderLevels(); if (S.tab === "cnt") renderCounters(); }
+    if (S.mode === "live") { S.t = audioNow(); coachTick(); } else if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
+    if (now - (frame.vt || 0) > 500) { frame.vt = now; updateVoices(); compactOld(); }
+    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); voices.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); if (S.tab === "ev") renderEvents(); if (S.tab === "lvl") renderLevels(); if (S.tab === "cnt") renderCounters(); }
     const c = mmss(S.t); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
     const b = pending ? `${pending} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
   }
