@@ -280,6 +280,11 @@
   .hearing .tent { flex: 1; min-width: 0; padding: 0; min-height: 0; border: 0; color: var(--text-2); max-height: 2.9em; overflow: hidden; }
   .hearing .cap { margin-left: auto; padding-left: 12px; font: 500 10.5px var(--font); color: var(--text-3); text-align: right; max-width: 42%; }
   .fl.cool { filter: saturate(.55); } .fl.arch { opacity: .6; filter: grayscale(.85); } details.arch > summary { color: var(--text-3); }
+  /* spacing: every bubble is its own island. Clear gaps between rows (also back-to-back lines from the same voice), the accent only as the left band, and nothing can spill out of a bubble. */
+  .msg { margin: 6px 0; contain: layout style; } .msg.old { margin: 4px 0; }
+  .bub { box-sizing: border-box; overflow: hidden; min-width: 0; min-height: 24px; }
+  .msg.coach .bub { border-color: var(--border); border-left: 4px solid var(--accent); }
+  .txt { min-width: 0; overflow-wrap: anywhere; } .meta { overflow: hidden; }
   /* conversation text: one step larger */
   .txt { font-size: 16px; line-height: 1.38; } .msg.old .txt { font-size: 13.5px; line-height: 1.3; }
   .meta .pnum { font-size: 12px; } .meta > span:last-child { font-size: 10.5px; } .msg.old .meta .pnum { font-size: 10.5px; }
@@ -454,7 +459,7 @@
     if (per.length) for (const spk of Object.keys(runner.people).filter(k => runner.people[k].words.length >= 3).slice(-3)) { const c = mk("person", spk, personWindow(runner.people[spk].words, S.win), per.map(d => d.q)); if (c && words(c.state).length >= 3) { LN.testChecks++; submit(c); } }
     if (call.length && runner.flat.length >= 3) { const c = mk("call", runner.flat[runner.flat.length - 1].spk, callWindow(runner.flat, S.win), call.map(d => d.q)); if (c) { LN.testChecks++; submit(c); } }
   }
-  /* key points to make: a fixed menu, three smart defaults, and (Live) Jev's pick from the last two minutes. No free-text field. */
+  /* key points to make: a fixed menu, three smart defaults, and (Live) the selected model's pick from the last two minutes. No free-text field. */
   const KP_LIB = [
     ["ask_open", "Ask an open question", "asks a how or what question that invites explanation"], ["summarise", "Summarise where we are", "summarises what has been said or agreed so far"],
     ["next_step", "Agree the next step", "agrees a specific next step with an owner or a time"], ["acknowledge", "Acknowledge their concern", "acknowledges the other person's concern or feeling"],
@@ -562,7 +567,7 @@
   async function fetchState(state, qids, signal) {
     const r0 = rec(state), miss = qids.filter(q => !r0.answers[q]); if (!miss.length) return 0;
     const res = await api("/api/batch", { method: "POST", headers: { "Content-Type": "application/json" }, signal, body: JSON.stringify({ backend: S.model, items: [{ state, questions: Object.fromEntries(miss.map(q => [q, QALL[q]])) }] }) });
-    const r = Array.isArray(res) ? res[0] : null; if (!r || r.error) throw new Error((r && r.error) || "No result returned");
+    const r = Array.isArray(res) ? res[0] : null; if (!r || r.error) throw new Error((r && r.error) || "No result returned"); r0.reply = { model: r.model, ms: r.latency_ms };
     Object.assign(r0.answers, r.answers || {}); if (miss.some(q => !r0.answers[q])) throw new Error("Missing answer in response");
     return 1;
   }
@@ -581,7 +586,7 @@
   }
   function pump() {
     while (active < CONC && QUEUE.length) {
-      if (S.mode === "live" && LN.calls >= S.cap) { LN.capHit = true; LN.dropped += QUEUE.length; QUEUE.length = 0; pending = active; break; }
+      if (S.mode === "live" && isHosted() && LN.calls >= S.cap) { LN.capHit = true; LN.dropped += QUEUE.length; QUEUE.length = 0; pending = active; break; }
       const chk = QUEUE.shift(); active++; if (S.mode === "live") { LN.calls++; LN.tokens += PER_Q * missing(chk).length + 2 * words(chk.state).length; } ctl = ctl || new AbortController(); const c = ctl;
       fetchState(chk.state, chk.qids, c.signal).then(() => { if (!c.signal.aborted && chk.model === S.model) apply(chk, performance.now() - chk.wall); })
         .catch(e => { if (!c.signal.aborted) { failed++; ui.err && (ui.err.textContent = `A check failed: ${e.message}`); } })
@@ -740,8 +745,8 @@
   function tickHits() { for (const k in PC) PC[k].hits.querySelectorAll(".hit").forEach(h => h.classList.toggle("cool", S.t - (+h.dataset.t) > HOLD)); }
   function renderKp() {
     if (!ui.kp) return;
-    ui.kp.replaceChildren(el("span", { class: "lab", title: "Points worth making in the next couple of minutes. In Live, Jev reads the last two minutes and picks them; until then these are sensible defaults. They tick when the coached voice says them, or click one to tick it yourself." }, "Say next"),
-      ...S.kps.map(k => el("button", { type: "button", class: "kpchip" + (k.done ? " done" : ""), title: `${k.text}: the speaker ${k.what}.${KPJ.rank && KPJ.rank[k.id] != null ? ` Jev's ranking: ${KPJ.rank[k.id]}%.` : ""} Click to tick it off yourself.`, onclick: () => { k.done = !k.done; k.doneAt = S.t; renderKp(); } }, el("span", { class: "g", text: k.done ? "✓" : "○" }), k.text)));
+    ui.kp.replaceChildren(el("span", { class: "lab", title: "Points worth making in the next couple of minutes. In Live, the selected model reads the last two minutes and picks them; until then these are sensible defaults. They tick when the coached voice says them, or click one to tick it yourself." }, "Say next"),
+      ...S.kps.map(k => el("button", { type: "button", class: "kpchip" + (k.done ? " done" : ""), title: `${k.text}: the speaker ${k.what}.${KPJ.rank && KPJ.rank[k.id] != null ? ` Model ranking: ${KPJ.rank[k.id]}%.` : ""} Click to tick it off yourself.`, onclick: () => { k.done = !k.done; k.doneAt = S.t; renderKp(); } }, el("span", { class: "g", text: k.done ? "✓" : "○" }), k.text)));
   }
   function afterConfig() { renderModels(); refreshEst(); }
 
@@ -790,9 +795,9 @@
     if (Array.isArray(v)) { if (!v.length) return [T_("p", "[]")]; out.push(T_("p", "[\n")); v.forEach((x, i) => { out.push(document.createTextNode(sp + "  "), ...jsonNodes(x, ind + 1), T_("p", i < v.length - 1 ? ",\n" : "\n")); }); out.push(document.createTextNode(sp), T_("p", "]")); return out; }
     const ks = Object.keys(v); if (!ks.length) return [T_("p", "{}")]; out.push(T_("p", "{\n")); ks.forEach((k, i) => { out.push(document.createTextNode(sp + "  "), T_("k", JSON.stringify(k)), T_("p", ": "), ...jsonNodes(v[k], ind + 1), T_("p", i < ks.length - 1 ? ",\n" : "\n")); }); out.push(document.createTextNode(sp), T_("p", "}")); return out;
   }
-  function renderReqView(body) {
+  function renderReqView(body, chk) {
     const q = body.questions || {}, crit = (x) => { const c = x.criteria; if (!c) return null; const rows = Array.isArray(c) ? c.map((v, i) => [String(i), typeof v === "string" ? v : JSON.stringify(v)]) : Object.entries(c).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]); return el("div", { class: "rq-crit" }, ...rows.map(([k, v]) => el("div", {}, el("span", { class: "rq-ck", text: k }), "  " + v))); };
-    ui.reqView.replaceChildren(el("div", { class: "rq-head" }, el("span", { class: "rq-verb", text: "POST" }), el("span", { text: "/v1/systemone" }), el("span", { class: "rq-model", text: String(body.model) })),
+    ui.reqView.replaceChildren(el("div", { class: "rq-head" }, el("span", { class: "rq-verb", text: "POST" }), el("span", { text: "/v1/systemone" }), el("span", { class: "rq-model", title: "The wire-format model name in the body. The call itself went to the model you selected.", text: (() => { const m = chk && chk.model ? chk.model : S.model, rp = (C.get(m + "\u0001" + (chk ? chk.state : "")) || {}).reply; return `sent to ${Jev.codeOf(m)}` + (rp && rp.model ? ` · answered as “${rp.model}”${rp.ms != null ? ` in ${rp.ms} ms` : ""}` : ""); })() })),
       el("div", { class: "rq-lab", text: `state · ${words(body.state).length} words` }), el("div", { class: "rq-state", text: String(body.state) }), el("div", { class: "rq-lab", text: `questions · ${Object.keys(q).length}` }),
       ...Object.entries(q).map(([id, x]) => el("div", { class: "rq-q" }, el("div", { class: "rq-qh" }, el("b", { text: id }), el("span", { class: "rq-type", text: x.type })), el("div", { class: "rq-ins", text: typeof x.instructions === "string" ? x.instructions : JSON.stringify(x.instructions) }), crit(x))));
     ui.reqPre.replaceChildren(...jsonNodes(body));
@@ -802,7 +807,7 @@
     if (!CPS.length) { ui.reqPre.replaceChildren(); ui.reqView.replaceChildren(el("p", { class: "help", text: "No checks yet. Press Play or Start; each check sent to the model appears here exactly as sent." })); ui.reqBadge.replaceChildren(el("span", { class: "badge", text: "waiting" })); ui.reqSelEl.replaceChildren(); ui.reqCur = null; return; }
     const last30 = CPS.slice(-30).reverse(); if (ui.reqSelEl.childElementCount !== last30.length + 1 || S.reqSel === "latest") ui.reqSelEl.replaceChildren(el("option", { value: "latest", text: "latest" }), ...last30.map(c => el("option", { value: c.n, text: `#${c.n} · ${mmss(c.t)} · ${c.scope === "call" ? "call" : code(c.spk)}` }))); ui.reqSelEl.value = S.reqSel;
     const chk = S.reqSel === "latest" ? CPS[CPS.length - 1] : CPS.find(c => c.n === +S.reqSel) || CPS[CPS.length - 1], body = chk.req, probs = validateReq(body), nq = Object.keys(body.questions).length;
-    renderReqView(body);
+    renderReqView(body, chk);
     ui.reqBadge.replaceChildren(probs.length ? el("span", { class: "badge bad", text: `${probs.length} problem${probs.length > 1 ? "s" : ""}: ${probs.join("; ")}` }) : el("span", { class: "badge good", text: "Well formed" }), el("span", { class: "small muted", text: `check #${chk.n} · ${chk.scope === "call" ? "whole call" : code(chk.spk)} · ${mmss(chk.t)} · ${nq} question${nq > 1 ? "s" : ""} · ${words(body.state).length} words${chk.answers ? " · answered" : ""}` }));
     ui.reqCur = chk;
   }
@@ -876,7 +881,7 @@
     } };
   }
 
-  /* ---------- coaching: wins, and Jev's read of the last minute (Live only) ---------- */
+  /* ---------- coaching: wins, and the selected model's read of the last minute (Live only) ---------- */
   const CWINS = [], JC = { play: null, next: null, phase: null, t: -1e9, at: -1e9, spk: null, n: 0, sig: "" };
   const WINKEYS = { k_question: ["Asked a question", 30], o_open_q: ["Asked an open question", 30], k_empathy: ["Showed empathy", 30], k_commitment: ["Made a commitment", 30], o_praise: ["Gave specific praise", 30], j_owner: ["Took ownership", 30], c_admit: ["Owned a mistake", 30], c_reflect: ["Reflected back", 30], o_check: ["Checked understanding", 30], v_apology: ["Apologised", 30], x_calm: ["Calmed things down", 30], m_recap: ["Summarised", 30], politeness: ["Stayed polite", 90] };
   function noteWin(d, chk) { if (chk.test || !isCoach(chk.spk) || !WINKEYS[d.key]) return; const [text, gap] = WINKEYS[d.key], last = [...CWINS].reverse().find(w => w.key === d.key); if (last && S.t - last.t < gap) return; CWINS.push({ key: d.key, text, t: S.t }); renderWins(); }
@@ -901,13 +906,13 @@
   function jevAction() {
     const pl = JC.play; if (!S.jev || S.mode !== "live" || !pl || JC.spk !== S.coach || S.t - JC.t > 45 || pl.key === "continue" || pl.p < 0.3 || pl.gap < 0.04 || !PLAY_TXT[pl.key]) return null;
     const [head, text, tone] = PLAY_TXT[pl.key], ph = JC.phase && JC.phase.p >= 0.4 ? ` It reads as ${JC.phase.key}.` : "";
-    return { key: "jev_" + pl.key, prio: 4.5, head, horizon: 20, text, why: `Jev's read of the last minute (${Math.round(pl.p * 100)}% for this move, ${Math.round(pl.gap * 100)} points ahead of the next).${ph}`, tone };
+    return { key: "jev_" + pl.key, prio: 4.5, head, horizon: 20, text, why: `${Jev.codeOf(S.model)}'s read of the last minute (${Math.round(pl.p * 100)}% for this move, ${Math.round(pl.gap * 100)} points ahead of the next).${ph}`, tone };
   }
   function renderNext() {
     if (!ui.cNext) return; const live = S.mode === "live" && S.jev; ui.cNext.hidden = !live; if (!live) return;
     const n = JC.next, ph = JC.phase, fresh = n && JC.spk === S.coach && S.t - JC.t <= 60, sig = fresh ? `${n.key}|${Math.round(n.p * 100)}|${ph && ph.key}` : S.coach ? "wait" : "pick";
     if (JC.sig === sig) return; JC.sig = sig;
-    ui.cNext.replaceChildren(el("div", { class: "k", text: fresh ? `Next · ${ph && ph.p >= 0.4 ? ph.key : "reading"} · ${Math.round(n.p * 100)}% sure` : "Next" }), el("div", { class: "t" + (fresh ? "" : " muted"), text: fresh ? (NEXT_TXT[n.key] || "") : S.coach ? "Jev is reading the conversation…" : "Pick your voice to get a forward look." }));
+    ui.cNext.replaceChildren(el("div", { class: "k", text: fresh ? `Next · ${ph && ph.p >= 0.4 ? ph.key : "reading"} · ${Math.round(n.p * 100)}% sure` : "Next" }), el("div", { class: "t" + (fresh ? "" : " muted"), text: fresh ? (NEXT_TXT[n.key] || "") : S.coach ? `${Jev.codeOf(S.model)} is reading the conversation…` : "Pick your voice to get a forward look." }));
   }
   function paintYou() {
     const sig = S.coach + "|" + S.mode + "|" + (S.mode === "live" && VOICES[S.coach] ? (S.t - VOICES[S.coach].last < 3 ? "now" : Math.floor((S.t - VOICES[S.coach].last) / 5)) : ""); if (ui.cYou.dataset.sig === sig) return; ui.cYou.dataset.sig = sig;
@@ -1023,7 +1028,16 @@
       el("b", { text: Jev.codeOf(id) }), st[id].hosted ? el("small", { class: "paid", text: "paid" }) : null, on && l ? el("small", { text: Math.round(l) + " ms" }) : null, on ? null : el("small", { text: "not loaded" })); }));
     const s = st[S.model] || {}; ui.mstate.replaceChildren(el("span", { class: "dot " + (s.up ? "up" : "down"), "aria-hidden": "true" }), s.up ? (s.hosted ? "Hosted, billed per token." : `Loaded · ${s.identity || ""}${s.gpu_mb ? ` · ${(s.gpu_mb / 1024).toFixed(1)} GiB` : ""}`) : `${Jev.codeOf(S.model)} is not loaded`, s.identity_ok === false ? " · identity does not match its label" : "");
   }
-  function setModel(id) { if (id === S.model) return; S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderDets(); renderDetTab(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
+  function switchLiveModel(id) {
+    const to = (Jev.status() || {})[id] || {}, go = () => {
+      if (ctl) ctl.abort(); ctl = null; QUEUE.length = 0; pending = 0; S.model = id;              // in-flight and queued checks belonged to the old model
+      Object.assign(JC, { play: null, next: null, phase: null, at: -1e9, sig: "" }); Object.assign(KPJ, { at: -1e9, n: 0, rank: null });
+      ui.confirm.replaceChildren(); renderModels(); renderDets(); renderDetTab(); refreshEst(); renderNext(); writeHash();
+    };
+    if (to.hosted && !S.armed) { ui.confirm.replaceChildren(el("div", { class: "callout warn notice" }, el("span", {}, el("strong", { text: `${Jev.codeOf(id)} is hosted and billed per token. ` }), `Switch the whole session (detectors, coaching and key points) to it? Session cap: ${S.cap} calls.`), el("button", { class: "btn primary", type: "button", onclick: () => { S.armed = true; go(); }, text: "Confirm and switch" }), el("button", { class: "btn", type: "button", onclick: () => ui.confirm.replaceChildren(), text: "Cancel" }))); return; }
+    go();
+  }
+  function setModel(id) { if (id === S.model) return; if (S.mode === "live" && (V.state === "running" || V.state === "starting")) { switchLiveModel(id); return; } S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderDets(); renderDetTab(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
   function bestWindow() {
     const e = D.study && Object.values(D.study).find(x => x && String(x.backend).toLowerCase().replace("jev (typesafe)", "jev") === S.model);
     if (e && e.windows) { const c = WINS.filter(w => e.windows[w] && Number.isFinite(e.windows[w].auc_max)).sort((a, b) => e.windows[b].auc_max - e.windows[a].auc_max); if (c.length) return c[0]; }
@@ -1091,8 +1105,8 @@
     ui.playReplay = el("div", {}, el("div", { class: "bt", text: "Playback" }), el("div", { class: "mrow" }, el("span", { class: "l", text: "Speed" }), ui.speedSeg),
       el("label", { class: "chk", title: "Instead of precomputing every check first, call the model as playback reaches each one." }, ui.freshCb, "Score while it plays (instead of precomputing first)"));
     const stIn = el("input", { type: "number", min: 30, max: 1800, step: 30, value: S.stale, style: "width:70px", "aria-label": "Stale after seconds", onchange: () => { S.stale = clamp(parseInt(stIn.value, 10) || 120, 30, 1800); } }), kIn = el("input", { type: "number", min: 0, max: 8, value: S.k, style: "width:56px", "aria-label": "Words held back", onchange: () => { S.k = clamp(parseInt(kIn.value, 10) || 0, 0, 8); } });
-    const jevCb = el("input", { type: "checkbox", checked: true, "aria-label": "Jev coaching", onchange: () => { S.jev = jevCb.checked; JC.sig = ""; renderNext(); } });
-    ui.playLive.append(el("label", { class: "chk", style: "margin-top:8px", title: "Every 15 s Jev answers three fixed-menu questions about the last minute: which move helps the coached voice, what the other party will probably do, and where the conversation is. It adds one hosted call per 15 s." }, jevCb, "Jev coaching: read the situation every 15 s (one extra call)"));
+    const jevCb = el("input", { type: "checkbox", checked: true, "aria-label": "Model coaching", onchange: () => { S.jev = jevCb.checked; JC.sig = ""; renderNext(); } });
+    ui.playLive.append(el("label", { class: "chk", style: "margin-top:8px", title: "Every 15 s the selected model answers three fixed-menu questions about the last minute: which move helps the coached voice, what the other party will probably do, and where the conversation is. It adds one hosted call per 15 s." }, jevCb, "Model coaching: read the situation every 15 s (one extra call)"));
     ui.advSet.append(el("div", { class: "bt", style: "margin-top:12px", text: "Live audio" }), el("div", { class: "mrow", style: "margin-top:4px" }, el("span", { class: "l", text: "Voice server" }), ui.wsurl),
       el("div", { class: "mrow" }, el("span", { class: "l", text: "A voice label counts as stale after (s of silence)" }), stIn, el("span", { class: "l", text: "our heuristic; NVIDIA gives no expiry time" })), el("div", { class: "mrow" }, el("span", { class: "l", text: "Words held back before they commit (applies at the next Start)" }), kIn));
     ui.libLoad();
@@ -1118,7 +1132,7 @@
       ["model step (compute / hop)", `${f1(V.stepMs, " ms")} / ${V.hopMs || "–"} ms`], ["speech → committed word (mean / max)", `${f1(st.lagMean, " s")} / ${f1(st.lagMax, " s")}`],
       ["speech → detector result (median / p90) *", `${f1(med(LN.e2e), " s")} / ${f1(p90(LN.e2e), " s")}`], ["API round trip (median / p90)", `${f1(med(LN.wall) && med(LN.wall) / 1000, " s")} / ${f1(p90(LN.wall) && p90(LN.wall) / 1000, " s")}`],
       ["Stabiliser", null], ["words committed / tentative", `${st.committed} / ${tail}`], ["committed words rewritten (letters)", String(st.rewrites)], ["…only punctuation changed", String(st.punctUpdates)], ["…speaker changed", String(st.speakerFlips)],
-      ["voice slots in use (max 8)", String(SPOKE.length)], ["Jev coaching reads", String(JC.n)], ["Jev key-point reads (every 2 min)", String(KPJ.n)], [`voices that returned after > ${S.stale} s silent`, String(LN.returns)], ["label changes per minute (between committed words)", f1(V.flips / mins)],
+      ["voice slots in use (max 8)", String(SPOKE.length)], ["Model coaching reads", String(JC.n)], ["Model key-point reads (every 2 min)", String(KPJ.n)], [`voices that returned after > ${S.stale} s silent`, String(LN.returns)], ["label changes per minute (between committed words)", f1(V.flips / mins)],
       ["Hosted checks", null], ["checkpoints made", String(cpN)], ["calls sent / cap", `${LN.calls} / ${S.cap}${LN.capHit ? "  CAP REACHED" : ""}`], ["answered / failed", `${checksDone} / ${failed}`], ["dropped (behind or cap)", String(LN.dropped)],
       ["estimated tokens", String(LN.tokens)], ["estimated spend (tariff-based)", money(cost)], ["…per audio hour at this rate", S.t > 30 ? money(cost / (S.t / 3600)) : "–"], ["* speech → result is meaningful at real-time pace only", ""],
     ];
@@ -1331,7 +1345,7 @@
     /* rail: cue cards for everyone else, coaching for the person you pick, tabbed card */
     ui.moms = el("div", { id: "moms" }); ui.more = el("span", { class: "r" });
     const cues = el("section", { class: "pn" }, el("header", {}, el("h4", { text: "Cue cards" }), ui.more), el("div", { class: "bd" }, ui.moms));
-    ui.cHead = el("div", { class: "chead", text: "READY" }); ui.cText = el("div", { class: "ctext" }); ui.cWhy = el("div", { class: "cwhy" }); ui.cBar = el("i"); ui.cLeft = el("span", { class: "num" }); ui.cWin = el("span"); ui.cBox = el("div", { class: "cnote calm", role: "status", "aria-live": "polite", title: "Plain rules on the clock and the detectors (talk share, pace, alerts). In Live, Jev also reads the last minute and chooses among fixed moves when it is confident." });
+    ui.cHead = el("div", { class: "chead", text: "READY" }); ui.cText = el("div", { class: "ctext" }); ui.cWhy = el("div", { class: "cwhy" }); ui.cBar = el("i"); ui.cLeft = el("span", { class: "num" }); ui.cWin = el("span"); ui.cBox = el("div", { class: "cnote calm", role: "status", "aria-live": "polite", title: "Plain rules on the clock and the detectors (talk share, pace, alerts). In Live, the selected model also reads the last minute and chooses among fixed moves when it is confident." });
     ui.cBox.append(el("div", { class: "cwin" }, ui.cWin, ui.cLeft), ui.cHead, ui.cText, el("div", { class: "ctimer", "aria-hidden": "true" }, el("div", { class: "trk" }, ui.cBar)), ui.cWhy);
     ui.kp = el("div", { class: "ksay" }); ui.kprog = el("span");
     const kpIn = el("input", { type: "text", id: "kp-in", placeholder: "Add a key point to cover", "aria-label": "Key point", onkeydown: (e) => { if (e.key === "Enter" && kpIn.value.trim()) { addKeyPoint(kpIn.value); kpIn.value = ""; renderKp(); afterConfig(); } } });
@@ -1404,7 +1418,7 @@
       (ui.playSec = el("div", { class: "playsec" })), ui.advSet);
     /* request: what exactly is sent */
     ui.reqPre = el("pre", { class: "req", tabindex: "0", "aria-label": "Request body" }); ui.reqView = el("div", { class: "reqview" }); ui.reqBadge = el("div", { class: "reqhead" }); ui.reqSelEl = el("select", { "aria-label": "Which check", style: "min-height:26px;padding:1px 6px;width:auto", onchange: () => { S.reqSel = ui.reqSelEl.value; renderReq(); } });
-    ui.pane_req = el("div", { class: "tabpane col", hidden: true }, el("div", { class: "reqbar" }, ui.reqBadge, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy" }), el("button", { class: "btn", type: "button", title: "Every check as sent, with its scores", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all" })), ui.reqView, el("details", { class: "dnew" }, el("summary", { text: "Raw JSON" }), ui.reqPre));
+    ui.pane_req = el("div", { class: "tabpane col", hidden: true }, el("div", { class: "reqbar" }, ui.reqBadge, ui.reqSelEl, el("button", { class: "btn", type: "button", onclick: () => { if (ui.reqCur) copy(JSON.stringify(ui.reqCur.req, null, 2)); }, text: "Copy" }), el("button", { class: "btn", type: "button", title: "Every check as sent, with its scores", onclick: () => download(`cockpit-requests-${Date.now()}.json`, JSON.stringify(exportData().requests, null, 1), "application/json"), text: "Export all" })), ui.reqView, el("details", { class: "dnew" }, el("summary", { text: "Raw JSON" }), el("p", { class: "help", text: "The body's \"model\" is the wire-format name every model in the lineup answers to. The call itself went to the model named at the top of this tab." }), ui.reqPre));
     /* events: did the detectors catch what really happened */
     ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, ui.evs);
     ui.lvl = el("div"); ui.pane_lvl = el("div", { class: "tabpane", hidden: true }, ui.lvl); ui.cnt = el("div", { class: "cnt-grid" }); ui.pane_cnt = el("div", { class: "tabpane", hidden: true }, ui.cnt, el("div", { class: "foot" }, el("button", { class: "btn", type: "button", text: "Download live stats (JSON)", onclick: () => download(`flow-live-stats-${Date.now()}.json`, JSON.stringify(liveStats(), null, 2), "application/json") })));
@@ -1428,7 +1442,7 @@
     Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
     document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
     applyMode(); if (S.mode === "live") liveReset(); renderDets(); renderDetTab(); ui.loadFiles();
-    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { glideStep: (n) => { for (let i = 0; i < n; i++) glide.frame(0.1); }, addLog: (f) => addLog(f), ageFlags: () => ageFlags(), KPJ, setKps, applyKp, KP_LIB, drawLanes: () => voices.draw(), feedReplay: (n) => { for (let k = 0; k < n && ptr < W.length; k++) onWord(W[ptr++]); compactOld(); }, JC, coachQs, applyCoach, jevAction, coachTick, WINS: CWINS, classicDefaults: () => defaultDets("replay"), addSpec, loadCore, exportDoc, testMany, S, V, VOICES, LN, dryRun: () => dryRun(), setMode: (k) => setMode(k), onSnapshot: (m) => onSnapshot(m), get T() { return T; }, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
+    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { kpTick: () => kpTick(), glideStep: (n) => { for (let i = 0; i < n; i++) glide.frame(0.1); }, addLog: (f) => addLog(f), ageFlags: () => ageFlags(), KPJ, setKps, applyKp, KP_LIB, drawLanes: () => voices.draw(), feedReplay: (n) => { for (let k = 0; k < n && ptr < W.length; k++) onWord(W[ptr++]); compactOld(); }, JC, coachQs, applyCoach, jevAction, coachTick, WINS: CWINS, classicDefaults: () => defaultDets("replay"), addSpec, loadCore, exportDoc, testMany, S, V, VOICES, LN, dryRun: () => dryRun(), setMode: (k) => setMode(k), onSnapshot: (m) => onSnapshot(m), get T() { return T; }, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
     return root;
   }
   window.refreshSrcPanels = () => {};
