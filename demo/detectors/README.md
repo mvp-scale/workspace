@@ -24,6 +24,7 @@ everywhere, so combining packs never duplicates it.
 | Operations · Emergency and control room | `operations.json` | Cockpit, control-room and dispatch traffic | 10 |
 | Public debate · Claims and dodges | `debate.json` | Interviews and debates | 11 |
 | Gaming · The Spiffing Brit style | `spiffing-brit.json` | An exploit-hunting gaming channel's humour: exploits, "perfectly balanced", devs jabs, tea | 12 |
+| Beauty · Randa Rosa style | `randa-rosa.json` | A beauty, nails and comedy creator: makeup, long-nail struggles, reveals, plus reported catchphrases (unverified) | 17 |
 
 Good detectors describe one observable behaviour in the words, phrased "the speaker ...", that a stranger could answer yes or
 no from 20 to 40 words. They cannot read tone of voice, intent or truth. Add your own by copying an entry.

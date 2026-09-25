@@ -271,6 +271,12 @@
   pre.req { font-size: 11px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
   .j-k { color: var(--accent); } .j-s { color: var(--good); } .j-n { color: var(--warn); } .j-b { color: var(--bad); } .j-p { color: var(--text-3); }
   details.adv > summary { font-weight: 600; }
+  .dchip, .drow { cursor: pointer; } .dchip.sel { outline: 2px solid var(--accent); outline-offset: 1px; } .drow.sel { background: var(--accent-soft); }
+  .ddetail .dh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; } .ddetail .dh b { font-size: 14px; }
+  .ddetail .dwhere { font-size: 12px; color: var(--text-2); margin: 2px 0 6px; line-height: 1.4; } .ddetail .dwhere code, .ddetail .dwhere b { font-family: var(--mono); font-size: 11px; }
+  .ddetail .dlab { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 8px 0 2px; display: flex; align-items: center; gap: 8px; }
+  .ddetail pre.jpre { font: 11px/1.4 var(--mono); white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; margin: 0; }
+  .ddetail .dscores { font: 11.5px/1.5 var(--mono); color: var(--text-2); }
   .setmain { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 12px 10px; background: var(--surface-2); margin-bottom: 12px; }
   .mbig.off { opacity: .42; cursor: not-allowed; } .mbig.off small { font-style: italic; }
   .playsec { margin-bottom: 4px; }
@@ -493,7 +499,7 @@
     QALL[key] = { type: "noul", instructions: `Does the speaker say or clearly convey this: ${text}`, criteria: { true: `The text matches: ${text}`, false: `The text does not match: ${text}` } };
     S.kps.push({ key, q: key, text, done: false, doneAt: 0 }); return true;
   }
-  function removeDet(key) { S.touched = true; S.dets = S.dets.filter(d => d.key !== key); renderDets(); renderDetTab(); renderPeople(); afterConfig(); }
+  function removeDet(key) { S.touched = true; if (S.sel === key) S.sel = null; S.dets = S.dets.filter(d => d.key !== key); renderDets(); renderDetTab(); renderPeople(); afterConfig(); }
   const detsFor = (chk) => chk.scope === "coach" ? [] : S.dets.filter(d => d.scope === (chk.scope === "call" ? "call" : "person"));
 
   /* Trust: measured accuracy of the detector on its own validation set, for the selected model. Custom detectors have none. */
@@ -713,7 +719,7 @@
     ui.dets.replaceChildren(); DCH = {};
     for (const d of S.dets) {
       const t = trust(d), bar = el("i"), pv = el("span", { class: "pv", text: "–", title: "Latest score from the model (0-100)" });
-      const node = el("div", { class: "dchip quiet" + (d.custom ? " custom" : ""), style: cvar(d.slot), title: `${d.label}\n${d.about}\n${d.scope === "call" ? "Reads the whole call." : "Scored on each person's own window."}\n${t.text}` },
+      const node = el("div", { class: "dchip quiet" + (d.custom ? " custom" : "") + (S.sel === d.key ? " sel" : ""), style: cvar(d.slot), tabindex: "0", role: "button", onclick: () => showDetector(d.key), onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showDetector(d.key); } }, title: `${d.label}\n${d.about}\n${d.scope === "call" ? "Reads the whole call." : "Scored on each person's own window."}\n${t.text}` },
         el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), pv, el("div", { class: "mt", "aria-hidden": "true" }, bar),
         el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, title: "Remove " + d.label, onclick: (e) => { e.stopPropagation(); removeDet(d.key); }, text: "×" }));
       DCH[d.key] = { d, node, bar, pv, c: {} }; ui.dets.append(node);
@@ -784,10 +790,10 @@
   }
   let formIcon = "";
   function renderDetTab() {
-    ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow", style: cvar(d.slot), title: d.about + (d.example ? ` Example: “${d.example}”` : "") }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each voice" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: () => removeDet(d.key), text: "×" })); }));
+    ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow" + (S.sel === d.key ? " sel" : ""), onclick: () => showDetector(d.key), style: cvar(d.slot), title: d.about + (d.example ? ` Example: “${d.example}”` : "") }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each voice" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: (e) => { e.stopPropagation(); removeDet(d.key); }, text: "×" })); }));
     const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)), leftNew = CORE_NEW.filter(c => !S.dets.some(d => d.key === c.key)).map(c => ({ id: c.key, name: c.name, icon: c.icon, about: c.what + " (unvalidated)", core: true }));
     ui.dlib.replaceChildren(...(left.length + leftNew.length ? [...left, ...leftNew].map(p => el("button", { class: "libchip", type: "button", title: p.about, onclick: () => { const d = p.core ? addCore(p.id) : (addLibrary(p.id) ? S.dets[S.dets.length - 1] : null); if (d) { S.touched = true; renderDets(); renderDetTab(); renderPeople(); afterConfig(); testMany([d]); } } }, iconEl(p.icon, 14), p.name)) : [el("span", { class: "small muted", text: "All library detectors are on." })]));
-    ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
+    ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`; if (ui.ddetail) renderDetail();
   }
   function jsonNodes(v, ind = 0) {
     const sp = "  ".repeat(ind), out = [], T_ = (c, t) => el("span", { class: "j-" + c, text: t });
@@ -801,6 +807,31 @@
       el("div", { class: "rq-lab", text: `state · ${words(body.state).length} words` }), el("div", { class: "rq-state", text: String(body.state) }), el("div", { class: "rq-lab", text: `questions · ${Object.keys(q).length}` }),
       ...Object.entries(q).map(([id, x]) => el("div", { class: "rq-q" }, el("div", { class: "rq-qh" }, el("b", { text: id }), el("span", { class: "rq-type", text: x.type })), el("div", { class: "rq-ins", text: typeof x.instructions === "string" ? x.instructions : JSON.stringify(x.instructions) }), crit(x))));
     ui.reqPre.replaceChildren(...jsonNodes(body));
+  }
+  /* ---------- detector definition: click a detector (bar or list) to see exactly how it is defined ---------- */
+  function showDetector(key) { S.sel = key; renderDets(); renderDetTab(); setTab("det"); if (ui.ddetail) ui.ddetail.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+  function renderDetail() {
+    const d = S.dets.find(x => x.key === S.sel);
+    if (!d) { ui.ddetail.replaceChildren(el("p", { class: "help", text: "Click a detector, in the bar at the top or in the Advanced list, to see its definition here: where it comes from, the exact question sent to the model, and the pack entry." })); return; }
+    const t = trust(d), lib = !d.custom, set = lib ? QSETS[d.q] : null;
+    const entry = lib ? { library: d.pid } : { key: d.key, name: d.name || d.label, what: d.about, example: d.example || "", scope: d.scope, icon: d.icon };
+    const def = { key: d.key, label: d.label, kind: lib ? "validated (library)" : "your own wording (unvalidated)", scope: d.scope === "call" ? "call: reads the whole call, both voices together" : "person: each voice's own last words", question: d.q, reads: d.read === "noul" || d.custom ? "the probability of yes (noul)" : `the probability of the option "${d.read}" in the question's choices`, alerts_at: S.gate };
+    const where = lib
+      ? [el("b", { text: "Validated detector. " }), `Its question is loaded when the page starts from `, el("code", { text: `probes/v2/${set}.jsonl` }), " (first item, key ", el("code", { text: "question" }), "); the wiring is ", el("code", { text: `PERSP id "${d.pid}"` }), " and ", el("code", { text: "QSETS" }), " in ", el("code", { text: "demo/flow.html" }), ". Detector packs in ", el("code", { text: "demo/detectors/" }), " only point to it with ", el("code", { text: `{"library": "${d.pid}"}` }), "."]
+      : [el("b", { text: "Your own wording, unvalidated. " }), d.src ? ["From ", el("code", { text: d.src.includes("(") ? d.src : "demo/detectors/" + d.src }), "."] : "Built into the page or added here. Save it to a pack with Detectors > More > Save to demo/detectors.", " The question sent to the model is built from the description below."];
+    ui.dscores = el("div", { class: "dscores" });
+    ui.ddetail.replaceChildren(
+      el("div", { class: "dh" }, iconEl(d.icon, 18), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "small muted", text: d.scope === "call" ? "whole call" : "each voice" })),
+      el("div", { class: "dwhere" }, ...[].concat(where)),
+      el("div", { class: "dlab" }, "Definition"), el("pre", { class: "jpre" }, ...jsonNodes(def)),
+      el("div", { class: "dlab" }, "Question sent to the model", el("button", { class: "btn ghost", type: "button", text: "Copy", onclick: () => copy(JSON.stringify(QALL[d.q], null, 2)) })), el("pre", { class: "jpre" }, ...jsonNodes(QALL[d.q] || {})),
+      el("div", { class: "dlab" }, "Pack entry (what a detector file holds)", el("button", { class: "btn ghost", type: "button", text: "Copy", onclick: () => copy(JSON.stringify(entry, null, 2)) })), el("pre", { class: "jpre" }, ...jsonNodes(entry)),
+      el("div", { class: "dlab" }, "Latest scores"), ui.dscores);
+    updateDetailScores();
+  }
+  function updateDetailScores() {
+    const d = S.dets.find(x => x.key === S.sel); if (!d || !ui.dscores) return; const rowsS = Object.entries(d.st).filter(([, v]) => v.n).map(([spk, v]) => `${spk === "_call" ? "whole call" : code(spk)}  latest ${Math.round(v.latest * 100)}  peak ${Math.round(Math.max(...v.marks.map(m => m.p)) * 100)}  checks ${v.n}`);
+    const txt = rowsS.length ? rowsS.join("\n") : "not scored yet"; if (ui.dscores.textContent !== txt) ui.dscores.textContent = txt; ui.dscores.style.whiteSpace = "pre";
   }
   function renderReq() {
     if (!ui.reqPre) return;
@@ -1384,9 +1415,9 @@
     ui.loadFiles = async () => { try { const r = await api("/api/detector-files"); ui.fsel.replaceChildren(...r.files.map(f => el("option", { value: f.file, title: f.description, text: `${f.name} (${f.count}) · ${f.file}` }))); ui.aiNote.textContent = r.ai ? `AI drafts on (${r.ai_model}, ${r.ai_used}/${r.ai_cap} used)` : "AI drafts off: no ANTHROPIC_API_KEY on the server, so a name gets a plain template"; } catch (e) { say("Could not list detector files: " + e.message, true); } };
     const useFile = async (replace) => {
       const f = ui.fsel.value; if (!f) return;
-      try { const doc = await api("/api/detector-file?file=" + encodeURIComponent(f)); if (replace) S.dets = []; const ds = doc.detectors.map(addSpec).filter(Boolean); say(applied(ds, replace ? `Loaded “${doc.name}”:` : `Added from “${doc.name}”:`) + (doc.skipped ? ` ${doc.skipped} invalid entries skipped.` : "")); } catch (e) { say(e.message, true); }
+      try { const doc = await api("/api/detector-file?file=" + encodeURIComponent(f)); if (replace) S.dets = []; const ds = doc.detectors.map(addSpec).filter(Boolean); ds.forEach(x => { x.src = f; }); say(applied(ds, replace ? `Loaded “${doc.name}”:` : `Added from “${doc.name}”:`) + (doc.skipped ? ` ${doc.skipped} invalid entries skipped.` : "")); } catch (e) { say(e.message, true); }
     };
-    const fileIn = el("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: async () => { const f = fileIn.files[0]; fileIn.value = ""; if (!f) return; try { const doc = JSON.parse(await f.text()); if (!Array.isArray(doc.detectors)) throw new Error("a detector file needs a top-level `detectors` list"); const ds = doc.detectors.slice(0, 40).map(addSpec).filter(Boolean); say(applied(ds, `Imported “${doc.name || f.name}”:`)); } catch (e) { say("Could not import that file: " + e.message, true); } } });
+    const fileIn = el("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: async () => { const f = fileIn.files[0]; fileIn.value = ""; if (!f) return; try { const doc = JSON.parse(await f.text()); if (!Array.isArray(doc.detectors)) throw new Error("a detector file needs a top-level `detectors` list"); const ds = doc.detectors.slice(0, 40).map(addSpec).filter(Boolean); ds.forEach(x => { x.src = f.name + " (imported from your computer)"; }); say(applied(ds, `Imported “${doc.name || f.name}”:`)); } catch (e) { say("Could not import that file: " + e.message, true); } } });
     const sname = el("input", { type: "text", placeholder: "file name, e.g. my-detectors", style: "width:170px", "aria-label": "Save as file name" }); let overwrite = false;
     const saveFile = async () => { try { const r = await post("/api/detector-save", { file: sname.value, doc: exportDoc(), overwrite }); overwrite = false; say(`Saved ${r.count} detectors to demo/detectors/${r.file}`); ui.loadFiles(); } catch (e) { if (/already exists/.test(e.message)) { overwrite = true; say(e.message + ". Press Save again to overwrite it.", true); } else say("Save failed: " + e.message, true); } };
     ui.dfiles = el("div", { class: "dform" }, el("div", { class: "sec" }, el("b", { text: "Or start from a set" }), ui.aiNote),
@@ -1402,7 +1433,8 @@
       el("div", { class: "help", text: "A name is enough: AI drafts what it should detect. Add now, or draft first to review it." }),
       el("details", { class: "dnew" }, el("summary", { text: "Write the description yourself" }), el("div", { class: "dform", style: "border:0;margin:0;padding:6px 0 0" }, el("label", {}, "What should it detect?", dwhat), el("label", {}, "An example that should trigger it", dex), el("div", { class: "frow" }, el("label", {}, "Applies to", scopeSeg), el("label", {}, "Icon (optional)", iconBox)))));
     ui.pane_det = el("div", { class: "tabpane", hidden: true }, ui.dnew, ui.dmsg, ui.dfiles,
-      el("details", { class: "dnew adv", style: "margin-top:10px" }, el("summary", {}, "Advanced ", ui.dcount), el("div", { class: "bt", style: "margin-top:8px", text: "Current detectors" }), ui.dlist, ui.dsuggest, el("div", { class: "bt", style: "margin-top:10px", text: "More validated detectors" }), ui.dlib, ui.dguide));
+      el("details", { class: "dnew adv", style: "margin-top:10px" }, el("summary", {}, "Advanced ", ui.dcount), el("div", { class: "bt", style: "margin-top:8px", text: "Current detectors" }), ui.dlist, ui.dsuggest, el("div", { class: "bt", style: "margin-top:10px", text: "More validated detectors" }), ui.dlib, ui.dguide),
+      el("div", { class: "bt", style: "margin-top:14px", text: "Detector definition" }), (ui.ddetail = el("div", { class: "ddetail" })));
     /* settings: the levers, in order of how often they are changed */
     ui.models = el("div", { class: "models", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("div", { class: "mstat small muted" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per voice" }); ui.winHelp = el("div", { class: "help" });
     const cadSeg = el("span", { class: "segmented", role: "group", "aria-label": "How often to score" }); const nIn = el("input", { type: "number", min: "3", max: "20", step: "1", "aria-label": "Words between checks", style: "width:56px;min-height:28px", onchange: () => { S.n = clamp(Math.round(+nIn.value) || 5, 3, 20); nIn.value = S.n; resetRun(); writeHash(); refreshEst(); } }); nIn.value = S.n; nIn.hidden = S.cp !== "words";
@@ -1442,7 +1474,7 @@
     Jev.onStatus(() => { renderModels(); if (S.playing && !isUp()) { pause(); toast(`${Jev.codeOf(S.model)} stopped being loaded.`); } });
     document.addEventListener("keydown", (e) => { if (e.code === "Space" && !/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); onPlay(); } });
     applyMode(); if (S.mode === "live") liveReset(); renderDets(); renderDetTab(); ui.loadFiles();
-    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { kpTick: () => kpTick(), glideStep: (n) => { for (let i = 0; i < n; i++) glide.frame(0.1); }, addLog: (f) => addLog(f), ageFlags: () => ageFlags(), KPJ, setKps, applyKp, KP_LIB, drawLanes: () => voices.draw(), feedReplay: (n) => { for (let k = 0; k < n && ptr < W.length; k++) onWord(W[ptr++]); compactOld(); }, JC, coachQs, applyCoach, jevAction, coachTick, WINS: CWINS, classicDefaults: () => defaultDets("replay"), addSpec, loadCore, exportDoc, testMany, S, V, VOICES, LN, dryRun: () => dryRun(), setMode: (k) => setMode(k), onSnapshot: (m) => onSnapshot(m), get T() { return T; }, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
+    last = performance.now(); raf = requestAnimationFrame(frame); window.__mockClock = () => S.t; window.__cockpit = { showDetector: (k) => showDetector(k), kpTick: () => kpTick(), glideStep: (n) => { for (let i = 0; i < n; i++) glide.frame(0.1); }, addLog: (f) => addLog(f), ageFlags: () => ageFlags(), KPJ, setKps, applyKp, KP_LIB, drawLanes: () => voices.draw(), feedReplay: (n) => { for (let k = 0; k < n && ptr < W.length; k++) onWord(W[ptr++]); compactOld(); }, JC, coachQs, applyCoach, jevAction, coachTick, WINS: CWINS, classicDefaults: () => defaultDets("replay"), addSpec, loadCore, exportDoc, testMany, S, V, VOICES, LN, dryRun: () => dryRun(), setMode: (k) => setMode(k), onSnapshot: (m) => onSnapshot(m), get T() { return T; }, SP, get checks() { return checksDone; }, get maxPending() { return maxPending; }, get failed() { return failed; }, CPS, FLAGS, LAGS };
     return root;
   }
   window.refreshSrcPanels = () => {};
@@ -1451,7 +1483,7 @@
     raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.mode === "live") { S.t = audioNow(); coachTick(); kpTick(); } else if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
     if (now - (frame.vt || 0) > 500) { frame.vt = now; updateVoices(); compactOld(); }
-    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); voices.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); ageFlags(); if (S.tab === "lvl") renderLevels(); if (S.tab === "set") { if (ui.diag.open) renderCounters(); if (ui.evDet.open) renderEvents(); } }
+    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); voices.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); ageFlags(); if (S.tab === "det" && S.sel) updateDetailScores(); if (S.tab === "lvl") renderLevels(); if (S.tab === "set") { if (ui.diag.open) renderCounters(); if (ui.evDet.open) renderEvents(); } }
     const c = mmss(S.t + (S.mode === "live" ? S.startAt : 0)); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
     const b = pending ? `${pending} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
   }
