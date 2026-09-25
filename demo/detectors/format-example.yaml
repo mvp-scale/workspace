@@ -1,0 +1,24 @@
+# A detector file. Save as .json or .yaml in demo/detectors/ and it appears in the Flow lab's file list.
+# Reload the list in the lab after adding or editing a file.
+name: Format example
+description: Shows the fields and what a good detector looks like. Safe to copy and edit.
+
+detectors:
+  # 1) A validated detector from the library: just its id. These have measured accuracy.
+  #    ids: anger fear threat politeness sarcasm phishing persuasion urgency scarcity social_proof manipulation
+  - library: anger
+
+  # 2) Your own detector. Unvalidated: no accuracy claim, drawn with a dashed outline.
+  - name: Asks for secrecy                # 1-3 words
+    what: the speaker tells the other person not to tell anyone or to keep the call secret
+    example: Do not tell your bank or your family about this call.   # optional, but it helps the model
+    scope: person                         # person = scored on each voice's own words; call = reads the whole conversation
+    icon: lock                            # optional; any icon name from the lab
+    key: ex_secrecy                       # optional, lowercase letters/digits/underscore; identifies it if you edit later
+
+  # GOOD: one observable behaviour, phrased "the speaker <does X>", answerable from 20-40 words.
+  #   what: the speaker asks for money, gift cards, cryptocurrency, or a payment code
+  # WEAK (and why):
+  #   what: the speaker is lying                 -> intent and truth cannot be read from the words
+  #   what: the speaker is angry and threatening -> two detectors; split them
+  #   what: the speaker is bad                   -> too vague to say yes or no

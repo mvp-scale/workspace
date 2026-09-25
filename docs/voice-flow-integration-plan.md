@@ -76,6 +76,16 @@ is blocked: play the video in a browser tab and capture tab audio (`getDisplayMe
   "cap reached". Hosted use is confirmed once at Start, not per detector.
 - The Jev key stays server-side (`demo/server.py`), as today.
 
+## Design principle: seed the integration, do not fork it
+
+The mock-up must resemble `flow.html` closely enough that phase 4 is mostly moving code, and it must
+never change `flow.html`. Reuse `static/app.css` / `static/app.js`, the thread classes (`msg`, `bub`,
+`meta`, `words`), detector colours `--s1..--s8` and the icon set, the checkpoint rule and window
+functions (`trig`, `personWindow`, `callWindow`), and the `QALL` question shapes. Write the live path
+as one function shaped like flow's `onWord(wd)`: a word event `{spk, w, t, turnId, last}` in, thread
+and runner out. Keep the lab's own runner copy small and marked disposable, and diff it against flow's
+`makeRunner` before phase 4 so drift is visible.
+
 ## What the voice server sends (measured)
 
 `ws://<host>:8200/ws`. After every model step, a full snapshot:
@@ -102,6 +112,28 @@ speaker, or its segment is closed (that speaker started a later segment, or `aud
 or on flush. Diff each snapshot against the committed prefix; if a committed word changed, do not
 re-emit, count it. `t` is the `audio_s` at commit. New turn on speaker change or a same-speaker segment after a pause.
 Fixture tests (node): exact committed sequence for the clip; injected rewrite emits nothing twice; flush commits the tail.
+
+## Measured so far (phase 1 and 2)
+
+- **Ingest**: a public 7-minute YouTube video (Apollo 13 narration, 7 speaker labels) ran at about 19x real time
+  (421 s of audio in 21.7 s), 759 words; local WAV/MP3/M4A files decode identically (44 to 45 words, 2 speakers).
+- **Q1, rewrites, real speech** (that recording, 377 snapshots, `data/voice-fixtures/`, not in git): with the last word
+  held back (K=1 or more) **zero committed words changed letters or speaker**. K=0 gives 41 lexical rewrites
+  (word fragments: `spacecra` to `spacecraft`). The only late change is trailing punctuation on the last word of an
+  earlier segment (14 times; up to 345 words later), so `last` (segment end), not ".", must end a chunk.
+  Default K is now 2 (was 5): mean commit lag 1.7 s (K=1: 1.3 s, K=5: 2.8 s, K=8: 3.6 s). One recording of
+  narration: not overlapped speech, not a call. Re-check on a panel and a live call.
+- **Ingest fixes found by testing**: MP4/M4A cannot be read from a pipe (uploads are spooled to a private temp
+  file); pipe reads can split a 16-bit sample (odd byte carried over); stopping a paced ffmpeg hung until a
+  timeout (transport closed after kill).
+
+- **Voice labels over time** (18-minute scam-baiting video, 8 slots, `data/voice-fixtures/`, not in git): all 8 slots were in
+  use by 3:37 and one slot first appeared at 16:06, so V-numbers are not reliably arrival order. Three slots returned after
+  6 to 9 minutes of silence (up to 529 s); whether those were the same people is unknowable without ground truth.
+  NVIDIA documents a fixed-size speaker memory, arrival-order channels and a maximum of 8, but **no expiry time**
+  (`voice/reference/PROD_BEST_PRACTICES.md`: "late-session drift", "more than 8 voices"). So the lab shows last-heard age per
+  voice, an "N of 8 voices" meter, a "label may be reused" state after a tunable silence (default 120 s, our heuristic, not
+  NVIDIA's) and a "returned after X, identity unverified" badge, and restarts a voice's scoring window after 30 s of its own silence.
 
 ## What the mock-up must answer (with real audio, not the clean clip)
 

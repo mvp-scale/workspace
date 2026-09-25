@@ -1,0 +1,72 @@
+{
+  "name": "Scam call",
+  "description": "Behaviours typical of phone and tech-support scams, for testing on recorded scam calls. Custom items are unvalidated wording.",
+  "detectors": [
+    {
+      "library": "phishing"
+    },
+    {
+      "library": "urgency"
+    },
+    {
+      "library": "persuasion"
+    },
+    {
+      "library": "manipulation"
+    },
+    {
+      "library": "threat"
+    },
+    {
+      "library": "anger"
+    },
+    {
+      "key": "s_secrecy",
+      "name": "Asks for secrecy",
+      "what": "the speaker tells the other person not to tell anyone or to keep the call secret",
+      "example": "Do not tell your bank or your family about this call.",
+      "scope": "person",
+      "icon": "lock"
+    },
+    {
+      "key": "s_authority",
+      "name": "Claims authority",
+      "what": "the speaker claims to represent a bank, government agency, or trusted company",
+      "example": "This is the fraud department at your bank.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "s_payment",
+      "name": "Asks for payment",
+      "what": "the speaker asks for money, gift cards, cryptocurrency, or a payment code",
+      "example": "Go to the store and buy four gift cards.",
+      "scope": "person",
+      "icon": "coin"
+    },
+    {
+      "key": "s_access",
+      "name": "Asks for access",
+      "what": "the speaker asks the other person to install software, share their screen, or read out a code or password",
+      "example": "Please install this program so I can see your screen.",
+      "scope": "person",
+      "icon": "key"
+    },
+    {
+      "key": "s_steps",
+      "name": "Gives orders",
+      "what": "the speaker tells the other person exactly what to do next, step by step",
+      "example": "Now click the blue button and enter the number.",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "s_reassure",
+      "name": "Reassures",
+      "what": "the speaker reassures the other person to keep them calm and cooperating",
+      "example": "Don't worry sir, I will take care of everything for you.",
+      "scope": "person",
+      "icon": "heart"
+    }
+  ]
+}

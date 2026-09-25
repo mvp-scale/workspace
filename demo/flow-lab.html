@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow lab (mock-up) · Jev Bench Console</title>
+<meta name="description" content="Isolated recon page: live audio (YouTube link, uploaded file, microphone) through the NeMo voice server, scored by detectors that can be added while it runs. Not in the nav, not in the static build.">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<script src="/static/voice-source.js"></script>
+<style>
+  /* Layout the shared CSS lacks. Colours come from shared tokens only (detector colours are --s1 to --s8; icons tell detectors apart beyond that). */
+  [hidden] { display: none !important; }
+  .footer { display: none; }
+  .page.cockpit { max-width: none; padding: 8px var(--gutter) 10px; }
+  .cp { display: flex; flex-direction: column; gap: 8px; height: calc(100dvh - 42px - 18px); min-height: 800px; }
+  .cp .top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: flex-end; }
+  .cp .top h1 { font-size: 17px; }
+  .cp .sub { color: var(--text-3); font-size: 12px; }
+  @media (max-width: 1700px) { .cp .top .sub { display: none; } }
+  .cp .ctl { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-end; margin-left: auto; }
+  .cp .field select { min-width: 120px; max-width: 230px; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; font: 500 12px var(--mono); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); min-height: 30px; }
+  .pill .rec { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+  .pill.on .rec { background: var(--bad); animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; transform: scale(.8); } }
+  .notice { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  .chk { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-2); cursor: pointer; }
+
+  .pn { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .pn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 12px 0; min-height: 26px; position: relative; }
+  .pn > header .r { margin-left: auto; font-size: 12px; color: var(--text-3); }
+  .pn > .bd { padding: 6px 12px 10px; flex: 1; min-height: 0; display: flex; min-width: 0; position: relative; }
+  .pn > .bd > * { flex: 1; min-width: 0; }
+
+  /* Detectors and people */
+  .stage { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr); grid-template-rows: auto minmax(0, 1fr) clamp(146px, 17vh, 220px); grid-template-areas: "top top" "conv rail" "chart chart"; }
+  .toppn { padding: 6px 12px 8px; display: grid; gap: 6px; grid-area: top; }
+  .trow { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+  .trow h4 { padding-top: 6px; }
+  .dets { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; max-height: 76px; overflow: auto; min-height: 30px; }
+  .dchip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); position: relative; }
+  .dchip.custom { border-style: dashed; }
+  .dchip .ic { color: var(--c); display: grid; place-items: center; }
+  .dchip .nm { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+  .dchip .mt { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--surface-2); border-radius: 0 0 5px 5px; overflow: hidden; }
+  .dchip .mt i { display: block; height: 100%; background: var(--c); transform-origin: left; transform: scaleX(0); }
+  .dchip .x { border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); cursor: pointer; padding: 0; font-size: 12px; line-height: 1; width: 16px; height: 16px; border-radius: 50%; position: absolute; right: -6px; top: -7px; opacity: 0; z-index: 2; display: grid; place-items: center; }
+  .dchip:hover .x, .dchip .x:focus-visible { opacity: 1; } .dchip .x:hover { color: var(--bad); border-color: var(--bad); }
+  .dchip.hot { background: color-mix(in srgb, var(--c) 14%, var(--surface)); border-color: var(--c); }
+  .dchip.quiet .nm { color: var(--text-2); font-weight: 500; } .dchip.quiet .ic { opacity: .75; }
+  .people { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; min-height: 52px; }
+  .pcard { flex: 0 0 auto; width: 206px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px 4px; background: var(--surface-2); }
+  .pcard.speaking { border-color: var(--accent); background: var(--accent-soft); }
+  .pcard .h1 { display: flex; align-items: center; gap: 6px; min-height: 20px; }
+  .pnum { min-width: 22px; height: 18px; padding: 0 5px; border-radius: 9px; background: color-mix(in srgb, var(--v, var(--text-2)) 30%, var(--surface)); border: 1px solid var(--v, var(--text-2)); color: var(--text); font: 700 10.5px var(--mono); display: grid; place-items: center; flex: none; }
+  .pcard .rt { font: 500 10px var(--mono); color: var(--accent); margin-left: auto; }
+  .pcard b { font-size: 12px; font-weight: 650; }
+  .hits { display: flex; gap: 3px; flex-wrap: wrap; min-height: 20px; }
+  .hit { display: inline-flex; align-items: center; gap: 3px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+  .hit svg { color: var(--c); } .hit .t { font: 500 10px var(--mono); color: var(--text-2); }
+  .hit.cool { opacity: .5; }
+  .nohit { font-size: 11px; color: var(--text-3); }
+
+  .glide { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 100%); }
+  .glide > .track { will-change: transform; padding-top: 8px; }
+  .msg { display: flex; margin: 5px 0; --v: var(--text-2); } .msg.coach { justify-content: flex-end; }
+  .bub { max-width: min(88%, 680px); padding: 4px 10px 6px; border-radius: 12px 12px 12px 4px; background: color-mix(in srgb, var(--v) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--v) 30%, var(--border)); font-size: clamp(14px, 0.4vw + 11px, 17px); line-height: 1.55; }
+  .msg.coach .bub { border-radius: 12px 12px 4px 12px; }
+  .meta { display: flex; align-items: center; gap: 6px; font: 500 10.5px var(--mono); color: var(--text-3); line-height: 1.6; } .meta .pnum { height: 15px; min-width: 20px; font-size: 10px; }
+  .meta .nmx { font-family: var(--font); font-weight: 600; letter-spacing: .02em; color: var(--text-2); }
+  .txt { position: relative; } .txt .ghost { visibility: hidden; user-select: none; padding-right: 8px; } .txt .words { position: absolute; left: 0; top: 0; width: 100%; }
+  .w { display: inline-block; animation: wordin .26s ease-out both; } @keyframes wordin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .showwin .w.out { color: var(--text-3); }
+  .caret { display: inline-block; width: 0; height: 1.05em; position: relative; vertical-align: text-bottom; } .caret::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: var(--accent); animation: caret 1s steps(2) infinite; } @keyframes caret { 50% { opacity: 0; } }
+  .ph { box-shadow: inset 0 -2px 0 var(--c); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .readnote { font-size: 11px; color: var(--text-3); padding: 0 12px 6px; }
+
+  .rail { grid-area: rail; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; flex: 1 1 0; min-height: 210px; }
+  .stackroot { position: relative; overflow: hidden; }
+  .moment { border: 1px solid var(--border-strong); border-left: 4px solid var(--c); border-radius: var(--radius-sm); padding: 0 6px 0 8px; background: var(--surface); height: 34px; overflow: hidden; display: flex; align-items: center; gap: 7px; }
+  .moment.cool { background: var(--surface-2); border-color: var(--border); border-left-color: var(--c); }
+  .moment .ic { color: var(--c); display: grid; place-items: center; flex: none; }
+  .moment .nm { font-weight: 650; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .moment .who { font: 700 11px var(--mono); color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; flex: none; }
+  .moment .pc { font: 600 11px var(--mono); color: var(--text); flex: none; }
+  .moment .cnt { font: 500 10.5px var(--mono); color: var(--text-3); flex: none; }
+  .moment .age { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); white-space: nowrap; flex: none; }
+  .moment .btn { font-size: 11px; padding: 0 4px; line-height: 16px; min-height: 0; flex: none; }
+  .moment.cool .nm { color: var(--text-2); font-weight: 500; }
+  .moment .hold { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); } .moment .hold i { display: block; height: 100%; background: var(--c); transform-origin: left; }
+  .scroll { overflow: auto; min-height: 0; }
+  .cnote { border-left: 5px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-sm); padding: 8px 10px; display: grid; gap: 4px; }
+  .cnote.caution { border-left-color: var(--bad); background: var(--bad-soft); } .cnote.notice { border-left-color: var(--warn); background: var(--warn-soft); }
+  .cwin { display: flex; justify-content: space-between; font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
+  .chead { font-size: clamp(22px, 1.9vw, 28px); font-weight: 780; letter-spacing: -.02em; line-height: 1.05; }
+  .ctext { font-size: 14px; line-height: 1.3; font-weight: 500; }
+  .cwhy { font-size: 12px; color: var(--text-2); min-height: 16px; }
+  .ctimer .trk { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--text) 14%, transparent); overflow: hidden; } .ctimer .trk i { display: block; height: 100%; background: var(--text); transform-origin: left; }
+  .bt { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 2px 0 4px; }
+  .split { position: relative; height: 9px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+  .split i { position: absolute; top: 0; bottom: 0; width: 100%; } .split .th { left: 0; background: var(--text-3); transform-origin: left; transform: scaleX(.5); } .split .me { right: 0; background: var(--accent); transform-origin: right; transform: scaleX(.5); }
+  .bl { font: 500 11px var(--mono); color: var(--text-2); margin: 4px 0 6px; min-height: 14px; } .tip { font-size: 12.5px; min-height: 18px; }
+  .ck { display: grid; grid-template-columns: 16px 1fr auto auto; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; align-items: center; }
+  .ck .g { font: 700 12px var(--mono); color: var(--text-3); } .ck.done .g { color: var(--good); } .ck .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .ck button { border: 0; background: transparent; color: var(--text-3); cursor: pointer; }
+  .rf { font-size: 12px; color: var(--text-2); padding: 2px 0; overflow-wrap: anywhere; }
+
+  /* Tabbed card */
+  .tabs2 { display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 8px; flex-wrap: wrap; }
+  .tabs2 button { border: 0; background: transparent; padding: 6px 9px; font: inherit; font-size: 12.5px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs2 button[aria-selected=true] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+  .tabpane { padding: 6px 12px 8px; overflow: auto; flex: 1; min-height: 0; }
+  .mrow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-bottom: 6px; }
+  .mrow .l { font-size: 12px; color: var(--text-3); } .mrow .segmented button { padding: 3px 8px; }
+  .mbtn { display: inline-flex; gap: 6px; align-items: baseline; } .mbtn small { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .est { font: 500 11px var(--mono); color: var(--text-2); }
+  .li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .li .ts { font: 500 11px var(--mono); color: var(--text-3); }
+  .li .q { color: var(--text-2); overflow-wrap: anywhere; } .li .ic { display: inline-block; vertical-align: -2px; margin-right: 4px; color: var(--c); }
+  .dform { display: grid; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .dform label { font-size: 12px; font-weight: 500; color: var(--text-2); display: grid; gap: 2px; }
+  .icons { display: flex; flex-wrap: wrap; gap: 4px; }
+  .icons button { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 5px; padding: 3px; cursor: pointer; color: var(--text-2); display: grid; place-items: center; }
+  .icons button[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .chartwrap { position: relative; flex: 1; min-height: 0; padding: 2px 10px 6px; } .chartwrap canvas { position: absolute; inset: 2px 10px 6px; width: calc(100% - 20px); height: calc(100% - 8px); }
+  .key { font-size: 12px; color: var(--text-2); }
+  .tabsbar { display: none; }
+  @media (max-width: 1100px) {
+    .cp { min-height: 0; }
+    .cp .ctl { margin-left: 0; }
+    .stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "x"; }
+    .stage > [data-pane] { grid-area: x; display: none; }
+    .stage[data-tab="talk"] > [data-pane="talk"], .stage[data-tab="signals"] > [data-pane="signals"], .stage[data-tab="cues"] > [data-pane="cues"], .stage[data-tab="history"] > [data-pane="history"] { display: flex; flex-direction: column; }
+    .stage[data-tab="signals"] > [data-pane="signals"] { display: grid; align-content: start; overflow: auto; }
+    .stage[data-tab="cues"] > [data-pane="cues"] { overflow: auto; }
+    .dets { max-height: none; }
+    .cols { grid-template-columns: 1fr; flex: 0 0 auto; }
+    .tabsbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+    .tabsbar button { border: 0; background: transparent; padding: 10px 4px; font: inherit; font-size: 12px; color: var(--text-3); border-top: 2px solid transparent; cursor: pointer; }
+    .tabsbar button[aria-selected=true] { color: var(--text); border-top-color: var(--text); font-weight: 600; }
+  }
+  @media (max-width: 560px) { .trow { grid-template-columns: 1fr; } .bub { max-width: 92%; } .cp .top .sub { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .w, .caret::after, .pill.on .rec { animation: none; } }
+
+  /* Tab panes: one job each */
+  .tabs2 button .n { margin-left: 5px; font: 500 10.5px var(--mono); color: var(--text-3); } .tabs2 button[aria-selected=true] .n { color: var(--text-2); }
+  .tabpane.col { display: flex; flex-direction: column; gap: 6px; }
+  .sec { display: flex; justify-content: space-between; align-items: baseline; }
+  .fl { border-left: 4px solid var(--c); padding: 4px 8px 5px; margin: 4px 0; background: var(--surface); border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .fl .ts, .evx .ts { font: 500 11px var(--mono); color: var(--text-3); padding-top: 1px; }
+  .fl .fh { display: flex; align-items: center; gap: 7px; font-size: 12.5px; } .fl .ic { color: var(--c); display: grid; place-items: center; }
+  .fl .vc, .fl .cnt { font: 600 10.5px var(--mono); color: var(--text-2); } .fl .vc { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0 6px; } .fl .pc { font: 600 11px var(--mono); margin-left: auto; } .fl .ts { font: 500 10.5px var(--mono); color: var(--text-3); }
+  .fl .q { color: var(--text-2); font-size: 12.5px; overflow-wrap: anywhere; }
+  .drow { display: grid; grid-template-columns: 22px auto auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; } .drow .ic { color: var(--c); display: grid; place-items: center; } .drow .small { text-align: right; }
+  .libchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .libchip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; padding: 4px 9px; border: 1px dashed var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text-2); cursor: pointer; } .libchip:hover { border-style: solid; color: var(--text); background: var(--surface-2); }
+  .dnew { margin-top: 10px; } .dnew > summary { cursor: pointer; font-weight: 600; font-size: 12.5px; color: var(--accent); }
+  .frow { display: flex; gap: 14px; flex-wrap: wrap; }
+  .models { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .mbig { display: inline-flex; align-items: baseline; gap: 6px; font: inherit; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; } .mbig b { font: 700 13px var(--mono); } .mbig small { font: 500 10.5px var(--mono); color: var(--text-3); } .mbig small.paid { color: var(--warn); }
+  .mbig[aria-checked=true] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .mstat { display: flex; align-items: center; gap: 4px; min-height: 18px; margin-bottom: 4px; }
+  .twocol { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
+  .bigval { font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; } .bigslider { width: 100%; min-height: 24px; margin: 2px 0; }
+  .help { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .reqbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .reqhead { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+  pre.req { flex: 1; min-height: 60px; overflow: auto; margin: 0; }
+  .evx { padding: 6px 0; border-bottom: 1px solid var(--border); } .evx .eh { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; font-size: 13px; }
+  .evx .er { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 0 48px; } .evx .lbl { font-size: 11px; color: var(--text-3); }
+  .drow button.x { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; } .drow button.x:hover { color: var(--bad); }
+  .moment .sup { display: inline-flex; align-items: center; gap: 2px; font: 600 11px var(--mono); color: var(--text-3); flex: none; }
+  .moment.shifted { opacity: .7; }
+  /* ---- flow-lab additions (the only page-specific CSS) ---- */
+  .dets { max-height: 96px !important; }
+  .dchip .pv { font: 600 10.5px var(--mono); color: var(--text-3); min-width: 18px; text-align: right; } .dchip.hot .pv { color: var(--text); }
+  table.lv { border-collapse: collapse; width: 100%; font-size: 12px; } table.lv th { font: 600 10.5px var(--font); color: var(--text-3); text-align: center; padding: 2px 4px; } table.lv td { padding: 2px 4px; border-bottom: 1px solid var(--border); } table.lv td.c { text-align: center; font: 600 11px var(--mono); border-radius: 3px; min-width: 40px; } table.lv td.n { white-space: nowrap; }
+  .pcard .vstat { font: 500 10.5px var(--mono); color: var(--text-3); min-height: 14px; } .pcard.stale { opacity: .6; } .pcard .vstat.ret { color: var(--warn); font-weight: 600; }
+  .vcap { font: 600 11px var(--mono); padding-top: 6px; white-space: nowrap; } .vcap.warn { color: var(--warn); } .vcap.bad { color: var(--bad); }
+  .lab-banner { font-size: 12px; color: var(--text-2); background: var(--warn-soft); border: 1px solid var(--warn); border-radius: var(--radius-sm); padding: 4px 10px; }
+  .stage.lab { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "top top" "conv rail"; }
+  .scroller { overflow: auto; min-height: 0; padding: 6px 4px 6px 0; flex: 1; }
+  .tent { font-style: italic; color: var(--text-3); font-size: 13px; padding: 4px 10px 6px; border-top: 1px dashed var(--border); min-height: 26px; }
+  .tent .pnum { margin-right: 6px; font-style: normal; display: inline-grid; }
+  .msg .words .w { animation: none; }
+  .srcrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-end; }
+  .srcrow input[type=text], .srcrow input[type=url] { min-width: 300px; }
+  .cnt-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; font-size: 12.5px; }
+  .cnt-grid .k { color: var(--text-2); } .cnt-grid .v { font: 600 12px var(--mono); text-align: right; }
+  .cnt-grid .h { grid-column: 1 / -1; font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-top: 8px; }
+  .confirm { border: 1px solid var(--warn); background: var(--warn-soft); border-radius: var(--radius-sm); padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12.5px; }
+  .lvl { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 2px; } .lvl i { display: block; height: 100%; background: var(--c, var(--accent)); transform-origin: left; transform: scaleX(0); }
+</style>
+</head>
+<body>
+<main class="page cockpit"><div id="app"></div></main>
+<script>
+(() => {
+  const { el, api, toast, copy, download } = Jev;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const mmss = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+  const words = (s) => String(s).split(/\s+/).filter(Boolean);
+  const SENT_END = /[.!?…]["')\]]*$/;
+  const WINDOW_GAP = 30, MAX_VOICES = 8;   // a voice's scoring window restarts after this many seconds of its own silence
+  const HOLD = 30, MAXDET = 20, CONC = 3, PER_Q = 110, HITS = 6, MAX_QUEUE = 4;
+  const WINS = ["w10", "w20", "w40"];
+  const cvar = (slot) => `--c:var(--s${(slot % 8) + 1})`;
+  const money = (x) => "$" + (x < 0.01 ? x.toFixed(4) : x.toFixed(2));
+  let TARIFF = 0.042;
+
+  /* ---------- icons: a small object palette. Colour says which detector family, the icon says which detector ---------- */
+  const circ = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+  const ICONS = {
+    flame: "M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3 2-4 .3 1.2 1 2 1.8 2C11 8.5 11.5 5.5 12 3z", alert: "M12 4 3 20h18L12 4z|M12 10v4|M12 17v.5", clock: circ(12, 12, 9) + "|M12 7v5l3.5 2",
+    shield: "M12 3l8 3v6c0 4.5-3.2 7.5-8 9-4.8-1.5-8-4.5-8-9V6l8-3z|M12 8v5|M12 16v.5", heart: "M12 20s-8-4.8-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.2 12 20 12 20z",
+    mask: "M4 6c4-2 12-2 16 0v5c0 4.5-3.5 8-8 8s-8-3.5-8-8V6z|M8 11h2|M14 11h2|M9 15c1.5 1.2 4.5 1.2 6 0", hook: "M12 3v11a4 4 0 1 1-4-4|M9 5h6",
+    smile: circ(12, 12, 9) + "|M8 14.5c2 1.5 6 1.5 8 0|M9 9.5h.5|M14.5 9.5h.5", box: "M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5v-9z|M3 7.5l9 4.5 9-4.5|M12 12v9",
+    users: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z|M3 20c0-3.2 2.7-5 6-5s6 1.8 6 5|M16 5.5a3 3 0 0 1 0 5.5|M18 15.3c2 .6 3.3 2 3.3 4.7", megaphone: "M3 10v4l11 5V5L3 10z|M14 8c3 0 5 1.5 5 4s-2 4-5 4|M6 14.5l1.2 5h3l-1-4.2",
+    coin: circ(12, 12, 9) + "|M12 7v10|M9.5 9.5c0-1.2 1.2-2 2.5-2s2.5.8 2.5 2c0 3-5 1.8-5 4.5 0 1.2 1.2 2 2.5 2s2.5-.8 2.5-2", check: circ(12, 12, 9) + "|M8 12.5l3 3 5-6",
+    help: circ(12, 12, 9) + "|M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7|M12 17v.5", flag: "M5 21V4|M5 4h12l-2.5 4L17 12H5", star: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z",
+    bell: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2z|M10 21h4", lock: "M6 11h12v9H6z|M8.5 11V8a3.5 3.5 0 0 1 7 0v3", eye: "M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z|" + circ(12, 12, 3),
+    bolt: "M13 2L4 14h7l-1 8 9-12h-7l1-8z", key: circ(8, 15, 4) + "|M11 12l9-9|M16 7l3 3", chat: "M4 5h16v11H9l-5 4V5z", target: circ(12, 12, 9) + "|" + circ(12, 12, 4.5),
+  };
+  const ICON_NAMES = Object.keys(ICONS), NS = "http://www.w3.org/2000/svg", P2D = {};
+  function iconEl(name, size = 15) {
+    const s = document.createElementNS(NS, "svg"); for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) s.setAttribute(k, v);
+    for (const d of (ICONS[name] || ICONS.flag).split("|")) { const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); s.append(p); } return s;
+  }
+
+  /* Nine validated question sets, eleven detectors. `scope` says what text the detector was validated on: one person's words, or a whole dialogue. */
+  const QSETS = { manipulation: "manipulation_dialogue", phishing: "phishing", sarcasm: "sarcasm_isarcasm", threat: "threat_civil", anger: "emotion_anger", fear: "emotion_fear", politeness: "politeness_deference", darkpatterns: "darkpatterns", persuasion: "persuasion_appeals" };
+  const PERSP = [
+    { id: "manipulation", icon: "mask", name: "Manipulation", q: "manipulation", read: "noul", scope: "call", about: "Does one speaker try to manipulate the other? Validated on whole dialogues, so it reads the whole call, not one person." },
+    { id: "phishing", icon: "hook", name: "Deceptive request", q: "phishing", read: "noul", scope: "person", about: "Is the text trying to get credentials or money through deception?" },
+    { id: "sarcasm", icon: "smile", name: "Sarcasm", q: "sarcasm", read: "noul", scope: "person", about: "Does the speaker mean the opposite of the literal words?" },
+    { id: "threat", icon: "shield", name: "Threat", q: "threat", read: "noul", scope: "person", about: "Does the text threaten to harm the listener?", caveat: "The threat set has label noise, so treat its accuracy as a rough guide." },
+    { id: "anger", icon: "flame", name: "Anger", q: "anger", read: "noul", scope: "person", about: "Does the text express anger?" },
+    { id: "fear", icon: "alert", name: "Fear", q: "fear", read: "noul", scope: "person", about: "Does the text express fear or nervousness?" },
+    { id: "politeness", icon: "heart", name: "Politeness", q: "politeness", read: "noul", scope: "person", about: "Is the speaker polite and deferential to the person addressed?" },
+    { id: "urgency", icon: "clock", name: "Urgency", q: "darkpatterns", read: "urgency", scope: "person", about: "P(urgency) from the dark-pattern question: a deadline pushing a quick decision.", caveat: "Validated on short shopping-site text." },
+    { id: "scarcity", icon: "box", name: "Scarcity", q: "darkpatterns", read: "scarcity", scope: "person", about: "P(scarcity) from the dark-pattern question: something may run out.", caveat: "Validated on short shopping-site text." },
+    { id: "social_proof", icon: "users", name: "Social proof", q: "darkpatterns", read: "social_proof", scope: "person", about: "P(social_proof) from the dark-pattern question: what others did or said.", caveat: "Validated on short shopping-site text." },
+    { id: "persuasion", icon: "megaphone", name: "Persuasive move", q: "persuasion", read: "appeal", scope: "person", about: "1 minus P(none) from the persuasion-appeal question.", caveat: "Validated on donation appeals to a charity; other contexts are outside what was measured." },
+  ];
+  const P_BY = Object.fromEntries(PERSP.map(p => [p.id, p]));
+  /* The core sixteen: nine validated library detectors + seven of our own wording (unvalidated: no accuracy claim, dashed outline).
+     Scarcity and social proof stay in the library but are off: validated only on shopping-site text. */
+  const CORE_VALIDATED = ["anger", "fear", "threat", "politeness", "sarcasm", "phishing", "persuasion", "urgency", "manipulation"];
+  const CORE_NEW = [
+    { key: "k_question", name: "Question", icon: "help", what: "the speaker asks a question or asks for information" },
+    { key: "k_commitment", name: "Commitment", icon: "check", what: "the speaker promises or commits to doing something" },
+    { key: "k_disagree", name: "Disagreement", icon: "bolt", what: "the speaker disagrees with, objects to, or pushes back on something that was said" },
+    { key: "k_agree", name: "Agreement", icon: "star", what: "the speaker agrees with or accepts what was said" },
+    { key: "k_uncertain", name: "Uncertainty", icon: "eye", what: "the speaker expresses uncertainty, hedges, or says they are not sure" },
+    { key: "k_empathy", name: "Empathy", icon: "users", what: "the speaker acknowledges or shows understanding of another person's feelings" },
+    { key: "k_deflect", name: "Deflection", icon: "target", what: "the speaker avoids answering, changes the subject, or deflects responsibility" },
+  ];
+  const DEFAULTS = CORE_VALIDATED;
+
+  /* ---------- state ---------- */
+  const S = { model: "jev", scoring: true, confirmed: true, cap: 150, stale: 120, win: "w20", cp: "words", n: 10, gate: 0.7, dets: [], seq: 0, t: 0, tab: "flag", reqSel: "latest", src: "youtube", pace: "realtime", k: 2 };
+  const QALL = {}, C = new Map(), CPS = [], FLAGS = [], LAGS = [], QUEUE = [], SPOKE = [], PC = {}, rows = {}, ROWSPK = {};
+  let runner = null, ui = {}, active = 0, ctl = null, cpN = 0, moSeq = 0, LOGROW = {};
+  const VOICES = {};
+  const N = { returns: 0, calls: 0, dropped: 0, capHit: false, failed: 0, checksMade: 0, tokens: 0, applied: 0, maxQueue: 0, e2e: [], wall: [], testChecks: 0 };
+  const V = { ws: null, stab: null, running: false, state: "idle", msg: "", audioS: 0, snapWall: 0, wall0: 0, snaps: 0, words: 0, lastSnap: null, ingest: null, mic: null, stepMs: 0, hopMs: 0, lagSamples: [] };
+
+  /* ---------- speakers (diarization ids, no names): speaker_0 is V1 ---------- */
+  const numOf = (spk) => spk === "_call" ? 0 : (parseInt(String(spk).split("_")[1], 10) || 0) + 1;
+  const code = (spk) => spk === "_call" ? "Call" : "V" + numOf(spk);
+  const vcol = (spk) => { const i = SPOKE.indexOf(spk); return i < 0 ? "var(--text-2)" : `var(--s${(i % 8) + 1})`; };
+
+  /* ---------- detectors (same shapes as flow.html) ---------- */
+  const newState = () => ({ latest: 0, marks: [], disp: 0, lastFire: -1e9, n: 0 });
+  const cs = (d, spk) => d.st[spk] ||= newState();
+  const stFor = (d, spk) => cs(d, d.scope === "call" ? "_call" : spk);
+  function newDet(o) { return { key: o.key, pid: o.pid || null, label: o.label, icon: o.icon, slot: o.slot, scope: o.scope || "person", q: o.q, read: o.read || "noul", custom: !!o.custom, about: o.about || "", example: o.example || "", st: {}, agg: { disp: 0, who: null, n: 0 }, addedAt: V.audioS }; }
+  function addLibrary(pid) {
+    const p = P_BY[pid]; if (!p || S.dets.some(d => d.pid === pid)) return null;
+    if (S.dets.length >= MAXDET) { toast(`${MAXDET} detectors is the most in the lab.`); return null; }
+    const d = newDet({ key: pid, pid, label: p.name, icon: p.icon, slot: S.dets.length, scope: p.scope, q: p.q, read: p.read, about: p.about }); S.dets.push(d); return d;
+  }
+  const customQ = (what, example) => ({ type: "noul", instructions: `Does the text match this description: ${what}`, criteria: { true: `The text matches: ${what}.${example ? ` Example: "${example}"` : ""}`, false: `The text does not match: ${what}` } });
+  function addCore(key) {
+    const c = CORE_NEW.find(x => x.key === key); if (!c || S.dets.some(d => d.key === key)) return null;
+    if (S.dets.length >= MAXDET) { toast(`${MAXDET} detectors is the most in the lab.`); return null; }
+    QALL[key] = customQ(c.what, ""); const d = newDet({ key, label: c.name, icon: c.icon, slot: S.dets.length, scope: "person", q: key, custom: true, about: c.what }); d.core = true; S.dets.push(d); return d;
+  }
+  function loadCore() { S.dets = []; for (const p of CORE_VALIDATED) addLibrary(p); for (const c of CORE_NEW) addCore(c.key); for (const d of S.dets) d.addedAt = V.audioS; renderAll(); }
+  function addCustom(name, what, example, scope, icon, fixedKey) {
+    name = name.trim(); what = what.trim(); example = example.trim();
+    if (!name || !what) { toast("Give it a name and say what it should detect."); return null; }
+    if (S.dets.length >= MAXDET) { toast(`${MAXDET} detectors is the most in the lab.`); return null; }
+    const key = fixedKey || "c" + (++S.seq);
+    QALL[key] = customQ(what, example);
+    const d = newDet({ key, label: name.length > 22 ? name.slice(0, 21) + "…" : name, icon: icon && ICONS[icon] ? icon : ICON_NAMES[(S.dets.length * 5 + 3) % ICON_NAMES.length], slot: S.dets.length, scope, q: key, custom: true, about: what, example }); d.name = name; S.dets.push(d); return d;
+  }
+  /* one entry of a detector file / suggestion: {library} or {name, what, example, scope, icon, key}; null when skipped (already on, invalid, or full) */
+  function addSpec(x) {
+    if (!x || typeof x !== "object") return null;
+    if (x.library) return addLibrary(x.library);
+    if (typeof x.name !== "string" || typeof x.what !== "string") return null;
+    if (x.key && S.dets.some(d => d.key === x.key)) return null;
+    if (S.dets.some(d => (d.name || d.label).toLowerCase() === x.name.trim().toLowerCase())) return null;
+    return addCustom(x.name.slice(0, 40), x.what.slice(0, 240), String(x.example || "").slice(0, 240), x.scope === "call" ? "call" : "person", x.icon, /^[a-z0-9_]{1,40}$/.test(x.key || "") ? x.key : null);
+  }
+  const exportDoc = () => ({ name: "My detectors", description: "Exported from the Flow lab", detectors: S.dets.map(d => d.pid ? { library: d.pid } : { key: d.key, name: d.name || d.label, what: d.about, example: d.example || "", scope: d.scope, icon: d.icon }) });
+  const removeDet = (key) => { S.dets = S.dets.filter(d => d.key !== key); renderAll(); };
+  const detsFor = (chk) => S.dets.filter(d => d.scope === (chk.scope === "call" ? "call" : "person"));
+
+  /* ---------- windows and the checkpoint runner (COPY of flow.html makeRunner; word events come from the stabiliser) ---------- */
+  function personWindow(ws, spec) { const n = parseInt(spec.slice(1), 10); return ws.slice(-n).join(" "); }
+  function callWindow(flat, spec) {
+    const n = parseInt(spec.slice(1), 10), tail = flat.slice(-n); let out = [], prev = null;
+    for (const x of tail) { if (x.spk !== prev) { out.push(`${x.spk}:`); prev = x.spk; } out.push(x.w); } return out.join(" ");
+  }
+  const qidsFor = (chk) => [...new Set(detsFor(chk).map(d => d.q))];
+  function makeRunner() {
+    const R = { people: {}, flat: [], dsince: 0 };
+    const trig = (since, end, turnEnd) => S.cp === "words" ? since >= S.n : ((end || turnEnd) && since >= 3) || since >= 12;
+    R.feed = (wd) => {
+      const p = (R.people[wd.spk] ||= { words: [], since: 0, lastSt: null }), end = SENT_END.test(wd.w), turnEnd = wd.last;
+      if (p.lastSt != null && wd.st - p.lastSt > WINDOW_GAP) { p.words = []; p.since = 0; }      // long silence: do not blend an old sentence into a new one
+      p.lastSt = wd.st; p.words.push(wd.w); if (p.words.length > 200) p.words.shift(); R.flat.push({ spk: wd.spk, w: wd.w }); if (R.flat.length > 400) R.flat.shift(); p.since++; R.dsince++;
+      const out = [], meta = { turnId: wd.turnId, st: wd.st, tCommit: wd.t };
+      if (trig(p.since, end, turnEnd)) { p.since = 0; const chk = { scope: "person", spk: wd.spk, state: personWindow(p.words, S.win), ...meta }; chk.qids = qidsFor(chk); if (chk.qids.length && words(chk.state).length >= 3) out.push(chk); }
+      if (trig(R.dsince, end, turnEnd)) { R.dsince = 0; const chk = { scope: "call", spk: wd.spk, state: callWindow(R.flat, S.win), ...meta }; chk.qids = qidsFor(chk); if (chk.qids.length && words(chk.state).length >= 3) out.push(chk); }
+      return out;
+    };
+    return R;
+  }
+
+  /* ---------- the request: exactly what is sent to POST /v1/systemone (one call per checkpoint, every detector's question in it) ---------- */
+  const sysBody = (state, qids) => ({ state, model: "jev-latest", questions: Object.fromEntries(qids.map(q => [q, QALL[q]])) });
+  function validateReq(b) {
+    const p = [];
+    if (!(typeof b.state === "string" && b.state.trim())) p.push("state must be a non-empty string");
+    const qs = b.questions; if (!qs || typeof qs !== "object" || !Object.keys(qs).length) p.push("questions must be a non-empty object");
+    else for (const [k, q] of Object.entries(qs)) { if (!["noul", "choice", "score"].includes(q.type)) p.push(`${k}: type must be noul, choice or score`); if (q.type === "noul" && q.criteria && !("true" in q.criteria || "false" in q.criteria)) p.push(`${k}: noul criteria needs true and/or false`); }
+    return p;
+  }
+
+  /* ---------- calling the server (hosted Jev: paid, capped, off until confirmed) ---------- */
+  const ckey = (state) => S.model + "\u0001" + state;
+  const rec = (state) => { const k = ckey(state); if (!C.has(k)) C.set(k, { answers: {} }); return C.get(k); };
+  const missing = (chk) => { const r = C.get(ckey(chk.state)); return chk.qids.filter(q => !(r && r.answers[q])); };
+  const tokensOf = (state, nq) => PER_Q * nq + 2 * words(state).length;
+  async function fetchState(chk, signal) {
+    const r0 = rec(chk.state), miss = chk.qids.filter(q => !r0.answers[q]); if (!miss.length) return;
+    const res = await api("/api/batch", { method: "POST", headers: { "Content-Type": "application/json" }, signal, body: JSON.stringify({ backend: S.model, items: [{ state: chk.state, questions: Object.fromEntries(miss.map(q => [q, QALL[q]])) }] }) });
+    const r = Array.isArray(res) ? res[0] : null; if (!r || r.error) throw new Error((r && r.error) || "No result returned");
+    Object.assign(r0.answers, r.answers || {}); if (miss.some(q => !r0.answers[q])) throw new Error("Missing answer in response");
+  }
+  function readDet(d, ans) {
+    if (!ans) return null;
+    if (d.custom || d.read === "noul") { const v = Number(ans.noul); return Number.isFinite(v) ? { score: v } : null; }
+    const pr = ans.probabilities; if (!pr) return null;
+    if (d.read === "appeal") { let top = null, tp = -1; for (const [k, v] of Object.entries(pr)) if (k !== "none" && v > tp) { top = k; tp = v; } return { score: clamp(1 - (pr.none ?? 0), 0, 1), label: top }; }
+    const v = pr[d.read]; return Number.isFinite(v) ? { score: v, label: ans.choice } : null;
+  }
+  function submit(chk) {
+    S.t = audioNow(); chk.n = ++cpN; chk.t = S.t; chk.wall = performance.now(); chk.req = sysBody(chk.state, chk.qids); CPS.push(chk); if (CPS.length > 400) CPS.shift(); if (S.tab === "req") renderReq();
+    if (!S.scoring || !S.confirmed) { chk.skipped = true; return; }
+    if (!missing(chk).length) { apply(chk, 0); return; }
+    QUEUE.push(chk); while (QUEUE.length > MAX_QUEUE) { QUEUE.shift().dropped = true; N.dropped++; }   // behind: drop the oldest, never let paid calls pile up
+    N.maxQueue = Math.max(N.maxQueue, QUEUE.length + active); pump();
+  }
+  function pump() {
+    while (active < CONC && QUEUE.length) {
+      if (N.calls >= S.cap) { N.capHit = true; N.dropped += QUEUE.length; QUEUE.length = 0; break; }
+      const chk = QUEUE.shift(); active++; N.calls++; N.tokens += tokensOf(chk.state, missing(chk).length); ctl = ctl || new AbortController(); const c = ctl;
+      fetchState(chk, c.signal).then(() => { if (!c.signal.aborted) apply(chk, performance.now() - chk.wall); })
+        .catch(e => { if (!c.signal.aborted) { N.failed++; ui.err && (ui.err.textContent = `A check failed: ${e.message}`); } })
+        .finally(() => { active--; pump(); });
+    }
+  }
+  function apply(chk, lagMs) {
+    S.t = audioNow(); N.applied++; if (lagMs) { LAGS.push(lagMs); if (LAGS.length > 500) LAGS.shift(); N.e2e.push(S.t - chk.st); N.wall.push(lagMs); }
+    const r = C.get(ckey(chk.state)); chk.answers = {};
+    for (const d of detsFor(chk)) {
+      const v = readDet(d, r && r.answers[d.q]); if (!v) continue; chk.answers[d.key] = v.score;
+      const st = stFor(d, chk.spk); d.agg.lastP = v.score; d.agg.lastT = S.t; st.n++; st.latest = v.score; st.marks.push({ t: S.t, p: v.score }); if (st.marks.length > 60) st.marks.shift();
+      if (v.score >= S.gate) fire(d, chk, v);
+    }
+    if (S.tab === "req") renderReq();
+  }
+  /* on add: score each recent speaker's current window once, with only the new questions (one call per speaker, however many were added) */
+  function testMany(ds) {
+    if (!ds.length || !S.scoring || !S.confirmed || !runner) return;
+    const per = ds.filter(d => d.scope === "person"), call = ds.filter(d => d.scope === "call");
+    if (per.length) for (const spk of Object.keys(runner.people).filter(k => runner.people[k].words.length >= 3).slice(-3)) {
+      const st = personWindow(runner.people[spk].words, S.win); if (words(st).length < 3) continue;
+      N.testChecks++; submit({ scope: "person", spk, state: st, qids: [...new Set(per.map(d => d.q))], turnId: -1, st: V.audioS, tCommit: V.audioS, test: true });
+    }
+    if (call.length && runner.flat.length >= 3) { N.testChecks++; submit({ scope: "call", spk: (runner.flat[runner.flat.length - 1] || {}).spk || "speaker_0", state: callWindow(runner.flat, S.win), qids: [...new Set(call.map(d => d.q))], turnId: -1, st: V.audioS, tCommit: V.audioS, test: true }); }
+  }
+  const testNew = (d) => testMany([d]);
+
+  /* the audio clock on demand (the frame loop pauses in a background tab, so never read S.t stale) */
+  const audioNow = () => V.audioS + (V.state === "running" && V.snapWall ? Math.min(1.2, (performance.now() - V.snapWall) / 1000) : 0);
+
+  /* ---------- level, hold, fire ---------- */
+  const env = (p, age) => age < 0 ? 0 : age <= 8 ? p : p * Math.exp(-(age - 8) / 6);
+  const vis = (x) => x >= S.gate ? x : 0;
+  function tickDets(dt) {
+    const k = 1 - Math.exp(-dt / 0.18);
+    for (const d of S.dets) {
+      let best = 0, who = null;
+      for (const spk in d.st) { const st = d.st[spk], m = st.marks[st.marks.length - 1], tgt = m ? env(m.p, S.t - m.t) : 0; st.disp += (tgt - st.disp) * k; if (st.disp > best) { best = st.disp; who = spk; } }
+      d.agg.disp = best; d.agg.who = who; d.agg.n = Object.values(d.st).reduce((s, x) => s + x.n, 0);
+    }
+  }
+  function fire(d, chk, v) {
+    const st = stFor(d, chk.spk); st.lastFire = S.t; const who = d.scope === "call" ? "_call" : chk.spk;
+    const quote = words(chk.state).slice(-12).join(" "), fl = { id: ++moSeq, det: d.key, label: d.label, icon: d.icon, slot: d.slot, spk: who, at: chk.spk, t: S.t, p: v.score, quote, test: !!chk.test };
+    FLAGS.push(fl); addLog(fl); renderHits(who);
+  }
+
+  /* ---------- the thread: one row per stabiliser turn, growing as committed words arrive ---------- */
+  function onWord(wd) {
+    const vo = (VOICES[wd.spk] ||= { first: wd.st, last: wd.st, words: 0, returned: null });
+    if (vo.words && wd.st - vo.last > S.stale) { vo.returned = { gap: wd.st - vo.last, at: wd.st }; N.returns++; }
+    vo.last = wd.st; vo.words++;
+    if (!SPOKE.includes(wd.spk)) { SPOKE.push(wd.spk); renderPeople(); }
+    let row = rows[wd.turnId];
+    if (!row) {
+      const wordsEl = el("div", { class: "words", style: "position:static" });
+      row = rows[wd.turnId] = { words: wordsEl, n: 0, el: el("div", { class: "msg", style: `--v:${vcol(wd.spk)}` }, el("div", { class: "bub" }, el("div", { class: "meta" }, el("span", { class: "pnum", "aria-hidden": "true", text: code(wd.spk) }), el("span", { text: mmss(wd.st) })), el("div", { class: "txt" }, wordsEl))) };
+      const near = ui.scroller.scrollHeight - ui.scroller.scrollTop - ui.scroller.clientHeight < 80; ui.track.append(row.el); row.stick = near;
+      for (const k in PC) PC[k].node.classList.toggle("speaking", k === wd.spk);
+    }
+    const near = ui.scroller.scrollHeight - ui.scroller.scrollTop - ui.scroller.clientHeight < 80;
+    row.words.append(document.createTextNode(row.n++ ? " " : ""), el("span", { class: "w", text: wd.w }));
+    if (near) ui.scroller.scrollTop = ui.scroller.scrollHeight;
+    V.words++;
+    for (const chk of runner.feed(wd)) submit(chk);
+  }
+  function renderTail() {
+    const t = V.stab ? V.stab.tail() : [], groups = [];
+    for (const x of t) { const g = groups[groups.length - 1]; if (g && g.spk === x.spk) g.w.push(x.w); else groups.push({ spk: x.spk, w: [x.w] }); }
+    ui.tent.replaceChildren(...(groups.length ? groups.map(g => el("span", {}, el("span", { class: "pnum", style: `--v:${vcol(g.spk)}`, text: code(g.spk) }), g.w.join(" ") + " ")) : [el("span", { text: "tentative words appear here until they settle" })]));
+  }
+
+  /* ---------- detectors bar, people cards, tabs ---------- */
+  let DCH = {};
+  function renderDets() {
+    ui.dets.replaceChildren(); DCH = {};
+    for (const d of S.dets) {
+      const bar = el("i"), pv = el("span", { class: "pv", text: "–", title: "Latest score from the model (0-100)" }), node = el("div", { class: "dchip quiet" + (d.custom ? " custom" : ""), style: cvar(d.slot), title: `${d.label}\n${d.about}\n${d.scope === "call" ? "Reads the whole call." : "Scored on each person's own window."}${d.custom ? "\nUnvalidated: your own wording." : ""}` },
+        el("span", { class: "ic" }, iconEl(d.icon, 16)), el("span", { class: "nm", text: d.label }), pv, el("div", { class: "mt", "aria-hidden": "true" }, bar),
+        el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: (e) => { e.stopPropagation(); removeDet(d.key); }, text: "×" }));
+      DCH[d.key] = { d, node, bar, pv, c: {} }; ui.dets.append(node);
+    }
+    if (!S.dets.length) ui.dets.append(el("span", { class: "small muted", style: "padding-top:6px", text: "No detectors. Add one in the Detectors tab." }));
+  }
+  function updateDets() { for (const k in DCH) { const L = DCH[k], a = L.d.agg, raw = a.lastP == null ? 0 : a.lastP, shown = vis(a.disp); L.bar.style.transform = `scaleX(${clamp(raw, 0, 1).toFixed(3)})`; L.bar.style.opacity = raw >= S.gate ? 1 : 0.45; const pt = a.lastP == null ? "–" : String(Math.round(raw * 100)); if (L.c.pt !== pt) { L.pv.textContent = pt; L.c.pt = pt; } const hot = shown > 0; if (L.c.h !== hot) { L.node.classList.toggle("hot", hot); L.node.classList.toggle("quiet", !hot); L.c.h = hot; } } }
+  function renderPeople() {
+    ui.people.replaceChildren(); for (const k in PC) delete PC[k];
+    const list = [...SPOKE, ...(S.dets.some(d => d.scope === "call") ? ["_call"] : [])];
+    for (const spk of list) {
+      const hits = el("div", { class: "hits" }), call = spk === "_call";
+      const node = el("div", { class: "pcard", style: call ? "" : `--v:${vcol(spk)}`, title: call ? "Detectors that read the whole call" : `${code(spk)} (${spk})` }, el("div", { class: "h1" }, el("span", { class: "pnum", "aria-hidden": "true", text: call ? "∑" : code(spk) }), el("b", { text: call ? "Whole call" : spk })), hits);
+      const vstat = el("div", { class: "vstat" }); if (!call) node.append(vstat); PC[spk] = { node, hits, vstat }; ui.people.append(node); renderHits(spk);
+    }
+    if (!list.length) ui.people.append(el("span", { class: "small muted", style: "padding-top:4px", text: "Each voice that speaks gets a card. Detector hits appear on it." }));
+  }
+  function renderHits(spk) {
+    const P = PC[spk]; if (!P) return; const fl = FLAGS.filter(f => f.spk === spk).slice(-HITS).reverse();
+    P.hits.replaceChildren(...(fl.length ? fl.map(f => el("span", { class: "hit", style: cvar(f.slot), title: `${f.label} ${Math.round(f.p * 100)}% at ${mmss(f.t)}\n“${f.quote}”` }, iconEl(f.icon, 12), el("span", { class: "t", text: mmss(f.t) }))) : [el("span", { class: "nohit", text: "no hits yet" })]));
+  }
+  function addLog(fl) {
+    const key = fl.det + "|" + fl.spk, r = LOGROW[key], pct = Math.round(fl.p * 100) + "%";
+    if (r && S.t - r.t < 12) { r.n++; r.t = S.t; r.cnt.textContent = "×" + r.n; r.pc.textContent = pct; r.ts.textContent = mmss(S.t); r.q.textContent = "“" + fl.quote + "”"; return; }
+    const ts = el("span", { class: "ts", text: mmss(fl.t) }), cnt = el("span", { class: "cnt" }), pc = el("span", { class: "pc", text: pct }), q = el("div", { class: "q", text: "“" + fl.quote + "”" });
+    const row = el("div", { class: "fl", style: cvar(fl.slot) }, el("div", { class: "fh" }, el("span", { class: "ic" }, iconEl(fl.icon, 16)), el("b", { text: fl.label + (fl.test ? " (test on add)" : "") }), el("span", { class: "vc", text: fl.spk === "_call" ? "ALL" : code(fl.spk) }), cnt, pc, ts), q);
+    LOGROW[key] = { t: fl.t, n: 1, ts, cnt, pc, q }; ui.log.prepend(row);
+  }
+  let addMsg = "";
+  function renderDetTab() {
+    ui.dlist.replaceChildren(...S.dets.map(d => el("div", { class: "drow", style: cvar(d.slot), title: d.about + (d.example ? ` Example: “${d.example}”` : "") }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("b", { text: d.label }), el("span", { class: "badge" + (d.custom ? " warn" : ""), text: d.custom ? "unvalidated" : "validated" }), el("span", { class: "subtle small", text: (d.scope === "call" ? "whole call" : "each voice") + ` · added ${mmss(d.addedAt)}` }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: () => removeDet(d.key), text: "×" }))));
+    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)), leftNew = CORE_NEW.filter(c => !S.dets.some(d => d.key === c.key)).map(c => ({ id: c.key, name: c.name, icon: c.icon, about: c.what + " (unvalidated)", core: true }));
+    ui.dlib.replaceChildren(...(left.length + leftNew.length ? [...left, ...leftNew].map(p => el("button", { class: "libchip", type: "button", title: p.about, onclick: () => { const d = p.core ? addCore(p.id) : addLibrary(p.id); if (d) { renderAll(); testNew(d); ui.dmsg.textContent = `Added ${d.label}: applies from the next checkpoint${S.scoring && S.confirmed ? ", and once now on each recent speaker's window" : ""}.`; } } }, iconEl(p.icon, 14), p.name)) : [el("span", { class: "small muted", text: "All library detectors are on." })]));
+    ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`;
+  }
+  function renderReq() {
+    if (!CPS.length) { ui.reqPre.textContent = "No checks yet. Start a source; each check appears here exactly as it would be sent (also with scoring off)."; ui.reqBadge.replaceChildren(el("span", { class: "badge", text: "waiting" })); ui.reqSelEl.replaceChildren(); return; }
+    const last30 = CPS.slice(-30).reverse(); if (ui.reqSelEl.childElementCount !== last30.length + 1 || S.reqSel === "latest") ui.reqSelEl.replaceChildren(el("option", { value: "latest", text: "latest" }), ...last30.map(c => el("option", { value: c.n, text: `#${c.n} · ${mmss(c.t)} · ${c.scope === "call" ? "call" : code(c.spk)}${c.test ? " · test" : ""}` }))); ui.reqSelEl.value = S.reqSel;
+    const chk = S.reqSel === "latest" ? CPS[CPS.length - 1] : CPS.find(c => c.n === +S.reqSel) || CPS[CPS.length - 1], body = chk.req, probs = validateReq(body), nq = Object.keys(body.questions).length;
+    ui.reqPre.textContent = JSON.stringify(body, null, 2);
+    ui.reqBadge.replaceChildren(probs.length ? el("span", { class: "badge bad", text: `${probs.length} problem(s): ${probs.join("; ")}` }) : el("span", { class: "badge good", text: "Well formed" }), el("span", { class: "small muted", text: `check #${chk.n} · ${nq} question${nq > 1 ? "s" : ""} · ${words(body.state).length} words · ${chk.skipped ? "not sent (scoring off)" : chk.dropped ? "dropped (behind)" : chk.answers ? "answered" : "pending"}` }));
+  }
+  const med = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  const p90 = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * 0.9))]; };
+  const f1 = (x, u = "") => x == null ? "–" : x.toFixed(1) + u;
+  function counters() {
+    const st = V.stab ? V.stab.stats() : { committed: 0, rewrites: 0, punctUpdates: 0, speakerFlips: 0, lagMean: 0, lagMax: 0 }, wall = V.wall0 ? (performance.now() - V.wall0) / 1000 : 0, mins = Math.max(S.t, 1) / 60, cost = N.tokens * TARIFF / 1e6;
+    const tail = V.stab ? V.stab.tail().length : 0;
+    return [
+      ["Audio and lag", null],
+      ["audio position", f1(V.audioS, " s")], ["audio played to you", PLAY.ctx ? `${f1(PLAY.sec, " s")} (${PLAY.ctx.state})` : "off"], ["wall time", f1(wall, " s")], ["audio ÷ wall (speed)", wall > 1 ? f1(V.audioS / wall, "x") : "–"],
+      ["model step (compute / hop)", `${f1(V.stepMs, " ms")} / ${V.hopMs || "–"} ms`],
+      ["speech → committed word (mean / max)", `${f1(st.lagMean, " s")} / ${f1(st.lagMax, " s")}`],
+      ["speech → detector result (median / p90) *", `${f1(med(N.e2e), " s")} / ${f1(p90(N.e2e), " s")}`],
+      ["API round trip (median / p90)", `${f1(med(N.wall) && med(N.wall) / 1000, " s")} / ${f1(p90(N.wall) && p90(N.wall) / 1000, " s")}`],
+      ["Stabiliser", null],
+      ["words committed / tentative", `${st.committed} / ${tail}`],
+      ["committed words rewritten (letters)", String(st.rewrites)], ["…only punctuation changed", String(st.punctUpdates)], ["…speaker changed", String(st.speakerFlips)],
+      ["voice slots in use (max 8)", `${SPOKE.length}`], [`voices that returned after > ${S.stale} s silent`, String(N.returns)],
+      ["speaker flips per minute (label changes between committed words)", f1(V.flips / mins)], ["voices seen", String(SPOKE.length)],
+      ["Hosted checks", null],
+      ["checkpoints made", String(cpN)], ["calls sent / cap", `${N.calls} / ${S.cap}${N.capHit ? "  CAP REACHED" : ""}`], ["answered / failed", `${N.applied} / ${N.failed}`],
+      ["dropped (behind or cap)", String(N.dropped)], ["max in flight or queued", String(N.maxQueue)], ["add-detector test checks", String(N.testChecks)],
+      ["estimated tokens", String(N.tokens)], ["estimated spend (tariff-based)", money(cost)], ["…per audio hour at this rate", S.t > 30 ? money(cost / (S.t / 3600)) : "–"],
+      ["* speech → result is meaningful at real-time pace only", ""],
+    ];
+  }
+  function renderCounters() {
+    const rowsC = counters(), out = [];
+    for (const [k, v] of rowsC) out.push(v === null ? el("div", { class: "h", text: k }) : el("div", { class: "k", text: k }), v === null ? null : el("div", { class: "v", text: v }));
+    ui.cnt.replaceChildren(...out.filter(Boolean)); ui.capBadge.hidden = !N.capHit;
+  }
+  const SEGS = { win: WINS.map(w => [w, w.slice(1) + " words"]), cp: [["words", "every N words"], ["chunk", "at chunk ends"]] };
+  function seg(items, get, set) { const w = el("div", { class: "segmented", role: "group" }); const draw = () => w.replaceChildren(...items.map(([v, t]) => el("button", { type: "button", "aria-pressed": String(get() === v), onclick: () => { set(v); draw(); }, text: t }))); draw(); return w; }
+  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); for (const k of ["flag", "lvl", "det", "set", "req", "cnt"]) ui["pane_" + k].hidden = k !== t; if (t === "lvl") renderLevels(); if (t === "req") renderReq(); if (t === "det") renderDetTab(); if (t === "cnt") renderCounters(); }
+  function renderLevels() {
+    const cols = [...SPOKE]; if (S.dets.some(d => d.scope === "call")) cols.push("_call");
+    const head = el("tr", {}, el("th", { text: "" }), ...cols.map(c => el("th", { text: c === "_call" ? "Call" : code(c) })), el("th", { text: "checks" }));
+    const body = S.dets.map(d => el("tr", { style: cvar(d.slot) }, el("td", { class: "n" }, iconEl(d.icon, 13), " " + d.label + (d.custom ? " ?" : "")), ...cols.map(c => {
+      const st = d.st[c], ok = st && st.n; const p = ok ? st.latest : null;
+      return el("td", { class: "c", style: ok ? `background:color-mix(in srgb, var(--c) ${Math.round(clamp(p, 0, 1) * 70)}%, transparent);${p >= S.gate ? "outline:2px solid var(--c);" : ""}` : "", title: ok ? `${d.label} on ${c === "_call" ? "the whole call" : code(c)}: ${Math.round(p * 100)}% (${st.n} checks, peak ${Math.round(Math.max(...st.marks.map(m => m.p)) * 100)}%)` : "not scored yet", text: ok ? String(Math.round(p * 100)) : "·" });
+    }), el("td", { class: "c", text: String(Object.values(d.st).reduce((n, x) => n + x.n, 0)) })));
+    ui.lvl.replaceChildren(el("table", { class: "lv" }, el("thead", {}, head), el("tbody", {}, ...body)), el("p", { class: "help", text: `Latest score per detector and voice, 0-100. Outlined = at or above the alert level (${Math.round(S.gate * 100)}). "?" = your own wording, unvalidated. Voices appear as they speak.` }));
+  }
+  /* Voice ages. NVIDIA documents a fixed-size speaker memory and at most 8 labels, but no expiry time; the stale threshold is our own heuristic (Settings). */
+  function updateVoices() {
+    const now = audioNow(), n = SPOKE.length;
+    for (const spk in PC) {
+      const vo = VOICES[spk], P = PC[spk]; if (spk === "_call" || !vo) continue;
+      const age = now - vo.last, ret = vo.returned && now - vo.returned.at < 90;
+      const txt = ret ? `returned after ${mmss(vo.returned.gap)} · identity unverified` : age < 3 ? "speaking now" : age <= S.stale ? `heard ${mmss(age)} ago` : `silent ${mmss(age)} · label may be reused`;
+      if (P.vstat.textContent !== txt) P.vstat.textContent = txt;
+      P.vstat.classList.toggle("ret", !!ret); P.node.classList.toggle("stale", !ret && age > S.stale);
+      P.node.title = `${code(spk)} (${spk}): first heard ${mmss(vo.first)}, ${vo.words} words. Labels come from the diarizer's memory of earlier speakers; NVIDIA gives no expiry time, so after ${S.stale} s of silence this label is shown as possibly reused.`;
+    }
+    const full = n >= MAX_VOICES;
+    ui.vcap.textContent = `${n} of ${MAX_VOICES} voices${full ? " · full" : ""}`; ui.vcap.className = "vcap" + (full ? " bad" : n >= MAX_VOICES - 1 ? " warn" : "");
+    ui.vcap.title = "The diarizer supports at most 8 voices and numbers them by first arrival. Beyond 8, new voices can be missed or merged into an existing label (NVIDIA guide).";
+    const note = full ? "All 8 voice slots are in use: any further new voice may be merged into an existing label." : "committed words are final; the italic line is still settling";
+    if (ui.convNote.textContent !== note) { ui.convNote.textContent = note; ui.convNote.style.color = full ? "var(--bad)" : ""; }
+  }
+  const renderAll = () => { renderDets(); renderDetTab(); renderPeople(); if (ui.cnt) renderCounters(); };
+
+  /* ---------- voice source: WebSocket to the voice server, stabiliser, ingest commands ---------- */
+  const setState = (s, msg) => { V.state = s; V.msg = msg || ""; ui.pill.className = "pill" + (s === "running" || s === "starting" ? " on" : ""); ui.pillTxt.textContent = msg ? `${s} · ${msg}` : s; ui.start.disabled = s === "running" || s === "starting"; ui.stop.disabled = !(s === "running" || s === "starting"); };
+  function resetRun() {
+    ui.track.replaceChildren(); ui.log.replaceChildren(); LOGROW = {}; for (const k in rows) delete rows[k]; SPOKE.length = 0; FLAGS.length = 0; CPS.length = 0; LAGS.length = 0; QUEUE.length = 0; C.clear();
+    if (ctl) ctl.abort(); ctl = null; active = 0; cpN = 0; moSeq = 0; for (const k in VOICES) delete VOICES[k]; Object.assign(N, { returns: 0, calls: 0, dropped: 0, capHit: false, failed: 0, tokens: 0, applied: 0, maxQueue: 0, e2e: [], wall: [], testChecks: 0 });
+    for (const d of S.dets) { d.st = {}; d.agg = { disp: 0, who: null, n: 0 }; d.addedAt = 0; }
+    Object.assign(V, { audioS: 0, snapWall: 0, snaps: 0, words: 0, flips: 0, prevSpk: null, lastSnap: null, stepMs: 0, wall0: performance.now() });
+    V.stab = VoiceSource.createStabiliser({ K: S.k }); runner = makeRunner(); S.t = 0; renderAll(); renderTail(); ui.err.textContent = "";
+  }
+  function onSnapshot(m) {
+    V.snaps++; V.audioS = m.audio_s; V.snapWall = performance.now(); V.stepMs = m.step_ms; V.hopMs = m.hop_ms; V.lastSnap = m;
+    for (const wd of V.stab.feed(m)) { if (V.prevSpk && V.prevSpk !== wd.spk) V.flips++; V.prevSpk = wd.spk; onWord(wd); }
+    renderTail();
+  }
+  /* ---------- listen: the server sends back the exact paced PCM it feeds the model (file / YouTube, real time only) ---------- */
+  const PLAY = { ctx: null, next: 0, sec: 0, on: true, delay: 0 };
+  function playOpen() { playClose(); if (!PLAY.on) return; try { PLAY.ctx = new AudioContext(); PLAY.ctx.resume(); PLAY.next = 0; PLAY.sec = 0; } catch { PLAY.ctx = null; } }
+  function playClose() { if (PLAY.ctx) { try { PLAY.ctx.close(); } catch {} } PLAY.ctx = null; }
+  function playChunk(ab) {
+    const c = PLAY.ctx; if (!c || ab.byteLength < 2) return;
+    const i16 = new Int16Array(ab, 0, ab.byteLength >> 1), buf = c.createBuffer(1, i16.length, 16000), ch = buf.getChannelData(0);
+    for (let i = 0; i < i16.length; i++) ch[i] = i16[i] / 32768;
+    if (!PLAY.next || PLAY.next < c.currentTime) PLAY.next = c.currentTime + 0.25 + PLAY.delay;     // first chunk, or an underrun: re-buffer
+    const src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination); src.start(PLAY.next); PLAY.next += buf.duration; PLAY.sec += buf.duration;
+  }
+  const wsUrl = () => ui.wsurl.value.trim();
+  function connect() {
+    return new Promise((resolve, reject) => {
+      if (V.ws && V.ws.readyState === WebSocket.OPEN) return resolve(V.ws);
+      let ws; try { ws = new WebSocket(wsUrl()); } catch (e) { return reject(e); }
+      ws.binaryType = "arraybuffer"; V.ws = ws; let opened = false;
+      ws.onopen = () => { opened = true; resolve(ws); };
+      ws.onerror = () => { if (!opened) reject(new Error(`Cannot reach the voice server at ${wsUrl()}. Is it running (port 8200), and is that port reachable from this browser?`)); };
+      ws.onclose = () => { if (V.ws === ws) { V.ws = null; if (V.state === "running" || V.state === "starting") setState("idle", "voice server disconnected"); } };
+      ws.onmessage = (e) => { if (typeof e.data !== "string") { playChunk(e.data); return; } let m; try { m = JSON.parse(e.data); } catch { return; }
+        if (m.kind === "transcript") onSnapshot(m);
+        else if (m.kind === "flush") { for (const wd of V.stab.flush()) onWord(wd); renderTail(); }
+        else if (m.kind === "ingest") onIngest(m);
+        else if (m.kind === "error") ui.err.textContent = "Voice server: " + m.error; };
+    });
+  }
+  function onIngest(m) {
+    if (m.state === "error") { setState("idle", "ingest failed"); ui.err.textContent = m.error; }
+    else if (m.state === "uploading") setState("starting", "uploading file");
+    else if (m.state === "started") setState("running", `${m.source}, ${m.pace === "max" ? "as fast as possible" : "real time"}`);
+    else if (m.state === "running") V.ingestPos = m.pos_s;
+    else if (m.state === "done") setState("idle", `finished at ${mmss(m.pos_s || V.audioS)}`);
+    else if (m.state === "stopped") setState("idle", "stopped");
+  }
+  async function start() {
+    ui.err.textContent = ""; const wantPlay = (S.src === "youtube" || S.src === "file") && S.pace === "realtime" && PLAY.on;
+    if (wantPlay) playOpen(); else playClose();            // the AudioContext must be created inside the click to be allowed to play
+    try {
+      setState("starting", "connecting"); const ws = await connect(); resetRun();
+      ws.send(JSON.stringify({ cmd: "reset" }));
+      if (S.src === "youtube") { const url = ui.yt.value.trim(); if (!url) throw new Error("Paste a YouTube link."); ws.send(JSON.stringify({ cmd: "ingest", kind: "youtube", url, pace: S.pace, play: wantPlay })); setState("starting", "fetching from YouTube"); }
+      else if (S.src === "file") {
+        let blob, fname;
+        if (ui.lib.value) { const r = await fetch("/audio/" + encodeURIComponent(ui.lib.value)); if (!r.ok) throw new Error("Could not read that library file."); blob = await r.blob(); fname = ui.lib.value; ui.libAudio.pause(); }
+        else { blob = ui.file.files[0]; if (!blob) throw new Error("Choose a file from the library or from your computer."); fname = blob.name; }
+        if (blob.size > 300 * 1024 * 1024) throw new Error("File is over 300 MB.");
+        ws.send(JSON.stringify({ cmd: "ingest", kind: "file", name: fname, pace: S.pace, play: wantPlay })); setState("starting", "uploading file");
+        const buf = await blob.arrayBuffer(); for (let o = 0; o < buf.byteLength; o += 262144) { ws.send(buf.slice(o, o + 262144)); if (ws.bufferedAmount > 8e6) await new Promise(r => setTimeout(r, 30)); }
+        ws.send(JSON.stringify({ cmd: "ingest_end" }));
+      } else await startMic(ws);
+    } catch (e) { setState("idle", "not started"); ui.err.textContent = e.message || String(e); }
+  }
+  async function stop() {
+    if (V.mic) await stopMic(); else if (V.ws && V.ws.readyState === WebSocket.OPEN) V.ws.send(JSON.stringify({ cmd: "ingest_stop" }));
+    playClose(); setState("idle", "stopped");
+  }
+  /* mic or shared tab/call audio: raw PCM frames over the same socket (needs https or localhost) */
+  const WORKLET = URL.createObjectURL(new Blob([`class P extends AudioWorkletProcessor{process(i){const c=i[0]&&i[0][0];if(c&&c.length)this.port.postMessage(c.slice());return true}}registerProcessor('pcm-capture',P)`], { type: "application/javascript" }));
+  const f16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); o[i] = s < 0 ? s * 32768 : s * 32767; } return o; };
+  async function startMic(ws) {
+    if (!navigator.mediaDevices) throw new Error("The microphone needs https or localhost. Open this page as http://localhost:8100/flow-lab.");
+    const streams = [];
+    if (S.src === "mic" || S.src === "both") streams.push(await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } }));
+    if (S.src === "tab" || S.src === "both") { const d = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); d.getVideoTracks().forEach(t => t.stop()); if (!d.getAudioTracks().length) throw new Error("No audio in the share. Choose a tab and tick 'Share tab audio'."); streams.push(new MediaStream(d.getAudioTracks())); }
+    const ctx = new AudioContext({ sampleRate: 16000 }); await ctx.audioWorklet.addModule(WORKLET);
+    const node = new AudioWorkletNode(ctx, "pcm-capture"), gain = ctx.createGain(); gain.gain.value = 0; let buf = [];
+    node.port.onmessage = (e) => { buf.push(e.data); const n = buf.reduce((a, b) => a + b.length, 0); if (n >= 2048) { const m = new Float32Array(n); let o = 0; for (const b of buf) { m.set(b, o); o += b.length; } buf = []; if (ws.readyState === WebSocket.OPEN) ws.send(f16(m).buffer); } };
+    const srcs = streams.map(s => ctx.createMediaStreamSource(s)); srcs.forEach(s => s.connect(node)); node.connect(gain); gain.connect(ctx.destination);
+    V.mic = { ctx, streams, node, srcs }; setState("running", ctx.sampleRate === 16000 ? "listening" : `listening (context ${ctx.sampleRate} Hz, expected 16000)`);
+  }
+  async function stopMic() {
+    const m = V.mic; V.mic = null; if (!m) return;
+    m.srcs.forEach(s => s.disconnect()); m.streams.forEach(s => s.getTracks().forEach(t => t.stop())); await m.ctx.close();
+    if (V.ws && V.ws.readyState === WebSocket.OPEN) V.ws.send(JSON.stringify({ cmd: "flush" }));
+  }
+
+  /* ---------- frame loop: the audio clock drives detector decay ---------- */
+  let last = performance.now(), cntAt = 0;
+  function frame(now) {
+    requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    const running = V.state === "running"; S.t = V.audioS + (running && V.snapWall ? Math.min(1.2, (now - V.snapWall) / 1000) : 0);
+    tickDets(dt); updateDets(); if (now - cntAt > 300 && (S.tab === "cnt" || S.tab === "lvl")) { cntAt = now; if (S.tab === "cnt") renderCounters(); else renderLevels(); } else if (now - cntAt > 1000) { cntAt = now; ui.capBadge.hidden = !N.capHit; }
+    ui.offBanner.hidden = (S.scoring && S.confirmed) || V.state === "idle"; if (now - (frame.vt || 0) > 500) { frame.vt = now; updateVoices(); }
+  }
+
+  /* ---------- page ---------- */
+  function build() {
+    const $ = (n, a, ...c) => el(n, a, ...c);
+    ui.pillTxt = $("span", { text: "idle" }); ui.pill = $("span", { class: "pill", role: "status" }, $("span", { class: "rec" }), ui.pillTxt);
+    ui.yt = $("input", { type: "text", placeholder: "https://www.youtube.com/watch?v=…  (youtube.com or youtu.be only)", "aria-label": "YouTube link" });
+    ui.file = $("input", { type: "file", accept: "audio/*,video/*,.m4a,.mp4,.mp3,.wav,.ogg,.flac,.webm", "aria-label": "Audio file" });
+    ui.lib = $("select", { "aria-label": "Audio library", style: "max-width:300px" }); ui.libAudio = $("audio", { controls: true, preload: "metadata", hidden: true, style: "height:32px;width:300px" });
+    ui.libLoad = async () => { try { const r = await api("/api/audio-files"); ui.lib.replaceChildren($("option", { value: "", text: r.files.length ? "pick from the library…" : "library is empty (put files in data/audio)" }), ...r.files.map(f => $("option", { value: f.file, text: `${f.file} · ${mmss(f.duration || 0)} · ${(f.size / 1048576).toFixed(1)} MB` }))); } catch (e) { ui.err.textContent = "Audio library: " + e.message; } };
+    ui.lib.onchange = () => { if (ui.lib.value) { ui.libAudio.src = "/audio/" + encodeURIComponent(ui.lib.value); ui.libAudio.hidden = false; ui.file.value = ""; } else { ui.libAudio.pause(); ui.libAudio.removeAttribute("src"); ui.libAudio.hidden = true; } };
+    ui.file.onchange = () => { if (ui.file.files.length) { ui.lib.value = ""; ui.lib.onchange(); } };
+    ui.libBox = $("div", { class: "field", title: "Files in data/audio on the server. Play one here, then press Start to transcribe it." }, $("label", { text: "Audio library" }), ui.lib, ui.libAudio);
+    ui.wsurl = $("input", { type: "text", value: `ws://${location.hostname || "127.0.0.1"}:8200/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
+    ui.start = $("button", { class: "btn primary", type: "button", onclick: start, text: "Start" }); ui.stop = $("button", { class: "btn", type: "button", onclick: stop, text: "Stop", disabled: true });
+    const inputs = $("div", { class: "field" }); const showSrc = () => { ui.yt.hidden = S.src !== "youtube"; ui.file.hidden = S.src !== "file"; ui.libBox.hidden = S.src !== "file"; };
+    ui.srcSeg = seg([["youtube", "YouTube link"], ["file", "Audio file"], ["mic", "Microphone"], ["tab", "Tab / call audio"]], () => S.src, (v) => { S.src = v; showSrc(); paceRow(); });
+    ui.paceSeg = seg([["realtime", "Real time"], ["max", "As fast as it processes (no sound)"]], () => S.pace, (v) => { S.pace = v; });
+    const paceRow = () => { const live = S.src === "mic" || S.src === "tab"; ui.paceSeg.parentNode.hidden = live; ui.listenBox.hidden = live; };
+    const lc = $("input", { type: "checkbox", checked: true, "aria-label": "Listen to the audio", onchange: () => { PLAY.on = lc.checked; if (!PLAY.on) playClose(); } }), ld = $("input", { type: "number", min: 0, max: 5, step: 0.5, value: 0, style: "width:58px", "aria-label": "Audio delay in seconds", onchange: () => { PLAY.delay = clamp(parseFloat(ld.value) || 0, 0, 5); } });
+    ui.listenBox = $("div", { class: "field", title: "Plays the same audio the model hears, at the same moment (real-time pace only). Words show up a second or two later, which is the real transcription lag; add a delay to line them up by ear." }, $("label", { text: "Listen" }), $("span", { class: "chk" }, lc, "play audio", $("span", { class: "small muted", text: "delay s" }), ld));
+    ui.err = $("div", { class: "small", style: "color:var(--bad)", role: "alert" });
+    ui.capBadge = $("span", { class: "badge bad", text: "session cap reached: no more hosted calls", hidden: true });
+    ui.confirm = $("div", { class: "confirm", hidden: true });
+    ui.offBanner = $("div", { class: "confirm", role: "alert", hidden: true, style: "border-color:var(--bad);background:var(--bad-soft)" }, $("b", { text: "Hosted Jev is off: the detectors are not scoring anything." }), $("button", { class: "btn primary", type: "button", text: "Turn on hosted Jev", onclick: () => { ui.confirm.hidden = false; } }));
+    const scoreBtn = $("button", { class: "btn", type: "button", "aria-pressed": "false" });
+    const drawScore = () => { scoreBtn.textContent = S.scoring && S.confirmed ? `Hosted Jev: ON (paid, cap ${S.cap})` : "Hosted Jev: OFF (click to turn on)"; scoreBtn.setAttribute("aria-pressed", String(S.scoring && S.confirmed)); };
+    scoreBtn.onclick = () => { if (S.scoring && S.confirmed) { S.scoring = false; drawScore(); ui.confirm.hidden = true; return; } ui.confirm.hidden = false; };
+    const capIn = $("input", { type: "number", value: S.cap, min: 10, max: 300, step: 10, style: "width:70px", "aria-label": "Session cap in calls" });
+    ui.est = $("span", { class: "est" });
+    const okBtn = $("button", { class: "btn primary", type: "button", text: "Confirm: use paid hosted Jev", onclick: () => { S.cap = clamp(parseInt(capIn.value, 10) || 300, 10, 300); S.scoring = true; S.confirmed = true; ui.confirm.hidden = true; drawScore(); } });
+    ui.confirm.replaceChildren($("span", { text: "Each check is one paid call to hosted Jev. Session cap (calls):" }), capIn, ui.est, okBtn, $("button", { class: "btn ghost", type: "button", text: "Cancel", onclick: () => { ui.confirm.hidden = true; } }));
+    const refreshEst = () => { const nq = new Set(S.dets.filter(d => d.scope === "person").map(d => d.q)).size, tok = PER_Q * nq + 2 * parseInt(S.win.slice(1), 10), cap = clamp(parseInt(capIn.value, 10) || 300, 10, 300); ui.est.textContent = `≈ ${tok} tokens a check, cap ≈ ${money(tok * cap * TARIFF / 1e6)} at most`; }; capIn.oninput = refreshEst; scoreBtn.addEventListener("click", refreshEst); setInterval(refreshEst, 1500);
+    drawScore();
+
+    ui.dets = $("div", { class: "dets" }); ui.people = $("div", { class: "people" });
+    ui.scroller = $("div", { class: "scroller" }, ui.track = $("div", { class: "track" })); ui.tent = $("div", { class: "tent" });
+    const conv = $("section", { class: "pn", style: "grid-area:conv" }, $("header", {}, $("h4", { text: "Live transcript" }), ui.convNote = $("span", { class: "r", text: "committed words are final; the italic line is still settling" })), $("div", { class: "bd", style: "flex-direction:column;padding:0 12px" }, ui.scroller, ui.tent));
+    const top = $("section", { class: "pn toppn", style: "grid-area:top" }, $("div", { class: "trow" }, $("h4", { text: "Detectors" }), ui.dets, $("span", {})), $("div", { class: "trow" }, $("h4", { text: "Voices" }), ui.people, ui.vcap = $("span", { class: "vcap", text: "0 of 8 voices" })));
+
+    ui.tabs = $("div", { class: "tabs2", role: "tablist" }, ...[["flag", "Flagged"], ["lvl", "Levels"], ["det", "Detectors"], ["set", "Settings"], ["req", "Request"], ["cnt", "Counters"]].map(([t, l]) => $("button", { type: "button", role: "tab", "data-t": t, onclick: () => setTab(t), text: l })));
+    ui.log = $("div", {}); ui.pane_flag = $("div", { class: "tabpane" }, ui.log); ui.lvl = $("div", {}); ui.pane_lvl = $("div", { class: "tabpane", hidden: true }, ui.lvl);
+    ui.dlist = $("div", {}); ui.dlib = $("div", { class: "libchips" }); ui.dcount = $("span", { class: "small muted" }); ui.dmsg = $("div", { class: "small", style: "min-height:16px;color:var(--good)" });
+    /* detector editing: files, name-first add with AI draft, suggestions */
+    const dname = $("input", { type: "text", maxlength: 40, placeholder: "Just a name is enough, e.g. Guilt tripping" }), dwhat = $("input", { type: "text", placeholder: "What it should detect (leave empty and AI drafts it from the name)" }), dex = $("input", { type: "text", placeholder: "Optional example sentence" });
+    const dscope = { v: "person" }; let pendingIcon = ""; const scopeHost = $("div", {});
+    const drawScope = () => scopeHost.replaceChildren(seg([["person", "each voice"], ["call", "whole call"]], () => dscope.v, (v) => { dscope.v = v; })); drawScope();
+    const say = (t, bad) => { ui.dmsg.textContent = t; ui.dmsg.style.color = bad ? "var(--bad)" : "var(--good)"; };
+    const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, icons: ICON_NAMES }) });
+    const applied = (ds, verb) => { renderAll(); testMany(ds); return `${verb} ${ds.length} detector${ds.length === 1 ? "" : "s"}: from the next checkpoint${S.scoring && S.confirmed && ds.length && runner && Object.keys(runner.people).length ? ", and tried once now on each recent speaker" : ""}.`; };
+    async function draftInto() {
+      const name = dname.value.trim(); if (!name) { say("Type a name first.", true); return null; }
+      say("Drafting…"); let r; try { r = await post("/api/detector-draft", { name }); } catch (e) { say("Draft failed: " + e.message, true); return null; }
+      const d = r.detector; dwhat.value = d.what; dex.value = d.example || ""; dscope.v = d.scope; pendingIcon = d.icon || ""; drawScope();
+      say(r.ai ? "Drafted by AI. Edit anything, then press Add." : (r.note || "Plain template filled in; edit it, then press Add."), !r.ai); return r;
+    }
+    const doAdd = async () => {
+      if (!dname.value.trim()) { say("Give it a name.", true); return; }
+      if (!dwhat.value.trim()) { const r = await draftInto(); if (!r) return; if (!r.ai) return; }       // name only: AI drafts it, then it is added; a plain template is left for you to edit
+      const d = addCustom(dname.value, dwhat.value, dex.value, dscope.v, pendingIcon);
+      if (d) { dname.value = dwhat.value = dex.value = ""; pendingIcon = ""; say(applied([d], "Added") + " Your own wording is unvalidated."); }
+    };
+    let proposals = []; const sctx = $("input", { type: "text", placeholder: "Describe the conversation: phone scams, a sales call, a job interview…" }); ui.sugg = $("div", { class: "libchips" });
+    const drawSugg = () => ui.sugg.replaceChildren(...proposals.map(p => $("button", { class: "libchip", type: "button", title: `${p.what}${p.example ? `\ne.g. “${p.example}”` : ""}`, onclick: () => { const d = addSpec(p); proposals = proposals.filter(x => x !== p); drawSugg(); say(d ? applied([d], "Added") : "Skipped: already on, or the list is full.", !d); } }, iconEl(p.icon && ICONS[p.icon] ? p.icon : "flag", 14), p.name)), ...(proposals.length ? [$("button", { class: "btn", type: "button", text: "Add all", onclick: () => { const ds = proposals.map(addSpec).filter(Boolean); proposals = []; drawSugg(); say(applied(ds, "Added")); } })] : []));
+    const suggest = async () => { say("Asking for suggestions…"); try { const r = await post("/api/detector-suggest", { context: sctx.value, n: 8, existing: S.dets.map(d => d.name || d.label) }); proposals = r.detectors || []; drawSugg(); say(r.ai ? `${proposals.length} suggestions: click one to add it, or Add all.` : (r.note || "No suggestions."), !r.ai || !proposals.length); } catch (e) { say("Suggest failed: " + e.message, true); } };
+    ui.fsel = $("select", { "aria-label": "Detector file" }); ui.aiNote = $("span", { class: "small muted" });
+    ui.loadFiles = async () => { try { const r = await api("/api/detector-files"); ui.fsel.replaceChildren(...r.files.map(f => $("option", { value: f.file, title: f.description, text: `${f.name} (${f.count}) · ${f.file}` }))); ui.aiNote.textContent = r.ai ? `AI drafts on (${r.ai_model}, ${r.ai_used}/${r.ai_cap} used)` : "AI drafts off: no ANTHROPIC_API_KEY on the server, so a name gets a plain template"; } catch (e) { say("Could not list detector files: " + e.message, true); } };
+    const useFile = async (replace) => {
+      const f = ui.fsel.value; if (!f) return;
+      try { const doc = await api("/api/detector-file?file=" + encodeURIComponent(f)); if (replace) S.dets = []; const ds = doc.detectors.map(addSpec).filter(Boolean); say(applied(ds, replace ? `Loaded “${doc.name}”:` : `Added from “${doc.name}”:`) + (doc.skipped ? ` ${doc.skipped} invalid entries skipped.` : "")); } catch (e) { say(e.message, true); }
+    };
+    const fileIn = $("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: async () => { const f = fileIn.files[0]; fileIn.value = ""; if (!f) return; try { const doc = JSON.parse(await f.text()); if (!Array.isArray(doc.detectors)) throw new Error("a detector file needs a top-level `detectors` list"); const ds = doc.detectors.slice(0, 40).map(addSpec).filter(Boolean); say(applied(ds, `Imported “${doc.name || f.name}”:`)); } catch (e) { say("Could not import that file: " + e.message, true); } } });
+    const sname = $("input", { type: "text", placeholder: "file name, e.g. my-detectors", style: "width:170px", "aria-label": "Save as file name" }); let overwrite = false;
+    const saveFile = async () => { try { const r = await post("/api/detector-save", { file: sname.value, doc: exportDoc(), overwrite }); overwrite = false; say(`Saved ${r.count} detectors to demo/detectors/${r.file}`); ui.loadFiles(); } catch (e) { if (/already exists/.test(e.message)) { overwrite = true; say(e.message + ". Press Save again to overwrite it.", true); } else say("Save failed: " + e.message, true); } };
+    ui.pane_det = $("div", { class: "tabpane col", hidden: true },
+      $("div", { class: "sec" }, $("b", { text: "Watching for" }), ui.dcount), $("div", { class: "mrow" }, $("button", { class: "btn", type: "button", text: "Load the core 16", onclick: () => { loadCore(); say("Core 16 loaded (9 validated, 7 unvalidated)."); } }), $("button", { class: "btn ghost", type: "button", text: "Clear all", onclick: () => { S.dets = []; renderAll(); say("All detectors removed."); } })), ui.dlist,
+      $("div", { class: "sec", style: "margin-top:8px" }, $("b", { text: "Detector files" }), ui.aiNote),
+      $("div", { class: "mrow" }, ui.fsel, $("button", { class: "btn", type: "button", text: "Replace with this file", onclick: () => useFile(true) }), $("button", { class: "btn", type: "button", text: "Add from this file", onclick: () => useFile(false) }), $("button", { class: "btn ghost", type: "button", text: "Refresh", onclick: () => ui.loadFiles() })),
+      $("div", { class: "mrow" }, $("button", { class: "btn ghost", type: "button", text: "Import a JSON file…", onclick: () => fileIn.click() }), fileIn, $("button", { class: "btn ghost", type: "button", text: "Download current", onclick: () => download("detectors.json", JSON.stringify(exportDoc(), null, 2), "application/json") }), sname, $("button", { class: "btn ghost", type: "button", text: "Save to demo/detectors", onclick: saveFile })),
+      $("div", { class: "sec", style: "margin-top:8px" }, $("b", { text: "Add a validated or core detector" })), ui.dlib,
+      $("div", { class: "dform" }, $("b", { text: "Add your own: a name is enough" }), $("label", {}, "Name", dname), $("label", {}, "What it should detect", dwhat), $("label", {}, "Example", dex), $("div", { class: "frow" }, scopeHost, $("button", { class: "btn primary", type: "button", onclick: doAdd, text: "Add" }), $("button", { class: "btn", type: "button", onclick: draftInto, text: "Draft it (review first)" }))),
+      $("div", { class: "dform" }, $("b", { text: "Suggest detectors for this kind of conversation" }), $("div", { class: "frow" }, sctx, $("button", { class: "btn", type: "button", onclick: suggest, text: "Suggest 8" })), ui.sugg),
+      ui.dmsg,
+      $("details", { class: "dnew" }, $("summary", { text: "What makes a good detector?" }), $("div", { class: "small", style: "display:grid;gap:4px;padding-top:6px" },
+        $("span", { text: "One observable behaviour in the words, phrased “the speaker …”, that a stranger could answer yes or no from 20 to 40 words." }),
+        $("span", { text: "Good: “the speaker asks for money, gift cards, cryptocurrency, or a payment code”." }),
+        $("span", { text: "Weak: “the speaker is lying” (truth is not in the words), “is angry and threatening” (two detectors), “is bad” (too vague)." }),
+        $("span", { text: "An example sentence helps. Your own detectors are unvalidated, so treat their scores as a hint, not a measurement." }))));
+    const kIn = $("input", { type: "number", min: 0, max: 8, value: S.k, style: "width:60px", onchange: () => { S.k = clamp(parseInt(kIn.value, 10) || 0, 0, 8); } }), nIn = $("input", { type: "number", min: 3, max: 40, value: S.n, style: "width:60px", onchange: () => { S.n = clamp(parseInt(nIn.value, 10) || 10, 3, 40); } }), stIn = $("input", { type: "number", min: 30, max: 1800, step: 30, value: S.stale, style: "width:70px", onchange: () => { S.stale = clamp(parseInt(stIn.value, 10) || 120, 30, 1800); } }), gIn = $("input", { type: "number", min: 0.5, max: 0.99, step: 0.05, value: S.gate, style: "width:70px", onchange: () => { S.gate = clamp(parseFloat(gIn.value) || 0.8, 0.5, 0.99); } });
+    ui.pane_set = $("div", { class: "tabpane col", hidden: true }, $("div", { class: "mrow" }, $("span", { class: "l", text: "Window each check reads" }), seg(SEGS.win, () => S.win, (v) => { S.win = v; })), $("div", { class: "mrow" }, $("span", { class: "l", text: "Check" }), seg(SEGS.cp, () => S.cp, (v) => { S.cp = v; }), $("span", { class: "l", text: "N =" }), nIn), $("div", { class: "mrow" }, $("span", { class: "l", text: "Alert at" }), gIn, $("span", { class: "l", text: "Words held back (K, applies at next Start)" }), kIn), $("div", { class: "mrow" }, $("span", { class: "l", text: "Voice label counts as stale after (s of silence)" }), stIn, $("span", { class: "l", text: "our heuristic; NVIDIA gives no expiry time" })),
+      $("p", { class: "help", text: "Changes to window, cadence and alert apply to the next checkpoint. Model: hosted Jev. Words arrive with no per-word timestamps and unreliable full stops, so the lab defaults to a 20-word window every 10 words." }));
+    ui.reqSelEl = $("select", { "aria-label": "Which check", onchange: () => { S.reqSel = ui.reqSelEl.value; renderReq(); } }); ui.reqBadge = $("div", { class: "reqhead" }); ui.reqPre = $("pre", { class: "req" });
+    ui.pane_req = $("div", { class: "tabpane col", hidden: true }, $("div", { class: "reqbar" }, ui.reqBadge, ui.reqSelEl, $("button", { class: "btn ghost", type: "button", text: "Copy", onclick: () => copy(ui.reqPre.textContent) })), ui.reqPre);
+    ui.cnt = $("div", { class: "cnt-grid" });
+    ui.pane_cnt = $("div", { class: "tabpane col", hidden: true }, ui.cnt, $("div", { class: "foot" }, $("button", { class: "btn", type: "button", text: "Download session stats (JSON)", onclick: () => download("flow-lab-stats.json", JSON.stringify(exportStats(), null, 2), "application/json") })));
+    const rail = $("section", { class: "pn", style: "grid-area:rail" }, ui.tabs, ui.pane_flag, ui.pane_lvl, ui.pane_det, ui.pane_set, ui.pane_req, ui.pane_cnt);
+
+    const app = document.getElementById("app");
+    app.append($("div", { class: "cp" },
+      $("div", { class: "top" }, $("h1", { text: "Flow lab" }), $("span", { class: "lab-banner", text: "Mock-up · not in the nav · nothing saved · transcripts stay in this tab" }), $("div", { class: "ctl" }, ui.pill, ui.start, ui.stop)),
+      $("div", { class: "srcrow" }, $("div", { class: "field" }, $("label", { text: "Source" }), ui.srcSeg), $("div", { class: "field" }, $("label", { text: "Link or file" }), ui.yt, ui.file), ui.libBox, $("div", { class: "field" }, $("label", { text: "Pace" }), ui.paceSeg), ui.listenBox, $("div", { class: "field" }, $("label", { text: "Voice server" }), ui.wsurl), $("div", { class: "field" }, $("label", { text: "Scoring" }), scoreBtn), ui.capBadge),
+      ui.offBanner, ui.confirm, ui.err,
+      $("div", { class: "stage lab" }, top, conv, rail)));
+    showSrc(); paceRow(); setTab("flag");
+  }
+  function exportStats() { return { when: new Date().toISOString(), source: S.src, pace: S.pace, settings: { win: S.win, cp: S.cp, n: S.n, k: S.k, gate: S.gate }, detectors: S.dets.map(d => ({ key: d.key, custom: d.custom, addedAtAudioS: d.addedAt })), counters: Object.fromEntries(counters().filter(r => r[1] !== null && r[1] !== "").map(r => [r[0], r[1]])), stabiliser: V.stab && V.stab.stats(), checks: CPS.map(c => ({ n: c.n, at: c.t, scope: c.scope, nq: c.qids.length, words: words(c.state).length, skipped: !!c.skipped, dropped: !!c.dropped, answered: !!c.answers, test: !!c.test })) }; }
+
+  (async () => {
+    await Jev.ready; build();
+    try { const models = await api("/api/models"), j = models.models.find(m => m.id === "jev"), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
+    try {
+      const ids = [...new Set(Object.values(QSETS))], sets = await Promise.all(ids.map(id => api("/api/probe?set=" + encodeURIComponent(id))));
+      const bySet = Object.fromEntries(ids.map((id, i) => [id, sets[i]])); Object.entries(QSETS).forEach(([q, set]) => { QALL[q] = bySet[set].items[0].question; });
+    } catch (e) { ui.err.textContent = "Could not load the question sets: " + e.message; }
+    loadCore(); ui.loadFiles(); ui.libLoad();
+    resetRun(); V.wall0 = 0; renderAll(); requestAnimationFrame(frame);
+    window.__lab = { S, V, N, CPS, FLAGS, QALL, counters, exportStats, start, stop, addCustom, addSpec, addLibrary, addCore, loadCore, testNew, testMany, exportDoc, updateVoices, VOICES, renderAll, get stab() { return V.stab; }, get runner() { return runner; }, onSnapshot };
+  })();
+})();
+</script>
+</body>
+</html>

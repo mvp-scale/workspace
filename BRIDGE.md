@@ -2,14 +2,54 @@
 
 Updated 2026-09-25. Read `CLAUDE.md` first — it's the authoritative map of the repo layout,
 commands, and architecture; this file is only the narrative of *why* things are the way they are
-and what's still open. **Not yet committed** — this update and the voice work it describes are
-uncommitted on disk; check `git status --short` before assuming otherwise.
+and what's still open. Everything described here is committed locally; `main` is **2 commits ahead
+of `origin` and unpushed**, and the repo is **public** (check `voice/reference/`, which holds copies
+of NVIDIA's docs, before pushing).
 
 This file was compacted on 2026-09-24: the previous version's long round-by-round history (MMLU
 world knowledge, the Decompose/Monte Carlo readability passes, the honesty-audit round, etc.) is
 still fully recoverable from `git log` if a specific rationale is ever needed again — it isn't
 reproduced here because none of it is load-bearing for what's currently in progress (see "Voice
 pipeline" below).
+
+## START HERE: priority for the next session
+
+**Live audio in Conversation flow, proven in an isolated mock-up first.** Do not touch
+`demo/flow.html` until the mock-up has measured the open questions. Plan (decisions already made,
+phases, safeguards, measured server behaviour): `docs/voice-flow-integration-plan.md`. Read it fully.
+
+The shape, in five lines:
+- **Two modes**: *Replay* = a saved conversation (precomputed answers); *Live* = real audio from a
+  mic/call, an **uploaded audio file**, or a **YouTube link**. Today's "Live" (scripted words, real
+  model calls) was never truly live and folds into Replay as an option.
+- **Mock-up** `demo/flow-lab.html`, served by `demo/server.py` at `/flow-lab`, not in the nav, not
+  in the static build. It watches voices arrive, has detectors, and lets you **add a detector while
+  it runs** on paid Jev (all detector questions in one composite `/v1/systemone` call per checkpoint).
+- **Ingest is server-side** in `voice/server.py` (`yt-dlp` piped into ffmpeg for YouTube; file bytes
+  over the same WebSocket), with an allowlist and caps. `yt-dlp` is not installed yet (pip into `voice/.venv`).
+- **Seed the integration, do not fork it.** The mock-up should look and behave like `flow.html` so
+  porting is mostly moving code: load `static/app.css` and `static/app.js` (`Jev.*` helpers), reuse
+  the thread markup classes (`msg`, `bub`, `meta`, `words`), the detector colours `--s1..--s8` and
+  icon set, the checkpoint rule (`trig`: `((sentence end || turn end) && since >= 3) || since >= 12`
+  words), `personWindow`/`callWindow`, and the `QALL` question shapes for library and custom
+  detectors. Write the live path as one function with the same shape as flow's `onWord(wd)` (a word
+  event `{spk, w, t, turnId, last}` in, thread + runner out) so it lifts across unchanged.
+- **Recon questions to answer with numbers** (real panel/stream audio, not the clean clip): rewrite
+  rate of committed words, speech-to-detector lag, speaker flips per minute, hosted spend per hour,
+  GPU fit, add-a-detector-mid-stream behaviour. Write the answers into the plan file.
+
+**Runtime state right now**: the voice server is **running** (`:8200`, started from
+`/workspace/voice` with `.venv/bin/python -u server.py`) and the classifier lineup is **down**
+(voice plus the full ~30 GB lineup runs out of GPU memory; plan adds a smaller `lineup.sh voice`
+profile). Hosted Jev works with no GPU. To get the lineup back: stop the voice server, then
+`demo/lineup.sh up`. The demo console (`:8100`) runs from `/workspace` with `.env` loaded
+(`set -a; . ./.env; set +a; python3 demo/server.py`).
+
+**Also done this session, relevant here**: Baseline compare now has ten simple scenarios, two of
+them code-security *batteries* (a snippet plus ten yes/no checks and a decision answered in one
+composite request; `/api/compare` accepts `questions`) — the same composite mechanism the
+mock-up's detectors will use. A stylesheet bug that let `.field { display:flex }` override the
+`hidden` attribute was fixed in `compare.html`.
 
 ## Where things stand
 
@@ -160,12 +200,7 @@ VB-CABLE as the more polished option for the actual demo but confirmed the no-in
 as a fallback. **VB-CABLE requires a reboot** (their own install page says so — an earlier claim
 in this session that it usually doesn't was wrong and got corrected).
 
-**Where things stand right now**: the voice server is stopped and the GPU fully freed — the user
-asked to switch to showing a friend the jevbench lineup instead (`kev-4b`, `semif`, `so1`, `laya`,
-`verdict` — all confirmed up via `demo/lineup.sh up`, ~28GB/32.6GB). The user is currently
-rebooting their own laptop (not this box) to activate VB-CABLE, then planned to test multi-speaker
-diarization against a YouTube news panel before the real call. To resume voice work: stop the
-lineup (`demo/lineup.sh down`) to free GPU headroom again, then `cd /workspace/voice && .venv/bin/python -u server.py`.
+**Where things stand right now**: see "Runtime state right now" under START HERE.
 
 **Next (planned, not started)**: two modes in `demo/flow.html` (Replay = saved conversation, Live = real audio from mic/call, an uploaded file, or a YouTube link), proven first in an isolated `demo/flow-lab.html` with live-added detectors on paid Jev. Full plan: `docs/voice-flow-integration-plan.md` (measured transcript behaviour, ingest design and safeguards, phases; test fixture `voice/fixtures/twovoice-snapshots.json`).
 

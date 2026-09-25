@@ -19,6 +19,9 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import audio_library  # read-only data/audio library for /flow-lab
+import detector_api  # detector files + AI-drafted detectors for /flow-lab
+
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent / "probes"))
 try:
@@ -387,7 +390,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/flow": "flow.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/flow": "flow.html", "/flow-lab": "flow-lab.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
@@ -402,6 +405,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/") or "/"
+        if path.startswith("/audio/"):
+            return audio_library.serve(self, path[len("/audio/"):])
+        if path == "/api/audio-files":
+            return self._send(200, audio_library.list_files())
+        if path.startswith("/api/detector-"):
+            r = detector_api.handle_get(path, self.path.partition("?")[2])
+            return self._send(*r) if r else self._send(404, {"error": "not found"})
         if path in PAGES and (HERE / PAGES[path]).exists():
             self._send(200, (HERE / PAGES[path]).read_bytes(), "text/html; charset=utf-8")
         elif path.startswith("/static/"):
@@ -523,6 +533,9 @@ class Handler(BaseHTTPRequestHandler):
         self._stream(events)
 
     def do_POST(self):
+        if self.path.startswith("/api/detector-"):
+            r = detector_api.handle_post(self.path.split("?")[0], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), detector_api.MAX_BODY + 1)))
+            return self._send(*r) if r else self._send(404, {"error": "not found"})
         if self.path == "/api/decompose-live":
             return self._handle_decompose_live()
         if self.path == "/api/batch":
