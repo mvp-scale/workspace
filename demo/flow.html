@@ -272,11 +272,20 @@
   .j-k { color: var(--accent); } .j-s { color: var(--good); } .j-n { color: var(--warn); } .j-b { color: var(--bad); } .j-p { color: var(--text-3); }
   details.adv > summary { font-weight: 600; }
   .dchip, .drow { cursor: pointer; } .dchip.sel { outline: 2px solid var(--accent); outline-offset: 1px; } .drow.sel { background: var(--accent-soft); }
+  .tabs2 .expand { margin-left: auto; font-size: 11.5px; border-bottom-color: transparent !important; } .tabs2 .expand:hover { color: var(--text); }
+  .setlab { display: inline-flex; align-items: center; gap: 6px; font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); } .menu .mh { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding: 8px 10px 2px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .agrp { margin-top: 8px; } .agrp .bt { margin-bottom: 2px; }
+  .dsec.avail { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 14px; } .dfilter { width: 190px; min-height: 26px; padding: 1px 6px; }
+  .dsec { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; margin: 12px 0 4px; } .dsec .bt { margin: 0; } .dsec .dsp { flex: 1 1 0; }
+  .libchip .q { color: var(--text-3); font-size: 11px; } .libchip.sugg { border-color: var(--accent); }
+  .ddetail { margin-top: 2px; } .ddetail .dact { margin-left: auto; display: flex; gap: 6px; }
+  .ddetail .dabout { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
+  .ddetail .dq { font-size: 12.5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-2); padding: 6px 8px; } .ddetail .dq .rq-ins { color: var(--text); }
+  .dmanage .mrow .l { min-width: 40px; } .setsel { min-height: 30px; width: auto; max-width: 230px; padding: 2px 6px; font-size: 12.5px; }
   .ddetail .dh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; } .ddetail .dh b { font-size: 14px; }
   .ddetail .dwhere { font-size: 12px; color: var(--text-2); margin: 2px 0 6px; line-height: 1.4; } .ddetail .dwhere code, .ddetail .dwhere b { font-family: var(--mono); font-size: 11px; }
   .ddetail .dlab { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 8px 0 2px; display: flex; align-items: center; gap: 8px; }
   .ddetail pre.jpre { font: 11px/1.4 var(--mono); white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; margin: 0; }
-  .ddetail .dscores { font: 11.5px/1.5 var(--mono); color: var(--text-2); }
   .setmain { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 12px 10px; background: var(--surface-2); margin-bottom: 12px; }
   .mbig.off { opacity: .42; cursor: not-allowed; } .mbig.off small { font-style: italic; }
   .playsec { margin-bottom: 4px; }
@@ -455,7 +464,7 @@
     if (S.dets.some(d => (d.name || d.label).toLowerCase() === x.name.trim().toLowerCase())) return null;
     return addCustom(x.name.slice(0, 40), x.what.slice(0, 240), String(x.example || "").slice(0, 240), x.icon, x.scope === "call" ? "call" : "person", /^[a-z0-9_]{1,40}$/.test(x.key || "") ? x.key : null);
   }
-  const exportDoc = () => ({ name: "My detectors", description: "Exported from Conversation flow", detectors: S.dets.map(d => d.pid ? { library: d.pid } : { key: d.key, name: d.name || d.label, what: d.about, example: d.example || "", scope: d.scope, icon: d.icon }) });
+  const exportDoc = (name = "My detectors", group) => ({ name, ...(group ? { group } : {}), description: "Exported from Conversation flow", detectors: S.dets.map(d => d.pid ? { library: d.pid } : { key: d.key, name: d.name || d.label, what: d.about, example: d.example || "", scope: d.scope, icon: d.icon }) });
   /* on add during a live session: score each recent voice's current window once with only the new questions (one call per voice, however many were added) */
   function testMany(ds) {
     if (!ds.length || S.mode !== "live" || !runner || (isHosted() && !S.armed)) return;
@@ -714,7 +723,14 @@
   }
 
   /* ---------- detectors bar and person cards ---------- */
-  let DCH = {};
+  let DCH = {}, SETFILE = "", SETSIG = "";
+  const detSig = () => S.dets.map(d => d.key).join(",");
+  /* the Set dropdown next to the detector bar: shows the loaded set, and marks it edited once detectors were added or removed */
+  function paintSet() {
+    if (!ui.setSel) return; const edited = SETFILE && SETSIG !== detSig();
+    for (const o of ui.setSel.options) if (o.dataset.name) o.textContent = o.dataset.name + (o.value === SETFILE && edited ? " · edited" : "");
+    ui.setSel.options[0].textContent = `Current (${S.dets.length})`; ui.setSel.value = SETFILE && [...ui.setSel.options].some(o => o.value === SETFILE) ? SETFILE : "";
+  }
   function renderDets() {
     ui.dets.replaceChildren(); DCH = {};
     for (const d of S.dets) {
@@ -725,6 +741,7 @@
       DCH[d.key] = { d, node, bar, pv, c: {} }; ui.dets.append(node);
     }
     if (!S.dets.length) ui.dets.append(el("span", { class: "small muted", style: "padding-top:6px", text: "No detectors. Add one." }));
+    paintSet();
   }
   function updateDets() {
     for (const k in DCH) {
@@ -788,12 +805,49 @@
       return el("div", { class: "evx" }, el("div", { class: "eh" }, el("span", { class: "ts", text: mmss(e.t) }), el("b", { text: `E${e.n} ${e.what}`, title: "“" + e.quote + "”" })), el("div", { class: "er" }, el("span", { class: "lbl", text: "Flagged within 25 s" }), res, el("a", { class: "small", href: e.url, target: "_blank", rel: "noopener", text: "source" })));
     }) : [el("p", { class: "muted small", text: "Only real scenes have documented events, from cited sources. Pick one to see whether the detectors caught what actually happened." })]));
   }
-  let formIcon = "";
+  let PACKS = [];
+  const GROUP_ORDER = ["General", "Governance & meetings", "Coaching & interviewing", "Sales & service", "Operations", "Conflict & debate", "Scams", "YouTube personalities", "My presets"];
+  const markSel = () => { for (const k in DCH) DCH[k].node.classList.toggle("sel", k === S.sel); };
+  /* Presets dropdown: grouped, so the eye goes to a heading first */
+  function rebuildPresetSel() {
+    const rank = (g) => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? 98 : i; }, gs = [...new Set(PACKS.map(x => x.group))].sort((x, y) => rank(x) - rank(y));
+    ui.setSel.replaceChildren(el("option", { value: "", text: "Current" }), ...gs.map(g => el("optgroup", { label: g }, ...PACKS.filter(x => x.group === g).map(x => el("option", { value: x.file, title: x.description, text: `${x.name} (${x.count})`, "data-name": `${x.name} (${x.count})` })))));
+    paintSet();
+  }
+  /* one click on a detector that is not on adds it, selects it, and (in Live) tries it once on the recent voices */
+  function loadDetector(it) {
+    const d = addSpec(it.spec);
+    if (!d) toast(`${it.name} is already on, or the list is full.`);
+    else { if (it.file && !d.src && d.custom) d.src = it.file; S.touched = true; S.sel = d.key; renderDets(); renderPeople(); afterConfig(); testMany([d]); }
+    renderDetTab();
+  }
+  /* every detector in the presets that is not in the current detectors, grouped like the Presets dropdown; a detector shows once, under the first preset that has it */
+  function availGroups() {
+    const onKeys = new Set(S.dets.flatMap(d => [d.pid ? "lib:" + d.pid : null, "key:" + d.key, "name:" + (d.name || d.label).trim().toLowerCase()].filter(Boolean)));
+    const kof = (x) => x.library ? "lib:" + x.library : x.key ? "key:" + x.key : "name:" + String(x.name).trim().toLowerCase(), seen = new Set(), groups = new Map();
+    const add = (group, list, file) => {
+      for (const x of list) {
+        const k = kof(x); if (seen.has(k)) continue; seen.add(k);
+        if (x.library ? onKeys.has(k) : (x.key && onKeys.has("key:" + x.key)) || onKeys.has("name:" + String(x.name).trim().toLowerCase())) continue;
+        let it; if (x.library) { const pp = P_BY[x.library]; if (pp) it = { spec: x, name: pp.name, icon: pp.icon, about: pp.about, file }; } else it = { spec: x, name: x.name, icon: x.icon && ICONS[x.icon] ? x.icon : "flag", about: x.what + (x.example ? `\ne.g. “${x.example}”` : "") + "\n(unvalidated)", file };
+        if (it) (groups.get(group) || groups.set(group, []).get(group)).push(it);
+      }
+    };
+    if (!PACKS.length) { add("Built in", PERSP.map(pp => ({ library: pp.id }))); add("Built in", CORE_NEW.map(c => ({ key: c.key, name: c.name, what: c.what, icon: c.icon }))); }
+    for (const pk of PACKS) add(pk.group, pk.dets, pk.file);
+    const rank = (g) => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? 98 : i; };
+    return [...groups].sort((x, y) => rank(x[0]) - rank(y[0]));
+  }
   function renderDetTab() {
-    ui.dlist.replaceChildren(...S.dets.map(d => { const t = trust(d); return el("div", { class: "drow" + (S.sel === d.key ? " sel" : ""), onclick: () => showDetector(d.key), style: cvar(d.slot), title: d.about + (d.example ? ` Example: “${d.example}”` : "") }, el("span", { class: "ic" }, iconEl(d.icon, 16)), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "subtle small", text: d.scope === "call" ? "whole call" : "each voice" }), el("button", { class: "x", type: "button", "aria-label": "Remove " + d.label, onclick: (e) => { e.stopPropagation(); removeDet(d.key); }, text: "×" })); }));
-    const left = PERSP.filter(p => !S.dets.some(d => d.pid === p.id)), leftNew = CORE_NEW.filter(c => !S.dets.some(d => d.key === c.key)).map(c => ({ id: c.key, name: c.name, icon: c.icon, about: c.what + " (unvalidated)", core: true }));
-    ui.dlib.replaceChildren(...(left.length + leftNew.length ? [...left, ...leftNew].map(p => el("button", { class: "libchip", type: "button", title: p.about, onclick: () => { const d = p.core ? addCore(p.id) : (addLibrary(p.id) ? S.dets[S.dets.length - 1] : null); if (d) { S.touched = true; renderDets(); renderDetTab(); renderPeople(); afterConfig(); testMany([d]); } } }, iconEl(p.icon, 14), p.name)) : [el("span", { class: "small muted", text: "All library detectors are on." })]));
-    ui.dcount.textContent = `${S.dets.length} of ${MAXDET}`; if (ui.ddetail) renderDetail();
+    if (S.sel && !S.dets.some(d => d.key === S.sel)) S.sel = null;
+    if (!S.sel && S.dets.length) { S.sel = S.dets[0].key; markSel(); }
+    const q = (ui.dfilter.value || "").trim().toLowerCase();
+    const blocks = availGroups().map(([g, items]) => {
+      items = items.filter(it => !q || (it.name + " " + it.about).toLowerCase().includes(q)); if (!items.length) return null;
+      return el("div", { class: "agrp" }, el("div", { class: "bt", text: g }), el("div", { class: "libchips" }, ...items.map(it => el("button", { class: "libchip", type: "button", title: it.about, onclick: () => loadDetector(it) }, iconEl(it.icon, 14), it.name))));
+    }).filter(Boolean);
+    ui.dlib.replaceChildren(...(blocks.length ? blocks : [el("p", { class: "help", text: q ? "No match." : "Every detector in every preset is already on." })]));
+    if (ui.ddetail) renderDetail();
   }
   function jsonNodes(v, ind = 0) {
     const sp = "  ".repeat(ind), out = [], T_ = (c, t) => el("span", { class: "j-" + c, text: t });
@@ -802,36 +856,34 @@
     const ks = Object.keys(v); if (!ks.length) return [T_("p", "{}")]; out.push(T_("p", "{\n")); ks.forEach((k, i) => { out.push(document.createTextNode(sp + "  "), T_("k", JSON.stringify(k)), T_("p", ": "), ...jsonNodes(v[k], ind + 1), T_("p", i < ks.length - 1 ? ",\n" : "\n")); }); out.push(document.createTextNode(sp), T_("p", "}")); return out;
   }
   function renderReqView(body, chk) {
-    const q = body.questions || {}, crit = (x) => { const c = x.criteria; if (!c) return null; const rows = Array.isArray(c) ? c.map((v, i) => [String(i), typeof v === "string" ? v : JSON.stringify(v)]) : Object.entries(c).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]); return el("div", { class: "rq-crit" }, ...rows.map(([k, v]) => el("div", {}, el("span", { class: "rq-ck", text: k }), "  " + v))); };
+    const q = body.questions || {}, crit = critEl;
     ui.reqView.replaceChildren(el("div", { class: "rq-head" }, el("span", { class: "rq-verb", text: "POST" }), el("span", { text: "/v1/systemone" }), el("span", { class: "rq-model", title: "The wire-format model name in the body. The call itself went to the model you selected.", text: (() => { const m = chk && chk.model ? chk.model : S.model, rp = (C.get(m + "\u0001" + (chk ? chk.state : "")) || {}).reply; return `sent to ${Jev.codeOf(m)}` + (rp && rp.model ? ` · answered as “${rp.model}”${rp.ms != null ? ` in ${rp.ms} ms` : ""}` : ""); })() })),
       el("div", { class: "rq-lab", text: `state · ${words(body.state).length} words` }), el("div", { class: "rq-state", text: String(body.state) }), el("div", { class: "rq-lab", text: `questions · ${Object.keys(q).length}` }),
       ...Object.entries(q).map(([id, x]) => el("div", { class: "rq-q" }, el("div", { class: "rq-qh" }, el("b", { text: id }), el("span", { class: "rq-type", text: x.type })), el("div", { class: "rq-ins", text: typeof x.instructions === "string" ? x.instructions : JSON.stringify(x.instructions) }), crit(x))));
     ui.reqPre.replaceChildren(...jsonNodes(body));
   }
   /* ---------- detector definition: click a detector (bar or list) to see exactly how it is defined ---------- */
+  /* ---------- detector view: what it is, what it is looking at right now, and the question it asks ---------- */
   function showDetector(key) { S.sel = key; renderDets(); renderDetTab(); setTab("det"); if (ui.ddetail) ui.ddetail.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+  const critEl = (x) => { const c = x.criteria; if (!c) return null; const rows = Array.isArray(c) ? c.map((v, i) => [String(i), typeof v === "string" ? v : JSON.stringify(v)]) : Object.entries(c).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]); return el("div", { class: "rq-crit" }, ...rows.map(([k, v]) => el("div", {}, el("span", { class: "rq-ck", text: k }), "  " + v))); };
   function renderDetail() {
     const d = S.dets.find(x => x.key === S.sel);
-    if (!d) { ui.ddetail.replaceChildren(el("p", { class: "help", text: "Click a detector, in the bar at the top or in the Advanced list, to see its definition here: where it comes from, the exact question sent to the model, and the pack entry." })); return; }
-    const t = trust(d), lib = !d.custom, set = lib ? QSETS[d.q] : null;
+    if (!d) { ui.ddetail.style.cssText = ""; ui.ddetail.replaceChildren(el("p", { class: "help", text: "Click a detector in the bar above to see what it is made of." })); return; }
+    ui.ddetail.style.cssText = cvar(d.slot);
+    const t = trust(d), lib = !d.custom, set = lib ? QSETS[d.q] : null, qd = QALL[d.q] || {};
     const entry = lib ? { library: d.pid } : { key: d.key, name: d.name || d.label, what: d.about, example: d.example || "", scope: d.scope, icon: d.icon };
     const def = { key: d.key, label: d.label, kind: lib ? "validated (library)" : "your own wording (unvalidated)", scope: d.scope === "call" ? "call: reads the whole call, both voices together" : "person: each voice's own last words", question: d.q, reads: d.read === "noul" || d.custom ? "the probability of yes (noul)" : `the probability of the option "${d.read}" in the question's choices`, alerts_at: S.gate };
     const where = lib
       ? [el("b", { text: "Validated detector. " }), `Its question is loaded when the page starts from `, el("code", { text: `probes/v2/${set}.jsonl` }), " (first item, key ", el("code", { text: "question" }), "); the wiring is ", el("code", { text: `PERSP id "${d.pid}"` }), " and ", el("code", { text: "QSETS" }), " in ", el("code", { text: "demo/flow.html" }), ". Detector packs in ", el("code", { text: "demo/detectors/" }), " only point to it with ", el("code", { text: `{"library": "${d.pid}"}` }), "."]
-      : [el("b", { text: "Your own wording, unvalidated. " }), d.src ? ["From ", el("code", { text: d.src.includes("(") ? d.src : "demo/detectors/" + d.src }), "."] : "Built into the page or added here. Save it to a pack with Detectors > More > Save to demo/detectors.", " The question sent to the model is built from the description below."];
-    ui.dscores = el("div", { class: "dscores" });
+      : [el("b", { text: "Your own wording, unvalidated. " }), d.src ? ["From ", el("code", { text: d.src.includes("(") ? d.src : "demo/detectors/" + d.src }), "."] : "Built into the page.", " The question sent to the model is built from the description."];
     ui.ddetail.replaceChildren(
-      el("div", { class: "dh" }, iconEl(d.icon, 18), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "small muted", text: d.scope === "call" ? "whole call" : "each voice" })),
-      el("div", { class: "dwhere" }, ...[].concat(where)),
+      el("div", { class: "dh" }, iconEl(d.icon, 18), el("b", { text: d.label }), el("span", { class: "badge" + (t.warn ? " warn" : " accent"), title: t.title, text: t.text }), el("span", { class: "small muted", text: d.scope === "call" ? "whole call" : "each voice" }), el("span", { class: "dact" }, el("button", { class: "btn ghost", type: "button", text: "Remove", onclick: () => removeDet(d.key) }))),
+      el("div", { class: "dabout", text: d.about + (d.example ? `  Example: “${d.example}”` : "") }),
+      el("div", { class: "dlab" }, "The question it asks the model", el("button", { class: "btn ghost", type: "button", text: "Copy", onclick: () => copy(JSON.stringify(qd, null, 2)) })),
+      el("div", { class: "dq" }, el("div", { class: "rq-ins", text: typeof qd.instructions === "string" ? qd.instructions : JSON.stringify(qd.instructions || "") }), critEl(qd)),
+      el("div", { class: "dlab" }, "Source"), el("div", { class: "dwhere" }, ...[].concat(where)),
       el("div", { class: "dlab" }, "Definition"), el("pre", { class: "jpre" }, ...jsonNodes(def)),
-      el("div", { class: "dlab" }, "Question sent to the model", el("button", { class: "btn ghost", type: "button", text: "Copy", onclick: () => copy(JSON.stringify(QALL[d.q], null, 2)) })), el("pre", { class: "jpre" }, ...jsonNodes(QALL[d.q] || {})),
-      el("div", { class: "dlab" }, "Pack entry (what a detector file holds)", el("button", { class: "btn ghost", type: "button", text: "Copy", onclick: () => copy(JSON.stringify(entry, null, 2)) })), el("pre", { class: "jpre" }, ...jsonNodes(entry)),
-      el("div", { class: "dlab" }, "Latest scores"), ui.dscores);
-    updateDetailScores();
-  }
-  function updateDetailScores() {
-    const d = S.dets.find(x => x.key === S.sel); if (!d || !ui.dscores) return; const rowsS = Object.entries(d.st).filter(([, v]) => v.n).map(([spk, v]) => `${spk === "_call" ? "whole call" : code(spk)}  latest ${Math.round(v.latest * 100)}  peak ${Math.round(Math.max(...v.marks.map(m => m.p)) * 100)}  checks ${v.n}`);
-    const txt = rowsS.length ? rowsS.join("\n") : "not scored yet"; if (ui.dscores.textContent !== txt) ui.dscores.textContent = txt; ui.dscores.style.whiteSpace = "pre";
+      el("div", { class: "dlab" }, "Pack entry (what a detector file holds)", el("button", { class: "btn ghost", type: "button", text: "Copy", onclick: () => copy(JSON.stringify(entry, null, 2)) })), el("pre", { class: "jpre" }, ...jsonNodes(entry)));
   }
   function renderReq() {
     if (!ui.reqPre) return;
@@ -843,7 +895,10 @@
     ui.reqCur = chk;
   }
   function updateTabs() { const n = { flag: FLAGS.length, det: S.dets.length, ev: EVENTS.length }; ui.tabs.querySelectorAll(".n").forEach(e => { const v = n[e.dataset.n]; const t = v ? String(v) : ""; if (e.textContent !== t) e.textContent = t; }); }
-  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); for (const k of ["flag", "lvl", "det", "set", "req", "cnt", "ev"]) ui["pane_" + k].hidden = k !== t; if (t !== "lvl" && ui.rail) ui.rail.classList.remove("lvbig"); if (t === "lvl") renderLevels(); if (t === "cnt") renderCounters(); if (t === "req") renderReq(); if (t === "det") renderDetTab(); if (t === "ev") renderEvents(); }
+  function setTab(t) { S.tab = t; ui.tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t))); for (const k of ["flag", "lvl", "det", "set", "req", "cnt", "ev"]) ui["pane_" + k].hidden = k !== t; if (t === "lvl") renderLevels(); if (t === "cnt") renderCounters(); if (t === "req") renderReq(); if (t === "det") renderDetTab(); if (t === "ev") renderEvents(); }
+  /* expand belongs to the panel, not to one tab: the whole card grows to the full column and stays that way across tabs */
+  function paintExpand() { const big = !!(ui.rail && ui.rail.classList.contains("lvbig")); ui.expand.textContent = big ? "⤡ Collapse" : "⤢ Expand"; ui.expand.setAttribute("aria-pressed", String(big)); ui.expand.title = big ? "Collapse: show coaching above this card again" : "Expand this card to the full column (hides coaching)"; }
+  function toggleExpand() { ui.rail.classList.toggle("lvbig"); paintExpand(); }
 
   /* ---------- history: heat strip of every detector, or ticks per person ---------- */
   function Chart(canvas) {
@@ -1150,8 +1205,8 @@
       const st = d.st[c], ok = st && st.n, pp = ok ? st.latest : null;
       return el("td", { class: "c", style: ok ? `background:color-mix(in srgb, var(--c) ${Math.round(clamp(pp, 0, 1) * 70)}%, transparent);${pp >= S.gate ? "outline:2px solid var(--c);" : ""}` : "", title: ok ? `${d.label} on ${c === "_call" ? "the whole call" : code(c)}: ${Math.round(pp * 100)}% (${st.n} checks, peak ${Math.round(Math.max(...st.marks.map(m => m.p)) * 100)}%)` : "not scored yet", text: ok ? String(Math.round(pp * 100)) : "·" });
     }), el("td", { class: "c", text: String(Object.values(d.st).reduce((n, x) => n + x.n, 0)) })));
-    const big = ui.rail && ui.rail.classList.contains("lvbig");
-    ui.lvl.replaceChildren(el("div", { class: "mrow" }, el("button", { class: "btn ghost", type: "button", text: big ? "Collapse (show coaching and cue cards)" : "Expand to the full column", onclick: () => { ui.rail.classList.toggle("lvbig"); renderLevels(); } })), el("table", { class: "lv" }, el("thead", {}, head), el("tbody", {}, ...body)), el("p", { class: "help", text: `Latest score per detector and voice, 0-100. Outlined = at or above the minimum threshold (${Math.round(S.gate * 100)}). "?" = your own wording, unvalidated. Voices appear as they speak.` }));
+
+    ui.lvl.replaceChildren(el("table", { class: "lv" }, el("thead", {}, head), el("tbody", {}, ...body)), el("p", { class: "help", text: `Latest score per detector and voice, 0-100. Outlined = at or above the minimum threshold (${Math.round(S.gate * 100)}). "?" = your own wording, unvalidated. Voices appear as they speak.` }));
   }
   /* ---------- Counters ---------- */
   const med = (a) => { if (!a.length) return null; const x = [...a].sort((p, q) => p - q); return x[Math.floor(x.length / 2)]; }, p90 = (a) => { if (!a.length) return null; const x = [...a].sort((p, q) => p - q); return x[Math.min(x.length - 1, Math.floor(x.length * 0.9))]; }, f1 = (x, u = "") => x == null ? "–" : x.toFixed(1) + u;
@@ -1360,7 +1415,8 @@
     const menuItem = (t, fn) => el("button", { type: "button", role: "menuitem", onclick: () => { closeMenu(); fn(); }, text: t });
     ui.menuBtn = el("button", { class: "btn", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", title: "More actions", "aria-label": "More actions", text: "⋯", onclick: (e) => { e.stopPropagation(); ui.menu.hidden = !ui.menu.hidden; ui.menuBtn.setAttribute("aria-expanded", String(!ui.menu.hidden)); } });
     ui.menu = el("div", { class: "menu", role: "menu", hidden: true }, menuItem("Start over", () => { if (S.mode === "live") { stopLive(); liveReset(); } else resetRun(); updatePlay(); }),
-      menuItem("Export session (JSON)", () => download(`conversation-flow-${Date.now()}.json`, JSON.stringify(S.mode === "live" ? liveStats() : exportData(), null, 1), "application/json")), menuItem("Copy link to this view", () => copy(location.href)));
+      menuItem("Export session (JSON)", () => download(`conversation-flow-${Date.now()}.json`, JSON.stringify(S.mode === "live" ? liveStats() : exportData(), null, 1), "application/json")), menuItem("Copy link to this view", () => copy(location.href)),
+      el("div", { class: "mh", text: "Detectors" }), menuItem("Import detectors (JSON)…", () => ui.detIO.importFile()), menuItem("Download detectors (JSON)", () => ui.detIO.download()), menuItem("Save detectors as a preset…", () => ui.detIO.save()), menuItem("Clear all detectors", () => ui.detIO.clear()));
     document.addEventListener("click", closeMenu); document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
     const top = el("div", { class: "hdr" }, el("div", { class: "hl" }, el("h1", { text: "Conversation flow", title: "Detectors have a colour and an icon. Signals rise, hold and fade so there is time to react." })),
       el("div", { class: "hsrc" }, srcSel, ui.slot), el("div", { class: "hr" }, ui.play, ui.pill, el("div", { class: "menuwrap" }, ui.menuBtn, ui.menu)));
@@ -1368,8 +1424,9 @@
       el("p", { style: "margin-top:6px", text: "Models return probabilities, not written reasons. A high reading means the wording resembles what a detector was validated on, not that anyone intended anything. Each detector shows its measured accuracy in the Detectors tab; your own detectors are unvalidated (marked ?). Speakers are diarized voices, shown as V1, V2 (names only for scripted scenes). Windows are per person, which is new: the detectors were validated on whole texts (manipulation on whole dialogues, so it reads the whole call). Highlights mark the whole scored sentence, because the models score windows, not phrases. Timing measures (talk share, pace) come from the clock, not a model. The Request tab shows exactly what is sent to the model." }));
     /* top: detectors bar and person cards */
     ui.dets = el("div", { class: "dets", id: "dets" }); ui.people = el("div", { class: "people", id: "people" });
-    const addBtn = el("button", { class: "btn", type: "button", id: "add-det", title: "Add a detector", "aria-label": "Add a detector", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dname.focus(), 50); }, text: "+" });
-    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, addBtn)), el("div", { class: "trow" }, el("h4", { text: "Voices" }), (ui.vsWrap = el("div", { class: "vstream" })), ui.vcap = el("span", { class: "vcap" })));
+    ui.setSel = el("select", { class: "setsel", "aria-label": "Detector set", title: "Presets: load a ready-made set of detectors in one click", onchange: () => { if (ui.setSel.value) ui.usePreset(ui.setSel.value); else paintSet(); } }, el("option", { value: "", text: "Current" }));
+    const addBtn = el("button", { class: "btn", type: "button", id: "add-det", title: "Add detectors from other presets", "aria-label": "Add detectors from other presets", onclick: () => { setTab("det"); if (ui.stage.dataset.tab !== undefined && matchMedia("(max-width:1100px)").matches) { ui.stage.dataset.tab = "cues"; ui.tabsbar.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === "cues"))); } setTimeout(() => ui.dfilter.focus(), 50); }, text: "+" });
+    const toppn = el("section", { class: "pn toppn", "data-pane": "signals" }, el("div", { class: "trow" }, el("h4", { text: "Detectors" }), ui.dets, el("div", { style: "display:flex;gap:8px;align-items:center" }, el("label", { class: "setlab", title: "Presets: load a ready-made set of detectors" }, el("span", { text: "Presets" }), ui.setSel), addBtn)), el("div", { class: "trow" }, el("h4", { text: "Voices" }), (ui.vsWrap = el("div", { class: "vstream" })), ui.vcap = el("span", { class: "vcap" })));
     /* conversation */
     ui.track = el("div", { class: "track showwin" }); ui.view = el("div", { class: "glide", id: "view" }, ui.track); ui.caret = el("span", { class: "caret" }); ui.readnote = el("div", { class: "readnote" }); ui.tent = el("div", { class: "tent" }); ui.tentLab = el("span", { class: "lab", text: "Hearing", title: "Words still settling. The model reads the last few words of each voice (set under Settings > Advanced); older words in the thread are dimmed." }); ui.tentBar = el("div", { class: "hearing" }, ui.tentLab, ui.tent); ui.readnote2 = el("div", { class: "readnote", style: "color:var(--bad)" });
     const conv = el("section", { class: "pn", "data-pane": "talk", style: "grid-area:conv" }, el("header", {}, el("h4", { text: "Conversation" })), el("div", { class: "bd", style: "padding:0 12px" }, ui.view), ui.tentBar, ui.readnote2, ui.readnote);
@@ -1387,54 +1444,32 @@
     /* tabs: Flagged | Detectors | Settings | Request | Events */
     ui.log = el("div"); ui.logOld = el("div"); ui.flagEmpty = el("p", { class: "help", text: "Nothing flagged in the last 30 seconds. Hits appear here, grey out, then move to Earlier." }); ui.oldSum = el("summary", { text: "Earlier · 0" });
     ui.pane_flag = el("div", { class: "tabpane" }, el("div", { class: "bt", text: "Live · last 30 s" }), ui.flagEmpty, ui.log, el("details", { class: "dnew arch", style: "margin-top:10px" }, ui.oldSum, ui.logOld));
-    ui.dlist = el("div", { class: "dgrid" }); ui.dlib = el("div", { class: "libchips" }); ui.dcount = el("span", { class: "small muted" });
-    ui.dname = el("input", { type: "text", id: "det-name", placeholder: "Name, e.g. Budget mentioned", "aria-label": "Detector name" }); const dwhat = el("textarea", { id: "det-what", rows: 2, placeholder: "What should it detect? e.g. The speaker states a price, budget or amount of money.", "aria-label": "What should it detect" }); const dex = el("input", { type: "text", id: "det-example", placeholder: "An example that should trigger it", "aria-label": "Example" });
-    let dscope = "person"; const scopeSeg = el("span", { class: "segmented", role: "group", "aria-label": "Applies to" }); const drawScope = () => scopeSeg.replaceChildren(...[["person", "Each voice"], ["call", "Whole call"]].map(([v, t]) => el("button", { type: "button", "aria-pressed": String(v === dscope), onclick: () => { dscope = v; drawScope(); }, text: t }))); drawScope();
-    const iconBox = el("div", { class: "icons", role: "group", "aria-label": "Icon" }); const drawIcons = () => iconBox.replaceChildren(...ICON_NAMES.map(n => el("button", { type: "button", title: n, "aria-label": "Icon " + n, "aria-pressed": String(n === formIcon), onclick: () => { formIcon = formIcon === n ? "" : n; drawIcons(); } }, iconEl(n, 16)))); drawIcons();
-    ui.dmsg = el("span", { class: "small muted", role: "status" });
-    const say = (t, bad) => { ui.dmsg.textContent = t; ui.dmsg.style.color = bad ? "var(--bad)" : ""; };
-    const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, icons: ICON_NAMES }) });
-    const refreshAll = () => { renderDets(); renderDetTab(); renderPeople(); afterConfig(); };
-    const applied = (ds, verb) => { S.touched = true; refreshAll(); testMany(ds); return `${verb} ${ds.length} detector${ds.length === 1 ? "" : "s"}: from the next checkpoint${S.mode === "live" && ds.length && runner && Object.keys(runner.people).length && (!isHosted() || S.armed) ? ", and tried once now on each recent voice" : ""}.`; };
-    async function draftInto() {
-      const name = ui.dname.value.trim(); if (!name) { say("Type a name first.", true); return null; }
-      say("Drafting…"); let r; try { r = await post("/api/detector-draft", { name }); } catch (e) { say("Draft failed: " + e.message, true); return null; }
-      const d = r.detector; dwhat.value = d.what; dex.value = d.example || ""; dscope = d.scope; formIcon = d.icon || ""; drawScope(); drawIcons();
-      say(r.ai ? "Drafted by AI. Edit anything, then press Add." : (r.note || "Plain template filled in; edit it, then press Add."), !r.ai); return r;
-    }
-    const doAdd = async () => {
-      if (!ui.dname.value.trim()) { say("Give it a name.", true); return; }
-      if (!dwhat.value.trim()) { const r = await draftInto(); if (!r || !r.ai) return; }       // name only: AI drafts it, then it is added; a plain template is left for you to edit
-      const d = addCustom(ui.dname.value, dwhat.value, dex.value, formIcon, dscope);
-      if (d) { ui.dname.value = ""; dwhat.value = ""; dex.value = ""; formIcon = ""; drawIcons(); say(applied([d], "Added") + " Your own detectors are unvalidated (dashed outline)."); }
+    const say = (t) => toast(t);
+    const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const applied = (ds, verb) => { S.touched = true; renderDets(); renderDetTab(); renderPeople(); afterConfig(); testMany(ds); return `${verb} ${ds.length} detector${ds.length === 1 ? "" : "s"}: from the next checkpoint${S.mode === "live" && ds.length && runner && Object.keys(runner.people).length && (!isHosted() || S.armed) ? ", and tried once now on each recent voice" : ""}.`; };
+    ui.loadFiles = async () => {
+      try {
+        const r = await api("/api/detector-files"); PACKS = r.files.map(f => ({ ...f, group: f.group || "Other", dets: [] })); rebuildPresetSel();
+        await Promise.all(PACKS.map(async pk => { try { pk.dets = (await api("/api/detector-file?file=" + encodeURIComponent(pk.file))).detectors; } catch (e) { /* that preset just contributes nothing to the list */ } }));
+        renderDetTab();
+      } catch (e) { say("Could not list presets: " + e.message); }
     };
-    let proposals = []; const sctx = el("input", { type: "text", placeholder: "Describe the conversation: phone scams, a sales call, a job interview…", "aria-label": "Conversation description" }); ui.sugg = el("div", { class: "libchips" });
-    const drawSugg = () => ui.sugg.replaceChildren(...proposals.map(pp => el("button", { class: "libchip", type: "button", title: `${pp.what}${pp.example ? `\ne.g. “${pp.example}”` : ""}`, onclick: () => { const d = addSpec(pp); proposals = proposals.filter(x => x !== pp); drawSugg(); say(d ? applied([d], "Added") : "Skipped: already on, or the list is full.", !d); } }, iconEl(pp.icon && ICONS[pp.icon] ? pp.icon : "flag", 14), pp.name)), ...(proposals.length ? [el("button", { class: "btn", type: "button", text: "Add all", onclick: () => { const ds = proposals.map(addSpec).filter(Boolean); proposals = []; drawSugg(); say(applied(ds, "Added")); } })] : []));
-    const suggest = async () => { ui.dsuggest.open = true; say("Asking for suggestions…"); try { const r = await post("/api/detector-suggest", { context: sctx.value, n: 8, existing: S.dets.map(d => d.name || d.label) }); proposals = r.detectors || []; drawSugg(); say(r.ai ? `${proposals.length} suggestions: click one to add it, or Add all.` : (r.note || "No suggestions."), !r.ai || !proposals.length); } catch (e) { say("Suggest failed: " + e.message, true); } };
-    ui.fsel = el("select", { "aria-label": "Detector file" }); ui.aiNote = el("span", { class: "small muted" });
-    ui.loadFiles = async () => { try { const r = await api("/api/detector-files"); ui.fsel.replaceChildren(...r.files.map(f => el("option", { value: f.file, title: f.description, text: `${f.name} (${f.count}) · ${f.file}` }))); ui.aiNote.textContent = r.ai ? `AI drafts on (${r.ai_model}, ${r.ai_used}/${r.ai_cap} used)` : "AI drafts off: no ANTHROPIC_API_KEY on the server, so a name gets a plain template"; } catch (e) { say("Could not list detector files: " + e.message, true); } };
-    const useFile = async (replace) => {
-      const f = ui.fsel.value; if (!f) return;
-      try { const doc = await api("/api/detector-file?file=" + encodeURIComponent(f)); if (replace) S.dets = []; const ds = doc.detectors.map(addSpec).filter(Boolean); ds.forEach(x => { x.src = f; }); say(applied(ds, replace ? `Loaded “${doc.name}”:` : `Added from “${doc.name}”:`) + (doc.skipped ? ` ${doc.skipped} invalid entries skipped.` : "")); } catch (e) { say(e.message, true); }
+    const usePreset = async (file) => {
+      try { const doc = await api("/api/detector-file?file=" + encodeURIComponent(file)); S.dets = []; S.sel = null; const ds = doc.detectors.map(addSpec).filter(Boolean); ds.forEach(x => { x.src = file; }); SETFILE = file; SETSIG = detSig(); say(applied(ds, `Loaded “${doc.name}”:`) + (doc.skipped ? ` ${doc.skipped} invalid entries skipped.` : "")); } catch (e) { say(e.message); }
     };
-    const fileIn = el("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: async () => { const f = fileIn.files[0]; fileIn.value = ""; if (!f) return; try { const doc = JSON.parse(await f.text()); if (!Array.isArray(doc.detectors)) throw new Error("a detector file needs a top-level `detectors` list"); const ds = doc.detectors.slice(0, 40).map(addSpec).filter(Boolean); ds.forEach(x => { x.src = f.name + " (imported from your computer)"; }); say(applied(ds, `Imported “${doc.name || f.name}”:`)); } catch (e) { say("Could not import that file: " + e.message, true); } } });
-    const sname = el("input", { type: "text", placeholder: "file name, e.g. my-detectors", style: "width:170px", "aria-label": "Save as file name" }); let overwrite = false;
-    const saveFile = async () => { try { const r = await post("/api/detector-save", { file: sname.value, doc: exportDoc(), overwrite }); overwrite = false; say(`Saved ${r.count} detectors to demo/detectors/${r.file}`); ui.loadFiles(); } catch (e) { if (/already exists/.test(e.message)) { overwrite = true; say(e.message + ". Press Save again to overwrite it.", true); } else say("Save failed: " + e.message, true); } };
-    ui.dfiles = el("div", { class: "dform" }, el("div", { class: "sec" }, el("b", { text: "Or start from a set" }), ui.aiNote),
-      el("div", { class: "mrow" }, ui.fsel, el("button", { class: "btn", type: "button", text: "Use this set", title: "Replace the current detectors with this set", onclick: () => useFile(true) }), el("button", { class: "btn ghost", type: "button", text: "Add it to mine", onclick: () => useFile(false) })),
-      el("details", { class: "dnew" }, el("summary", { text: "More: import, save, reset" }), el("div", { class: "mrow", style: "margin-top:6px" }, el("button", { class: "btn ghost", type: "button", text: "Import a JSON file…", onclick: () => fileIn.click() }), fileIn, el("button", { class: "btn ghost", type: "button", text: "Download current", onclick: () => download("detectors.json", JSON.stringify(exportDoc(), null, 2), "application/json") }), sname, el("button", { class: "btn ghost", type: "button", text: "Save to demo/detectors", onclick: saveFile }), el("button", { class: "btn ghost", type: "button", text: "Refresh list", onclick: () => ui.loadFiles() })),
-        el("div", { class: "mrow" }, el("button", { class: "btn", type: "button", text: "Load all 18", onclick: () => { loadCore(); say(applied([], "Loaded all 18 detectors (11 validated, 7 unvalidated);").replace(" 0 detectors:", "")); } }), el("button", { class: "btn ghost", type: "button", text: "Clear all", onclick: () => { S.dets = []; say(applied([], "Removed all;").replace(" 0 detectors:", "")); } }))));
-    ui.dsuggest = el("details", { class: "dnew" }, el("summary", { text: "Suggest detectors for this kind of conversation" }), el("div", { class: "frow", style: "margin-top:6px" }, sctx, el("button", { class: "btn", type: "button", onclick: suggest, text: "Suggest 8" })), ui.sugg);
-    ui.dguide = el("details", { class: "dnew" }, el("summary", { text: "What makes a good detector?" }), el("div", { class: "small", style: "display:grid;gap:4px;padding-top:6px" },
-      el("span", { text: "One observable behaviour in the words, phrased “the speaker …”, that a stranger could answer yes or no from 20 to 40 words." }), el("span", { text: "Good: “the speaker asks for money, gift cards, cryptocurrency, or a payment code”." }),
-      el("span", { text: "Weak: “the speaker is lying” (truth is not in the words), “is angry and threatening” (two detectors), “is bad” (too vague)." }), el("span", { text: "An example sentence helps. Your own detectors are unvalidated, so treat their scores as a hint, not a measurement." })));
-    ui.dnew = el("div", { class: "dform", style: "border-top:0;margin-top:6px;padding-top:0" }, el("b", { text: "Add a detector" }),
-      el("div", { class: "frow", style: "align-items:center;flex-wrap:nowrap" }, ui.dname, el("button", { class: "btn primary", type: "button", id: "det-add", onclick: doAdd, text: "Add" }), el("button", { class: "btn", type: "button", style: "white-space:nowrap", onclick: draftInto, text: "Draft first" })),
-      el("div", { class: "help", text: "A name is enough: AI drafts what it should detect. Add now, or draft first to review it." }),
-      el("details", { class: "dnew" }, el("summary", { text: "Write the description yourself" }), el("div", { class: "dform", style: "border:0;margin:0;padding:6px 0 0" }, el("label", {}, "What should it detect?", dwhat), el("label", {}, "An example that should trigger it", dex), el("div", { class: "frow" }, el("label", {}, "Applies to", scopeSeg), el("label", {}, "Icon (optional)", iconBox)))));
-    ui.pane_det = el("div", { class: "tabpane", hidden: true }, ui.dnew, ui.dmsg, ui.dfiles,
-      el("details", { class: "dnew adv", style: "margin-top:10px" }, el("summary", {}, "Advanced ", ui.dcount), el("div", { class: "bt", style: "margin-top:8px", text: "Current detectors" }), ui.dlist, ui.dsuggest, el("div", { class: "bt", style: "margin-top:10px", text: "More validated detectors" }), ui.dlib, ui.dguide),
-      el("div", { class: "bt", style: "margin-top:14px", text: "Detector definition" }), (ui.ddetail = el("div", { class: "ddetail" })));
+    ui.usePreset = usePreset;
+    /* import, export and reset live in the header ⋯ menu (ui.detIO), not in this tab */
+    const fileIn = el("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: async () => { const f = fileIn.files[0]; fileIn.value = ""; if (!f) return; try { const doc = JSON.parse(await f.text()); if (!Array.isArray(doc.detectors)) throw new Error("a detector file needs a top-level `detectors` list"); const ds = doc.detectors.slice(0, 40).map(addSpec).filter(Boolean); ds.forEach(x => { x.src = f.name + " (imported from your computer)"; }); say(applied(ds, `Imported “${doc.name || f.name}”:`)); } catch (e) { say("Could not import that file: " + e.message); } } });
+    const savePreset = () => {
+      const n = (prompt("Save the current detectors as a preset. Name:", "") || "").trim(); if (!n) return;
+      const go = async (overwrite) => { try { const r = await post("/api/detector-save", { file: n, doc: exportDoc(n, "My presets"), overwrite }); say(`Saved ${r.count} detectors as a preset (demo/detectors/${r.file}).`); ui.loadFiles(); } catch (e) { if (/already exists/.test(e.message) && confirm(`${e.message}. Replace it?`)) go(true); else say("Save failed: " + e.message); } };
+      go(false);
+    };
+    ui.detIO = { importFile: () => fileIn.click(), download: () => download("detectors.json", JSON.stringify(exportDoc(), null, 2), "application/json"), save: savePreset, clear: () => { S.dets = []; S.sel = null; SETFILE = ""; say(applied([], "Removed all;").replace(" 0 detectors:", "")); } };
+    ui.dfilter = el("input", { type: "search", class: "dfilter", placeholder: "Find a detector…", "aria-label": "Find a detector to add", oninput: () => renderDetTab() });
+    ui.dlib = el("div", { class: "davail" });
+    ui.pane_det = el("div", { class: "tabpane", hidden: true }, (ui.ddetail = el("div", { class: "ddetail" })),
+      el("div", { class: "dsec avail" }, el("div", { class: "bt", text: "Add a detector" }), el("span", { class: "dsp" }), ui.dfilter), ui.dlib);
     /* settings: the levers, in order of how often they are changed */
     ui.models = el("div", { class: "models", role: "radiogroup", "aria-label": "Model" }); ui.mstate = el("div", { class: "mstat small muted" }); ui.winSeg = el("span", { class: "segmented", role: "group", "aria-label": "Window per voice" }); ui.winHelp = el("div", { class: "help" });
     const cadSeg = el("span", { class: "segmented", role: "group", "aria-label": "How often to score" }); const nIn = el("input", { type: "number", min: "3", max: "20", step: "1", "aria-label": "Words between checks", style: "width:56px;min-height:28px", onchange: () => { S.n = clamp(Math.round(+nIn.value) || 5, 3, 20); nIn.value = S.n; resetRun(); writeHash(); refreshEst(); } }); nIn.value = S.n; nIn.hidden = S.cp !== "words";
@@ -1454,7 +1489,8 @@
     /* events: did the detectors catch what really happened */
     ui.evs = el("div"); ui.pane_ev = el("div", { class: "tabpane", hidden: true }, ui.evs);
     ui.lvl = el("div"); ui.pane_lvl = el("div", { class: "tabpane", hidden: true }, ui.lvl); ui.cnt = el("div", { class: "cnt-grid" }); ui.pane_cnt = el("div", { class: "tabpane", hidden: true }, ui.cnt, el("div", { class: "foot" }, el("button", { class: "btn", type: "button", text: "Download live stats (JSON)", onclick: () => download(`flow-live-stats-${Date.now()}.json`, JSON.stringify(liveStats(), null, 2), "application/json") })));
-    ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["lvl", "Levels"], ["det", "Detectors"], ["req", "Request"], ["set", "Settings"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k) }, t, el("span", { class: "n", "data-n": k }))));
+    ui.tabs = el("div", { class: "tabs2", role: "tablist" }, [["flag", "Flagged"], ["lvl", "Levels"], ["det", "Detectors"], ["req", "Request"], ["set", "Settings"]].map(([k, t]) => el("button", { type: "button", role: "tab", "data-t": k, "aria-selected": String(k === S.tab), onclick: () => setTab(k) }, t, el("span", { class: "n", "data-n": k }))), ui.expand = el("button", { type: "button", class: "expand", onclick: () => toggleExpand() }));
+    paintExpand();
     ui.diag = el("details", { class: "dnew", style: "margin-top:10px" }, el("summary", { text: "Diagnostics: counters and timings" }), ui.cnt, ui.pane_cnt.querySelector(".foot")); ui.diag.addEventListener("toggle", () => { if (ui.diag.open) renderCounters(); });
     ui.evDet = el("details", { class: "dnew" }, el("summary", { text: "Documented events (real scenes)" }), ui.evs); ui.evDet.addEventListener("toggle", () => { if (ui.evDet.open) renderEvents(); });
     ui.advSet.append(ui.diag, ui.evDet);
@@ -1483,7 +1519,7 @@
     raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.mode === "live") { S.t = audioNow(); coachTick(); kpTick(); } else if (S.playing) { S.t += dt * speedF(); while (ptr < W.length && W[ptr].t <= S.t) onWord(W[ptr++]); if (ptr >= W.length && S.t > DUR) finish(); }
     if (now - (frame.vt || 0) > 500) { frame.vt = now; updateVoices(); compactOld(); }
-    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); voices.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); ageFlags(); if (S.tab === "det" && S.sel) updateDetailScores(); if (S.tab === "lvl") renderLevels(); if (S.tab === "set") { if (ui.diag.open) renderCounters(); if (ui.evDet.open) renderEvents(); } }
+    tickDets(dt); glide.frame(dt); stack.frame(dt); tickCards(); updateDets(); updateCoach(); chart.draw(); voices.draw(); if (now - hitTick > 800) { hitTick = now; tickHits(); } if (now - tabTick > 700) { tabTick = now; updateTabs(); ageFlags(); if (S.tab === "lvl") renderLevels(); if (S.tab === "set") { if (ui.diag.open) renderCounters(); if (ui.evDet.open) renderEvents(); } }
     const c = mmss(S.t + (S.mode === "live" ? S.startAt : 0)); if (ui.clock.textContent !== c) ui.clock.textContent = c; ui.pill.classList.toggle("on", S.playing);
     const b = pending ? `${pending} waiting on ${Jev.codeOf(S.model)}` : ""; if (ui.behind.textContent !== b) ui.behind.textContent = b;
   }

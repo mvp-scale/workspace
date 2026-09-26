@@ -1,6 +1,6 @@
 """Detector files and AI-drafted detectors for the Flow lab (demo/flow-lab.html). Stdlib + optional PyYAML.
 
-  GET  /api/detector-files                  -> [{file, name, description, count}]        (demo/detectors/*.json|yaml|yml)
+  GET  /api/detector-files                  -> [{file, name, group, description, count}]        (demo/detectors/*.json|yaml|yml)
   GET  /api/detector-file?file=NAME         -> normalised document {name, description, detectors:[...]}
   POST /api/detector-save   {file, doc, overwrite?}  -> writes demo/detectors/<file>.json
   POST /api/detector-draft  {name, context?, icons} -> one detector drafted from just a name
@@ -87,7 +87,7 @@ def _doc(raw, fname):
     if not isinstance(raw, dict) or not isinstance(raw.get("detectors"), list):
         raise ValueError("a detector file needs a top-level `detectors:` list")
     dets = [c for c in (clean(x, None) for x in raw["detectors"][:MAX_DETECTORS]) if c]
-    return {"name": str(raw.get("name") or fname)[:60], "description": str(raw.get("description", ""))[:400], "detectors": dets,
+    return {"name": str(raw.get("name") or fname)[:60], "group": str(raw.get("group") or "")[:40], "description": str(raw.get("description", ""))[:400], "detectors": dets,
             "skipped": len(raw["detectors"][:MAX_DETECTORS]) - len(dets)}
 
 
@@ -109,12 +109,12 @@ def handle_get(path, query):
     if path == "/api/detector-files":
         out = []
         for p in sorted(DIR.glob("*")):
-            if p.suffix in (".json", ".yaml", ".yml"):
+            if p.suffix in (".json", ".yaml", ".yml") and p.stem != "format-example":     # the template for authors, not a preset
                 try:
                     d = _load(p.name)
-                    out.append({"file": p.name, "name": d["name"], "description": d["description"], "count": len(d["detectors"])})
+                    out.append({"file": p.name, "name": d["name"], "group": d["group"], "description": d["description"], "count": len(d["detectors"])})
                 except Exception as e:
-                    out.append({"file": p.name, "name": p.name, "description": f"could not read: {e}", "count": 0})
+                    out.append({"file": p.name, "name": p.name, "group": "", "description": f"could not read: {e}", "count": 0})
         return 200, {"files": out, "ai": bool(os.environ.get("ANTHROPIC_API_KEY")), "ai_model": MODEL, "ai_used": _ai_used, "ai_cap": AI_CAP}
     if path == "/api/detector-file":
         try:
