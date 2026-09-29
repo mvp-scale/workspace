@@ -1,0 +1,127 @@
+{
+  "name": "Students: disruption and settling",
+  "group": "Classroom behaviour",
+  "description": "For a noisy or disruptive class: talking over the teacher, ignoring instructions, backchat, mocking, off-topic chatter, and the moments a student settles or apologises. Language only; it cannot hear tone or see what is happening.",
+  "detectors": [
+    {
+      "key": "cl_talkover",
+      "name": "Talks over the teacher",
+      "what": "the speaker talks over or cuts off someone who is instructing or speaking to the class",
+      "example": "Yeah but Miss, I'm talking now.",
+      "scope": "person",
+      "icon": "megaphone"
+    },
+    {
+      "key": "cl_ignore",
+      "name": "Ignores an instruction",
+      "what": "the speaker refuses or brushes off an instruction they were just given",
+      "example": "Nah, I'm not doing that.",
+      "scope": "person",
+      "icon": "lock"
+    },
+    {
+      "key": "cl_offtopic",
+      "name": "Off-topic chatter",
+      "what": "the speaker talks about something unrelated to the lesson while the lesson is going on",
+      "example": "Did you see the game last night?",
+      "scope": "person",
+      "icon": "chat"
+    },
+    {
+      "key": "cl_backchat",
+      "name": "Backchat",
+      "what": "the speaker answers back to an adult in a cheeky, dismissive or sarcastic way",
+      "example": "Whatever, you can't make me.",
+      "scope": "person",
+      "icon": "flame"
+    },
+    {
+      "key": "cl_mock",
+      "name": "Mocks someone",
+      "what": "the speaker makes fun of a person, copies them in a mocking voice or laughs at them",
+      "example": "Ooh, look at teacher's pet.",
+      "scope": "person",
+      "icon": "mask"
+    },
+    {
+      "key": "cl_insult",
+      "name": "Insult or name-calling",
+      "what": "the speaker calls someone a rude name or insults them directly",
+      "example": "You're so stupid.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "cl_heckle",
+      "name": "Heckles the lesson",
+      "what": "the speaker makes loud remarks or jokes to get a laugh from the class while someone else is teaching",
+      "example": "This is so boring, can we go home?",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "cl_challenge",
+      "name": "Challenges authority",
+      "what": "the speaker questions an adult's right to tell them what to do",
+      "example": "Why should I listen to you?",
+      "scope": "person",
+      "icon": "shield"
+    },
+    {
+      "key": "cl_complain",
+      "name": "Complains",
+      "what": "the speaker complains about the task, the rules or being treated unfairly",
+      "example": "This is pointless, it's not fair.",
+      "scope": "person",
+      "icon": "flag"
+    },
+    {
+      "key": "cl_refuse",
+      "name": "Refuses to take part",
+      "what": "the speaker says they will not join in or do the work",
+      "example": "I'm not doing the group thing.",
+      "scope": "person",
+      "icon": "hook"
+    },
+    {
+      "key": "cl_blame",
+      "name": "Blames someone else",
+      "what": "the speaker blames another person for what they did",
+      "example": "It wasn't me, he started it.",
+      "scope": "person",
+      "icon": "hook"
+    },
+    {
+      "key": "cl_swear",
+      "name": "Swears or rude language",
+      "what": "the speaker uses swearing or crude language",
+      "example": "This is crap.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "cl_threat",
+      "name": "Threatens someone",
+      "what": "the speaker says they will hurt someone or get someone in trouble",
+      "example": "Say that again and I'll get you after school.",
+      "scope": "person",
+      "icon": "flame"
+    },
+    {
+      "key": "cl_cooperate",
+      "name": "Cooperates",
+      "what": "the speaker agrees to do what was asked or answers the question properly",
+      "example": "Okay, sorry. Page twelve, right?",
+      "scope": "person",
+      "icon": "check"
+    },
+    {
+      "key": "cl_apology",
+      "name": "Apologises",
+      "what": "the speaker says sorry for something they did",
+      "example": "Sorry, I shouldn't have said that.",
+      "scope": "person",
+      "icon": "heart"
+    }
+  ]
+}

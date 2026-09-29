@@ -1,0 +1,119 @@
+{
+  "name": "Teacher: warnings, consequences, resets",
+  "group": "Classroom management",
+  "description": "For the adult handling a disruptive class: warnings, naming students, repeated requests, consequences, calm resets and humour, and the moments control slips.",
+  "detectors": [
+    {
+      "key": "cm_warn",
+      "name": "Gives a warning",
+      "what": "the speaker warns that there will be a consequence if the behaviour continues",
+      "example": "One more comment and you'll be moving seats.",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "cm_name",
+      "name": "Names a student",
+      "what": "the speaker calls out a particular student by name to stop or change what they are doing",
+      "example": "Jordan, eyes on your book.",
+      "scope": "person",
+      "icon": "target"
+    },
+    {
+      "key": "cm_repeat",
+      "name": "Repeats the request",
+      "what": "the speaker repeats an instruction or request they already gave",
+      "example": "I've asked you twice to sit down.",
+      "scope": "person",
+      "icon": "clock"
+    },
+    {
+      "key": "cm_consequence",
+      "name": "Sets a consequence",
+      "what": "the speaker states or applies a consequence such as a detention, a call home or a move",
+      "example": "That's a detention, see me at break.",
+      "scope": "person",
+      "icon": "lock"
+    },
+    {
+      "key": "cm_raise",
+      "name": "Shouts or snaps",
+      "what": "the speaker uses shouting words, an exclamation or a sharp order to regain control",
+      "example": "Right! Everybody, be quiet now!",
+      "scope": "person",
+      "icon": "megaphone"
+    },
+    {
+      "key": "cm_calm",
+      "name": "Calm reset",
+      "what": "the speaker asks for quiet or attention in a calm, non-threatening way",
+      "example": "Okay everyone, let's take a breath and start again.",
+      "scope": "person",
+      "icon": "smile"
+    },
+    {
+      "key": "cm_deflect",
+      "name": "Uses humour to defuse",
+      "what": "the speaker uses a light joke to ease tension without ignoring the behaviour",
+      "example": "I love the enthusiasm, now let's aim it at the worksheet.",
+      "scope": "person",
+      "icon": "smile"
+    },
+    {
+      "key": "cm_private",
+      "name": "Takes it aside",
+      "what": "the speaker asks to speak to a student privately about their behaviour",
+      "example": "Can I have a word outside, please?",
+      "scope": "person",
+      "icon": "users"
+    },
+    {
+      "key": "cm_give_up",
+      "name": "Loses control",
+      "what": "the speaker says they cannot get the class to listen, or gives up trying",
+      "example": "I can't teach like this.",
+      "scope": "person",
+      "icon": "alert"
+    },
+    {
+      "key": "cm_sarcasm",
+      "name": "Sarcasm at a student",
+      "what": "the speaker answers a student with sarcasm or a put-down",
+      "example": "Oh, brilliant, thank you for that contribution.",
+      "scope": "person",
+      "icon": "mask"
+    },
+    {
+      "key": "o_redirect",
+      "name": "Redirects attention",
+      "what": "the speaker redirects someone's behaviour or attention back to the task",
+      "example": "Eyes up front please.",
+      "scope": "person",
+      "icon": "bell"
+    },
+    {
+      "key": "o_praise",
+      "name": "Specific praise",
+      "what": "the speaker praises a specific thing someone did or said",
+      "example": "I liked how you showed your working.",
+      "scope": "person",
+      "icon": "star"
+    },
+    {
+      "key": "o_encourage",
+      "name": "Encouragement",
+      "what": "the speaker encourages someone to keep trying or reassures them about a mistake",
+      "example": "That's okay, try it once more.",
+      "scope": "person",
+      "icon": "heart"
+    },
+    {
+      "key": "o_invite",
+      "name": "Invites participation",
+      "what": "the speaker invites a quiet or new person to contribute",
+      "example": "Sam, what do you think?",
+      "scope": "person",
+      "icon": "users"
+    }
+  ]
+}

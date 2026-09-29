@@ -14,6 +14,8 @@ everywhere, so combining packs never duplicates it.
 | General · Core 16 | `core16.json` | The default set for any conversation | 16 |
 | Governance & meetings · Team meeting | `meeting.json` | Team and project meetings | 14 |
 | Coaching & interviewing · Teaching observation | `observation.json` | Observing a teacher, trainer or facilitator | 12 |
+| Classroom behaviour · Students: disruption and settling | `classroom-behaviour.json` | A noisy or disruptive class: talking over, backchat, mocking, refusing | 15 |
+| Classroom management · Teacher: warnings, consequences, resets | `classroom-management.json` | The adult handling it: warnings, consequences, calm resets | 14 |
 | Coaching & interviewing · Job interview | `interview.json` | How a candidate's answers are phrased (language only, not a hiring decision) | 12 |
 | Scams · Scam caller | `scam-call.json` | The caller in phone and tech-support scams | 12 |
 | Scams · Scam victim | `scam-victim.json` | The person being scammed; pair with the caller pack | 8 |
