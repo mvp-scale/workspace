@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image lab · Jev Bench Console</title>
+<meta name="description" content="Accuracy of the vision model on real business image tasks, scored against known answers.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  /* Same layout as the Scenario lab: a rail of tasks on the left, one view on the right. Colours come from shared tokens only. */
+  .lab { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px; align-items: start; }
+  .lab > .view { border-left: 1px solid var(--border); padding-left: 30px; min-width: 0; }
+  .view > * + * { margin-top: 14px; }
+  .rail { position: sticky; top: 52px; max-height: calc(100vh - 64px); overflow-y: auto; display: grid; gap: 1px; padding-right: 6px; }
+  .rail h4.sect { margin: 16px 8px 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+  .rail h4.sect:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .rail a { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: var(--radius-sm); color: var(--text-2); text-decoration: none; font-size: 13px; border-left: 2px solid transparent; }
+  .rail a .lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rail a:hover { background: var(--surface-2); color: var(--text); }
+  .rail a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; border-left-color: var(--accent); }
+  .rail a .n { color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; flex: none; }
+  .rail a.off { opacity: .6; }
+  .rail a .vd { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--border-strong); }
+  .rail a .vd.good { background: var(--good); } .rail a .vd.warn { background: var(--warn); } .rail a .vd.bad { background: var(--bad); }
+  @media (max-width: 860px) { .lab { grid-template-columns: 1fr; } .lab > .view { border-left: 0; padding-left: 0; } .rail { position: static; max-height: none; } }
+
+  .pillrow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+  .pill b { color: var(--text); font-weight: 600; }
+  .facts { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 10px; margin: 8px 0; font-size: 13px; }
+  .facts dt { color: var(--text-3); margin: 0; } .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .qbox { margin: 0; padding: 6px 10px; border-left: 3px solid var(--border-strong); background: var(--surface-2); border-radius: var(--radius-sm); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .eyebrow { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; margin: 10px 0 4px; }
+  details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
+  pre.notes { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); max-height: 420px; overflow: auto; }
+
+  /* Interval bar: the band is the 95% Wilson interval, the tick the accuracy, the dashed line chance */
+  .ibar { position: relative; height: 14px; min-width: 120px; }
+  .ibar::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--border); border-radius: 2px; }
+  .ibar .band { position: absolute; top: 3px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 45%, var(--surface-2)); }
+  .ibar .tick { position: absolute; top: 0; width: 2px; height: 14px; margin-left: -1px; background: var(--accent); }
+  .ibar .chance { position: absolute; top: -2px; height: 18px; border-left: 1px dashed var(--text-3); }
+  .ibar.big { height: 22px; } .ibar.big::before { top: 10px; } .ibar.big .band { top: 6px; height: 10px; } .ibar.big .tick { height: 22px; } .ibar.big .chance { height: 28px; top: -3px; }
+  .big-stat { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .resgrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 22px; align-items: center; }
+  @media (max-width: 860px) { .resgrid { grid-template-columns: 1fr; } }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  table.lab-t td.rowlink { cursor: pointer; } table.lab-t tr.rowgroup th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); padding: 5px 12px; }
+  table.lab-t td.dim, table.lab-t td .dim { color: var(--text-3); } table.lab-t td.wrapc { white-space: normal; min-width: 180px; max-width: 340px; }
+  table.lab-t tr.off td { opacity: .65; }
+  /* Confusion matrix */
+  table.cm { border-collapse: collapse; font-size: 12px; }
+  table.cm th, table.cm td { padding: 5px 9px; text-align: center; border: 1px solid var(--surface); }
+  table.cm th { color: var(--text-2); font-weight: 600; background: var(--surface-2); max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  table.cm th.r { text-align: left; }
+  table.cm td.ok { background: color-mix(in srgb, var(--good) 38%, var(--surface)); font-weight: 650; }
+  table.cm td.bad { background: color-mix(in srgb, var(--bad) 28%, var(--surface)); }
+  table.cm td.z { color: var(--text-3); }
+  .twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+  .mini { width: 100%; border-collapse: collapse; font-size: 13px; } .mini td, .mini th { padding: 4px 8px 4px 0; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; vertical-align: middle; }
+  .mini tr:last-child td { border-bottom: 0; } .mini td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; } .mini td.grow { width: 40%; }
+
+  /* Item cards: the image is the point, so it leads */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .icard { border: 1px solid var(--border); border-left: 3px solid var(--good); border-radius: var(--radius); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; }
+  .icard.wrong { border-left-color: var(--bad); } .icard.err { border-left-color: var(--warn); }
+  .icard .thumb { display: block; width: 100%; height: 170px; object-fit: contain; background: var(--surface-2); border: 0; padding: 0; cursor: zoom-in; }
+  .icard .body { padding: 8px 10px 10px; display: grid; gap: 6px; font-size: 12.5px; }
+  .icard .q { color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+  .icard .verdict { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .icard .vt { font-weight: 650; } .icard .vt.good { color: var(--good); } .icard .vt.bad { color: var(--bad); }
+  .opts { display: grid; gap: 3px; }
+  .opt { display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 6px; align-items: center; font-size: 11.5px; }
+  .opt .lab-n { position: relative; z-index: 1; padding: 1px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent) var(--p), transparent var(--p)); }
+  .opt.exp .lab-n { box-shadow: inset 0 0 0 1px var(--good); } .opt.pick:not(.exp) .lab-n { box-shadow: inset 0 0 0 1px var(--bad); }
+  .opt .pv { text-align: right; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  dialog.lb { border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 12px; max-width: min(1100px, 94vw); }
+  dialog.lb::backdrop { background: rgba(0, 0, 0, .6); }
+  dialog.lb img { display: block; max-width: 100%; max-height: 74vh; margin: 0 auto 10px; }
+  .need { display: grid; gap: 6px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--text-3); font-size: 12px; align-items: center; }
+  .legend .sw { display: inline-block; width: 22px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 45%, var(--surface-2)); vertical-align: middle; margin-right: 5px; }
+  .legend .sw.t { width: 2px; height: 12px; background: var(--accent); border-radius: 0; } .legend .sw.c { width: 0; height: 12px; background: none; border-left: 1px dashed var(--text-3); border-radius: 0; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>Image lab</h1>
+      <p>Can the vision model do real business tasks on images? Each task is 25 images with a known answer, scored the same way as the Scenario lab.</p>
+    </div>
+    <div class="actions"><button class="btn" id="share" type="button">Copy link</button><button class="btn" id="print" type="button">Print</button></div>
+  </div>
+  <div class="callout warn" style="margin-bottom:14px">Caveat: each task has only 25 images, so the interval is wide (about plus or minus 15 points at 80%). Answers come from a dataset's own annotations or from a generator that drew the image, never from a person or model looking at it. Several sources are licensed for local use only, so these images stay on this machine. Read the interval, not just the point value.</div>
+  <div id="root" aria-live="polite"></div>
+  <dialog class="lb" id="lb"><img alt="" id="lb-img"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span id="lb-cap" class="small muted"></span><button class="btn" id="lb-x" type="button">Close</button></div></dialog>
+</main>
+
+<script>
+const { el, fmt, api, mount, empty } = Jev;
+const PAGE = location.pathname;
+const GOOD = 0.85, GOOD_LO = 0.70, ASSIST = 0.60;
+
+/* ---- statistics, kept in one place ---- */
+function wilson(k, n, z = 1.96) {
+  if (!n) return [0, 1];
+  const p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n));
+  return [Math.max(0, (c - m) / d), Math.min(1, (c + m) / d)];
+}
+const chanceOf = (it) => 1 / Math.max(2, it.labels.length);
+const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const topP = (r) => Math.max(0, ...Object.values(r.probs || { x: 0 }));
+
+/* The rule from probes/images/HANDOFF.md section 9. Below 60%, or an interval that reaches chance, is Not ready. */
+function verdictOf(s) {
+  if (!s || !s.n) return { key: "none", label: "Not run", tone: "" };
+  if (s.acc < ASSIST || s.lo <= s.chance) return { key: "not", label: "Not ready", tone: "bad" };
+  if (s.acc >= GOOD && s.lo > GOOD_LO) return { key: "works", label: "Works", tone: "good" };
+  return { key: "assist", label: "Assist only", tone: "warn" };
+}
+
+/* All numbers for one task and model, from the stored per-item answers. */
+function stats(task, model) {
+  const res = task.results[model] || {};
+  const rows = task.items.filter(i => res[i.id]).map(i => ({ item: i, r: res[i.id] }));
+  const ok = rows.filter(x => !x.r.error), k = ok.filter(x => x.r.correct).length, n = ok.length;
+  const [lo, hi] = wilson(k, n);
+  const chance = ok.length ? ok.reduce((a, x) => a + chanceOf(x.item), 0) / ok.length : task.items.length ? task.items.reduce((a, i) => a + chanceOf(i), 0) / task.items.length : null;
+  const conf = ok.length ? ok.reduce((a, x) => a + topP(x.r), 0) / ok.length : null;
+  return { rows, ok, k, n, errors: rows.length - n, acc: n ? k / n : null, lo, hi, chance, conf, lat: median(ok.map(x => x.r.latency_s).filter(v => v != null)) };
+}
+
+/* ---- small building blocks ---- */
+const pct0 = (v) => v == null ? "–" : Math.round(v * 100) + "%";
+const badge = (v) => el("span", { class: `badge ${v.tone}`, text: v.label });
+function ibar(s, big) {
+  if (!s.n) return el("div", { class: `ibar${big ? " big" : ""}` });
+  return el("div", { class: `ibar${big ? " big" : ""}`, role: "img", "aria-label": `Accuracy ${pct0(s.acc)}, interval ${pct0(s.lo)} to ${pct0(s.hi)}, chance ${pct0(s.chance)}`, title: `${pct0(s.acc)} (${pct0(s.lo)} to ${pct0(s.hi)}); chance ${pct0(s.chance)}` },
+    el("div", { class: "band", style: `left:${s.lo * 100}%;width:${Math.max(0.5, (s.hi - s.lo) * 100)}%` }),
+    el("div", { class: "tick", style: `left:${s.acc * 100}%` }), el("div", { class: "chance", style: `left:${s.chance * 100}%` }));
+}
+const interval = (s) => s.n ? `${pct0(s.lo)} to ${pct0(s.hi)}` : "–";
+const built = (t) => t.items.length > 0;
+const label = (t, m) => { const s = stats(t, m); return s.n ? pct0(s.acc) : ""; };
+const isNoul = (it) => it.question.type === "noul";
+const chanceText = (t) => { const c = [...new Set(t.items.map(i => pct0(chanceOf(i))))]; return c.length ? c.join(" or ") : (t.chance_note || "–"); };
+
+/* ---- state lives in the URL hash so a view can be shared ---- */
+function route() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  return { task: h.get("task"), model: h.get("m"), f: h.get("f") || "all" };
+}
+function go(patch) {
+  const r = { ...route(), ...patch }, h = new URLSearchParams();
+  if (r.task) h.set("task", r.task); if (r.model) h.set("m", r.model); if (r.f && r.f !== "all") h.set("f", r.f);
+  location.hash = h.toString();
+}
+
+/* ---- rail ---- */
+function rail(D, model, cur) {
+  const nav = el("nav", { class: "rail", "aria-label": "Tasks" });
+  const link = (task, text, extra, vd, off) => el("a", { href: `#${new URLSearchParams(task ? { task, ...(model ? { m: model } : {}) } : {}).toString()}`, "aria-current": (task || null) === cur ? "page" : null, class: off ? "off" : null },
+    vd ? el("span", { class: `vd ${vd}`, "aria-hidden": "true" }) : null, el("span", { class: "lbl", text }), el("span", { class: "n", text: extra }));
+  nav.append(el("h4", { class: "sect", text: "Overview" }), link(null, "All tasks", String(D.tasks.length)));
+  for (const area of D.areas) {
+    nav.append(el("h4", { class: "sect", text: area }));
+    for (const t of D.tasks.filter(x => x.area === area)) {
+      const v = verdictOf(stats(t, model));
+      nav.append(link(t.id, `${String(t.n).padStart(2, "0")} ${t.title}`, built(t) ? label(t, model) : "", built(t) ? v.tone : "", !built(t)));
+    }
+  }
+  return nav;
+}
+
+/* ---- overview ---- */
+function overview(D, model) {
+  const all = D.tasks.map(t => ({ t, s: stats(t, model) })), done = all.filter(x => x.s.n);
+  const count = (key) => done.filter(x => verdictOf(x.s).key === key).length;
+  const needs = D.tasks.filter(t => /NEEDS/.test(t.status)).length, blocked = D.tasks.filter(t => t.status === "BLOCKED").length;
+  const kpi = (l, v, note) => el("div", { class: "card kpi" }, el("div", { class: "label", text: l }), el("div", { class: "value", text: String(v) }), el("div", { class: "note", text: note }));
+  const rows = [];
+  for (const area of D.areas) {
+    rows.push(el("tr", { class: "rowgroup" }, el("th", { colspan: 7, text: area })));
+    for (const { t, s } of all.filter(x => x.t.area === area)) {
+      const v = verdictOf(s), open = () => go({ task: t.id });
+      rows.push(el("tr", { class: built(t) ? null : "off", tabindex: "0", onclick: open, onkeydown: (e) => { if (e.key === "Enter") open(); } },
+        el("td", { class: "rowlink" }, el("a", { href: `#task=${t.id}`, text: `${String(t.n).padStart(2, "0")} ${t.title}`, onclick: (e) => e.stopPropagation() })),
+        el("td", {}, s.n ? badge(v) : el("span", { class: "badge", text: t.status.replaceAll("_", " ").toLowerCase() })),
+        el("td", { class: "num", "data-value": s.n ? s.acc : -1, text: s.n ? `${pct0(s.acc)}` : "–" }),
+        el("td", { style: "min-width:160px;width:22%" }, s.n ? ibar(s) : el("span", { class: "dim small", text: "" })),
+        el("td", { class: "num", text: s.n ? `${s.k}/${s.n}` : built(t) ? "not run" : "–" }),
+        el("td", { class: "num", text: built(t) ? chanceText(t) : (t.chance_note || "–") }),
+        el("td", { class: "wrapc dim small", text: built(t) ? `${t.source || ""} · ${t.license || ""}` : (t.note || "") })));
+    }
+  }
+  const tbl = el("table", { class: "data lab-t" }, el("thead", {}, el("tr", {}, [["Task"], ["Verdict"], ["Accuracy", "num"], ["95% interval"], ["Correct", "num"], ["Chance", "num"], ["Source · licence, or why not built"]].map(([h, c]) => el("th", { scope: "col", class: c, text: h })))), el("tbody", {}, rows));
+  return el("div", { class: "view-in" },
+    el("div", { class: "toolbar" },
+      el("div", {}, el("h2", { style: "margin:0;font-size:15px", text: "All tasks: accuracy by task" }),
+        el("p", { class: "small muted", text: "Click a task to see every image, the question and what the model answered." })),
+      el("button", { class: "btn", type: "button", onclick: () => exportAll(D, model), text: "Export CSV" })),
+    el("div", { class: "kpis", style: "margin-top:12px" },
+      kpi("Built and run", `${done.length} of ${D.tasks.length}`, "25 images each"),
+      kpi("Works", count("works"), "85%+ and interval above 70%"), kpi("Assist only", count("assist"), "needs a human check"),
+      kpi("Not ready", count("not"), "under 60%, or near chance"), kpi("Not built", blocked + needs, `${blocked} blocked, ${needs} need you`)),
+    el("div", { class: "table-wrap", style: "margin-top:12px" }, tbl),
+    el("div", { class: "legend", style: "margin-top:10px" }, el("span", {}, el("i", { class: "sw" }), "95% Wilson interval"), el("span", {}, el("i", { class: "sw t" }), "accuracy"), el("span", {}, el("i", { class: "sw c" }), "chance")),
+    el("p", { class: "small muted", style: "margin-top:6px", text: "Chance is what guessing would score: 50% for yes/no, one over the number of options for pick-one. A yes/no task at 60% is barely better than a coin; a nine-option task at 60% is far above its 11% chance." }));
+}
+
+/* ---- one task ---- */
+function header(t, s) {
+  const types = [...new Set(t.items.map(i => isNoul(i) ? "yes/no" : "multi-choice"))];
+  const qs = [...new Set(t.items.map(i => i.question.instructions))];
+  const dist = {};
+  t.items.forEach(i => { dist[i.expected] = (dist[i.expected] || 0) + 1; });
+  const classes = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+  return el("div", { class: "card" },
+    el("div", { class: "pillrow", style: "align-items:center" }, el("h2", { style: "margin:0 6px 0 0;font-size:16px", text: t.title }),
+      el("span", { class: "pill", text: t.area }), el("span", { class: "pill", text: `${t.items.length} images` }),
+      el("span", { class: "pill", text: `chance ${chanceText(t)}` }), el("span", { class: "pill", text: types.join(" + ") })),
+    el("dl", { class: "facts" },
+      el("dt", { text: "Source" }), el("dd", { text: t.source || "–" }),
+      el("dt", { text: "Licence" }), el("dd", { text: t.license || "–" }),
+      el("dt", { text: "Answer" }), el("dd", { text: t.label_origin || "–" }),
+      t.url && /^https?:/.test(t.url) ? [el("dt", { text: "Link" }), el("dd", {}, el("a", { href: t.url, target: "_blank", rel: "noopener", text: t.url }))] : null),
+    el("div", { class: "eyebrow", text: qs.length > 1 && qs.length <= 6 ? "Questions" : "Question" }),
+    qs.length <= 6 ? el("div", { style: "display:grid;gap:4px" }, qs.map(q => el("p", { class: "qbox", text: q }))) : el("p", { class: "qbox", text: `${qs.length} different questions, one per image (see each card below). Example: ${qs[0]}` }),
+    classes.length <= 12 ? [el("div", { class: "eyebrow", text: "Right answers across the 25 images" }), el("div", { class: "pillrow" }, classes.map(([c, n]) => el("span", { class: "pill" }, c, " ", el("b", { text: String(n) }))))] : null,
+    t.md ? el("details", { class: "more", style: "margin-top:10px" }, el("summary", { text: "Source and caveats" }), el("pre", { class: "notes", text: t.md })) : null);
+}
+
+function result(t, s, models, model) {
+  const v = verdictOf(s);
+  const conf = s.conf == null ? null : `mean confidence ${pct0(s.conf)} against accuracy ${pct0(s.acc)}${s.conf - s.acc > 0.05 ? ": overconfident on average" : s.acc - s.conf > 0.05 ? ": underconfident on average" : ": well matched"}`;
+  return el("div", {},
+    el("h3", { style: "margin:0 0 4px;font-size:15px", text: "Result" }),
+    el("div", { class: "card" }, s.n ? el("div", { class: "resgrid" },
+      el("div", {}, el("div", { style: "display:flex;align-items:baseline;gap:12px;flex-wrap:wrap" }, el("span", { class: "big-stat", text: fmt.pct(s.acc, 0) }), badge(v), Jev.tag(model),
+          el("span", { class: "muted small", text: `${s.k} of ${s.n} correct` })),
+        el("div", { style: "margin:10px 0 4px;max-width:520px" }, ibar(s, true)),
+        el("p", { class: "small muted", text: `95% interval ${interval(s)}, chance ${pct0(s.chance)}. ` + (v.key === "works" ? "Clears the Works bar." : v.key === "assist" ? "Usable with human review." : s.lo <= s.chance ? "The interval reaches chance, so this is not distinguishable from guessing." : "Below the 60% bar.") })),
+      el("div", { class: "small", style: "display:grid;gap:3px" }, conf ? el("div", { text: conf }) : null,
+        s.lat != null ? el("div", { text: `median ${fmt.ms(s.lat)} per image` }) : null,
+        s.errors ? el("div", { class: "badge warn", style: "justify-self:start", text: `${s.errors} could not run (not counted as wrong)` }) : null,
+        el("div", { class: "muted", text: "Works = 85%+ with interval above 70%. Assist only = 60% to 85%. Not ready = below 60% or interval reaches chance." })))
+      : el("p", { class: "muted", text: "No stored answers for this model yet. Run probes/images/run_winnow.py." })),
+    models.length > 1 ? el("div", { class: "pillrow", style: "margin-top:8px" }, models.map(m => el("button", { class: "pill" + (m === model ? " active" : ""), type: "button", onclick: () => go({ model: m }), text: Jev.nameOf(m) }))) : null);
+}
+
+function confusion(t, s) {
+  const lab = [...new Set(s.ok.flatMap(x => [x.item.expected, x.r.predicted]))];
+  if (lab.length < 2) return null;
+  if (lab.length > 9) {
+    const wrong = s.ok.filter(x => !x.r.correct);
+    return el("div", { class: "card" }, el("h3", { style: "margin:0", text: "Mistakes" }),
+      el("p", { class: "small muted", text: `Too many different answers (${lab.length}) for a matrix. Each row is one wrong image: the right answer and what the model said.` }),
+      wrong.length ? el("table", { class: "mini" }, el("tbody", {}, wrong.map(x => el("tr", {}, el("td", {}, el("a", { href: "#", onclick: (e) => { e.preventDefault(); show(x.item); }, text: x.item.id.slice(-3) })), el("td", { text: x.item.expected }), el("td", { class: "muted", text: "→" }), el("td", { text: String(x.r.predicted) }))))) : el("p", { class: "small", text: "No mistakes." }));
+  }
+  const order = [...lab].sort((a, b) => (a === "no" ? -1 : b === "no" ? 1 : 0) || String(a).localeCompare(String(b), undefined, { numeric: true }));
+  const cnt = {}; s.ok.forEach(x => { const k = `${x.item.expected}\u0000${x.r.predicted}`; cnt[k] = (cnt[k] || 0) + 1; });
+  return el("div", { class: "card" }, el("h3", { style: "margin:0", text: "What it got wrong" }),
+    el("p", { class: "small muted", text: "Rows are the right answer, columns what the model said. Green diagonal is correct; red cells are the mistakes. Recall is the share of each right answer found." }),
+    el("div", { class: "table-wrap", style: "margin-top:8px" }, el("table", { class: "cm" },
+      el("thead", {}, el("tr", {}, el("th", { class: "r", text: "Right ↓ / said →" }), order.map(c => el("th", { title: c, text: c })), el("th", { text: "Recall" }))),
+      el("tbody", {}, order.map(e => {
+        const tot = order.reduce((a, p) => a + (cnt[`${e}\u0000${p}`] || 0), 0);
+        if (!tot) return null;
+        return el("tr", {}, el("th", { class: "r", title: e, text: e }), order.map(p => { const c = cnt[`${e}\u0000${p}`] || 0; return el("td", { class: c ? (e === p ? "ok" : "bad") : "z", text: String(c) }); }), el("td", { text: pct0((cnt[`${e}\u0000${e}`] || 0) / tot) }));
+      })))));
+}
+
+function calibration(s) {
+  const bands = [[0, 0.6, "under 60%"], [0.6, 0.8, "60 to 80%"], [0.8, 0.95, "80 to 95%"], [0.95, 1.01, "95% and up"]];
+  const rows = bands.map(([a, b, l]) => { const g = s.ok.filter(x => topP(x.r) >= a && topP(x.r) < b); return { l, n: g.length, acc: g.length ? g.filter(x => x.r.correct).length / g.length : null }; });
+  return el("div", { class: "card" }, el("h3", { style: "margin:0", text: "Does confidence mean anything?" }),
+    el("p", { class: "small muted", text: "Confidence is the highest probability the model gave. If it can be trusted to route work, accuracy should climb as confidence rises. With 25 images each band is small." }),
+    el("table", { class: "mini", style: "margin-top:6px" }, el("thead", {}, el("tr", {}, ["Confidence", "Images", "Accuracy"].map((h, i) => el("th", { class: i ? "num" : "", text: h })))),
+      el("tbody", {}, rows.map(r => el("tr", {}, el("td", { text: r.l }), el("td", { class: "num", text: String(r.n) }), el("td", { class: "num", text: r.n ? pct0(r.acc) : "–" }))))));
+}
+
+/* Accuracy sliced by the dimensions a task actually has: question, right answer, and (for the drawn forms) image quality. */
+function slices(t, s) {
+  const by = (fn) => { const m = new Map(); s.ok.forEach(x => { const k = fn(x); if (k == null) return; const g = m.get(k) || [0, 0]; g[1]++; if (x.r.correct) g[0]++; m.set(k, g); }); return [...m]; };
+  const out = [];
+  const table = (title, sub, rows) => el("div", { class: "card" }, el("h3", { style: "margin:0", text: title }), el("p", { class: "small muted", text: sub }),
+    el("table", { class: "mini", style: "margin-top:6px" }, el("tbody", {}, rows.map(([k, [c, n]]) => el("tr", {}, el("td", { style: "max-width:200px;overflow:hidden;text-overflow:ellipsis", title: k, text: k }),
+      el("td", { class: "grow" }, Jev.meter(c / n)), el("td", { class: "num dim", text: `${c}/${n}` }))))));
+  const qs = by(x => x.item.question.instructions);
+  if (qs.length > 1 && qs.length <= 6) out.push(table("By question", "Different questions behave differently, so they are scored separately.", qs));
+  if (t.items[0] && /^t05/.test(t.id)) out.push(table("By image quality", "The same form drawn clean, skewed, at low resolution or scanned.", by(x => (x.item.notes || "").split(" ").pop()).sort()));
+  const cl = by(x => x.item.expected);
+  if (cl.length > 1 && cl.length <= 12) out.push(table("By right answer", "Share of each right answer the model found.", cl.sort((a, b) => String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true }))));
+  return out.length ? el("div", { class: "twocol" }, out) : null;
+}
+
+function optionBars(x) {
+  const probs = x.r.probs || {}, order = [...x.item.labels].sort((a, b) => (probs[b] || 0) - (probs[a] || 0)), shown = order.slice(0, 4);
+  if (!shown.includes(x.item.expected)) shown.push(x.item.expected);
+  return el("div", { class: "opts" }, shown.map(l => el("div", { class: "opt" + (l === x.item.expected ? " exp" : "") + (l === x.r.predicted ? " pick" : "") },
+    el("span", { class: "lab-n", style: `--p:${(probs[l] || 0) * 100}%`, title: l, text: (l === x.item.expected ? "✓ " : "") + l }), el("span", { class: "pv", text: pct0(probs[l] || 0) }))));
+}
+function card(t, x) {
+  const r = x.r, bad = r.error ? "err" : r.correct ? "" : "wrong";
+  return el("article", { class: `icard ${bad}` },
+    el("button", { class: "thumb", type: "button", "aria-label": `Enlarge ${x.item.id}`, onclick: () => show(x.item), style: "padding:0" }, el("img", { src: x.item.image, alt: "", loading: "lazy", style: "width:100%;height:170px;object-fit:contain" })),
+    el("div", { class: "body" }, el("div", { class: "q", title: x.item.question.instructions, text: x.item.question.instructions }),
+      r.error ? el("div", { class: "badge warn", text: "could not run: " + r.error }) : [
+        el("div", { class: "verdict" }, el("span", { class: `vt ${r.correct ? "good" : "bad"}`, text: r.correct ? "Correct" : `Said ${r.predicted}` }), el("span", { class: "muted", text: `right answer ${x.item.expected} · ${pct0(topP(r))} sure` })),
+        optionBars(x)],
+      el("div", { class: "muted", style: "font-size:11px", text: `${x.item.id.split("-").pop()} · ${x.item.source_id || ""}` })));
+}
+function show(item) {
+  document.getElementById("lb-img").src = item.image; document.getElementById("lb-cap").textContent = `${item.id} · ${item.question.instructions} · right answer: ${item.expected}`;
+  const d = document.getElementById("lb"); if (!d.open) d.showModal();
+}
+
+function gallery(t, s, f, model) {
+  const shown = s.rows.filter(x => f === "wrong" ? !x.r.error && !x.r.correct : f === "right" ? x.r.correct : true);
+  const seg = el("div", { class: "segmented", role: "group", "aria-label": "Filter images" }, [["all", `All ${s.rows.length}`], ["wrong", `Wrong ${s.n - s.k}`], ["right", `Right ${s.k}`]].map(([k, l]) => el("button", { type: "button", "aria-pressed": String(f === k), onclick: () => go({ f: k }), text: l })));
+  return el("div", {}, el("div", { class: "toolbar" }, el("h3", { style: "margin:0;font-size:15px", text: "Every image" }), el("div", { style: "display:flex;gap:8px" }, seg, el("button", { class: "btn", type: "button", onclick: () => exportTask(t, model), text: "Export CSV" }))),
+    el("p", { class: "small muted", style: "margin:4px 0 10px", text: "Green edge is correct, red is wrong. Bars show the model's probability for each option; the right answer is marked ✓. Click an image to enlarge." }),
+    shown.length ? el("div", { class: "gallery" }, shown.map(x => card(t, x))) : empty("Nothing here", "No images match this filter."));
+}
+
+function notBuilt(t) {
+  const user = /NEEDS_USER_IMAGES/.test(t.status);
+  return el("div", { class: "view-in", style: "display:grid;gap:14px" },
+    el("div", { class: "card need" }, el("div", { class: "pillrow", style: "align-items:center" }, el("h2", { style: "margin:0 6px 0 0;font-size:16px", text: t.title }), el("span", { class: "pill", text: t.area }), el("span", { class: "badge bad", text: t.status.replaceAll("_", " ").toLowerCase() })),
+      el("p", { text: t.note || "" }),
+      user ? el("p", { class: "small muted", text: `No public source exists for this one. Drop 25 photos you may use, plus labels.csv, into data/image-lab/user/${t.id}/, then run probes/images/ingest_user.py. The question and allowed answers are in the notes below.` }) : null,
+      t.status === "NEEDS_USER_ACTION" ? el("p", { class: "small muted", text: "A person has to accept a licence or log in first. The notes below say exactly what." }) : null,
+      el("dl", { class: "facts" }, el("dt", { text: "Source" }), el("dd", { text: t.source || "none" }), el("dt", { text: "Licence" }), el("dd", { text: t.license || "–" }), el("dt", { text: "Chance" }), el("dd", { text: t.chance_note || "–" })),
+      t.md ? el("details", { class: "more", open: true }, el("summary", { text: "Notes" }), el("pre", { class: "notes", text: t.md })) : null));
+}
+
+function taskView(D, t, model, f) {
+  if (!built(t)) return notBuilt(t);
+  const s = stats(t, model);
+  return el("div", { class: "view-in", style: "display:grid;gap:14px" }, header(t, s), result(t, s, D.models, model),
+    s.n ? [el("div", { class: "twocol" }, confusion(t, s), calibration(s)), slices(t, s)] : null,
+    gallery(t, s, f, model));
+}
+
+/* ---- exports ---- */
+function exportTask(t, model) {
+  const s = stats(t, model);
+  Jev.download(`${t.id}-${model}.csv`, Jev.csv([["id", "question", "expected", "predicted", "correct", "confidence", "source_id"], ...s.rows.map(x => [x.item.id, x.item.question.instructions, x.item.expected, x.r.predicted, x.r.correct, x.r.error ? "" : topP(x.r).toFixed(3), x.item.source_id])]), "text/csv");
+}
+function exportAll(D, model) {
+  Jev.download(`image-lab-${model}.csv`, Jev.csv([["task", "status", "correct", "n", "accuracy", "low", "high", "chance", "verdict"], ...D.tasks.map(t => { const s = stats(t, model); return [t.id, t.status, s.k, s.n, s.acc?.toFixed(3) ?? "", s.n ? s.lo.toFixed(3) : "", s.n ? s.hi.toFixed(3) : "", s.chance?.toFixed(3) ?? "", verdictOf(s).label]; })]), "text/csv");
+}
+
+/* ---- mount ---- */
+const root = document.getElementById("root");
+let DATA = null;
+function paint() {
+  const r = route(), D = DATA, model = r.model && D.models.includes(r.model) ? r.model : (D.models.includes("winnow") ? "winnow" : D.models[0]);
+  const t = r.task && D.tasks.find(x => x.id === r.task);
+  document.title = (t ? `${t.title} · ` : "") + "Image lab · Jev Bench Console";
+  root.replaceChildren(el("div", { class: "lab" }, rail(D, model, t ? t.id : null), el("div", { class: "view" }, t ? taskView(D, t, model, r.f) : overview(D, model))));
+  if (!paint.first) paint.first = true; else window.scrollTo(0, 0);
+}
+(async function init() {
+  root.replaceChildren(Jev.skeleton());
+  try { DATA = await api("api/imagelab"); await Promise.race([Jev.ready, new Promise(r => setTimeout(r, 1200))]); paint(); }
+  catch (e) { root.replaceChildren(Jev.failure(e, init)); }
+})();
+window.addEventListener("hashchange", () => DATA && paint());
+document.getElementById("share").addEventListener("click", () => Jev.copy(location.href));
+document.getElementById("print").addEventListener("click", () => print());
+document.getElementById("lb-x").addEventListener("click", () => document.getElementById("lb").close());
+document.getElementById("lb").addEventListener("click", (e) => { if (e.target.id === "lb") e.target.close(); });
+</script>
+</body>
+</html>

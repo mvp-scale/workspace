@@ -21,6 +21,7 @@ from pathlib import Path
 
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
+import imagelab_api  # image tasks and stored answers for /imagelab
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent / "probes"))
@@ -392,7 +393,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
@@ -409,6 +410,10 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0].rstrip("/") or "/"
         if path.startswith("/audio/"):
             return audio_library.serve(self, path[len("/audio/"):])
+        if path.startswith("/imagelab-img/"):
+            return imagelab_api.serve_image(self, path[len("/imagelab-img/"):])
+        if path == "/api/imagelab":
+            return self._send(200, imagelab_api.payload())
         if path == "/api/audio-files":
             return self._send(200, audio_library.list_files())
         if path.startswith("/api/detector-"):
