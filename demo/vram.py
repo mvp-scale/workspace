@@ -156,6 +156,20 @@ def main():
         "laya": lambda: measure_inprocess("laya", "laya_local", str(ROOT / "data/models/laya")),
         "verdict": lambda: measure_inprocess("verdict", "verdict_local", str(ROOT / "data/models/verdict")),
     }
+    wi, cy = ROOT / "models/winnow-inference", ROOT / "models/cygnet-recipe"
+    def winnow_job(tag, vision):
+        cmd = ["python3", "scripts/serve.py", "--model", str(ROOT / "models/Winnow-12B/gguf/Winnow-12B-Q8_0.gguf")]
+        if vision:  # --mmproj is the on/off switch for image input; omit it for text only
+            cmd += ["--mmproj", str(ROOT / "models/Winnow-12B/gguf/mmproj-Winnow-12B.gguf")]
+        cmd += ["--context", "65536", "--decision-parallel", "4", "--chat-parallel", "1", "--cache", "q8_0", "--memory", "exclusive", "--port", "8091"]
+        return lambda: measure_served(tag, cmd, {"PATH": "/usr/local/cuda/bin:" + os.environ["PATH"]}, wi, "http://127.0.0.1:8091", "http://127.0.0.1:8091/v1/models", {})
+    jobs["winnow"], jobs["winnow-text"] = winnow_job("winnow", True), winnow_job("winnow-text", False)
+    # Cygnet is two processes (vLLM on :8890 plus the decision server on :8016) run under one shell so both are sampled; vLLM pre-allocates 90% of the card by design
+    cyvenv = ROOT / "models/cygnet-venv/bin"
+    jobs["cygnet"] = lambda: measure_served("cygnet", ["bash", "-c", f"{cyvenv}/vllm serve google/gemma-4-12B-it --revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 --served-model-name cygnet "
+        f"--host 127.0.0.1 --port 8890 --max-model-len 16384 --gpu-memory-utilization 0.90 & python3 shim/decision_server.py & wait"],
+        {"VLLM_USE_FLASHINFER_SAMPLER": "0", "SHIM_VLLM": "http://127.0.0.1:8890/v1/chat/completions", "SHIM_MODEL": "cygnet", "SHIM_TEMPERATURE": "3.4", "CYGNET_PORT": "8016"},
+        cy, "http://127.0.0.1:8016", "http://127.0.0.1:8890/v1/models", {})
     for tag, run, port in (("kev-4b", "jaredpalmer/kev-4b", "8010"), ("kev-0.8b", "jaredpalmer/kev-0.8b", "8011"), ("kev-0.5b", str(ROOT / "data/kev/runs/kev"), "8008")):
         jobs[tag + "-bf16"] = (lambda tag=tag, run=run, port=port: measure_served(tag + "-bf16", [kevpy, str(ROOT / "demo/serve_kev.py"), "--run", run, "--port", port], {**kev_env, "KEV_DTYPE": "bf16"},
                                ROOT / "kev", f"http://127.0.0.1:{port}", f"http://127.0.0.1:{port}/v1/models", {}))

@@ -1179,7 +1179,8 @@
     ui.lenIn = el("input", { type: "text", placeholder: "for … min", value: S.hashLn || "", style: "flex:0 0 78px", "aria-label": "Length", title: "Stop after this long (minutes, or m:ss). Empty = until the end or the 2 h limit. Handy for keeping a paid run short.", onchange: () => writeHash() });
     ui.yt.addEventListener("input", () => { try { const u = new URL(ui.yt.value.trim()), t = u.searchParams.get("t") || u.searchParams.get("start"); if (t && !ui.startIn.value.trim()) { const sec = parseHMS(t); if (Number.isFinite(sec) && sec > 0) { ui.startIn.value = fmtHMS(sec); writeHash(); } } } catch {} });
     ui.ytF = ui.yt; ui.fileF = ui.file; ui.libF = el("div", { class: "row1" }, ui.lib, ui.libPrev); ui.hint = el("span", { class: "small muted" });
-    ui.wsurl = el("input", { type: "text", value: `ws://${location.hostname || "127.0.0.1"}:8200/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
+    ui.wsurl = el("input", { type: "text", value: new URLSearchParams(location.search).get("voice") || `ws://${location.hostname || "127.0.0.1"}:8200/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
+    if (location.protocol === "https:" && !new URLSearchParams(location.search).get("voice")) fetch("/static/voice-url.txt", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(t => { if (/^wss:\/\//.test(t.trim())) ui.wsurl.value = t.trim(); }).catch(() => {});
     ui.liveStat = el("span"); ui.liveErr = el("div", { class: "liveerr", role: "alert" });
     ui.slot.append(ui.dlgField, ui.pasteField, ui.ytF, ui.fileF, ui.libF, ui.hint, ui.startIn, ui.lenIn);
     /* Settings > Playback: what applies to the current source */

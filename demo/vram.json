@@ -1,7 +1,7 @@
 {
   "gpu": "NVIDIA GeForce RTX 5090",
   "gpu_total_mb": 32607,
-  "measured": "2026-09-21",
+  "measured": "2026-09-30",
   "method": "nvidia-smi per-process memory (includes the CUDA context) sampled every 0.2 s while the model handles long single-question inputs and the 9-question battery (served models) or the 80-item websec set (in-process models). loaded = after load and warm-up; peak = maximum seen.",
   "models": {
     "jeff": {
@@ -106,6 +106,33 @@
       "gpu_workload_peak_mb": 1722,
       "cpu_rss_peak_mb": 2735,
       "workload_s": 4.9
+    },
+    "winnow": {
+      "kind": "server",
+      "load_s": 4.4,
+      "gpu_loaded_mb": 14166,
+      "gpu_peak_mb": 15060,
+      "gpu_workload_peak_mb": 15060,
+      "cpu_rss_peak_mb": 12474,
+      "workload_s": 10.8
+    },
+    "cygnet": {
+      "kind": "server",
+      "load_s": 110.0,
+      "gpu_loaded_mb": 29322,
+      "gpu_peak_mb": 29954,
+      "gpu_workload_peak_mb": 29694,
+      "cpu_rss_peak_mb": 26298,
+      "workload_s": 11.9
+    },
+    "winnow-text": {
+      "kind": "server",
+      "load_s": 5.4,
+      "gpu_loaded_mb": 13896,
+      "gpu_peak_mb": 14790,
+      "gpu_workload_peak_mb": 14790,
+      "cpu_rss_peak_mb": 12473,
+      "workload_s": 10.8
     }
   }
 }

@@ -54,6 +54,58 @@
       "verify": "semif"
     },
     {
+      "id": "cygnet",
+      "name": "Cygnet",
+      "vendor": "BlockBrain (blockbrain-ai)",
+      "kind": "Open, decoder LLM",
+      "open": true,
+      "licence": "Shim MIT; weights Apache-2.0 with Google's Gemma Prohibited Use Policy",
+      "params": "12B",
+      "base": "google/gemma-4-12B-it (frozen, unmodified, BF16)",
+      "architecture": "Decoder-only LLM used as a classifier",
+      "how": [
+        "Each option is shown as a letter with its criteria text kept verbatim.",
+        "One vLLM request with one output token: the model's own probability for each option letter at the answer position is read, then renormalised over the options.",
+        "One calibration temperature (3.4) is applied. It was fitted on the authors' own generated items, not on JevBench's public set. The weights are not fine-tuned."
+      ],
+      "interface": "POST /v1/systemone (shim) over stock vLLM 0.30.0",
+      "served_as": "HTTP, vLLM plus shim, GPU (bf16, 16384-token limit)",
+      "price": "Self-hosted",
+      "public_score": null,
+      "public_rank": null,
+      "repo": "https://github.com/blockbrain-ai/cygnet-recipe",
+      "family": "logits",
+      "sauce": "No training at all. Label the options A, B, C, run frozen Gemma 4 12B once, read how strongly it wants to write each letter, and soften with one temperature.",
+      "code": "CYGN12",
+      "verify": "cygnet"
+    },
+    {
+      "id": "winnow",
+      "name": "Winnow-12B (Q8)",
+      "vendor": "EldanRing",
+      "kind": "Open, decoder LLM",
+      "open": true,
+      "licence": "Apache-2.0 (inherited from Gemma 4)",
+      "params": "12B",
+      "base": "Gemma 4 12B IT, LoRA rank 32 merged into the weights (Q8_0 GGUF, 12.67 GB)",
+      "architecture": "Decoder-only LLM with native typed-decision serving",
+      "how": [
+        "The model sees a letter-labelled question. The server picks verified single-token labels, reads their logits and normalises over those candidates (a softmax over the logits).",
+        "Serves noul, choice and score questions natively through a patched llama.cpp server (winnow-inference), with batches of questions run in waves.",
+        "Also offers /v1/chat/completions, and image input when the 175 MB mmproj projector is loaded."
+      ],
+      "interface": "POST /v1/systemone (llama.cpp-based winnow-server)",
+      "served_as": "HTTP, llama.cpp CUDA, Q8_0 GGUF, 65536-token context",
+      "price": "Self-hosted",
+      "public_score": null,
+      "public_rank": null,
+      "repo": "https://huggingface.co/EldanRing/Winnow-12B",
+      "family": "logits",
+      "sauce": "A Gemma 4 12B fine-tune served by a purpose-built llama.cpp build: label the options with letters, read the label logits once, softmax over them.",
+      "code": "WINN12",
+      "verify": "winnow"
+    },
+    {
       "id": "so1",
       "name": "open-alternative-jev",
       "vendor": "IkerMoel",

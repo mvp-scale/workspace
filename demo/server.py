@@ -34,6 +34,8 @@ _decompose_lock = threading.Lock()
 BENCH = Path(os.environ.get("BENCH_DIR", HERE.parent / "data" / "bench"))
 BACKENDS = {  # keyed by the same model ids as the leaderboard, best first; codes and names live in models.json
     "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": os.environ.get("TYPESAFE_API_KEY", ""), "hosted": True},
+    "cygnet": {"url": os.environ.get("CYGNET_URL", "http://127.0.0.1:8016"), "key": ""},
+    "winnow": {"url": os.environ.get("WINNOW_URL", "http://127.0.0.1:8091"), "key": ""},
     "semif": {"url": os.environ.get("SEMIF_URL", "http://127.0.0.1:8012"), "key": ""},
     "kev-4b": {"url": os.environ.get("KEV4_URL", "http://127.0.0.1:8010"), "key": ""},
     "so1": {"url": os.environ.get("SO1_URL", "http://127.0.0.1:8013"), "key": ""},

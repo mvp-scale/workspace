@@ -149,7 +149,7 @@ function families(rows, tier) {
   return el("div", { class: "table-wrap" }, t);
 }
 
-const LOCAL = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "semif", "so1", "laya", "verdict"];
+const LOCAL = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "cygnet", "winnow", "semif", "so1", "laya", "verdict"];
 const extra = () => Promise.all([Jev.api("api/vram"), Jev.api("api/probe-macro"), Jev.api("api/agreement")]).then(([vram, macro, agree]) => ({ vram, macro, agree })).catch(() => null);
 const gbOf = (mb) => mb / 1024;
 
