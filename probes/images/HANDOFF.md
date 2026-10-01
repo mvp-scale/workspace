@@ -15,6 +15,29 @@ To do that we need a small, reproducible test set per task:
 
 You are building the **pipeline** (download, sample, build, validate, report). You are not running the model. Someone else runs the model later.
 
+### Scope: you only ADD new files. You never change existing code.
+
+- **Create new files only**, and only inside `/workspace/probes/images/` (code and notes) and `/workspace/data/image-lab/` (images).
+- **Do not edit, rename, move, delete, reformat or "improve" any file that already exists** outside those two folders. That includes `/workspace/probes/vision/*.py`, `/workspace/probes/v2/*`, `/workspace/demo/*`, `/workspace/jevbench/*`, `/workspace/kev/*`, `/workspace/jeff/*`. If you need something from one of those files, **import it or copy the few lines you need into your own file**. If an existing function does not do what you need, write your own new function. Do not change the old one.
+- **Do not refactor, rename or restructure** anything you create in this job after the validator passes for it. Fix only what the validator reports.
+- **Do not add dependencies.** Use only what is already installed in `/workspace/kev/.venv` (Pillow, pyarrow, numpy if present) and the standard library. If you think you need a new package, STOP and ask.
+- Existing data under `/workspace/data/sources/image-lab/` is read-only. Download new data into new sub-folders only.
+- If anything in this file seems to conflict with these rules, the rules win. Stop and ask.
+
+### Naming: what `T` means
+
+`T` in this file stands for **a task id**, one per business topic, exactly as written in section 7. For example the first task is `t01_invoice_fields`. Everywhere you see `T`, replace it with that id:
+
+| Placeholder | Example for the first task |
+|---|---|
+| `build_T.py` | `/workspace/probes/images/build_t01_invoice_fields.py` |
+| `T.jsonl` | `/workspace/probes/images/t01_invoice_fields.jsonl` |
+| `T.md` | `/workspace/probes/images/t01_invoice_fields.md` |
+| images for `T` | `/workspace/data/image-lab/images/t01_invoice_fields/000.jpg` ... `024.jpg` |
+| `python validate.py T` | `python validate.py t01_invoice_fields` |
+
+The cross-task files keep fixed names: `_imgcommon.py`, `validate.py`, `STATUS.md`, and `ingest_user.py` (section 10). The only other files you may create are the per-task files in the table above and the drop-in `README.txt` files in section 10. Do not create any other file names.
+
 ### Non-goals (do not do these)
 
 - Do **not** label images by eye. Do not ask a model to label images. Do not "fix" a label you disagree with.
