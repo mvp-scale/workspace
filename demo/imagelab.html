@@ -231,10 +231,11 @@ function taskRows(tasks, model) {
     const s = stats(t, model), v = verdictOf(s), open = () => go({ task: t.id, area: t.area });
     return el("tr", { class: built(t) ? null : "off", tabindex: "0", onclick: open, onkeydown: (e) => { if (e.key === "Enter") open(); } },
       el("td", { class: "rowlink" }, el("a", { href: hashOf({ ...route(), task: t.id, area: t.area }), text: `${String(t.n).padStart(2, "0")} ${t.title}`, onclick: (e) => e.stopPropagation() })),
-      el("td", {}, s.n ? badge(v) : el("span", { class: "badge", text: t.status.replaceAll("_", " ").toLowerCase() })),
+      el("td", {}, s.n ? badge(v) : el("span", { class: "badge", text: t.status.replaceAll("_", " ").toLowerCase() }), t.research_only ? el("span", { class: "pill", style: "margin-left:6px", title: "Research benchmark, not for clinical use", text: "research" }) : null),
       el("td", { class: "num", text: s.n ? pct0(s.acc) : "–" }),
       el("td", { style: "min-width:140px" }, s.n ? ibar(s) : null),
       el("td", { class: "num", text: s.n ? `${s.k}/${s.n}` : built(t) ? "not run" : "–" }),
+      el("td", { class: "num", title: "Images answered correctly on every wording of the same question", text: (cons(t, model) ? `${cons(t, model).all_correct}/${cons(t, model).n}` : "–") }),
       el("td", { class: "wrapc dim small", text: built(t) ? (t.source || "") : (t.note || "") }));
   });
 }
@@ -251,7 +252,7 @@ function domainRow(area, tasks, model) {
 }
 function taskTable(tasks, model) {
   return el("table", { class: "data lab-t" },
-    el("thead", {}, el("tr", {}, ["Task", "Verdict", "Accuracy", "95% interval", "Correct", "Source, or why not built"].map((h, i) => el("th", { class: i === 2 || i === 4 ? "num" : "", text: h })))),
+    el("thead", {}, el("tr", {}, ["Task", "Verdict", "Accuracy", "95% interval", "Correct", "Same answer reworded", "Source, or why not built"].map((h, i) => el("th", { class: i === 2 || i === 4 || i === 5 ? "num" : "", text: h })))),
     el("tbody", {}, taskRows(tasks, model)));
 }
 function overview(D, model) {
@@ -303,6 +304,7 @@ function header(t, s) {
     el("div", { class: "pillrow", style: "align-items:center" }, el("h2", { style: "margin:0 6px 0 0;font-size:16px", text: t.title }),
       el("span", { class: "pill", text: t.area }), el("span", { class: "pill", text: `${t.items.length} images` }),
       el("span", { class: "pill", text: `chance ${chanceText(t)}` }), el("span", { class: "pill", text: types.join(" + ") })),
+    t.research_only ? el("div", { class: "callout bad", style: "margin-top:8px" }, el("strong", { text: "Research benchmark only, not for clinical use. " }), "Accuracy here says how a general vision model reads published, expert-labelled images. It is not a claim that it can diagnose, and the Works / Assist only labels are not a readiness rating.") : null,
     el("dl", { class: "facts" },
       el("dt", { text: "Source" }), el("dd", { text: t.source || "–" }),
       el("dt", { text: "Licence" }), el("dd", { text: t.license || "–" }),
@@ -384,14 +386,40 @@ function optionBars(x) {
   return el("div", { class: "opts" }, shown.map(l => el("div", { class: "opt" + (l === x.item.expected ? " exp" : "") + (l === x.r.predicted ? " pick" : "") },
     el("span", { class: "lab-n", style: `--p:${(probs[l] || 0) * 100}%`, title: l, text: (l === x.item.expected ? "✓ " : "") + l }), el("span", { class: "pv", text: pct0(probs[l] || 0) }))));
 }
+/* Plain-language meaning of each angle name written by probes/images/consistency.py */
+const ANGLE = {
+  "base": ["Original question", "The question exactly as built."],
+  "opposite": ["Asked backwards", "The same fact worded the opposite way (for example \"free of any cavity?\"). The right answer flips."],
+  "paraphrase": ["Reworded", "The same question in different words."],
+  "pick yes,no": ["As a choice: yes, no", "The same question as a pick-one with the options listed yes then no."],
+  "pick no,yes": ["As a choice: no, yes", "The same, options reversed. Catches a habit of picking the first option."],
+  "reversed": ["Options reversed", "The same pick-one with the options listed in the opposite order."],
+  "true is it": ["Is the right answer correct?", "\"Is the answer X?\" for the true option. The right response is yes."],
+  "wrong is it 1": ["Is a wrong answer correct? (1)", "\"Is the answer X?\" for a wrong option. The right response is no."],
+  "wrong is it 2": ["Is a wrong answer correct? (2)", "The same for a second wrong option. The right response is no."],
+};
+const cons = (t, model) => (t.consistency || {})[model] || null;
+/* The same fact asked several ways. A guesser is right on one wording half the time but rarely on all of them. */
+function angles(t, model) {
+  const c = cons(t, model);
+  if (!c) return null;
+  const base = c.by_angle[0], mixed = Object.values(c.items).filter(i => i.variants.some(v => v.correct) && !i.variants.every(v => v.correct)).length;
+  return el("div", { class: "card" }, el("h3", { style: "margin:0", text: "Asked from several angles" }),
+    el("p", { class: "small muted", text: `Each image is asked ${c.angles} ways about the same fact (rewording, opposite wording, options reordered, and "is the answer X?" for the true and for wrong options). Right on every way: ${c.all_correct} of ${c.n}. Right on some but not all: ${mixed}. A coin-flipper would be right on every way for only a few percent of images.` }),
+    el("table", { class: "mini", style: "margin-top:6px" }, el("tbody", {}, c.by_angle.map(a => el("tr", {}, el("td", { style: "white-space:normal;min-width:200px" }, el("div", { text: (ANGLE[a.name] || [a.name])[0] }), el("div", { class: "dim small", text: (ANGLE[a.name] || [a.name, ""])[1] })), el("td", { class: "grow" }, Jev.meter(a.correct / a.n)), el("td", { class: "num dim", text: `${a.correct}/${a.n}` }))))));
+}
 function card(t, x) {
   const r = x.r, bad = r.error ? "err" : r.correct ? "" : "wrong";
+  const ci = ((t.consistency || {})[curModel] || { items: {} }).items[x.item.id];
   return el("article", { class: `icard ${bad}` },
     el("button", { class: "thumb", type: "button", "aria-label": `Enlarge ${x.item.id}`, onclick: () => show(x.item), style: "padding:0" }, el("img", { src: x.item.image, alt: "", loading: "lazy", style: "width:100%;height:170px;object-fit:contain" })),
     el("div", { class: "body" }, el("div", { class: "q", title: x.item.question.instructions, text: x.item.question.instructions }),
       r.error ? el("div", { class: "badge warn", text: "could not run: " + r.error }) : [
         el("div", { class: "verdict" }, el("span", { class: `vt ${r.correct ? "good" : "bad"}`, text: r.correct ? "Correct" : `Said ${r.predicted}` }), el("span", { class: "muted", text: `right answer ${x.item.expected} · ${pct0(topP(r))} sure` })),
         optionBars(x)],
+      ci ? el("div", { class: "small", title: ci.variants.map(v => `${v.name}: ${v.correct ? "right" : "wrong (" + v.predicted + ")"}`).join("\n"), style: "display:flex;gap:4px;flex-wrap:wrap;align-items:center" },
+        el("span", { class: "muted", text: "angles" }), ci.variants.map(v => el("span", { class: v.correct ? "vt good" : "vt bad", text: v.correct ? "✓" : "✗" })),
+        ci.all ? null : (ci.variants.some(v => v.correct) ? el("span", { class: "badge warn", text: "inconsistent" }) : null)) : null,
       el("div", { class: "muted", style: "font-size:11px", text: `${x.item.id.split("-").pop()} · ${x.item.source_id || ""}` })));
 }
 function show(item) {
@@ -418,11 +446,13 @@ function notBuilt(t) {
       t.md ? el("details", { class: "more", open: true }, el("summary", { text: "Notes" }), el("pre", { class: "notes", text: t.md })) : null));
 }
 
+let curModel = null;
 function taskView(D, t, model, f) {
   if (!built(t)) return notBuilt(t);
+  curModel = model;
   const s = stats(t, model);
   return el("div", { class: "view-in", style: "display:grid;gap:14px" }, header(t, s), result(t, s, D.models, model),
-    s.n ? [el("div", { class: "twocol" }, confusion(t, s), calibration(s)), slices(t, s)] : null,
+    s.n ? [el("div", { class: "twocol" }, confusion(t, s), calibration(s)), angles(t, model), slices(t, s)] : null,
     gallery(t, s, f, model));
 }
 

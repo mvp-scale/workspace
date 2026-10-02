@@ -41,6 +41,16 @@
 | t36_meter_reading | READY | 25 | photographed electricity meters | not stated, local use only | 25% | The printed reading. Different photos from the water meters |
 | t37_road_damage | READY | 25 | pothole severity folders | MIT | 25% | none, low, medium, severe |
 | t38_cattle_count | READY | 25 | UAV cattle photos | not stated, local use only | 25% | How many cattle, four bins |
+| t40_skin_lesion | READY | 25 | HAM10000 (pathology-confirmed), HF mirror | CC BY-NC, local use only | 25% | Research benchmark, not for clinical use |
+| t41_bone_fracture | READY | 25 | FracAtlas (radiologist-annotated) | CC BY 4.0 | 50% | Research benchmark, not for clinical use |
+| t42_chest_xray | READY | 25 | Kermany pediatric chest X-ray, HF mirror | CC BY 4.0 | 50% | Research benchmark; pediatric, normal vs pneumonia only |
+| t43_retina | READY | 25 | Kermany retinal OCT, HF mirror | CC BY 4.0 | 25% | Research benchmark; widely used test split |
+| t44_dental_xray | READY | 25 | DENTEX test split | CC BY-NC-SA 4.0, local use only | 50% | Research benchmark; Turkish label mapping by builder, to verify |
+| t45_pathology_patch | READY | 25 | PatchCamelyon, HF mirror | CC0 | 50% | Research benchmark; 96 px patches |
+| t46_endoscopy | READY | 25 | HyperKvasir labelled images, HF mirror | CC BY 4.0 (mirror), owner page not reached | 25% | Research benchmark; class folders |
+| t47_brain_mri | READY | 25 | Brain tumour MRI, HF mirror | CC0 (mirror) | 25% | Research benchmark; no-tumour class from a different source |
+| t48_wound_photo | READY | 25 | Fitzpatrick17k, Atlas Dermatologico images | CC BY-NC-SA 3.0, local use only | 25% | Skin conditions, not wound types: no usable wound data found |
+| t49_roof_hail | BLOCKED | 0 | Roboflow roof sets (gated), others unusable | CC BY 4.0 (reported) | 50% planned | Roboflow needs an account; see t49_roof_hail.md |
 
 ## How a later run should be scored
 

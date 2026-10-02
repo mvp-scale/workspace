@@ -18,11 +18,13 @@ RUNS = DATA / "runs"
 TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
 AREAS = [  # business area -> task numbers. 1-25 are the original lab. 26+ are the real-photo sets from the gap.
-    ("Finance and admin", set(range(1, 9)) | {31, 32}), ("Insurance and claims", range(9, 13)), ("Retail and logistics", range(13, 18)),
+    ("Finance and admin", set(range(1, 9)) | {31, 32}), ("Insurance and claims", set(range(9, 13)) | {49}), ("Retail and logistics", range(13, 18)),
     ("Safety and compliance", range(18, 21)), ("Manufacturing and field", range(21, 24)), ("IT and property", range(24, 26)),
     ("Traffic and parking", range(26, 27)), ("Livestock", set(range(27, 29)) | {38}), ("Property plans", range(29, 30)),
     ("Catastrophe claims", range(30, 31)), ("Utilities", {36}), ("Roads", {37}),
+    ("Medical and dental", range(40, 49)),
 ]
+TITLES = {"t48_wound_photo": "Skin condition photo"}  # the set asks about skin conditions; no usable wound data was found
 TASK_ID = re.compile(r"^t(\d\d)_[a-z0-9_]+$")
 
 
@@ -53,11 +55,31 @@ def _results(task):
     return out
 
 
+def _consistency(task):
+    """Same-fact-asked-several-ways runs written by probes/images/consistency.py: <model>-consistency/<task>.jsonl."""
+    out = {}
+    if RUNS.is_dir():
+        for d in sorted(RUNS.glob("*-consistency")):
+            f = d / f"{task}.jsonl"
+            if not f.is_file():
+                continue
+            rows = [r for r in _jsonl(f) if "variants" in r]
+            if not rows:
+                continue
+            k = len(rows[0]["variants"])
+            names = [v["name"] for v in rows[0]["variants"]]
+            by_angle = [{"name": n, "correct": sum(r["variants"][i]["correct"] for r in rows), "n": len(rows)} for i, n in enumerate(names)]
+            items = {r["id"]: {"all": all(v["correct"] for v in r["variants"]), "variants": [{x: v[x] for x in ("name", "correct", "predicted", "expected")} for v in r["variants"]]} for r in rows}
+            out[d.name[: -len("-consistency")]] = {"n": len(rows), "angles": k, "all_correct": sum(i["all"] for i in items.values()), "by_angle": by_angle, "items": items}
+    return out
+
+
 def _task(task_id, status):
     n = int(task_id[1:3])
     area = next(name for name, rng in AREAS if n in rng)
     st = status.get(task_id, {})
-    t = {"id": task_id, "n": n, "title": task_id[4:].replace("_", " ").capitalize(), "area": area, "status": st.get("status", "UNKNOWN"),
+    title = TITLES.get(task_id) or task_id[4:].replace("_", " ").capitalize()
+    t = {"id": task_id, "n": n, "title": title, "area": area, "research_only": area == "Medical and dental", "status": st.get("status", "UNKNOWN"),
          "source": st.get("source"), "license": st.get("license"), "chance_note": st.get("chance"), "note": st.get("note"), "items": [], "results": {}}
     md = SETS / f"{task_id}.md"
     t["md"] = md.read_text() if md.is_file() else None
@@ -69,13 +91,14 @@ def _task(task_id, status):
         t["items"] = [{"id": r["id"], "image": f"imagelab-img/{r['images'][0]}", "question": r["question"], "labels": r["labels"], "expected": r["expected"],
                        "source_id": r["provenance"].get("source_id"), "notes": r["provenance"].get("notes")} for r in rows]
         t["results"] = _results(task_id)
+        t["consistency"] = _consistency(task_id)
     return t
 
 
 def payload():
     status = _status_table()
     ids = sorted({p.stem for p in SETS.glob("t[0-9][0-9]_*.md")} | set(status))
-    models = sorted({m for d in ([RUNS] if RUNS.is_dir() else []) for m in (p.name for p in d.iterdir() if p.is_dir())})
+    models = sorted({p.name for p in (RUNS.iterdir() if RUNS.is_dir() else []) if p.is_dir() and not p.name.endswith("-consistency") and any(p.glob("*/results.jsonl"))})
     return {"areas": [a for a, _ in AREAS], "models": models, "tasks": [_task(t, status) for t in ids if TASK_ID.match(t)]}
 
 
