@@ -1,0 +1,736 @@
+{
+ "task": "dental",
+ "title": "Panoramic dental X-ray: caries",
+ "status": "DRAFT: written from general dental radiology criteria, needs dentist review. RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE.",
+ "pilot": "dental",
+ "classes": [
+  "caries present",
+  "no caries"
+ ],
+ "map": {
+  "yes": "caries present",
+  "no": "no caries"
+ },
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a panoramic dental X-ray showing both jaws.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a medical X-ray image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Does the image show human teeth?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Does the image show both an upper row and a lower row of teeth?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Is the jaw shown as a wide curved strip from the left side to the right side?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Is the image grey, with bone brighter than soft tissue?",
+   "pass": "yes"
+  },
+  {
+   "id": "G6",
+   "q": "Is the image a radiograph rather than a colour photograph?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Can individual teeth be told apart from each other?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Is the image a drawing or a cartoon?",
+   "pass": "no"
+  },
+  {
+   "id": "G9",
+   "q": "Does the image show a vehicle, a balloon, an animal or a landscape?",
+   "pass": "no"
+  },
+  {
+   "id": "G10",
+   "q": "Does the image show a chest, a skull from the side, or a single limb?",
+   "pass": "no"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Tooth crown and enamel",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Is there a dark spot inside the crown of any tooth?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Is the outer bright enamel layer of any crown broken by a darker notch?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Is any crown shorter than its neighbours?"
+    }
+   ],
+   "supports": {
+    "caries present": 1,
+    "no caries": -1
+   },
+   "truth": {
+    "meta": "caries_count",
+    "rule": "v > 0"
+   },
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Dark spot in the crown",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Is the dark spot inside the bright enamel outline?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Is the dark spot round or oval?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Is the dark spot darker than the surrounding tooth?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Is the dark spot larger than 1 mm across?"
+      },
+      {
+       "id": "F1.1.e",
+       "q": "Is more than one tooth showing a dark spot?"
+      }
+     ],
+     "supports": {
+      "caries present": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F1.1.1",
+       "name": "Spot depth",
+       "probes": [
+        {
+         "id": "F1.1.1.a",
+         "q": "Does the dark spot reach through the full thickness of the enamel?"
+        },
+        {
+         "id": "F1.1.1.b",
+         "q": "Does the dark spot reach the darker inner pulp area?"
+        },
+        {
+         "id": "F1.1.1.c",
+         "q": "Does the dark spot sit under the enamel surface?"
+        },
+        {
+         "id": "F1.1.1.d",
+         "q": "Is the dark spot wider than it is deep?"
+        }
+       ],
+       "supports": {
+        "caries present": 1
+       },
+       "truth": null,
+       "children": []
+      },
+      {
+       "id": "F1.1.2",
+       "name": "Spot location on the tooth",
+       "probes": [
+        {
+         "id": "F1.1.2.a",
+         "q": "Is the dark spot on the chewing surface of a back tooth?"
+        },
+        {
+         "id": "F1.1.2.b",
+         "q": "Is the dark spot on the side of a crown facing the next tooth?"
+        },
+        {
+         "id": "F1.1.2.c",
+         "q": "Is the dark spot near the gum line?"
+        },
+        {
+         "id": "F1.1.2.d",
+         "q": "Is the dark spot on a front tooth?"
+        }
+       ],
+       "supports": {
+        "caries present": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F1.2",
+     "name": "Enamel outline",
+     "probes": [
+      {
+       "id": "F1.2.a",
+       "q": "Is the bright enamel outline of a crown continuous all the way round?"
+      },
+      {
+       "id": "F1.2.b",
+       "q": "Is the enamel outline of any crown jagged?"
+      },
+      {
+       "id": "F1.2.c",
+       "q": "Does any crown have a missing corner?"
+      },
+      {
+       "id": "F1.2.d",
+       "q": "Is the enamel layer visibly thinner on one side of any crown?"
+      }
+     ],
+     "supports": {
+      "caries present": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Contact between neighbouring teeth",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Is there a dark triangle at the contact point between two neighbouring crowns?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Do any two neighbouring crowns overlap on the film?"
+    }
+   ],
+   "supports": {
+    "caries present": 1,
+    "no caries": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F2.1",
+     "name": "Dark wedge at the contact",
+     "probes": [
+      {
+       "id": "F2.1.a",
+       "q": "Is the dark wedge pointing from the contact point toward the centre of a tooth?"
+      },
+      {
+       "id": "F2.1.b",
+       "q": "Is the dark wedge on the side of a back tooth?"
+      },
+      {
+       "id": "F2.1.c",
+       "q": "Is the dark wedge wider than 1 mm?"
+      },
+      {
+       "id": "F2.1.d",
+       "q": "Does the dark wedge touch the enamel edge?"
+      },
+      {
+       "id": "F2.1.e",
+       "q": "Is a dark wedge visible on more than one contact point?"
+      }
+     ],
+     "supports": {
+      "caries present": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F2.2",
+     "name": "Contact spacing",
+     "probes": [
+      {
+       "id": "F2.2.a",
+       "q": "Is there a visible gap between any two neighbouring crowns?"
+      },
+      {
+       "id": "F2.2.b",
+       "q": "Do all the back teeth touch their neighbours?"
+      },
+      {
+       "id": "F2.2.c",
+       "q": "Is any tooth tilted toward its neighbour?"
+      },
+      {
+       "id": "F2.2.d",
+       "q": "Is food-trap crowding visible between two back teeth?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F3",
+   "name": "Fillings and restorations",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Is there a very bright patch inside the crown of any tooth?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Is there a bright metal-like block on the chewing surface of any tooth?"
+    }
+   ],
+   "supports": {
+    "caries present": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F3.1",
+     "name": "Bright filling patch",
+     "probes": [
+      {
+       "id": "F3.1.a",
+       "q": "Is the bright patch brighter than the surrounding enamel?"
+      },
+      {
+       "id": "F3.1.b",
+       "q": "Does the bright patch have sharp straight edges?"
+      },
+      {
+       "id": "F3.1.c",
+       "q": "Is the bright patch on a back tooth?"
+      },
+      {
+       "id": "F3.1.d",
+       "q": "Is a dark rim visible around the edge of the bright patch?"
+      },
+      {
+       "id": "F3.1.e",
+       "q": "Is more than one tooth showing a bright patch?"
+      }
+     ],
+     "supports": {
+      "caries present": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F3.2",
+     "name": "Filling extent",
+     "probes": [
+      {
+       "id": "F3.2.a",
+       "q": "Does a bright patch cover most of a crown?"
+      },
+      {
+       "id": "F3.2.b",
+       "q": "Does a bright patch reach the gum line?"
+      },
+      {
+       "id": "F3.2.c",
+       "q": "Does a bright patch fill a space between two teeth?"
+      },
+      {
+       "id": "F3.2.d",
+       "q": "Is a bright patch visible inside a root canal space?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F4",
+   "name": "Root canal treatment",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Is there a thin bright line running down the middle of any tooth root?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Does any root contain a narrow bright filling that reaches its tip?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "root_canal_count",
+    "rule": "v > 0"
+   },
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Root filling details",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Is the bright line inside the root straight?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Does the bright line run the full length of the root?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Are two or more roots of the same tooth filled with bright lines?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Is a bright post visible in the upper part of the root?"
+      },
+      {
+       "id": "F4.1.e",
+       "q": "Is more than one tooth root filled?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.2",
+     "name": "Tip of treated root",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Is there a dark halo around the tip of a filled root?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Does the bright line stop short of the root tip?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Is the root tip surrounded by bright bone?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Is the bright line wider at the crown end than at the tip?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Crowns and caps",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Is there a bright cap covering the whole top of any tooth?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Is there a row of connected bright caps spanning a gap between teeth?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F6",
+   "name": "Impacted and missing teeth",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Is any tooth lying tilted or sideways inside the jaw bone?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Is there a visible gap in a row of teeth where a tooth would be expected?"
+    },
+    {
+     "id": "F6.c",
+     "q": "Is any tooth crown covered by bone or gum rather than showing in the mouth?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "impacted_count",
+    "rule": "v > 0"
+   },
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Tilted tooth inside bone",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Is the tilted tooth in the lower back corner of the jaw?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Is the tilted tooth in the upper back corner of the jaw?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Is the crown of the tilted tooth pressed against the neighbouring tooth?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Is the tilted tooth lying at more than 45 degrees from upright?"
+      },
+      {
+       "id": "F6.1.e",
+       "q": "Is a dark outline visible around the crown of the tilted tooth?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F6.2",
+     "name": "Gap in the tooth row",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Is the gap in the tooth row wider than one tooth?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Is the gap in a back region of the jaw?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Is the bone in the gap smooth and rounded at the top?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Is a leftover root visible in the gap?"
+      },
+      {
+       "id": "F6.2.e",
+       "q": "Do the neighbouring teeth lean into the gap?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "extraction_count",
+      "rule": "v > 0"
+     },
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Tissue around the root tip",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Is there a round dark area at the tip of any tooth root?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Is there a dark area between the roots of any back tooth?"
+    },
+    {
+     "id": "F7.c",
+     "q": "Is the thin dark line around any root wider than at its neighbours?"
+    }
+   ],
+   "supports": {
+    "caries present": 1
+   },
+   "truth": {
+    "meta": "lesion_count",
+    "rule": "v > 0"
+   },
+   "children": [
+    {
+     "id": "F7.1",
+     "name": "Dark area at the root tip",
+     "probes": [
+      {
+       "id": "F7.1.a",
+       "q": "Is the dark area round?"
+      },
+      {
+       "id": "F7.1.b",
+       "q": "Is the dark area wider than 3 mm?"
+      },
+      {
+       "id": "F7.1.c",
+       "q": "Does the dark area have a thin bright rim?"
+      },
+      {
+       "id": "F7.1.d",
+       "q": "Is the dark area attached to a tooth that has a dark spot in its crown?"
+      },
+      {
+       "id": "F7.1.e",
+       "q": "Is the dark area attached to a tooth with a root filling?"
+      }
+     ],
+     "supports": {
+      "caries present": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F7.1.1",
+       "name": "Dark area size and edge",
+       "probes": [
+        {
+         "id": "F7.1.1.a",
+         "q": "Is the dark area larger than the width of the root?"
+        },
+        {
+         "id": "F7.1.1.b",
+         "q": "Does the dark area push the neighbouring root away?"
+        },
+        {
+         "id": "F7.1.1.c",
+         "q": "Is the edge of the dark area sharp?"
+        },
+        {
+         "id": "F7.1.1.d",
+         "q": "Does the dark area reach the sinus floor or the nerve canal?"
+        }
+       ],
+       "supports": {},
+       "truth": null,
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F8",
+   "name": "Bone level around the teeth",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Is the top of the bone ridge lower than the necks of the teeth in some area?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Is the bone ridge between neighbouring teeth flat rather than pointed?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F8.1",
+     "name": "Bone height",
+     "probes": [
+      {
+       "id": "F8.1.a",
+       "q": "Is more than one third of any root visible above the bone?"
+      },
+      {
+       "id": "F8.1.b",
+       "q": "Is the bone height lower on one side of the jaw than on the other?"
+      },
+      {
+       "id": "F8.1.c",
+       "q": "Is the bone ridge between two teeth cup-shaped?"
+      },
+      {
+       "id": "F8.1.d",
+       "q": "Is the bone ridge higher than the neck of any tooth?"
+      },
+      {
+       "id": "F8.1.e",
+       "q": "Is the lower edge of the jaw bone thin?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F8.2",
+     "name": "Bone texture",
+     "probes": [
+      {
+       "id": "F8.2.a",
+       "q": "Is the bone around the roots bright and evenly grey?"
+      },
+      {
+       "id": "F8.2.b",
+       "q": "Is there a patch of bone that looks lacy?"
+      },
+      {
+       "id": "F8.2.c",
+       "q": "Is there a dark space between the root and the bone on one side of a root?"
+      },
+      {
+       "id": "F8.2.d",
+       "q": "Is there a bright dense patch inside the bone?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F9",
+   "name": "Jaw joints and sinuses",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Are both jaw joints visible at the top corners of the film?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Are the air spaces above the upper back teeth visible?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F10",
+   "name": "Image quality and positioning",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Are the front teeth blurred or narrower than the back teeth?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Is a bright ghost image crossing the middle of the film?"
+    },
+    {
+     "id": "F10.c",
+     "q": "Is the head tilted so that the two jaw joints are at different heights?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  }
+ ]
+}

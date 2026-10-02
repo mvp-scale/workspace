@@ -290,6 +290,7 @@ function domainView(D, model, area) {
         d.n ? badge(d.verdict) : el("span", { class: "badge", text: "Not run" }),
         el("span", { class: "small muted", text: `${d.tasks} tasks · ${d.images} images · ${d.n ? pct0(d.acc) : "not run"} · ${mix}` }))),
     el("div", { class: "table-wrap", style: "margin-top:12px" }, taskTable(tasks, model)),
+    area === "Medical and dental" ? [layered3Table(D), layeredTable(D)] : null,
     el("div", { class: "legend", style: "margin-top:10px" }, el("span", {}, el("i", { class: "sw" }), "95% Wilson interval"), el("span", {}, el("i", { class: "sw t" }), "accuracy"), el("span", {}, el("i", { class: "sw c" }), "chance")));
 }
 
@@ -447,12 +448,105 @@ function notBuilt(t) {
 }
 
 let curModel = null;
+/* ---- ontology cascade (v3): gate, a broad pool of family probes, then depth. Accuracy is shown as a function of questions spent. ---- */
+const stepAt = (c, k) => c.curve_family.find(x => x.k === k) || c.curve_family[c.curve_family.length - 1];
+const afterBreadth = (c) => c.curve_family.find(x => x.k >= c.breadth_end) || c.curve_family[c.curve_family.length - 1];
+function layered3Table(D) {
+  const cs = (D.cascades3 || {}).tasks || [];
+  if (!cs.length) return null;
+  const rows = cs.map(c => { const b = afterBreadth(c), f = stepAt(c, 100), det = c.capability.filter(x => x.auc != null), good = det.filter(x => x.auc >= 0.75).length;
+    return el("tr", { tabindex: "0", onclick: () => go({ task: c.task_id }), style: "cursor:pointer" },
+      el("td", {}, el("a", { href: hashOf({ ...route(), task: c.task_id }), text: c.title, onclick: (e) => e.stopPropagation() })),
+      el("td", { class: "num", text: String(c.n) }), el("td", { class: "num", text: pct0(c.chance) }), el("td", { class: "num", text: pct(c.single, c.n) }),
+      el("td", { class: "num", text: pct(b.forced, b.gate_passed) }), el("td", { class: "num", text: pct(f.forced, f.gate_passed) }),
+      el("td", { class: "num", text: f.consensus ? `${Math.round(f.consensus / c.n * 100)}% at ${pct0(f.consensus_right / f.consensus)}` : "none" }),
+      el("td", { class: "num", text: det.length ? `${good} of ${det.length}` : "–" }));
+  });
+  return el("div", { class: "card", style: "margin-top:14px" }, el("h3", { style: "margin:0", text: "Family cascade: broad pool, then depth" }),
+    el("p", { class: "small muted", text: "Each image is asked a gate of 10 questions, then a pool of about 25 to 45 questions covering every family of finding for that kind of image, then more questions inside the families that look detectable, up to 100 in all. Accuracy is among images that passed the gate (the others go to a person) and counts questions spent, so you can see where extra questions stop helping. Samples are 48 to 100 images, separate from the 25-image tasks. Click a row for the families, the observations that separate the classes, and what the model can detect." }),
+    el("div", { class: "table-wrap", style: "margin-top:8px" }, el("table", { class: "data lab-t" }, el("thead", {}, el("tr", {}, ["Task", "Images", "Chance", "Single question", "After the broad pool", "Full 100 questions", "On consensus: handled at right", "Families it detects (AUC 0.75+)"].map((h, i) => el("th", { class: i ? "num" : "", text: h })))), el("tbody", {}, rows))),
+    el("p", { class: "small muted", style: "margin-top:6px", text: "Research benchmark only, not for clinical use. Family lists are drafts from standard criteria and need clinician review." }));
+}
+function layered3Card(D, t) {
+  const c = ((D.cascades3 || {}).tasks || []).find(x => x.task_id === t.id);
+  if (!c) return null;
+  const rows = c.curve_family.map(x => el("tr", {}, el("td", { text: `${x.k}${x.k === afterBreadth(c).k ? "  (after the broad pool)" : ""}` }), el("td", { class: "grow" }, Jev.meter(x.gate_passed ? x.forced / x.gate_passed : 0)),
+    el("td", { class: "num", text: pct(x.forced, x.gate_passed) }), el("td", { class: "num dim", text: x.consensus ? `${x.consensus} handled, ${pct0(x.consensus_right / x.consensus)} right` : "no consensus yet" })));
+  const cap = c.capability.slice().sort((a, b) => (b.auc || 0) - (a.auc || 0));
+  const fams = c.families.slice().sort((a, b) => b.spread - a.spread), cls = c.classes;
+  const sup = (f) => Object.entries(f.supports || {}).map(([k, v]) => `${v > 0 ? "+" : "-"} ${k}`).join(", ") || "information only";
+  return el("div", { class: "card" }, el("h3", { style: "margin:0", text: "Family cascade: broad pool, then depth" }),
+    el("p", { class: "small muted", text: `${c.n} images (chance ${pct0(c.chance)}), separate from the 25 above. The model is asked ${c.tree.families} families of finding for this kind of image (${c.breadth_end} questions after the gate, then deeper inside the families that look detectable, ${c.tree.questions} questions in the whole tree, 100 per image at most). ${c.gate_stops} of ${c.n} images were stopped by the gate. Research benchmark only, not for clinical use.` }),
+    c.cv_families ? el("p", { class: "small", style: "margin:8px 0 0", text: `Is the information in the family answers? A cross-validated fit on the ${c.tree.families} family scores gets ${pct(c.cv_families.cv_families, c.cv_families.n)}, against ${pct(c.cv_families.single, c.cv_families.n)} for the single question. The votes below use a hand-written map from families to classes, which is the weaker link; a fitted combination needs labelled images.` }) : null,
+    el("div", { class: "eyebrow", text: `Accuracy by questions spent (hand-written family votes). Single original question: ${pct(c.single, c.n)}` }),
+    el("table", { class: "mini" }, el("tbody", {}, rows)),
+    cap.length ? [el("div", { class: "eyebrow", text: "What the model can detect (each family scored against the dataset's own metadata)" }),
+      el("table", { class: "mini" }, el("thead", {}, el("tr", {}, ["Family", "Dataset says present when", "Present / absent", "AUC", "Balanced accuracy"].map((h, i) => el("th", { class: i > 1 ? "num" : "", text: h })))),
+        el("tbody", {}, cap.map(x => el("tr", {}, el("td", { text: x.name }), el("td", { class: "dim small", style: "white-space:normal", text: x.truth }), el("td", { class: "num", text: `${x.present} / ${x.absent}` }), el("td", { class: "num", text: x.auc == null ? "–" : x.auc.toFixed(2) }), el("td", { class: "num", text: x.balanced_acc.toFixed(2) })))))] : null,
+    el("div", { class: "eyebrow", text: "Which families separate the classes (average P(yes) over the questions in each family, by true class)" }),
+    el("table", { class: "mini" }, el("thead", {}, el("tr", {}, [el("th", { text: "Family" }), el("th", { text: "Points to" }), ...cls.map(x => el("th", { class: "num", text: x }))])),
+      el("tbody", {}, fams.map(f => el("tr", {}, el("td", { text: f.name }), el("td", { class: "dim small", style: "white-space:normal", text: sup(f) }), ...cls.map(x => el("td", { class: "num", text: f.mean_by_class[x] == null ? "–" : f.mean_by_class[x].toFixed(2) })))))),
+    el("details", { class: "more", style: "margin-top:8px" }, el("summary", { text: `Gate questions (${c.gate.length})` }), el("ol", { class: "small", style: "margin:6px 0 0;padding-left:22px" }, c.gate.map(q => el("li", { text: q })))),
+    el("details", { class: "more", style: "margin-top:6px" }, el("summary", { text: `Family questions asked in the broad pool (${c.families.reduce((a, f) => a + f.probes_root, 0)})` }),
+      el("div", { class: "small", style: "margin-top:6px" }, c.families.map(f => el("div", { style: "margin-bottom:6px" }, el("strong", { text: `${f.name}: ` }), f.probe_questions.join("  ·  "), f.children ? el("span", { class: "dim", text: `   (${f.children} sub-families asked in depth)` }) : null)))));
+}
+/* ---- layered method: the budgeted cascade (gate, characteristics, discriminators, deep dive), pilot on larger samples ---- */
+const pct = (k, n) => n ? `${Math.round(k / n * 100)}% (${Math.round(wilson(k, n)[0] * 100)}% to ${Math.round(wilson(k, n)[1] * 100)}%)` : "–";
+const LAYER_BUDGET = [["Gate", "10", "Is this the right kind of image? A balloon instead of a lesion stops here."], ["Characteristics", "about 20", "Broad atomic observations, good and bad findings alike."],
+  ["Discriminators", "up to 30", "Chosen by what the characteristics showed, in batches of 10, to separate the two leading hypotheses."], ["Deep dive", "up to 25", "Confirm or deny the leading hypothesis feature by feature."], ["Backtrack", "up to 15", "Re-ask the unsure questions with the facts so far, then come down again."]];
+function layeredTable(D) {
+  const cs = (D.cascades || {}).cascades || [];
+  if (!cs.length) return null;
+  const rows = cs.map(c => { const s = c.summary, gp = c.gate_passed;
+    return el("tr", { tabindex: "0", onclick: () => go({ task: c.task_id }), style: "cursor:pointer" },
+      el("td", {}, el("a", { href: hashOf({ ...route(), task: c.task_id }), text: c.title, onclick: (e) => e.stopPropagation() })),
+      el("td", { class: "num", text: String(s.n) }), el("td", { class: "num", text: pct0(s.chance) }),
+      el("td", { class: "num", text: pct(s.single, s.n) }), el("td", { class: "num", text: pct(c.forced_gate_passed, gp) }),
+      el("td", { class: "num", text: s.consensus_n ? `${Math.round(s.consensus_n / s.n * 100)}%` : "0%" }),
+      el("td", { class: "num", text: s.consensus_n ? pct(s.consensus_right, s.consensus_n) : "–" }),
+      el("td", { class: "num", text: `${s.used_avg.toFixed(0)} of ${D.cascades.budget}` }));
+  });
+  return el("div", { class: "card", style: "margin-top:14px" }, el("h3", { style: "margin:0", text: "Layered method: pilot on larger samples" }),
+    el("p", { class: "small muted", text: "Instead of one question per image, each image gets a budget of 100 questions spent in layers, stopping as soon as the evidence is decisive. Samples are 48 to 100 images, different from the 25-image tasks, so intervals are tighter. Layered accuracy is among images that passed the gate; images the gate stops go to a person. Click a row for the questions and where each image stopped." }),
+    el("div", { class: "table-wrap", style: "margin-top:8px" }, el("table", { class: "data lab-t" }, el("thead", {}, el("tr", {}, ["Task", "Images", "Chance", "Single question", "Layered, gate passed", "Handled on consensus", "Right on consensus", "Questions per image"].map((h, i) => el("th", { class: i ? "num" : "", text: h })))), el("tbody", {}, rows))),
+    el("p", { class: "small muted", style: "margin-top:6px", text: "Research benchmark only, not for clinical use. Handled on consensus means the votes agree strongly enough to answer without a person; it is only trustworthy if the right-on-consensus figure beside it is high." }));
+}
+function layeredCard(D, t) {
+  const c = ((D.cascades || {}).cascades || []).find(x => x.task_id === t.id);
+  if (!c) return null;
+  const s = c.summary, gp = c.gate_passed, stopRows = ["gate", "L1", "L2", "L3", "backtrack", "exhausted"].filter(k => s.stops[k]).map(k => [k, s.stops[k]]);
+  const STOP = { gate: "Gate: stopped, sent to a person", L1: "Decided after characteristics", L2: "Decided after discriminators", L3: "Decided after deep dive", backtrack: "Decided after backtracking", exhausted: "No consensus; best guess, sent to a person" };
+  const top = [...c.features].filter(f => f.layer === "characteristics").sort((a, b) => b.spread - a.spread).slice(0, 8), cls = s.classes;
+  const gt = c.gate_test;
+  const list = (title, qs) => el("details", { class: "more", style: "margin-top:6px" }, el("summary", { text: `${title} (${qs.length})` }), el("ol", { class: "small", style: "margin:6px 0 0;padding-left:22px" }, qs.map(q => el("li", { text: q.q }))));
+  return el("div", { class: "card" }, el("h3", { style: "margin:0", text: "Layered method: pilot on a larger sample" }),
+    el("p", { class: "small muted", text: `${s.n} images (chance ${pct0(s.chance)}), separate from the 25 above. Each image is asked in layers within a budget of ${D.cascades.budget} questions, in batches of 10, and stops as soon as the votes agree. Votes, not averages: an answer counts as yes at 65% or more, no at 35% or less, and is unsure in between. A task like this has to be checked against its labels before consensus can be trusted. Research benchmark only.` }),
+    el("div", { class: "twocol", style: "margin-top:8px" },
+      el("div", {}, el("table", { class: "mini" }, el("tbody", {},
+        el("tr", {}, el("td", { text: "Single original question" }), el("td", { class: "num", text: pct(s.single, s.n) })),
+        el("tr", {}, el("td", { text: `Layered, best guess (${gp} passed the gate)` }), el("td", { class: "num", text: pct(c.forced_gate_passed, gp) })),
+        el("tr", {}, el("td", { text: "Layered, handled on consensus" }), el("td", { class: "num", text: s.consensus_n ? `${s.consensus_n} of ${s.n} (${Math.round(s.consensus_n / s.n * 100)}%)` : "none" })),
+        el("tr", {}, el("td", { text: "Right on those" }), el("td", { class: "num", text: s.consensus_n ? pct(s.consensus_right, s.consensus_n) : "–" })),
+        el("tr", {}, el("td", { text: "Questions per image (average, most)" }), el("td", { class: "num", text: `${s.used_avg.toFixed(0)}, ${s.used_max}` })),
+        c.v1 ? el("tr", {}, el("td", { text: "Earlier fixed battery (no budget)" }), el("td", { class: "num", text: `${pct(c.v1.forced, c.v1.n)}, ${c.v1.questions.toFixed(0)} questions` })) : null,
+        s.fp ? el("tr", {}, el("td", { text: "False positives: single, layered, on consensus" }), el("td", { class: "num", text: `${s.fp.single}, ${s.fp.cascade}, ${s.fp.consensus}` })) : null,
+        el("tr", {}, el("td", { text: "Is the information in the answers? (cross-validated fit)" }), el("td", { class: "num", text: pct(c.cv.correct, c.cv.n) })))),
+        gt ? el("p", { class: "small muted", style: "margin-top:8px", text: `Gate test: stopped ${gt.off_topic_rejected} of ${gt.off_topic} off-topic images (including other radiograph types and photos) and wrongly stopped ${gt.own_rejected} of ${gt.own_images} of this task's own images.` }) : null),
+      el("div", {}, el("div", { class: "eyebrow", style: "margin-top:0", text: "Where each image stopped" }),
+        el("table", { class: "mini" }, el("tbody", {}, stopRows.map(([k, v]) => el("tr", {}, el("td", { text: STOP[k] }), el("td", { class: "num", text: `${v.n} images` }), el("td", { class: "num dim", text: `${(v.used / v.n).toFixed(0)} questions` }), el("td", { class: "num", text: k === "gate" ? "–" : `${v.right}/${v.n} right` }))))))),
+    el("div", { class: "eyebrow", text: "The observations that tell the classes apart (average P(yes) by true class)" }),
+    el("table", { class: "mini" }, el("thead", {}, el("tr", {}, [el("th", { text: "Question" }), ...cls.map(x => el("th", { class: "num", text: x }))])),
+      el("tbody", {}, top.map(f => el("tr", {}, el("td", { style: "white-space:normal", text: f.q }), ...cls.map(x => el("td", { class: "num", text: f.mean_by_class[x] == null ? "–" : f.mean_by_class[x].toFixed(2) })))))),
+    el("div", { class: "eyebrow", text: "How the budget is spent" }),
+    el("table", { class: "mini" }, el("tbody", {}, LAYER_BUDGET.map(([n, b, d]) => el("tr", {}, el("td", { text: n }), el("td", { class: "num", text: b }), el("td", { class: "dim small", style: "white-space:normal", text: d }))))),
+    list("Gate questions", c.layers.gate), list("Characteristic questions", c.layers.characteristics), list("Discriminating questions", c.layers.discriminators), list("Deep-dive questions", c.layers.deep));
+}
 function taskView(D, t, model, f) {
   if (!built(t)) return notBuilt(t);
   curModel = model;
   const s = stats(t, model);
   return el("div", { class: "view-in", style: "display:grid;gap:14px" }, header(t, s), result(t, s, D.models, model),
-    s.n ? [el("div", { class: "twocol" }, confusion(t, s), calibration(s)), angles(t, model), slices(t, s)] : null,
+    s.n ? [el("div", { class: "twocol" }, confusion(t, s), calibration(s)), layered3Card(D, t), layeredCard(D, t), angles(t, model), slices(t, s)] : null,
     gallery(t, s, f, model));
 }
 

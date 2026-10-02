@@ -1,0 +1,979 @@
+{
+ "task": "pathology",
+ "title": "Lymph-node tumour patch (RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE)",
+ "status": "DRAFT: written from general histopathology criteria, needs pathologist review. Truth thresholds (empty_fraction > 0.10, mean_brightness < 0.45 and > 0.6, mean_saturation > 0.4) were chosen from the pilot's quartiles, not from clinical standards.",
+ "pilot": "pathology",
+ "classes": [
+  "tumour",
+  "no tumour"
+ ],
+ "map": {
+  "yes": "tumour",
+  "no": "no tumour"
+ },
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a 96 by 96 pixel patch of H&E-stained lymph-node tissue, enlarged four times.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this an image of stained tissue seen through a microscope?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is this a photograph of a person or an animal?",
+   "pass": "no"
+  },
+  {
+   "id": "G3",
+   "q": "Is this a photograph of an object such as a balloon or a car?",
+   "pass": "no"
+  },
+  {
+   "id": "G4",
+   "q": "Is this a skin photograph?",
+   "pass": "no"
+  },
+  {
+   "id": "G5",
+   "q": "Is this a black and white X-ray?",
+   "pass": "no"
+  },
+  {
+   "id": "G6",
+   "q": "Does the image show many small cell nuclei?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Are the colours mainly pink and purple?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Is the image a drawing or diagram?",
+   "pass": "no"
+  },
+  {
+   "id": "G9",
+   "q": "Is the image a screenshot with text or menus?",
+   "pass": "no"
+  },
+  {
+   "id": "G10",
+   "q": "Is the tissue in focus?",
+   "pass": "yes"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Stain colour",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Is the tissue stained pink and purple?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Are there purple-blue areas in the patch?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Are there pink areas in the patch?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "mean_saturation",
+    "rule": "v > 0.4"
+   },
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Purple stain",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Are the nuclei stained purple or blue?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Is the purple stain dark in the nuclei?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Does the purple stain fill most of the patch?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Is the purple stain spread evenly across the patch?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.2",
+     "name": "Pink stain",
+     "probes": [
+      {
+       "id": "F1.2.a",
+       "q": "Is the background between cells pink?"
+      },
+      {
+       "id": "F1.2.b",
+       "q": "Are there bright pink fibre-like strands?"
+      },
+      {
+       "id": "F1.2.c",
+       "q": "Does the pink stain fill most of the patch?"
+      },
+      {
+       "id": "F1.2.d",
+       "q": "Are there dense pink patches?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Image quality",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Is the whole patch in sharp focus?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Is the patch free from visible blocky compression squares?"
+    },
+    {
+     "id": "F2.c",
+     "q": "Is the colour even across the patch?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F3",
+   "name": "Nuclei density",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Are there more than 50 nuclei in the patch?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Are the nuclei close together?"
+    },
+    {
+     "id": "F3.c",
+     "q": "Do nuclei cover more than half of the patch?"
+    }
+   ],
+   "supports": {
+    "tumour": 1,
+    "no tumour": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F3.1",
+     "name": "Crowding",
+     "probes": [
+      {
+       "id": "F3.1.a",
+       "q": "Do neighbouring nuclei touch each other?"
+      },
+      {
+       "id": "F3.1.b",
+       "q": "Do nuclei overlap each other?"
+      },
+      {
+       "id": "F3.1.c",
+       "q": "Are the nuclei packed edge to edge?"
+      },
+      {
+       "id": "F3.1.d",
+       "q": "Are there gaps wider than one nucleus between most nuclei?"
+      },
+      {
+       "id": "F3.1.e",
+       "q": "Is the centre of the patch crowded with nuclei?"
+      }
+     ],
+     "supports": {
+      "tumour": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F3.1.1",
+       "name": "Overlap detail",
+       "probes": [
+        {
+         "id": "F3.1.1.a",
+         "q": "Are there stacks of two or more nuclei on top of each other?"
+        },
+        {
+         "id": "F3.1.1.b",
+         "q": "Do nuclear outlines merge into one mass?"
+        },
+        {
+         "id": "F3.1.1.c",
+         "q": "Are individual nuclear edges hard to separate?"
+        },
+        {
+         "id": "F3.1.1.d",
+         "q": "Do nuclei form a single dense sheet?"
+        }
+       ],
+       "supports": {
+        "tumour": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F3.2",
+     "name": "Sparse nuclei",
+     "probes": [
+      {
+       "id": "F3.2.a",
+       "q": "Are there fewer than 20 nuclei in the patch?"
+      },
+      {
+       "id": "F3.2.b",
+       "q": "Are most nuclei separated by pink space?"
+      },
+      {
+       "id": "F3.2.c",
+       "q": "Is the patch mostly pink background?"
+      },
+      {
+       "id": "F3.2.d",
+       "q": "Are the nuclei scattered singly?"
+      }
+     ],
+     "supports": {
+      "tumour": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F4",
+   "name": "Nuclear size and shape variation",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Do the nuclei differ clearly in size from each other?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Do the nuclei differ clearly in shape from each other?"
+    },
+    {
+     "id": "F4.c",
+     "q": "Are there nuclei more than twice the size of their neighbours?"
+    }
+   ],
+   "supports": {
+    "tumour": 1,
+    "no tumour": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Large nuclei",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Are there nuclei larger than a red blood cell would be?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Are some nuclei much wider than others?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Are there nuclei with a visible nucleolus?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Do the nuclei have round outlines?"
+      },
+      {
+       "id": "F4.1.e",
+       "q": "Are there nuclei with an irregular outline?"
+      }
+     ],
+     "supports": {
+      "tumour": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F4.1.1",
+       "name": "Outline detail",
+       "probes": [
+        {
+         "id": "F4.1.1.a",
+         "q": "Do any nuclei have notches in the outline?"
+        },
+        {
+         "id": "F4.1.1.b",
+         "q": "Do any nuclei have folds in the outline?"
+        },
+        {
+         "id": "F4.1.1.c",
+         "q": "Are there nuclei with pointed corners?"
+        },
+        {
+         "id": "F4.1.1.d",
+         "q": "Are there lobed nuclei?"
+        }
+       ],
+       "supports": {
+        "tumour": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F4.2",
+     "name": "Uniform nuclei",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Are all nuclei about the same size?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Are all nuclei round?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Do the nuclei look alike in shape?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Are all nuclei smaller than a quarter of the patch width?"
+      }
+     ],
+     "supports": {
+      "tumour": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Nuclear darkness",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Are the nuclei much darker than the background?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Are there nuclei that look black?"
+    },
+    {
+     "id": "F5.c",
+     "q": "Do the nuclei have uneven dark and light patches inside?"
+    }
+   ],
+   "supports": {
+    "tumour": 1
+   },
+   "truth": {
+    "meta": "mean_brightness",
+    "rule": "v < 0.45"
+   },
+   "children": [
+    {
+     "id": "F5.1",
+     "name": "Chromatin texture",
+     "probes": [
+      {
+       "id": "F5.1.a",
+       "q": "Do nuclei contain coarse dark clumps?"
+      },
+      {
+       "id": "F5.1.b",
+       "q": "Do nuclei have a smooth even interior?"
+      },
+      {
+       "id": "F5.1.c",
+       "q": "Do nuclei have a visible dark rim at the edge?"
+      },
+      {
+       "id": "F5.1.d",
+       "q": "Do nuclei look pale inside with a dark outline?"
+      },
+      {
+       "id": "F5.1.e",
+       "q": "Are there nuclei with a pale hollow centre?"
+      }
+     ],
+     "supports": {
+      "tumour": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F6",
+   "name": "Cell clustering and architecture",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Are the cells arranged in clumps or sheets?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Are the cells arranged in lines or cords?"
+    },
+    {
+     "id": "F6.c",
+     "q": "Is there a clear boundary between a cell cluster and the surrounding tissue?"
+    }
+   ],
+   "supports": {
+    "tumour": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Sheets and nests",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Do cells form a solid sheet with no gaps?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Do cells form rounded nests?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Are there gland-like rings of cells?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Are cells piled in several layers?"
+      },
+      {
+       "id": "F6.1.e",
+       "q": "Does a cluster of cells fill the centre of the patch?"
+      }
+     ],
+     "supports": {
+      "tumour": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F6.2",
+     "name": "Orderly layout",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Are the cells evenly spaced across the patch?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Do the cells follow a regular pattern?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Are there small round follicle-like areas?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Are the cells arranged in a ring around a pale centre?"
+      }
+     ],
+     "supports": {
+      "tumour": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Lymphocyte background",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Are there many small round dark nuclei of similar size?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Do the small nuclei have almost no visible cell body around them?"
+    },
+    {
+     "id": "F7.c",
+     "q": "Are the small round nuclei spread evenly across the patch?"
+    }
+   ],
+   "supports": {
+    "no tumour": 1,
+    "tumour": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F7.1",
+     "name": "Small round nuclei",
+     "probes": [
+      {
+       "id": "F7.1.a",
+       "q": "Are most nuclei smaller than one tenth of the patch width?"
+      },
+      {
+       "id": "F7.1.b",
+       "q": "Are the small nuclei round?"
+      },
+      {
+       "id": "F7.1.c",
+       "q": "Are the small nuclei stained dark purple?"
+      },
+      {
+       "id": "F7.1.d",
+       "q": "Are the small nuclei evenly spaced?"
+      },
+      {
+       "id": "F7.1.e",
+       "q": "Do the small nuclei fill the patch edge to edge?"
+      }
+     ],
+     "supports": {
+      "no tumour": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F7.2",
+     "name": "Mixed cell types",
+     "probes": [
+      {
+       "id": "F7.2.a",
+       "q": "Are there larger pale nuclei among small dark nuclei?"
+      },
+      {
+       "id": "F7.2.b",
+       "q": "Are there cells with visible pink cytoplasm?"
+      },
+      {
+       "id": "F7.2.c",
+       "q": "Are there branching cell shapes?"
+      },
+      {
+       "id": "F7.2.d",
+       "q": "Are there cells with a clear halo around the nucleus?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F8",
+   "name": "Fat and empty space",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Are there white or clear areas in the patch?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Are there round clear holes in the tissue?"
+    },
+    {
+     "id": "F8.c",
+     "q": "Does white space cover more than a tenth of the patch?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "empty_fraction",
+    "rule": "v > 0.10"
+   },
+   "children": [
+    {
+     "id": "F8.1",
+     "name": "Clear areas",
+     "probes": [
+      {
+       "id": "F8.1.a",
+       "q": "Are there round white vacuoles with thin walls?"
+      },
+      {
+       "id": "F8.1.b",
+       "q": "Is there a white area larger than a quarter of the patch?"
+      },
+      {
+       "id": "F8.1.c",
+       "q": "Are there thin pink lines surrounding white areas?"
+      },
+      {
+       "id": "F8.1.d",
+       "q": "Are there slit-shaped white gaps?"
+      },
+      {
+       "id": "F8.1.e",
+       "q": "Are there white areas at the patch border?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F8.2",
+     "name": "Tissue cover",
+     "probes": [
+      {
+       "id": "F8.2.a",
+       "q": "Does tissue cover the whole patch?"
+      },
+      {
+       "id": "F8.2.b",
+       "q": "Does tissue cover less than half of the patch?"
+      },
+      {
+       "id": "F8.2.c",
+       "q": "Is there a straight edge between tissue and white background?"
+      },
+      {
+       "id": "F8.2.d",
+       "q": "Are there torn or ragged tissue edges?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F9",
+   "name": "Connective tissue",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Are there thin pink fibres running in one direction?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Are there elongated nuclei along fibres?"
+    },
+    {
+     "id": "F9.c",
+     "q": "Are there thick pink bands crossing the patch?"
+    }
+   ],
+   "supports": {
+    "no tumour": 1,
+    "tumour": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F9.1",
+     "name": "Fibre bands",
+     "probes": [
+      {
+       "id": "F9.1.a",
+       "q": "Do pink bands run in parallel?"
+      },
+      {
+       "id": "F9.1.b",
+       "q": "Are the bands wavy?"
+      },
+      {
+       "id": "F9.1.c",
+       "q": "Do the bands divide cell areas from each other?"
+      },
+      {
+       "id": "F9.1.d",
+       "q": "Are the bands thicker than a nucleus?"
+      },
+      {
+       "id": "F9.1.e",
+       "q": "Do the bands cross the centre of the patch?"
+      }
+     ],
+     "supports": {
+      "no tumour": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F9.2",
+     "name": "Vessels",
+     "probes": [
+      {
+       "id": "F9.2.a",
+       "q": "Are there round or oval tubes lined by flat cells?"
+      },
+      {
+       "id": "F9.2.b",
+       "q": "Are there red blood cells inside a tube?"
+      },
+      {
+       "id": "F9.2.c",
+       "q": "Is there a thick pink wall around a tube?"
+      },
+      {
+       "id": "F9.2.d",
+       "q": "Are there tubes cut lengthways?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "name": "Mitotic figures and necrosis",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Are there nuclei showing dark condensed threads or bars?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Are there patches of pink structureless material?"
+    },
+    {
+     "id": "F10.c",
+     "q": "Are there fragments of dark nuclear dust?"
+    }
+   ],
+   "supports": {
+    "tumour": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F10.1",
+     "name": "Dividing cells",
+     "probes": [
+      {
+       "id": "F10.1.a",
+       "q": "Is there a cell with a dark bar or plate of chromatin?"
+      },
+      {
+       "id": "F10.1.b",
+       "q": "Is there a cell with two dark clusters side by side?"
+      },
+      {
+       "id": "F10.1.c",
+       "q": "Is there a dark ring of chromatin?"
+      },
+      {
+       "id": "F10.1.d",
+       "q": "Is there a nucleus with no visible membrane and dark clumps?"
+      },
+      {
+       "id": "F10.1.e",
+       "q": "Are there dividing-looking cells in more than one place?"
+      }
+     ],
+     "supports": {
+      "tumour": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F10.1.1",
+       "name": "Division detail",
+       "probes": [
+        {
+         "id": "F10.1.1.a",
+         "q": "Are the dark chromatin threads arranged radially?"
+        },
+        {
+         "id": "F10.1.1.b",
+         "q": "Is the dark mass surrounded by a clear zone?"
+        },
+        {
+         "id": "F10.1.1.c",
+         "q": "Do the dark clumps have fuzzy edges?"
+        },
+        {
+         "id": "F10.1.1.d",
+         "q": "Are there two dark masses of equal size?"
+        }
+       ],
+       "supports": {
+        "tumour": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F10.2",
+     "name": "Dead tissue",
+     "probes": [
+      {
+       "id": "F10.2.a",
+       "q": "Is there a pink area with no visible nuclei?"
+      },
+      {
+       "id": "F10.2.b",
+       "q": "Are there small dark round fragments scattered in pink material?"
+      },
+      {
+       "id": "F10.2.c",
+       "q": "Is there a pink area with faint ghost outlines of cells?"
+      },
+      {
+       "id": "F10.2.d",
+       "q": "Is there a sharp line between a pink area and cells with dark nuclei?"
+      }
+     ],
+     "supports": {
+      "tumour": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F11",
+   "name": "Tissue edges",
+   "probes": [
+    {
+     "id": "F11.a",
+     "q": "Does the patch include the border of the tissue section?"
+    },
+    {
+     "id": "F11.b",
+     "q": "Is there a thin pink capsule line along one side?"
+    },
+    {
+     "id": "F11.c",
+     "q": "Is there a fold or crease in the tissue?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F11.1",
+     "name": "Border features",
+     "probes": [
+      {
+       "id": "F11.1.a",
+       "q": "Does a pink line run along the border of the tissue?"
+      },
+      {
+       "id": "F11.1.b",
+       "q": "Are there flat nuclei along the border?"
+      },
+      {
+       "id": "F11.1.c",
+       "q": "Does a fat area touch the border?"
+      },
+      {
+       "id": "F11.1.d",
+       "q": "Is the border of the tissue straight?"
+      },
+      {
+       "id": "F11.1.e",
+       "q": "Is the border of the tissue curved?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F11.2",
+     "name": "Artefacts",
+     "probes": [
+      {
+       "id": "F11.2.a",
+       "q": "Is there a dark line where the tissue is folded?"
+      },
+      {
+       "id": "F11.2.b",
+       "q": "Are there dark specks of pigment on the tissue?"
+      },
+      {
+       "id": "F11.2.c",
+       "q": "Are there out-of-focus areas?"
+      },
+      {
+       "id": "F11.2.d",
+       "q": "Are there scratches or parallel streaks?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F12",
+   "name": "Overall paleness",
+   "probes": [
+    {
+     "id": "F12.a",
+     "q": "Is the patch mostly pale pink?"
+    },
+    {
+     "id": "F12.b",
+     "q": "Is the patch mostly dark purple?"
+    },
+    {
+     "id": "F12.c",
+     "q": "Are there both pale and dark regions in the patch?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "mean_brightness",
+    "rule": "v > 0.6"
+   },
+   "children": []
+  }
+ ]
+}

@@ -1,0 +1,957 @@
+{
+ "task": "endoscopy",
+ "title": "Gastrointestinal endoscopy finding",
+ "status": "DRAFT: written from standard endoscopic descriptions, needs gastroenterologist review. RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE",
+ "pilot": "endoscopy",
+ "classes": [
+  "normal cecum",
+  "polyp",
+  "ulcerative colitis",
+  "esophagitis"
+ ],
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a still taken by an endoscope inside the digestive tract.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a photograph taken from inside a hollow organ of the body?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is this image taken by a camera on the tip of an endoscope?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Does the image show a wet, glistening pink or red tissue surface?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Is the image a colour photograph?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Does the image show a tube-like or round opening seen from within?",
+   "pass": "yes"
+  },
+  {
+   "id": "G6",
+   "q": "Is there a circular field of view with lighting from the camera tip?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is this image a photograph of a car, a balloon, an animal or a landscape?",
+   "pass": "no"
+  },
+  {
+   "id": "G8",
+   "q": "Is this image a photograph of the outside of human skin?",
+   "pass": "no"
+  },
+  {
+   "id": "G9",
+   "q": "Is this image a black and white X-ray or scan?",
+   "pass": "no"
+  },
+  {
+   "id": "G10",
+   "q": "Is this image a drawing, a diagram or a screenshot of text?",
+   "pass": "no"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Mucosal colour",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Is the lining red over a large part of the image?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Are there pale pink areas on the lining?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Are there yellow or white patches on the lining?"
+    }
+   ],
+   "supports": {
+    "ulcerative colitis": 1,
+    "esophagitis": 1,
+    "normal cecum": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Redness pattern",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Is the redness spread evenly across the whole lining?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Is the redness in separate patches with pink lining between them?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Is the redness arranged in thin lines?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Are there dark red spots on the lining?"
+      },
+      {
+       "id": "F1.1.e",
+       "q": "Is the lining dark red or purple in colour?"
+      }
+     ],
+     "supports": {
+      "ulcerative colitis": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.2",
+     "name": "Pale areas",
+     "probes": [
+      {
+       "id": "F1.2.a",
+       "q": "Are there pale cream areas on the lining?"
+      },
+      {
+       "id": "F1.2.b",
+       "q": "Is the lining pale pink over most of the image?"
+      },
+      {
+       "id": "F1.2.c",
+       "q": "Are there white spots on the lining?"
+      },
+      {
+       "id": "F1.2.d",
+       "q": "Is there a sharp border between a red area and a pale area?"
+      }
+     ],
+     "supports": {
+      "normal cecum": 1,
+      "polyp": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Vessel pattern",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Are thin branching blood vessels visible under the lining surface?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Are there thin vessels visible in a tree-like pattern?"
+    },
+    {
+     "id": "F2.c",
+     "q": "Are the vessels hidden by redness or a covering?"
+    }
+   ],
+   "supports": {
+    "normal cecum": 1,
+    "ulcerative colitis": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F2.1",
+     "name": "Vessel visibility",
+     "probes": [
+      {
+       "id": "F2.1.a",
+       "q": "Can individual vessels be followed along the lining for more than a centimetre?"
+      },
+      {
+       "id": "F2.1.b",
+       "q": "Are the vessels thin and sharp-edged?"
+      },
+      {
+       "id": "F2.1.c",
+       "q": "Are the vessels fuzzy or blurred?"
+      },
+      {
+       "id": "F2.1.d",
+       "q": "Are vessels visible on the surface of a raised area?"
+      },
+      {
+       "id": "F2.1.e",
+       "q": "Are vessels visible across most of the image?"
+      }
+     ],
+     "supports": {
+      "normal cecum": 1,
+      "ulcerative colitis": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F2.2",
+     "name": "Vessel loss",
+     "probes": [
+      {
+       "id": "F2.2.a",
+       "q": "Is a large area of lining visible with no vessel lines?"
+      },
+      {
+       "id": "F2.2.b",
+       "q": "Are the vessels broken into short segments?"
+      },
+      {
+       "id": "F2.2.c",
+       "q": "Is the lining a uniform colour with no vessel lines?"
+      },
+      {
+       "id": "F2.2.d",
+       "q": "Are there vessel lines in only one corner of the image?"
+      }
+     ],
+     "supports": {
+      "ulcerative colitis": 1,
+      "normal cecum": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F3",
+   "name": "Surface texture",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Is the lining surface smooth and shiny?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Does the lining surface look grainy or finely granular?"
+    },
+    {
+     "id": "F3.c",
+     "q": "Does the lining surface look rough or cracked?"
+    }
+   ],
+   "supports": {
+    "normal cecum": 1,
+    "ulcerative colitis": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F3.1",
+     "name": "Granularity",
+     "probes": [
+      {
+       "id": "F3.1.a",
+       "q": "Is the surface covered with many tiny bumps of similar size?"
+      },
+      {
+       "id": "F3.1.b",
+       "q": "Does the surface look like fine sand?"
+      },
+      {
+       "id": "F3.1.c",
+       "q": "Are there coarse bumps larger than a grain of rice?"
+      },
+      {
+       "id": "F3.1.d",
+       "q": "Does the surface reflect light in many small points?"
+      },
+      {
+       "id": "F3.1.e",
+       "q": "Is the grainy texture spread over most of the image?"
+      }
+     ],
+     "supports": {
+      "ulcerative colitis": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F3.1.1",
+       "name": "Bump detail",
+       "probes": [
+        {
+         "id": "F3.1.1.a",
+         "q": "Are the bumps round?"
+        },
+        {
+         "id": "F3.1.1.b",
+         "q": "Are the bumps red?"
+        },
+        {
+         "id": "F3.1.1.c",
+         "q": "Are the bumps closely packed?"
+        },
+        {
+         "id": "F3.1.1.d",
+         "q": "Are the bumps different in size from one another?"
+        }
+       ],
+       "supports": {
+        "ulcerative colitis": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F3.2",
+     "name": "Shine and reflections",
+     "probes": [
+      {
+       "id": "F3.2.a",
+       "q": "Are there bright white reflections from the light on the lining?"
+      },
+      {
+       "id": "F3.2.b",
+       "q": "Is there a thin layer of liquid on the surface?"
+      },
+      {
+       "id": "F3.2.c",
+       "q": "Are there bubbles on the lining?"
+      },
+      {
+       "id": "F3.2.d",
+       "q": "Is the surface dull with no reflections?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F4",
+   "name": "Folds and lumen shape",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Are there folds of lining that meet at a point?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Does the lumen appear as a dark round opening in the centre?"
+    },
+    {
+     "id": "F4.c",
+     "q": "Are there folds running along the length of the tube?"
+    }
+   ],
+   "supports": {
+    "normal cecum": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Fold arrangement",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Do three folds meet at a single point?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Are the folds thick and rounded?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Are the folds thin and straight?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Do the folds radiate from a central point?"
+      },
+      {
+       "id": "F4.1.e",
+       "q": "Are the folds arranged in rings around the lumen?"
+      }
+     ],
+     "supports": {
+      "normal cecum": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.2",
+     "name": "Lumen shape",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Is the lumen round?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Is the lumen narrowed to a slit?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Is the lumen visible as a dark area at the centre?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Is the lumen filled with liquid?"
+      },
+      {
+       "id": "F4.2.e",
+       "q": "Is the lumen out of view?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Protruding growth",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Is there a rounded mass that sticks out from the lining?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Is there a growth attached by a thin stalk?"
+    },
+    {
+     "id": "F5.c",
+     "q": "Is there a raised lump with a clear edge?"
+    }
+   ],
+   "supports": {
+    "polyp": 1,
+    "normal cecum": -1,
+    "ulcerative colitis": -1,
+    "esophagitis": -1
+   },
+   "truth": {
+    "meta": "class_folder",
+    "rule": "v == 'polyps'"
+   },
+   "children": [
+    {
+     "id": "F5.1",
+     "name": "Growth shape",
+     "probes": [
+      {
+       "id": "F5.1.a",
+       "q": "Is the growth round or oval?"
+      },
+      {
+       "id": "F5.1.b",
+       "q": "Does the growth sit on a stalk?"
+      },
+      {
+       "id": "F5.1.c",
+       "q": "Does the growth sit flat on a broad base?"
+      },
+      {
+       "id": "F5.1.d",
+       "q": "Is the growth a single lump?"
+      },
+      {
+       "id": "F5.1.e",
+       "q": "Is the growth surface lobed like a raspberry?"
+      },
+      {
+       "id": "F5.1.f",
+       "q": "Is the growth larger than a fold beside it?"
+      }
+     ],
+     "supports": {
+      "polyp": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F5.1.1",
+       "name": "Growth surface",
+       "probes": [
+        {
+         "id": "F5.1.1.a",
+         "q": "Is the growth surface a different colour from the lining around it?"
+        },
+        {
+         "id": "F5.1.1.b",
+         "q": "Is the growth surface smooth?"
+        },
+        {
+         "id": "F5.1.1.c",
+         "q": "Does the growth surface have a visible pit pattern?"
+        },
+        {
+         "id": "F5.1.1.d",
+         "q": "Is there redness on the tip of the growth?"
+        }
+       ],
+       "supports": {
+        "polyp": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F5.2",
+     "name": "Growth count and size",
+     "probes": [
+      {
+       "id": "F5.2.a",
+       "q": "Are there two or more growths in view?"
+      },
+      {
+       "id": "F5.2.b",
+       "q": "Is the growth smaller than one fifth of the image width?"
+      },
+      {
+       "id": "F5.2.c",
+       "q": "Is the growth larger than one third of the image width?"
+      },
+      {
+       "id": "F5.2.d",
+       "q": "Does the growth fill the centre of the image?"
+      }
+     ],
+     "supports": {
+      "polyp": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F6",
+   "name": "Ulcers and erosions",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Is there a crater-like hole in the lining?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Are there shallow raw patches on the lining?"
+    },
+    {
+     "id": "F6.c",
+     "q": "Are there red streaks or breaks in the lining surface?"
+    }
+   ],
+   "supports": {
+    "ulcerative colitis": 1,
+    "esophagitis": 1,
+    "polyp": -1,
+    "normal cecum": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Ulcer features",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Is there a patch covered by a yellow or white layer?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Is the edge of the patch irregular?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Is the patch surrounded by a red rim?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Are there several patches in the image?"
+      },
+      {
+       "id": "F6.1.e",
+       "q": "Is the patch longer than it is wide?"
+      }
+     ],
+     "supports": {
+      "ulcerative colitis": 1,
+      "esophagitis": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F6.2",
+     "name": "Breaks in lining",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Are there vertical red streaks running along the lining?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Do the streaks reach the lumen edge?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Do the streaks join each other?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Are the streaks covered by a white layer?"
+      }
+     ],
+     "supports": {
+      "esophagitis": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Bleeding",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Is there fresh red blood on the lining surface?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Is there a red trickle or smear on the lining?"
+    },
+    {
+     "id": "F7.c",
+     "q": "Is there a dark red clot visible?"
+    }
+   ],
+   "supports": {
+    "ulcerative colitis": 1,
+    "normal cecum": -1
+   },
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F8",
+   "name": "Exudate or membrane",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Is there a white layer lying on the lining?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Is there yellow material on the lining surface?"
+    },
+    {
+     "id": "F8.c",
+     "q": "Is there thick mucus strands on the lining?"
+    }
+   ],
+   "supports": {
+    "esophagitis": 1,
+    "ulcerative colitis": 1,
+    "normal cecum": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F8.1",
+     "name": "Layer appearance",
+     "probes": [
+      {
+       "id": "F8.1.a",
+       "q": "Is the white layer in a strip?"
+      },
+      {
+       "id": "F8.1.b",
+       "q": "Is the white layer in round spots?"
+      },
+      {
+       "id": "F8.1.c",
+       "q": "Does the white layer cover a red base?"
+      },
+      {
+       "id": "F8.1.d",
+       "q": "Is the layer thick enough to cast a shadow?"
+      },
+      {
+       "id": "F8.1.e",
+       "q": "Is the layer spread over a large area?"
+      }
+     ],
+     "supports": {
+      "esophagitis": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F8.2",
+     "name": "Mucus and fluid",
+     "probes": [
+      {
+       "id": "F8.2.a",
+       "q": "Is there clear mucus on the surface?"
+      },
+      {
+       "id": "F8.2.b",
+       "q": "Is there cloudy fluid pooled in the image?"
+      },
+      {
+       "id": "F8.2.c",
+       "q": "Are there stool particles in view?"
+      },
+      {
+       "id": "F8.2.d",
+       "q": "Are there food particles in view?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F9",
+   "name": "Landmarks of the cecum",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Is the opening of the ileocecal valve visible?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Is the opening of the appendix visible as a small pit?"
+    },
+    {
+     "id": "F9.c",
+     "q": "Do three folds meet near the appendix opening?"
+    }
+   ],
+   "supports": {
+    "normal cecum": 1,
+    "polyp": -1,
+    "ulcerative colitis": -1,
+    "esophagitis": -1
+   },
+   "truth": {
+    "meta": "landmark",
+    "rule": "v == True"
+   },
+   "children": [
+    {
+     "id": "F9.1",
+     "name": "Valve",
+     "probes": [
+      {
+       "id": "F9.1.a",
+       "q": "Is there a lip-shaped fold at the edge of the lumen?"
+      },
+      {
+       "id": "F9.1.b",
+       "q": "Is there a slit-like opening between two fold lips?"
+      },
+      {
+       "id": "F9.1.c",
+       "q": "Is the valve surface paler than the lining around it?"
+      },
+      {
+       "id": "F9.1.d",
+       "q": "Is the valve seen side on?"
+      },
+      {
+       "id": "F9.1.e",
+       "q": "Is the valve in the centre of the image?"
+      }
+     ],
+     "supports": {
+      "normal cecum": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F9.2",
+     "name": "Appendix opening",
+     "probes": [
+      {
+       "id": "F9.2.a",
+       "q": "Is there a small round pit among the folds?"
+      },
+      {
+       "id": "F9.2.b",
+       "q": "Is the pit darker than the surrounding lining?"
+      },
+      {
+       "id": "F9.2.c",
+       "q": "Is the pit at the meeting point of folds?"
+      },
+      {
+       "id": "F9.2.d",
+       "q": "Is the pit smaller than one tenth of the image width?"
+      }
+     ],
+     "supports": {
+      "normal cecum": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "name": "Esophageal lining",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Is the lining pale pink with lines running along the tube?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Is a ring-shaped junction between two colours of lining visible?"
+    },
+    {
+     "id": "F10.c",
+     "q": "Is the lumen narrow, round and centred?"
+    }
+   ],
+   "supports": {
+    "esophagitis": 1,
+    "normal cecum": -1,
+    "polyp": -1,
+    "ulcerative colitis": -1
+   },
+   "truth": {
+    "meta": "upper_or_lower",
+    "rule": "v == 'upper'"
+   },
+   "children": []
+  },
+  {
+   "id": "F11",
+   "name": "Instruments and tools",
+   "probes": [
+    {
+     "id": "F11.a",
+     "q": "Is a metal or plastic instrument visible in the image?"
+    },
+    {
+     "id": "F11.b",
+     "q": "Is a wire loop visible in the image?"
+    },
+    {
+     "id": "F11.c",
+     "q": "Is a text label or overlay drawn on the image?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F12",
+   "name": "Image quality and lighting",
+   "probes": [
+    {
+     "id": "F12.a",
+     "q": "Is the image sharp enough to read fine vessel detail?"
+    },
+    {
+     "id": "F12.b",
+     "q": "Is part of the image over-exposed to white?"
+    },
+    {
+     "id": "F12.c",
+     "q": "Is part of the image dark with little light?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F12.1",
+     "name": "Exposure and focus",
+     "probes": [
+      {
+       "id": "F12.1.a",
+       "q": "Is the centre of the image brighter than the edges?"
+      },
+      {
+       "id": "F12.1.b",
+       "q": "Is there a bright glare spot?"
+      },
+      {
+       "id": "F12.1.c",
+       "q": "Is the image blurred by motion?"
+      },
+      {
+       "id": "F12.1.d",
+       "q": "Is the lining close to the camera?"
+      },
+      {
+       "id": "F12.1.e",
+       "q": "Is the lining far from the camera?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F12.2",
+     "name": "Frame",
+     "probes": [
+      {
+       "id": "F12.2.a",
+       "q": "Is there a black border around the picture?"
+      },
+      {
+       "id": "F12.2.b",
+       "q": "Is there a green box in a corner of the image?"
+      },
+      {
+       "id": "F12.2.c",
+       "q": "Is there a circular mask on the image?"
+      },
+      {
+       "id": "F12.2.d",
+       "q": "Is there small text in the image?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  }
+ ]
+}

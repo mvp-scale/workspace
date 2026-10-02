@@ -1,0 +1,480 @@
+{
+ "task": "dental",
+ "pilot": "dental",
+ "status": "DRAFT: written from general dental radiology criteria, needs dentist review",
+ "classes": [
+  "caries present",
+  "no caries"
+ ],
+ "map": {
+  "yes": "caries present",
+  "no": "no caries"
+ },
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a panoramic dental X-ray showing the teeth.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a dental X-ray showing teeth?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Does the image show both the upper and the lower row of teeth?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Is the image sharp enough to see individual teeth?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Is a large part of the image covered by text or an artefact?",
+   "pass": "no"
+  },
+  {
+   "id": "G5",
+   "q": "Is the image a radiograph rather than a photograph, drawing or screenshot?",
+   "pass": "yes"
+  },
+  {
+   "id": "G6",
+   "q": "Is the jaw shown from ear to ear, as in a panoramic X-ray?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is the contrast good enough to tell enamel from the darker inner tooth?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Are at least 20 teeth visible?",
+   "pass": "yes"
+  },
+  {
+   "id": "G9",
+   "q": "Is the image rotated or cut off so that part of one jaw is missing?",
+   "pass": "no"
+  },
+  {
+   "id": "G10",
+   "q": "Is the image free of large bright objects covering the teeth, such as a bite block or jewellery?",
+   "pass": "yes"
+  }
+ ],
+ "features": [
+  {
+   "id": "F1",
+   "q": "Is there a dark area inside the crown of any tooth, the part above the gum?",
+   "for": [
+    "caries present"
+   ],
+   "against": [
+    "no caries"
+   ]
+  },
+  {
+   "id": "F2",
+   "q": "Is there a dark area between two neighbouring teeth where they touch?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "id": "F3",
+   "q": "Is there a dark area beside or under a filling?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "id": "F4",
+   "q": "Does any dark area in a tooth reach towards the centre of the tooth?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "id": "F5",
+   "q": "Is any tooth heavily broken down, with most of its crown missing?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "id": "F6",
+   "q": "Does any tooth have a bright white filling?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F7",
+   "q": "Is any tooth missing from the row?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F8",
+   "q": "Is there an impacted tooth, lying sideways or buried in the bone?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F9",
+   "q": "Is there a dark area around the tip of a root?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F10",
+   "q": "Do all visible tooth crowns look evenly light, with no dark spots?",
+   "for": [
+    "no caries"
+   ],
+   "against": [
+    "caries present"
+   ]
+  },
+  {
+   "id": "F11",
+   "q": "Is there a bright line inside a root, as from a root canal filling?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F12",
+   "q": "Is there a crown or cap on any tooth?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F13",
+   "q": "Is there visible loss of bone between the teeth?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F14",
+   "q": "Are the outer outlines of every tooth crown smooth and continuous?",
+   "for": [
+    "no caries"
+   ],
+   "against": [
+    "caries present"
+   ]
+  },
+  {
+   "id": "F15",
+   "q": "Is there a dark spot on the biting surface of any back tooth?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "id": "F16",
+   "q": "Is there a dark notch at the neck of any tooth, near the gum line?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "id": "F17",
+   "q": "Is any tooth crown visibly darker than the crowns next to it?",
+   "for": [
+    "caries present"
+   ],
+   "against": [
+    "no caries"
+   ]
+  },
+  {
+   "id": "F18",
+   "q": "Are the spaces between neighbouring teeth clear and uniform?",
+   "for": [
+    "no caries"
+   ],
+   "against": [
+    "caries present"
+   ]
+  },
+  {
+   "id": "F19",
+   "q": "Is there a tooth with a large filling that covers most of its crown?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F20",
+   "q": "Is there a tooth with a visible gap between its crown and a filling?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  }
+ ],
+ "discriminators": [
+  {
+   "when": [
+    "caries present",
+    "no caries"
+   ],
+   "id": "D1",
+   "q": "Is a dark area in a tooth crown clearly darker than the tooth around it and well defined?",
+   "for": [
+    "caries present"
+   ],
+   "against": [
+    "no caries"
+   ]
+  },
+  {
+   "when": [
+    "caries present",
+    "no caries"
+   ],
+   "id": "D2",
+   "q": "Is a dark area on the chewing surface of a back tooth?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "caries present",
+    "no caries"
+   ],
+   "id": "D3",
+   "q": "Is a dark area on the side of a tooth that touches its neighbour?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "caries present",
+    "no caries"
+   ],
+   "id": "D4",
+   "q": "Does a dark area cross the outer white enamel layer of a tooth?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "caries present",
+    "no caries"
+   ],
+   "id": "D5",
+   "q": "Could every dark area in the tooth row be explained by the normal gap between teeth or by a shadow?",
+   "for": [
+    "no caries"
+   ],
+   "against": [
+    "caries present"
+   ]
+  },
+  {
+   "when": [
+    "caries present",
+    "no caries"
+   ],
+   "id": "D6",
+   "q": "Is there a dark area at the place where a filling meets the tooth?",
+   "for": [
+    "caries present"
+   ],
+   "against": []
+  },
+  {
+   "id": "D7",
+   "q": "Is the dark area inside the enamel or deeper?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "D8",
+   "q": "Is the dark area triangular, pointing towards the centre of the tooth?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "D9",
+   "q": "Is the dark area limited to a tooth that has no filling?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "D10",
+   "q": "Is the darker area at the same place in both neighbouring teeth, as a shadow would be?",
+   "for": [
+    "no caries"
+   ],
+   "against": [
+    "caries present"
+   ],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "D11",
+   "q": "Is the darker area a straight band across several teeth?",
+   "for": [
+    "no caries"
+   ],
+   "against": [
+    "caries present"
+   ],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "D12",
+   "q": "Is there a clear sharp border between the dark area and the tooth around it?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  }
+ ],
+ "version": 2,
+ "deep": [
+  {
+   "id": "P1",
+   "q": "Does the dark area look different from the dark spaces between teeth?",
+   "for": [
+    "caries present"
+   ],
+   "against": [
+    "no caries"
+   ],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "P2",
+   "q": "Is the dark area in a tooth that has a normal-looking root?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "P3",
+   "q": "Does the dark area extend from the outer surface inwards?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "P4",
+   "q": "Is more than one tooth showing a dark area in its crown?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "P5",
+   "q": "Is the outline of the crown broken or notched at the dark area?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "P6",
+   "q": "Is the dark area bigger than a quarter of the crown width?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "P7",
+   "q": "Does every dark spot sit on a tooth contact point or a chewing surface, where caries commonly starts?",
+   "for": [
+    "caries present"
+   ],
+   "against": [],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  },
+  {
+   "id": "P8",
+   "q": "Are all the tooth crowns evenly bright from edge to edge?",
+   "for": [
+    "no caries"
+   ],
+   "against": [
+    "caries present"
+   ],
+   "when": [
+    "caries present",
+    "no caries"
+   ]
+  }
+ ]
+}

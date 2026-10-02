@@ -1,0 +1,957 @@
+{
+ "task": "chest",
+ "title": "Pediatric chest X-ray: pneumonia versus normal",
+ "status": "DRAFT: written from general chest radiograph criteria, needs radiologist review. RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE.",
+ "pilot": "chest",
+ "classes": [
+  "pneumonia",
+  "normal chest"
+ ],
+ "map": {
+  "yes": "pneumonia",
+  "no": "normal chest"
+ },
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a frontal chest X-ray.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this an X-ray image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is this an X-ray of the human chest?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Is the chest seen from the front?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Are both lungs visible in the image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Are the ribs visible as pale curved bands?",
+   "pass": "yes"
+  },
+  {
+   "id": "G6",
+   "q": "Is the image a grayscale radiograph?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is the spine visible as a vertical column in the middle of the chest?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Are both shoulders or collar bones visible at the top of the image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G9",
+   "q": "Is the heart shadow visible between the two lungs?",
+   "pass": "yes"
+  },
+  {
+   "id": "G10",
+   "q": "Are the upper abdomen or diaphragm domes visible at the bottom of the image?",
+   "pass": "yes"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Lung transparency",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Do both lung fields look dark gray with thin pale lines?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Is one lung darker than the other?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Are the ribs clearly visible through the lungs?"
+    }
+   ],
+   "supports": {
+    "normal chest": 1,
+    "pneumonia": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Symmetry",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Are the left and right lung fields the same brightness?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Is the upper zone of one lung brighter than the same zone of the other lung?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Is the lower zone of one lung brighter than the same zone of the other lung?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Are the lung fields the same width on both sides?"
+      }
+     ],
+     "supports": {
+      "normal chest": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.2",
+     "name": "Rib visibility",
+     "probes": [
+      {
+       "id": "F1.2.a",
+       "q": "Can the rear ribs be traced through the lower lungs?"
+      },
+      {
+       "id": "F1.2.b",
+       "q": "Can the front ribs be traced through the upper lungs?"
+      },
+      {
+       "id": "F1.2.c",
+       "q": "Are the rib edges sharp?"
+      },
+      {
+       "id": "F1.2.d",
+       "q": "Can the spine be seen through the heart shadow?"
+      }
+     ],
+     "supports": {
+      "normal chest": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.3",
+     "name": "Vessel visibility",
+     "probes": [
+      {
+       "id": "F1.3.a",
+       "q": "Are thin branching lines visible near the lung edges?"
+      },
+      {
+       "id": "F1.3.b",
+       "q": "Are thin branching lines visible near the center of the lungs?"
+      },
+      {
+       "id": "F1.3.c",
+       "q": "Do the thin lines taper toward the lung edge?"
+      },
+      {
+       "id": "F1.3.d",
+       "q": "Are the thin lines sharp-edged?"
+      }
+     ],
+     "supports": {
+      "normal chest": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Focal opacity",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Is there a white patch in one part of a lung?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Does a white area have a fairly well defined edge?"
+    },
+    {
+     "id": "F2.c",
+     "q": "Is there a white area next to the heart border?"
+    }
+   ],
+   "supports": {
+    "pneumonia": 1,
+    "normal chest": -1
+   },
+   "truth": {
+    "meta": "pneumonia_type",
+    "rule": "v != 'none'"
+   },
+   "children": [
+    {
+     "id": "F2.1",
+     "name": "Location",
+     "probes": [
+      {
+       "id": "F2.1.a",
+       "q": "Is the white patch in the upper third of a lung?"
+      },
+      {
+       "id": "F2.1.b",
+       "q": "Is the white patch in the middle third of a lung?"
+      },
+      {
+       "id": "F2.1.c",
+       "q": "Is the white patch in the lower third of a lung?"
+      },
+      {
+       "id": "F2.1.d",
+       "q": "Is the white patch on the right side of the image?"
+      },
+      {
+       "id": "F2.1.e",
+       "q": "Is the white patch on the left side of the image?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F2.1.1",
+       "name": "Extent",
+       "probes": [
+        {
+         "id": "F2.1.1.a",
+         "q": "Does the white patch fill most of one lung?"
+        },
+        {
+         "id": "F2.1.1.b",
+         "q": "Is the white patch smaller than a quarter of one lung?"
+        },
+        {
+         "id": "F2.1.1.c",
+         "q": "Does the white patch reach the chest wall?"
+        },
+        {
+         "id": "F2.1.1.d",
+         "q": "Does the white patch reach the middle of the chest?"
+        }
+       ],
+       "supports": {
+        "pneumonia": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F2.2",
+     "name": "Edge and texture",
+     "probes": [
+      {
+       "id": "F2.2.a",
+       "q": "Is the edge of the white patch straight along a line?"
+      },
+      {
+       "id": "F2.2.b",
+       "q": "Is the edge of the white patch fuzzy?"
+      },
+      {
+       "id": "F2.2.c",
+       "q": "Is the white patch evenly bright?"
+      },
+      {
+       "id": "F2.2.d",
+       "q": "Is the white patch brighter than the ribs over it?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F2.3",
+     "name": "Air bronchogram",
+     "probes": [
+      {
+       "id": "F2.3.a",
+       "q": "Are dark branching lines visible inside a white patch?"
+      },
+      {
+       "id": "F2.3.b",
+       "q": "Do dark branching lines extend to the edge of the patch?"
+      },
+      {
+       "id": "F2.3.c",
+       "q": "Are the dark lines thinner than the nearby ribs?"
+      },
+      {
+       "id": "F2.3.d",
+       "q": "Does the white patch hide the vessels under it?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F2.4",
+     "name": "Number of patches",
+     "probes": [
+      {
+       "id": "F2.4.a",
+       "q": "Are there white patches in both lungs?"
+      },
+      {
+       "id": "F2.4.b",
+       "q": "Is there more than one white patch in one lung?"
+      },
+      {
+       "id": "F2.4.c",
+       "q": "Is there only one white patch in the whole chest?"
+      },
+      {
+       "id": "F2.4.d",
+       "q": "Do two white patches touch each other?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F3",
+   "name": "Diffuse haze",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Is there a milky gray veil over most of one lung?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Is there a milky gray veil over both lungs?"
+    },
+    {
+     "id": "F3.c",
+     "q": "Are the vessel lines blurred by a gray veil?"
+    }
+   ],
+   "supports": {
+    "pneumonia": 1,
+    "normal chest": -1
+   },
+   "truth": {
+    "meta": "pneumonia_type",
+    "rule": "v != 'none'"
+   },
+   "children": [
+    {
+     "id": "F3.1",
+     "name": "Distribution",
+     "probes": [
+      {
+       "id": "F3.1.a",
+       "q": "Is the haze in the lower zones of the lungs?"
+      },
+      {
+       "id": "F3.1.b",
+       "q": "Is the haze in the upper zones of the lungs?"
+      },
+      {
+       "id": "F3.1.c",
+       "q": "Is the haze around the center of both lungs?"
+      },
+      {
+       "id": "F3.1.d",
+       "q": "Is the haze spread evenly across a whole lung?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F3.2",
+     "name": "Pattern",
+     "probes": [
+      {
+       "id": "F3.2.a",
+       "q": "Is the haze made of many small dots?"
+      },
+      {
+       "id": "F3.2.b",
+       "q": "Is the haze made of fine net-like lines?"
+      },
+      {
+       "id": "F3.2.c",
+       "q": "Is the haze made of blotchy patches?"
+      },
+      {
+       "id": "F3.2.d",
+       "q": "Is the haze a smooth gray tone?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F3.3",
+     "name": "Effect on structures",
+     "probes": [
+      {
+       "id": "F3.3.a",
+       "q": "Is the heart border blurred by the haze?"
+      },
+      {
+       "id": "F3.3.b",
+       "q": "Is the diaphragm edge blurred by the haze?"
+      },
+      {
+       "id": "F3.3.c",
+       "q": "Are the ribs fainter where the haze lies?"
+      },
+      {
+       "id": "F3.3.d",
+       "q": "Is the haze brighter than the soft tissue of the chest wall?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F4",
+   "name": "Airways and bronchial markings",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Are there thick pale lines radiating from the center of the lungs?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Are there pale ring shapes seen end-on in the lungs?"
+    },
+    {
+     "id": "F4.c",
+     "q": "Are the lines around the central airways wider than normal vessels?"
+    }
+   ],
+   "supports": {
+    "pneumonia": 1,
+    "normal chest": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Peribronchial lines",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Are thick lines running from the center toward the lung edge?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Are there parallel pale lines shaped like tram tracks?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Are the lines present in both lungs?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Do the lines reach the lower zones?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.2",
+     "name": "Ring shadows",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Are there small pale rings with dark centers?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Are the rings thicker than a vessel line?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Are the rings seen near the heart?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Are the rings seen in the lower lungs?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.3",
+     "name": "Central airways",
+     "probes": [
+      {
+       "id": "F4.3.a",
+       "q": "Is the windpipe visible as a dark vertical band?"
+      },
+      {
+       "id": "F4.3.b",
+       "q": "Do the main airways split into two dark branches?"
+      },
+      {
+       "id": "F4.3.c",
+       "q": "Are the walls of the main airways thickened?"
+      },
+      {
+       "id": "F4.3.d",
+       "q": "Is the area around the airway branches brighter than the lungs?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Heart outline",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Is the edge of the heart sharp on the right side of the image?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Is the edge of the heart sharp on the left side of the image?"
+    },
+    {
+     "id": "F5.c",
+     "q": "Is the heart shadow narrower than half of the chest width?"
+    }
+   ],
+   "supports": {
+    "normal chest": 1,
+    "pneumonia": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F5.1",
+     "name": "Border sharpness",
+     "probes": [
+      {
+       "id": "F5.1.a",
+       "q": "Is the right heart border a clear line against the lung?"
+      },
+      {
+       "id": "F5.1.b",
+       "q": "Is the left heart border a clear line against the lung?"
+      },
+      {
+       "id": "F5.1.c",
+       "q": "Is the heart border blurred along part of its length?"
+      },
+      {
+       "id": "F5.1.d",
+       "q": "Is the heart border hidden by a white area?"
+      }
+     ],
+     "supports": {
+      "normal chest": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F5.2",
+     "name": "Heart size",
+     "probes": [
+      {
+       "id": "F5.2.a",
+       "q": "Is the heart width less than half the width of the chest?"
+      },
+      {
+       "id": "F5.2.b",
+       "q": "Is the heart width more than half the width of the chest?"
+      },
+      {
+       "id": "F5.2.c",
+       "q": "Is the heart shadow round?"
+      },
+      {
+       "id": "F5.2.d",
+       "q": "Is the heart shadow centered over the spine?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F5.3",
+     "name": "Thymus and mediastinal shape",
+     "probes": [
+      {
+       "id": "F5.3.a",
+       "q": "Is there a wide triangular shadow above the heart?"
+      },
+      {
+       "id": "F5.3.b",
+       "q": "Is there a sail-shaped shadow beside the heart?"
+      },
+      {
+       "id": "F5.3.c",
+       "q": "Does the shadow above the heart have a wavy edge?"
+      },
+      {
+       "id": "F5.3.d",
+       "q": "Is the shadow above the heart the same brightness as the heart?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F6",
+   "name": "Diaphragm and costophrenic angles",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Is the top edge of each diaphragm a clear curved line?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Are the corners where the diaphragm meets the chest wall sharp?"
+    },
+    {
+     "id": "F6.c",
+     "q": "Are both diaphragm domes at similar heights?"
+    }
+   ],
+   "supports": {
+    "normal chest": 1,
+    "pneumonia": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Diaphragm edge",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Is the right diaphragm edge a clear line?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Is the left diaphragm edge a clear line?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Is part of a diaphragm edge hidden by a white area?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Is the stomach gas bubble visible under the left diaphragm?"
+      }
+     ],
+     "supports": {
+      "normal chest": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F6.2",
+     "name": "Costophrenic angles",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Is the right corner of the chest base a sharp point?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Is the left corner of the chest base a sharp point?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Is either corner filled by a gray curved shadow?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Is either corner rounded?"
+      }
+     ],
+     "supports": {
+      "normal chest": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F6.3",
+     "name": "Diaphragm shape",
+     "probes": [
+      {
+       "id": "F6.3.a",
+       "q": "Is each diaphragm dome curved upward?"
+      },
+      {
+       "id": "F6.3.b",
+       "q": "Is either diaphragm flat?"
+      },
+      {
+       "id": "F6.3.c",
+       "q": "Is one diaphragm higher than the other?"
+      },
+      {
+       "id": "F6.3.d",
+       "q": "Is the diaphragm lower than the tenth rib at the back?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Pleural space",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Is there a gray band along the lateral chest wall?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Is there a thin white line parallel to the chest wall?"
+    },
+    {
+     "id": "F7.c",
+     "q": "Is there a dark band with no vessel lines at a lung edge?"
+    }
+   ],
+   "supports": {
+    "pneumonia": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F7.1",
+     "name": "Fluid signs",
+     "probes": [
+      {
+       "id": "F7.1.a",
+       "q": "Is there a gray curved shadow at the base of a lung?"
+      },
+      {
+       "id": "F7.1.b",
+       "q": "Is the top edge of the gray shadow curved upward at the side?"
+      },
+      {
+       "id": "F7.1.c",
+       "q": "Is a whole lung field gray from top to bottom?"
+      },
+      {
+       "id": "F7.1.d",
+       "q": "Is the fluid line higher at the chest wall than at the center?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F7.2",
+     "name": "Air signs",
+     "probes": [
+      {
+       "id": "F7.2.a",
+       "q": "Is there a dark band between the lung and the chest wall?"
+      },
+      {
+       "id": "F7.2.b",
+       "q": "Does a thin line separate the dark band from the lung?"
+      },
+      {
+       "id": "F7.2.c",
+       "q": "Are vessel lines missing in the dark band?"
+      },
+      {
+       "id": "F7.2.d",
+       "q": "Is the lung edge pulled away from the chest wall?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F7.3",
+     "name": "Pleural thickening",
+     "probes": [
+      {
+       "id": "F7.3.a",
+       "q": "Is there a thin pale stripe inside the rib cage edge?"
+      },
+      {
+       "id": "F7.3.b",
+       "q": "Is the stripe present on both sides?"
+      },
+      {
+       "id": "F7.3.c",
+       "q": "Is the stripe thicker than the ribs?"
+      },
+      {
+       "id": "F7.3.d",
+       "q": "Is the stripe along the lower chest wall?"
+      }
+     ],
+     "supports": {
+      "pneumonia": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F8",
+   "name": "Mediastinum and trachea",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Is the windpipe a dark vertical band in the middle?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Is the windpipe centered over the spine?"
+    },
+    {
+     "id": "F8.c",
+     "q": "Is the central shadow between the lungs narrow?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F9",
+   "name": "Hyperinflation",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Are the lungs tall, reaching below the tenth rib at the back?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Are both diaphragms flat?"
+    },
+    {
+     "id": "F9.c",
+     "q": "Are the ribs running horizontally?"
+    }
+   ],
+   "supports": {
+    "pneumonia": 1
+   },
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F10",
+   "name": "Devices and lines",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Is there a tube or wire inside the chest?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Are there round ECG stickers on the skin?"
+    },
+    {
+     "id": "F10.c",
+     "q": "Is there a metal object over the chest?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F11",
+   "name": "Image quality and positioning",
+   "probes": [
+    {
+     "id": "F11.a",
+     "q": "Are the collar bones level with each other?"
+    },
+    {
+     "id": "F11.b",
+     "q": "Are the inner ends of the collar bones equally far from the spine?"
+    },
+    {
+     "id": "F11.c",
+     "q": "Is the image wider than it is tall?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "orientation",
+    "rule": "v == 'landscape'"
+   },
+   "children": []
+  }
+ ]
+}

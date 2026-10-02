@@ -1,0 +1,1014 @@
+{
+ "task": "brain",
+ "title": "Brain MRI slice (tumour type)",
+ "status": "DRAFT: written from general criteria, needs neuroradiologist review. RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE",
+ "pilot": "brain",
+ "classes": [
+  "glioma",
+  "meningioma",
+  "pituitary tumour",
+  "no tumour"
+ ],
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a magnetic resonance slice of a human head.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a magnetic resonance image of a head?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is this a brain scan showing grey and white tissue?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Is a skull outline visible?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Is the image a greyscale medical scan?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Is the image a single slice, rather than a collage of many slices?",
+   "pass": "yes"
+  },
+  {
+   "id": "G6",
+   "q": "Is the brain in the image in focus?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is this a photograph of a balloon?",
+   "pass": "no"
+  },
+  {
+   "id": "G8",
+   "q": "Is this a photograph of a car?",
+   "pass": "no"
+  },
+  {
+   "id": "G9",
+   "q": "Is this a photograph of skin?",
+   "pass": "no"
+  },
+  {
+   "id": "G10",
+   "q": "Is this a chest X-ray showing ribs and lungs?",
+   "pass": "no"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Slice orientation",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Is the head seen from the side, with the face toward the left or right edge?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Is the head cut across, as a round or oval ring seen from above?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Is the head seen from the front, with the face toward the viewer?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Axial plane cues",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Is the outline of the head round or oval?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Are two eyes or eye sockets visible at the front of the slice?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Are two lateral ventricles visible side by side?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Is a single vertical line running front to back through the middle of the slice?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.2",
+     "name": "Sagittal plane cues",
+     "probes": [
+      {
+       "id": "F1.2.a",
+       "q": "Is a curved band of tissue visible across the top of the ventricles?"
+      },
+      {
+       "id": "F1.2.b",
+       "q": "Is the cerebellum visible at the lower back of the slice?"
+      },
+      {
+       "id": "F1.2.c",
+       "q": "Is the brainstem visible as a vertical stalk below the brain?"
+      },
+      {
+       "id": "F1.2.d",
+       "q": "Is the nasal cavity or nose visible at the front edge?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.3",
+     "name": "Coronal plane cues",
+     "probes": [
+      {
+       "id": "F1.3.a",
+       "q": "Are both temporal lobes visible at the lower sides of the slice?"
+      },
+      {
+       "id": "F1.3.b",
+       "q": "Is the head outline taller than it is wide?"
+      },
+      {
+       "id": "F1.3.c",
+       "q": "Are two lateral ventricles visible as paired dark shapes?"
+      },
+      {
+       "id": "F1.3.d",
+       "q": "Is the vertical midline visible from the top to the base of the brain?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Hemisphere symmetry",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Does the left half of the brain differ in shape from the right half?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Does one side of the brain look larger than the other side?"
+    }
+   ],
+   "supports": {
+    "glioma": 1,
+    "meningioma": 1,
+    "pituitary tumour": 1,
+    "no tumour": -1
+   },
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F3",
+   "name": "Ventricles",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Are the lateral ventricles visible as dark fluid-filled spaces?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Is one lateral ventricle smaller than the other?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F4",
+   "name": "Midline structures",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Is a thin vertical line visible between the two halves of the brain?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Is the midline line bent toward one side?"
+    }
+   ],
+   "supports": {
+    "glioma": 1,
+    "meningioma": 1,
+    "no tumour": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Midline position",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Is the midline curved toward the left side?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Is the midline curved toward the right side?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Is the midline straight from front to back?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Is the central dark fluid space pushed toward one side?"
+      },
+      {
+       "id": "F4.1.e",
+       "q": "Is the septum between the ventricles bent?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": 1,
+      "no tumour": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.2",
+     "name": "Sulci and folds",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Are the grooves on the brain surface visible?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Are the grooves on one side narrower than on the other side?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Are the grooves on one side hidden by a bright or grey mass?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Are the brain folds evenly spaced across the surface?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.3",
+     "name": "Central brain structures",
+     "probes": [
+      {
+       "id": "F4.3.a",
+       "q": "Is the corpus callosum visible as a curved band?"
+      },
+      {
+       "id": "F4.3.b",
+       "q": "Is the third ventricle visible as a narrow dark slit?"
+      },
+      {
+       "id": "F4.3.c",
+       "q": "Are the basal ganglia visible near the centre?"
+      },
+      {
+       "id": "F4.3.d",
+       "q": "Is the pineal region visible near the centre?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Focal mass",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Is there a rounded or oval area whose brightness differs from the tissue around it?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Is there a single distinct lump within or beside the brain?"
+    },
+    {
+     "id": "F5.c",
+     "q": "Does a region of the brain have a different texture from the rest?"
+    }
+   ],
+   "supports": {
+    "glioma": 1,
+    "meningioma": 1,
+    "pituitary tumour": 1,
+    "no tumour": -1
+   },
+   "truth": {
+    "meta": "has_tumour",
+    "rule": "v == True"
+   },
+   "children": [
+    {
+     "id": "F5.1",
+     "name": "Mass size",
+     "probes": [
+      {
+       "id": "F5.1.a",
+       "q": "Is the lump wider than one quarter of the width of the brain?"
+      },
+      {
+       "id": "F5.1.b",
+       "q": "Is the lump smaller than the eye of the head outline?"
+      },
+      {
+       "id": "F5.1.c",
+       "q": "Does the lump span more than one brain fold?"
+      },
+      {
+       "id": "F5.1.d",
+       "q": "Is the lump larger than the lateral ventricle?"
+      },
+      {
+       "id": "F5.1.e",
+       "q": "Does the lump touch more than one lobe of the brain?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": 1,
+      "no tumour": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F5.2",
+     "name": "Mass shape",
+     "probes": [
+      {
+       "id": "F5.2.a",
+       "q": "Is the lump round?"
+      },
+      {
+       "id": "F5.2.b",
+       "q": "Is the lump oval?"
+      },
+      {
+       "id": "F5.2.c",
+       "q": "Is the outline of the lump lobulated, with bumps?"
+      },
+      {
+       "id": "F5.2.d",
+       "q": "Is the lump shaped like an irregular star?"
+      },
+      {
+       "id": "F5.2.e",
+       "q": "Does the lump have a smooth curved outline?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": 1,
+      "pituitary tumour": 1,
+      "no tumour": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F5.3",
+     "name": "Mass count",
+     "probes": [
+      {
+       "id": "F5.3.a",
+       "q": "Is there exactly one lump visible?"
+      },
+      {
+       "id": "F5.3.b",
+       "q": "Are there two or more separate lumps visible?"
+      },
+      {
+       "id": "F5.3.c",
+       "q": "Is the lump in the left half of the image?"
+      },
+      {
+       "id": "F5.3.d",
+       "q": "Is the lump in the right half of the image?"
+      }
+     ],
+     "supports": {
+      "no tumour": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F6",
+   "name": "Mass location",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Does the mass sit against the inner surface of the skull?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Does the mass sit at the base of the brain near the centre of the skull?"
+    }
+   ],
+   "supports": {
+    "meningioma": 1,
+    "pituitary tumour": 1
+   },
+   "truth": {
+    "meta": "tumour_group",
+    "rule": "v in ('extra-axial','intra-axial')"
+   },
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Brain surface contact",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Does the mass touch the outer edge of the brain?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Does the mass have a broad flat side against the skull?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Is there a thin dark line between the mass and the brain tissue?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Is the mass attached to a fold of tissue between the hemispheres?"
+      },
+      {
+       "id": "F6.1.e",
+       "q": "Is the mass embedded deep inside the brain tissue?"
+      }
+     ],
+     "supports": {
+      "glioma": -1,
+      "meningioma": 1
+     },
+     "truth": {
+      "meta": "tumour_group",
+      "rule": "v == 'extra-axial'"
+     },
+     "children": [
+      {
+       "id": "F6.1.1",
+       "name": "Skull-side attachment",
+       "probes": [
+        {
+         "id": "F6.1.1.a",
+         "q": "Is the flat side of the mass wider than the rest of the mass?"
+        },
+        {
+         "id": "F6.1.1.b",
+         "q": "Does the adjacent skull look thicker than elsewhere?"
+        },
+        {
+         "id": "F6.1.1.c",
+         "q": "Does the mass sit near the top of the head?"
+        },
+        {
+         "id": "F6.1.1.d",
+         "q": "Does the mass sit near the front of the head?"
+        }
+       ],
+       "supports": {
+        "meningioma": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F6.2",
+     "name": "Sella region",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Is there a mass in the small bony hollow at the centre of the skull base?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Is the mass directly above the nasal cavity?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Is the mass below the centre of the brain?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Is the mass behind the eyes, at the midline?"
+      },
+      {
+       "id": "F6.2.e",
+       "q": "Does the mass sit between the two temporal lobes?"
+      }
+     ],
+     "supports": {
+      "glioma": -1,
+      "pituitary tumour": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F6.2.1",
+       "name": "Sella shape",
+       "probes": [
+        {
+         "id": "F6.2.1.a",
+         "q": "Is the bony hollow at the skull base enlarged?"
+        },
+        {
+         "id": "F6.2.1.b",
+         "q": "Does the mass extend upward from the skull base?"
+        },
+        {
+         "id": "F6.2.1.c",
+         "q": "Does the mass sit exactly on the midline?"
+        },
+        {
+         "id": "F6.2.1.d",
+         "q": "Is the mass round with a smooth top?"
+        }
+       ],
+       "supports": {
+        "pituitary tumour": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F6.3",
+     "name": "Deep brain position",
+     "probes": [
+      {
+       "id": "F6.3.a",
+       "q": "Is the mass inside a lobe of the brain?"
+      },
+      {
+       "id": "F6.3.b",
+       "q": "Does the mass lie next to the lateral ventricle?"
+      },
+      {
+       "id": "F6.3.c",
+       "q": "Does the mass sit in the left hemisphere?"
+      },
+      {
+       "id": "F6.3.d",
+       "q": "Does the mass sit in the right hemisphere?"
+      },
+      {
+       "id": "F6.3.e",
+       "q": "Does the mass lie at the centre of the white matter?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": -1,
+      "pituitary tumour": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Mass borders",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Does the mass have a sharp edge against the tissue around it?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Is the edge of the mass blurred into the tissue around it?"
+    }
+   ],
+   "supports": {
+    "glioma": -1,
+    "meningioma": 1,
+    "pituitary tumour": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F7.1",
+     "name": "Edge sharpness",
+     "probes": [
+      {
+       "id": "F7.1.a",
+       "q": "Can a thin line be traced all around the mass?"
+      },
+      {
+       "id": "F7.1.b",
+       "q": "Does the edge of the mass fade gradually?"
+      },
+      {
+       "id": "F7.1.c",
+       "q": "Does the mass have a bright rim?"
+      },
+      {
+       "id": "F7.1.d",
+       "q": "Is the edge smooth along its whole length?"
+      },
+      {
+       "id": "F7.1.e",
+       "q": "Is the edge jagged?"
+      }
+     ],
+     "supports": {
+      "glioma": -1,
+      "meningioma": 1,
+      "pituitary tumour": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F7.2",
+     "name": "Edge extension",
+     "probes": [
+      {
+       "id": "F7.2.a",
+       "q": "Do finger-like extensions leave the mass into the brain?"
+      },
+      {
+       "id": "F7.2.b",
+       "q": "Does the mass spread across the midline?"
+      },
+      {
+       "id": "F7.2.c",
+       "q": "Does the mass push the surrounding tissue inward?"
+      },
+      {
+       "id": "F7.2.d",
+       "q": "Is the mass enclosed by a visible rim?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": -1,
+      "pituitary tumour": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F7.3",
+     "name": "Internal structure",
+     "probes": [
+      {
+       "id": "F7.3.a",
+       "q": "Is the inside of the mass evenly bright?"
+      },
+      {
+       "id": "F7.3.b",
+       "q": "Does the mass contain dark spots?"
+      },
+      {
+       "id": "F7.3.c",
+       "q": "Does the mass contain a fluid-filled hollow?"
+      },
+      {
+       "id": "F7.3.d",
+       "q": "Does the mass contain bright spots?"
+      },
+      {
+       "id": "F7.3.e",
+       "q": "Does the mass contain bands of different brightness?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": -1,
+      "pituitary tumour": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F8",
+   "name": "Mass brightness",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Is the mass brighter than the grey matter of the brain?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Is the mass darker than the grey matter of the brain?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F8.1",
+     "name": "Brightness level",
+     "probes": [
+      {
+       "id": "F8.1.a",
+       "q": "Is the mass as bright as the fluid in the ventricles?"
+      },
+      {
+       "id": "F8.1.b",
+       "q": "Is the mass as bright as the skull?"
+      },
+      {
+       "id": "F8.1.c",
+       "q": "Is the mass similar in brightness to the grey matter?"
+      },
+      {
+       "id": "F8.1.d",
+       "q": "Is the mass the brightest area in the slice?"
+      },
+      {
+       "id": "F8.1.e",
+       "q": "Is the mass darker than the white matter?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F8.2",
+     "name": "Brightness evenness",
+     "probes": [
+      {
+       "id": "F8.2.a",
+       "q": "Is the brightness of the mass the same everywhere inside it?"
+      },
+      {
+       "id": "F8.2.b",
+       "q": "Does the brightness change from the centre to the edge of the mass?"
+      },
+      {
+       "id": "F8.2.c",
+       "q": "Does the mass have a darker centre?"
+      },
+      {
+       "id": "F8.2.d",
+       "q": "Does the mass have a brighter centre?"
+      },
+      {
+       "id": "F8.2.e",
+       "q": "Is a ring of brighter tissue around the mass?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": -1,
+      "pituitary tumour": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F8.3",
+     "name": "Contrast agent look",
+     "probes": [
+      {
+       "id": "F8.3.a",
+       "q": "Does the mass look uniformly bright, as if filled with a bright dye?"
+      },
+      {
+       "id": "F8.3.b",
+       "q": "Do blood vessels near the mass look bright?"
+      },
+      {
+       "id": "F8.3.c",
+       "q": "Is the mass brighter than the blood vessels beside it?"
+      },
+      {
+       "id": "F8.3.d",
+       "q": "Does a bright tail of tissue extend from the mass along the skull?"
+      }
+     ],
+     "supports": {
+      "meningioma": 1,
+      "pituitary tumour": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F9",
+   "name": "Surrounding swelling",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Is there a wide halo of different brightness around the mass?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Does the halo extend into the white matter of the brain?"
+    }
+   ],
+   "supports": {
+    "glioma": 1,
+    "pituitary tumour": -1,
+    "no tumour": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F9.1",
+     "name": "Halo extent",
+     "probes": [
+      {
+       "id": "F9.1.a",
+       "q": "Is the halo wider than the mass itself?"
+      },
+      {
+       "id": "F9.1.b",
+       "q": "Does the halo reach the ventricles?"
+      },
+      {
+       "id": "F9.1.c",
+       "q": "Does the halo reach the brain surface?"
+      },
+      {
+       "id": "F9.1.d",
+       "q": "Does the halo follow the shape of white matter fingers?"
+      },
+      {
+       "id": "F9.1.e",
+       "q": "Is the halo present on one side of the brain only?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "pituitary tumour": -1,
+      "no tumour": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F9.2",
+     "name": "Tissue compression",
+     "probes": [
+      {
+       "id": "F9.2.a",
+       "q": "Is the nearest ventricle squeezed flat?"
+      },
+      {
+       "id": "F9.2.b",
+       "q": "Are the brain folds near the mass flattened?"
+      },
+      {
+       "id": "F9.2.c",
+       "q": "Is the brain tissue near the mass pushed away from the skull?"
+      },
+      {
+       "id": "F9.2.d",
+       "q": "Does the mass press into the brainstem?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "meningioma": 1,
+      "no tumour": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F9.3",
+     "name": "Halo brightness",
+     "probes": [
+      {
+       "id": "F9.3.a",
+       "q": "Is the halo darker than the white matter?"
+      },
+      {
+       "id": "F9.3.b",
+       "q": "Is the halo brighter than the white matter?"
+      },
+      {
+       "id": "F9.3.c",
+       "q": "Is the halo brightness smooth?"
+      },
+      {
+       "id": "F9.3.d",
+       "q": "Is the halo brightness patchy?"
+      },
+      {
+       "id": "F9.3.e",
+       "q": "Is the halo as bright as the ventricle fluid?"
+      }
+     ],
+     "supports": {
+      "glioma": 1,
+      "pituitary tumour": -1,
+      "no tumour": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "name": "Skull and extracranial structures",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Is the skull visible as a ring around the brain?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Are the eyes or nose visible outside the skull outline?"
+    }
+   ],
+   "supports": {
+    "meningioma": 1
+   },
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F11",
+   "name": "Image quality and contrast",
+   "probes": [
+    {
+     "id": "F11.a",
+     "q": "Is the grey and white matter boundary visible?"
+    },
+    {
+     "id": "F11.b",
+     "q": "Is the image sharp enough to see brain folds?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "mean_brightness",
+    "rule": "v > 0.1"
+   },
+   "children": []
+  },
+  {
+   "id": "F12",
+   "name": "Image colour",
+   "probes": [
+    {
+     "id": "F12.a",
+     "q": "Does the image contain only shades of grey?"
+    },
+    {
+     "id": "F12.b",
+     "q": "Is any coloured tint visible in the image?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "is_grayscale",
+    "rule": "v == True"
+   },
+   "children": []
+  }
+ ]
+}

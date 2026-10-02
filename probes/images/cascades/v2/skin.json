@@ -1,0 +1,756 @@
+{
+ "task": "skin",
+ "pilot": "skin",
+ "status": "DRAFT: written from standard dermoscopy criteria, needs clinician review",
+ "classes": [
+  "melanocytic nevus",
+  "melanoma",
+  "benign keratosis",
+  "basal cell carcinoma"
+ ],
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a dermoscopy image of one skin lesion.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a close-up image of human skin?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is there a single skin lesion near the centre of the image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Is the lesion in sharp focus?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Does the image show a magnified view with fine surface structures visible, as in dermoscopy?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Is more than half of the lesion hidden by hair, a ruler, a marker or an air bubble?",
+   "pass": "no"
+  },
+  {
+   "id": "G6",
+   "q": "Is the whole lesion inside the frame, not cut off at the edge?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is the lighting even, without strong glare or reflection over the lesion?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Does the image mainly show an object, animal, food, room or other subject that is not skin?",
+   "pass": "no"
+  },
+  {
+   "id": "G9",
+   "q": "Is the lesion a different colour from the skin around it?",
+   "pass": "yes"
+  },
+  {
+   "id": "G10",
+   "q": "Is the image a photograph or scan rather than a drawing, diagram or screenshot?",
+   "pass": "yes"
+  }
+ ],
+ "features": [
+  {
+   "id": "F1",
+   "q": "Is the outline of the lesion irregular, with notches or uneven edges?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "id": "F2",
+   "q": "Are the two halves of the lesion clearly different in shape or colour?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "id": "F3",
+   "q": "Does the lesion show three or more distinct colours?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus",
+    "benign keratosis"
+   ]
+  },
+  {
+   "id": "F4",
+   "q": "Does the lesion contain a black or very dark brown area?",
+   "for": [
+    "melanoma"
+   ],
+   "against": []
+  },
+  {
+   "id": "F5",
+   "q": "Does the lesion contain a blue, grey or white area?",
+   "for": [
+    "melanoma",
+    "basal cell carcinoma"
+   ],
+   "against": [
+    "melanocytic nevus",
+    "benign keratosis"
+   ]
+  },
+  {
+   "id": "F6",
+   "q": "Does the lesion contain red or pink areas?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "id": "F7",
+   "q": "Is a regular network of fine brown lines visible across the lesion?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "basal cell carcinoma"
+   ]
+  },
+  {
+   "id": "F8",
+   "q": "Are branching blood vessels visible on the lesion?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "id": "F9",
+   "q": "Does the lesion look like a waxy, raised patch that appears stuck onto the skin?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": []
+  },
+  {
+   "id": "F10",
+   "q": "Are small round white or yellow cyst-like spots or openings visible?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": []
+  },
+  {
+   "id": "F11",
+   "q": "Are dots or globules scattered unevenly across the lesion?",
+   "for": [
+    "melanoma"
+   ],
+   "against": []
+  },
+  {
+   "id": "F12",
+   "q": "Is the colour spread evenly across the whole lesion?",
+   "for": [
+    "melanocytic nevus",
+    "benign keratosis"
+   ],
+   "against": [
+    "melanoma"
+   ]
+  },
+  {
+   "id": "F13",
+   "q": "Is part of the lesion surface ulcerated, crusted or bleeding?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "id": "F14",
+   "q": "Is the border of the lesion sharply and smoothly separated from the surrounding skin?",
+   "for": [
+    "melanocytic nevus",
+    "benign keratosis"
+   ],
+   "against": [
+    "melanoma"
+   ]
+  },
+  {
+   "id": "F15",
+   "q": "Does the lesion contain a pearly or translucent area?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "id": "F16",
+   "q": "Is the lesion roughly round or oval overall?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": []
+  },
+  {
+   "id": "F17",
+   "q": "Does the lesion have a uniform light-brown or tan colour?",
+   "for": [
+    "melanocytic nevus",
+    "benign keratosis"
+   ],
+   "against": [
+    "melanoma"
+   ]
+  },
+  {
+   "id": "F18",
+   "q": "Is the surface of the lesion shiny?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "id": "F19",
+   "q": "Does the lesion have a rough or scaly surface?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": []
+  },
+  {
+   "id": "F20",
+   "q": "Does the lesion contain several different patterns, for example network, dots and streaks together?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ]
+  }
+ ],
+ "discriminators": [
+  {
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ],
+   "id": "D1",
+   "q": "Is there a milky blue-white haze over part of the lesion?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ],
+   "id": "D2",
+   "q": "Are there irregular streaks or finger-like projections at the edge of the lesion?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ],
+   "id": "D3",
+   "q": "Are there scar-like white areas or grey-blue peppering inside the lesion?",
+   "for": [
+    "melanoma"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ],
+   "id": "D4",
+   "q": "Is the network of brown lines thick and irregular, with abrupt endings?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ],
+   "id": "D5",
+   "q": "Is the pigment arranged in a regular, symmetric pattern around the centre?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ]
+  },
+  {
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ],
+   "id": "D6",
+   "q": "Are there several dots or globules of the same size, evenly spaced?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ]
+  },
+  {
+   "when": [
+    "basal cell carcinoma"
+   ],
+   "id": "D7",
+   "q": "Are tree-like branching vessels with thick trunks visible?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "basal cell carcinoma"
+   ],
+   "id": "D8",
+   "q": "Are rounded blue-grey nests or large blue-grey areas visible?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "basal cell carcinoma"
+   ],
+   "id": "D9",
+   "q": "Are there leaf-like or spoke-wheel shaped brown areas?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "basal cell carcinoma"
+   ],
+   "id": "D10",
+   "q": "Is there a shiny, rolled border around part of the lesion?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "benign keratosis"
+   ],
+   "id": "D11",
+   "q": "Are there several round or oval cream-coloured cyst-like structures?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "benign keratosis"
+   ],
+   "id": "D12",
+   "q": "Are there dark plug-like openings on the surface?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "benign keratosis"
+   ],
+   "id": "D13",
+   "q": "Does the surface show a brain-like or fingerprint-like pattern of ridges?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "benign keratosis"
+   ],
+   "id": "D14",
+   "q": "Does the border look moth-eaten or scalloped with a sharp edge?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": []
+  },
+  {
+   "id": "D15",
+   "q": "Is there pink or red colour inside a dark part of the lesion?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [],
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "id": "D16",
+   "q": "Is the edge of the lesion darker or more abrupt on one side than on the other?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ],
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "id": "D17",
+   "q": "Are there thick dark lines spreading out from the middle of the lesion?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [],
+   "when": [
+    "melanoma",
+    "melanocytic nevus"
+   ]
+  },
+  {
+   "id": "D18",
+   "q": "Are there tiny blue-grey dots like grains of pepper?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": [],
+   "when": [
+    "basal cell carcinoma"
+   ]
+  },
+  {
+   "id": "D19",
+   "q": "Are there shiny white streaks inside the lesion?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": [],
+   "when": [
+    "basal cell carcinoma"
+   ]
+  },
+  {
+   "id": "D20",
+   "q": "Is the surface covered by a thick yellow-brown scale?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": [],
+   "when": [
+    "benign keratosis"
+   ]
+  },
+  {
+   "id": "D21",
+   "q": "Is the lesion sharply cut off from the skin with a straight or curved edge, like a sticker?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "benign keratosis"
+   ]
+  },
+  {
+   "id": "D22",
+   "q": "Is the lesion colour all one shade of brown?",
+   "for": [
+    "melanocytic nevus",
+    "benign keratosis"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "melanoma",
+    "melanocytic nevus",
+    "benign keratosis"
+   ]
+  }
+ ],
+ "version": 2,
+ "deep": [
+  {
+   "id": "P1",
+   "q": "Is the network of brown lines evenly spaced throughout?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P2",
+   "q": "Do the network lines fade gradually towards the edge?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P3",
+   "q": "Are all dots and globules about the same size?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P4",
+   "q": "Is the centre of the lesion one even colour?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P5",
+   "q": "Is the lesion shaped the same on both sides of its long axis and its short axis?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P6",
+   "q": "Does the lesion show only network and globules and no other structures?",
+   "for": [
+    "melanocytic nevus"
+   ],
+   "against": [
+    "melanoma"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P7",
+   "q": "Is there a broad, irregular, uneven network anywhere in the lesion?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P8",
+   "q": "Are there radial streaks around only part of the edge?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P9",
+   "q": "Are there irregular dark blotches?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P10",
+   "q": "Is part of the lesion patchily lighter than the rest?",
+   "for": [
+    "melanoma"
+   ],
+   "against": [
+    "melanocytic nevus"
+   ],
+   "when": [
+    "melanocytic nevus",
+    "melanoma"
+   ]
+  },
+  {
+   "id": "P11",
+   "q": "Are the branching vessels thick near the middle and thinner towards the ends?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": [],
+   "when": [
+    "basal cell carcinoma"
+   ]
+  },
+  {
+   "id": "P12",
+   "q": "Are there oval blue-grey structures?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": [],
+   "when": [
+    "basal cell carcinoma"
+   ]
+  },
+  {
+   "id": "P13",
+   "q": "Is the lesion pearly pink overall?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": [],
+   "when": [
+    "basal cell carcinoma"
+   ]
+  },
+  {
+   "id": "P14",
+   "q": "Is there a shallow central depression or erosion?",
+   "for": [
+    "basal cell carcinoma"
+   ],
+   "against": [],
+   "when": [
+    "basal cell carcinoma"
+   ]
+  },
+  {
+   "id": "P15",
+   "q": "Does the surface look like a folded brain, with ridges and grooves?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": [],
+   "when": [
+    "benign keratosis"
+   ]
+  },
+  {
+   "id": "P16",
+   "q": "Is the lesion flat and sharply edged, as if stuck onto the skin?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": [],
+   "when": [
+    "benign keratosis"
+   ]
+  },
+  {
+   "id": "P17",
+   "q": "Are there several small round yellow or white structures?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": [],
+   "when": [
+    "benign keratosis"
+   ]
+  },
+  {
+   "id": "P18",
+   "q": "Are there fingerprint-like parallel lines?",
+   "for": [
+    "benign keratosis"
+   ],
+   "against": [],
+   "when": [
+    "benign keratosis"
+   ]
+  }
+ ]
+}

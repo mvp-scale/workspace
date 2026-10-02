@@ -1,0 +1,1046 @@
+{
+ "task": "bone",
+ "title": "Bone fracture",
+ "status": "DRAFT: written from general radiology criteria, needs radiologist review. RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE.",
+ "pilot": "bone",
+ "classes": [
+  "fracture",
+  "no fracture"
+ ],
+ "map": {
+  "yes": "fracture",
+  "no": "no fracture"
+ },
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is an X-ray of a limb or joint.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a radiograph (X-ray image)?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is the image mostly grayscale?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Does the image show bones as brighter areas against a darker background?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Does the image show a limb or a joint?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Is a bone visible in the image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G6",
+   "q": "Is the image a medical scan rather than a photograph of a scene?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is the main subject large enough to fill a third of the image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Is the bone outline in focus?",
+   "pass": "yes"
+  },
+  {
+   "id": "G9",
+   "q": "Is the image a single radiograph rather than a drawing or a collage?",
+   "pass": "yes"
+  },
+  {
+   "id": "G10",
+   "q": "Is every part of the image a shade of gray?",
+   "pass": "yes"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Fracture line",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Is there a thin dark line crossing a bone?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Is there a thin bright line crossing a bone?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Does a line run through the full width of a bone shaft?"
+    }
+   ],
+   "supports": {
+    "fracture": 1,
+    "no fracture": -1
+   },
+   "truth": {
+    "meta": "fracture_count",
+    "rule": "v > 0"
+   },
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Line direction",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Does a line run at a right angle to the length of the bone?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Does a line run at a slant to the length of the bone?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Does a line run along the length of the bone?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Do two lines cross each other in one bone?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.2",
+     "name": "Line location",
+     "probes": [
+      {
+       "id": "F1.2.a",
+       "q": "Is a line located in the middle part of a long bone?"
+      },
+      {
+       "id": "F1.2.b",
+       "q": "Is a line located near the end of a bone?"
+      },
+      {
+       "id": "F1.2.c",
+       "q": "Is a line located in the neck of a bone near a joint?"
+      },
+      {
+       "id": "F1.2.d",
+       "q": "Is a line located inside a joint surface?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F1.3",
+     "name": "Line pattern",
+     "probes": [
+      {
+       "id": "F1.3.a",
+       "q": "Does a line have jagged edges?"
+      },
+      {
+       "id": "F1.3.b",
+       "q": "Does a line have smooth straight edges?"
+      },
+      {
+       "id": "F1.3.c",
+       "q": "Does one bone show more than one line?"
+      },
+      {
+       "id": "F1.3.d",
+       "q": "Does a line extend from one edge of a bone to the opposite edge?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Cortical outline",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Is the thin bright outer edge of a bone interrupted at one point?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Does the outer edge of a bone have a step or notch?"
+    },
+    {
+     "id": "F2.c",
+     "q": "Does the outer edge of a bone form a sharp angle?"
+    }
+   ],
+   "supports": {
+    "fracture": 1,
+    "no fracture": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F2.1",
+     "name": "Edge break",
+     "probes": [
+      {
+       "id": "F2.1.a",
+       "q": "Is there a gap in the bright outer edge of a bone?"
+      },
+      {
+       "id": "F2.1.b",
+       "q": "Is the bright outer edge of a bone bent inward at one spot?"
+      },
+      {
+       "id": "F2.1.c",
+       "q": "Is the bright outer edge of a bone bulging outward at one spot?"
+      },
+      {
+       "id": "F2.1.d",
+       "q": "Does the bright outer edge show a small step between two segments?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F2.2",
+     "name": "Edge continuity",
+     "probes": [
+      {
+       "id": "F2.2.a",
+       "q": "Does the bright outer edge run smoothly along the whole bone?"
+      },
+      {
+       "id": "F2.2.b",
+       "q": "Is the bright outer edge of equal thickness along the bone?"
+      },
+      {
+       "id": "F2.2.c",
+       "q": "Does the bright outer edge form a continuous curve around the bone end?"
+      },
+      {
+       "id": "F2.2.d",
+       "q": "Are the two sides of the bone outline parallel?"
+      }
+     ],
+     "supports": {
+      "fracture": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F3",
+   "name": "Bone alignment",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Does a bone appear bent at an angle along its length?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Do two bone segments point in different directions?"
+    }
+   ],
+   "supports": {
+    "fracture": 1,
+    "no fracture": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F3.1",
+     "name": "Axis angle",
+     "probes": [
+      {
+       "id": "F3.1.a",
+       "q": "Is the long axis of a bone bent at one point?"
+      },
+      {
+       "id": "F3.1.b",
+       "q": "Do the two ends of a bone point in different directions?"
+      },
+      {
+       "id": "F3.1.c",
+       "q": "Does a bone form a V shape?"
+      },
+      {
+       "id": "F3.1.d",
+       "q": "Is a bone straight from one end to the other?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F3.2",
+     "name": "Joint alignment",
+     "probes": [
+      {
+       "id": "F3.2.a",
+       "q": "Do the bones on both sides of a joint line up in a straight line?"
+      },
+      {
+       "id": "F3.2.b",
+       "q": "Is a bone end shifted sideways relative to the neighboring bone?"
+      },
+      {
+       "id": "F3.2.c",
+       "q": "Is the end of a bone out of its socket?"
+      },
+      {
+       "id": "F3.2.d",
+       "q": "Are the bones on both sides of a joint at the same angle?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F3.3",
+     "name": "Rotation",
+     "probes": [
+      {
+       "id": "F3.3.a",
+       "q": "Is the top of a bone turned relative to its lower part?"
+      },
+      {
+       "id": "F3.3.b",
+       "q": "Does a bone appear shortened in length?"
+      },
+      {
+       "id": "F3.3.c",
+       "q": "Are two parallel bones crossing each other?"
+      },
+      {
+       "id": "F3.3.d",
+       "q": "Are two parallel bones the same length?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F4",
+   "name": "Displacement and fragments",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Are there separate pieces of bone close to the main bone?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Are two bone ends shifted away from each other?"
+    },
+    {
+     "id": "F4.c",
+     "q": "Do two bone ends overlap each other?"
+    }
+   ],
+   "supports": {
+    "fracture": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Fragments",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Is there a small bright fragment separate from the main bone?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Are there three or more pieces of one bone?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Is a bone broken into many small bright pieces?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Is a bright fragment located between two bone ends?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.2",
+     "name": "Gap between ends",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Is there a visible gap between two bone ends?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Is the gap between two bone ends wider than the bone thickness?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Do two bone ends touch each other?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Are two bone ends at the same level?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Joint spaces",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Is a dark gap visible between two bone ends at a joint?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Is the joint gap uneven in width?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F5.1",
+     "name": "Gap width",
+     "probes": [
+      {
+       "id": "F5.1.a",
+       "q": "Is the dark gap at a joint the same width along its length?"
+      },
+      {
+       "id": "F5.1.b",
+       "q": "Is the dark gap at a joint narrower than a nearby bone thickness?"
+      },
+      {
+       "id": "F5.1.c",
+       "q": "Is the dark gap at a joint wider on one side?"
+      },
+      {
+       "id": "F5.1.d",
+       "q": "Are two bones in contact at a joint?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F5.2",
+     "name": "Joint surfaces",
+     "probes": [
+      {
+       "id": "F5.2.a",
+       "q": "Are the bone surfaces at a joint smooth?"
+      },
+      {
+       "id": "F5.2.b",
+       "q": "Do the bone surfaces at a joint have small bright bumps?"
+      },
+      {
+       "id": "F5.2.c",
+       "q": "Are the bone surfaces at a joint parallel to each other?"
+      },
+      {
+       "id": "F5.2.d",
+       "q": "Is a joint surface flattened?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F6",
+   "name": "Bone density",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Is one area of a bone brighter than the rest of the same bone?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Is the inner part of a bone darker than its outer edge?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Bright patches",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Is there a localized bright band inside a bone?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Is there a bright area at a line crossing a bone?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Is a bone uniformly bright?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Do bones appear very bright overall?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F6.2",
+     "name": "Dark patches",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Is there a round dark area inside a bone?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Does a bone have a thin outer edge with a dark interior?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Do the bones look very dark overall?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Does the inner part of a bone show a fine net pattern?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Callus and healing",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Is there a bright cloud of tissue around a bone line?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Is a bone thicker at one point than at its ends?"
+    }
+   ],
+   "supports": {
+    "fracture": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F7.1",
+     "name": "Callus",
+     "probes": [
+      {
+       "id": "F7.1.a",
+       "q": "Is there a bright lump on the outer edge of a bone?"
+      },
+      {
+       "id": "F7.1.b",
+       "q": "Is there a bright collar around a bone?"
+      },
+      {
+       "id": "F7.1.c",
+       "q": "Is the bone thickened around a line?"
+      },
+      {
+       "id": "F7.1.d",
+       "q": "Does a bright band bridge two bone ends?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F7.2",
+     "name": "Line fading",
+     "probes": [
+      {
+       "id": "F7.2.a",
+       "q": "Is a line crossing a bone faint?"
+      },
+      {
+       "id": "F7.2.b",
+       "q": "Is a line crossing a bone sharp?"
+      },
+      {
+       "id": "F7.2.c",
+       "q": "Are two bone ends joined by bright tissue?"
+      },
+      {
+       "id": "F7.2.d",
+       "q": "Is a line crossing a bone wide?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F8",
+   "name": "Hardware and casts",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Is there a very bright metal object on or in a bone?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Is there a cast shown as a gray band around a limb?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "hardware",
+    "rule": "v == 1"
+   },
+   "children": []
+  },
+  {
+   "id": "F9",
+   "name": "Soft tissue",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Is the gray outline of the skin visible around a bone?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Is the gray tissue around a bone thicker on one side?"
+    }
+   ],
+   "supports": {
+    "fracture": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F9.1",
+     "name": "Swelling",
+     "probes": [
+      {
+       "id": "F9.1.a",
+       "q": "Is the gray tissue near a joint wider than nearby tissue?"
+      },
+      {
+       "id": "F9.1.b",
+       "q": "Is the skin outline bulging outward at one point?"
+      },
+      {
+       "id": "F9.1.c",
+       "q": "Is the gray tissue around a bone uniform in width?"
+      },
+      {
+       "id": "F9.1.d",
+       "q": "Is there a darker gray stripe in the soft tissue?"
+      }
+     ],
+     "supports": {
+      "fracture": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F9.2",
+     "name": "Foreign objects",
+     "probes": [
+      {
+       "id": "F9.2.a",
+       "q": "Is there a bright object outside the bone in the soft tissue?"
+      },
+      {
+       "id": "F9.2.b",
+       "q": "Is there a small dark gas bubble in the soft tissue?"
+      },
+      {
+       "id": "F9.2.c",
+       "q": "Is a bright marker or label visible in the image?"
+      },
+      {
+       "id": "F9.2.d",
+       "q": "Is a bright ring or watch visible?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "name": "Body part",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Does the image show finger or wrist bones?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Does the image show a long bone of the leg or ankle?"
+    },
+    {
+     "id": "F10.c",
+     "q": "Does the image show a hip or shoulder joint?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F10.1",
+     "name": "Hand",
+     "probes": [
+      {
+       "id": "F10.1.a",
+       "q": "Does the image show finger bones?"
+      },
+      {
+       "id": "F10.1.b",
+       "q": "Does the image show small wrist bones?"
+      },
+      {
+       "id": "F10.1.c",
+       "q": "Does the image show a thumb?"
+      },
+      {
+       "id": "F10.1.d",
+       "q": "Does the image show the two forearm bones near the wrist?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "body_part",
+      "rule": "v == 'hand'"
+     },
+     "children": []
+    },
+    {
+     "id": "F10.2",
+     "name": "Leg",
+     "probes": [
+      {
+       "id": "F10.2.a",
+       "q": "Does the image show a shin bone?"
+      },
+      {
+       "id": "F10.2.b",
+       "q": "Does the image show an ankle joint?"
+      },
+      {
+       "id": "F10.2.c",
+       "q": "Does the image show a knee joint?"
+      },
+      {
+       "id": "F10.2.d",
+       "q": "Does the image show foot bones?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "body_part",
+      "rule": "v == 'leg'"
+     },
+     "children": []
+    },
+    {
+     "id": "F10.3",
+     "name": "Hip",
+     "probes": [
+      {
+       "id": "F10.3.a",
+       "q": "Does the image show a ball and socket joint at the pelvis?"
+      },
+      {
+       "id": "F10.3.b",
+       "q": "Does the image show the top of the thigh bone?"
+      },
+      {
+       "id": "F10.3.c",
+       "q": "Does the image show the pelvic ring?"
+      },
+      {
+       "id": "F10.3.d",
+       "q": "Does the image show a round femoral head?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "body_part",
+      "rule": "v == 'hip'"
+     },
+     "children": []
+    },
+    {
+     "id": "F10.4",
+     "name": "Shoulder",
+     "probes": [
+      {
+       "id": "F10.4.a",
+       "q": "Does the image show a collar bone?"
+      },
+      {
+       "id": "F10.4.b",
+       "q": "Does the image show a shoulder blade?"
+      },
+      {
+       "id": "F10.4.c",
+       "q": "Does the image show the top of the upper arm bone?"
+      },
+      {
+       "id": "F10.4.d",
+       "q": "Does the image show ribs near a shoulder joint?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "body_part",
+      "rule": "v == 'shoulder'"
+     },
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F11",
+   "name": "View",
+   "probes": [
+    {
+     "id": "F11.a",
+     "q": "Is the bone seen from the front?"
+    },
+    {
+     "id": "F11.b",
+     "q": "Is the bone seen from the side?"
+    },
+    {
+     "id": "F11.c",
+     "q": "Is the bone seen at a slanted angle?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F11.1",
+     "name": "Frontal",
+     "probes": [
+      {
+       "id": "F11.1.a",
+       "q": "Are two neighboring bones side by side?"
+      },
+      {
+       "id": "F11.1.b",
+       "q": "Is the joint gap seen as a thin line?"
+      },
+      {
+       "id": "F11.1.c",
+       "q": "Is the limb shown with both edges visible?"
+      },
+      {
+       "id": "F11.1.d",
+       "q": "Does the image show the limb face on?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "frontal",
+      "rule": "v == 1"
+     },
+     "children": []
+    },
+    {
+     "id": "F11.2",
+     "name": "Lateral",
+     "probes": [
+      {
+       "id": "F11.2.a",
+       "q": "Are two neighboring bones overlapping each other?"
+      },
+      {
+       "id": "F11.2.b",
+       "q": "Is the limb shown in profile?"
+      },
+      {
+       "id": "F11.2.c",
+       "q": "Does the kneecap or heel appear in profile?"
+      },
+      {
+       "id": "F11.2.d",
+       "q": "Are the bones stacked one behind the other?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "lateral",
+      "rule": "v == 1"
+     },
+     "children": []
+    },
+    {
+     "id": "F11.3",
+     "name": "Oblique",
+     "probes": [
+      {
+       "id": "F11.3.a",
+       "q": "Is the limb rotated about halfway between face on and profile?"
+      },
+      {
+       "id": "F11.3.b",
+       "q": "Are two neighboring bones partly overlapping?"
+      },
+      {
+       "id": "F11.3.c",
+       "q": "Is the joint gap seen as a thin slanted band?"
+      },
+      {
+       "id": "F11.3.d",
+       "q": "Is the limb tilted relative to the film edges?"
+      }
+     ],
+     "supports": {},
+     "truth": {
+      "meta": "oblique",
+      "rule": "v == 1"
+     },
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F12",
+   "name": "Image quality",
+   "probes": [
+    {
+     "id": "F12.a",
+     "q": "Are the bone edges sharp?"
+    },
+    {
+     "id": "F12.b",
+     "q": "Is the bone shown at high contrast against its surroundings?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F12.1",
+     "name": "Exposure",
+     "probes": [
+      {
+       "id": "F12.1.a",
+       "q": "Is the image bright overall?"
+      },
+      {
+       "id": "F12.1.b",
+       "q": "Is the image dark overall?"
+      },
+      {
+       "id": "F12.1.c",
+       "q": "Do the bones show internal texture?"
+      },
+      {
+       "id": "F12.1.d",
+       "q": "Is the background uniformly dark?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F12.2",
+     "name": "Framing",
+     "probes": [
+      {
+       "id": "F12.2.a",
+       "q": "Is the whole bone inside the image?"
+      },
+      {
+       "id": "F12.2.b",
+       "q": "Is a bone end cut off by the image edge?"
+      },
+      {
+       "id": "F12.2.c",
+       "q": "Is there a black border around the image?"
+      },
+      {
+       "id": "F12.2.d",
+       "q": "Is there printed text on the image?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  }
+ ]
+}

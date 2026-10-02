@@ -1,0 +1,978 @@
+{
+ "task": "skin",
+ "title": "Skin lesion (dermoscopy). RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE",
+ "status": "DRAFT: written from standard dermoscopy criteria (ABCD rule, 7-point checklist, pattern analysis), needs dermatologist review",
+ "pilot": "skin",
+ "classes": [
+  "melanocytic nevus",
+  "melanoma",
+  "benign keratosis",
+  "basal cell carcinoma"
+ ],
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a dermoscopy image of one skin lesion.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a close-up image of human skin?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is there a single skin lesion near the centre of the image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Is the lesion in sharp focus?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Does the image show a magnified view with fine surface structures visible, as in dermoscopy?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Is more than half of the lesion covered by hair, a ruler, a marker or an air bubble?",
+   "pass": "no"
+  },
+  {
+   "id": "G6",
+   "q": "Is the whole lesion inside the frame, with all of its edge visible?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is the lesion a different colour from the skin around it?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Does the image mainly show an object, animal, vehicle, food or room?",
+   "pass": "no"
+  },
+  {
+   "id": "G9",
+   "q": "Is the image an X-ray, CT slice or other grey-scale scan of the inside of the body?",
+   "pass": "no"
+  },
+  {
+   "id": "G10",
+   "q": "Is the image a photograph or scan rather than a drawing, diagram or screenshot?",
+   "pass": "yes"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Global pattern",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Does the lesion show one repeated pattern across most of its area?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Does the lesion show two or more different patterns in different areas?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Is the lesion mostly one flat, uniform patch of colour?"
+    }
+   ],
+   "supports": {
+    "melanocytic nevus": 1,
+    "melanoma": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Pattern types",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Is a reticular network of lines the main pattern?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Are round globules the main pattern?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Is a cobblestone arrangement of closely packed globules the main pattern?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Is a starburst arrangement of streaks around the edge the main pattern?"
+      },
+      {
+       "id": "F1.1.e",
+       "q": "Is a smooth, structureless area the main pattern?"
+      }
+     ],
+     "supports": {
+      "melanocytic nevus": 1,
+      "melanoma": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Symmetry",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Does the lesion look the same when mirrored across its long axis?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Does the lesion look the same when mirrored across the axis at a right angle to it?"
+    },
+    {
+     "id": "F2.c",
+     "q": "Are the colours spread evenly around the centre of the lesion?"
+    }
+   ],
+   "supports": {
+    "melanocytic nevus": 1,
+    "melanoma": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F2.1",
+     "name": "Asymmetry detail",
+     "probes": [
+      {
+       "id": "F2.1.a",
+       "q": "Are the two halves of the lesion different in outline?"
+      },
+      {
+       "id": "F2.1.b",
+       "q": "Are the two halves of the lesion different in colour?"
+      },
+      {
+       "id": "F2.1.c",
+       "q": "Are the two halves of the lesion different in internal structures?"
+      },
+      {
+       "id": "F2.1.d",
+       "q": "Is one end of the lesion much wider than the other end?"
+      }
+     ],
+     "supports": {
+      "melanocytic nevus": -1,
+      "melanoma": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F3",
+   "name": "Border",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Is the edge of the lesion a smooth, continuous curve?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Does the edge of the lesion have notches or indentations?"
+    },
+    {
+     "id": "F3.c",
+     "q": "Does the edge of the lesion fade gradually into the surrounding skin?"
+    }
+   ],
+   "supports": {
+    "melanocytic nevus": 1,
+    "melanoma": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F3.1",
+     "name": "Border sharpness",
+     "probes": [
+      {
+       "id": "F3.1.a",
+       "q": "Does the colour stop abruptly at the edge of the lesion along its full outline?"
+      },
+      {
+       "id": "F3.1.b",
+       "q": "Does the colour stop abruptly along only part of the outline?"
+      },
+      {
+       "id": "F3.1.c",
+       "q": "Does the lesion edge look blurred when compared with the surrounding skin?"
+      },
+      {
+       "id": "F3.1.d",
+       "q": "Does a thin pale rim run along the edge of the lesion?"
+      },
+      {
+       "id": "F3.1.e",
+       "q": "Does a dark rim run along the edge of the lesion?"
+      }
+     ],
+     "supports": {
+      "melanoma": 1,
+      "benign keratosis": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F3.2",
+     "name": "Border outline shape",
+     "probes": [
+      {
+       "id": "F3.2.a",
+       "q": "Is the outline of the lesion close to a circle or oval?"
+      },
+      {
+       "id": "F3.2.b",
+       "q": "Does the outline have scalloped, wavy edges?"
+      },
+      {
+       "id": "F3.2.c",
+       "q": "Does the outline have finger-like projections?"
+      },
+      {
+       "id": "F3.2.d",
+       "q": "Does the outline have a straight edge segment?"
+      },
+      {
+       "id": "F3.2.e",
+       "q": "Does the outline look as if it was pasted or stuck onto the skin?"
+      }
+     ],
+     "supports": {
+      "melanocytic nevus": 1,
+      "melanoma": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F4",
+   "name": "Colours",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Does the lesion contain light brown areas?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Does the lesion contain dark brown or black areas?"
+    },
+    {
+     "id": "F4.c",
+     "q": "Does the lesion contain red, white, blue or grey areas?"
+    }
+   ],
+   "supports": {
+    "melanoma": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Number of colours",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Does the lesion contain only one colour?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Does the lesion contain three or more different colours?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Does the lesion contain five or more different colours?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Is the colour darker at the centre than at the edge?"
+      },
+      {
+       "id": "F4.1.e",
+       "q": "Are the colours arranged in patches rather than blending smoothly?"
+      }
+     ],
+     "supports": {
+      "melanocytic nevus": -1,
+      "melanoma": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F4.2",
+     "name": "Specific colours",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Does the lesion contain a black area?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Does the lesion contain a blue-grey area?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Does the lesion contain a red area?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Does the lesion contain a white area?"
+      },
+      {
+       "id": "F4.2.e",
+       "q": "Does the lesion contain a yellow or orange area?"
+      },
+      {
+       "id": "F4.2.f",
+       "q": "Does the lesion contain a light tan area?"
+      }
+     ],
+     "supports": {
+      "melanoma": 1,
+      "basal cell carcinoma": 1,
+      "melanocytic nevus": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Pigment network",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Are fine brown lines forming a net of small holes visible?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Are the lines of the net the same thickness across the lesion?"
+    },
+    {
+     "id": "F5.c",
+     "q": "Do the net lines get thinner towards the edge of the lesion?"
+    }
+   ],
+   "supports": {
+    "melanocytic nevus": 1,
+    "basal cell carcinoma": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F5.1",
+     "name": "Network regularity",
+     "probes": [
+      {
+       "id": "F5.1.a",
+       "q": "Are the holes of the net all about the same size?"
+      },
+      {
+       "id": "F5.1.b",
+       "q": "Are the lines of the net evenly spaced?"
+      },
+      {
+       "id": "F5.1.c",
+       "q": "Do the lines of the net vary in thickness?"
+      },
+      {
+       "id": "F5.1.d",
+       "q": "Do the lines of the net end abruptly at the edge?"
+      },
+      {
+       "id": "F5.1.e",
+       "q": "Does the net cover less than half of the lesion?"
+      }
+     ],
+     "supports": {
+      "melanocytic nevus": 1,
+      "melanoma": -1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F5.1.1",
+       "name": "Network colour",
+       "probes": [
+        {
+         "id": "F5.1.1.a",
+         "q": "Are the net lines all the same shade of brown?"
+        },
+        {
+         "id": "F5.1.1.b",
+         "q": "Are some net lines black and others light brown?"
+        },
+        {
+         "id": "F5.1.1.c",
+         "q": "Are some net lines grey?"
+        },
+        {
+         "id": "F5.1.1.d",
+         "q": "Are the net lines broken into short pieces?"
+        }
+       ],
+       "supports": {
+        "melanocytic nevus": 1,
+        "melanoma": -1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F5.2",
+     "name": "Network gaps",
+     "probes": [
+      {
+       "id": "F5.2.a",
+       "q": "Does the net have areas where the lines are missing?"
+      },
+      {
+       "id": "F5.2.b",
+       "q": "Are there areas of white inside the net?"
+      },
+      {
+       "id": "F5.2.c",
+       "q": "Does the net have thick, dark lines?"
+      },
+      {
+       "id": "F5.2.d",
+       "q": "Does the net have lines that look like branches?"
+      }
+     ],
+     "supports": {
+      "melanoma": 1,
+      "melanocytic nevus": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F6",
+   "name": "Dots and globules",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Are small round dots visible in the lesion?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Are larger round or oval globules visible in the lesion?"
+    },
+    {
+     "id": "F6.c",
+     "q": "Are the dots or globules spread evenly across the lesion?"
+    }
+   ],
+   "supports": {
+    "melanocytic nevus": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Dot and globule layout",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Are the dots or globules all about the same size?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Are the dots or globules all about the same colour?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Are the dots or globules mainly in the centre of the lesion?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Are the dots or globules mainly at the edge of the lesion?"
+      },
+      {
+       "id": "F6.1.e",
+       "q": "Are the dots or globules gathered in one cluster?"
+      }
+     ],
+     "supports": {
+      "melanocytic nevus": -1,
+      "melanoma": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F6.2",
+     "name": "Dot colour",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Are the dots black?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Are the dots brown?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Are the dots blue-grey?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Are the dots red?"
+      }
+     ],
+     "supports": {
+      "melanoma": 1,
+      "basal cell carcinoma": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Streaks",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Are lines that run outward from the edge of the lesion visible?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Are the outward lines tipped with small bulbs?"
+    },
+    {
+     "id": "F7.c",
+     "q": "Do the outward lines occur around the whole edge?"
+    }
+   ],
+   "supports": {
+    "melanoma": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F7.1",
+     "name": "Streak layout",
+     "probes": [
+      {
+       "id": "F7.1.a",
+       "q": "Are the outward lines in only one part of the edge?"
+      },
+      {
+       "id": "F7.1.b",
+       "q": "Are the outward lines the same length?"
+      },
+      {
+       "id": "F7.1.c",
+       "q": "Are the outward lines spaced regularly?"
+      },
+      {
+       "id": "F7.1.d",
+       "q": "Are the outward lines dark brown or black?"
+      },
+      {
+       "id": "F7.1.e",
+       "q": "Do the outward lines join into a continuous ring?"
+      }
+     ],
+     "supports": {
+      "melanoma": 1,
+      "melanocytic nevus": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F8",
+   "name": "Blue-white structures",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Is a blue-grey or milky-white veil-like area visible?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Are white shiny lines visible?"
+    },
+    {
+     "id": "F8.c",
+     "q": "Are blue-grey spots visible?"
+    }
+   ],
+   "supports": {
+    "melanoma": 1,
+    "basal cell carcinoma": 1,
+    "melanocytic nevus": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F8.1",
+     "name": "Blue-white veil",
+     "probes": [
+      {
+       "id": "F8.1.a",
+       "q": "Is the blue-white area raised above the skin?"
+      },
+      {
+       "id": "F8.1.b",
+       "q": "Does the blue-white area cover the centre of the lesion?"
+      },
+      {
+       "id": "F8.1.c",
+       "q": "Is the blue-white area on top of a darker area?"
+      },
+      {
+       "id": "F8.1.d",
+       "q": "Is the blue-white area patchy in shape?"
+      },
+      {
+       "id": "F8.1.e",
+       "q": "Does the blue-white area cover more than half of the lesion?"
+      }
+     ],
+     "supports": {
+      "melanoma": 1,
+      "melanocytic nevus": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F8.2",
+     "name": "Blue-grey spots and ovoid nests",
+     "probes": [
+      {
+       "id": "F8.2.a",
+       "q": "Are blue-grey round spots scattered in the lesion?"
+      },
+      {
+       "id": "F8.2.b",
+       "q": "Are large blue-grey oval areas present, with a clear edge?"
+      },
+      {
+       "id": "F8.2.c",
+       "q": "Are the blue-grey spots arranged like a leaf or a wheel?"
+      },
+      {
+       "id": "F8.2.d",
+       "q": "Does a blue-grey area touch the edge of the lesion?"
+      }
+     ],
+     "supports": {
+      "basal cell carcinoma": 1,
+      "melanoma": 1,
+      "melanocytic nevus": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F8.3",
+     "name": "Shiny white lines",
+     "probes": [
+      {
+       "id": "F8.3.a",
+       "q": "Are white lines visible that cross each other at right angles?"
+      },
+      {
+       "id": "F8.3.b",
+       "q": "Are white lines visible only in some viewing angles?"
+      },
+      {
+       "id": "F8.3.c",
+       "q": "Are the white lines short and straight?"
+      },
+      {
+       "id": "F8.3.d",
+       "q": "Are white clods visible?"
+      }
+     ],
+     "supports": {
+      "melanoma": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F9",
+   "name": "Vascular structures",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Are red vessels visible in the lesion?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Do any red vessels branch like the limbs of a tree?"
+    },
+    {
+     "id": "F9.c",
+     "q": "Are red dots or loops visible in the lesion?"
+    }
+   ],
+   "supports": {
+    "basal cell carcinoma": 1,
+    "melanocytic nevus": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F9.1",
+     "name": "Vessel shape",
+     "probes": [
+      {
+       "id": "F9.1.a",
+       "q": "Are the red vessels thick near the middle and thinner at the tips, with many branches?"
+      },
+      {
+       "id": "F9.1.b",
+       "q": "Are the red vessels short and curved?"
+      },
+      {
+       "id": "F9.1.c",
+       "q": "Are the red vessels shaped like commas?"
+      },
+      {
+       "id": "F9.1.d",
+       "q": "Are the red vessels shaped like hairpins?"
+      },
+      {
+       "id": "F9.1.e",
+       "q": "Are the red vessels arranged in a ring?"
+      },
+      {
+       "id": "F9.1.f",
+       "q": "Are the red vessels dots in a regular pattern?"
+      }
+     ],
+     "supports": {
+      "basal cell carcinoma": 1,
+      "melanocytic nevus": -1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F9.2",
+     "name": "Vessel background",
+     "probes": [
+      {
+       "id": "F9.2.a",
+       "q": "Do the vessels lie on a white background?"
+      },
+      {
+       "id": "F9.2.b",
+       "q": "Do the vessels lie on a pink background?"
+      },
+      {
+       "id": "F9.2.c",
+       "q": "Do the vessels lie on a brown background?"
+      },
+      {
+       "id": "F9.2.d",
+       "q": "Are the vessels visible only at the edge of the lesion?"
+      }
+     ],
+     "supports": {
+      "basal cell carcinoma": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "name": "Surface scale and keratin",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Are flaky or crusty bits visible on the surface?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Are round yellow or white plugs visible on the surface?"
+    },
+    {
+     "id": "F10.c",
+     "q": "Does the surface look waxy, like stuck-on wax?"
+    }
+   ],
+   "supports": {
+    "benign keratosis": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F10.1",
+     "name": "Keratin plugs and cysts",
+     "probes": [
+      {
+       "id": "F10.1.a",
+       "q": "Are round white or yellow-white blobs visible on the surface?"
+      },
+      {
+       "id": "F10.1.b",
+       "q": "Are dark round plugs visible in the surface openings?"
+      },
+      {
+       "id": "F10.1.c",
+       "q": "Do the blobs have a clear, sharp edge?"
+      },
+      {
+       "id": "F10.1.d",
+       "q": "Are the blobs scattered across the lesion?"
+      },
+      {
+       "id": "F10.1.e",
+       "q": "Are the blobs bigger than the dots of any pigment network?"
+      }
+     ],
+     "supports": {
+      "benign keratosis": 1
+     },
+     "truth": null,
+     "children": []
+    },
+    {
+     "id": "F10.2",
+     "name": "Surface texture",
+     "probes": [
+      {
+       "id": "F10.2.a",
+       "q": "Does the lesion surface have fine cracks or folds like a brain?"
+      },
+      {
+       "id": "F10.2.b",
+       "q": "Does the lesion surface look rough or scaly?"
+      },
+      {
+       "id": "F10.2.c",
+       "q": "Is a dry scab visible on the lesion?"
+      },
+      {
+       "id": "F10.2.d",
+       "q": "Does the lesion surface look smooth and glossy?"
+      }
+     ],
+     "supports": {
+      "benign keratosis": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F11",
+   "name": "Regression",
+   "probes": [
+    {
+     "id": "F11.a",
+     "q": "Are areas of white scar-like colour visible inside the lesion?"
+    },
+    {
+     "id": "F11.b",
+     "q": "Are fine grey or blue-grey dots visible in a patch of the lesion?"
+    }
+   ],
+   "supports": {
+    "melanoma": 1,
+    "melanocytic nevus": -1
+   },
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F12",
+   "name": "Ulcer and erosion",
+   "probes": [
+    {
+     "id": "F12.a",
+     "q": "Is there an area of red or brown crust on the lesion?"
+    },
+    {
+     "id": "F12.b",
+     "q": "Is a raw, open area visible on the lesion?"
+    }
+   ],
+   "supports": {
+    "basal cell carcinoma": 1
+   },
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F13",
+   "name": "Hair and artefacts",
+   "probes": [
+    {
+     "id": "F13.a",
+     "q": "Are hairs visible on or around the lesion?"
+    },
+    {
+     "id": "F13.b",
+     "q": "Is a ruler, marker ink or other drawn object visible?"
+    },
+    {
+     "id": "F13.c",
+     "q": "Are air bubbles or glare spots visible?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": []
+  },
+  {
+   "id": "F14",
+   "name": "Body site",
+   "probes": [
+    {
+     "id": "F14.a",
+     "q": "Does the skin around the lesion show wrinkles, hair follicles or pores typical of the face?"
+    },
+    {
+     "id": "F14.b",
+     "q": "Does the image show a visible part of an ear, a nose, a nail or a lip?"
+    }
+   ],
+   "supports": {},
+   "truth": {
+    "meta": "region",
+    "rule": "v == 'head_neck'"
+   },
+   "children": []
+  }
+ ]
+}

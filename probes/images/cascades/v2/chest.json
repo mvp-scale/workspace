@@ -1,0 +1,494 @@
+{
+ "task": "chest",
+ "pilot": "chest",
+ "status": "DRAFT: written from general chest radiograph criteria, needs radiologist review",
+ "classes": [
+  "pneumonia",
+  "normal chest"
+ ],
+ "map": {
+  "yes": "pneumonia",
+  "no": "normal chest"
+ },
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a frontal chest X-ray.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a chest X-ray?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Is the image taken from the front?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Are both lungs fully visible in the image?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Is the image sharp and well exposed?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Is the chest rotated or tilted by more than 20 degrees?",
+   "pass": "no"
+  },
+  {
+   "id": "G6",
+   "q": "Is the whole rib cage visible from the collar bones down to below the diaphragm?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is the image a radiograph rather than a photograph, drawing or screenshot?",
+   "pass": "yes"
+  },
+  {
+   "id": "G8",
+   "q": "Is the image free of large text or markers covering the lungs?",
+   "pass": "yes"
+  },
+  {
+   "id": "G9",
+   "q": "Is the contrast good enough to see the ribs through the lungs?",
+   "pass": "yes"
+  },
+  {
+   "id": "G10",
+   "q": "Is the patient positioned straight, with the collar bones level?",
+   "pass": "yes"
+  }
+ ],
+ "features": [
+  {
+   "id": "F1",
+   "q": "Is there a patchy or solid white area in either lung?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [
+    "normal chest"
+   ]
+  },
+  {
+   "id": "F2",
+   "q": "Is the white area limited to one part of one lung?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "id": "F3",
+   "q": "Are both lung fields equally dark with no white patches?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ]
+  },
+  {
+   "id": "F4",
+   "q": "Is the outline of the heart sharp on both sides?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ]
+  },
+  {
+   "id": "F5",
+   "q": "Is the edge of each diaphragm sharp and clearly visible?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ]
+  },
+  {
+   "id": "F6",
+   "q": "Are the angles between the diaphragm and the chest wall sharp on both sides?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ]
+  },
+  {
+   "id": "F7",
+   "q": "Are there thickened lines radiating from the centre of the lungs?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "id": "F8",
+   "q": "Is there a fluffy or hazy whiteness spread over a large part of a lung?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "id": "F9",
+   "q": "Are the lungs overinflated, with flattened diaphragms?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "id": "F10",
+   "q": "Is there a dark branching air line inside a white area?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "id": "F11",
+   "q": "Are tubes, wires or other devices visible on the chest?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F12",
+   "q": "Is the heart enlarged compared with the width of the chest?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F13",
+   "q": "Are the fine lines of the lung pattern evenly spread across both lungs?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ]
+  },
+  {
+   "id": "F14",
+   "q": "Is one lung visibly whiter than the other?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [
+    "normal chest"
+   ]
+  },
+  {
+   "id": "F15",
+   "q": "Are the lung fields transparent enough to see the ribs through them in both lungs?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ]
+  },
+  {
+   "id": "F16",
+   "q": "Is the trachea in the midline?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F17",
+   "q": "Is there air or fluid at the edge of either lung, between the lung and the ribs?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "id": "F18",
+   "q": "Is the right half of the diaphragm higher than the left half or the other way round by more than a rib?",
+   "for": [],
+   "against": []
+  },
+  {
+   "id": "F19",
+   "q": "Is there any cloudy area that blends into the heart shadow?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [
+    "normal chest"
+   ]
+  },
+  {
+   "id": "F20",
+   "q": "Does either lung look smaller than the other?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  }
+ ],
+ "discriminators": [
+  {
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ],
+   "id": "D1",
+   "q": "Is the white area in the lower part of a lung?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ],
+   "id": "D2",
+   "q": "Is the white area wedge shaped and touching the chest wall?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ],
+   "id": "D3",
+   "q": "Does a white area hide the edge of the heart or of a diaphragm?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ],
+   "id": "D4",
+   "q": "Is a white area present in both lungs?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ],
+   "id": "D5",
+   "q": "Is there a thin line of fluid along the side of a lung?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ],
+   "id": "D6",
+   "q": "Are there small scattered white spots like nodules?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": []
+  },
+  {
+   "id": "D7",
+   "q": "Is the white area made of many small patches joined together?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "D8",
+   "q": "Is a white area visible behind the heart?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "D9",
+   "q": "Is there a visible border of a lobe, like a straight line between white and dark lung?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "D10",
+   "q": "Are the white areas symmetric left and right, like an even haze?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "D11",
+   "q": "Is the rib pattern clearly visible through every part of both lungs?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "D12",
+   "q": "Is the heart shadow clearly separated from the lung on both sides?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  }
+ ],
+ "version": 2,
+ "deep": [
+  {
+   "id": "P1",
+   "q": "Does the white area have air-filled dark tubes running through it?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "P2",
+   "q": "Does the white area end sharply at a straight line?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "P3",
+   "q": "Is the white area denser than the soft tissue of the heart?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "P4",
+   "q": "Is the white area in the middle part of the lung and not the top?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "P5",
+   "q": "Do the vessels at the base of the lungs look sharp?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "P6",
+   "q": "Are both sides of the diaphragm clearly curved and dome shaped?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "P7",
+   "q": "Are the airways next to the heart clearly visible?",
+   "for": [
+    "normal chest"
+   ],
+   "against": [
+    "pneumonia"
+   ],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  },
+  {
+   "id": "P8",
+   "q": "Is there a bright spot in the lung that could be a nodule or a button?",
+   "for": [
+    "pneumonia"
+   ],
+   "against": [],
+   "when": [
+    "pneumonia",
+    "normal chest"
+   ]
+  }
+ ]
+}

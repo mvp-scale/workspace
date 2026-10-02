@@ -1,0 +1,903 @@
+{
+ "task": "retina",
+ "title": "Retinal OCT finding (CNV / DME / drusen / normal)",
+ "status": "DRAFT: written from general OCT descriptions of choroidal neovascularisation, diabetic macular edema, drusen and normal retina; needs ophthalmologist review. RESEARCH BENCHMARK ONLY, NOT FOR CLINICAL USE",
+ "pilot": "retina",
+ "classes": [
+  "CNV",
+  "DME",
+  "DRUSEN",
+  "NORMAL"
+ ],
+ "state_gate": "An image is attached.",
+ "state_after_gate": "An image is attached. It is a cross-section OCT scan of the retina.",
+ "gate": [
+  {
+   "id": "G1",
+   "q": "Is this a cross-section scan of the back of an eye?",
+   "pass": "yes"
+  },
+  {
+   "id": "G2",
+   "q": "Does the image show layered tissue as horizontal bands?",
+   "pass": "yes"
+  },
+  {
+   "id": "G3",
+   "q": "Is the image a grayscale picture?",
+   "pass": "yes"
+  },
+  {
+   "id": "G4",
+   "q": "Does the image have a dark background around the tissue?",
+   "pass": "yes"
+  },
+  {
+   "id": "G5",
+   "q": "Is the layered tissue wider than it is thick?",
+   "pass": "yes"
+  },
+  {
+   "id": "G6",
+   "q": "Is this image an optical coherence tomography scan?",
+   "pass": "yes"
+  },
+  {
+   "id": "G7",
+   "q": "Is this image a photograph of a face or skin?",
+   "pass": "no"
+  },
+  {
+   "id": "G8",
+   "q": "Is this image a photograph of an object such as a vehicle or a balloon?",
+   "pass": "no"
+  },
+  {
+   "id": "G9",
+   "q": "Is this image an X-ray of bone or lungs?",
+   "pass": "no"
+  },
+  {
+   "id": "G10",
+   "q": "Is the layered tissue in focus?",
+   "pass": "yes"
+  }
+ ],
+ "families": [
+  {
+   "id": "F1",
+   "name": "Retinal layer structure",
+   "probes": [
+    {
+     "id": "F1.a",
+     "q": "Does the scan show several parallel horizontal bands stacked from top to bottom?"
+    },
+    {
+     "id": "F1.b",
+     "q": "Is there a dark band at the top of the tissue above the retina?"
+    },
+    {
+     "id": "F1.c",
+     "q": "Does the tissue show a bright band near the bottom of the retina?"
+    }
+   ],
+   "supports": {
+    "NORMAL": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F1.1",
+     "name": "Layer boundaries",
+     "probes": [
+      {
+       "id": "F1.1.a",
+       "q": "Can a thin bright line be followed across the full width of the scan?"
+      },
+      {
+       "id": "F1.1.b",
+       "q": "Is the boundary between the inner retina and the dark vitreous space a clean line?"
+      },
+      {
+       "id": "F1.1.c",
+       "q": "Are the horizontal bands of the retina parallel to each other?"
+      },
+      {
+       "id": "F1.1.d",
+       "q": "Is the nerve fibre layer a bright band along the inner surface?"
+      },
+      {
+       "id": "F1.1.e",
+       "q": "Is a dark band visible in the outer part of the retina?"
+      }
+     ],
+     "supports": {
+      "NORMAL": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F1.1.1",
+       "name": "Band continuity",
+       "probes": [
+        {
+         "id": "F1.1.1.a",
+         "q": "Is the bright band at the bottom of the retina unbroken across the image?"
+        },
+        {
+         "id": "F1.1.1.b",
+         "q": "Is the inner surface of the retina unbroken across the image?"
+        },
+        {
+         "id": "F1.1.1.c",
+         "q": "Does each band keep a similar thickness from left to right?"
+        },
+        {
+         "id": "F1.1.1.d",
+         "q": "Are the bands in the middle of the retina evenly spaced?"
+        }
+       ],
+       "supports": {
+        "NORMAL": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F1.2",
+     "name": "Layer disruption",
+     "probes": [
+      {
+       "id": "F1.2.a",
+       "q": "Is any horizontal band interrupted by a dark gap?"
+      },
+      {
+       "id": "F1.2.b",
+       "q": "Is any horizontal band replaced by a bright blob?"
+      },
+      {
+       "id": "F1.2.c",
+       "q": "Do the horizontal bands bend sharply upward at one spot?"
+      },
+      {
+       "id": "F1.2.d",
+       "q": "Do the horizontal bands lose their separation in one region?"
+      }
+     ],
+     "supports": {
+      "CNV": 1,
+      "DME": 1,
+      "NORMAL": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "name": "Foveal pit and contour",
+   "probes": [
+    {
+     "id": "F2.a",
+     "q": "Is there a downward dip in the inner surface of the retina near the middle of the scan?"
+    },
+    {
+     "id": "F2.b",
+     "q": "Is the inner surface of the retina smoothly curved?"
+    },
+    {
+     "id": "F2.c",
+     "q": "Is the dip in the inner surface symmetric on its left and right sides?"
+    }
+   ],
+   "supports": {
+    "NORMAL": 1,
+    "DME": -1,
+    "CNV": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F2.1",
+     "name": "Pit shape",
+     "probes": [
+      {
+       "id": "F2.1.a",
+       "q": "Is the dip in the inner surface a narrow funnel shape?"
+      },
+      {
+       "id": "F2.1.b",
+       "q": "Is the dip in the inner surface wider than a quarter of the scan width?"
+      },
+      {
+       "id": "F2.1.c",
+       "q": "Is the bottom of the dip thinner than the retina beside it?"
+      },
+      {
+       "id": "F2.1.d",
+       "q": "Is the dip located within the central third of the scan width?"
+      },
+      {
+       "id": "F2.1.e",
+       "q": "Are the slopes on both sides of the dip steep?"
+      }
+     ],
+     "supports": {
+      "NORMAL": 1,
+      "DME": -1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F3",
+   "name": "Retinal thickness",
+   "probes": [
+    {
+     "id": "F3.a",
+     "q": "Is the retina thicker than a quarter of the image height?"
+    },
+    {
+     "id": "F3.b",
+     "q": "Does the thickness of the retina vary strongly from left to right?"
+    },
+    {
+     "id": "F3.c",
+     "q": "Is the retina thinner at the middle of the scan than at its edges?"
+    }
+   ],
+   "supports": {
+    "DME": 1,
+    "NORMAL": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F3.1",
+     "name": "Thickening pattern",
+     "probes": [
+      {
+       "id": "F3.1.a",
+       "q": "Is the retina swollen across the middle of the scan?"
+      },
+      {
+       "id": "F3.1.b",
+       "q": "Is the inner surface of the retina raised above its level at the scan edges?"
+      },
+      {
+       "id": "F3.1.c",
+       "q": "Is the thickening spread over more than half the scan width?"
+      },
+      {
+       "id": "F3.1.d",
+       "q": "Is the retina thickened on one side of the scan only?"
+      },
+      {
+       "id": "F3.1.e",
+       "q": "Is the thickest part of the retina near the middle of the scan?"
+      }
+     ],
+     "supports": {
+      "DME": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F4",
+   "name": "Fluid pockets within the retina",
+   "probes": [
+    {
+     "id": "F4.a",
+     "q": "Are there round or oval dark spaces inside the retina?"
+    },
+    {
+     "id": "F4.b",
+     "q": "Are the dark spaces inside the retina arranged in a row?"
+    },
+    {
+     "id": "F4.c",
+     "q": "Is a large dark space located inside the middle retinal layers?"
+    }
+   ],
+   "supports": {
+    "DME": 1,
+    "CNV": 1,
+    "NORMAL": -1,
+    "DRUSEN": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F4.1",
+     "name": "Cyst appearance",
+     "probes": [
+      {
+       "id": "F4.1.a",
+       "q": "Are the dark spaces round?"
+      },
+      {
+       "id": "F4.1.b",
+       "q": "Are the dark spaces separated by thin bright walls?"
+      },
+      {
+       "id": "F4.1.c",
+       "q": "Are more than three separate dark spaces visible?"
+      },
+      {
+       "id": "F4.1.d",
+       "q": "Are the dark spaces larger than the thickness of a retinal band?"
+      },
+      {
+       "id": "F4.1.e",
+       "q": "Are the dark spaces clustered near the middle of the scan?"
+      }
+     ],
+     "supports": {
+      "DME": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F4.1.1",
+       "name": "Cyst position",
+       "probes": [
+        {
+         "id": "F4.1.1.a",
+         "q": "Are the dark spaces located in the outer half of the retina?"
+        },
+        {
+         "id": "F4.1.1.b",
+         "q": "Are the dark spaces located in the inner half of the retina?"
+        },
+        {
+         "id": "F4.1.1.c",
+         "q": "Do the dark spaces touch the bright band at the bottom of the retina?"
+        },
+        {
+         "id": "F4.1.1.d",
+         "q": "Do the dark spaces stack above one another in two or more rows?"
+        }
+       ],
+       "supports": {
+        "DME": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F4.2",
+     "name": "Sponge-like swelling",
+     "probes": [
+      {
+       "id": "F4.2.a",
+       "q": "Does the retina look like a sponge with many small dark holes?"
+      },
+      {
+       "id": "F4.2.b",
+       "q": "Are the dark holes spread across most of the scan width?"
+      },
+      {
+       "id": "F4.2.c",
+       "q": "Are there small dark holes beside one large dark space?"
+      },
+      {
+       "id": "F4.2.d",
+       "q": "Are the dark holes arranged in vertical columns?"
+      }
+     ],
+     "supports": {
+      "DME": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F5",
+   "name": "Fluid under the retina",
+   "probes": [
+    {
+     "id": "F5.a",
+     "q": "Is there a dark dome-shaped space between the retina and the bright band at its bottom?"
+    },
+    {
+     "id": "F5.b",
+     "q": "Is there a smooth dark region lifting the retina upward?"
+    },
+    {
+     "id": "F5.c",
+     "q": "Is a dark space visible directly above the bright band at the bottom of the retina?"
+    }
+   ],
+   "supports": {
+    "CNV": 1,
+    "DME": 1,
+    "NORMAL": -1,
+    "DRUSEN": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F5.1",
+     "name": "Detachment shape",
+     "probes": [
+      {
+       "id": "F5.1.a",
+       "q": "Is the dark space shaped like a dome?"
+      },
+      {
+       "id": "F5.1.b",
+       "q": "Is the top edge of the dark space smooth?"
+      },
+      {
+       "id": "F5.1.c",
+       "q": "Is the dark space wider than a quarter of the scan width?"
+      },
+      {
+       "id": "F5.1.d",
+       "q": "Does the retina above the dark space follow a curved path?"
+      },
+      {
+       "id": "F5.1.e",
+       "q": "Is the dark space located near the middle of the scan?"
+      }
+     ],
+     "supports": {
+      "CNV": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F6",
+   "name": "Drusen and bumps under the pigment layer",
+   "probes": [
+    {
+     "id": "F6.a",
+     "q": "Are there small rounded bumps along the bright band at the bottom of the retina?"
+    },
+    {
+     "id": "F6.b",
+     "q": "Is the bright band at the bottom of the retina wavy?"
+    },
+    {
+     "id": "F6.c",
+     "q": "Are there several bumps of similar size next to each other?"
+    }
+   ],
+   "supports": {
+    "DRUSEN": 1,
+    "NORMAL": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F6.1",
+     "name": "Bump appearance",
+     "probes": [
+      {
+       "id": "F6.1.a",
+       "q": "Are the bumps dome-shaped?"
+      },
+      {
+       "id": "F6.1.b",
+       "q": "Are the bumps smaller than a tenth of the scan width?"
+      },
+      {
+       "id": "F6.1.c",
+       "q": "Are the bumps filled with uniform grey material?"
+      },
+      {
+       "id": "F6.1.d",
+       "q": "Are there more than three bumps in the scan?"
+      },
+      {
+       "id": "F6.1.e",
+       "q": "Do the bumps push the layers above them upward slightly?"
+      }
+     ],
+     "supports": {
+      "DRUSEN": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F6.1.1",
+       "name": "Bump spacing",
+       "probes": [
+        {
+         "id": "F6.1.1.a",
+         "q": "Are the bumps evenly spaced?"
+        },
+        {
+         "id": "F6.1.1.b",
+         "q": "Are the bumps joined into one broad rise?"
+        },
+        {
+         "id": "F6.1.1.c",
+         "q": "Are the bumps confined to the middle third of the scan?"
+        },
+        {
+         "id": "F6.1.1.d",
+         "q": "Are the bumps present on both sides of the middle of the scan?"
+        }
+       ],
+       "supports": {
+        "DRUSEN": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F6.2",
+     "name": "Pigment line contour",
+     "probes": [
+      {
+       "id": "F6.2.a",
+       "q": "Is the bright band at the bottom of the retina uneven in height?"
+      },
+      {
+       "id": "F6.2.b",
+       "q": "Is the bright band at the bottom of the retina thinner over the bumps?"
+      },
+      {
+       "id": "F6.2.c",
+       "q": "Does the bright band at the bottom of the retina form a series of small arcs?"
+      },
+      {
+       "id": "F6.2.d",
+       "q": "Is the bright band at the bottom of the retina continuous over each bump?"
+      }
+     ],
+     "supports": {
+      "DRUSEN": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F7",
+   "name": "Elevation or membrane above the pigment layer",
+   "probes": [
+    {
+     "id": "F7.a",
+     "q": "Is there a raised irregular mound under the retina?"
+    },
+    {
+     "id": "F7.b",
+     "q": "Is there a thick bright band lying along the bottom of the retina?"
+    },
+    {
+     "id": "F7.c",
+     "q": "Is the bright band at the bottom of the retina lifted into a peak?"
+    }
+   ],
+   "supports": {
+    "CNV": 1,
+    "NORMAL": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F7.1",
+     "name": "Mound appearance",
+     "probes": [
+      {
+       "id": "F7.1.a",
+       "q": "Is the mound taller than the thickness of the retina's bright bottom band?"
+      },
+      {
+       "id": "F7.1.b",
+       "q": "Does the mound have an uneven outline?"
+      },
+      {
+       "id": "F7.1.c",
+       "q": "Does the mound contain grey or bright material inside?"
+      },
+      {
+       "id": "F7.1.d",
+       "q": "Is the mound wider than a tenth of the scan width?"
+      },
+      {
+       "id": "F7.1.e",
+       "q": "Is the mound attached to the bright band at the bottom of the retina?"
+      }
+     ],
+     "supports": {
+      "CNV": 1
+     },
+     "truth": null,
+     "children": [
+      {
+       "id": "F7.1.1",
+       "name": "Mound edges",
+       "probes": [
+        {
+         "id": "F7.1.1.a",
+         "q": "Is the outline of the mound jagged?"
+        },
+        {
+         "id": "F7.1.1.b",
+         "q": "Does the mound have a steep left or right edge?"
+        },
+        {
+         "id": "F7.1.1.c",
+         "q": "Is a thin bright line visible along the top of the mound?"
+        },
+        {
+         "id": "F7.1.1.d",
+         "q": "Does the mound have a sharp peak?"
+        }
+       ],
+       "supports": {
+        "CNV": 1
+       },
+       "truth": null,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "F7.2",
+     "name": "Layered elevation",
+     "probes": [
+      {
+       "id": "F7.2.a",
+       "q": "Is there a second thin bright line below the main bright line at the bottom of the retina?"
+      },
+      {
+       "id": "F7.2.b",
+       "q": "Is there a dark gap between two bright lines at the bottom of the retina?"
+      },
+      {
+       "id": "F7.2.c",
+       "q": "Does the lifted band extend across more than a fifth of the scan width?"
+      },
+      {
+       "id": "F7.2.d",
+       "q": "Is the lifted band connected to the retina above it?"
+      }
+     ],
+     "supports": {
+      "CNV": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F8",
+   "name": "Hyper-reflective material",
+   "probes": [
+    {
+     "id": "F8.a",
+     "q": "Are there small bright dots inside the retina?"
+    },
+    {
+     "id": "F8.b",
+     "q": "Is there a patch of bright material under the retina?"
+    },
+    {
+     "id": "F8.c",
+     "q": "Is there a bright spot larger than a retinal band's thickness?"
+    }
+   ],
+   "supports": {
+    "CNV": 1,
+    "DME": 1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F8.1",
+     "name": "Bright spot appearance",
+     "probes": [
+      {
+       "id": "F8.1.a",
+       "q": "Are the bright dots scattered across the retina?"
+      },
+      {
+       "id": "F8.1.b",
+       "q": "Are the bright dots located in the outer half of the retina?"
+      },
+      {
+       "id": "F8.1.c",
+       "q": "Does the bright patch sit beside a dark space?"
+      },
+      {
+       "id": "F8.1.d",
+       "q": "Is the bright patch as bright as the band at the bottom of the retina?"
+      },
+      {
+       "id": "F8.1.e",
+       "q": "Is the bright patch irregular in outline?"
+      }
+     ],
+     "supports": {
+      "CNV": 1,
+      "DME": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F9",
+   "name": "Shadowing",
+   "probes": [
+    {
+     "id": "F9.a",
+     "q": "Is there a vertical dark streak below a bright spot?"
+    },
+    {
+     "id": "F9.b",
+     "q": "Is part of the bottom of the image darker than the rest of its row?"
+    },
+    {
+     "id": "F9.c",
+     "q": "Does a dark vertical stripe cross the layers beneath the retina?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F9.1",
+     "name": "Shadow appearance",
+     "probes": [
+      {
+       "id": "F9.1.a",
+       "q": "Is the dark streak narrower than a tenth of the scan width?"
+      },
+      {
+       "id": "F9.1.b",
+       "q": "Does the dark streak reach the bottom edge of the image?"
+      },
+      {
+       "id": "F9.1.c",
+       "q": "Is the dark streak directly below a bright dot?"
+      },
+      {
+       "id": "F9.1.d",
+       "q": "Are there two or more dark streaks in the scan?"
+      },
+      {
+       "id": "F9.1.e",
+       "q": "Does the dark streak have straight vertical sides?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "name": "Image quality and signal",
+   "probes": [
+    {
+     "id": "F10.a",
+     "q": "Is the scan bright enough to show every layer of the retina?"
+    },
+    {
+     "id": "F10.b",
+     "q": "Is grainy speckle visible across the scan?"
+    },
+    {
+     "id": "F10.c",
+     "q": "Is the retina tilted relative to the horizontal edge of the image?"
+    }
+   ],
+   "supports": {},
+   "truth": null,
+   "children": [
+    {
+     "id": "F10.1",
+     "name": "Scan geometry",
+     "probes": [
+      {
+       "id": "F10.1.a",
+       "q": "Is the retina curved like a shallow bowl?"
+      },
+      {
+       "id": "F10.1.b",
+       "q": "Does the retina cross the image from the left edge to the right edge?"
+      },
+      {
+       "id": "F10.1.c",
+       "q": "Is the retina located in the middle third of the image height?"
+      },
+      {
+       "id": "F10.1.d",
+       "q": "Is a white bar or margin present at one image edge?"
+      },
+      {
+       "id": "F10.1.e",
+       "q": "Is the image wider than it is tall?"
+      }
+     ],
+     "supports": {},
+     "truth": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": "F11",
+   "name": "Pigment line integrity",
+   "probes": [
+    {
+     "id": "F11.a",
+     "q": "Is the bright band at the bottom of the retina smooth along its length?"
+    },
+    {
+     "id": "F11.b",
+     "q": "Is the bright band at the bottom of the retina one even thickness?"
+    },
+    {
+     "id": "F11.c",
+     "q": "Is the bright band at the bottom of the retina a single line?"
+    }
+   ],
+   "supports": {
+    "NORMAL": 1,
+    "DRUSEN": -1,
+    "CNV": -1
+   },
+   "truth": null,
+   "children": [
+    {
+     "id": "F11.1",
+     "name": "Pigment line shape",
+     "probes": [
+      {
+       "id": "F11.1.a",
+       "q": "Does the bright band follow a smooth gentle curve?"
+      },
+      {
+       "id": "F11.1.b",
+       "q": "Is the bright band the brightest layer in the scan?"
+      },
+      {
+       "id": "F11.1.c",
+       "q": "Does the bright band stay close to the bottom edge of the retina?"
+      },
+      {
+       "id": "F11.1.d",
+       "q": "Is the bright band the same brightness across the scan?"
+      },
+      {
+       "id": "F11.1.e",
+       "q": "Does the bright band form one continuous line?"
+      }
+     ],
+     "supports": {
+      "NORMAL": 1
+     },
+     "truth": null,
+     "children": []
+    }
+   ]
+  }
+ ]
+}

@@ -95,11 +95,23 @@ def _task(task_id, status):
     return t
 
 
+def _cascades():
+    """Layered-method pilots written by probes/images/cascade2.py export (read-only)."""
+    f = RUNS / "winnow-cascade2" / "summary.json"
+    return json.loads(f.read_text()) if f.is_file() else {"budget": 100, "cascades": []}
+
+
+def _cascades3():
+    """Ontology cascade results written by probes/images/cascade3.py export (read-only)."""
+    f = RUNS / "winnow-cascade3" / "summary.json"
+    return json.loads(f.read_text()) if f.is_file() else {"budget": 100, "steps": [], "tasks": []}
+
+
 def payload():
     status = _status_table()
     ids = sorted({p.stem for p in SETS.glob("t[0-9][0-9]_*.md")} | set(status))
     models = sorted({p.name for p in (RUNS.iterdir() if RUNS.is_dir() else []) if p.is_dir() and not p.name.endswith("-consistency") and any(p.glob("*/results.jsonl"))})
-    return {"areas": [a for a, _ in AREAS], "models": models, "tasks": [_task(t, status) for t in ids if TASK_ID.match(t)]}
+    return {"areas": [a for a, _ in AREAS], "models": models, "cascades": _cascades(), "cascades3": _cascades3(), "tasks": [_task(t, status) for t in ids if TASK_ID.match(t)]}
 
 
 def serve_image(handler, rel):
