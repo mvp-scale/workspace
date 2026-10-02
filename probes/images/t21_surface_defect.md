@@ -1,11 +1,3 @@
-# t21_surface_defect
+Status: READY
 
-Status: BLOCKED
-
-## Recon
-
-`ybli/yolo-neu-det-surface-defect-object-detection` has no licence field. The hub files are only `.gitattributes` and `README.md`. The README is in Chinese and points at an off-hub download page, `https://www.data2.cn`. There are no images and no annotation files in the repo. That page was not used.
-
-## Why blocked
-
-The class of the defect cannot be read from anything in the repository.
+25 photos from `newguyme/neu_det_caption` (the NEU steel set, already on disk). The answer is `label_str`: crazing, inclusion, patches, or scratches. The blank and map images in the same file are not used. Licence is not stated on the card, so this set is local use only.

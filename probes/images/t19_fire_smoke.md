@@ -1,22 +1,3 @@
-# t19_fire_smoke
+Status: READY
 
-Status: BLOCKED
-
-## Recon
-
-`fireviewer/fire-smoke-detection-corpus-v2` is about 28 GB with no licence stated. It was not downloaded.
-
-`Simuletic/CCTV-Smoke-Fire-Emergency-Detection-Dataset` is CC-BY-NC-4.0, about 0.34 GB. File names are `fire_detected_*` (239) and `smoke_detected_*` (240). `data.yaml` says:
-
-```
-nc: 1
-names:
-  0: fire
-  1: smoke
-```
-
-There is no class for a frame with neither. Images were not downloaded.
-
-## Why blocked
-
-"Is there fire or smoke visible?" needs real negatives. Both classes in this set are positives.
+25 frames from one D-Fire test shard (`badsaarow/d-fire`, test-00000). Yes means the label string contains a box. No means the label string is empty. The card does not name class 0 and class 1, so the question does not say which box is fire and which is smoke. Licence is not stated on the card, so this set is local use only.

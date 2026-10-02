@@ -1,11 +1,3 @@
-# t25_room_type
+Status: READY
 
-Status: NEEDS_USER_IMAGES
-
-No public source was found. Put 25 photos and `labels.csv` in `/workspace/data/image-lab/user/t25_room_type/`.
-
-Question (choice): "What kind of room or view is this?"
-
-Allowed answers: `kitchen`, `bathroom`, `bedroom`, `living room`, `exterior`. Chance rate 20%. `question_id` may be `t25_room_type`.
-
-`label_origin` after ingest: supplied by user.
+25 photos from the test zip of `keremberke/indoor-scene-classification`. The test split has no bathroom, bedroom, or exterior folder, so the four answers are kitchen, living room, dining room, and pantry, taken from the folder name. The export README says MIT. The pictures are the MIT indoor scene set; treat that project's terms as the ones that apply, and keep the images local.

@@ -13,9 +13,15 @@
   .lab > .view { border-left: 1px solid var(--border); padding-left: 30px; min-width: 0; }
   .view > * + * { margin-top: 14px; }
   .rail { position: sticky; top: 52px; max-height: calc(100vh - 64px); overflow-y: auto; display: grid; gap: 1px; padding-right: 6px; }
-  .rail h4.sect { margin: 16px 8px 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+  .rail h4.sect { margin: 14px 8px 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
   .rail h4.sect:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .rail button.domain { display: flex; align-items: center; gap: 7px; width: 100%; margin: 0; padding: 5px 8px; text-align: left; background: none; border: 0; border-left: 2px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font: inherit; font-size: 13px; color: var(--text-2); }
+  .rail button.domain .lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rail button.domain .n { color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; flex: none; }
+  .rail button.domain:hover { background: var(--surface-2); color: var(--text); }
+  .rail button.domain.open { color: var(--text); font-weight: 600; border-left-color: var(--accent); background: var(--surface-2); }
   .rail a { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: var(--radius-sm); color: var(--text-2); text-decoration: none; font-size: 13px; border-left: 2px solid transparent; }
+  .rail a.sub { padding-left: 16px; font-size: 12.5px; }
   .rail a .lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rail a:hover { background: var(--surface-2); color: var(--text); }
   .rail a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; border-left-color: var(--accent); }
@@ -47,6 +53,12 @@
   @media (max-width: 860px) { .resgrid { grid-template-columns: 1fr; } }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
   table.lab-t td.rowlink { cursor: pointer; } table.lab-t tr.rowgroup th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); padding: 5px 12px; }
+  table.domains tr.domain { cursor: pointer; } table.domains tr.domain td { vertical-align: top; }
+  table.domains tr.domain:hover td { background: var(--surface-2); }
+  table.domains tr.domain.open td { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+  table.domains .dname { font-weight: 650; }
+  table.domains tr.domain-open > td { background: var(--surface-2); padding: 8px 10px 12px; }
+  table.lab-t.nest { margin: 0; background: var(--surface); }
   table.lab-t td.dim, table.lab-t td .dim { color: var(--text-3); } table.lab-t td.wrapc { white-space: normal; min-width: 180px; max-width: 340px; }
   table.lab-t tr.off td { opacity: .65; }
   /* Confusion matrix */
@@ -151,64 +163,133 @@ const chanceText = (t) => { const c = [...new Set(t.items.map(i => pct0(chanceOf
 /* ---- state lives in the URL hash so a view can be shared ---- */
 function route() {
   const h = new URLSearchParams(location.hash.slice(1));
-  return { task: h.get("task"), model: h.get("m"), f: h.get("f") || "all" };
+  return { task: h.get("task"), model: h.get("m"), f: h.get("f") || "all", area: h.get("area") };
 }
-function go(patch) {
-  const r = { ...route(), ...patch }, h = new URLSearchParams();
+function hashOf(r) {
+  const h = new URLSearchParams();
   if (r.task) h.set("task", r.task); if (r.model) h.set("m", r.model); if (r.f && r.f !== "all") h.set("f", r.f);
-  location.hash = h.toString();
+  if (r.area) h.set("area", r.area);
+  const s = h.toString();
+  return s ? "#" + s : "#";
+}
+function go(patch) { location.hash = hashOf({ ...route(), ...patch }); }
+
+/* One line on what a domain is actually asking the model to do. */
+const IDEA = {
+  "Finance and admin": "Read an amount, a count, or the words on a page.",
+  "Insurance and claims": "Decide whether a vehicle is damaged.",
+  "Retail and logistics": "Count goods, judge produce, and name a logo.",
+  "Safety and compliance": "Spot a missing hard hat or another site hazard.",
+  "Manufacturing and field": "Name a defect, read a gauge, or judge a leaf.",
+  "IT and property": "Read a screen or name a room.",
+  "Traffic and parking": "Count how many marked spaces are free.",
+  "Livestock": "Count animals, including how many are standing.",
+  "Utilities": "Read the number on a photographed meter.",
+  "Roads": "Grade how severe the road damage is.",
+  "Property plans": "Count doors on a scanned floor plan.",
+  "Catastrophe claims": "Grade damage as little, mild, or severe.",
+};
+
+/* Pooled score for every image in a domain that has been run. */
+function domainScore(tasks, model) {
+  const scored = tasks.map(t => stats(t, model)).filter(s => s.n);
+  const k = scored.reduce((a, s) => a + s.k, 0);
+  const n = scored.reduce((a, s) => a + s.n, 0);
+  const [lo, hi] = wilson(k, n);
+  const chance = n ? scored.reduce((a, s) => a + s.chance * s.n, 0) / n : null;
+  const acc = n ? k / n : null;
+  const tally = { works: 0, assist: 0, not: 0 };
+  scored.forEach(s => { tally[verdictOf(s).key]++; });
+  return { tasks: tasks.length, built: tasks.filter(built).length, images: tasks.reduce((a, t) => a + t.items.length, 0), k, n, acc, lo, hi, chance, tally, verdict: verdictOf({ n, acc, lo, chance }) };
 }
 
-/* ---- rail ---- */
-function rail(D, model, cur) {
+/* ---- rail: domains stay collapsed. A count is how many tasks, not a score. ---- */
+function rail(D, cur, openArea) {
   const nav = el("nav", { class: "rail", "aria-label": "Tasks" });
-  const link = (task, text, extra, vd, off) => el("a", { href: `#${new URLSearchParams(task ? { task, ...(model ? { m: model } : {}) } : {}).toString()}`, "aria-current": (task || null) === cur ? "page" : null, class: off ? "off" : null },
-    vd ? el("span", { class: `vd ${vd}`, "aria-hidden": "true" }) : null, el("span", { class: "lbl", text }), el("span", { class: "n", text: extra }));
-  nav.append(el("h4", { class: "sect", text: "Overview" }), link(null, "All tasks", String(D.tasks.length)));
+  nav.append(el("h4", { class: "sect", text: "Overview" }),
+    el("a", { href: hashOf({ ...route(), task: null, area: null }), "aria-current": !cur && !openArea ? "page" : null },
+      el("span", { class: "lbl", text: "All tasks" }), el("span", { class: "n", text: String(D.tasks.length) })));
   for (const area of D.areas) {
-    nav.append(el("h4", { class: "sect", text: area }));
-    for (const t of D.tasks.filter(x => x.area === area)) {
-      const v = verdictOf(stats(t, model));
-      nav.append(link(t.id, `${String(t.n).padStart(2, "0")} ${t.title}`, built(t) ? label(t, model) : "", built(t) ? v.tone : "", !built(t)));
+    const tasks = D.tasks.filter(x => x.area === area);
+    if (!tasks.length) continue;
+    const open = openArea === area;
+    nav.append(el("button", { type: "button", class: "domain" + (open ? " open" : ""), "aria-expanded": String(open),
+      onclick: () => { const r = route(); go({ task: null, area: r.area === area && !r.task ? null : area }); } },
+      el("span", { class: "lbl", text: area }), el("span", { class: "n", text: String(tasks.length) })));
+    if (!open) continue;
+    for (const t of tasks) {
+      nav.append(el("a", { class: "sub" + (built(t) ? "" : " off"), href: hashOf({ ...route(), task: t.id, area }), "aria-current": t.id === cur ? "page" : null },
+        el("span", { class: "lbl", text: `${String(t.n).padStart(2, "0")} ${t.title}` })));
     }
   }
   return nav;
 }
 
-/* ---- overview ---- */
+/* ---- overview: one row per domain; the task table opens under the row you pick ---- */
+function taskRows(tasks, model) {
+  return tasks.map(t => {
+    const s = stats(t, model), v = verdictOf(s), open = () => go({ task: t.id, area: t.area });
+    return el("tr", { class: built(t) ? null : "off", tabindex: "0", onclick: open, onkeydown: (e) => { if (e.key === "Enter") open(); } },
+      el("td", { class: "rowlink" }, el("a", { href: hashOf({ ...route(), task: t.id, area: t.area }), text: `${String(t.n).padStart(2, "0")} ${t.title}`, onclick: (e) => e.stopPropagation() })),
+      el("td", {}, s.n ? badge(v) : el("span", { class: "badge", text: t.status.replaceAll("_", " ").toLowerCase() })),
+      el("td", { class: "num", text: s.n ? pct0(s.acc) : "–" }),
+      el("td", { style: "min-width:140px" }, s.n ? ibar(s) : null),
+      el("td", { class: "num", text: s.n ? `${s.k}/${s.n}` : built(t) ? "not run" : "–" }),
+      el("td", { class: "wrapc dim small", text: built(t) ? (t.source || "") : (t.note || "") }));
+  });
+}
+function domainRow(area, tasks, model) {
+  const d = domainScore(tasks, model);
+  const open = () => go({ area, task: null });
+  const mix = d.n ? `${d.k}/${d.n} · ` + [`${d.tally.works} works`, `${d.tally.assist} assist`, `${d.tally.not} not ready`].filter(s => !s.startsWith("0 ")).join(" · ") : `${d.built} built`;
+  return el("tr", { class: "domain", tabindex: "0", onclick: open, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } } },
+    el("td", {}, el("div", { class: "dname", text: area }), el("div", { class: "small muted", text: IDEA[area] || "" })),
+    el("td", { class: "num", text: `${d.built} of ${d.tasks}` }),
+    el("td", { class: "num", text: String(d.images) }),
+    el("td", { class: "num", text: d.n ? pct0(d.acc) : "–" }),
+    el("td", {}, d.n ? badge(d.verdict) : el("span", { class: "badge", text: "Not run" }), el("div", { class: "dim small", text: mix })));
+}
+function taskTable(tasks, model) {
+  return el("table", { class: "data lab-t" },
+    el("thead", {}, el("tr", {}, ["Task", "Verdict", "Accuracy", "95% interval", "Correct", "Source, or why not built"].map((h, i) => el("th", { class: i === 2 || i === 4 ? "num" : "", text: h })))),
+    el("tbody", {}, taskRows(tasks, model)));
+}
 function overview(D, model) {
-  const all = D.tasks.map(t => ({ t, s: stats(t, model) })), done = all.filter(x => x.s.n);
-  const count = (key) => done.filter(x => verdictOf(x.s).key === key).length;
+  const done = D.tasks.filter(t => stats(t, model).n);
+  const count = (key) => done.filter(t => verdictOf(stats(t, model)).key === key).length;
   const needs = D.tasks.filter(t => /NEEDS/.test(t.status)).length, blocked = D.tasks.filter(t => t.status === "BLOCKED").length;
   const kpi = (l, v, note) => el("div", { class: "card kpi" }, el("div", { class: "label", text: l }), el("div", { class: "value", text: String(v) }), el("div", { class: "note", text: note }));
-  const rows = [];
-  for (const area of D.areas) {
-    rows.push(el("tr", { class: "rowgroup" }, el("th", { colspan: 7, text: area })));
-    for (const { t, s } of all.filter(x => x.t.area === area)) {
-      const v = verdictOf(s), open = () => go({ task: t.id });
-      rows.push(el("tr", { class: built(t) ? null : "off", tabindex: "0", onclick: open, onkeydown: (e) => { if (e.key === "Enter") open(); } },
-        el("td", { class: "rowlink" }, el("a", { href: `#task=${t.id}`, text: `${String(t.n).padStart(2, "0")} ${t.title}`, onclick: (e) => e.stopPropagation() })),
-        el("td", {}, s.n ? badge(v) : el("span", { class: "badge", text: t.status.replaceAll("_", " ").toLowerCase() })),
-        el("td", { class: "num", "data-value": s.n ? s.acc : -1, text: s.n ? `${pct0(s.acc)}` : "–" }),
-        el("td", { style: "min-width:160px;width:22%" }, s.n ? ibar(s) : el("span", { class: "dim small", text: "" })),
-        el("td", { class: "num", text: s.n ? `${s.k}/${s.n}` : built(t) ? "not run" : "–" }),
-        el("td", { class: "num", text: built(t) ? chanceText(t) : (t.chance_note || "–") }),
-        el("td", { class: "wrapc dim small", text: built(t) ? `${t.source || ""} · ${t.license || ""}` : (t.note || "") })));
-    }
-  }
-  const tbl = el("table", { class: "data lab-t" }, el("thead", {}, el("tr", {}, [["Task"], ["Verdict"], ["Accuracy", "num"], ["95% interval"], ["Correct", "num"], ["Chance", "num"], ["Source · licence, or why not built"]].map(([h, c]) => el("th", { scope: "col", class: c, text: h })))), el("tbody", {}, rows));
+  const rows = D.areas.map(area => {
+    const tasks = D.tasks.filter(t => t.area === area);
+    return tasks.length ? domainRow(area, tasks, model) : null;
+  });
   return el("div", { class: "view-in" },
     el("div", { class: "toolbar" },
-      el("div", {}, el("h2", { style: "margin:0;font-size:15px", text: "All tasks: accuracy by task" }),
-        el("p", { class: "small muted", text: "Click a task to see every image, the question and what the model answered." })),
+      el("div", {}, el("h2", { style: "margin:0;font-size:15px", text: "All tasks, by domain" }),
+        el("p", { class: "small muted", text: "One row per domain. Open a domain to see its tasks." })),
       el("button", { class: "btn", type: "button", onclick: () => exportAll(D, model), text: "Export CSV" })),
     el("div", { class: "kpis", style: "margin-top:12px" },
-      kpi("Built and run", `${done.length} of ${D.tasks.length}`, "25 images each"),
+      kpi("Built and run", `${done.length} of ${D.tasks.length}`, "scored images"),
       kpi("Works", count("works"), "85%+ and interval above 70%"), kpi("Assist only", count("assist"), "needs a human check"),
       kpi("Not ready", count("not"), "under 60%, or near chance"), kpi("Not built", blocked + needs, `${blocked} blocked, ${needs} need you`)),
-    el("div", { class: "table-wrap", style: "margin-top:12px" }, tbl),
-    el("div", { class: "legend", style: "margin-top:10px" }, el("span", {}, el("i", { class: "sw" }), "95% Wilson interval"), el("span", {}, el("i", { class: "sw t" }), "accuracy"), el("span", {}, el("i", { class: "sw c" }), "chance")),
-    el("p", { class: "small muted", style: "margin-top:6px", text: "Chance is what guessing would score: 50% for yes/no, one over the number of options for pick-one. A yes/no task at 60% is barely better than a coin; a nine-option task at 60% is far above its 11% chance." }));
+    el("div", { class: "table-wrap", style: "margin-top:12px" }, el("table", { class: "data lab-t domains" },
+      el("thead", {}, el("tr", {}, ["Domain", "Tasks built", "Images", "Accuracy", "Rating"].map((h, i) => el("th", { class: i === 1 || i === 2 || i === 3 ? "num" : "", text: h })))),
+      el("tbody", {}, rows))),
+    el("p", { class: "small muted", style: "margin-top:8px", text: "A domain's accuracy is every scored image in it, pooled." }));
+}
+function domainView(D, model, area) {
+  const tasks = D.tasks.filter(t => t.area === area);
+  const d = domainScore(tasks, model);
+  const mix = d.n ? `${d.k}/${d.n} correct` : `${d.built} of ${d.tasks} built`;
+  return el("div", { class: "view-in" },
+    el("div", { class: "toolbar" },
+      el("div", {}, el("h2", { style: "margin:0;font-size:15px", text: area }),
+        el("p", { class: "small muted", text: IDEA[area] || "" })),
+      el("div", { style: "display:flex;gap:8px;align-items:center" },
+        d.n ? badge(d.verdict) : el("span", { class: "badge", text: "Not run" }),
+        el("span", { class: "small muted", text: `${d.tasks} tasks · ${d.images} images · ${d.n ? pct0(d.acc) : "not run"} · ${mix}` }))),
+    el("div", { class: "table-wrap", style: "margin-top:12px" }, taskTable(tasks, model)),
+    el("div", { class: "legend", style: "margin-top:10px" }, el("span", {}, el("i", { class: "sw" }), "95% Wilson interval"), el("span", {}, el("i", { class: "sw t" }), "accuracy"), el("span", {}, el("i", { class: "sw c" }), "chance")));
 }
 
 /* ---- one task ---- */
@@ -360,9 +441,13 @@ let DATA = null;
 function paint() {
   const r = route(), D = DATA, model = r.model && D.models.includes(r.model) ? r.model : (D.models.includes("winnow") ? "winnow" : D.models[0]);
   const t = r.task && D.tasks.find(x => x.id === r.task);
-  document.title = (t ? `${t.title} · ` : "") + "Image lab · Jev Bench Console";
-  root.replaceChildren(el("div", { class: "lab" }, rail(D, model, t ? t.id : null), el("div", { class: "view" }, t ? taskView(D, t, model, r.f) : overview(D, model))));
-  if (!paint.first) paint.first = true; else window.scrollTo(0, 0);
+  const openArea = (t && t.area) || (D.areas.includes(r.area) ? r.area : null);
+  document.title = (t ? `${t.title} · ` : openArea ? `${openArea} · ` : "") + "Image lab · Jev Bench Console";
+  const view = t ? taskView(D, t, model, r.f) : openArea ? domainView(D, model, openArea) : overview(D, model);
+  root.replaceChildren(el("div", { class: "lab" }, rail(D, t ? t.id : null, t ? t.area : openArea), el("div", { class: "view" }, view)));
+  const viewKey = t ? t.id : (openArea || "");
+  if (paint.view !== viewKey && paint.view != null) window.scrollTo(0, 0);
+  paint.view = viewKey;
 }
 (async function init() {
   root.replaceChildren(Jev.skeleton());

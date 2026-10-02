@@ -1,13 +1,3 @@
-# t24_screenshot_triage
+Status: READY
 
-Status: NEEDS_USER_ACTION
-
-## Recon
-
-Candidate: `lmms-lab-encoder/ScreenSpot-v2`. The hub API returned 401 Repository Not Found for that id. The dataset card did not load. Nothing was downloaded.
-
-The planned question was a choice over four UI element names, "Which of these is shown on the screen?", with the right answer taken from the dataset's element text.
-
-## What you need to do
-
-Open https://huggingface.co/datasets/lmms-lab-encoder/ScreenSpot-v2 while logged in. If the page asks you to accept terms, do that and say so. If the repository id has moved, send the public id. The 401 response is treated as gated or private, so the files were not fetched another way.
+25 real screenshots from `OS-Copilot/ScreenSpot-v2` (Apache-2.0). The annotation is a pointing instruction plus `data_type` of icon or text. It does not name the UI element. The question is whether the target of that instruction is an icon: 13 yes (icon) and 12 no (text). Desktop, mobile, and web shots are mixed. Each image is used once, and only when every annotation on that image has the same `data_type`.

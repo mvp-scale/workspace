@@ -21,7 +21,7 @@ Goal of this job: for each of the 11 unbuilt tasks, find out whether a usable, o
 1. **A label we did not make.** The right answer comes from the dataset's own annotation, or from a generator we write that draws the image from known values. Never from a person or model looking at the image.
 2. **Both answers present.** Yes/no tasks need real negatives, not just positives. Choice tasks need at least 4 distinct classes with at least 3 images each (so 25 items can be sampled with no class over 40%).
 3. **Licence stated and compatible.** Per HANDOFF 6: stated licence is fine; unstated, non-commercial or GPL is allowed for local use only; gated means STOP and write down what the user must click.
-4. **Small enough.** At most 3 GB for one task, 15 GB for the whole job (about 10.5 GB is still free; check `du -sh /workspace/data/sources/image-lab`).
+4. **Small enough.** At most 3 GB for one task, 30 GB for the whole job (raised by the user from 15 GB) (about 10.5 GB is still free; check `du -sh /workspace/data/sources/image-lab`).
 5. **No personal data.** No readable real person, ID document or identifiable private property. This matters for t16 and t20 in particular (see below).
 6. **Fits the typed question** in HANDOFF section 7 or, where that is impossible, a re-scoped question that the user approves.
 

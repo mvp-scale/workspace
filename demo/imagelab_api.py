@@ -17,9 +17,11 @@ IMAGES = DATA / "images"
 RUNS = DATA / "runs"
 TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
-AREAS = [  # business area -> task numbers, as laid out in probes/images/HANDOFF.md section 7
-    ("Finance and admin", range(1, 9)), ("Insurance and claims", range(9, 13)), ("Retail and logistics", range(13, 18)),
+AREAS = [  # business area -> task numbers. 1-25 are the original lab. 26+ are the real-photo sets from the gap.
+    ("Finance and admin", set(range(1, 9)) | {31, 32}), ("Insurance and claims", range(9, 13)), ("Retail and logistics", range(13, 18)),
     ("Safety and compliance", range(18, 21)), ("Manufacturing and field", range(21, 24)), ("IT and property", range(24, 26)),
+    ("Traffic and parking", range(26, 27)), ("Livestock", set(range(27, 29)) | {38}), ("Property plans", range(29, 30)),
+    ("Catastrophe claims", range(30, 31)), ("Utilities", {36}), ("Roads", {37}),
 ]
 TASK_ID = re.compile(r"^t(\d\d)_[a-z0-9_]+$")
 

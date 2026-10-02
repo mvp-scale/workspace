@@ -2,6 +2,8 @@
 
 Status: READY
 
+The 12 answers of "no" (items 013 through 024) are parts-only files. The annotation has no damage class, and the photo is a part, not a whole undamaged car. Those 12 are the ones to back out. They stay in this file until a set of labelled undamaged cars replaces them. Do not read the 48% as a score on whole vehicles.
+
 ## Recon
 
 Source: `DrBimmer/car-parts-and-damage-dataset` (MIT). The full tree is about 3.31 GB, so only the annotation JSON files were downloaded (1,815), plus the 25 images used below.

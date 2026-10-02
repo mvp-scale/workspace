@@ -156,7 +156,7 @@ Build these functions once, test each in a tiny script, and reuse them:
 1. **Ungated and licence stated:** fine to download (CC-BY, CC0, MIT, Apache-2.0, ODbL).
 2. **Licence not stated** (for example CountBench) **or non-commercial / GPL** (for example ChartQA, GPL-3.0): allowed for **local testing only**. Put `"license": "not stated, local use only"` (or the real licence) in the provenance and in `T.md`. Never copy these images anywhere git tracks.
 3. **Gated** (Hugging Face asks you to log in or accept terms): **STOP.** Write in `T.md` what the user must do (which URL, which button), mark `NEEDS_USER_ACTION`, move on. Never try to work around a gate.
-4. **Do not download** anything bigger than 3 GB for a single task. If the only way is bigger, download one shard only (list the repo files first) and write down which shard in `T.md`. **Total budget for this whole job: 15 GB.** Run `du -sh /workspace/data/sources/image-lab` after each download and stop at the budget.
+4. **Do not download** anything bigger than 3 GB for a single task. If the only way is bigger, download one shard only (list the repo files first) and write down which shard in `T.md`. **Total budget for this whole job: 30 GB (doubled by the user from 15 GB).** Run `du -sh /workspace/data/sources/image-lab` after each download and stop at the budget.
 5. **No personal data.** If an image shows a real identity document or a readable real person's details, do not use it; mark the task `BLOCKED` with the reason.
 
 ## 7. The 25 tasks
