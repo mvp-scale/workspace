@@ -60,3 +60,61 @@ if __name__ == "__main__":
     ev = [json.loads(l) for l in open("/workspace/probes/world-engine/ledger/evidence.jsonl")]
     out, dt = run(ev); open("/workspace/probes/world-engine/ledger/measurements.jsonl", "w").write("\n".join(json.dumps(o) for o in out) + "\n")
     print(f"{len(out)} items classified in {dt:.0f}s ({dt/len(out):.1f}s each, {len(QS)} questions per item)")
+
+# ---------- placement: what is this story ABOUT? (added 2026-10-05; see spec/ontology-domains.md) ----------
+DOMAINS = load("domains"); TYPE_W = {t["type"]: t for t in load("type_weights")}
+def place(ev, today=None, tag_choice=0.2, tag_yes=0.5):
+    """Every story gets at least one domain. Forced choice over the closed list (always answers) plus one yes/no per domain (lets a story carry several)."""
+    today = today or datetime.date.today().isoformat(); state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"
+    qs = {"c": {"type": "choice", "instructions": "Which area is this story mainly about?", "criteria": {d["id"]: d["definition"] for d in DOMAINS}}}
+    qs.update({"y|" + d["id"]: {"type": "noul", "instructions": f"Is this story about {d['name']}? ({d['definition']})"} for d in DOMAINS if d["id"] != "other"})
+    a = O.call(state, qs); pc = {k: float(v) for k, v in a["c"]["probabilities"].items()}; out = []
+    for d in DOMAINS:
+        py = float(a["y|" + d["id"]]["noul"]) if d["id"] != "other" else 0.0
+        out.append({"id": d["id"], "name": d["name"], "p_choice": round(pc.get(d["id"], 0.0), 3), "p_yes": round(py, 3), "tagged": d["id"] != "other" and (pc.get(d["id"], 0.0) >= tag_choice or py >= tag_yes)})
+    if not any(x["tagged"] for x in out): max(out, key=lambda x: x["p_choice"])["tagged"] = True          # never leave a story unplaced
+    return sorted(out, key=lambda x: (not x["tagged"], -(x["p_choice"] + x["p_yes"])))
+def type_weight(happened, announced, opinion, forecast):
+    """A weight, not a wall: how much a story of this type counts. 'fact' keeps the old full weight; refused types now enter at a reduced weight."""
+    if (happened >= .5 or announced >= .5) and opinion < .5 and forecast < .5: t = "fact"
+    elif forecast >= .5: t = "forecast"
+    elif opinion >= .5: t = "opinion"
+    else: t = "unclear"
+    return float(TYPE_W[t]["weight"]), t, TYPE_W[t]["why"]
+def misses(P, k=3):
+    """The closest dial checks that did NOT clear the bar, so a non-result can always be explained."""
+    rows = []
+    for (d, dirn), lst in ATTRS.items():
+        for i, r in enumerate(lst):
+            a, b = P[f"a|{d}|{dirn}|{i}|0"], P[f"a|{d}|{dirn}|{i}|1"]; m = (a + b) / 2
+            if m < ATTR_MIN: rows.append({"dial": d, "direction": dirn, "attribute": r["attribute"], "mean": round(m, 3), "p1": round(a, 3), "p2": round(b, 3), "question": r["question_1"], "bar": ATTR_MIN})
+    return sorted(rows, key=lambda x: -x["mean"])[:k]
+
+# ---------- expected impact: what the story is likely to DO if it plays out as reported (added 2026-10-05) ----------
+PHRASES = {r["dial_id"]: r for r in load("impact_phrases")}; MODES = {m["mode"]: m for m in load("impact_modes")}
+EXPECT_MIN, EXPECT_TOP = 0.5, 4
+def allowed_dials(placement):
+    """Conditions a story may be expected to move: those plausible for the domains it was placed in (our mapping in domains.csv; guess)."""
+    rows = {d["id"]: d for d in DOMAINS}; out = set()
+    for t in placement:
+        if t["tagged"]: out |= {v for v in rows[t["id"]].get("dials", "").split("; ") if v}
+    return out
+def expected(ev, reported_dials, allowed=None, today=None):
+    """For every condition the story did not report directly, ask whether it is likely to push it up or down if it plays out as reported.
+    Net direction = P(up) - P(down), so a story that could go either way gets a small net effect instead of none. Pending items (a hearing, a plan) are weighted lower than items already in effect."""
+    today = today or datetime.date.today().isoformat(); state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"; qs = {}
+    for d, r in PHRASES.items():
+        if d in reported_dials or (allowed is not None and d not in allowed): continue
+        qs[f"e|{d}|up"] = f"Suppose the main development in this story fully plays out (the plan goes ahead, the claim succeeds, the invention works, the event unfolds as described). Is it likely that {r['up']}? Answer yes only if there is a real reason to expect it."
+        qs[f"e|{d}|down"] = f"Suppose the main development in this story fully plays out (the plan goes ahead, the claim succeeds, the invention works, the event unfolds as described). Is it likely that {r['down']}? Answer yes only if there is a real reason to expect it."
+    qs["done"] = "The consequences this story describes or implies are already in effect. They are NOT merely planned, announced for the future, argued in court, proposed, under review or only possible."
+    names = list(qs); P = {}
+    for j in range(0, len(names), 20):
+        a = O.call(state, {k: {"type": "noul", "instructions": qs[k]} for k in names[j:j + 20]}); P.update({k: a[k]["noul"] for k in a})
+    done = P["done"]; mode = "expected_in_effect" if done >= .5 else "expected_pending"; out = []
+    for d in PHRASES:
+        if d in reported_dials or f"e|{d}|up" not in P: continue
+        pu, pd = P[f"e|{d}|up"], P[f"e|{d}|down"]; net = pu - pd
+        if max(pu, pd) >= EXPECT_MIN and abs(net) > 0.05:
+            out.append({"dial": d, "direction": "up" if net > 0 else "down", "strength": round(abs(net), 3), "p_up": round(pu, 3), "p_down": round(pd, 3), "p_done": round(done, 3), "mode": mode, "basis": "expected", "mode_weight": float(MODES[mode]["weight"]), "attributes": ["expected impact"]})
+    return sorted(out, key=lambda x: -x["strength"])[:EXPECT_TOP]

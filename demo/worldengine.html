@@ -7,6 +7,7 @@
 <meta name="description" content="Ask anything and see how it moves the world: where it lands, what pulls it up, what pulls it down.">
 <link rel="stylesheet" href="static/app.css">
 <script src="static/app.js"></script>
+<script src="static/graphview.js"></script>
 <style>
   .we { --gap: 16px; }
   .we-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
@@ -28,12 +29,9 @@
   [data-tip] { position: relative; } [data-tip]:hover::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); width: 260px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.4; z-index: 30; box-shadow: 0 8px 24px rgba(0, 0, 0, .4); white-space: pre-line; text-transform: none; letter-spacing: 0; font-weight: 400; pointer-events: none; }
   .empty { margin-top: 22px; } .empty h2 { font-size: 15px; margin: 0 0 4px; } .empty p { color: var(--text-3); font-size: 13.5px; margin: 0 0 14px; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; } .ex { text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 14px; cursor: pointer; font: inherit; color: inherit; } .ex:hover { border-color: var(--accent); } .ex .t { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 600; } .ex .t.offer { color: var(--warn); } .ex .q { font-size: 14px; margin-top: 6px; line-height: 1.4; } .ex .s { color: var(--text-3); font-size: 12.5px; margin-top: 6px; }
-  .res { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--gap); margin-top: var(--gap); align-items: start; } @media (max-width: 960px) { .res { grid-template-columns: 1fr; } }
-  .res > .main > * + * { margin-top: var(--gap); } .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .res { display: grid; gap: var(--gap); margin-top: var(--gap); }
   .crumb { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--text-3); } .crumb b { color: var(--text); font-weight: 600; } .crumb button { background: none; border: 0; color: var(--text-2); cursor: pointer; font: inherit; padding: 0; } .crumb button:hover { color: var(--accent); }
   .read-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; font-size: 12.5px; color: var(--text-3); } .pill { border: 1px solid var(--border-strong); border-radius: 999px; padding: 1px 9px; color: var(--text-2); font-size: 12px; }
-  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; } @media (max-width: 700px) { .kpis { grid-template-columns: 1fr; } }
-  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; } .kpi .l { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; } .kpi .v { font-size: 28px; font-weight: 650; letter-spacing: -.02em; margin: 4px 0 2px; font-variant-numeric: tabular-nums; } .kpi .s { font-size: 12.5px; color: var(--text-3); }
   .pos { color: var(--good); } .neg { color: var(--bad); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; } @media (max-width: 700px) { .two { grid-template-columns: 1fr; } }
   h3.sec { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; } .panel > h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
@@ -46,20 +44,74 @@
   table.hm td { min-width: 50px; height: 26px; text-align: center; border-radius: 5px; font-variant-numeric: tabular-nums; cursor: pointer; border: 1.5px solid transparent; } table.hm td.sel { border-color: var(--text); } table.hm td.tot { background: var(--surface-2); font-weight: 650; cursor: default; } table.hm tr.hdr th { text-align: left; color: var(--text-3); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; padding-top: 10px; cursor: default; }
   .cap { font-size: 12.5px; color: var(--text-3); margin: 8px 0 0; line-height: 1.45; }
   table.pl { border-collapse: collapse; width: 100%; font-size: 13px; } table.pl th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; padding: 4px 10px 4px 0; } table.pl td { padding: 7px 10px 7px 0; border-top: 1px solid var(--border); vertical-align: middle; } table.pl td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; } table.pl .q { color: var(--text-3); font-size: 11.5px; margin-top: 2px; }
-  .persp { position: sticky; top: 156px; max-height: calc(100vh - 176px); overflow: auto; padding: 14px; } @media (max-width: 960px) { .persp { position: static; max-height: none; } }
-  .persp .hd { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; } .seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 2px; } .seg button { border: 0; background: none; color: var(--text-3); font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer; } .seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
-  .persp select { font: inherit; font-size: 12px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; max-width: 150px; }
-  .nrow { display: grid; grid-template-columns: minmax(0, 1fr) 56px; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; } .nrow:hover { background: var(--surface-2); } .nrow.sel { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); } .nrow.reg { padding-left: 24px; color: var(--text-2); } .nrow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nrow .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 12.5px; border-radius: 6px; padding: 1px 4px; } .ngrp { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin: 12px 8px 4px; font-weight: 600; }
   .pop { position: fixed; z-index: 40; width: 380px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 12px 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .5); } .pop h4 { margin: 0 0 6px; font-size: 13px; }
   .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 50; opacity: 0; pointer-events: none; transition: opacity .2s; } .scrim.on { opacity: 1; pointer-events: auto; }
   .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 94vw); background: var(--bg, var(--surface)); border-left: 1px solid var(--border-strong); z-index: 51; transform: translateX(100%); transition: transform .25s; overflow: auto; padding: 18px 20px; } .drawer.on { transform: none; } .drawer h2 { margin: 0 0 4px; font-size: 16px; } .drawer h3 { margin: 18px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
   .drawer table { width: 100%; border-collapse: collapse; font-size: 12.5px; } .drawer td, .drawer th { padding: 4px 8px 4px 0; border-top: 1px solid var(--border); text-align: left; font-weight: 400; } .drawer td.n { text-align: right; font-variant-numeric: tabular-nums; } .drawer .sub { color: var(--text-3); font-size: 12.5px; }
   .skel { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: sh 1.2s infinite; border-radius: 14px; } @keyframes sh { to { background-position: -200% 0; } }
+  .we { --for: #4f8ff7; --against: #e9843b; --good: var(--for); --bad: var(--against); }
+  .we-btns { display: flex; gap: 8px; }
+  .maphd { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; } .maphd h2 { margin: 0; font-size: 15px; font-weight: 600; } .maphd select { font: inherit; font-size: 12.5px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; max-width: 230px; }
+  .mapnote { font-size: 12.5px; color: var(--text-3); margin-bottom: 10px; min-height: 18px; } .mapnote .link { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: 0; }
+  .tmap { position: relative; height: 340px; border-radius: 10px; overflow: hidden; }
+  .tile { position: absolute; box-sizing: border-box; border: 2px solid var(--surface); border-radius: 6px; padding: 5px 7px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; font: inherit; cursor: pointer; overflow: hidden; transition: background .35s, color .35s; }
+  .tile:hover { filter: brightness(1.12); } .tile.sel, .chip.sel { outline: 2px solid var(--text); outline-offset: -3px; z-index: 2; }
+  .tn { font-size: 11.5px; line-height: 1.15; opacity: .92; } .tv { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; } .tile.big .tn { font-size: 13px; } .tile.big .tv { font-size: 24px; }
+  .frame { position: absolute; box-sizing: border-box; border: 1px solid var(--border-strong); border-radius: 8px; pointer-events: none; }
+  .flabel { position: absolute; z-index: 3; background: none; border: 0; padding: 0 6px; color: var(--text-2); font: inherit; font-size: 11.5px; font-weight: 600; text-align: left; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .flabel:hover { color: var(--accent); }
+  .legend { margin-top: 10px; max-width: 420px; } .legbar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--against), var(--surface-2) 50%, var(--for)); } .legl { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-3); margin-top: 3px; }
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; } .chip { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 2px solid var(--surface); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 12.5px; cursor: pointer; text-align: left; transition: background .35s, color .35s; } .chip .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .chip b { font-variant-numeric: tabular-nums; }
+  .how { max-width: none; margin: 22px 0 0; display: grid; gap: 30px; } .how h1 { font-size: 30px; letter-spacing: -.02em; margin: 0; } .how .lede { font-size: 17px; color: var(--text-2); margin: 8px 0 0; max-width: 640px; line-height: 1.45; }
+  .how h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); margin: 0 0 10px; font-weight: 600; } .how p { margin: 0; font-size: 15px; line-height: 1.55; max-width: 680px; }
+  .stack { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; } .stack span.b { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; } .stack span.a { color: var(--text-3); }
+  .hsteps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; } @media (max-width: 900px) { .hsteps { grid-template-columns: 1fr 1fr; } }
+  .hstep { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 14px; } .hstep .n { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; } .hstep h3 { margin: 8px 0 4px; font-size: 14.5px; } .hstep p { font-size: 13px; color: var(--text-2); line-height: 1.45; } .hstep .up { margin-top: 8px; font-size: 12px; color: var(--text-3); line-height: 1.4; } .hstep .up b { color: var(--text-2); font-weight: 600; }
+  .gets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; } @media (max-width: 700px) { .gets { grid-template-columns: 1fr; } } .gets div { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 14px; font-size: 13.5px; color: var(--text-2); line-height: 1.45; } .gets b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+  .truth { width: 100%; border-collapse: collapse; font-size: 13.5px; } .truth td { padding: 9px 12px 9px 0; border-top: 1px solid var(--border); vertical-align: top; color: var(--text-2); } .truth td:first-child { width: 110px; } .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text); }
+  html { scrollbar-gutter: stable; }
+  .ctx { min-height: 56px; } .crumb { min-height: 22px; } .read-line { min-height: 26px; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); gap: var(--gap); align-items: stretch; } @media (max-width: 1000px) { .grid2 { grid-template-columns: 1fr; } }
+  .side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; } .dockp { flex: 1; min-height: 240px; display: flex; flex-direction: column; } .dock { flex: 1; min-height: 0; overflow: auto; }
+  .side .panel > h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item > button { height: 34px; padding: 0 6px; border-radius: 8px; } .item.sel > button { background: color-mix(in srgb, var(--accent) 14%, transparent); } .item.ph > button { cursor: default; color: var(--text-3); } .item.ph .bar, .item.ph .val { display: none; } .item .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .maphost { height: 340px; } .maphd select { min-width: 150px; } .chip { height: 36px; }
+  .det { padding: 0; } .dethd { all: unset; box-sizing: border-box; display: flex; align-items: baseline; gap: 12px; width: 100%; padding: 14px 16px; cursor: pointer; } .dethd .dt { font-size: 15px; font-weight: 600; } .dethd .ds { color: var(--text-3); font-size: 12.5px; flex: 1; } .dethd .chev { color: var(--text-3); transition: transform .25s; } .det.open .chev { transform: rotate(180deg); }
+  .detwrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; } .det.open .detwrap { grid-template-rows: 1fr; } .detin { overflow: hidden; min-height: 0; padding: 0 16px; } .det.open .detin { padding-bottom: 16px; } .detbody { height: 400px; overflow: auto; } .detin .tabs { margin: 0 0 12px; }
+  table.hm { table-layout: fixed; width: 100%; min-width: 820px; } table.hm th.r { width: 200px; } table.hm td { min-width: 0; }
+  .ctx { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; min-height: 30px; } .ctx .read-line { margin: 0; min-height: 0; flex: 1; }
+  .maphost, .tmap { height: 380px; } .side .panel { padding: 14px 16px; } .side h3.sec { margin: 0 0 2px; } .side h3.sec ~ h3.sec { margin-top: 10px; }
+  .item > button { grid-template-columns: minmax(0, 1fr) 90px 52px; }
+  .dh { display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; margin: 0 0 4px; padding: 0 6px; }
+  .dbar { height: 8px; background: var(--surface-2); border-radius: 4px; position: relative; } .dbar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--border-strong); } .dbar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .dbar i.up { left: 50%; background: var(--for); } .dbar i.dn { right: 50%; background: var(--against); }
+  .item > button { grid-template-columns: minmax(0, 1fr) 130px 52px; }
+  @media (max-height: 800px) { .askbar { position: static; } }
+  .seg { display: inline-flex; flex-wrap: wrap; background: var(--surface-2); border-radius: 8px; padding: 2px; } .seg button { border: 0; background: none; color: var(--text-3); font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 6px; cursor: pointer; } .seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+  .gv-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 36px; margin-bottom: 10px; } .gv-ctl { display: flex; gap: 6px; }
+  .gv { position: relative; height: 460px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; } .gv-canvas { display: block; cursor: grab; } .gv-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; transition: opacity .1s; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 10px; font-size: 12px; line-height: 1.4; white-space: nowrap; }
+  .gv-tick { height: 20px; margin-top: 8px; font-size: 12.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .how2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; } @media (max-width: 800px) { .how2 { grid-template-columns: 1fr; } }
+  table.hm thead th:first-child { width: 270px; max-width: 270px; } table.hm th.r { width: 270px; max-width: 270px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } table.hm td, table.hm thead th { overflow: hidden; text-overflow: ellipsis; } table.hm tr.hdr th { overflow: visible; }
+  .pill.dom { border-color: var(--accent); color: var(--text); } .read-line .lab { color: var(--text-3); } .read-line .sep { width: 1px; height: 14px; background: var(--border-strong); margin: 0 4px; }
+  .pill.exp { border-style: dashed; color: var(--text-2); }
+  .via { display: inline-block; border: 1px solid var(--border-strong); border-radius: 999px; padding: 0 7px; margin: 3px 4px 0 0; font-size: 11px; color: var(--text-2); line-height: 17px; } .via.exp { border-style: dashed; }
+  .split { margin: 0 0 10px; } .split .sv { display: flex; align-items: baseline; gap: 10px; font-size: 12.5px; color: var(--text-3); } .split .sv b { font-size: 20px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--text); } .split .sv b.pos { color: var(--good); } .split .sv b.neg { color: var(--bad); }
+  .split .sb { display: flex; height: 6px; margin-top: 6px; border-radius: 3px; overflow: hidden; background: var(--surface-2); } .split .sb i { display: block; height: 100%; } .split .sb i.rep { background: var(--accent); } .split .sb i.exp { background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 6px); } .split .sb i.int { background: var(--border-strong); }
+  .dockp { position: relative; flex: 1; min-height: 250px; display: block; } .dockp > h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dockp .dock { position: absolute; left: 16px; right: 16px; top: 48px; bottom: 12px; overflow: auto; }
+  .ctx .crumb { flex: none; max-width: 360px; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; } .ctx .crumb b { overflow: hidden; text-overflow: ellipsis; }
+  .ctx .crumb { height: 24px; align-items: center; } .ctx .crumb > *, .ctx .crumb button { line-height: 22px; height: 22px; display: inline-block; vertical-align: middle; }
+  .ctx .read-line { row-gap: 6px; align-content: flex-start; } .ctx .read-line > * { height: 24px; line-height: 22px; display: inline-flex; align-items: center; box-sizing: border-box; }
+  .sw { display: grid; grid-template-rows: auto auto auto 1fr; gap: 6px; height: 270px; padding: 14px 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .swk { display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); font-weight: 600; } .swk .k { color: var(--accent); } .swk .for { text-transform: none; letter-spacing: 0; font-weight: 400; } .lens { font: inherit; font-size: 12.5px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; max-width: 280px; text-transform: none; letter-spacing: 0; }
+  .swh { font-size: 21px; font-weight: 600; letter-spacing: -.012em; line-height: 1.28; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 54px; } .sws { font-size: 13px; line-height: 1.45; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 38px; }
+  .swb { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 210px; gap: 12px; align-items: stretch; margin-top: 4px; } .cl { min-width: 0; border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px; padding: 9px 12px; } .cl .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; } .cl .v { font-size: 17px; font-weight: 650; letter-spacing: -.01em; margin: 2px 0 1px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 24px; } .cl .s { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acts { display: flex; flex-direction: column; gap: 6px; justify-content: center; } .acts .btn { width: 100%; min-height: 28px; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } @media (max-width: 1000px) { .sw { height: auto; } .swb { grid-template-columns: 1fr; } }
+  .tch { display: grid; grid-template-columns: 1.05fr 1.15fr 1.4fr; gap: 18px; height: 100%; } .tch .col { min-width: 0; overflow: auto; padding-right: 4px; } .trow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; } .trow:hover { background: var(--surface-2); } .trow.sel { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); } .trow.dim .nm { color: var(--text-3); } .trow.static { grid-template-columns: minmax(0, 1fr) 90px 74px; cursor: default; } .trow.static:hover { background: none; } .trow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .trow .tg { font-size: 11.5px; color: var(--text-3); white-space: nowrap; } .trow .tg.exp { font-style: italic; } .chips2 { display: flex; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 <main class="page we">
-  <header class="we-head"><div><h1>World engine</h1><p>Ask about anything, large or small. See where it lands, and what pulls it up or down.</p></div><button class="btn" id="dataBtn" type="button">Data &amp; rules</button></header>
+  <header class="we-head"><div><h1>World engine</h1><p>Ask about anything, large or small. See where it lands, and what pulls it up or down.</p></div><div class="we-btns"><button class="btn ghost" id="howBtn" type="button">How it works</button><button class="btn" id="dataBtn" type="button">Data &amp; rules</button></div></header>
   <section class="askbar" id="askbar">
     <div class="askrow"><textarea id="ask" rows="1" aria-label="Ask the world engine" placeholder="Type an event, a product, or a message. For example: “Fuel prices jump 25% in Brazil”"></textarea><button class="btn primary go" id="go" type="button">Ask</button></div>
     <div class="askmeta"><div class="eg" id="eg"></div><div class="readas" id="readas"></div></div>
@@ -76,7 +128,7 @@ const EXAMPLES = [["event", "Fuel prices jump 25% in Brazil as refinery outages 
 const STEPS = [["Collect", "Gathers what the engine runs on: news, public indices, and 100,000 simulated people across 8 countries.\nTo refine: add real indices and live feeds per country."], ["Identify", "The local model reads your ask into elements, each answered by a yes/no question.\nTo refine: labelled headlines, numbers inside stories."],
   ["Propagate", "An event enters at a country or the world and spreads to regions by gain and delay.\nTo refine: histories of real shocks."], ["Decide", "Rules turn each person's state into attractors and detractors.\nTo refine: survey and behaviour data by group."], ["Read", "The answer is read at any layer: world, country, region, audience.\nTo refine: outcomes over time, to backtest."]];
 const pm = (v, d = 1) => v == null ? "–" : (v > 0.0049 ? "+" : v < -0.0049 ? "−" : "") + Math.abs(v).toFixed(d);
-const tint = (v, mx) => v == null || Math.abs(v) < 0.05 ? "" : `background:color-mix(in srgb, var(${v > 0 ? "--good" : "--bad"}) ${Math.round(Math.min(1, Math.abs(v) / mx) * 62)}%, var(--surface))`;
+const tint = (v, mx) => v == null || Math.abs(v) < 0.05 ? "" : `background:color-mix(in srgb, var(${v > 0 ? "--for" : "--against"}) ${Math.round(Math.min(1, Math.abs(v) / mx) * 62)}%, var(--surface))`;
 const $ = (id) => document.getElementById(id);
 const ask = $("ask"), out = $("out");
 
@@ -89,87 +141,300 @@ function renderReadAs() {
   const r = S.res; if (!r) return $("readas").replaceChildren(); const a = r.identify.auto, m = r.identify.mode, p = a && a.p ? Math.round(a.p[m] * 100) : null, other = m === "event" ? "offer" : "event";
   $("readas").replaceChildren("Read as", el("b", { text: m === "event" ? "something that happens" : "something offered" }), p != null ? `(${p}%)` : "", el("button", { type: "button", text: `Treat as ${other === "event" ? "something that happens" : "something offered"}`, onclick: () => go(other) }));
 }
+const pctr = (v) => Math.round(v * 100) + "%", tagsOf = (i) => (i.placement || []).filter(t => t.tagged);
+const DEC_SHORT = { spend: "spending", buy_new: "buying new things", subscribe: "subscriptions", travel: "travel", change_work: "changing jobs", move: "moving home", switch_brand: "switching providers", share: "speaking out" };
+const DIAL_SHORT = { prices: "prices", housing_cost: "housing costs", energy_fuel: "energy costs", financial_conditions: "financing", job_security: "job security", crime: "crime", war_terror: "conflict", health_risk: "health risk", trust_institutions: "trust in institutions", community: "community", social_division: "division", tech_pace: "tech pace", disruption: "disruption", environment: "environmental harm", optimism: "outlook", news_overload: "news overload" };
+const arrow = (d) => d === "up" ? "▲" : "▼", sizeWord = (v) => Math.abs(v) < .5 ? "A negligible move" : Math.abs(v) < 2 ? "A small move" : Math.abs(v) < 5 ? "A moderate move" : "A large move";
+const mapOf = () => (S.state && S.state.map) || null, maxAbs = (row) => Math.max(0, ...row.values.map(Math.abs));
+const phrase = (id, v) => { const m = mapOf(), p = m && m.phrases[id]; return p ? (v < 0 ? p.down : p.up) : `${DEC_SHORT[id] || id} ${pm(v)}`; };
+const placeName = (label) => { const [c, rest] = label.split(" · "), the = /^United /.test(c) ? "the " : ""; return rest ? `${the}${c} (${rest})` : the + c; };
+const joinNice = (a) => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+const leadOrder = (row, cols) => row.values.map((v, j) => ({ v, j, id: cols[j].id })).filter(x => Math.abs(x.v) >= .05).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+/* Direction label, by rule (our choice, a guess): the consumption decisions (spending, buying, subscriptions, travel) decide it. */
+function directionOf(row, cols) {
+  const cons = row.values.reduce((a, v, j) => ["spend", "buy_new", "subscribe", "travel"].includes(cols[j].id) ? a + v : a, 0), lead = leadOrder(row, cols)[0];
+  return cons <= -1 ? "Pulling back" : cons >= 1 ? "Leaning in" : lead && ["switch_brand", "change_work", "move", "share"].includes(lead.id) ? "Shifting" : lead ? "Little net change" : "No change";
+}
+function swEl() {
+  const lens = el("select", { class: "lens", "aria-label": "So what for", onchange: (e) => focus(e.target.value) }), head = el("div", { class: "swh" }), sub = el("div", { class: "sws" }), acts = el("div", { class: "acts" });
+  const cell = () => { const l = el("div", { class: "l" }), v = el("div", { class: "v" }), s = el("div", { class: "s" }); return { root: el("div", { class: "cl" }, l, v, s), l, v, s }; }, cells = [cell(), cell(), cell()];
+  return { root: el("div", { class: "sw" }, el("div", { class: "swk" }, el("span", { class: "k", text: "So what" }), el("span", { class: "for", text: "for" }), lens, el("span", { class: "pill", style: "margin-left:auto", "data-tip": "Inputs are simulated and every rule is a guess until real data refines it.", text: "Simulated" })), head, sub, el("div", { class: "swb" }, ...cells.map(c => c.root), acts)), lens, head, sub, cells, acts };
+}
+function setCell(c, label, val, sub, d, tip) { c.l.textContent = label; c.v.textContent = val; c.s.textContent = sub; c.v.className = "v " + (d == null ? "" : d > 0.0049 ? "pos" : d < -0.0049 ? "neg" : ""); c.root.title = tip || `${label}: ${val}. ${sub}`; }
+function openTouch() { S.det = true; S.tab = "touch"; update(); ui.det.scrollIntoView({ behavior: "smooth", block: "start" }); }
+/* The "so what" is built by rule from the numbers, never written by hand. Event: where the move is biggest and what people there are likelier to do, how big, how many people,
+   and three call-outs: NOW (what is reported), DIRECTION (the pattern and the conditions behind it), IF IT PLAYS OUT (the expected part at full weight, a scenario not a prediction). */
+function paintSoWhat(u, r, R, f, w, cs, ev) {
+  const sw = u.sw, i = r.identify, acts = [];
+  if (sw.lensKey !== S.runId) { const og = (label, rows, fn) => el("optgroup", { label }, rows.map(x => el("option", { value: x.id, text: fn(x) }))); sw.lens.replaceChildren(el("option", { value: w.id, text: "the world" }), og("Countries", cs, x => x.label), og("Regions", R.rows.filter(x => x.level === "region"), x => x.label), og("Audiences", R.rows.filter(x => x.level === "audience"), x => x.label)); sw.lensKey = S.runId; }
+  sw.lens.value = f.id;
+  if (!ev) {
+    const best = cs.reduce((a, b) => b.total > a.total ? b : a), low = cs.reduce((a, b) => b.total < a.total ? b : a), aud = R.rows.filter(x => x.level === "audience"), top = aud.reduce((a, b) => b.total > a.total ? b : a), bot = aud.reduce((a, b) => b.total < a.total ? b : a);
+    const pos = f.values.map((v, j) => ({ v, j })).sort((a, b) => b.v - a.v), up = pos[0], dn = pos[pos.length - 1];
+    sw.head.textContent = `${f.total.toFixed(1)}% of people${f.id === w.id ? "" : ` in ${f.label}`} would take this up. The best fit is ${top.label} (${top.total.toFixed(1)}%).`;
+    sw.sub.textContent = `Strongest in ${best.label} (${best.total.toFixed(1)}%), weakest in ${low.label} (${low.total.toFixed(1)}%). Least likely: ${bot.label} (${bot.total.toFixed(1)}%).`;
+    [["Today", f.total.toFixed(1) + "%", f.id === w.id ? "support across all people" : `support in ${f.label}`, null], ["Pulls and pushes", up && up.v > 0.5 ? R.cols[up.j].label : "Nothing pulls", dn && dn.v < -0.5 ? `pushed by ${R.cols[dn.j].label}` : "nothing pushes", null], ["Best fit", top.total.toFixed(1) + "%", top.label, null]].forEach((x, k) => setCell(sw.cells[k], ...x));
+  } else {
+    const hot = cs.reduce((a, b) => maxAbs(b) > maxAbs(a) ? b : a), world = f.level === "world", row = world ? hot : f, ord = leadOrder(row, R.cols), lead = ord[0], reach = cs.filter(x => x.values.some(v => Math.abs(v) >= .5)), reachPct = Math.round(reach.reduce((a, x) => a + x.share, 0) * 100);
+    const readings = i.readings, reps = readings.filter(x => x.basis !== "expected"), exps = readings.filter(x => x.basis === "expected"), byAmt = [...readings].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)), short = (x) => `${DIAL_SHORT[x.dial] || x.name} ${arrow(x.direction)}`;
+    if (!lead) { sw.head.textContent = i.counted ? "Nothing here shifts a decision." : "No material impact expected."; sw.sub.textContent = i.counted ? "The readings are too small to move any decision in this view." : "Nothing in the story gives a real reason to expect a tracked condition to move."; }
+    else if (world) {
+      const j = lead.j, contrib = cs.map(c => c.share * Math.abs(c.values[j])), conc = Math.max(...contrib) / (contrib.reduce((a, b) => a + b, 0) || 1), wv = w.values[j], wo = leadOrder(w, R.cols);
+      if (conc >= .6 && Math.abs(wv) < 1) { sw.head.textContent = `Concentrated in ${placeName(hot.label)}: people there are likelier to ${joinNice(ord.slice(0, 3).map(x => phrase(x.id, x.v)))}.`; sw.sub.textContent = `${sizeWord(lead.v)} there (${DEC_SHORT[lead.id]} ${pm(lead.v)} pts); ${reachPct}% of people reached. Worldwide the average person moves ${pm(wv)} pts.`; }
+      else { sw.head.textContent = wo.length ? `Worldwide, people are likelier to ${joinNice(wo.slice(0, 3).map(x => phrase(x.id, x.v)))}.` : `Worldwide the average person barely moves.`; sw.sub.textContent = `${sizeWord(wo.length ? wo[0].v : 0)} on average${wo.length ? ` (${DEC_SHORT[wo[0].id]} ${pm(wo[0].v)} pts)` : ""}; ${reachPct}% of people reached across ${reach.length} countries.`; }
+    } else { sw.head.textContent = `${f.level === "audience" ? `${f.label} people are` : `People in ${placeName(f.label)} are`} likelier to ${joinNice(ord.slice(0, 3).map(x => phrase(x.id, x.v)))}.`; sw.sub.textContent = `${sizeWord(lead.v)} (${DEC_SHORT[lead.id]} ${pm(lead.v)} pts); this group is ${(f.share * 100).toFixed(1)}% of people.`; }
+    // call-outs
+    setCell(sw.cells[0], "Now", reps.length ? byAmt.filter(x => x.basis !== "expected").slice(0, 2).map(short).join(", ") : i.counted ? "Nothing reported yet" : "Nothing", reps.length ? "reported in the story" : i.counted ? "no condition is reported as changing" : "no impact expected", null);
+    setCell(sw.cells[1], "Direction", directionOf(row, R.cols), i.counted ? `driven by ${byAmt.slice(0, 3).map(short).join(", ")}` : "no conditions move", lead ? lead.v : null);
+    if (lead && exps.length && row.parts) {
+      const mw = exps[0].mode_weight || 1, k = 1 / mw, rep = row.parts.reported[lead.j], exp = row.parts.expected[lead.j], full = rep + exp * k, fullReach = Math.round(cs.filter(c => c.parts && c.values.some((_, j) => Math.abs(c.parts.reported[j] + c.parts.expected[j] * k) >= .5)).reduce((a, c) => a + c.share, 0) * 100);
+      setCell(sw.cells[2], "If it plays out", pm(full) + " pts", `${DEC_SHORT[lead.id]} · about ${fullReach}% of people`, full, `A scenario, not a prediction: the expected part at full weight (about ${k.toFixed(1)} times what is counted now), if the main development fully plays out. Approximate: assumes effects scale in proportion.`);
+    } else setCell(sw.cells[2], "If it plays out", !i.counted ? "Nothing" : exps.length ? "—" : "Fully counted", !i.counted ? "no effect expected" : exps.length ? "no decision shifts" : "nothing more to come", null);
+    if (i.counted) acts.push(el("button", { class: "btn primary", type: "button", text: "Add to the world's news", onclick: commitEv }));
+    if (lead && world) acts.push(el("button", { class: "btn", type: "button", text: `Zoom to ${placeName(hot.label)} →`, onclick: () => focus(hot.id) })); else if (!world) acts.push(el("button", { class: "btn", type: "button", text: "← Back to the world", onclick: () => focus(w.id) }));
+  }
+  acts.push(el("button", { class: "btn ghost", type: "button", text: "See what it touches →", onclick: openTouch })); sw.acts.replaceChildren(...acts);
+  if (ev) sw.head.title = sw.sub.title = "Built by rule from the numbers: the place with the biggest move, its three largest decision changes (phrases from rules/decision_phrases.csv), a size word (under 0.5 negligible, under 2 small, under 5 moderate, above that large), and the share of people in countries that move 0.5 or more.";
+}
+/* ---- "What it touches": domain, then the conditions it can move, then the decisions and resources they reach (drill by clicking) ---- */
+function touchPanel(r) {
+  const m = mapOf(), i = r.identify, box = el("div", { class: "tch" }); if (!m) return el("div", { class: "cap", text: "The connection map is not loaded yet. Reload the page." });
+  const pl = new Map((i.placement || []).map(t => [t.id, t])), doms = [...m.domains].sort((a, b) => ((pl.get(b.id) || {}).tagged ? 1 : 0) - ((pl.get(a.id) || {}).tagged ? 1 : 0) || (Math.max((pl.get(b.id) || {}).p_choice || 0, (pl.get(b.id) || {}).p_yes || 0) - Math.max((pl.get(a.id) || {}).p_choice || 0, (pl.get(a.id) || {}).p_yes || 0)));
+  if (!S.tdom || !m.domains.some(d => d.id === S.tdom)) S.tdom = (doms.find(d => (pl.get(d.id) || {}).tagged) || doms[0]).id;
+  const dom = m.domains.find(d => d.id === S.tdom), rd = new Map((i.readings || []).map(x => [x.dial, x])), dn = new Map(m.dials.map(d => [d.id, d.name]));
+  const inDom = dom.dials.filter(d => dn.has(d)), outside = [...rd.keys()].filter(d => !dom.dials.includes(d));
+  if (!S.tdial || ![...inDom, ...outside].includes(S.tdial)) S.tdial = inDom.find(d => rd.has(d)) || inDom[0] || null;
+  const go_ = (fn) => () => { fn(); paintDetails(); };
+  const dcol = el("div", { class: "col" }, el("h3", { class: "sec", text: "Where it is about" }), ...doms.map(d => { const t = pl.get(d.id) || {}, on = t.tagged, moved = d.dials.filter(x => rd.has(x)).length; return el("div", { class: "trow" + (d.id === S.tdom ? " sel" : "") + (on ? "" : " dim"), onclick: go_(() => { S.tdom = d.id; S.tdial = null; }) }, el("span", { class: "nm", text: d.name }), el("span", { class: "tg", text: on ? (moved ? `${moved} moved` : "placed") : "" })); }));
+  const row = (id) => { const x = rd.get(id); return el("div", { class: "trow" + (id === S.tdial ? " sel" : "") + (x ? "" : " dim"), onclick: go_(() => { S.tdial = id; }) }, el("span", { class: "nm", text: dn.get(id) }), el("span", { class: "tg" + (x && x.basis === "expected" ? " exp" : ""), text: x ? `${arrow(x.direction)} ${x.basis === "expected" ? "expected" : "reported"}` : "not moved" })); };
+  const ccol = el("div", { class: "col" }, el("h3", { class: "sec", text: `Conditions ${dom.name.split(",")[0]} can move` }), ...inDom.map(row), outside.length ? el("h3", { class: "sec", style: "margin-top:12px", text: "Also moved by this story" }) : null, ...outside.map(row)); 
+  const sel = S.tdial, x = sel ? rd.get(sel) : null, link = sel ? m.links[sel] : null, sgn = x ? (x.direction === "up" ? 1 : -1) : 1, mxl = link ? Math.max(.01, ...link.map(Math.abs)) : 1;
+  const chips = (a, tip) => el("div", { class: "chips2" }, a.length ? a.map(t => el("span", { class: "via", title: tip ? tip(t) : "", text: t })) : el("span", { class: "cap", style: "margin:0", text: "none" })), rdef = new Map(m.resources.map(q => [q.name, q.definition]));
+  const rcol = el("div", { class: "col" }, sel ? el("h3", { class: "sec", text: `${dn.get(sel)} ${x ? `${arrow(x.direction)} reaches` : "would reach, if it rose,"}` }) : null,
+    ...(link ? link.map((v, j) => ({ v: v * sgn, j })).filter(t => Math.abs(t.v) >= .05).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 5).map(t => el("div", { class: "trow static" }, el("span", { class: "nm", text: m.decisions[t.j].label }), el("div", { class: "dbar" }, el("i", { class: t.v > 0 ? "up" : "dn", style: `width:${Math.abs(t.v) / mxl * 50}%` })), el("span", { class: "tg", text: t.v > 0 ? "more likely" : "less likely" }))) : []),
+    el("h3", { class: "sec", style: "margin-top:12px", text: "Resources this domain draws on" }), chips(dom.resources, (t) => rdef.get(t) || ""), el("h3", { class: "sec", style: "margin-top:12px", text: "Decisions institutions typically take" }), chips(dom.decisions),
+    el("div", { class: "cap", text: `${dom.definition}. Backbone topics: ${dom.cap_topics.join(", ") || "none"}${dom.kind.startsWith("extension") ? " (our extension)" : ""}. Connections are rule strengths (how a condition reaches a decision through the person factors); mappings to resources are our judgement.` }));
+  box.append(dcol, ccol, rcol); return box;
+}
+function readLine(r, ev) {
+  const i = r.identify, tags = tagsOf(i), out = [], dom = (t) => el("span", { class: "pill dom", title: `${t.name}: forced choice ${pctr(t.p_choice)}, yes/no ${pctr(t.p_yes)}`, text: t.name.split(",")[0] });
+  if (i.placement) out.push(el("span", { class: "lab", text: "About" }), ...tags.slice(0, 2).map(dom), tags.length > 2 ? el("span", { class: "pill dom", title: tags.slice(2).map(t => t.name).join("\n"), text: `+${tags.length - 2}` }) : null);
+  if (!ev) { const ps = i.readings.filter(x => x.p >= .5); return [...out, ...ps.slice(0, 3).map(x => el("span", { class: "pill", text: x.label })), ps.length > 3 ? el("span", { class: "pill", title: ps.slice(3).map(x => x.label).join("\n"), text: `+${ps.length - 3}` }) : null].filter(Boolean); }
+  if (i.counted) {
+    const rep = i.readings.filter(x => x.basis !== "expected").length, exp = i.readings.length - rep, tip = i.readings.map(x => `${x.name} ${arrow(x.direction)} ${x.basis === "expected" ? `expected (${x.mode === "expected_pending" ? "pending" : "in effect"}; up ${pctr(x.p_up)}, down ${pctr(x.p_down)})` : "reported"}`).join("\n");
+    out.push(el("span", { class: "sep" }), el("span", { class: "pill" + (rep ? "" : " exp"), title: tip, text: [rep && `${rep} reported`, exp && `${exp} expected`].filter(Boolean).join(" · ") }), el("span", { text: `enters at ${i.entry.split(":")[1] === "world" ? "the world" : (rowOf(i.entry) || {}).label}` }));
+    if (i.weight && i.weight.value < 1) out.push(el("span", { class: "pill", style: "border-color:var(--warn);color:var(--warn)", title: i.weight.why, text: `counts at ${pctr(i.weight.value)} · ${i.weight.type}` }));
+  } else out.push(el("span", { class: "sep" }), el("span", { class: "pill", style: "border-color:var(--warn);color:var(--warn)", title: "Nothing in the story gives a real reason to expect any tracked condition to move.", text: "no material impact expected" }));
+  return out.filter(Boolean);
+}
+function readExtras(i, ev) {
+  const t = (rows, heads, cls) => el("table", { class: "pl" }, el("thead", {}, el("tr", {}, heads.map(h => el("th", { text: h })))), el("tbody", {}, rows)), out = [];
+  if (i.placement) out.push(el("h3", { class: "sec", style: "margin:0 0 6px", text: "What it is about" }), t(i.placement.filter(x => x.tagged || x.p_choice >= .05 || x.p_yes >= .3).slice(0, 6).map(x => el("tr", {}, el("td", { text: x.name }), el("td", { class: "n", text: pctr(x.p_choice) }), el("td", { class: "n", text: pctr(x.p_yes) }), el("td", { class: "n", text: x.tagged ? "placed" : "" }))), ["Domain", "Forced choice", "Yes / no", ""]));
+  if (ev) { const w = i.weight; out.push(el("h3", { class: "sec", style: "margin:14px 0 6px", text: "Gate: a weight, not a wall" }), el("div", { class: "read-line", style: "margin:0 0 6px" }, ["happened", "announced", "opinion", "forecast"].map(k => el("span", { class: "pill", text: `${k} ${pctr(i.gate[k] == null ? 0 : i.gate[k])}` })), w ? el("span", { text: `counts at ${pctr(w.value)} (${w.type}): ${w.why}` }) : null));
+    if (i.misses && i.misses.length) out.push(el("h3", { class: "sec", style: "margin:14px 0 6px", text: "Closest checks that did not clear the 65% bar" }), t(i.misses.map(m => el("tr", {}, el("td", {}, `${m.dial_name} · ${m.direction} · ${m.attribute}`, el("div", { class: "q", text: m.question })), el("td", { class: "n", text: pctr(m.mean) }), el("td", { class: "n", text: `${pctr(m.p1)} and ${pctr(m.p2)}` }))), ["Check", "Average", "Its two questions"]));
+    if (i.exposure && !i.counted) out.push(el("h3", { class: "sec", style: "margin:14px 0 6px", text: "Exposure (our mapping, no direction implied)" }), el("div", { class: "cap", style: "margin:0", text: `States: ${i.exposure.state_classes.join("; ") || "none"}. Decisions: ${i.exposure.decisions.join("; ") || "none"}. Resources: ${i.exposure.resources.join("; ") || "none"}.` })); }
+  return out;
+}
 function renderSteps(stage, r) {
-  const ev = r && r.identify.mode === "event", sum = r ? ["inputs loaded", ev ? `${r.identify.readings.length} element${r.identify.readings.length === 1 ? "" : "s"} read` : "10 properties read", ev ? `${r.propagate.rows.filter(x => x.delta.some(d => Math.abs(d) > 0.004)).length} places moved` : "today's world", ev ? `${r.read.cols.length} decisions` : `${r.read.cols.length} factors`, `${r.read.rows.length} layers`] : [];
+  const ev = r && r.identify.mode === "event", sum = r ? ["inputs loaded", ev ? (r.identify.placement ? `placed in ${(tagsOf(r.identify)[0] || { name: "other" }).name.split(",")[0]}` + (r.identify.readings.length ? ` · ${r.identify.readings.filter(x => x.basis !== "expected").length} reported, ${r.identify.readings.filter(x => x.basis === "expected").length} expected` : " · no impact expected") : `${r.identify.readings.length} elements read`) : "10 properties read", ev ? (r.propagate.rows.some(x => x.delta.some(d => Math.abs(d) > 0.004)) ? `${r.propagate.rows.filter(x => x.delta.some(d => Math.abs(d) > 0.004)).length} places moved` : "nothing moved") : "today's world", ev ? (r.identify.counted ? `${r.read.cols.length} decisions` : `${r.read.cols.length} decisions, none changed`) : `${r.read.cols.length} factors`, `${r.read.rows.length} layers read`] : [];
   $("steps").replaceChildren(...STEPS.map(([n, tip], i) => el("li", { class: i < stage ? "done" : i === stage ? "run" : "", "data-tip": tip + (sum[i] && i < stage ? `\nNow: ${sum[i]}` : "") }, el("span", { class: "d", text: i < stage ? "✓" : String(i + 1) }), n, sum[i] && i < stage ? el("span", { style: "color:var(--text-3);font-weight:400;white-space:nowrap", text: "· " + sum[i] }) : null)));
 }
 /* ---------- run ---------- */
 async function go(modeOverride) {
-  const t = ask.value.trim(); if (t.length < 8 || S.busy) return; S.busy = true; S.text = t; S.openItem = null; S.led = {}; renderSteps(1, null); $("go").disabled = true;
-  if (!S.res) out.replaceChildren(el("div", { class: "skel", style: "height:120px;margin-top:16px" }), el("div", { class: "skel", style: "height:220px;margin-top:16px" })); else out.style.opacity = .55;
-  try { S.res = await post("request", { text: t, mode: modeOverride || "auto" }); const i = S.res.identify, ent = i.entry; S.focus = i.mode === "event" && ent && ent.startsWith("COUNTRY:") ? ent : "WORLD:world"; S.open = new Set(ent && ent.startsWith("COUNTRY:") ? [ent] : []); S.nav = "tree"; S.tab = "layers";
+  const t = ask.value.trim(); if (t.length < 8 || S.busy) return; S.busy = true; S.text = t; S.openItem = null; S.led = {}; S.ledP = {}; S.sel = null; S.tdom = null; S.tdial = null; S.tab = "touch"; renderSteps(1, null); $("go").disabled = true;
+  if (!S.res) out.replaceChildren(el("div", { class: "skel", style: "height:620px;margin-top:16px" }));
+  try { S.res = await post("request", { text: t, mode: modeOverride || "auto" }); S.audNames = S.res.read.rows.filter(x => x.level === "audience").map(x => x.label); const i = S.res.identify, ent = i.entry; S.focus = "WORLD:world"; S.open = new Set(); S.runId = (S.runId || 0) + 1; S.nav = "tree"; S.tab = "layers";
     S.col = i.mode === "event" ? bestCol() : null; renderSteps(5, S.res); renderExamples(); renderReadAs(); render(); }
   catch (e) { out.replaceChildren(el("div", { class: "panel", style: "margin-top:16px;color:var(--bad)", text: e.message })); renderSteps(0, null); }
-  finally { S.busy = false; $("go").disabled = false; out.style.opacity = 1; }
+  finally { S.busy = false; $("go").disabled = false; }
 }
 const rowOf = (id) => S.res.read.rows.find(x => x.id === id), isEvent = () => S.res.identify.mode === "event";
 function bestCol() { const R = S.res.read; let b = 0, m = -1; R.cols.forEach((c, j) => { const v = Math.max(...R.rows.filter(x => x.level === "country").map(x => Math.abs(x.values[j]))); if (v > m) { m = v; b = j; } }); return b; }
-const metric = (r) => isEvent() ? r.values[S.col] : r.total;
 /* ---------- result view ---------- */
-function render() {
-  const r = S.res; if (!r) { out.replaceChildren(empty()); return; } const R = r.read, f = rowOf(S.focus) || R.rows[0], w = R.rows[0], ev = isEvent();
+const NW = 900, NH = 380;
+const worldRow = () => rowOf("WORLD:world");
+const cval = (r) => isEvent() ? r.values[S.col] : r.total - worldRow().total;
+const scaleMax = () => Math.max(isEvent() ? 1 : 5, ...S.res.read.rows.filter(x => x.level === "country" || x.level === "region").map(x => Math.abs(cval(x))));
+function shade(v, mx) {
+  if (v == null || Math.abs(v) < (isEvent() ? 0.05 : 0.3)) return { bg: "var(--surface-2)", fg: "var(--text-3)", neutral: true };
+  const p = Math.round(22 + 68 * Math.min(1, Math.abs(v) / mx));
+  return { bg: `color-mix(in srgb, var(${v > 0 ? "--for" : "--against"}) ${p}%, var(--surface-2))`, fg: p > 58 ? "#fff" : "var(--text)", neutral: false };
+}
+function squarify(items, x, y, w, h) {
+  const out = [], total = items.reduce((a, b) => a + b.value, 0); if (!items.length || total <= 0) return out;
+  const k = w * h / total; let rest = items.slice();
+  while (rest.length) {
+    const sh = Math.min(w, h), area = (r) => r.value * k, worst = (row, s) => Math.max(...row.map(r => Math.max(sh * sh * area(r) / (s * s), s * s / (sh * sh * area(r)))));
+    let row = [rest[0]], s = area(rest[0]), i = 1;
+    while (i < rest.length) { const nr = row.concat(rest[i]), ns = s + area(rest[i]); if (worst(nr, ns) <= worst(row, s)) { row = nr; s = ns; i++; } else break; }
+    const th = s / sh; let off = 0;
+    if (w >= h) { for (const r of row) { const rh = area(r) / th; out.push({ ...r, x, y: y + off, w: th, h: rh }); off += rh; } x += th; w -= th; }
+    else { for (const r of row) { const rw = area(r) / th; out.push({ ...r, x: x + off, y, w: rw, h: th }); off += rw; } y += th; h -= th; }
+    rest = rest.slice(row.length);
+  }
+  return out;
+}
+function buildMap(rootId) {
+  const rows = S.res.read.rows, tiles = [], box = el("div", { class: "tmap" }), pct = (v, n) => (v / n * 100).toFixed(3) + "%";
+  const pos = (x, y, w, h) => `left:${pct(x, NW)};top:${pct(y, NH)};width:${pct(w, NW)};height:${pct(h, NH)}`, short = (r) => r.label.split(" · ").pop();
+  const lay = (list, x, y, w, h) => squarify(list.map(r => ({ row: r, value: r.share })).sort((a, b) => b.value - a.value), x, y, w, h);
+  const tile = (q, name, big) => { const val = el("span", { class: "tv" }), t = el("button", { type: "button", class: "tile" + (big ? " big" : ""), style: pos(q.x, q.y, q.w, q.h), onclick: () => focus(q.row.id) }, q.w > 64 && q.h > 34 ? el("span", { class: "tn", text: name }) : null, q.w > 38 && q.h > 22 ? val : null); tiles.push({ el: t, row: q.row, val }); box.append(t); };
+  if (rootId.startsWith("COUNTRY:")) lay(rows.filter(r => r.parent === rootId), 0, 0, NW, NH).forEach(q => tile(q, short(q.row), true));
+  else for (const c of lay(rows.filter(r => r.level === "country"), 0, 0, NW, NH)) {
+    const kids = rows.filter(r => r.parent === c.row.id);
+    if (c.w >= 110 && c.h >= 70 && kids.length) { box.append(el("div", { class: "frame", style: pos(c.x, c.y, c.w, c.h) }), el("button", { type: "button", class: "flabel", style: pos(c.x + 2, c.y + 2, c.w - 4, 16), text: c.row.label, onclick: () => focus(c.row.id) })); lay(kids, c.x + 2, c.y + 20, c.w - 4, c.h - 22).forEach(q => tile(q, short(q.row))); }
+    else tile(c, c.row.label);
+  }
+  return { box, tiles };
+}
+function paintMap() {
+  const mx = scaleMax(), R = S.res.read, what = isEvent() ? R.cols[S.col].label + " (points vs no event)" : "support vs the world average (points)";
+  for (const t of S.map.tiles) { const v = cval(t.row), s = shade(v, mx); t.el.style.background = s.bg; t.el.style.color = s.fg; t.val.textContent = s.neutral ? "" : pm(v); t.el.classList.toggle("sel", S.focus === t.row.id); t.el.title = `${t.row.label} · ${what}: ${pm(v)} · ${(t.row.share * 100).toFixed(1)}% of people`; }
+}
+function setView(v) { if (S.gv) { S.gv.destroy(); S.gv = null; } S.view = v; $("askbar").style.display = v === "how" ? "none" : ""; $("howBtn").textContent = v === "how" ? "Back to the engine" : "How it works"; window.scrollTo(0, 0); if (v === "how") out.replaceChildren(howView()); else if (S.res) render(); else out.replaceChildren(empty()); }
+const SETTLE_NAMES = ["cities", "towns", "rural areas"], DEC_FALLBACK = ["Spend (vs save)", "Buy something new", "Subscribe or commit", "Travel", "Change work", "Move home", "Switch brand or provider", "Share or engage publicly"];
+function mountGraph(host, tick, bar, cap) {
+  const ready = S.state ? Promise.resolve(S.state) : api("api/world-engine/state").then(st => (S.state = st));
+  ready.then((st) => {
+    if (S.view !== "how" || !host.isConnected) return;
+    const res = S.res && isEvent() ? S.res.read : null, wr = res ? res.rows[0] : null, decs = (res ? res.cols.map(c => c.label) : DEC_FALLBACK).map((label, j) => ({ label, value: wr ? wr.values[j] : null }));
+    const data = { countries: st.countries, people: st.people, regionNames: SETTLE_NAMES, dotsPerRegion: 15, audiences: S.audNames || Array.from({ length: st.audiences }, (_, i) => "Audience " + (i + 1)), decisions: decs, decisionMax: Math.max(1, ...decs.map(d => Math.abs(d.value || 0))), events: st.events };
+    const name = (e) => e === "WORLD:world" ? "the world" : (st.countries.find(c => "COUNTRY:" + c.id === e) || { name: e }).name;
+    const gv = S.gv = new GraphView(host, data, { height: 460,
+      onEvent: (ev, i, n) => { tick.textContent = `${i + 1} of ${n} · “${ev.title.length > 96 ? ev.title.slice(0, 94) + "…" : ev.title}” · enters at ${name(ev.entry)}` + (ev.readings.length ? " · " + ev.readings.map(r => r.name + (r.amount > 0 ? " ▲" : " ▼")).join(", ") : ""); },
+      onLayer: (l) => pick(l) });
+    const btns = {}, pick = (l) => { gv.setView(l); for (const k in btns) btns[k].classList.toggle("on", k === l); };
+    const seg = el("div", { class: "seg" }, [["all", "All layers"], ["world", "World"], ["country", "Country"], ["region", "Region"], ["audience", "Audience"], ["person", "Person"], ["decision", "Decision"]].map(([k, l]) => (btns[k] = el("button", { type: "button", class: k === "all" ? "on" : "", text: l, onclick: () => pick(k) }))));
+    const pp = el("button", { type: "button", class: "btn ghost", text: "Pause", onclick: () => { if (gv.playing) { gv.pause(); pp.textContent = "Play"; } else { gv.play(); pp.textContent = "Pause"; } } });
+    bar.replaceChildren(seg, el("div", { class: "gv-ctl" }, pp, el("button", { type: "button", class: "btn ghost", title: "Zoom out", text: "−", onclick: () => gv.zoom(1 / 1.3) }), el("button", { type: "button", class: "btn ghost", title: "Zoom in", text: "+", onclick: () => gv.zoom(1.3) }), el("button", { type: "button", class: "btn ghost", text: "Reset", onclick: () => gv.resetZoom() })));
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) pp.textContent = "Play"; else gv.play();
+    tick.textContent = "Replaying the " + st.events.length + " news stories already in the world…";
+    cap.textContent = `Real: ${st.countries.length} countries, ${st.countries.length * 3} settlement types, ${st.audiences} audiences, ${st.people.toLocaleString()} simulated people, and the ${st.events.length} news stories already in the world, replayed in order. Illustrative: each dot is a sample of about ${Math.round(st.people / (st.countries.length * 3 * 15)).toLocaleString()} people, and a pulse shows the path a story takes, not its size. Click a layer name or node to zoom to it; Ctrl or ⌘ plus scroll to zoom, drag to move.`;
+  }).catch(e => { tick.textContent = "Could not load the world: " + e.message; });
+}
+function howView() {
+  const h = (t, c, x) => el(t, c ? { class: c } : {}, x);
+  const steps = [["Collect", "Start from a baseline world: public indices, news headlines and 100,000 simulated people across 8 countries.", "Real indices and live feeds for every country."], ["Identify", "A local language model reads your text as yes/no questions. Fixed rules turn the answers into numbers and decide: event or offer, and where.", "Labelled headlines, and numbers inside stories."], ["Propagate", "The event enters at a country or the world. Each link passes a share on to the layer below, after a delay. A second run with no event is the comparison.", "Histories of real shocks."], ["Decide", "Each person's numbers feed fixed rules: spend, travel, switch, move. Every weight is visible.", "Survey and behaviour data by group."], ["Read", "See the result at any layer, from the whole world to one audience. Click any number to see the rule behind it.", "Outcomes over time, to test it."]];
+  const truth = [["Real", "US public indices (read 2026-10-04) and NPR headlines."], ["Simulated", "The 100,000 people, the other seven countries' starting values, and how each audience feels each change."], ["Fitted", "The take-up model for offers, learned from 39 ideas rated by 400 generated people. The ratings are language-model answers, not real people's."], ["Guess", "How strongly and how fast effects spread, and the weight of each decision rule."]];
+  const host = el("div", { class: "gv" }), tick = el("div", { class: "gv-tick", text: "Loading the world…" }), bar = el("div", { class: "gv-bar" }), cap = el("div", { class: "cap", style: "max-width:980px;min-height:36px" });
+  setTimeout(() => mountGraph(host, tick, bar, cap), 0);
+  return el("div", { class: "how" },
+    el("div", {}, h("h1", "", "How the world engine works"), h("p", "lede", "News keeps changing the world. The engine shows where each story lands and what people do about it, before it lands.")),
+    el("div", {}, bar, host, tick, cap),
+    el("div", { class: "two how2" }, el("div", {}, h("h2", "", "The problem"), h("p", "", "You can't try a headline, an offer or a policy on the world first. Surveys take weeks. An AI-agent simulation can't show its working.")),
+      el("div", {}, h("h2", "", "The idea"), h("p", "", "The world is a stack of layers, each holding 16 numbers such as prices, trust and job security. A story nudges some. Plain rules pass the nudge down, and each person's decisions follow from their own numbers. No chatbots, and 100,000 people recalculate in about 50 ms on one processor (measured earlier)."))),
+    el("div", {}, h("h2", "", "Five steps"), el("div", { class: "hsteps" }, steps.map(([n, d, u], i) => el("div", { class: "hstep" }, h("span", "n", String(i + 1)), h("h3", "", n), h("p", "", d), el("div", { class: "up" }, el("b", { text: "Sharper with: " }), u))))),
+    el("div", {}, h("h2", "", "What you get"), el("div", { class: "gets" }, [["Every layer at once", "Where it lands, from the whole world to one audience, on one map."], ["What pulls and what pushes", "The factors for and against, each with the rule behind it."], ["An answer in seconds", "Change the question or the view and the picture updates in place."]].map(([a, b]) => el("div", {}, h("b", "", a), b)))),
+    el("div", {}, h("h2", "", "What is real, and what is not"), el("table", { class: "truth" }, el("tbody", {}, truth.map(([a, b]) => el("tr", {}, el("td", {}, h("span", "tag", a)), el("td", { text: b }))))), el("div", { class: "cap", style: "max-width:680px", text: "It shows direction and relative size for comparison, not forecasts. As real data replaces each guess, it gets sharper." })));
+}
+let ui = null;
+function slotEl() {
+  const nm = el("span", { class: "nm" }), i = el("i"), val = el("span", { class: "val" }), s = { node: null, col: null, nm, i, val };
+  s.root = el("div", { class: "item" }, el("button", { type: "button", onclick: () => s.node && pick(s.node, s.col) }, nm, el("div", { class: "dbar" }, i), val)); return s;
+}
+function buildShell() {
+  S.mapKey = null; const u = {};
+  
+  u.crumb = el("div", { class: "crumb" }); u.read = el("div", { class: "read-line" }); u.sw = swEl();
+  u.mapTitle = el("h2"); u.sel = el("select", { "aria-label": "Decision", onchange: (e) => { S.col = +e.target.value; update(); } }); u.note = el("div", { class: "mapnote" }); u.host = el("div", { class: "maphost" });
+  u.lg = [el("span"), el("span"), el("span")]; u.chips = el("div", { class: "chips" }); u.cap = el("div", { class: "cap" });
+  u.pt = el("h2"); u.dh = [el("span"), el("span")]; u.rows = [0, 1, 2, 3, 4, 5].map(() => slotEl());
+  u.dockT = el("h2"); u.dock = el("div", { class: "dock" });
+  u.dethd = el("button", { type: "button", class: "dethd", onclick: () => { S.det = !S.det; update(); } }, el("span", { class: "dt", text: "Details" }), el("span", { class: "ds", text: "what it touches · all decisions · how it was read · how it spread · rules" }), el("span", { class: "chev", text: "▾" }));
+  u.tabs = el("div", { class: "tabs" }); u.body = el("div", { class: "detbody" });
+  u.det = el("div", { class: "panel det" }, u.dethd, el("div", { class: "detwrap" }, el("div", { class: "detin" }, u.tabs, u.body)));
+  u.root = el("div", { class: "res" },
+    u.sw.root, el("div", { class: "ctx" }, u.crumb, u.read),
+    el("div", { class: "grid2" },
+      el("div", { class: "panel" }, el("div", { class: "maphd" }, u.mapTitle, u.sel), u.note, u.host, el("div", { class: "legend" }, el("div", { class: "legbar" }), el("div", { class: "legl" }, u.lg)), el("h3", { class: "sec", style: "margin:16px 0 8px", text: "Audiences" }), u.chips, u.cap),
+      el("div", { class: "side" }, el("div", { class: "panel" }, u.pt, el("div", { class: "dh" }, u.dh), ...u.rows.map(x => x.root)), el("div", { class: "panel dockp" }, u.dockT, u.dock))),
+    u.det);
+  return u;
+}
+function update() {
+  if (S.view === "how") return;
+  const r = S.res; if (!r) { ui = null; out.replaceChildren(empty()); return; }
+  if (!ui || !ui.root.isConnected) { ui = buildShell(); out.replaceChildren(ui.root); }
+  const u = ui, R = r.read, f = rowOf(S.focus) || R.rows[0], w = R.rows[0], ev = isEvent(), cs = R.rows.filter(x => x.level === "country");
+  
   const path = []; let c = f; while (c) { path.unshift(c); c = c.parent && c.parent !== "AUDIENCES" ? rowOf(c.parent) : null; }
-  const crumb = el("div", { class: "crumb" }, el("span", { text: "Viewing" }), path.flatMap((p, i) => [i ? "›" : null, i === path.length - 1 ? el("b", { text: p.label }) : el("button", { type: "button", text: p.label, onclick: () => focus(p.id) })]));
-  const readLine = el("div", { class: "read-line" }, ev ? [r.identify.counted ? null : el("span", { class: "pill", style: "border-color:var(--warn);color:var(--warn)", text: "Not counted as an event" }), ...r.identify.readings.map(x => el("span", { class: "pill", text: `${x.name.split(" ")[0]} ${x.direction === "up" ? "▲" : "▼"}` })), r.identify.counted ? el("span", { text: `enters at ${r.identify.entry.split(":")[1] === "world" ? "the world" : (rowOf(r.identify.entry) || {}).label}` }) : el("span", { text: "it did not read as news that moved anything" })]
-    : r.identify.readings.filter(x => x.p >= .5).map(x => el("span", { class: "pill", text: x.label })));
-  const cs = R.rows.filter(x => x.level === "country");
-  let k1, k2, k3;
-  if (!ev) { const best = cs.reduce((a, b) => b.total > a.total ? b : a), low = cs.reduce((a, b) => b.total < a.total ? b : a), d = f.total - w.total;
-    k1 = kpi(`Support · ${f.label}`, f.total.toFixed(1) + "%", f.id === w.id ? "average across all people" : `${pm(d)} pts vs the world`, d); k2 = kpi("Strongest country", best.label, best.total.toFixed(1) + "% support", null); k3 = kpi("Weakest country", low.label, low.total.toFixed(1) + "% support", null); }
-  else { const j = S.col, c = R.cols[j], top = cs.reduce((a, b) => Math.abs(b.values[j]) > Math.abs(a.values[j]) ? b : a), reach = cs.filter(x => x.values.some(v => Math.abs(v) >= .5)).length, big = f.values.reduce((a, v, i) => Math.abs(v) > Math.abs(a[0]) ? [v, i] : a, [0, 0]);
-    k1 = kpi(`${c.label} · ${f.label}`, pm(f.values[j]) + " pts", "vs a run with no event", f.values[j]); k2 = kpi("Reach", `${reach} of ${cs.length}`, reach ? `countries move by 0.5 points or more` : "nothing moves", null); k3 = kpi(`Largest move · ${f.label}`, Math.abs(big[0]) < .05 ? "None" : pm(big[0]) + " pts", Math.abs(big[0]) < .05 ? "no decision moves here" : R.cols[big[1]].label, big[0]); }
+  u.crumb.replaceChildren(el("span", { text: "Viewing" }), ...path.flatMap((p, i) => [i ? "›" : null, i === path.length - 1 ? el("b", { text: p.label }) : el("button", { type: "button", text: p.label, onclick: () => focus(p.id) })]).filter(Boolean));
+  u.read.replaceChildren(...readLine(r, ev));
+  paintSoWhat(u, r, R, f, w, cs, ev);
+  const root = f.level === "country" ? f.id : f.level === "region" ? f.parent : "WORLD:world", key = S.runId + "|" + root;
+  if (S.mapKey !== key) { S.map = buildMap(root); S.mapKey = key; u.host.replaceChildren(S.map.box); }
+  paintMap(); u.mapTitle.textContent = ev ? "Where it lands" : "Where support is highest";
+  if (u.selKey !== `${S.runId}|${ev}`) { u.sel.replaceChildren(...R.cols.map((cl, j) => el("option", { value: j, text: cl.label }))); u.selKey = `${S.runId}|${ev}`; }
+  u.sel.value = String(S.col == null ? 0 : S.col); u.sel.style.visibility = ev ? "visible" : "hidden";
+  u.note.replaceChildren(root !== "WORLD:world" ? el("button", { type: "button", class: "link", text: "← All countries", onclick: () => focus("WORLD:world") }) : el("span", { text: "Area is people. Colour is " + (ev ? "the change in how likely they are to act." : "support against the world average.") }));
+  [["Less likely", "No change", "More likely"], ["Below the world average", "World average", "Above"]][ev ? 0 : 1].forEach((t, i) => u.lg[i].textContent = t);
+  const aud = R.rows.filter(x => x.level === "audience"), mx = scaleMax();
+  if (u.chipKey !== S.runId) { u.chipEls = aud.map(x => { const b = el("b"), btn = el("button", { type: "button", class: "chip", title: x.label, onclick: () => focus(x.id) }, el("span", { class: "nm", text: x.label }), b); return { x, btn, b }; }); u.chips.replaceChildren(...u.chipEls.map(e => e.btn)); u.chipKey = S.runId; }
+  for (const e of u.chipEls) { const v = cval(e.x), s = shade(v, mx); e.btn.style.background = s.bg; e.btn.style.color = s.fg; e.b.textContent = ev ? (s.neutral ? "·" : pm(v)) : e.x.total.toFixed(1) + "%"; e.btn.classList.toggle("sel", S.focus === e.x.id); }
+  u.cap.textContent = ev ? "Points: the change in the share of people likely to act, against a run with no event. Audiences cut across countries; grey means no change." : "Points: support minus the world average. Audiences cut across countries; grey means within 0.3 points of average.";
   const worldView = f.level === "world", th = ev ? 0.3 : 0.5;
-  const pairs = worldView ? R.rows.filter(x => ["country", "audience"].includes(x.level)).flatMap(x => R.cols.map((c, j) => ({ r: x, c, v: x.values[j] }))).filter(p => Math.abs(p.v) >= th) : R.cols.map((c, j) => ({ r: f, c, v: f.values[j] })).filter(x => Math.abs(x.v) >= 0.05);
-  const up = pairs.filter(x => x.v > 0).sort((a, b) => b.v - a.v).slice(0, worldView ? 6 : 5), dn = pairs.filter(x => x.v < 0).sort((a, b) => a.v - b.v).slice(0, worldView ? 6 : 5), mx = Math.max(1, ...pairs.map(x => Math.abs(x.v)));
-  const list = (items, kind) => items.length ? items.map(({ r: rr, c, v }) => item(worldView ? `${rr.label} · ${c.label}` : c.label, v, kind, mx, rr.id, c.id)) : [el("div", { class: "cap", text: ev ? "Nothing moves in this direction." : "Nothing pulls this way." })];
-  const pull = el("div", { class: "panel" }, el("h2", { text: worldView ? (ev ? "Where it lands hardest" : "Where support is pulled up and pushed down") : (ev ? `How decisions move at ${f.label}` : `What drives support at ${f.label}`) }), el("div", { class: "two" },
-    el("div", {}, el("h3", { class: "sec", text: ev ? "More likely" : "Pulls toward" }), ...list(up, "up")), el("div", {}, el("h3", { class: "sec", text: ev ? "Less likely" : "Pushes away" }), ...list(dn, "dn"))), el("div", { class: "cap", text: worldView ? "Each line is a place and a factor. Click one to go there and see the rule behind it." : "Click any line to see the rule behind it." }));
-  const tabs = el("div", { class: "panel" }, el("div", { class: "tabs" }, [["layers", "Across the world"], ["read", "How it was read"], ["spread", ev ? "How it spread" : "Today's world"], ["rules", "Decision rules"]].map(([k, l]) => el("button", { type: "button", class: S.tab === k ? "on" : "", text: l, onclick: () => { S.tab = k; render(); } }))), tabBody());
-  const commit = ev && r.identify.counted ? el("button", { class: "btn", type: "button", style: "margin-left:auto", text: "Add to the world's news", onclick: commitEv }) : null;
-  out.replaceChildren(el("div", { class: "res" }, el("div", { class: "main" }, el("div", {}, el("div", { class: "row", style: "display:flex;align-items:center;gap:10px" }, crumb, commit), readLine), el("div", { class: "kpis" }, k1, k2, k3), pull, tabs), navigator()));
+  const pairs = worldView ? R.rows.filter(x => ["country", "audience"].includes(x.level)).flatMap(x => R.cols.map((cl, j) => ({ r: x, c: cl, v: x.values[j] }))).filter(p => Math.abs(p.v) >= th) : R.cols.map((cl, j) => ({ r: f, c: cl, v: f.values[j] })).filter(x => Math.abs(x.v) >= 0.05);
+  const top = [...pairs].sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 6), pmx = Math.max(1, ...pairs.map(x => Math.abs(x.v)));
+  u.pt.textContent = worldView ? (ev ? "Biggest moves" : "Pulled up and pushed down") : (ev ? `How decisions move at ${f.label}` : `What drives support at ${f.label}`);
+  u.dh[0].textContent = ev ? "Less likely" : "Pushes away"; u.dh[1].textContent = ev ? "More likely" : "Pulls toward";
+  u.rows.forEach((s, i) => { const it = top[i], ph = !top.length && i === 0; s.root.style.visibility = it || ph ? "visible" : "hidden"; s.root.classList.toggle("ph", ph);
+    if (!it) { s.node = null; s.col = null; s.nm.textContent = ph ? (ev ? "Nothing moves here." : "Nothing pulls or pushes here.") : ""; return; }
+    s.node = it.r.id; s.col = it.c.id; s.nm.textContent = worldView ? `${it.r.label} · ${it.c.label}` : it.c.label; s.nm.title = s.nm.textContent; s.i.className = it.v > 0 ? "up" : "dn"; s.i.style.width = Math.min(50, Math.abs(it.v) / pmx * 50) + "%"; s.val.textContent = pm(it.v); s.val.className = "val " + (it.v > 0 ? "pos" : "neg"); });
+  const shown = top;
+  if (!S.sel || !shown.some(x => x.r.id === S.sel.node && x.c.id === S.sel.col)) { const t0 = shown[0]; S.sel = t0 ? { node: t0.r.id, col: t0.c.id } : null; }
+  markSel(); paintDock(); if (S.sel) ensureLedger(S.sel.node, S.sel.col);
+  u.det.classList.toggle("open", !!S.det); u.dethd.setAttribute("aria-expanded", String(!!S.det)); if (S.det) paintDetails();
 }
-const kpi = (l, v, s, d) => el("div", { class: "kpi" }, el("div", { class: "l", text: l }), el("div", { class: "v " + (d == null ? "" : d > 0.0049 ? "pos" : d < -0.0049 ? "neg" : ""), text: v }), el("div", { class: "s", text: s }));
-function item(label, v, kind, mx, node, colId) {
-  const key = node + "|" + colId, open = S.openItem === key && node === S.focus;
-  return el("div", { class: "item" }, el("button", { type: "button", onclick: () => node === S.focus ? toggleItem(colId) : jump(node, colId) }, el("span", { class: "nm", text: label }), el("div", { class: "bar " + kind }, el("i", { style: `width:${Math.min(100, Math.abs(v) / mx * 100)}%` })), el("span", { class: "val " + (v > 0 ? "pos" : "neg"), text: pm(v) })), open ? el("div", { class: "led" }, S.led[key] ? ledgerTable(S.led[key]) : el("div", { class: "cap", text: "Loading the rule…" })) : null);
+function markSel() { for (const s of ui.rows) s.root.classList.toggle("sel", !!S.sel && s.node === S.sel.node && s.col === S.sel.col); }
+function pick(node, col) { S.sel = { node, col }; markSel(); paintDock(); ensureLedger(node, col); }
+function paintDock() {
+  const u = ui, sel = S.sel; if (!sel) { u.dockT.textContent = "The rule behind it"; if (u.dockKey !== "none") { u.dockKey = "none"; u.dock.replaceChildren(el("div", { class: "cap", text: "Nothing moves here, so there is no rule to show." })); } return; }
+  const r = rowOf(sel.node), c = S.res.read.cols.find(k => k.id === sel.col), key = S.runId + "|" + sel.node + "|" + sel.col, d = S.led[sel.node + "|" + sel.col], k2 = key + (d ? "1" : "0");
+  u.dockT.textContent = `Why: ${r.label} · ${c.label}`; if (u.dockKey === k2) return; u.dockKey = k2;
+  u.dock.replaceChildren(...(d ? [splitBlock(d), el("div", { class: "led" }, ledgerTable(d))].filter(Boolean) : [el("div", { class: "cap", text: "Loading the rule…" })]));
 }
-async function jump(node, colId) { S.focus = node; const r = rowOf(node); if (r && r.level === "country") S.open.add(node); S.openItem = node + "|" + colId; render(); const key = S.openItem; if (!S.led[key]) { try { S.led[key] = await post("drill", { node, col: colId }); } catch (e) { S.led[key] = { error: e.message, ledger: [] }; } render(); } }
-async function toggleItem(colId) { const key = S.focus + "|" + colId; if (S.openItem === key) { S.openItem = null; return render(); } S.openItem = key; render(); if (!S.led[key]) { try { S.led[key] = await post("drill", { node: S.focus, col: colId }); } catch (e) { S.led[key] = { error: e.message, ledger: [] }; } render(); } }
+async function ensureLedger(node, col) {
+  const key = node + "|" + col; if (S.led[key] || S.ledP[key]) return; S.ledP[key] = 1; const run = S.runId;
+  try { S.led[key] = await post("drill", { node, col }); } catch (e) { S.led[key] = { error: e.message, ledger: [] }; }
+  delete S.ledP[key]; if (run === S.runId && ui && ui.root.isConnected) paintDock();
+}
+function paintDetails() {
+  const u = ui, ev = isEvent(), defs = [["touch", "What it touches"], ["layers", ev ? "All decisions" : "All factors"], ["read", "How it was read"], ["spread", ev ? "How it spread" : "Today's world"], ["rules", "Decision rules"]];
+  u.tabs.replaceChildren(...defs.map(([k, l]) => el("button", { type: "button", class: S.tab === k ? "on" : "", text: l, onclick: () => { S.tab = k; paintDetails(); } })));
+  const st = u.bodyTab === S.tab ? u.body.scrollTop : 0; u.bodyTab = S.tab; u.body.replaceChildren(tabBody()); u.body.scrollTop = st;
+}
+const viaChip = (v) => el("span", { class: "via" + (v.basis === "expected" ? " exp" : ""), title: v.basis === "expected" ? `Expected, not reported (${v.mode === "expected_pending" ? "still pending" : "already in effect"})` : v.basis === "reported" ? "Reported in the story" : "Follows from the conditions that moved", text: `${v.name.split(" ")[0]} ${v.direction === "up" ? "▲" : "▼"}${v.basis === "expected" ? " expected" : ""}` });
+function splitBlock(d) {
+  if (!d.parts) return null; const rep = d.parts.reported, exp = d.parts.expected, inter = d.value - rep - exp, tot = Math.abs(rep) + Math.abs(exp) + Math.abs(inter) || 1, seg = (cls, v) => el("i", { class: cls, style: `width:${Math.abs(v) / tot * 100}%` });
+  return el("div", { class: "split" }, el("div", { class: "sv" }, el("b", { class: d.value > 0.0049 ? "pos" : d.value < -0.0049 ? "neg" : "", text: pm(d.value) + " pts" }), el("span", { text: `expected ${pm(exp)} · reported ${pm(rep)}` + (Math.abs(inter) >= .05 ? ` · interaction ${pm(inter)}` : "") })), el("div", { class: "sb", title: "Each part is the same event run alone; effects interact, so the parts need not add up exactly" }, seg("rep", rep), seg("exp", exp), seg("int", inter)));
+}
 function ledgerTable(d) {
   const rows = (d.ledger || []).filter(x => Math.abs(x.push) >= 0.005).slice(0, 7); if (!rows.length) return el("div", { class: "cap", text: d.error || "No factor changed here, so nothing attracts or detracts." }); const mx = Math.max(0.5, ...rows.map(x => Math.abs(x.push)));
-  return el("table", {}, el("thead", {}, el("tr", {}, ["Factor", "State", "Weight", "Push (pts)"].map(h => el("th", { text: h })))), el("tbody", {}, rows.map(x => el("tr", {}, el("td", {}, x.factor, el("div", { class: "why", text: x.rule.length > 90 ? x.rule.slice(0, 88) + "…" : x.rule })), el("td", { class: "n", text: x.state == null ? "–" : pm(x.state, 2), title: x.state_label }), el("td", { class: "n", text: x.weight == null ? "–" : pm(x.weight, 2) }), el("td", { class: "n " + (x.push > 0 ? "pos" : "neg"), text: pm(x.push, 2) })))));
+  return el("table", {}, el("thead", {}, el("tr", {}, ["Factor", "State", "Weight", "Push (pts)"].map(h => el("th", { text: h })))), el("tbody", {}, rows.map(x => el("tr", {}, el("td", {}, x.factor, el("div", { class: "why", title: x.rule }, ...(x.via && x.via.length ? x.via.map(viaChip) : [x.rule.length > 90 ? x.rule.slice(0, 88) + "…" : x.rule]))), el("td", { class: "n", text: x.state == null ? "–" : pm(x.state, 2), title: x.state_label }), el("td", { class: "n", text: x.weight == null ? "–" : pm(x.weight, 2) }), el("td", { class: "n " + (x.push > 0 ? "pos" : "neg"), text: pm(x.push, 2) })))));
 }
-function focus(id) { S.focus = id; S.openItem = null; const r = rowOf(id); if (r && r.level === "country") S.open.add(id); render(); }
-/* ---------- perspective navigator ---------- */
-function navigator() {
-  const R = S.res.read, ev = isEvent(), mx = Math.max(1, ...R.rows.filter(x => x.level !== "world").map(x => Math.abs(metric(x))));
-  const row = (r, cls) => { const v = metric(r); return el("div", { class: `nrow ${cls || ""} ${S.focus === r.id ? "sel" : ""}`, onclick: () => focus(r.id) }, el("span", { class: "nm", text: (r.level === "country" && S.nav === "tree" ? (S.open.has(r.id) ? "▾ " : "▸ ") : "") + r.label }), el("span", { class: "v", style: ev ? tint(v, mx) : `background:color-mix(in srgb, var(--accent) ${Math.round(Math.min(1, v / Math.max(...R.rows.map(x => x.total || 0))) * 55)}%, var(--surface))`, text: ev ? (Math.abs(v) < .05 ? "·" : pm(v)) : v.toFixed(1) + "%" })); };
-  let body;
-  if (S.nav === "tree") body = [row(R.rows[0]), ...R.rows.filter(x => x.level === "country").flatMap(c => [row(c), ...(S.open.has(c.id) ? R.rows.filter(x => x.parent === c.id).map(x => row(x, "reg")) : [])]), el("div", { class: "ngrp", text: "Audiences across countries" }), ...R.rows.filter(x => x.level === "audience").map(x => row(x))];
-  else { const lv = { countries: "country", regions: "region", audiences: "audience" }[S.nav]; body = [...R.rows.filter(x => x.level === lv)].sort((a, b) => metric(b) - metric(a)).map(x => row(x)); }
-  return el("aside", { class: "panel persp" }, el("div", { class: "hd" }, el("div", { class: "seg" }, [["tree", "Tree"], ["countries", "Countries"], ["regions", "Regions"], ["audiences", "Audiences"]].map(([k, l]) => el("button", { type: "button", class: S.nav === k ? "on" : "", text: l, onclick: () => { S.nav = k; render(); } })))),
-    ev ? el("div", { class: "hd" }, el("span", { class: "cap", style: "margin:0", text: "Decision" }), el("select", { onchange: (e) => { S.col = +e.target.value; render(); } }, R.cols.map((c, j) => el("option", { value: j, selected: j === S.col, text: c.label })))) : el("div", { class: "cap", style: "margin:0 0 6px", text: "Support, ranked by where you look" }), ...body);
-}
+function focus(id) { S.focus = id; const r = rowOf(id); if (r && r.level === "country") S.open.add(id); update(); }
+function render() { update(); }
 /* ---------- tabs ---------- */
 function heat(cols, rows, val, mx, tot, totLabel, onCell) {
   const vis = []; for (const r of rows) { if (["world", "country"].includes(r.level)) vis.push(r); else if (r.level === "region" && S.open.has(r.parent)) vis.push(r); } const au = rows.filter(r => r.level === "audience"); if (au.length) vis.push({ id: "_", hdr: "Audiences across countries" }, ...au);
   return el("div", { style: "overflow-x:auto" }, el("table", { class: "hm" }, el("thead", {}, el("tr", {}, el("th"), cols.map(c => el("th", { title: c.label, text: c.label })), tot ? el("th", { text: totLabel }) : null)),
-    el("tbody", {}, vis.map(r => r.hdr ? el("tr", { class: "hdr" }, el("th", { colspan: cols.length + 2, text: r.hdr })) : el("tr", { class: (r.level === "region" ? "reg " : "") + (S.focus === r.id ? "foc" : "") }, el("th", { class: "r", onclick: () => focus(r.id), text: (r.level === "country" ? (S.open.has(r.id) ? "▾ " : "▸ ") : "") + r.label }),
+    el("tbody", {}, vis.map(r => r.hdr ? el("tr", { class: "hdr" }, el("th", { colspan: cols.length + 2, text: r.hdr })) : el("tr", { class: (r.level === "region" ? "reg " : "") + (S.focus === r.id ? "foc" : "") }, el("th", { class: "r", title: r.label, onclick: () => focus(r.id), text: (r.level === "country" ? (S.open.has(r.id) ? "▾ " : "▸ ") : "") + r.label }),
       cols.map((c, j) => { const v = val(r, j); return el("td", { style: tint(v, mx), title: `${r.label} · ${c.label}: ${v == null ? "–" : v.toFixed(2)}`, onclick: (e) => onCell && onCell(e, r.id, c.id), text: v == null || Math.abs(v) < .05 ? "·" : pm(v) }); }), tot ? el("td", { class: "tot", text: tot(r).toFixed(1) + "%" }) : null)))));
 }
 function tabBody() {
   const r = S.res, R = r.read, ev = isEvent();
-  if (S.tab === "layers") { const mx = Math.max(1, ...R.rows.filter(x => x.level !== "world").flatMap(x => x.values.map(Math.abs))); return el("div", {}, heat(R.cols, R.rows, (x, j) => x.values[j], mx, ev ? null : (x) => x.total, "Support", cellPop), el("div", { class: "cap", text: `${R.value_label}. Green attracts, red detracts. Click a place to view it; click a cell for its rule.` })); }
+  if (S.tab === "touch") return touchPanel(r);
+  if (S.tab === "layers") { const mx = Math.max(1, ...R.rows.filter(x => x.level !== "world").flatMap(x => x.values.map(Math.abs))); return el("div", {}, heat(R.cols, R.rows, (x, j) => x.values[j], mx, ev ? null : (x) => x.total, "Support", cellPop), el("div", { class: "cap", text: `${R.value_label}. Blue attracts, orange detracts. Click a place to view it; click a cell for its rule.` })); }
   if (S.tab === "read") {
-    const i = r.identify;
-    if (!ev) return el("table", { class: "pl" }, el("thead", {}, el("tr", {}, ["Property of the offer", "Reading", ""].map(h => el("th", { text: h })))), el("tbody", {}, i.readings.map(x => el("tr", {}, el("td", {}, x.label, el("div", { class: "q", text: x.question })), el("td", { class: "n", text: x.p.toFixed(2) }), el("td", { style: "width:120px" }, el("div", { class: "bar up" }, el("i", { style: `width:${x.p * 100}%` })))))));
-    return el("div", {}, el("div", { class: "read-line", style: "margin:0 0 10px" }, ["happened", "announced", "opinion"].map(k => el("span", { class: "pill", text: `${k} ${Math.round(i.gate[k] * 100)}%` })), el("span", { class: "pill", text: `where: ${i.country}${i.country_p != null ? " " + Math.round(i.country_p * 100) + "%" : ""}` })),
-      i.readings.length ? el("table", { class: "pl" }, el("thead", {}, el("tr", {}, ["Element", "Direction", "Strength", "Size"].map(h => el("th", { text: h })))), el("tbody", {}, i.readings.map(x => el("tr", {}, el("td", {}, x.name, el("div", { class: "q", text: i.evidence.filter(e => e.dial === x.dial).map(e => `${e.attribute} ${e.p.toFixed(2)}: “${e.q1}”`).join(" · ") })), el("td", { text: x.direction === "up" ? "▲ up" : "▼ down" }), el("td", { style: "width:110px" }, el("div", { class: "bar up" }, el("i", { style: `width:${x.strength * 100}%` }))), el("td", { class: "n", text: pm(x.amount, 2) }))))) : el("div", { class: "cap", text: "Nothing in the text cleared the rules, so no element moved. Opinion, forecasts and unclear stories are not counted." }));
+    const i = r.identify, extras = readExtras(i, ev);
+    if (!ev) return el("div", {}, ...extras, el("h3", { class: "sec", style: "margin:14px 0 6px", text: "How the offer was read" }), el("table", { class: "pl" }, el("thead", {}, el("tr", {}, ["Property of the offer", "Reading", ""].map(h => el("th", { text: h })))), el("tbody", {}, i.readings.map(x => el("tr", {}, el("td", {}, x.label, el("div", { class: "q", text: x.question })), el("td", { class: "n", text: x.p.toFixed(2) }), el("td", { style: "width:120px" }, el("div", { class: "bar up" }, el("i", { style: `width:${x.p * 100}%` }))))))));
+    return el("div", {}, ...extras, el("div", { class: "read-line", style: "margin:14px 0 6px" }, el("span", { class: "pill", text: `where: ${i.country}${i.country_p != null ? " " + Math.round(i.country_p * 100) + "%" : ""}` })),
+      i.readings.length ? el("table", { class: "pl" }, el("thead", {}, el("tr", {}, ["Element", "Direction", "Basis", "Strength", "Size"].map(h => el("th", { text: h })))), el("tbody", {}, i.readings.map(x => el("tr", {}, el("td", {}, x.name, el("div", { class: "q", text: x.basis === "expected" ? `If the main development plays out: chance up ${pctr(x.p_up)}, chance down ${pctr(x.p_down)}` : i.evidence.filter(e => e.dial === x.dial).map(e => `${e.attribute} ${e.p.toFixed(2)}: “${e.q1}”`).join(" · ") })), el("td", { text: x.direction === "up" ? "▲ up" : "▼ down" }), el("td", { text: x.basis === "expected" ? (x.mode === "expected_pending" ? "expected · pending" : "expected · in effect") : "reported" }), el("td", { style: "width:110px" }, el("div", { class: "bar up" }, el("i", { style: `width:${x.strength * 100}%` }))), el("td", { class: "n", text: pm(x.amount, 2) }))))) : el("div", { class: "cap", text: "Neither a reported change nor a reason to expect one, so no element moved. The closest reported checks are listed above." }));
   }
   if (S.tab === "spread") { const p = r.propagate, cols = p.dials.filter(d => d.id !== "news_overload"), rows = p.rows.map(x => ({ ...x, parent: x.id.startsWith("REGION") ? "COUNTRY:" + x.id.split(":")[1].split("-")[0] : null })).filter(x => ["world", "country", "region"].includes(x.level)), mx = Math.max(.05, ...rows.flatMap(x => x.delta.map(Math.abs)));
     return el("div", {}, heat(cols, rows, (x, j) => x.delta[p.dials.findIndex(d => d.id === cols[j].id)], mx, null, "", null), el("div", { class: "cap", text: p.note + "." })); }
   const m = r.decide.matrix, mx = Math.max(.2, ...m.values.flat().map(Math.abs));
-  return el("div", {}, el("div", { style: "overflow-x:auto" }, el("table", { class: "hm" }, el("thead", {}, el("tr", {}, el("th"), m.cols.map(c => el("th", { title: c.label, text: c.label })))), el("tbody", {}, m.rows.map((rw, a) => el("tr", {}, el("th", { class: "r", style: "cursor:default", text: rw.label }), m.cols.map((c, b) => el("td", { style: tint(m.values[a][b], mx), title: `${rw.label} × ${c.label}: ${m.values[a][b].toFixed(2)}`, text: pm(m.values[a][b], 2) }))))))), el("div", { class: "cap", text: m.note + ". Green attracts, red detracts." }));
+  return el("div", {}, el("div", { style: "overflow-x:auto" }, el("table", { class: "hm" }, el("thead", {}, el("tr", {}, el("th"), m.cols.map(c => el("th", { title: c.label, text: c.label })))), el("tbody", {}, m.rows.map((rw, a) => el("tr", {}, el("th", { class: "r", title: rw.label, style: "cursor:default", text: rw.label }), m.cols.map((c, b) => el("td", { style: tint(m.values[a][b], mx), title: `${rw.label} × ${c.label}: ${m.values[a][b].toFixed(2)}`, text: pm(m.values[a][b], 2) }))))))), el("div", { class: "cap", text: m.note + ". Blue attracts, orange detracts." }));
 }
 let popEl = null;
 function closePop() { if (popEl) { popEl.remove(); popEl = null; } }
@@ -196,7 +461,7 @@ function fillDrawer() {
     el("h3", { text: "Where better data sharpens each stage" }), el("table", {}, [["Collect", "Real indices and live feeds per country"], ["Identify", "Labelled headlines, numbers inside stories"], ["Propagate", "Histories of real shocks by country and group"], ["Decide", "Survey and behaviour data by group"], ["Read", "Outcomes over time, to backtest"]].map(([a, b]) => el("tr", {}, el("td", {}, el("b", { text: a })), el("td", { text: b })))),
     el("div", { style: "margin-top:18px" }, el("button", { class: "btn", type: "button", text: "Reset the world to its starting state", onclick: async () => { S.state = await post("reset", {}); S.res = null; renderExamples(); renderReadAs(); renderSteps(0, null); out.replaceChildren(empty()); drawer(false); } })));
 }
-$("dataBtn").onclick = () => drawer(true); $("scrim").onclick = () => drawer(false);
+$("howBtn").onclick = () => setView(S.view === "how" ? null : "how"); $("dataBtn").onclick = () => drawer(true); $("scrim").onclick = () => drawer(false);
 renderSteps(0, null); out.replaceChildren(empty());
 api("api/world-engine/state").then(s => { S.state = s; }).catch(e => out.replaceChildren(el("div", { class: "panel", style: "color:var(--bad);margin-top:16px", text: e.message })));
 </script>

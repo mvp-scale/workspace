@@ -8,7 +8,7 @@ sys.path.insert(0, "/workspace/probes/persona"); sys.path.insert(0, "/workspace/
 import engine as E, engine2 as W2, classify as C
 from world_pop import WorldPopulation, D as DATA
 from sklearn.cluster import KMeans
-L = "/workspace/probes/world-engine/ledger"; LOCK = threading.Lock()
+L = "/workspace/probes/world-engine/ledger"; LOCK = threading.RLock()      # re-entrant: the request handler holds it and log_unplaced takes it again
 IQ = list(E.O.IDEA_Q); DIALS = E.DIALS; DIAL_NAME = {r["id"]: r["name"] for r in E.D_ROWS}; EL_NAME = {r["id"]: r["name"] for r in E.E_ROWS}; DEC_NAME = {r["id"]: r["name"] for r in E.DEC_ROWS}
 FEATS = ["tech", "price", "privacy", "social", "time", "novelty", "young", "older", "city", "rural", "retired", "income", "caregiver", "alone", "kids", "housemates"]
 FEAT_LABEL = {"tech": "tech comfort", "price": "price attention", "privacy": "privacy stance", "social": "ease with strangers", "time": "time pressure", "novelty": "novelty appetite", "young": "under 30", "older": "60 or over", "city": "big city", "rural": "rural or small town",
@@ -97,6 +97,18 @@ class Session:
         """Typed choice question: is this something that happened (event) or something offered (offer)?"""
         a = E.O.call(f"Text:\n{text}", {"k": {"type": "choice", "instructions": "What kind of thing is this text?", "criteria": {"event": "Something that happened or was announced in the world, like a news item", "offer": "A product, service, programme or message being offered to people", "other": "Neither"}}})["k"]
         return a["choice"], {k: round(float(v), 3) for k, v in a["probabilities"].items()}
+    def exposure(self, pl):
+        """What a placed story is exposed to, from the domains table (our judgement; no direction is implied)."""
+        rows = {d["id"]: d for d in C.DOMAINS}; out = {"state_classes": [], "decisions": [], "resources": []}
+        for t in pl:
+            if not t["tagged"] or t["id"] == "other": continue
+            for key, col in (("state_classes", "state_classes"), ("decisions", "decisions"), ("resources", "resources")):
+                for v in rows[t["id"]][col].split("; "):
+                    if v and v not in out[key] and v != "depends on the story": out[key].append(v)
+        return out
+    def log_unplaced(self, text, pl):
+        if [t["id"] for t in pl if t["tagged"]] == ["other"]:
+            with LOCK, open(L + "/unplaced.jsonl", "a") as f: f.write(json.dumps({"at": datetime.datetime.now().isoformat(), "text": text}) + "\n")
     def request(self, text, mode):
         auto = None
         if mode == "auto":
@@ -105,37 +117,50 @@ class Session:
         if auto: r["identify"]["auto"] = auto
         else: r["identify"]["auto"] = {"kind": mode, "p": None}
         return r
+    def branch(self, readings, entry):
+        """A copy of the world, run for 3 ticks with noise off; with readings, the event enters at `entry` first."""
+        w = copy.deepcopy(self.w); w.noise = False
+        if readings: self.apply({"event": "req", "entry": entry, "count": 1, "readings": readings}, 3, world=w)
+        else: w.run(3)
+        return w
     def request_event(self, text):
-        ev = {"evidence_id": "req", "published_at": email.utils.format_datetime(datetime.datetime.now(datetime.timezone.utc)), "title": text, "description": ""}
+        ev = {"evidence_id": "req", "published_at": datetime.date.today().isoformat(), "title": text, "description": ""}
         P = C.ask(ev); r = C.read(P); country, cp = C.ask_country(ev); entry = f"COUNTRY:{country}" if country in self.cid else "WORLD:world"
         readings = [dict(x, amount=(0.10 if x["direction"] == "up" else -0.10) * x["strength"]) for x in r["readings"] if x["direction"] != "conflict"]
-        ok = bool((r["gate"]["happened"] >= .5 or r["gate"]["announced"] >= .5) and r["gate"]["opinion"] < .5 and P["g|forecast"] < .5)
+        for x in readings: x["basis"] = "reported"
+        pl = C.place(ev); self.log_unplaced(text, pl)
+        for x in C.expected(ev, {x["dial"] for x in readings}, C.allowed_dials(pl)): readings.append(dict(x, amount=(0.10 if x["direction"] == "up" else -0.10) * x["strength"] * x["mode_weight"]))     # expected impact, own weight table
+        w_, wtype, wwhy = C.type_weight(r["gate"]["happened"], r["gate"]["announced"], r["gate"]["opinion"], P["g|forecast"])      # a weight, not a wall
+        for x in readings: x["amount"] = x["amount"] * w_
+        ok = bool(readings) and w_ > 0
         evid = []
         for x in readings:
+            if x.get("basis") == "expected": continue
             for i, a in enumerate(C.ATTRS.get((x["dial"], x["direction"]), [])):
                 m = (P[f"a|{x['dial']}|{x['direction']}|{i}|0"] + P[f"a|{x['dial']}|{x['direction']}|{i}|1"]) / 2
                 if m >= .65: evid.append({"dial": x["dial"], "attribute": a["attribute"], "q1": a["question_1"], "q2": a["question_2"], "p": round(m, 3)})
-        ident = {"mode": "event", "counted": ok, "gate": r["gate"], "country": country, "country_p": cp.get(country), "entry": entry, "readings": [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "direction": x["direction"], "strength": x["strength"], "amount": round(x["amount"], 4)} for x in readings], "evidence": evid}
-        w2 = copy.deepcopy(self.w); w0 = copy.deepcopy(self.w); w2.noise = w0.noise = False; t0 = w2.tick                      # control branch (no event) run the same 3 ticks, so only the event differs
-        w0.run(3)
-        if ok and readings: self.apply({"event": "req", "entry": entry, "count": 1, "readings": readings}, 3, world=w2)
-        else: w2.run(3)
+        ident = {"mode": "event", "counted": ok, "status": "moved" if ok else "no_impact_expected", "weight": {"value": w_, "type": wtype, "why": wwhy}, "placement": pl, "exposure": self.exposure(pl), "misses": [dict(m, dial_name=DIAL_NAME[m["dial"]]) for m in C.misses(P)] if not readings else [], "gate": dict(r["gate"], forecast=round(P["g|forecast"], 2)), "country": country, "country_p": cp.get(country), "entry": entry, "readings": [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "direction": x["direction"], "strength": x["strength"], "amount": round(x["amount"], 4), "basis": x.get("basis", "reported"), "mode": x.get("mode", "reported"), "mode_weight": x.get("mode_weight", 1.0), "p_up": x.get("p_up"), "p_down": x.get("p_down"), "p_done": x.get("p_done")} for x in readings], "evidence": evid}
+        t0 = self.w.tick; w0 = self.branch([], entry); w2 = self.branch(readings if ok else [], entry)      # control run (no event) and event run: same 3 ticks, noise off, so only the event differs
         eff0, d0 = self.eff_prop(w0); eff1, d1 = self.eff_prop(w2); p0, p1 = E.Population.propensity(None, eff0), E.Population.propensity(None, eff1)
+        # the event run twice more, with only the reported or only the expected readings: how much of each move comes from which basis (parts need not add up exactly, because effects interact)
+        parts = {b: (E.Population.propensity(None, self.eff_prop(self.branch([x for x in readings if x["basis"] == b], entry))[0]) if ok and any(x["basis"] == b for x in readings) else p0) for b in ("reported", "expected")}
         first = {}
         for l in w2.log:
             if l["event"] == "req" and l["node"] not in first: first[l["node"]] = l["tick"] - t0
-        self.last = {"mode": "event", "w2": w2, "eff0": eff0, "eff1": eff1, "d0": d0, "d1": d1, "p0": p0, "p1": p1, "entry": entry, "readings": readings, "counted": ok and bool(readings), "event": {"event": "req", "title": text, "entry": entry, "country": country, "count": 1, "readings": readings, "source": "you"}}
+        self.last = {"mode": "event", "w2": w2, "eff0": eff0, "eff1": eff1, "d0": d0, "d1": d1, "p0": p0, "p1": p1, "parts": parts, "entry": entry, "readings": readings, "counted": ok, "event": {"event": "req", "title": text, "entry": entry, "country": country, "count": 1, "readings": readings, "source": "you"}}
         tot0, tot1 = w0.totals(), w2.totals(); cols = [{"id": d, "label": DEC_NAME[d], "kind": "decision"} for d in E.DECS]; rows = []
         for rw in self.rows:
-            if rw["level"] == "audience" or True:
-                m = self.masks[rw["id"]]; rows.append({**rw, "share": round(self.pop.wmean(m.astype(float)), 4), "values": [self.hm(p1[:, j] - p0[:, j], m) * 100 for j in range(len(E.DECS))], "base": [self.hm(p0[:, j], m) * 100 for j in range(len(E.DECS))]})
+            m = self.masks[rw["id"]]; nd = range(len(E.DECS))
+            rows.append({**rw, "share": round(self.pop.wmean(m.astype(float)), 4), "values": [self.hm(p1[:, j] - p0[:, j], m) * 100 for j in nd], "base": [self.hm(p0[:, j], m) * 100 for j in nd],
+                         "parts": {b: [self.hm(parts[b][:, j] - p0[:, j], m) * 100 for j in nd] for b in parts}})
         prop_rows = [{"id": n, "label": next(x["label"] for x in self.rows if x["id"] == n), "level": n.split(":")[0].lower(), "delta": (tot1[n] - tot0[n]).tolist(), "first_tick": first.get(n)} for n in w2.nodes]
         return jn({"identify": ident, "propagate": {"dials": [{"id": d, "name": DIAL_NAME[d]} for d in DIALS], "rows": prop_rows, "note": "change in each dial at each node versus a control run with no event, after 3 ticks"}, "decide": {"kind": "state decisions", "cols": cols, "matrix": {"rows": [{"id": d, "label": DEC_NAME[d], "kind": "decision"} for d in E.DECS], "cols": [{"id": e, "label": EL_NAME[e]} for e in E.ELS if abs(E.W[:, E.ELS.index(e)]).sum() > 0],
                               "values": [[float(E.W[j, E.ELS.index(e)]) for e in E.ELS if abs(E.W[:, E.ELS.index(e)]).sum() > 0] for j in range(len(E.DECS))], "note": "weight of each person state on each decision (rules/decision_weights.csv, hand-set guesses)"}, "rule": "propensity = sigmoid(bias + sum of weights x standardised person states); weights in rules/decision_weights.csv"},
                    "read": {"mode": "event", "cols": cols, "rows": rows, "value_label": "change in propensity (points)", "total_label": None}})
     def request_offer(self, text):
         iv = self.item(text); p = self.aud
-        ident = {"mode": "offer", "counted": True, "readings": [{"id": k, "label": PROP_LABEL[k], "p": round(float(v), 3), "question": E.O.IDEA_Q[k]} for k, v in zip(IQ, iv)]}
+        pl = C.place({"published_at": datetime.date.today().isoformat(), "title": text, "description": ""}); self.log_unplaced(text, pl)
+        ident = {"mode": "offer", "counted": True, "status": "moved", "placement": pl, "exposure": self.exposure(pl), "readings": [{"id": k, "label": PROP_LABEL[k], "p": round(float(v), 3), "question": E.O.IDEA_Q[k]} for k, v in zip(IQ, iv)]}
         eff, d = self.eff_prop(); tri = [E.ELS.index(e) for e in ("tech_comfort", "price_attention", "privacy_stance", "social_ease", "time_pressure", "novelty_seeking")]
         Pm = np.hstack([np.clip((eff[:, tri] - 1) / 4, 0, 1), self.pop.flags]); pr = p.probability(self.pop, eff, iv); pn = p.probability(self.pop, self.pop.base, iv)
         coef = p.m.coef_; a_, c_ = coef[:16], coef[26:].reshape(16, 10); wi = a_ + c_ @ iv; mu = np.array([self.pop.wmean(Pm[:, i]) for i in range(16)]); sd = Pm.std(0) + 1e-9
@@ -172,22 +197,33 @@ class Session:
         j = E.DECS.index(col); p0, p1 = L_["p0"][:, j], L_["p1"][:, j]; b = self.hm(p0, m); scale = b * (1 - b) * 100; z0 = (L_["eff0"] - 3) / 1.5; z1 = (L_["eff1"] - 3) / 1.5
         s = float(self.hm(self.pop.sal.mean(1), m)); d0 = np.array([self.hm(L_["d0"][:, k], m) for k in range(len(DIALS))]); d1 = np.array([self.hm(L_["d1"][:, k], m) for k in range(len(DIALS))])
         dl = np.log(np.maximum(1 + s * d1, 0.2)) - np.log(np.maximum(1 + s * d0, 0.2))
+        basis = {x["dial"]: x.get("basis", "reported") for x in L_["readings"]}; basis_mode = {x["dial"]: x.get("mode") for x in L_["readings"]}
         for e_i, e in enumerate(E.ELS):
             w_ = E.W[j, e_i]
             if abs(w_) < 1e-9: continue
-            dz = self.hm(z1[:, e_i], m) - self.hm(z0[:, e_i], m); push = w_ * dz * scale; contrib = E.GRID[e_i] * dl; k = int(np.argmax(np.abs(contrib)))
-            rows.append({"tag": "A" if push > 0 else "D", "factor": EL_NAME[e], "state": self.hm(z1[:, e_i], m), "state_label": "standardised state now", "weight": float(w_), "rule": (f"moved by {DIAL_NAME[DIALS[k]]} ({dl[k]:+.3f} in log perceived dial)" if abs(contrib[k]) > 1e-6 else "not moved by this event"), "delta": dz, "push": push})
+            dz = self.hm(z1[:, e_i], m) - self.hm(z0[:, e_i], m); push = w_ * dz * scale; contrib = E.GRID[e_i] * dl; k = int(np.argmax(np.abs(contrib))); top = abs(contrib[k])
+            via = [{"dial": DIALS[i], "name": DIAL_NAME[DIALS[i]], "direction": "up" if dl[i] > 0 else "down", "basis": basis.get(DIALS[i], "derived"), "mode": basis_mode.get(DIALS[i])} for i in np.argsort(-np.abs(contrib))[:2] if top > 1e-6 and abs(contrib[i]) >= 0.25 * top]
+            rows.append({"tag": "A" if push > 0 else "D", "factor": EL_NAME[e], "state": self.hm(z1[:, e_i], m), "state_label": "standardised state now", "weight": float(w_), "via": via, "rule": (f"moved by {DIAL_NAME[DIALS[k]]} ({dl[k]:+.3f} in log perceived dial)" if top > 1e-6 else "not moved by this event"), "delta": dz, "push": push})
         series = [self.hm(E.Population.propensity(None, W2.effective(self.pop, W2.person_delta(self.w, self.pop, self.seg_gain, at=h)))[:, j], m) * 100 for h in self.hist] + [self.hm(p1, m) * 100]
-        return jn({"mode": "event", "node": node, "col": col, "value": (self.hm(p1, m) - b) * 100, "ledger": sorted(rows, key=lambda r: -abs(r["push"])), "series": series, "series_label": "propensity after each story, then after the event (%)"})
+        return jn({"mode": "event", "node": node, "col": col, "value": (self.hm(p1, m) - b) * 100, "parts": {k: float(self.hm(v[:, j] - L_["p0"][:, j], m) * 100) for k, v in L_["parts"].items()}, "ledger": sorted(rows, key=lambda r: -abs(r["push"])), "series": series, "series_label": "propensity after each story, then after the event (%)"})
     def commit(self):
         if not self.last or self.last["mode"] != "event" or not self.last["counted"]: return {"error": "nothing to commit"}
         self.apply(self.last["event"], 3); self.last = None; return {"ok": True, "events": len(self.events)}
+    def map_info(self):
+        """Static picture of how things connect, for the page: topic domains, the conditions (dials) each may move, the decisions, the resource classes, and how strongly
+        each condition reaches each decision through the person factors (rules: decision weights x dial-to-factor grid; sign = direction when the condition rises)."""
+        split = lambda v: [x for x in v.split("; ") if x and x != "none"]; links = E.W @ E.GRID; mx = float(np.abs(links).max()) or 1.0
+        return {"domains": [{"id": d["id"], "name": d["name"], "definition": d["definition"], "cap_topics": split(d["cap_topics"]), "state_classes": split(d["state_classes"]), "dials": split(d["dials"]), "decisions": split(d["decisions"]), "resources": split(d["resources"]), "kind": d["kind"]} for d in C.DOMAINS],
+                "dials": [{"id": d, "name": DIAL_NAME[d]} for d in DIALS], "decisions": [{"id": d, "label": DEC_NAME[d]} for d in E.DECS],
+                "links": {d: [round(float(links[j, i]) / mx, 3) for j in range(len(E.DECS))] for i, d in enumerate(DIALS)},
+                "resources": [{"id": r["id"], "name": r["name"], "definition": r["definition"]} for r in C.load("resources")],
+                "phrases": {r["decision_id"]: {"down": r["down"], "up": r["up"]} for r in C.load("decision_phrases")}}
     def state(self):
         base = json.load(open("/workspace/probes/world-engine/baseline.json")); tot = self.w.totals(); dials = []
         for i, d in enumerate(DIALS): dials.append({"id": d, "name": DIAL_NAME[d], "world": float(tot["WORLD:world"][i])})
         return jn({"tick": self.w.tick, "digest": self.w.digest(), "people": self.pop.n, "countries": [{"id": c["id"], "name": c["name"], "pop_m": c["pop_m"], "median_age": c["median_age"], "income_k": c["income_k"], "urban": c["urban"], "source": c["source"]} for c in self.countries],
-                   "anchors": base["anchors"], "events": [{"title": e["title"], "entry": e["entry"], "country": e.get("country"), "source": e["source"], "readings": [{"dial": r["dial"], "name": DIAL_NAME[r["dial"]], "amount": r["amount"]} for r in e["readings"]]} for e in self.events],
-                   "rules": {"dials": len(DIALS), "elements": len(E.ELS), "grid_cells": int((E.GRID != 0).sum()), "decisions": len(E.DECS), "decision_weights": int((E.W != 0).sum()), "factors": len(FACTORS), "questions": len(C.QS)}, "audiences": len(self.segs), "boot_seconds": self.boot, "dials": dials})
+                   "map": self.map_info(), "anchors": base["anchors"], "events": [{"title": e["title"], "entry": e["entry"], "country": e.get("country"), "source": e["source"], "readings": [{"dial": r["dial"], "name": DIAL_NAME[r["dial"]], "amount": r["amount"]} for r in e["readings"]]} for e in self.events],
+                   "rules": {"domains": len(C.DOMAINS), "dials": len(DIALS), "elements": len(E.ELS), "grid_cells": int((E.GRID != 0).sum()), "decisions": len(E.DECS), "decision_weights": int((E.W != 0).sum()), "factors": len(FACTORS), "questions": len(C.QS)}, "audiences": len(self.segs), "boot_seconds": self.boot, "dials": dials})
 S = None
 class H(BaseHTTPRequestHandler):
     def _send(self, code, obj): b = json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type", "application/json"); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
