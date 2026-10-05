@@ -1,0 +1,10 @@
+{
+ "note": "Starting world state from public indices. Latest values only, read through a web-fetch tool summary of each FRED page on 2026-10-04 (the tool's 'a year earlier' values looked unreliable and are NOT used). Reference levels and scales are OUR ASSUMPTIONS.",
+ "anchors": [
+  {"id": "unrate", "label": "Unemployment rate", "value": 4.2, "unit": "%", "as_of": "2026-09", "source": "https://fred.stlouisfed.org/series/UNRATE", "check": "matches the 4.2% in NPR's jobs-report story", "dial": "job_security", "mode": "per_unit", "reference": 4.0, "scale": -0.10},
+  {"id": "mortgage", "label": "30-year mortgage rate", "value": 7.28, "unit": "%", "as_of": "2026-10-01", "source": "https://fred.stlouisfed.org/series/MORTGAGE30US", "check": "matches NPR's 'mortgage rates break past 7%' story", "dial": "housing_cost", "mode": "per_unit", "reference": 6.0, "scale": 0.10},
+  {"id": "gas", "label": "Regular gasoline", "value": 4.465, "unit": "$ per gallon", "as_of": "2026-09-28", "source": "https://fred.stlouisfed.org/series/GASREGW", "check": "none", "dial": "energy_fuel", "mode": "relative", "reference": 3.5, "scale": 0.5},
+  {"id": "sentiment", "label": "Consumer sentiment (Michigan)", "value": 51.7, "unit": "index", "as_of": "2026-08", "source": "https://fred.stlouisfed.org/series/UMCSENT", "check": "none", "dial": "optimism", "mode": "relative", "reference": 80.0, "scale": 0.5},
+  {"id": "cpi", "label": "Consumer price index", "value": 334.131, "unit": "index", "as_of": "2026-08", "source": "https://fred.stlouisfed.org/series/CPIAUCSL", "check": "no year-over-year value available, so not used", "dial": null, "mode": "unused", "reference": null, "scale": 0}
+ ]
+}

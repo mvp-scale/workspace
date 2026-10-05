@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World engine · Jev Bench Console</title>
+<meta name="description" content="Ask anything and see how it moves the world: where it lands, what pulls it up, what pulls it down.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  .we { --gap: 16px; }
+  .we-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .we-head h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; } .we-head p { margin: 2px 0 0; color: var(--text-3); font-size: 13.5px; }
+  .askbar { position: sticky; top: 50px; z-index: 6; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 12px 14px 8px; box-shadow: 0 6px 24px rgba(0, 0, 0, .28); }
+  .askrow { display: flex; gap: 10px; align-items: flex-start; }
+  .askrow textarea { flex: 1; font: inherit; font-size: 15.5px; line-height: 1.45; padding: 10px 12px; min-height: 44px; max-height: 128px; resize: none; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; outline: none; }
+  .askrow textarea:focus { border-color: var(--accent); }
+  .askrow .go { min-height: 44px; padding: 0 22px; font-size: 14.5px; font-weight: 600; border-radius: 10px; }
+  .askmeta { display: flex; justify-content: space-between; gap: 10px; align-items: center; min-height: 30px; margin-top: 6px; flex-wrap: wrap; }
+  .eg { display: flex; flex-wrap: wrap; gap: 6px; } .eg button { border: 1px solid var(--border); background: transparent; color: var(--text-2); border-radius: 999px; padding: 3px 11px; font: inherit; font-size: 12.5px; cursor: pointer; } .eg button:hover { border-color: var(--accent); color: var(--text); }
+  .readas { font-size: 12.5px; color: var(--text-3); display: flex; gap: 8px; align-items: center; } .readas b { color: var(--text); font-weight: 600; } .readas button { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: 0; }
+  .steps { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); margin: 6px 0 2px; padding: 8px 0 0; border-top: 1px solid var(--border); gap: 0; }
+  .steps li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-3); position: relative; padding-right: 8px; cursor: default; }
+  .steps li::after { content: ""; flex: 1; height: 1px; background: var(--border); margin-left: 4px; } .steps li:last-child::after { display: none; }
+  .steps .d { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: none; transition: all .2s; }
+  .steps li.done { color: var(--text); } .steps li.done .d { background: var(--accent); border-color: var(--accent); color: var(--accent-text); } .steps li.run .d { border-color: var(--accent); animation: pulse 1s infinite; } .steps li.run { color: var(--text); }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); } }
+  [data-tip] { position: relative; } [data-tip]:hover::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); width: 260px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.4; z-index: 30; box-shadow: 0 8px 24px rgba(0, 0, 0, .4); white-space: pre-line; text-transform: none; letter-spacing: 0; font-weight: 400; pointer-events: none; }
+  .empty { margin-top: 22px; } .empty h2 { font-size: 15px; margin: 0 0 4px; } .empty p { color: var(--text-3); font-size: 13.5px; margin: 0 0 14px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; } .ex { text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 14px; cursor: pointer; font: inherit; color: inherit; } .ex:hover { border-color: var(--accent); } .ex .t { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 600; } .ex .t.offer { color: var(--warn); } .ex .q { font-size: 14px; margin-top: 6px; line-height: 1.4; } .ex .s { color: var(--text-3); font-size: 12.5px; margin-top: 6px; }
+  .res { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--gap); margin-top: var(--gap); align-items: start; } @media (max-width: 960px) { .res { grid-template-columns: 1fr; } }
+  .res > .main > * + * { margin-top: var(--gap); } .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .crumb { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--text-3); } .crumb b { color: var(--text); font-weight: 600; } .crumb button { background: none; border: 0; color: var(--text-2); cursor: pointer; font: inherit; padding: 0; } .crumb button:hover { color: var(--accent); }
+  .read-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; font-size: 12.5px; color: var(--text-3); } .pill { border: 1px solid var(--border-strong); border-radius: 999px; padding: 1px 9px; color: var(--text-2); font-size: 12px; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; } @media (max-width: 700px) { .kpis { grid-template-columns: 1fr; } }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; } .kpi .l { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; } .kpi .v { font-size: 28px; font-weight: 650; letter-spacing: -.02em; margin: 4px 0 2px; font-variant-numeric: tabular-nums; } .kpi .s { font-size: 12.5px; color: var(--text-3); }
+  .pos { color: var(--good); } .neg { color: var(--bad); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; } @media (max-width: 700px) { .two { grid-template-columns: 1fr; } }
+  h3.sec { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; } .panel > h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+  .item { border-top: 1px solid var(--border); } .item:first-of-type { border-top: 0; } .item > button { all: unset; display: grid; grid-template-columns: minmax(0, 1fr) 120px 56px; gap: 10px; align-items: center; width: 100%; box-sizing: border-box; padding: 8px 0; cursor: pointer; font-size: 13.5px; } .item > button:hover .nm { color: var(--accent); }
+  .bar { height: 8px; background: var(--surface-2); border-radius: 4px; position: relative; } .bar i { position: absolute; top: 0; bottom: 0; border-radius: 4px; } .bar.up i { left: 0; background: var(--good); } .bar.dn i { right: 0; background: var(--bad); }
+  .val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13.5px; }
+  .led { padding: 2px 0 10px; } .led table { width: 100%; border-collapse: collapse; font-size: 12.5px; } .led th { text-align: left; font-weight: 500; color: var(--text-3); font-size: 11px; padding: 2px 8px 2px 0; } .led td { padding: 5px 8px 5px 0; border-top: 1px solid var(--border); } .led td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; } .led .why { color: var(--text-3); font-size: 11.5px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin: -4px 0 14px; } .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-3); padding: 8px 12px; font: inherit; font-size: 13.5px; cursor: pointer; } .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+  table.hm { border-collapse: separate; border-spacing: 2px; font-size: 12px; } table.hm th { color: var(--text-2); font-weight: 500; padding: 3px 4px; text-align: center; max-width: 82px; line-height: 1.15; vertical-align: bottom; font-size: 11.5px; } table.hm th.r { text-align: left; max-width: 260px; white-space: nowrap; font-size: 12.5px; cursor: pointer; } table.hm th.r:hover { color: var(--accent); } table.hm tr.reg th.r { padding-left: 20px; color: var(--text-3); } table.hm tr.foc th.r { color: var(--accent); font-weight: 650; }
+  table.hm td { min-width: 50px; height: 26px; text-align: center; border-radius: 5px; font-variant-numeric: tabular-nums; cursor: pointer; border: 1.5px solid transparent; } table.hm td.sel { border-color: var(--text); } table.hm td.tot { background: var(--surface-2); font-weight: 650; cursor: default; } table.hm tr.hdr th { text-align: left; color: var(--text-3); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; padding-top: 10px; cursor: default; }
+  .cap { font-size: 12.5px; color: var(--text-3); margin: 8px 0 0; line-height: 1.45; }
+  table.pl { border-collapse: collapse; width: 100%; font-size: 13px; } table.pl th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; padding: 4px 10px 4px 0; } table.pl td { padding: 7px 10px 7px 0; border-top: 1px solid var(--border); vertical-align: middle; } table.pl td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; } table.pl .q { color: var(--text-3); font-size: 11.5px; margin-top: 2px; }
+  .persp { position: sticky; top: 156px; max-height: calc(100vh - 176px); overflow: auto; padding: 14px; } @media (max-width: 960px) { .persp { position: static; max-height: none; } }
+  .persp .hd { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; } .seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 2px; } .seg button { border: 0; background: none; color: var(--text-3); font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer; } .seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+  .persp select { font: inherit; font-size: 12px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; max-width: 150px; }
+  .nrow { display: grid; grid-template-columns: minmax(0, 1fr) 56px; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; } .nrow:hover { background: var(--surface-2); } .nrow.sel { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); } .nrow.reg { padding-left: 24px; color: var(--text-2); } .nrow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nrow .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 12.5px; border-radius: 6px; padding: 1px 4px; } .ngrp { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin: 12px 8px 4px; font-weight: 600; }
+  .pop { position: fixed; z-index: 40; width: 380px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 12px 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .5); } .pop h4 { margin: 0 0 6px; font-size: 13px; }
+  .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 50; opacity: 0; pointer-events: none; transition: opacity .2s; } .scrim.on { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 94vw); background: var(--bg, var(--surface)); border-left: 1px solid var(--border-strong); z-index: 51; transform: translateX(100%); transition: transform .25s; overflow: auto; padding: 18px 20px; } .drawer.on { transform: none; } .drawer h2 { margin: 0 0 4px; font-size: 16px; } .drawer h3 { margin: 18px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
+  .drawer table { width: 100%; border-collapse: collapse; font-size: 12.5px; } .drawer td, .drawer th { padding: 4px 8px 4px 0; border-top: 1px solid var(--border); text-align: left; font-weight: 400; } .drawer td.n { text-align: right; font-variant-numeric: tabular-nums; } .drawer .sub { color: var(--text-3); font-size: 12.5px; }
+  .skel { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: sh 1.2s infinite; border-radius: 14px; } @keyframes sh { to { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+<main class="page we">
+  <header class="we-head"><div><h1>World engine</h1><p>Ask about anything, large or small. See where it lands, and what pulls it up or down.</p></div><button class="btn" id="dataBtn" type="button">Data &amp; rules</button></header>
+  <section class="askbar" id="askbar">
+    <div class="askrow"><textarea id="ask" rows="1" aria-label="Ask the world engine" placeholder="Type an event, a product, or a message. For example: “Fuel prices jump 25% in Brazil”"></textarea><button class="btn primary go" id="go" type="button">Ask</button></div>
+    <div class="askmeta"><div class="eg" id="eg"></div><div class="readas" id="readas"></div></div>
+    <ol class="steps" id="steps"></ol>
+  </section>
+  <section id="out"></section>
+</main>
+<div class="scrim" id="scrim"></div><aside class="drawer" id="drawer" aria-label="Data and rules"></aside>
+<script>
+const { el, api } = Jev;
+const post = (p, b) => api("api/world-engine/" + p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
+const S = { state: null, res: null, text: "", focus: "WORLD:world", col: null, tab: "layers", open: new Set(), nav: "tree", led: {}, openItem: null, busy: false, mode: "auto" };
+const EXAMPLES = [["event", "Fuel prices jump 25% in Brazil as refinery outages spread", "A macro event"], ["event", "Major employer announces 8,000 layoffs across three states in the United States", "A local shock"], ["offer", "Neighbour Loop lets people on the same street lend and borrow tools, ladders and kitchen appliances. It costs $12 a month. You need to install a phone app, and you must upload a photo of your face and a government ID to be approved. You can borrow from anyone on your street who has joined, including people you have never met.", "Neighbour Loop, paid app with ID check"], ["offer", "Gardenway is a free monthly paper newsletter, with a phone line you can call, for retired people living in rural areas. It shares seasonal gardening advice and puts local gardeners in touch with each other by post.", "Gardenway, a free paper newsletter"]];
+const STEPS = [["Collect", "Gathers what the engine runs on: news, public indices, and 100,000 simulated people across 8 countries.\nTo refine: add real indices and live feeds per country."], ["Identify", "The local model reads your ask into elements, each answered by a yes/no question.\nTo refine: labelled headlines, numbers inside stories."],
+  ["Propagate", "An event enters at a country or the world and spreads to regions by gain and delay.\nTo refine: histories of real shocks."], ["Decide", "Rules turn each person's state into attractors and detractors.\nTo refine: survey and behaviour data by group."], ["Read", "The answer is read at any layer: world, country, region, audience.\nTo refine: outcomes over time, to backtest."]];
+const pm = (v, d = 1) => v == null ? "–" : (v > 0.0049 ? "+" : v < -0.0049 ? "−" : "") + Math.abs(v).toFixed(d);
+const tint = (v, mx) => v == null || Math.abs(v) < 0.05 ? "" : `background:color-mix(in srgb, var(${v > 0 ? "--good" : "--bad"}) ${Math.round(Math.min(1, Math.abs(v) / mx) * 62)}%, var(--surface))`;
+const $ = (id) => document.getElementById(id);
+const ask = $("ask"), out = $("out");
+
+/* ---------- ask bar ---------- */
+function autosize() { ask.style.height = "auto"; ask.style.height = Math.min(128, ask.scrollHeight) + "px"; }
+ask.addEventListener("input", autosize); ask.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(); } });
+$("go").onclick = () => go();
+function renderExamples() { $("eg").replaceChildren(...(S.res ? EXAMPLES.map(([k, t, l]) => el("button", { type: "button", text: l, onclick: () => { ask.value = t; autosize(); go(); } })) : [])); }
+function renderReadAs() {
+  const r = S.res; if (!r) return $("readas").replaceChildren(); const a = r.identify.auto, m = r.identify.mode, p = a && a.p ? Math.round(a.p[m] * 100) : null, other = m === "event" ? "offer" : "event";
+  $("readas").replaceChildren("Read as", el("b", { text: m === "event" ? "something that happens" : "something offered" }), p != null ? `(${p}%)` : "", el("button", { type: "button", text: `Treat as ${other === "event" ? "something that happens" : "something offered"}`, onclick: () => go(other) }));
+}
+function renderSteps(stage, r) {
+  const ev = r && r.identify.mode === "event", sum = r ? ["inputs loaded", ev ? `${r.identify.readings.length} element${r.identify.readings.length === 1 ? "" : "s"} read` : "10 properties read", ev ? `${r.propagate.rows.filter(x => x.delta.some(d => Math.abs(d) > 0.004)).length} places moved` : "today's world", ev ? `${r.read.cols.length} decisions` : `${r.read.cols.length} factors`, `${r.read.rows.length} layers`] : [];
+  $("steps").replaceChildren(...STEPS.map(([n, tip], i) => el("li", { class: i < stage ? "done" : i === stage ? "run" : "", "data-tip": tip + (sum[i] && i < stage ? `\nNow: ${sum[i]}` : "") }, el("span", { class: "d", text: i < stage ? "✓" : String(i + 1) }), n, sum[i] && i < stage ? el("span", { style: "color:var(--text-3);font-weight:400;white-space:nowrap", text: "· " + sum[i] }) : null)));
+}
+/* ---------- run ---------- */
+async function go(modeOverride) {
+  const t = ask.value.trim(); if (t.length < 8 || S.busy) return; S.busy = true; S.text = t; S.openItem = null; S.led = {}; renderSteps(1, null); $("go").disabled = true;
+  if (!S.res) out.replaceChildren(el("div", { class: "skel", style: "height:120px;margin-top:16px" }), el("div", { class: "skel", style: "height:220px;margin-top:16px" })); else out.style.opacity = .55;
+  try { S.res = await post("request", { text: t, mode: modeOverride || "auto" }); const i = S.res.identify, ent = i.entry; S.focus = i.mode === "event" && ent && ent.startsWith("COUNTRY:") ? ent : "WORLD:world"; S.open = new Set(ent && ent.startsWith("COUNTRY:") ? [ent] : []); S.nav = "tree"; S.tab = "layers";
+    S.col = i.mode === "event" ? bestCol() : null; renderSteps(5, S.res); renderExamples(); renderReadAs(); render(); }
+  catch (e) { out.replaceChildren(el("div", { class: "panel", style: "margin-top:16px;color:var(--bad)", text: e.message })); renderSteps(0, null); }
+  finally { S.busy = false; $("go").disabled = false; out.style.opacity = 1; }
+}
+const rowOf = (id) => S.res.read.rows.find(x => x.id === id), isEvent = () => S.res.identify.mode === "event";
+function bestCol() { const R = S.res.read; let b = 0, m = -1; R.cols.forEach((c, j) => { const v = Math.max(...R.rows.filter(x => x.level === "country").map(x => Math.abs(x.values[j]))); if (v > m) { m = v; b = j; } }); return b; }
+const metric = (r) => isEvent() ? r.values[S.col] : r.total;
+/* ---------- result view ---------- */
+function render() {
+  const r = S.res; if (!r) { out.replaceChildren(empty()); return; } const R = r.read, f = rowOf(S.focus) || R.rows[0], w = R.rows[0], ev = isEvent();
+  const path = []; let c = f; while (c) { path.unshift(c); c = c.parent && c.parent !== "AUDIENCES" ? rowOf(c.parent) : null; }
+  const crumb = el("div", { class: "crumb" }, el("span", { text: "Viewing" }), path.flatMap((p, i) => [i ? "›" : null, i === path.length - 1 ? el("b", { text: p.label }) : el("button", { type: "button", text: p.label, onclick: () => focus(p.id) })]));
+  const readLine = el("div", { class: "read-line" }, ev ? [r.identify.counted ? null : el("span", { class: "pill", style: "border-color:var(--warn);color:var(--warn)", text: "Not counted as an event" }), ...r.identify.readings.map(x => el("span", { class: "pill", text: `${x.name.split(" ")[0]} ${x.direction === "up" ? "▲" : "▼"}` })), r.identify.counted ? el("span", { text: `enters at ${r.identify.entry.split(":")[1] === "world" ? "the world" : (rowOf(r.identify.entry) || {}).label}` }) : el("span", { text: "it did not read as news that moved anything" })]
+    : r.identify.readings.filter(x => x.p >= .5).map(x => el("span", { class: "pill", text: x.label })));
+  const cs = R.rows.filter(x => x.level === "country");
+  let k1, k2, k3;
+  if (!ev) { const best = cs.reduce((a, b) => b.total > a.total ? b : a), low = cs.reduce((a, b) => b.total < a.total ? b : a), d = f.total - w.total;
+    k1 = kpi(`Support · ${f.label}`, f.total.toFixed(1) + "%", f.id === w.id ? "average across all people" : `${pm(d)} pts vs the world`, d); k2 = kpi("Strongest country", best.label, best.total.toFixed(1) + "% support", null); k3 = kpi("Weakest country", low.label, low.total.toFixed(1) + "% support", null); }
+  else { const j = S.col, c = R.cols[j], top = cs.reduce((a, b) => Math.abs(b.values[j]) > Math.abs(a.values[j]) ? b : a), reach = cs.filter(x => x.values.some(v => Math.abs(v) >= .5)).length, big = f.values.reduce((a, v, i) => Math.abs(v) > Math.abs(a[0]) ? [v, i] : a, [0, 0]);
+    k1 = kpi(`${c.label} · ${f.label}`, pm(f.values[j]) + " pts", "vs a run with no event", f.values[j]); k2 = kpi("Reach", `${reach} of ${cs.length}`, reach ? `countries move by 0.5 points or more` : "nothing moves", null); k3 = kpi(`Largest move · ${f.label}`, Math.abs(big[0]) < .05 ? "None" : pm(big[0]) + " pts", Math.abs(big[0]) < .05 ? "no decision moves here" : R.cols[big[1]].label, big[0]); }
+  const worldView = f.level === "world", th = ev ? 0.3 : 0.5;
+  const pairs = worldView ? R.rows.filter(x => ["country", "audience"].includes(x.level)).flatMap(x => R.cols.map((c, j) => ({ r: x, c, v: x.values[j] }))).filter(p => Math.abs(p.v) >= th) : R.cols.map((c, j) => ({ r: f, c, v: f.values[j] })).filter(x => Math.abs(x.v) >= 0.05);
+  const up = pairs.filter(x => x.v > 0).sort((a, b) => b.v - a.v).slice(0, worldView ? 6 : 5), dn = pairs.filter(x => x.v < 0).sort((a, b) => a.v - b.v).slice(0, worldView ? 6 : 5), mx = Math.max(1, ...pairs.map(x => Math.abs(x.v)));
+  const list = (items, kind) => items.length ? items.map(({ r: rr, c, v }) => item(worldView ? `${rr.label} · ${c.label}` : c.label, v, kind, mx, rr.id, c.id)) : [el("div", { class: "cap", text: ev ? "Nothing moves in this direction." : "Nothing pulls this way." })];
+  const pull = el("div", { class: "panel" }, el("h2", { text: worldView ? (ev ? "Where it lands hardest" : "Where support is pulled up and pushed down") : (ev ? `How decisions move at ${f.label}` : `What drives support at ${f.label}`) }), el("div", { class: "two" },
+    el("div", {}, el("h3", { class: "sec", text: ev ? "More likely" : "Pulls toward" }), ...list(up, "up")), el("div", {}, el("h3", { class: "sec", text: ev ? "Less likely" : "Pushes away" }), ...list(dn, "dn"))), el("div", { class: "cap", text: worldView ? "Each line is a place and a factor. Click one to go there and see the rule behind it." : "Click any line to see the rule behind it." }));
+  const tabs = el("div", { class: "panel" }, el("div", { class: "tabs" }, [["layers", "Across the world"], ["read", "How it was read"], ["spread", ev ? "How it spread" : "Today's world"], ["rules", "Decision rules"]].map(([k, l]) => el("button", { type: "button", class: S.tab === k ? "on" : "", text: l, onclick: () => { S.tab = k; render(); } }))), tabBody());
+  const commit = ev && r.identify.counted ? el("button", { class: "btn", type: "button", style: "margin-left:auto", text: "Add to the world's news", onclick: commitEv }) : null;
+  out.replaceChildren(el("div", { class: "res" }, el("div", { class: "main" }, el("div", {}, el("div", { class: "row", style: "display:flex;align-items:center;gap:10px" }, crumb, commit), readLine), el("div", { class: "kpis" }, k1, k2, k3), pull, tabs), navigator()));
+}
+const kpi = (l, v, s, d) => el("div", { class: "kpi" }, el("div", { class: "l", text: l }), el("div", { class: "v " + (d == null ? "" : d > 0.0049 ? "pos" : d < -0.0049 ? "neg" : ""), text: v }), el("div", { class: "s", text: s }));
+function item(label, v, kind, mx, node, colId) {
+  const key = node + "|" + colId, open = S.openItem === key && node === S.focus;
+  return el("div", { class: "item" }, el("button", { type: "button", onclick: () => node === S.focus ? toggleItem(colId) : jump(node, colId) }, el("span", { class: "nm", text: label }), el("div", { class: "bar " + kind }, el("i", { style: `width:${Math.min(100, Math.abs(v) / mx * 100)}%` })), el("span", { class: "val " + (v > 0 ? "pos" : "neg"), text: pm(v) })), open ? el("div", { class: "led" }, S.led[key] ? ledgerTable(S.led[key]) : el("div", { class: "cap", text: "Loading the rule…" })) : null);
+}
+async function jump(node, colId) { S.focus = node; const r = rowOf(node); if (r && r.level === "country") S.open.add(node); S.openItem = node + "|" + colId; render(); const key = S.openItem; if (!S.led[key]) { try { S.led[key] = await post("drill", { node, col: colId }); } catch (e) { S.led[key] = { error: e.message, ledger: [] }; } render(); } }
+async function toggleItem(colId) { const key = S.focus + "|" + colId; if (S.openItem === key) { S.openItem = null; return render(); } S.openItem = key; render(); if (!S.led[key]) { try { S.led[key] = await post("drill", { node: S.focus, col: colId }); } catch (e) { S.led[key] = { error: e.message, ledger: [] }; } render(); } }
+function ledgerTable(d) {
+  const rows = (d.ledger || []).filter(x => Math.abs(x.push) >= 0.005).slice(0, 7); if (!rows.length) return el("div", { class: "cap", text: d.error || "No factor changed here, so nothing attracts or detracts." }); const mx = Math.max(0.5, ...rows.map(x => Math.abs(x.push)));
+  return el("table", {}, el("thead", {}, el("tr", {}, ["Factor", "State", "Weight", "Push (pts)"].map(h => el("th", { text: h })))), el("tbody", {}, rows.map(x => el("tr", {}, el("td", {}, x.factor, el("div", { class: "why", text: x.rule.length > 90 ? x.rule.slice(0, 88) + "…" : x.rule })), el("td", { class: "n", text: x.state == null ? "–" : pm(x.state, 2), title: x.state_label }), el("td", { class: "n", text: x.weight == null ? "–" : pm(x.weight, 2) }), el("td", { class: "n " + (x.push > 0 ? "pos" : "neg"), text: pm(x.push, 2) })))));
+}
+function focus(id) { S.focus = id; S.openItem = null; const r = rowOf(id); if (r && r.level === "country") S.open.add(id); render(); }
+/* ---------- perspective navigator ---------- */
+function navigator() {
+  const R = S.res.read, ev = isEvent(), mx = Math.max(1, ...R.rows.filter(x => x.level !== "world").map(x => Math.abs(metric(x))));
+  const row = (r, cls) => { const v = metric(r); return el("div", { class: `nrow ${cls || ""} ${S.focus === r.id ? "sel" : ""}`, onclick: () => focus(r.id) }, el("span", { class: "nm", text: (r.level === "country" && S.nav === "tree" ? (S.open.has(r.id) ? "▾ " : "▸ ") : "") + r.label }), el("span", { class: "v", style: ev ? tint(v, mx) : `background:color-mix(in srgb, var(--accent) ${Math.round(Math.min(1, v / Math.max(...R.rows.map(x => x.total || 0))) * 55)}%, var(--surface))`, text: ev ? (Math.abs(v) < .05 ? "·" : pm(v)) : v.toFixed(1) + "%" })); };
+  let body;
+  if (S.nav === "tree") body = [row(R.rows[0]), ...R.rows.filter(x => x.level === "country").flatMap(c => [row(c), ...(S.open.has(c.id) ? R.rows.filter(x => x.parent === c.id).map(x => row(x, "reg")) : [])]), el("div", { class: "ngrp", text: "Audiences across countries" }), ...R.rows.filter(x => x.level === "audience").map(x => row(x))];
+  else { const lv = { countries: "country", regions: "region", audiences: "audience" }[S.nav]; body = [...R.rows.filter(x => x.level === lv)].sort((a, b) => metric(b) - metric(a)).map(x => row(x)); }
+  return el("aside", { class: "panel persp" }, el("div", { class: "hd" }, el("div", { class: "seg" }, [["tree", "Tree"], ["countries", "Countries"], ["regions", "Regions"], ["audiences", "Audiences"]].map(([k, l]) => el("button", { type: "button", class: S.nav === k ? "on" : "", text: l, onclick: () => { S.nav = k; render(); } })))),
+    ev ? el("div", { class: "hd" }, el("span", { class: "cap", style: "margin:0", text: "Decision" }), el("select", { onchange: (e) => { S.col = +e.target.value; render(); } }, R.cols.map((c, j) => el("option", { value: j, selected: j === S.col, text: c.label })))) : el("div", { class: "cap", style: "margin:0 0 6px", text: "Support, ranked by where you look" }), ...body);
+}
+/* ---------- tabs ---------- */
+function heat(cols, rows, val, mx, tot, totLabel, onCell) {
+  const vis = []; for (const r of rows) { if (["world", "country"].includes(r.level)) vis.push(r); else if (r.level === "region" && S.open.has(r.parent)) vis.push(r); } const au = rows.filter(r => r.level === "audience"); if (au.length) vis.push({ id: "_", hdr: "Audiences across countries" }, ...au);
+  return el("div", { style: "overflow-x:auto" }, el("table", { class: "hm" }, el("thead", {}, el("tr", {}, el("th"), cols.map(c => el("th", { title: c.label, text: c.label })), tot ? el("th", { text: totLabel }) : null)),
+    el("tbody", {}, vis.map(r => r.hdr ? el("tr", { class: "hdr" }, el("th", { colspan: cols.length + 2, text: r.hdr })) : el("tr", { class: (r.level === "region" ? "reg " : "") + (S.focus === r.id ? "foc" : "") }, el("th", { class: "r", onclick: () => focus(r.id), text: (r.level === "country" ? (S.open.has(r.id) ? "▾ " : "▸ ") : "") + r.label }),
+      cols.map((c, j) => { const v = val(r, j); return el("td", { style: tint(v, mx), title: `${r.label} · ${c.label}: ${v == null ? "–" : v.toFixed(2)}`, onclick: (e) => onCell && onCell(e, r.id, c.id), text: v == null || Math.abs(v) < .05 ? "·" : pm(v) }); }), tot ? el("td", { class: "tot", text: tot(r).toFixed(1) + "%" }) : null)))));
+}
+function tabBody() {
+  const r = S.res, R = r.read, ev = isEvent();
+  if (S.tab === "layers") { const mx = Math.max(1, ...R.rows.filter(x => x.level !== "world").flatMap(x => x.values.map(Math.abs))); return el("div", {}, heat(R.cols, R.rows, (x, j) => x.values[j], mx, ev ? null : (x) => x.total, "Support", cellPop), el("div", { class: "cap", text: `${R.value_label}. Green attracts, red detracts. Click a place to view it; click a cell for its rule.` })); }
+  if (S.tab === "read") {
+    const i = r.identify;
+    if (!ev) return el("table", { class: "pl" }, el("thead", {}, el("tr", {}, ["Property of the offer", "Reading", ""].map(h => el("th", { text: h })))), el("tbody", {}, i.readings.map(x => el("tr", {}, el("td", {}, x.label, el("div", { class: "q", text: x.question })), el("td", { class: "n", text: x.p.toFixed(2) }), el("td", { style: "width:120px" }, el("div", { class: "bar up" }, el("i", { style: `width:${x.p * 100}%` })))))));
+    return el("div", {}, el("div", { class: "read-line", style: "margin:0 0 10px" }, ["happened", "announced", "opinion"].map(k => el("span", { class: "pill", text: `${k} ${Math.round(i.gate[k] * 100)}%` })), el("span", { class: "pill", text: `where: ${i.country}${i.country_p != null ? " " + Math.round(i.country_p * 100) + "%" : ""}` })),
+      i.readings.length ? el("table", { class: "pl" }, el("thead", {}, el("tr", {}, ["Element", "Direction", "Strength", "Size"].map(h => el("th", { text: h })))), el("tbody", {}, i.readings.map(x => el("tr", {}, el("td", {}, x.name, el("div", { class: "q", text: i.evidence.filter(e => e.dial === x.dial).map(e => `${e.attribute} ${e.p.toFixed(2)}: “${e.q1}”`).join(" · ") })), el("td", { text: x.direction === "up" ? "▲ up" : "▼ down" }), el("td", { style: "width:110px" }, el("div", { class: "bar up" }, el("i", { style: `width:${x.strength * 100}%` }))), el("td", { class: "n", text: pm(x.amount, 2) }))))) : el("div", { class: "cap", text: "Nothing in the text cleared the rules, so no element moved. Opinion, forecasts and unclear stories are not counted." }));
+  }
+  if (S.tab === "spread") { const p = r.propagate, cols = p.dials.filter(d => d.id !== "news_overload"), rows = p.rows.map(x => ({ ...x, parent: x.id.startsWith("REGION") ? "COUNTRY:" + x.id.split(":")[1].split("-")[0] : null })).filter(x => ["world", "country", "region"].includes(x.level)), mx = Math.max(.05, ...rows.flatMap(x => x.delta.map(Math.abs)));
+    return el("div", {}, heat(cols, rows, (x, j) => x.delta[p.dials.findIndex(d => d.id === cols[j].id)], mx, null, "", null), el("div", { class: "cap", text: p.note + "." })); }
+  const m = r.decide.matrix, mx = Math.max(.2, ...m.values.flat().map(Math.abs));
+  return el("div", {}, el("div", { style: "overflow-x:auto" }, el("table", { class: "hm" }, el("thead", {}, el("tr", {}, el("th"), m.cols.map(c => el("th", { title: c.label, text: c.label })))), el("tbody", {}, m.rows.map((rw, a) => el("tr", {}, el("th", { class: "r", style: "cursor:default", text: rw.label }), m.cols.map((c, b) => el("td", { style: tint(m.values[a][b], mx), title: `${rw.label} × ${c.label}: ${m.values[a][b].toFixed(2)}`, text: pm(m.values[a][b], 2) }))))))), el("div", { class: "cap", text: m.note + ". Green attracts, red detracts." }));
+}
+let popEl = null;
+function closePop() { if (popEl) { popEl.remove(); popEl = null; } }
+async function cellPop(e, node, colId) {
+  closePop(); const x = e.clientX, y = e.clientY; const r = rowOf(node), c = S.res.read.cols.find(k => k.id === colId); popEl = el("div", { class: "pop" }, el("h4", { text: `${r.label} · ${c.label}` }), el("div", { class: "cap", text: "Loading the rule…" })); document.body.append(popEl);
+  const place = () => { popEl.style.left = Math.max(10, Math.min(innerWidth - 400, x - 40)) + "px"; popEl.style.top = Math.max(60, Math.min(innerHeight - popEl.offsetHeight - 10, y + 12)) + "px"; }; place();
+  try { const d = await post("drill", { node, col: colId }); popEl.replaceChildren(el("h4", { text: `${r.label} · ${c.label}` }), el("div", { class: "led" }, ledgerTable(d))); place(); } catch (er) { popEl.append(er.message); }
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closePop(); drawer(false); } }); document.addEventListener("click", (e) => { if (popEl && !popEl.contains(e.target) && !e.target.closest("table.hm td")) closePop(); });
+async function commitEv() { const r = await post("commit", {}); S.state = await api("api/world-engine/state"); S.res = null; renderExamples(); renderReadAs(); renderSteps(0, null); out.replaceChildren(el("div", { class: "empty" }, el("h2", { text: "Added to the world" }), el("p", { text: r.error || "The world has moved. Ask again to see the new state." }))); }
+/* ---------- empty state and data drawer ---------- */
+function empty() {
+  return el("div", { class: "empty" }, el("h2", { text: "Start with a question" }), el("p", { text: "Ask about an event, or something you would offer people. The engine reads it, moves the world, and shows who is pulled toward it or pushed away, anywhere from the whole world down to one audience." }),
+    el("div", { class: "cards" }, EXAMPLES.map(([k, t, l]) => el("button", { class: "ex", type: "button", onclick: () => { ask.value = t; autosize(); go(); } }, el("div", { class: "t " + k, text: k === "event" ? "Event" : "Offer" }), el("div", { class: "q", text: t.length > 110 ? t.slice(0, 108) + "…" : t }), el("div", { class: "s", text: l })))));
+}
+function drawer(on) { $("drawer").classList.toggle("on", on); $("scrim").classList.toggle("on", on); if (on && S.state) fillDrawer(); }
+function fillDrawer() {
+  const st = S.state; $("drawer").replaceChildren(el("div", { class: "row", style: "display:flex;justify-content:space-between;align-items:center" }, el("h2", { text: "Data & rules" }), el("button", { class: "btn ghost", type: "button", text: "Close", onclick: () => drawer(false) })),
+    el("div", { class: "sub", text: "Everything the engine starts from. Inputs are simulated within reason; every rule is a guess or a fit until real data refines it." }),
+    el("h3", { text: `People · ${st.people.toLocaleString()} across ${st.countries.length} countries` }), el("table", {}, st.countries.map(c => el("tr", {}, el("td", { text: c.name }), el("td", { class: "n", text: c.pop_m + "m" }), el("td", { class: "n", text: "age " + c.median_age }), el("td", { class: "n", text: "$" + c.income_k + "k" }), el("td", { class: "sub", text: c.id === "usa" ? "real indices" : "simulated" })))),
+    el("h3", { text: "Public indices (US start, real)" }), el("table", {}, st.anchors.map(a => el("tr", {}, el("td", { text: a.label }), el("td", { class: "n", text: `${a.value} ${a.unit}` }), el("td", { class: "sub", text: a.as_of }), el("td", {}, el("a", { href: a.source, target: "_blank", rel: "noopener", text: "source" }))))),
+    el("h3", { text: `News already in the world · ${st.events.length}` }), el("table", {}, [...st.events].reverse().map(e => el("tr", {}, el("td", { text: e.title.slice(0, 66) }), el("td", { class: "sub", text: e.entry.split(":")[1] })))),
+    el("h3", { text: "Rules in use" }), el("div", { class: "sub", text: `${st.rules.dials} dials · ${st.rules.elements} person states · ${st.rules.grid_cells} dial-to-state links · ${st.rules.decisions} decisions with ${st.rules.decision_weights} weights · ${st.rules.questions} reading questions` }),
+    el("h3", { text: "Where better data sharpens each stage" }), el("table", {}, [["Collect", "Real indices and live feeds per country"], ["Identify", "Labelled headlines, numbers inside stories"], ["Propagate", "Histories of real shocks by country and group"], ["Decide", "Survey and behaviour data by group"], ["Read", "Outcomes over time, to backtest"]].map(([a, b]) => el("tr", {}, el("td", {}, el("b", { text: a })), el("td", { text: b })))),
+    el("div", { style: "margin-top:18px" }, el("button", { class: "btn", type: "button", text: "Reset the world to its starting state", onclick: async () => { S.state = await post("reset", {}); S.res = null; renderExamples(); renderReadAs(); renderSteps(0, null); out.replaceChildren(empty()); drawer(false); } })));
+}
+$("dataBtn").onclick = () => drawer(true); $("scrim").onclick = () => drawer(false);
+renderSteps(0, null); out.replaceChildren(empty());
+api("api/world-engine/state").then(s => { S.state = s; }).catch(e => out.replaceChildren(el("div", { class: "panel", style: "color:var(--bad);margin-top:16px", text: e.message })));
+</script>
+</body>
+</html>

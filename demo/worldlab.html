@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World lab · Jev Bench Console</title>
+<meta name="description" content="See how a changing world changes what people will do. Simulated people, plain arithmetic, no AI agents.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  .view > * + * { margin-top: 14px; }
+  .twocol { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .twocol { grid-template-columns: 1fr; } }
+  h2.step { font-size: 15px; margin: 0 0 8px; } h2.step span { color: var(--accent); margin-right: 6px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .dial { display: grid; grid-template-columns: 170px minmax(0, 1fr) 54px 84px; gap: 8px; align-items: center; font-size: 12.5px; padding: 3px 0; }
+  .dial .nm { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dial .trk { position: relative; height: 10px; background: var(--surface-2); border-radius: 5px; }
+  .dial .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border-strong); }
+  .dial .seg { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+  .dial .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-3); margin: 4px 0 8px; } .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .news { display: grid; gap: 6px; max-height: 330px; overflow: auto; }
+  .ev { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 9px; background: var(--surface); font-size: 12.5px; }
+  .ev .t { color: var(--text); } .ev .chips { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 11.5px; border: 1px solid var(--border-strong); border-radius: 999px; padding: 0 7px; color: var(--text-2); } .chip.up { border-color: var(--bad); color: var(--bad); } .chip.down { border-color: var(--good); color: var(--good); } .chip.you { border-color: var(--accent); color: var(--accent); }
+  textarea.big, input.txt { width: 100%; font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); }
+  textarea.big { min-height: 92px; resize: vertical; }
+  .verdict { font-size: 16px; line-height: 1.5; } .verdict b { font-weight: 650; }
+  table.heat { border-collapse: separate; border-spacing: 3px; font-size: 12.5px; } table.heat th { color: var(--text-2); font-weight: 600; padding: 2px 8px; text-align: center; } table.heat th.r { text-align: right; white-space: nowrap; }
+  table.heat td { min-width: 92px; height: 46px; text-align: center; border-radius: var(--radius-sm); cursor: pointer; font-variant-numeric: tabular-nums; line-height: 1.2; border: 2px solid transparent; }
+  table.heat td.sel { border-color: var(--text); } table.heat td small { display: block; font-size: 10.5px; color: var(--text-2); } table.heat td.in { box-shadow: inset 0 0 0 2px var(--good); } table.heat td.out { box-shadow: inset 0 0 0 2px var(--bad); }
+  .bk { display: grid; grid-template-columns: minmax(0, 1fr) 150px 64px; gap: 8px; align-items: center; font-size: 12.5px; padding: 2px 0; } .bk .trk { height: 9px; background: var(--surface-2); border-radius: 5px; } .bk .fill { height: 100%; border-radius: 5px; }
+  .bucket h4 { margin: 12px 0 2px; font-size: 13px; } .bucket .why { font-size: 12px; color: var(--text-3); margin-bottom: 2px; }
+  .kicker { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; margin: 10px 0 4px; }
+  .spin { color: var(--text-2); font-size: 13px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .seg { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; cursor: pointer; display: grid; gap: 6px; font-size: 12.5px; } .seg:hover { background: var(--surface-2); } .seg.sel { outline: 2px solid var(--accent); }
+  .seg h3 { margin: 0; font-size: 14px; } .seg .who { color: var(--text-3); font-size: 12px; } .seg .big { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stack { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-2); } .stack > div { height: 100%; }
+  .pull { display: grid; gap: 1px; } .pull .t { color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; } .up { color: var(--good); } .dn { color: var(--bad); }
+  .drv { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 62px; gap: 8px; align-items: center; font-size: 12.5px; padding: 2px 0; } .drv .axis { position: relative; height: 10px; background: var(--surface-2); border-radius: 5px; } .drv .axis i { position: absolute; top: 0; bottom: 0; border-radius: 5px; } .drv .axis b { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border-strong); }
+  .tag { font-size: 10.5px; border: 1px solid var(--border-strong); border-radius: 999px; padding: 0 6px; color: var(--text-3); margin-left: 5px; }
+  table.mx { border-collapse: separate; border-spacing: 2px; font-size: 12px; } table.mx th { font-weight: 600; color: var(--text-2); padding: 3px 6px; text-align: center; max-width: 92px; } table.mx th.r { text-align: left; max-width: 230px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; } table.mx td { text-align: center; min-width: 54px; height: 28px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+  table.who td, table.who th { padding: 2px 8px 2px 0; text-align: left; font-weight: 400; } table.who td.n { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-head"><div><h1>World lab</h1>
+    <p>Put something in front of an audience and see who backs it, why, and what would move them. 50,000 simulated people grouped by how they think and live, plain arithmetic, no AI agents.</p></div>
+    <div class="actions"><button class="btn" id="reset" type="button">Reset the world</button></div></div>
+  <div class="callout warn" style="margin-bottom:14px"><strong>Demo, not a survey.</strong> The people are simulated, and how hard the world pushes on them is our assumption. The starting world comes from public indices, cross-checked against this week's news. Read every number as “what our model says”. “Support” here means the likelihood of taking the offer up.</div>
+  <div class="view" id="root"></div>
+</main><script>
+const { el, api } = Jev;
+const post = (p, b) => api(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
+const pct = (x) => x == null ? "–" : Math.round(x * 100) + "%", pts = (x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(1) + " pts";
+const SV = "http://www.w3.org/2000/svg", svg = (t, a = {}, ...k) => { const n = document.createElementNS(SV, t); for (const [x, y] of Object.entries(a)) n.setAttribute(x, y); k.flat().forEach(c => c && n.append(c)); return n; };
+const S = { world: null, aud: null, text: "", sel: null, allDials: false };
+const OFFERS = [["Neighbour Loop: $12 a month, app and ID photo", "Neighbour Loop lets people on the same street lend and borrow tools, ladders and kitchen appliances. It costs $12 a month. You need to install a phone app, and you must upload a photo of your face and a government ID to be approved. You can borrow from anyone on your street who has joined, including people you have never met."],
+  ["Neighbour Loop: free, by text message", "Neighbour Loop lets people on the same street lend and borrow tools, ladders and kitchen appliances. It is free. It works by text message: reply to a text to request or offer an item. You can only borrow from people you personally invite."],
+  ["Gardenway: free paper newsletter for retired rural people", "Gardenway is a free monthly paper newsletter, with a phone line you can call, for retired people living in rural areas. It shares seasonal gardening advice and puts local gardeners in touch with each other by post."],
+  ["Nightfall: late-night membership, ages 21 to 30, big cities", "Nightfall is a $25 monthly membership that gives people aged 21 to 30 in large cities access to late-night events and shared rides home after 10pm. It is available only in large cities and works through a phone app."]];
+const HEADLINES = ["Gasoline and diesel prices jump 25% as refinery outages spread across the country", "Major employer announces 8,000 layoffs across three states", "Federal Reserve cuts interest rates and mortgage rates fall sharply"];
+const BAND_COL = ["var(--bad)", "color-mix(in srgb, var(--bad) 45%, var(--surface-2))", "var(--border-strong)", "color-mix(in srgb, var(--good) 45%, var(--surface-2))", "var(--good)"];
+const KIND = { belief: "belief or habit", situation: "life situation", world: "the world", offer: "the offer" };
+
+const worldBox = el("div"), askBox = el("div"), resultBox = el("div"), injMsg = el("div", { class: "small muted" });
+const nameOf = (id) => (S.world.dials.find(d => d.id === id) || {}).name || id;
+/* ---------- the world they live in (secondary) ---------- */
+function bars(d) { const sc = 0.3, pos = (v) => 50 + Math.max(-1, Math.min(1, v / sc)) * 50, seg = (a, b, c) => el("div", { class: "seg2", style: `position:absolute;top:0;bottom:0;border-radius:5px;left:${Math.min(pos(a), pos(b))}%;width:${Math.abs(pos(b) - pos(a))}%;background:${c}` }), same = d.from_indices * d.from_news >= 0, st = same ? d.from_indices : 0;
+  return el("div", { class: "trk" }, el("div", { class: "mid" }), seg(0, d.from_indices, "var(--text-3)"), seg(st, st + d.from_news, "var(--accent)")); }
+function spark(series) { const w = 80, h = 18, mn = Math.min(...series, 0), mx = Math.max(...series, 0.001), sp = (mx - mn) || 1; return svg("svg", { width: w, height: h, viewBox: `0 0 ${w} ${h}` }, svg("polyline", { fill: "none", stroke: "var(--accent)", "stroke-width": 1.5, points: series.map((v, i) => `${(i / Math.max(series.length - 1, 1) * w).toFixed(1)},${(h - 2 - (v - mn) / sp * (h - 4)).toFixed(1)}`).join(" ") })); }
+function renderWorld() {
+  const W = S.world, ds = [...W.dials].filter(d => d.id !== "news_overload").sort((a, b) => Math.abs(b.now) - Math.abs(a.now)), shown = S.allDials ? ds : ds.filter(d => Math.abs(d.now) > 0.004).slice(0, 9);
+  worldBox.replaceChildren(el("h2", { class: "step" }, el("span", { text: "3" }), "The world they are living in"), el("div", { class: "small muted", style: "margin-bottom:8px", text: "This is what pushes on your audience. Add a headline and watch the audience above change." }),
+    el("div", { class: "twocol" }, el("div", {}, el("div", { class: "legend" }, el("span", {}, el("i", { style: "background:var(--text-3)" }), "from public indices"), el("span", {}, el("i", { style: "background:var(--accent)" }), "from the news"), el("span", { text: "right of the line = more of it" })),
+      shown.map(d => el("div", { class: "dial" }, el("span", { class: "nm", text: d.name }), bars(d), el("span", { class: "v", text: (d.now >= 0 ? "+" : "−") + Math.abs(d.now).toFixed(2) }), spark(d.series))),
+      el("button", { class: "btn ghost", type: "button", onclick: () => { S.allDials = !S.allDials; renderWorld(); }, text: S.allDials ? "Show fewer" : "Show all measures" }),
+      el("div", { class: "kicker", text: "Starting point: public indices (latest values)" }),
+      el("table", { class: "small", style: "border-collapse:collapse;width:100%" }, W.anchors.map(a => el("tr", {}, el("td", { text: a.label }), el("td", { text: `${a.value} ${a.unit}`, style: "text-align:right;white-space:nowrap" }), el("td", { class: "muted", text: a.as_of }), el("td", {}, el("a", { href: a.source, target: "_blank", rel: "noopener", text: "source" })), el("td", { class: "muted", text: a.check !== "none" ? "✓ " + a.check : (a.dial ? "" : "not used") }))))),
+    el("div", {}, el("div", { class: "row" }, el("input", { class: "txt", id: "hl", placeholder: "Type a headline…", style: "flex:1;min-width:200px" }), el("button", { class: "btn primary", type: "button", onclick: inject, text: "Add to the news" })),
+      el("div", { class: "row", style: "margin:6px 0" }, HEADLINES.map(h => el("button", { class: "btn ghost", type: "button", style: "font-size:12px", onclick: () => { document.getElementById("hl").value = h; }, text: h.slice(0, 44) + "…" }))), injMsg,
+      el("div", { class: "kicker", text: `${W.events.length} stories counted so far (newest first)` }),
+      el("div", { class: "news" }, [...W.events].reverse().map(e => el("div", { class: "ev" }, el("div", { class: "t", text: e.title.slice(0, 96) }), el("div", { class: "chips" }, e.source === "you" && el("span", { class: "chip you", text: "added by you" }),
+        (e.readings.length ? e.readings : [{ dial: "" }]).map(r => r.dial ? el("span", { class: "chip", text: `${nameOf(r.dial).split(" ")[0]} ${r.amount >= 0 ? "▲" : "▼"} ${Math.abs(r.amount).toFixed(2)}` }) : el("span", { class: "chip", text: "no measure moved" })))))))));
+}
+async function loadWorld() { S.world = await api("api/world-lab/state"); renderWorld(); }
+async function inject() {
+  const t = document.getElementById("hl").value.trim(); if (t.length < 8) return; injMsg.textContent = "Reading it with the local model…";
+  try { const r = await post("api/world-lab/inject", { title: t }); S.world = r.state; const x = r.result;
+    if (x.counted_as_event && x.readings.length) injMsg.textContent = "Counted as news. It moved: " + x.readings.map(q => `${q.name} ${q.amount >= 0 ? "▲" : "▼"} ${Math.abs(q.amount).toFixed(2)}`).join(", ") + ".";
+    else injMsg.textContent = "Not counted: " + (x.gate.opinion >= .5 ? "it reads as opinion." : (x.gate.happened < .5 && x.gate.announced < .5) ? "it doesn't read as something that happened or was announced." : "it didn't clearly move any measure.");
+    renderWorld(); if (S.aud) runAsk(true); } catch (e) { injMsg.textContent = e.message; }
+}
+document.getElementById("reset").onclick = async () => { S.world = await post("api/world-lab/reset", {}); injMsg.textContent = "World reset to its starting state."; renderWorld(); if (S.aud) runAsk(true); };
+
+/* ---------- the question ---------- */
+const ta = el("textarea", { class: "big", id: "item", "aria-label": "What to put in front of the audience" });
+askBox.replaceChildren(el("h2", { class: "step" }, el("span", { text: "1" }), "Put something in front of your audience"),
+  el("div", { class: "row", style: "margin-bottom:6px" }, OFFERS.map(([l, t]) => el("button", { class: "btn", type: "button", style: "font-size:12px", onclick: () => { ta.value = t; }, text: l }))), ta,
+  el("div", { class: "row", style: "margin-top:8px" }, el("button", { class: "btn primary", type: "button", onclick: () => runAsk(false), text: "Show me the audience" }), el("span", { class: "spin", id: "spin" })));
+async function runAsk(keep) {
+  const t = (S.text = ta.value.trim() || S.text); if (t.length < 10) return; const sp = document.getElementById("spin"); sp.textContent = "Reading it, then asking 50,000 people… about 8 seconds.";
+  try { S.aud = await post("api/world-lab/audience", { text: t }); if (!keep || S.sel == null) { const sg = S.aud.segments.filter(x => x.share >= .08).sort((a, b) => a.support - b.support); S.sel = sg[0].id; } sp.textContent = ""; renderAudience(); } catch (e) { sp.textContent = e.message; }
+}
+/* ---------- the audience (center stage) ---------- */
+function whoLine(w, pop) { const bits = [`median age ${w.median_age}`, `${pct(w.under_60k)} under $60k`]; if (w.retired >= .4) bits.push("mostly retired"); if (w.kids_at_home >= .5) bits.push("kids at home"); if (w.lives_alone >= .4) bits.push("live alone"); if (w.shares_home >= .5) bits.push("share homes"); if (w.caring_for_relative >= .4) bits.push("caring for a relative"); if (w.big_city >= .4) bits.push("big-city"); if (w.rural_small_town >= .5) bits.push("rural or small-town"); return bits.slice(0, 4).join(" · "); }
+function driverBars(list) {
+  const mx = Math.max(4, ...list.map(d => Math.abs(d.pts)));
+  return list.map(d => el("div", { class: "drv" }, el("span", {}, `${d.label.charAt(0).toUpperCase() + d.label.slice(1)}`, el("span", { class: "tag", text: KIND[d.kind] })),
+    el("div", { class: "axis" }, el("b"), el("i", { style: `${d.pts >= 0 ? "left:50%" : `left:${50 - Math.abs(d.pts) / mx * 50}%`};width:${Math.abs(d.pts) / mx * 50}%;background:${d.pts >= 0 ? "var(--good)" : "var(--bad)"}` })), el("span", { class: d.pts >= 0 ? "up" : "dn", style: "text-align:right", text: pts(d.pts) })));
+}
+function renderAudience() {
+  const r = S.aud, segs = [...r.segments].sort((a, b) => b.support - a.support), top = segs[0], low = segs[segs.length - 1], sel = r.segments.find(x => x.id === S.sel), W = r.population;
+  const posd = (s) => s.drivers.filter(d => d.pts > 0).slice(0, 2), negd = (s) => s.drivers.filter(d => d.pts < 0).slice(0, 2), ph = (l) => l.map(d => `${d.label} ${pts(d.pts)}`).join("; ") || "nothing notable";
+  const intro = el("div", { class: "card" }, el("div", { class: "verdict" }, `Support runs from `, el("b", { text: pct(low.support) }), ` (${low.name.toLowerCase()}) to `, el("b", { text: pct(top.support) }), ` (${top.name.toLowerCase()}); across everyone it is `, el("b", { text: pct(r.overall) }), `. `,
+      `${top.name} back it mainly because of one thing: “${posd(top)[0] ? posd(top)[0].label : "a good fit"}”. ${low.name} are held back mainly by “${negd(low)[0] ? negd(low)[0].label : "the offer itself"}”.`),
+    r.extrapolation.unlike_anything_fitted && el("div", { class: "callout warn", style: "margin-top:8px", text: "This looks unlike anything the model was fitted on, so treat the numbers as a rough guess." }),
+    el("div", { class: "small muted", style: "margin-top:6px", text: "How it read your item: " + Object.entries(r.readings).filter(([, v]) => v >= .5).map(([k]) => ({ cost_monthly: "costs money monthly", setup_app: "needs an app", id_photo: "needs ID or a photo", strangers: "involves strangers", time_heavy: "takes time", urban_only: "big cities only", youth_target: "aimed at under-30s", older_target: "aimed at over-60s", rural_target: "aimed at rural areas", novel: "something new" }[k])).join(", ") + ". Segments are groups of people who think and live alike, found from beliefs, habits and life situation together." }));
+  const cards = el("div", { class: "cards" }, segs.map(s => el("div", { class: "seg" + (s.id === S.sel ? " sel" : ""), onclick: () => { S.sel = s.id; renderAudience(); } },
+    el("div", { class: "row", style: "justify-content:space-between" }, el("h3", { text: s.name }), el("span", { class: "muted", text: pct(s.share) + " of people" })), el("div", { class: "who", text: whoLine(s.who, W) }),
+    el("div", { class: "row", style: "justify-content:space-between;align-items:baseline" }, el("span", { class: "big", text: pct(s.support) }), el("span", { class: "small muted", text: `stronger than ${pct(s.stronger_than_pct_of_ideas)} of ideas scored` })),
+    el("div", { class: "stack", title: r.bands.map((b, i) => `${b}: ${pct(s.bands[i])}`).join(" · ") }, s.bands.map((b, i) => el("div", { style: `width:${b * 100}%;background:${BAND_COL[i]}` }))),
+    el("div", { class: "pull" }, el("span", { class: "t", text: "Pulls toward" }), el("span", { class: "up", text: ph(posd(s)) }), el("span", { class: "t", text: "Pushes away" }), el("span", { class: "dn", text: ph(negd(s)) })))));
+  const legend = el("div", { class: "legend" }, r.bands.map((b, i) => el("span", {}, el("i", { style: `background:${BAND_COL[i]}` }), b)), el("span", { text: "(bar = how the people in each group split across these levels of support)" }));
+  /* detail */
+  const lv = [...r.levers].map(l => ({ ...l, v: l.lift[r.segments.findIndex(x => x.id === sel.id)] })).sort((a, b) => b.v - a.v), tot = lv.reduce((a, l) => a + l.v, 0) || 1, by = (k) => lv.filter(l => l.kind === k).reduce((a, l) => a + l.v, 0) / tot;
+  const lead = by("offer") >= .6 ? "Most of the room is in the offer: what you ask of them and how plainly you say it." : by("belief") >= .4 ? "Much of it needs a change of belief or habit, which wording alone rarely moves." : by("world") >= .4 ? "Much of it is the world, which is a matter of timing." : "The room is spread across the offer and their beliefs.";
+  const both = r.readings.setup_app >= .5 && r.readings.id_photo >= .5;
+  const ind = Object.values(r.indicators).map(d => ({ name: d.name, up: d.up[r.segments.findIndex(x => x.id === sel.id)], down: d.down[r.segments.findIndex(x => x.id === sel.id)] })).sort((a, b) => Math.max(Math.abs(b.up), Math.abs(b.down)) - Math.max(Math.abs(a.up), Math.abs(a.down))).slice(0, 4);
+  const mxl = Math.max(5, ...lv.map(l => l.v)), kinds = { offer: "var(--accent)", belief: "var(--warn)", world: "var(--text-3)" };
+  const who = [["Median age", sel.who.median_age, W.median_age, 1], ["Under 35", sel.who.under_35, W.under_35], ["60 and over", sel.who.age_60_plus, W.age_60_plus], ["Under $60k a year", sel.who.under_60k, W.under_60k], ["Over $100k a year", sel.who.over_100k, W.over_100k], ["Big city", sel.who.big_city, W.big_city], ["Rural or small town", sel.who.rural_small_town, W.rural_small_town], ["Live alone", sel.who.lives_alone, W.lives_alone], ["Kids at home", sel.who.kids_at_home, W.kids_at_home], ["Share a home", sel.who.shares_home, W.shares_home], ["Retired", sel.who.retired, W.retired], ["Caring for a relative", sel.who.caring_for_relative, W.caring_for_relative]];
+  const tl = sel.timeline, ta2 = r.timeline_all, all = [...tl, ...ta2], mn = Math.min(...all), mxv = Math.max(...all), sp = (mxv - mn) || 0.01, Wd = 520, Hd = 110, line = (a, col, w) => svg("polyline", { fill: "none", stroke: col, "stroke-width": w, points: a.map((v, i) => `${(i / Math.max(a.length - 1, 1) * Wd).toFixed(1)},${(Hd - 6 - (v - mn) / sp * (Hd - 12)).toFixed(1)}`).join(" ") });
+  const detail = el("div", { class: "card" }, el("h2", { class: "step", text: `${sel.name}: why they back it, or don't` }), el("div", { class: "small muted", style: "margin-bottom:6px", text: `${pct(sel.share)} of people · support ${pct(sel.support)} (${pts((sel.support - r.overall) * 100)} against everyone). Each bar is how far this group sits from the average person on that factor, times how much that factor matters for this offer.` }),
+    el("div", { class: "twocol" }, el("div", {}, el("div", { class: "kicker", text: "What drives their support" }), driverBars(sel.drivers), el("div", { class: "small muted", style: "margin-top:4px", text: "Points are approximate; green pulls toward the offer, red pushes away." })),
+      el("div", {}, el("div", { class: "kicker", text: "What would move them" }), lv.slice(0, 7).map(l => el("div", { class: "drv" }, el("span", {}, l.label, el("span", { class: "tag", text: KIND[l.kind] })), el("div", { class: "axis" }, el("i", { style: `left:0;width:${Math.min(100, l.v / mxl * 100)}%;background:${kinds[l.kind]}` })), el("span", { style: "text-align:right", text: l.v < .05 ? "none" : "+" + l.v.toFixed(1) + " pts" }))),
+        el("div", { class: "verdict", style: "font-size:13.5px;margin-top:6px", text: lead }), both && el("div", { class: "small muted", style: "margin-top:4px", text: "Note: in our training examples the app requirement and the ID photo always came together, so their separate effects can't be told apart yet." }),
+        el("div", { class: "kicker", text: "What to watch (if this moves by 0.1)" }), ind.map(d => el("div", { class: "drv", style: "grid-template-columns:minmax(0,1.3fr) 1fr 1fr" }, el("span", { text: d.name }), el("span", { class: "muted", text: `rises: ${pts(d.up)}` }), el("span", { class: "muted", style: "text-align:right", text: `falls: ${pts(d.down)}` }))))),
+    el("div", { class: "twocol", style: "margin-top:10px" }, el("div", {}, el("div", { class: "kicker", text: "Who they are (this group vs everyone)" }), el("table", { class: "who small" }, who.map(([l, a, b, raw]) => el("tr", {}, el("th", { text: l }), el("td", { class: "n", text: raw ? a : pct(a) }), el("td", { class: "n muted", text: raw ? b : pct(b) }))))),
+      el("div", {}, el("div", { class: "kicker", text: "Support after each story (this group in colour, everyone in white)" }), svg("svg", { width: "100%", viewBox: `0 0 ${Wd} ${Hd}` }, line(ta2, "var(--text)", 2), line(tl, "var(--accent)", 2.5)), el("div", { class: "small muted", text: `Scale ${pct(mn)} to ${pct(mxv)}: small changes look big.` }))));
+  /* matrix */
+  const cols = r.levers, flat = r.segments.flatMap(s => cols.map(l => l.lift[r.segments.findIndex(x => x.id === s.id)])), mxm = Math.max(5, ...flat);
+  const matrix = el("div", { class: "card" }, el("h2", { class: "step", text: "Where a change moves each audience" }), el("div", { class: "small muted", style: "margin-bottom:6px", text: "Points of support gained if you pulled that lever. Read across a row to see what moves a group; read down a column to see who a change helps most. Click a row to open it." }),
+    el("div", { style: "overflow-x:auto" }, el("table", { class: "mx" }, el("thead", {}, el("tr", {}, el("th"), cols.map(l => el("th", { title: l.label, text: l.label.replace(/^(Make it|Remove the|Drop the|Remove|Ease their|Free up their|Make strangers|If the world were)\s*/i, "").slice(0, 16) || l.label })))),
+      el("tbody", {}, segs.map(s => { const si = r.segments.findIndex(x => x.id === s.id); return el("tr", {}, el("th", { class: "r", text: `${s.name} (${pct(s.support)})`, onclick: () => { S.sel = s.id; renderAudience(); } }), cols.map(l => { const v = l.lift[si]; return el("td", { style: `background:color-mix(in srgb, ${l.kind === "offer" ? "var(--accent)" : l.kind === "belief" ? "var(--warn)" : "var(--text-3)"} ${Math.round(Math.min(1, v / mxm) * 85)}%, var(--surface))`, title: `${s.name}: ${l.label}: +${v.toFixed(1)} pts`, text: v < .05 ? "·" : v.toFixed(1) }); })); })))),
+    el("div", { class: "legend" }, el("span", {}, el("i", { style: "background:var(--accent)" }), "change the offer"), el("span", {}, el("i", { style: "background:var(--warn)" }), "change their mind"), el("span", {}, el("i", { style: "background:var(--text-3)" }), "wait for the world")));
+  resultBox.replaceChildren(el("h2", { class: "step" }, el("span", { text: "2" }), "Your audience"), intro, cards, legend, detail, matrix);
+}
+document.getElementById("root").append(el("section", { class: "card" }, askBox), resultBox, el("section", { class: "card" }, worldBox));
+loadWorld().catch(e => worldBox.replaceChildren(el("div", { class: "callout bad", text: e.message })));
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+{
+ "snapshot": {
+  "world_tick": 39,
+  "world_digest": "1a0f3965942b",
+  "people": 50000,
+  "population_seed": 1,
+  "run_seed": 0,
+  "rules_hash": "c3d5ee8ab9",
+  "classifier": "Winnow-12B",
+  "decision_model": "take-up ridge fitted on 39 ideas x 400 people",
+  "created": "2026-10-04 14:37:18"
+ },
+ "answers": {
+  "take_up": {
+   "world": {
+    "by_node": {
+     "usa": 0.1993
+    },
+    "worst": 0.1993,
+    "best": 0.1993,
+    "percentile_among_known_ideas": 0.256
+   },
+   "country": {
+    "by_node": {
+     "usa": 0.1993
+    },
+    "worst": 0.1993,
+    "best": 0.1993,
+    "percentile_among_known_ideas": 0.256
+   },
+   "region": {
+    "by_node": {
+     "northeast": 0.2022,
+     "south": 0.1957,
+     "midwest": 0.1989,
+     "west": 0.2001
+    },
+    "worst": 0.1957,
+    "best": 0.2022,
+    "percentile_among_known_ideas": 0.256
+   },
+   "segment": {
+    "by_node": {
+     "income_low": 0.1512,
+     "income_high": 0.2293,
+     "age_young": 0.3297,
+     "age_senior": 0.0741
+    },
+    "worst": 0.0741,
+    "best": 0.3297,
+    "percentile_among_known_ideas": 0.256
+   },
+   "person": {
+    "share_yes": 0.133,
+    "p10": 0.0086,
+    "p90": 0.5781,
+    "percentile_among_known_ideas": 0.308
+   },
+   "levels_above_typical": 0,
+   "world_effect": {
+    "country_mean_now": 0.1993,
+    "country_mean_neutral_world": 0.2117,
+    "difference": -0.0124
+   },
+   "type": "noul",
+   "noul": 0.1993
+  },
+  "which_version": {
+   "type": "choice",
+   "choice": "free_sms",
+   "probabilities": {
+    "free_sms": 0.674,
+    "paid_app": 0.0636,
+    "free_app": 0.1963,
+    "none": 0.066
+   },
+   "by_level": {
+    "region": {
+     "northeast": {
+      "free_sms": 0.671,
+      "paid_app": 0.065,
+      "free_app": 0.198,
+      "none": 0.066
+     },
+     "south": {
+      "free_sms": 0.676,
+      "paid_app": 0.063,
+      "free_app": 0.193,
+      "none": 0.067
+     },
+     "midwest": {
+      "free_sms": 0.672,
+      "paid_app": 0.063,
+      "free_app": 0.199,
+      "none": 0.066
+     },
+     "west": {
+      "free_sms": 0.676,
+      "paid_app": 0.063,
+      "free_app": 0.195,
+      "none": 0.066
+     }
+    },
+    "segment": {
+     "income_low": {
+      "free_sms": 0.669,
+      "paid_app": 0.042,
+      "free_app": 0.216,
+      "none": 0.073
+     },
+     "income_high": {
+      "free_sms": 0.677,
+      "paid_app": 0.077,
+      "free_app": 0.184,
+      "none": 0.062
+     },
+     "age_young": {
+      "free_sms": 0.618,
+      "paid_app": 0.075,
+      "free_app": 0.284,
+      "none": 0.023
+     },
+     "age_senior": {
+      "free_sms": 0.675,
+      "paid_app": 0.053,
+      "free_app": 0.129,
+      "none": 0.143
+     }
+    }
+   },
+   "note": "the 'none' option has a fixed placeholder weight"
+  },
+  "rank_candidates": {
+   "type": "rank",
+   "ranking": [
+    "neighbour_loop_free_sms",
+    "gardenway",
+    "nightfall"
+   ],
+   "mean_take_up": {
+    "nightfall": 0.0172,
+    "gardenway": 0.0988,
+    "neighbour_loop_free_sms": 0.6285
+   },
+   "pairwise_share_preferring": {
+    "neighbour_loop_free_sms>gardenway": 0.924,
+    "neighbour_loop_free_sms>nightfall": 1.0,
+    "gardenway>nightfall": 0.677
+   },
+   "by_level": {
+    "region": {
+     "northeast": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ],
+     "south": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ],
+     "midwest": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ],
+     "west": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ]
+    },
+    "segment": {
+     "income_low": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ],
+     "income_high": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ],
+     "age_young": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ],
+     "age_senior": [
+      "neighbour_loop_free_sms",
+      "gardenway",
+      "nightfall"
+     ]
+    }
+   },
+   "same_order_at_every_region_and_segment": true
+  }
+ },
+ "item": {
+  "readings": {
+   "cost_monthly": 0.999,
+   "setup_app": 0.999,
+   "id_photo": 0.948,
+   "strangers": 0.999,
+   "time_heavy": 0.031,
+   "urban_only": 0.005,
+   "youth_target": 0.008,
+   "older_target": 0.009,
+   "rural_target": 0.024,
+   "novel": 0.884
+  },
+  "nearest_known_idea_distance": 0.0,
+  "typical_distance": 0.575,
+  "extrapolation_flag": false
+ },
+ "elapsed_s": 1.31
+}

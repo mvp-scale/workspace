@@ -22,6 +22,7 @@ from pathlib import Path
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
 import imagelab_api  # image tasks and stored answers for /imagelab
+import persona_api  # seeded personas, extractors and audience scoring for /personalab
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent / "probes"))
@@ -393,8 +394,40 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
+
+
+WORLD_LAB = "http://127.0.0.1:8111"  # probes/world-engine/world_service.py (mock-up engine service, started by hand)
+
+
+def world_lab_proxy(method, sub, body):
+    if sub.split("?")[0] not in ("/state", "/ask", "/audience", "/inject", "/reset"):
+        return 404, {"error": "not found"}
+    try:
+        req = urllib.request.Request(WORLD_LAB + sub, body, {"Content-Type": "application/json"}, method=method)
+        with urllib.request.urlopen(req, timeout=180) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+    except (urllib.error.URLError, OSError):
+        return 503, {"error": "The world engine service is not running. Start it with: /workspace/kev/.venv/bin/python probes/world-engine/world_service.py"}
+
+
+WORLD_ENGINE = "http://127.0.0.1:8112"  # probes/world-engine/world_service2.py (five-stage world engine, started by hand)
+
+
+def world_engine_proxy(method, sub, body):
+    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset"):
+        return 404, {"error": "not found"}
+    try:
+        req = urllib.request.Request(WORLD_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)
+        with urllib.request.urlopen(req, timeout=240) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+    except (urllib.error.URLError, OSError):
+        return 503, {"error": "The world engine service is not running. Start it with: /workspace/kev/.venv/bin/python probes/world-engine/world_service2.py"}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -414,6 +447,18 @@ class Handler(BaseHTTPRequestHandler):
             return imagelab_api.serve_image(self, path[len("/imagelab-img/"):])
         if path == "/api/imagelab":
             return self._send(200, imagelab_api.payload())
+        if path.startswith("/api/persona-lab/"):
+            r = persona_api.handle_get(path, self.path.partition("?")[2])
+            return self._send(*r)
+        if path in ("/personalab", "/worldlab"):  # folded into the world engine
+            self.send_response(302)
+            self.send_header("Location", "/worldengine")
+            self.end_headers()
+            return
+        if path.startswith("/api/world-engine/"):
+            return self._send(*world_engine_proxy("GET", path[len("/api/world-engine"):], None))
+        if path.startswith("/api/world-lab/"):
+            return self._send(*world_lab_proxy("GET", path[len("/api/world-lab"):], None))
         if path == "/api/audio-files":
             return self._send(200, audio_library.list_files())
         if path.startswith("/api/detector-"):
@@ -543,6 +588,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/detector-"):
             r = detector_api.handle_post(self.path.split("?")[0], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), detector_api.MAX_BODY + 1)))
             return self._send(*r) if r else self._send(404, {"error": "not found"})
+        if self.path.startswith("/api/world-engine/"):
+            return self._send(*world_engine_proxy("POST", self.path.split("?")[0][len("/api/world-engine"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
+        if self.path.startswith("/api/world-lab/"):
+            return self._send(*world_lab_proxy("POST", self.path.split("?")[0][len("/api/world-lab"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
+        if self.path.startswith("/api/persona-lab/"):
+            return self._send(*persona_api.handle_post(self.path.split("?")[0], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), persona_api.MAX_BODY + 1))))
         if self.path == "/api/decompose-live":
             return self._handle_decompose_live()
         if self.path == "/api/batch":

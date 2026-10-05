@@ -1,0 +1,16 @@
+id,name,kind,definition,half_life_ticks,grounding_series,status
+prices,Prices and cost of living,condition,How expensive everyday goods and services are for ordinary households.,150,"CPI (BLS, monthly)",draft
+housing_cost,Housing cost,condition,"Rent, house prices and mortgage cost.",300,"Case-Shiller, mortgage rate, rent index",draft: split out of prices (reviewers)
+energy_fuel,Energy and fuel,condition,"Fuel, electricity and heating cost and supply.",100,"gasoline price, energy CPI (EIA/BLS)",draft: split out of prices
+financial_conditions,Financial conditions,condition,"Interest rates, credit availability and market stress.",150,"policy rate, credit spreads, equity index","draft: new, ConsumerSim signal class"
+job_security,Job and income security,condition,How secure people's work and income are.,200,"unemployment rate, jobless claims, JOLTS",draft
+crime,Crime and personal safety,condition,Crime and violence around people's daily life.,100,"FBI UCR / NCVS (annual, lagged)",draft: was safety_fear; war and terror moved out
+war_terror,War and terror,condition,Armed conflict and terrorism affecting the audience's country or region.,150,"conflict event data (memory, unverified)","draft: new, reviewers"
+health_risk,Health risk,condition,Exposure to illness and strain on care.,150,CDC and WHO surveillance,draft
+trust_institutions,Trust in institutions,condition,"How credibly government, business and media are seen to act.",300,"Edelman, Gallup confidence (annual)",draft: may split government vs business/media
+community,Community and belonging,condition,How connected and supportive local communities are.,300,volunteering and time-use surveys,draft
+social_division,Social division,condition,Polarisation and perceived unfairness in society.,400,"Edelman grievance, polarisation surveys",draft: merges polarisation and inequality; split if overlap test says so
+tech_pace,Technology pace,condition,How fast technology is changing daily life and work.,200,Pew adoption surveys,draft: measures launches not adoption
+disruption,Disruption of routines,condition,"Interruptions to travel, power, services, school and work (including weather).",80,"NOAA storm events, outage data",draft
+optimism,Outlook (computed),outcome,"How hopeful people feel. Computed from the other dials, never read from a story.",200,Michigan sentiment (FRED UMCSENT),"draft: outcome, not input"
+news_overload,News overload,media,"Volume of reports per tick in the ledger. A fact about the media, not the world.",20,report counts in the ledger; GDELT,draft

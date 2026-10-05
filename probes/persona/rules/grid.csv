@@ -1,0 +1,40 @@
+element_id,dial_id,strength,why,moderated_by,status
+price_attention,prices,0.8,higher prices make people watch costs,liquidity (low = stronger),guess
+price_attention,housing_cost,0.3,housing cost squeezes everything else,tenure (renter = stronger),guess
+price_attention,energy_fuel,0.4,fuel and energy bills are visible,,guess
+price_attention,job_security,-0.3,"insecure people watch costs more (dial down, attention up)",,guess
+financial_stress,prices,0.6,higher prices strain budgets,liquidity (low = stronger),guess
+financial_stress,housing_cost,0.5,rent and mortgage are the largest bills,"tenure (renter, or owner with mortgage)",guess
+financial_stress,energy_fuel,0.3,energy bills,,guess
+financial_stress,financial_conditions,0.4,rising rates and tight credit raise strain,tenure; debt,guess
+financial_stress,job_security,-0.8,more security eases stress,,guess
+financial_stress,health_risk,0.3,illness brings cost,,guess
+liquidity,prices,-0.3,inflation erodes buffers,,guess
+liquidity,job_security,0.4,secure income rebuilds buffers,,guess
+optimism,optimism,0.6,the outlook dial is anchored on a real sentiment index and acts on personal optimism; identity-like: never reuse the same questions,,identity-like (anchored)
+optimism,prices,-0.4,cost pressure dampens hope,,guess
+optimism,job_security,0.5,secure work lifts hope,,guess
+optimism,crime,-0.3,fear dampens hope,,guess
+optimism,war_terror,-0.2,conflict dampens hope,,guess
+optimism,financial_conditions,-0.2,market stress dampens hope,asset ownership,guess
+optimism,social_division,-0.2,division dampens hope,,guess
+safety_concern,crime,0.9,"more crime, more concern",,identity-like: same construct as the dial; do not reuse questions
+safety_concern,war_terror,0.5,conflict raises concern,,guess
+safety_concern,health_risk,0.3,health threats raise caution,,guess
+safety_concern,disruption,0.2,disruption raises caution,,guess
+safety_concern,trust_institutions,-0.2,trusted institutions reassure,,guess
+institutional_trust,trust_institutions,0.9,same construct as the dial,political alignment (not in v2 yet),identity-like: do not reuse questions
+institutional_trust,social_division,-0.3,division erodes trust,,guess
+social_ease,community,0.5,"stronger community, easier with others",,guess
+social_ease,crime,-0.3,fear reduces openness to strangers,,guess
+social_ease,health_risk,-0.3,illness keeps people apart,,guess
+social_ease,social_division,-0.3,division makes strangers feel riskier,,guess
+time_pressure,disruption,0.6,disruption eats time,life_stage (caring duties = stronger),guess
+time_pressure,news_overload,0.2,overload eats attention,,guess
+novelty_seeking,crime,-0.3,fear narrows exploration,,guess
+novelty_seeking,tech_pace,0.2,fast tech change invites trying,,guess
+tech_comfort,tech_pace,0.1,small effect,,weak: near noise; hold at zero until data
+privacy_stance,trust_institutions,-0.5,"more trust, less reluctance to share",,contested sign
+privacy_stance,crime,-0.2,fear can raise acceptance of surveillance,,contested sign
+loss_aversion,financial_conditions,0.2,volatility raises loss sensitivity,,guess
+loss_aversion,war_terror,0.2,threat raises loss sensitivity,,guess
