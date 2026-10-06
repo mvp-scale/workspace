@@ -64,7 +64,7 @@ class Population:
                "financial_stress": 1 + 0.5 * (3 - inc), "optimism": cl(3 + .6 * r.standard_normal(n)), "safety_concern": cl(3 + .7 * r.standard_normal(n)), "institutional_trust": cl(3 + .7 * r.standard_normal(n)),
                "liquidity": cl(1 + .9 * inc + (age >= 60) * .5 + .5 * r.standard_normal(n)), "habit_inertia": cl(2.2 + age / 50 + .6 * r.standard_normal(n)), "loss_aversion": cl(3 + .6 * r.standard_normal(n)),
                "tenure": np.full(n, 3.0), "life_stage": 1 + 4 * age / 90}
-        self.base = np.column_stack([col[e] for e in ELS]).astype(np.float32); self.area = np.array([p['area'] for p in ps]); self.household = np.array([p['household'] for p in ps]); self.work = np.array([p['work'] for p in ps]); self.caregiver = np.array([p['caregiver'] for p in ps])
+        self.base = np.column_stack([col.get(e, np.full(n, 3.0)) for e in ELS]).astype(np.float32); self.area = np.array([p['area'] for p in ps]); self.household = np.array([p['household'] for p in ps]); self.work = np.array([p['work'] for p in ps]); self.caregiver = np.array([p['caregiver'] for p in ps])
         self.region = np.array([["Northeast", "South", "Midwest", "West"].index(p["region"]) for p in ps]); self.seg_inc = (inc >= 2).astype(int)           # 0 low, 1 high
         self.seg_age = np.where(age < 35, 0, np.where(age >= 60, 1, -1)); self.sal = r.uniform(.3, 1.0, (n, len(DIALS))).astype(np.float32); self.age = age; self.inc = inc
         self.flags = np.column_stack([age < 30, age >= 60, [p["area"] == "large city" for p in ps], [p["area"] in ("rural area", "small town") for p in ps], [p["work"] == "retired" for p in ps],

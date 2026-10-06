@@ -1,0 +1,225 @@
+# service.yaml -- the one place that says what can run here and what is "on".
+# Used by ./service.sh (tools/service.py). Edit this file, then:  ./service.sh check   to validate it.
+#
+# SERVICES say how a thing runs. PROFILES say which things are on.
+#   ./service.sh start              -> starts default_profile
+#   ./service.sh start full         -> a profile name
+#   ./service.sh restart tag:gpu    -> every service with that tag (tags are free labels)
+#   ./service.sh restart world      -> one service
+#
+# Service keys
+#   kind        proc (we launch and track it) | systemd (delegated to systemctl) | script (a script with start|stop|status)
+#   desc        one line shown in status
+#   port        the port it listens on (used for health and to find an untracked process)
+#   cmd         argv list; ${port} and ${root} are substituted (proc)
+#   cwd         working dir, relative to /workspace (proc)
+#   env         extra environment; ${port} substituted. env_file: a dotenv file loaded first (secrets stay in .env)
+#   path_prepend  directories put first on PATH (proc)
+#   unit        systemd unit name (default: the service name); blocking: true waits for start to finish
+#   script      path of the script (script kind)
+#   match       regex the process command line must match before we will stop it (safety)
+#   health      HTTP path that must answer (any status below 500) for the service to count as up
+#   boot        seconds to wait for health after a start
+#   after       services that must start before this one (stop runs in reverse)
+#   heavy       true = stop/restart asks first (loaded state or slow reload is lost)
+#   flex        true = may run on another port (a profile entry or --port)
+#   tags        free labels, used as  tag:<label>
+#   stop / restart   optional shell command overrides (default: signal the process / stop then start)
+#   log         log file (default logs/<name>.log)
+
+default_profile: core
+
+# Profile entries: a service name, another profile name, or a mapping {service: name, port: N, env: {K: V}}
+profiles:
+  core:   [winnow, world, demo]                     # the classifier, the World Engine, the console
+  models: [kev-4b, semif, so1, laya, verdict]       # the five loaded decision models (about 30 of 31.8 GiB together)
+  extras: [voice, mockups]
+  full:   [core, models, extras]
+  share:  [share]                                   # public Cloudflare links for demo and voice
+  test-world:                                       # a second engine beside the live one, for testing
+    - {service: world, port: 8122}
+  world-v2:                                         # the live engine on the expanded ontology (restart world-v2 to switch; restart world to go back to v1)
+    - {service: world, env: {WE_RULES: rules_v2}}
+  test-world-v2:                                    # a v2 engine on a test port beside the live one
+    - {service: world, port: 8132, env: {WE_RULES: rules_v2}}
+
+services:
+  winnow:
+    kind: proc
+    desc: Winnow-12B classifier (llama.cpp), reads every story
+    port: 8091
+    cwd: models/winnow-inference
+    env: {CUDA_VISIBLE_DEVICES: "0"}
+    path_prepend: [/usr/local/cuda/bin]
+    cmd:
+      - models/winnow-inference/.build/bin/winnow-server
+      - --model
+      - models/Winnow-12B/gguf/Winnow-12B-Q8_0.gguf
+      - --alias
+      - Winnow-12B
+      - --ctx-size
+      - "65536"
+      - --parallel
+      - "1"
+      - --n-gpu-layers
+      - "999"
+      - --fit
+      - "off"
+      - --flash-attn
+      - "on"
+      - --cache-type-k
+      - q8_0
+      - --cache-type-v
+      - q8_0
+      - --no-context-shift
+      - --lazy-mode
+      - "off"
+      - --split-mode
+      - none
+      - --override-tensor
+      - '^(token_embd|per_layer_token_embd)\.weight$=CUDA0'
+      - --batch-size
+      - "2048"
+      - --ubatch-size
+      - "1024"
+      - --threads
+      - "8"
+      - --host
+      - 127.0.0.1
+      - --port
+      - ${port}
+      - --jinja
+      - --reasoning
+      - "off"
+      - --no-warmup
+      - --cache-ram
+      - "0"
+      - --cors-origins
+      - ""
+      - --mmproj
+      - models/Winnow-12B/gguf/mmproj-Winnow-12B.gguf
+    match: winnow-server
+    health: /health
+    boot: 180
+    heavy: true
+    flex: true
+    tags: [gpu, classifier, core]
+    log: logs/winnow.log
+
+  world:
+    kind: proc
+    desc: World Engine 2 service (people, places, impact)
+    port: 8112
+    cwd: probes/world-engine
+    cmd: [/workspace/kev/.venv/bin/python, world_service2.py]
+    env: {WE2_PORT: "${port}"}
+    match: world_service2\.py
+    health: /live?since=0
+    boot: 120
+    after: [winnow]
+    heavy: true
+    flex: true
+    tags: [gpu, engine, core]
+    log: logs/world2.log
+
+  demo:
+    kind: proc
+    desc: "Console: leaderboard, flow, World Engine pages"
+    port: 8100
+    cmd: [python3, demo/server.py]
+    env_file: .env
+    env: {DEMO_PORT: "${port}"}        # set WORLD_ENGINE_URL in your shell to aim a demo at a test engine
+    match: demo/server\.py
+    health: /api/status
+    boot: 30
+    after: [world]
+    flex: true
+    tags: [web, core]
+    log: logs/demo.log
+
+  voice:
+    kind: proc
+    desc: Live speaker-attributed transcription
+    port: 8200
+    cwd: voice
+    cmd: [.venv/bin/python, server.py]
+    match: 'server\.py'
+    health: /api/status
+    boot: 90
+    tags: [gpu, voice]
+    log: logs/voice.log
+
+  mockups:
+    kind: proc
+    desc: Static mock-ups
+    port: 8110
+    cwd: demo/mockups
+    cmd: [python3, -m, http.server, -b, 127.0.0.1, -d, "${root}/demo", "${port}"]
+    match: http\.server
+    health: /
+    boot: 10
+    flex: true
+    tags: [web]
+    log: logs/mockups.log
+
+  kev-4b:
+    kind: systemd
+    desc: kev-4b decision model (starts first; needs about 17 GiB while loading)
+    port: 8010
+    blocking: true
+    match: serve_kev
+    health: /v1/models
+    boot: 240
+    heavy: true
+    tags: [gpu, model]
+
+  semif:
+    kind: systemd
+    desc: SemIf model
+    port: 8012
+    after: [kev-4b]
+    match: serve_inproc
+    health: /
+    boot: 300
+    heavy: true
+    tags: [gpu, model]
+
+  so1:
+    kind: systemd
+    desc: Open-alternative Jev model
+    port: 8013
+    after: [kev-4b]
+    match: serve_inproc
+    health: /
+    boot: 300
+    heavy: true
+    tags: [gpu, model]
+
+  laya:
+    kind: systemd
+    desc: Laya model
+    port: 8014
+    after: [kev-4b]
+    match: serve_inproc
+    health: /
+    boot: 300
+    heavy: true
+    tags: [gpu, model]
+
+  verdict:
+    kind: systemd
+    desc: Verdict model (CPU)
+    port: 8015
+    after: [kev-4b]
+    match: serve_inproc
+    health: /
+    boot: 300
+    heavy: true
+    tags: [cpu, model]
+
+  share:
+    kind: script
+    desc: Cloudflare quick tunnels for demo and voice (public links)
+    script: ./cf_start.sh
+    after: [demo, voice]
+    tags: [public]

@@ -1,0 +1,68 @@
+decision_id,resource_id,direction,weight,why,status
+spend,asset_wealth,draw,0.8,spending uses up money held,guess
+spend,food_stock,draw,0.5,food is the biggest everyday spend,guess
+spend,productive_capital,build,0.2,demand supports firms,guess
+buy_new,productive_capital,build,0.5,orders keep factories working,guess
+buy_new,minerals_materials,draw,0.5,goods embed metals and materials,guess
+buy_new,asset_wealth,draw,0.5,paying for it,guess
+buy_new,primary_energy,draw,0.2,making goods uses energy,guess
+subscribe,asset_wealth,draw,0.5,recurring payment,guess
+subscribe,attention,draw,0.5,a commitment takes ongoing attention,guess
+subscribe,computing_capacity,build,0.2,many are digital services,guess
+travel,primary_energy,draw,0.8,trips burn fuel,guess
+travel,atmosphere_climate,draw,0.5,travel adds emissions,guess
+travel,asset_wealth,draw,0.5,tickets and stays cost money,guess
+travel,built_infrastructure,draw,0.2,wears roads and terminals,guess
+change_work,skills,build,0.5,a new job builds skills,guess
+change_work,labour_force,build,0.5,matches people to work,guess
+change_work,community_ties,draw,0.2,leaving a workplace loosens ties,guess
+move,housing_stock,draw,0.8,moving uses housing stock,guess
+move,asset_wealth,draw,0.5,moving costs money,guess
+move,population,build,0.5,moves shift where people live,guess
+move,community_ties,draw,0.2,leaves local ties behind,guess
+switch_brand,attention,draw,0.5,comparing providers takes attention,guess
+switch_brand,knowledge,build,0.2,comparing spreads price information,guess
+switch_brand,supply_networks,build,0.2,shifts which supply links are used,guess
+share,attention,build,0.5,sharing earns audience attention,guess
+share,knowledge,build,0.5,sharing spreads information,guess
+share,social_trust,draw,0.2,heated sharing can spend trust,guess
+share,legitimacy,build,0.2,public voice can back or challenge authority,guess
+vote,legitimacy,build,0.8,voting is how authority is accepted or withdrawn,guess
+vote,state_capacity,build,0.2,a mandate lets government act,guess
+vote,attention,draw,0.2,following politics takes attention,guess
+protest,legitimacy,draw,0.5,protest challenges authority,guess
+protest,state_capacity,draw,0.5,policing protests uses state capacity,guess
+protest,community_ties,build,0.5,joining builds networks,guess
+protest,attention,build,0.2,protest draws attention,guess
+health_action,population_health,build,0.8,acting on health improves health,guess
+health_action,care_capacity,draw,0.5,care visits use clinics and staff,guess
+health_action,asset_wealth,draw,0.2,care and products cost money,guess
+study_train,skills,build,0.8,study adds skills,guess
+study_train,attention,draw,0.5,study takes time and focus,guess
+study_train,asset_wealth,draw,0.2,fees and lost earnings,guess
+family_change,population,build,0.5,births and household changes shape population,guess
+family_change,housing_stock,draw,0.5,a new household needs a home,guess
+family_change,asset_wealth,draw,0.5,costs money,guess
+family_change,community_ties,build,0.2,family changes link or loosen ties,guess
+stockpile_prepare,food_stock,draw,0.8,stocking up uses food supply,guess
+stockpile_prepare,supply_networks,draw,0.5,panic buying strains deliveries,guess
+stockpile_prepare,asset_wealth,draw,0.5,paying for supplies or cover,guess
+stockpile_prepare,water,draw,0.2,bottled and stored water,guess
+start_business,productive_capital,build,0.8,a business adds equipment and stock,guess
+start_business,labour_force,build,0.5,creates work,guess
+start_business,asset_wealth,draw,0.5,savings go into it,guess
+start_business,monetary_credit,draw,0.2,often needs a loan,guess
+donate_volunteer,community_ties,build,0.8,giving and joining build local networks,guess
+donate_volunteer,social_trust,build,0.5,helping others builds trust,guess
+donate_volunteer,asset_wealth,draw,0.2,gifts cost money,guess
+claim_support,public_finances,draw,0.8,benefits are paid from government funds,guess
+claim_support,state_capacity,draw,0.5,claims use public service staff,guess
+claim_support,attention,draw,0.2,forms take time,guess
+borrow,monetary_credit,draw,0.8,a loan uses lending capacity,guess
+borrow,asset_wealth,draw,0.5,debt reduces net wealth,guess
+invest,asset_wealth,build,0.5,invested savings aim to grow,guess
+invest,monetary_credit,build,0.5,funds flow into the financial system,guess
+invest,productive_capital,build,0.2,some money reaches firms,guess
+break_rules,legitimacy,draw,0.5,ignoring rules weakens authority,guess
+break_rules,state_capacity,draw,0.5,enforcement uses state capacity,guess
+break_rules,social_trust,draw,0.2,rule breaking erodes trust,guess

@@ -4,7 +4,9 @@ per headline in /workspace/data/news/classified.jsonl. Output: /workspace/data/n
 Run from this folder with the engine's python (needs the Winnow server on :8091): python classify_news_bank.py"""
 import csv, json, os, random, collections, datetime, hashlib, sys
 sys.path.insert(0, "/workspace/probes/persona"); import classify as C; O = C.O
-RAW, CACHE, OUT = "/workspace/data/news/raw_headlines.json", "/workspace/data/news/classified.jsonl", "/workspace/data/news/bank.json"
+import rules as RU      # WE_RULES picks the topic list; a non-v1 ruleset gets its own cache and bank files (classified_<rules>.jsonl, bank_<rules>.json) so the v1 ones are never overwritten
+SUF = "" if RU.IS_V1 else "_" + os.path.basename(RU.R)
+RAW, CACHE, OUT = "/workspace/data/news/raw_headlines.json", f"/workspace/data/news/classified{SUF}.jsonl", f"/workspace/data/news/bank{SUF}.json"
 WBC = json.load(open("/workspace/probes/world-engine/data/sources_raw/wb_countries.json"))[1]
 iso2 = {x["id"]: x["iso2Code"] for x in WBC}; region_of = {x["id"]: x["region"]["value"] for x in WBC}      # the server allows 2-64 options per question, so country is asked within a world region
 region_of.setdefault("TWN", "East Asia & Pacific"); iso2.setdefault("TWN", "TW")      # Taiwan is in the UN table but not in the World Bank country list
@@ -37,9 +39,13 @@ with open(CACHE, "a") as f:
         if g != "GLOBAL":
             b = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": in_region[g]}}); c = b["c"]["choice"]; pc = float(b["c"]["probabilities"][c]) * float(pg[g])
             c = "WORLD" if c == "OTHER_HERE" else c
-        r = dict(it, cc=c, c=("WORLD" if c == "WORLD" else iso2.get(c, c[:2])), t=TOPIC.get(t, "OTHER"), p_c=round(pc, 3), p_t=round(float(pt[t]), 3)); done[it["x"]] = r; f.write(json.dumps(r, ensure_ascii=False) + "\n"); f.flush(); n += 1
+        r = dict(it, cc=c, c=("WORLD" if c == "WORLD" else iso2.get(c, c[:2])), t=(TOPIC.get(t, "OTHER") if RU.IS_V1 else t), p_c=round(pc, 3), p_t=round(float(pt[t]), 3)); done[it["x"]] = r; f.write(json.dumps(r, ensure_ascii=False) + "\n"); f.flush(); n += 1
         if n % 25 == 0: print(n, "classified", flush=True)
 bank = [done[i["x"]] for i in picked if i["x"] in done]
-for g in json.load(open("/workspace/demo/ticker.json")): bank.append({"x": g["x"], "c": g["c"], "t": g["t"], "src": "written by us", "kind": "generated"})
+for g in json.load(open("/workspace/demo/ticker.json")):
+    t = g["t"]
+    if not RU.IS_V1:      # our own lines carry v1 tags; under another ruleset the model places them in that ruleset's topics
+        t = O.call(f"News item (published {today}; today is {today}):\n{g['x']}.", {"t": {"type": "choice", "instructions": "Which area is this story mainly about?", "criteria": {d["id"]: d["definition"] for d in C.DOMAINS}}})["t"]["choice"]
+    bank.append({"x": g["x"], "c": g["c"], "t": t, "src": "written by us", "kind": "generated"})
 rng.shuffle(bank); json.dump(bank, open(OUT, "w"), indent=0, ensure_ascii=False)
 print(len(bank), "in the bank:", dict(collections.Counter(b["kind"] for b in bank)), "| WORLD-tagged real:", sum(1 for b in bank if b["kind"] != "generated" and b["c"] == "WORLD"))

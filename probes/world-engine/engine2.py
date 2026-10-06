@@ -4,7 +4,16 @@ import sys, hashlib
 import numpy as np
 sys.path.insert(0, "/workspace/probes/persona"); sys.path.insert(0, "/workspace/probes/world-engine")
 import engine as E
+from rules import load_opt
 DIALS = E.DIALS; SETTLES = ["metro", "town", "rural"]
+MAX_TIE_HOPS = 3        # a change that came from a tie may start at most this many further ties in a row (ties have |strength| < 1 and pass the same gate, so this is a second guard against loops)
+def load_ties():
+    """condition -> condition ties from the active ruleset's dial_ties.csv: {source condition index: [(target index, strength)]}. No file = no ties = the old behaviour exactly."""
+    t = {}
+    for r in load_opt("dial_ties"):
+        if r["from_dial"] in DIALS and r["to_dial"] in DIALS: t.setdefault(DIALS.index(r["from_dial"]), []).append((DIALS.index(r["to_dial"]), float(r["strength"])))
+    return t
+TIES = load_ties()
 class World2:
     def __init__(self, countries, seed=0, noise=True, sigma=0.05):
         self.countries = countries; self.cid = [c["id"] for c in countries]; self.nodes = ["WORLD:world"] + [f"COUNTRY:{c}" for c in self.cid] + [f"REGION:{c}-{s}" for c in self.cid for s in SETTLES]
@@ -25,6 +34,11 @@ class World2:
         t = self.tick; due = sorted([q for q in self.queue if q[0] <= t], key=lambda q: (q[0], q[1])); self.queue = [q for q in self.queue if q[0] > t]
         for (_, _, node, di, amt, ev, path) in due:
             self.delta[node][di] += amt; self.log.append({"tick": t, "node": node, "dial": DIALS[di], "amount": amt, "event": ev, "path": path + [node]})
+            hops = sum(1 for p in path if isinstance(p, str) and p.startswith("~tie:"))
+            for dj, s_ in TIES.get(di, ()):          # condition -> condition tie: strength x amount lands on the target at the SAME node one tick later; no noise, no edge channels (the source change already travels along the edges and each place applies its own tie); same gate as the edges
+                a = amt * s_
+                if hops < MAX_TIE_HOPS and abs(a) >= 0.002: self.seq += 1; self.queue.append((t + 1, self.seq, node, dj, a, ev, path + [f"~tie:{DIALS[di]}"]))
+            if path and isinstance(path[-1], str) and path[-1].startswith("~tie:"): continue       # a tie-made change is not sent along the edges again
             for e in self.edges_from[node]:
                 a = amt * e["gain"][di] * (1 + e["slant"][di])
                 if abs(a) < e["gate"]: continue

@@ -2,28 +2,48 @@
 
 Everything to bring the demo back up and look at the output. Run from `/workspace`. Deeper context: `CLAUDE.md` (commands, architecture), `BRIDGE.md` (history).
 
-## 1. Check what is running
+## 1. One command for everything: `./service.sh`
+
+Run from `/workspace`. `service.yaml` says what exists and what is on; `./service.sh` acts on it (logic in `tools/service.py`). It replaces the old separate commands (`lineup.sh up`, hand-run demo, engine and Winnow launches).
 
 ```
-demo/lineup.sh status                                   # 5 local models: kev-4b :8010, semif :8012, so1 :8013, laya :8014, verdict :8015
-curl -s -o /dev/null -w "%{http_code}\n" localhost:8100/   # demo server, expect 200
-curl -s localhost:8100/api/status                       # live state, real identity, GPU memory per model
-git status --short; git log --oneline -3                # local repo only, no remote
+./service.sh help                   # every command, target and example (./service.sh help restart for one command)
+./service.sh                        # status of everything: port, state, pid, uptime, extra test copies, GPU memory
+./service.sh start                  # start the default profile (core: winnow, world, demo); skips what is up
+./service.sh start full             # a profile: core + models + extras
+./service.sh restart demo           # after editing demo/ code (no prompt)
+./service.sh restart world          # after editing probes/world-engine code (asks first: loaded state is lost)
+./service.sh stop tag:model         # a tag: every service labelled model (asks first)
+./service.sh start test-world       # a profile with a port: a second engine on :8122 beside the live one
+./service.sh start world --port 8130   # same idea ad hoc
+./service.sh logs world -f          # follow a log
+./service.sh list                   # services, tags, profiles
+./service.sh check                  # validate service.yaml (refs, ports, paths, systemd units)
+./service.sh restart world --dry-run   # show what would run, change nothing
 ```
 
-## 2. Start things
+**Change what is on by editing `service.yaml`**, not the script:
+- `default_profile` is what a bare `./service.sh start` brings up. `profiles:` are named lists of services (or other profiles, or `{service: world, port: 8122}`).
+- `services:` holds how each runs: command, port, health path, boot wait, `after` (start order), `heavy` (asks before stop), `flex` (may take another port), `tags` (free labels for `tag:<label>`), optional `stop:` / `restart:` shell overrides.
+- Run `./service.sh check` after any edit.
 
-| What | Command |
-|---|---|
-| Models (kev-4b must go first: ~17.8 GiB while loading) | `demo/lineup.sh up` (also `down`, `install`) |
-| Demo server (real console) | `set -a; . ./.env; set +a; python3 demo/server.py` then open http://127.0.0.1:8100 |
-| Mock-ups (static, no server needed) | `python3 -m http.server -d demo/mockups 8110` then open http://127.0.0.1:8110 or open `demo/mockups/index.html` |
+| Service | Port | Profile | What |
+|---|---|---|---|
+| winnow | 8091 | core | Winnow-12B classifier (reads every story) |
+| world | 8112 | core | World Engine 2 service (after winnow) |
+| demo | 8100 | core | the console; http://127.0.0.1:8100 (reads `.env`) |
+| kev-4b, semif, so1, laya, verdict | 8010, 8012-8015 | models | the five loaded models (systemd; kev-4b first, about 17.8 GiB while loading) |
+| voice | 8200 | extras | live transcription |
+| mockups | 8110 | extras | static mock-ups |
+| share | n/a | share | Cloudflare tunnels for demo and voice (`cf_start.sh`) |
 
-Model logs: `tail -f logs/kev-4b.log` (also `semif`, `so1`, `laya`, `verdict`). Restart a model: `systemctl restart kev-4b`.
+Start order follows `after`; stop is the reverse. Stop or restart of a `heavy` service asks first (`-y` skips). It only kills a process whose command line matches the service (`--force` overrides). Logs are `logs/<name>.log` (world is `logs/world2.log`). Point a demo at a test engine: `WORLD_ENGINE_URL=http://127.0.0.1:8122 ./service.sh start demo --port 8130`.
+
+Also: `curl -s localhost:8100/api/status` (live state, real identity, GPU memory per model); `git status --short; git log --oneline -3` (local repo only, no remote). `demo/lineup.sh install` still writes the model unit files. The Cloudflare share link dies when the demo is down; run `./service.sh start share` after a restart.
 
 **Do not**: restart `demo/server.py` while an experiment runs through it (its cache lives in memory); run the Baseline compare "Run" or any script that calls the hosted model (`jev`) without asking; leave wait loops without a `timeout`.
 
-## 3. Where the output is
+## 2. Where the output is
 
 | Page | URL / file |
 |---|---|
@@ -33,7 +53,7 @@ Model logs: `tail -f logs/kev-4b.log` (also `semif`, `so1`, `laya`, `verdict`). 
 
 Mock-ups are scripted: no audio, no speech to text, no model calls. Press Play (or space). Only Apollo 13 is a real transcript.
 
-## 4. Measure and screenshot the mock-ups
+## 3. Measure and screenshot the mock-ups
 
 Needs Playwright + Chromium (no browser otherwise). The earlier install lived in a session scratchpad under `/tmp` and may be gone; reinstall:
 
@@ -51,7 +71,7 @@ PLAYWRIGHT_BROWSERS_PATH=/tmp/pwb /tmp/pw/bin/python demo/mockups/tools/measure.
 
 Put a `timeout` on each run and check `ps aux | grep -E "measure.py|chrome-headless"` afterwards.
 
-## 5. Other useful commands
+## 4. Other useful commands
 
 ```
 python3 probes/report_v2.py                                   # accuracy over the published probe sets
@@ -60,7 +80,7 @@ TASKS_DIR=/workspace/probes/v2 BENCH_OUT=/workspace/data/probe-runs-v2 demo/benc
 python3 demo/vram.py                                          # measure GPU memory (stop servers first)
 ```
 
-## 6. Where things stand
+## 5. Where things stand
 
 - **`/flow` (Conversation flow) is built and running** (`demo/flow.html`): detector bar (colour + icon each, up to 20, add your own), person cards showing each person's hits, per-person windows, coaching for the person you pick, cue cards for everyone else, heat-strip history, and a Captured card with tabs (Flagged, Detectors, Settings, Request, Events). Detectors show, flag and chart only at or above the minimum threshold; a detector fades 8 s after its last supporting evidence from that voice; a new different cue from a voice shifts that voice's older cue cards out. Flagged rows match cue cards (icon, cue, voice, %, time) plus the sentence. Not yet in: scrubber and step, a facts extractor, live speech-to-text (the source is an interface: words with speaker and time), narrowed phrase highlights (highlights mark the whole scored sentence).
 

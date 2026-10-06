@@ -1,0 +1,49 @@
+id,frame,lead,certainty,template,note
+SQ-T,squeeze,trigger,any,"{Trigger}, and {subj} {mod_}feel the squeeze: they {resp}{resp2}.",
+SQ-W,squeeze,who,any,"{Who_lead}: {trigger}, so {there} {resp}{resp2}.",
+SQ-S,squeeze,scale,any,"A {scale} squeeze: {trigger}, so {subj} {resp}{resp2}.",
+SQ-C,squeeze,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+RL-T,relief,trigger,any,"{Trigger}: {subj} {resp}{resp2}.",
+RL-W,relief,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+RL-S,relief,scale,any,"{Trigger}, a {scale} relief for {reach}: they {resp}{resp2}.",world focus only; non-world focus uses RL-T
+RL-C,relief,certainty,forecast|opinion|unclear,"{Hedge} {trigger}: {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+SC-T,scare,trigger,any,"{Trigger}, so {subj} {resp}{resp2}.",
+SC-W,scare,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+SC-S,scare,scale,any,"A {scale} scare: {trigger}, so {subj} {resp}{resp2}.",
+SC-C,scare,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+BL-T,blow,trigger,any,"{Trigger}, and the blow {lands} on {subj}: they {resp}{resp2}.",
+BL-W,blow,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+BL-S,blow,scale,any,"A {scale} blow: {trigger}, and {subj} {resp}{resp2}.",
+BL-C,blow,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and the blow {lands} on {subj}: they {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+SH-T,shake_up,trigger,any,"{Trigger}, and {subj} {mod_}adjust: they {resp}{resp2}.",
+SH-W,shake_up,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+SH-S,shake_up,scale,any,"A {scale} shake-up: {trigger}, and {subj} {resp}{resp2}.",
+SH-C,shake_up,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, shaking things up: {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+SU-T,surge,trigger,any,"{Trigger}, and {subj} {mod_}respond: they {resp}{resp2}.",
+SU-W,surge,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+SU-S,surge,scale,any,"A {scale} surge: {trigger}, and {subj} {resp}{resp2}.",
+SU-C,surge,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+FR-T,freeze,trigger,any,"{Trigger}, and {subj} {mod_}wait and see: they {resp}{resp2}.",
+FR-W,freeze,who,any,"{Who_lead}: {trigger}, so {there} {resp}{resp2}.",
+FR-S,freeze,scale,any,"A {scale} freeze: {trigger}, so {subj} {resp}{resp2}.",
+FR-C,freeze,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+RF-T,rift,trigger,any,"{Trigger}, and {subj} {mod_}take sides: they {resp}{resp2}.",
+RF-W,rift,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+RF-S,rift,scale,any,"A {scale} rift: {trigger}, and {subj} {resp}{resp2}.",
+RF-C,rift,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+BO-T,boost,trigger,any,"{Trigger}, and {subj} {resp}{resp2}.",
+BO-W,boost,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+BO-S,boost,scale,any,"A {scale} boost: {trigger}, and {subj} {resp}{resp2}.",
+BO-C,boost,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+RP-T,ripple,trigger,any,"{Trigger}, but daily life barely changes: {subj} {resp}{resp2}.",
+RP-W,ripple,who,any,"{Who_lead}, and even there the change is {band}: {there} {resp}{resp2}.",
+RP-S,ripple,scale,any,"Barely a ripple{for_subj}: {trigger}, and few people change what they do.",
+RP-C,ripple,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, but little changes for {subj}.",hedge variant by rule (ontology: Variety)
+PL-T,plain,trigger,any,"{Trigger}, and {subj} {resp}{resp2}.",fallback family when the frame's sense contradicts the response and the runner-up does too
+PL-W,plain,who,any,"{Who_lead}: {trigger}, and {there} {resp}{resp2}.",
+PL-S,plain,scale,any,"A {scale} shift: {trigger}, and {subj} {resp}{resp2}.",
+PL-C,plain,certainty,forecast|opinion|unclear,"{Hedge} {trigger}, and {subj} {resp}{resp2}.",hedge variant by rule (ontology: Variety)
+NO-X,any,quiet,no_impact,Nothing to say: this story moves none of the things we track.,identify.counted is false (no reading cleared the bar)
+NO-Q,any,quiet,happened|announced|pending,"{Trigger}, but no decision moves enough to matter{for_subj}.",counted but the focus has no move >= 0.25 points
+NO-O,any,quiet,opinion,An opinion piece: on our numbers no one changes what they do.,opinion with no move >= 0.25 at the focus
+NO-F,any,quiet,forecast|unclear,"{Hedge} {trigger}, but no decision moves enough to matter{for_subj}.",forecast or unclear with no move >= 0.25 at the focus

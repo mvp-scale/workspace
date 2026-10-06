@@ -26,7 +26,7 @@ case "${1:-start}" in
   stop) stop ;;
   status) show ;;
   start)
-    curl -sf "http://127.0.0.1:$DEMO_PORT/api/status" >/dev/null || { echo "demo not answering on :$DEMO_PORT (./start.sh start)"; exit 1; }
+    curl -sf "http://127.0.0.1:$DEMO_PORT/api/status" >/dev/null || { echo "demo not answering on :$DEMO_PORT (./service.sh start demo)"; exit 1; }
     curl -sf "http://127.0.0.1:$VOICE_PORT/api/status" >/dev/null || echo "warning: voice server not answering on :$VOICE_PORT"
     [ -f "$RUN/demo.pid" ] && stop
     tunnel demo "$DEMO_PORT" >/dev/null; tunnel voice "$VOICE_PORT" >/dev/null; show ;;

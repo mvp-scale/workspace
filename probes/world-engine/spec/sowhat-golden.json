@@ -1,0 +1,3045 @@
+{
+ "version": 1,
+ "about": "Golden cases for the so-what composer. Inputs: spec/sowhat-fixtures/<n>.json (engine responses, rules_v2, captured 2026-10-06) plus the two classifier answers measured on Winnow-12B during design (story.frame, story.trigger). Expected output: headline, line2, template, lead, and each beat with its trace. Old = what the current page prints for the same input.",
+ "cases": [
+  {
+   "id": "01",
+   "fixture": "spec/sowhat-fixtures/01.json",
+   "text": "The central bank cut interest rates by half a point today",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "relief": 0.7863173204239337,
+      "boost": 0.19049397339528093,
+      "surge": 0.020558913000760366
+     },
+     "state_moves": [
+      "loans get cheaper or easier to get",
+      "share, property and savings values rise",
+      "people spend more",
+      "people buy more new things"
+     ],
+     "text_only_top": [
+      [
+       "relief",
+       0.921
+      ],
+      [
+       "ripple",
+       0.048
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "borrowing_cost": 0.9824598095014705,
+     "private_debt": 0.010535018699988588,
+     "housing_cost": 0.004119753717631554
+    }
+   },
+   "weak_spot": null,
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Loans get cheaper: people open their wallets and invest a bit more.",
+      "line2": "Builds, then eases. A minor shift that reaches nearly everyone.",
+      "template": "RL-T",
+      "lead": "trigger",
+      "frame": "relief",
+      "shrink": [],
+      "line2_beats": [
+       "arc",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "loans get cheaper",
+        "trace": "trigger choice: borrowing_cost 0.98, runner-up private_debt 0.01; borrowing_cost down: strength 0.996, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.98, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "relief",
+        "trace": "frame choice: relief 0.79, runner-up boost 0.19; response sense up (spend+buy_new+subscribe+travel +2.18)"
+       },
+       {
+        "kind": "response",
+        "text": "open their wallets and invest a bit more",
+        "trace": "spending: spend +1.30, buy_new +0.88 (peak pts at World); money: invest +0.61 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "Builds, then eases.",
+        "trace": "spend at World: now +0.97, next +1.30, later +0.72; peak next; keeps 55%"
+       },
+       {
+        "kind": "scale",
+        "text": "A minor shift that reaches nearly everyone.",
+        "trace": "Size 20.4 (Minor); spend reach 99.4% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Big-city high earners react a bit less than most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city +0.80 vs world +1.30 (x0.62)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to spend more, buy more new things and stay where they live."
+    },
+    {
+     "focus": "AUDIENCE:4",
+     "label": "Higher-income, tech-comfortable, big-city",
+     "expect": {
+      "headline": "Loans get cheaper: big-city high earners invest more and open their wallets.",
+      "line2": "More than most people. A clear shift here.",
+      "template": "RL-T",
+      "lead": "trigger",
+      "frame": "relief",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "loans get cheaper",
+        "trace": "trigger choice: borrowing_cost 0.98, runner-up private_debt 0.01; borrowing_cost down: strength 0.996, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.98, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "relief",
+        "trace": "frame choice: relief 0.79, runner-up boost 0.19; response sense up (spend+buy_new+subscribe+travel +1.33)"
+       },
+       {
+        "kind": "response",
+        "text": "invest more and open their wallets",
+        "trace": "money: invest +1.05, borrow +0.37 (peak pts at Higher-income, tech-comfortable, big-city); spending: spend +0.80, buy_new +0.53 (peak pts at Higher-income, tech-comfortable, big-city)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "invest at Higher-income, tech-comfortable, big-city: now +0.96, next +1.05, later +0.55; peak next; keeps 52%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "invest +1.05 pts at Higher-income, tech-comfortable, big-city -> band clear (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "More than most people.",
+        "trace": "invest: Higher-income, tech-comfortable, big-city +1.05 vs world +0.61 (x1.72)"
+       }
+      ]
+     },
+     "old": "Higher-income, tech-comfortable, big-city people are likelier to put savings into shares, funds or property, spend more and buy more new things."
+    }
+   ]
+  },
+  {
+   "id": "02",
+   "fixture": "spec/sowhat-fixtures/02.json",
+   "text": "A new pandemic virus is spreading fast across several countries, and hospitals report a surge in admissions",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "scare": 0.9891148229532579,
+      "surge": 0.008412034513564953,
+      "shake_up": 0.0018865473362016368
+     },
+     "state_moves": [
+      "exposure to illness, injury or outbreak increases",
+      "hospitals, clinics, staff or medicine supply come under more strain",
+      "people seek care, get tested or change a health habit",
+      "people travel less"
+     ],
+     "text_only_top": [
+      [
+       "scare",
+       0.997
+      ],
+      [
+       "surge",
+       0.002
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "health_risk": 0.9763281147245196,
+     "care_strain": 0.023584086076744473,
+     "public_service_quality": 8.779919873602894e-05
+    }
+   },
+   "weak_spot": null,
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "A major scare: health risks rise, so people protect themselves and travel far less.",
+      "line2": "A quick jolt that fades. Older, tech-wary people react more than most people.",
+      "template": "SC-S",
+      "lead": "scale",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "arc",
+       "who"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "health risks rise",
+        "trace": "trigger choice: health_risk 0.98, runner-up care_strain 0.02; health_risk up: strength 0.99, reported (reported), size severe"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.94, announced 0.04, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.99, runner-up surge 0.01; response sense down (spend+buy_new+subscribe+travel -4.71)"
+       },
+       {
+        "kind": "response",
+        "text": "protect themselves and travel far less",
+        "trace": "protection: health_action +4.77, stockpile_prepare +2.97 (peak pts at World); travel: travel -4.71 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "health_action at World: now +4.77, next +3.70, later +1.33; peak now; keeps 28%"
+       },
+       {
+        "kind": "scale",
+        "text": "A major shift that reaches nearly everyone.",
+        "trace": "Size 53.0 (Major); health_action reach 100.0% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Older, tech-wary people react more than most people.",
+        "trace": "health_action: Older, set in their ways, tech-wary +7.75 vs world +4.77 (x1.62)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to seek care, get tested or change a health habit, travel less and stock up on supplies or buy protection or insurance."
+    },
+    {
+     "focus": "AUDIENCE:6",
+     "label": "Older, set in their ways, tech-wary",
+     "expect": {
+      "headline": "A big scare: health risks rise, so older, tech-wary people protect themselves and travel far less.",
+      "line2": "A quick jolt that fades. More than most people.",
+      "template": "SC-S",
+      "lead": "scale",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "arc",
+       "who"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "health risks rise",
+        "trace": "trigger choice: health_risk 0.98, runner-up care_strain 0.02; health_risk up: strength 0.99, reported (reported), size severe"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.94, announced 0.04, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.99, runner-up surge 0.01; response sense down (spend+buy_new+subscribe+travel -6.50)"
+       },
+       {
+        "kind": "response",
+        "text": "protect themselves and travel far less",
+        "trace": "protection: health_action +7.75, stockpile_prepare +4.68 (peak pts at Older, set in their ways, tech-wary); travel: travel -6.50 (peak pts at Older, set in their ways, tech-wary)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "health_action at Older, set in their ways, tech-wary: now +7.75, next +6.06, later +2.27; peak now; keeps 29%"
+       },
+       {
+        "kind": "scale",
+        "text": "A big shift.",
+        "trace": "health_action +7.75 pts at Older, set in their ways, tech-wary -> band big (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "More than most people.",
+        "trace": "health_action: Older, set in their ways, tech-wary +7.75 vs world +4.77 (x1.62)"
+       }
+      ]
+     },
+     "old": "Older, set in their ways, tech-wary people are likelier to seek care, get tested or change a health habit, travel less and stock up on supplies or buy protection or insurance."
+    }
+   ]
+  },
+  {
+   "id": "03",
+   "fixture": "spec/sowhat-fixtures/03.json",
+   "text": "Russian forces launched a major new offensive in eastern Ukraine overnight",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "scare": 0.9249742471311874,
+      "squeeze": 0.029347020393489978,
+      "rift": 0.019761331582472723
+     },
+     "state_moves": [
+      "armed conflict or terrorism affecting the country or region increases",
+      "pressure on government budgets increases",
+      "people cut back on spending",
+      "people travel less"
+     ],
+     "text_only_top": [
+      [
+       "scare",
+       0.822
+      ],
+      [
+       "blow",
+       0.088
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "war_terror": 0.9999021789697246,
+     "fiscal_strain": 6.132211694912022e-05,
+     "food_insecurity": 2.4442318045087317e-05
+    }
+   },
+   "weak_spot": "War moves Ukraine by about 1 point and the rest of the world by nothing; the engine undersizes war, so the so-what is honest but small.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Only Ukraine feels this scare: armed conflict escalates, and people there cut back and travel less.",
+      "line2": "Elsewhere, barely a ripple. A quick jolt that fades.",
+      "template": "SC-W",
+      "lead": "who",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "armed conflict escalates",
+        "trace": "trigger choice: war_terror 1.00, runner-up fiscal_strain 0.00; war_terror up: strength 0.988, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.74, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.92, runner-up squeeze 0.03; response sense down (spend+buy_new+subscribe+travel -3.49)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and travel less",
+        "trace": "spending: spend -1.35, buy_new -0.83, subscribe -0.33 (peak pts at Ukraine); travel: travel -0.98 (peak pts at Ukraine)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "spend at Ukraine: now -1.35, next -1.08, later -0.43; peak now; keeps 32%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "spend -1.35 pts at Ukraine -> band clear (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Elsewhere, barely a ripple.",
+        "trace": "entry COUNTRY:ukr; world largest move 0.01 < 0.25; spend -1.35 at Ukraine"
+       }
+      ]
+     },
+     "old": "Concentrated in Ukraine: people there are likelier to cut back on spending, travel less and hold off buying new things."
+    },
+    {
+     "focus": "COUNTRY:ukr",
+     "label": "Ukraine",
+     "expect": {
+      "headline": "Armed conflict escalates, so people in Ukraine cut back and travel less.",
+      "line2": "Barely felt outside Ukraine. A quick jolt that fades.",
+      "template": "SC-T",
+      "lead": "trigger",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "armed conflict escalates",
+        "trace": "trigger choice: war_terror 1.00, runner-up fiscal_strain 0.00; war_terror up: strength 0.988, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.74, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.92, runner-up squeeze 0.03; response sense down (spend+buy_new+subscribe+travel -3.49)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and travel less",
+        "trace": "spending: spend -1.35, buy_new -0.83, subscribe -0.33 (peak pts at Ukraine); travel: travel -0.98 (peak pts at Ukraine)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "spend at Ukraine: now -1.35, next -1.08, later -0.43; peak now; keeps 32%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "spend -1.35 pts at Ukraine -> band clear (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside Ukraine.",
+        "trace": "spend: Ukraine -1.35 vs world -0.01 (x135.00); share 0.005"
+       }
+      ]
+     },
+     "old": "People in Ukraine are likelier to cut back on spending, travel less and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "04",
+   "fixture": "spec/sowhat-fixtures/04.json",
+   "text": "A record heat wave is hitting India, with temperatures above 48C and power cuts in several cities",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "scare": 0.9409047200223418,
+      "shake_up": 0.04527451126893741,
+      "blow": 0.012617031398024052
+     },
+     "state_moves": [
+      "travel, power, water or public services are interrupted more often",
+      "heat, drought, flood or storm hazard gets worse",
+      "people cut back on spending",
+      "people travel less"
+     ],
+     "text_only_top": [
+      [
+       "scare",
+       0.968
+      ],
+      [
+       "shake_up",
+       0.015
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "climate_stress": 0.9713548765667356,
+     "disruption": 0.02590934176340916,
+     "energy_fuel": 0.002355038548183027
+    }
+   },
+   "weak_spot": null,
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "India feels the scare most: weather hazards get worse, and people there spend far less and travel far less.",
+      "line2": "A quick jolt that fades. A minor shift that reaches a small minority.",
+      "template": "SC-W",
+      "lead": "who",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "arc",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "weather hazards get worse",
+        "trace": "trigger choice: climate_stress 0.97, runner-up disruption 0.03; climate_stress up: strength 0.993, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.95, announced 0.01, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.94, runner-up shake_up 0.05; response sense down (spend+buy_new+subscribe+travel -3.01)"
+       },
+       {
+        "kind": "response",
+        "text": "spend far less and travel far less",
+        "trace": "spending: spend -1.31, subscribe -0.55, buy_new -0.51 (peak pts at World); travel: travel -0.64 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "spend at World: now -1.31, next -1.07, later -0.44; peak now; keeps 34%"
+       },
+       {
+        "kind": "scale",
+        "text": "A minor shift that reaches a small minority.",
+        "trace": "Size 12.7 (Minor); spend reach 18.4% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "India reacts many times as much as most people.",
+        "trace": "spend: India -7.13 vs world -1.31 (x5.44); share 0.184"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to cut back on spending, travel less and switch brands or providers."
+    },
+    {
+     "focus": "COUNTRY:ind",
+     "label": "India",
+     "expect": {
+      "headline": "A big scare: weather hazards get worse, so people in India spend far less and travel far less.",
+      "line2": "Many times as much as most people. A quick jolt that fades.",
+      "template": "SC-S",
+      "lead": "scale",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "weather hazards get worse",
+        "trace": "trigger choice: climate_stress 0.97, runner-up disruption 0.03; climate_stress up: strength 0.993, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.95, announced 0.01, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.94, runner-up shake_up 0.05; response sense down (spend+buy_new+subscribe+travel -16.41)"
+       },
+       {
+        "kind": "response",
+        "text": "spend far less and travel far less",
+        "trace": "spending: spend -7.13, subscribe -3.00, buy_new -2.80 (peak pts at India); travel: travel -3.48 (peak pts at India)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "spend at India: now -7.13, next -5.79, later -2.38; peak now; keeps 33%"
+       },
+       {
+        "kind": "scale",
+        "text": "A big shift.",
+        "trace": "spend -7.13 pts at India -> band big (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Many times as much as most people.",
+        "trace": "spend: India -7.13 vs world -1.31 (x5.44); share 0.184"
+       }
+      ]
+     },
+     "old": "People in India are likelier to cut back on spending, travel less and switch brands or providers."
+    }
+   ]
+  },
+  {
+   "id": "05",
+   "fixture": "spec/sowhat-fixtures/05.json",
+   "text": "Rail workers across the UK walked out today in a national strike over pay",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "shake_up": 0.9771449396059215,
+      "ripple": 0.008257210895379799,
+      "rift": 0.005501820842875204
+     },
+     "state_moves": [
+      "travel, power, water or public services are interrupted more often",
+      "goods get harder or slower to move and trade",
+      "people travel less",
+      "people give less time and money to causes"
+     ],
+     "text_only_top": [
+      [
+       "shake_up",
+       0.967
+      ],
+      [
+       "ripple",
+       0.022
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "disruption": 0.974047658517309,
+     "supply_chain_strain": 0.01639571469890078,
+     "public_service_quality": 0.007929568698951778
+    }
+   },
+   "weak_spot": "Under 1 point, travel only. The second response (give less to causes) is an engine side effect; the word budget dropped it at world focus.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Only the United Kingdom feels this shake-up: service outages multiply, and people there travel a bit less.",
+      "line2": "Little changes elsewhere. A small shift there.",
+      "template": "SH-W",
+      "lead": "who",
+      "frame": "shake_up",
+      "shrink": [
+       "dropped 2nd response theme"
+      ],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "service outages multiply",
+        "trace": "trigger choice: disruption 0.97, runner-up supply_chain_strain 0.02; disruption up: strength 0.955, reported (reported), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.91, announced 0.52, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "shake-up",
+        "trace": "frame choice: shake_up 0.98, runner-up ripple 0.01; response sense down (spend+buy_new+subscribe+travel -1.31)"
+       },
+       {
+        "kind": "response",
+        "text": "travel a bit less",
+        "trace": "travel: travel -0.68 (peak pts at United Kingdom); support: donate_volunteer -0.48 (peak pts at United Kingdom)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "travel at United Kingdom: now -0.68, next -0.46, later -0.09; peak now; keeps 13%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "travel -0.68 pts at United Kingdom -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Little changes elsewhere.",
+        "trace": "entry COUNTRY:gbr; world largest move 0.01 < 0.25; travel -0.68 at United Kingdom"
+       }
+      ]
+     },
+     "old": "Concentrated in the United Kingdom: people there are likelier to travel less, give less time and money to causes and cut back on spending."
+    },
+    {
+     "focus": "COUNTRY:gbr",
+     "label": "United Kingdom",
+     "expect": {
+      "headline": "Service outages multiply, and people in the United Kingdom adjust: they travel a bit less and give a bit less to causes.",
+      "line2": "A small shift here. Barely felt outside the United Kingdom.",
+      "template": "SH-T",
+      "lead": "trigger",
+      "frame": "shake_up",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "who"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "service outages multiply",
+        "trace": "trigger choice: disruption 0.97, runner-up supply_chain_strain 0.02; disruption up: strength 0.955, reported (reported), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.91, announced 0.52, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "shake-up",
+        "trace": "frame choice: shake_up 0.98, runner-up ripple 0.01; response sense down (spend+buy_new+subscribe+travel -1.31)"
+       },
+       {
+        "kind": "response",
+        "text": "travel a bit less and give a bit less to causes",
+        "trace": "travel: travel -0.68 (peak pts at United Kingdom); support: donate_volunteer -0.48 (peak pts at United Kingdom)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "travel at United Kingdom: now -0.68, next -0.46, later -0.09; peak now; keeps 13%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "travel -0.68 pts at United Kingdom -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside the United Kingdom.",
+        "trace": "travel: United Kingdom -0.68 vs world -0.01 (x68.00); share 0.009"
+       }
+      ]
+     },
+     "old": "People in the United Kingdom are likelier to travel less, give less time and money to causes and cut back on spending."
+    }
+   ]
+  },
+  {
+   "id": "06",
+   "fixture": "spec/sowhat-fixtures/06.json",
+   "text": "Apple launched a new iPhone with a better camera",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "shake_up": 0.6316409853888524,
+      "boost": 0.3600897557541429,
+      "ripple": 0.007970439931511784
+     },
+     "state_moves": [
+      "more daily life and work moves onto newer digital tools",
+      "factories produce more"
+     ],
+     "text_only_top": [
+      [
+       "ripple",
+       0.419
+      ],
+      [
+       "shake_up",
+       0.312
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "tech_adoption": 0.9942229452261849,
+     "industrial_output": 0.005777054773815082
+    }
+   },
+   "weak_spot": "Nothing reaches 0.25 points anywhere: the quiet form is the right answer.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "New digital tools spread, but no decision moves enough to matter.",
+      "line2": "",
+      "template": "NO-Q",
+      "lead": "quiet",
+      "frame": "shake_up",
+      "shrink": [],
+      "line2_beats": [],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "new digital tools spread",
+        "trace": "trigger choice: tech_adoption 0.99, runner-up industrial_output 0.01; tech_adoption up: strength 0.689, reported (reported), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.97, announced 0.97, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "shake_up",
+        "trace": "frame choice: shake_up 0.63, runner-up boost 0.36; response sense up (spend+buy_new+subscribe+travel +0.33)"
+       },
+       {
+        "kind": "response",
+        "text": "none",
+        "trace": "no decision at World moves 0.25+ pts (largest spend +0.20)"
+       }
+      ]
+     },
+     "old": "Worldwide the average person barely moves."
+    },
+    {
+     "focus": "COUNTRY:usa",
+     "label": "United States",
+     "expect": {
+      "headline": "New digital tools spread, but no decision moves enough to matter for people in the United States.",
+      "line2": "",
+      "template": "NO-Q",
+      "lead": "quiet",
+      "frame": "shake_up",
+      "shrink": [],
+      "line2_beats": [],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "new digital tools spread",
+        "trace": "trigger choice: tech_adoption 0.99, runner-up industrial_output 0.01; tech_adoption up: strength 0.689, reported (reported), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.97, announced 0.97, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "shake_up",
+        "trace": "frame choice: shake_up 0.63, runner-up boost 0.36; response sense up (spend+buy_new+subscribe+travel +0.25)"
+       },
+       {
+        "kind": "response",
+        "text": "none",
+        "trace": "no decision at United States moves 0.25+ pts (largest spend +0.15)"
+       }
+      ]
+     },
+     "old": "Nothing here shifts a decision."
+    }
+   ]
+  },
+  {
+   "id": "07",
+   "fixture": "spec/sowhat-fixtures/07.json",
+   "text": "The state cut school funding by 12 percent, forcing districts to lay off teachers",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.9348735625530087,
+      "blow": 0.043301515292264996,
+      "shake_up": 0.017938079579265256
+     },
+     "state_moves": [
+      "schools, courts, permits and benefits are delivered worse",
+      "jobs and incomes become less secure",
+      "people cut back on spending",
+      "people ignore official rules and guidance"
+     ],
+     "text_only_top": [
+      [
+       "blow",
+       0.808
+      ],
+      [
+       "shake_up",
+       0.086
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "job_security": 0.8806966862591721,
+     "public_service_quality": 0.11051041811257341,
+     "fiscal_strain": 0.007038924003627606
+    }
+   },
+   "weak_spot": "Rule-breaking (+2.3 pts) comes from guessed decision weights (trust in institutions -> break_rules). The composer must report it; the fix belongs in decision_weights.csv.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Jobs get less secure, and people feel the squeeze: they cut back sharply and brush off official rules.",
+      "line2": "A notable shift that reaches nearly everyone. Fades slowly.",
+      "template": "SQ-T",
+      "lead": "trigger",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs get less secure",
+        "trace": "trigger choice: job_security 0.88, runner-up public_service_quality 0.11; job_security down: strength 0.998, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.97, announced 0.98, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.93, runner-up blow 0.04; response sense down (spend+buy_new+subscribe+travel -5.30)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back sharply and brush off official rules",
+        "trace": "spending: spend -3.23, buy_new -2.07 (peak pts at World); rules: break_rules +2.34 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at World: now -3.23, next -2.76, later -1.48; peak now; keeps 46%"
+       },
+       {
+        "kind": "scale",
+        "text": "A notable shift that reaches nearly everyone.",
+        "trace": "Size 39.3 (Notable); spend reach 100.0% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Big-city high earners react about half as much as most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city -1.82 vs world -3.23 (x0.56)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to cut back on spending, ignore official rules and guidance and hold off buying new things."
+    },
+    {
+     "focus": "COUNTRY:usa",
+     "label": "United States",
+     "expect": {
+      "headline": "Jobs get less secure, and people in the United States feel the squeeze: they cut back and brush off official rules.",
+      "line2": "A clear shift here. Fades slowly.",
+      "template": "SQ-T",
+      "lead": "trigger",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs get less secure",
+        "trace": "trigger choice: job_security 0.88, runner-up public_service_quality 0.11; job_security down: strength 0.998, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.97, announced 0.98, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.93, runner-up blow 0.04; response sense down (spend+buy_new+subscribe+travel -4.68)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and brush off official rules",
+        "trace": "spending: spend -2.92, buy_new -1.76 (peak pts at United States); rules: break_rules +2.13 (peak pts at United States)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at United States: now -2.92, next -2.48, later -1.30; peak now; keeps 45%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "spend -2.92 pts at United States -> band clear (cuts 0.25/1/3/8)"
+       }
+      ]
+     },
+     "old": "People in the United States are likelier to cut back on spending, ignore official rules and guidance and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "08",
+   "fixture": "spec/sowhat-fixtures/08.json",
+   "text": "A data breach at a major bank exposed the personal details of 40 million customers",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "scare": 0.9198376666409821,
+      "shake_up": 0.03323223709282742,
+      "blow": 0.032417739742178084
+     },
+     "state_moves": [
+      "digital systems become more exposed to breaches and outages",
+      "government, business or media come to be seen as less credible and trustworthy",
+      "people ignore official rules and guidance",
+      "people put off health care and health habits"
+     ],
+     "text_only_top": [
+      [
+       "scare",
+       0.951
+      ],
+      [
+       "ripple",
+       0.028
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "cyber_insecurity": 0.9870689682235836,
+     "trust_institutions": 0.012815436303574793,
+     "borrowing_cost": 8.009246356402341e-05
+    }
+   },
+   "weak_spot": "Weakest headline: \"brush off official rules and put off health care\" is what the numbers say, through the same guessed weights. Do not paper over it in the composer.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Digital break-in risks rise, so people brush off official rules and put off health care.",
+      "line2": "A minor shift that reaches most people. Fades slowly.",
+      "template": "SC-T",
+      "lead": "trigger",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "digital break-in risks rise",
+        "trace": "trigger choice: cyber_insecurity 0.99, runner-up trust_institutions 0.01; cyber_insecurity up: strength 0.966, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.97, announced 0.05, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.92, runner-up shake_up 0.03; response sense down (spend+buy_new+subscribe+travel -0.27)"
+       },
+       {
+        "kind": "response",
+        "text": "brush off official rules and put off health care",
+        "trace": "rules: break_rules +0.74 (peak pts at World); protection: health_action -0.41 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "break_rules at World: now +0.74, next +0.66, later +0.42; peak now; keeps 57%"
+       },
+       {
+        "kind": "scale",
+        "text": "A minor shift that reaches most people.",
+        "trace": "Size 15.6 (Minor); break_rules reach 69.3% at Next"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to ignore official rules and guidance, put off health care and health habits and join protests, boycotts or strikes."
+    },
+    {
+     "focus": "COUNTRY:chn",
+     "label": "China",
+     "expect": {
+      "headline": "Digital break-in risks rise, so people in China brush off official rules and put off health care.",
+      "line2": "A small shift here. Fades slowly.",
+      "template": "SC-T",
+      "lead": "trigger",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "digital break-in risks rise",
+        "trace": "trigger choice: cyber_insecurity 0.99, runner-up trust_institutions 0.01; cyber_insecurity up: strength 0.966, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.97, announced 0.05, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.92, runner-up shake_up 0.03; response sense down (spend+buy_new+subscribe+travel -0.25)"
+       },
+       {
+        "kind": "response",
+        "text": "brush off official rules and put off health care",
+        "trace": "rules: break_rules +0.83 (peak pts at China); protection: health_action -0.46 (peak pts at China)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "break_rules at China: now +0.83, next +0.74, later +0.46; peak now; keeps 55%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "break_rules +0.83 pts at China -> band small (cuts 0.25/1/3/8)"
+       }
+      ]
+     },
+     "old": "People in China are likelier to ignore official rules and guidance, put off health care and health habits and join protests, boycotts or strikes."
+    }
+   ]
+  },
+  {
+   "id": "09",
+   "fixture": "spec/sowhat-fixtures/09.json",
+   "text": "The government raised income tax by two points for middle earners starting next month",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.9911144686000252,
+      "shake_up": 0.0041618916710336636,
+      "freeze": 0.0024639351426121465
+     },
+     "state_moves": [
+      "pressure on government budgets eases",
+      "repayments take a bigger share of household or firm income",
+      "people cut back on spending",
+      "people hold off buying new things"
+     ],
+     "text_only_top": [
+      [
+       "squeeze",
+       0.985
+      ],
+      [
+       "shake_up",
+       0.005
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "prices": 0.5884636601932104,
+     "job_security": 0.2039981248194989,
+     "private_debt": 0.10076954931113287
+    }
+   },
+   "weak_spot": "The trigger question picked prices (0.59) over the budget reading (government budgets get breathing room). A tax rise headlined as a price rise is debatable.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Prices will rise, and people will feel the squeeze: they will cut back.",
+      "line2": "Not in effect yet. A minor shift that reaches nearly everyone.",
+      "template": "SQ-T",
+      "lead": "trigger",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "certainty",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "prices will rise",
+        "trace": "trigger choice: prices 0.59, runner-up job_security 0.20; prices up: strength 0.827, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "announced",
+        "trace": "weight fact 1.0; gate happened 0.21, announced 0.99, opinion 0.0, forecast 0.46"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.99, runner-up shake_up 0.00; response sense down (spend+buy_new+subscribe+travel -3.15)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back",
+        "trace": "spending: spend -1.81, buy_new -0.96, subscribe -0.38 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at World: now -1.81, next -1.57, later -0.70; peak now; keeps 39%"
+       },
+       {
+        "kind": "scale",
+        "text": "A minor shift that reaches nearly everyone.",
+        "trace": "Size 23.6 (Minor); spend reach 98.9% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Big-city high earners react about half as much as most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city -0.82 vs world -1.81 (x0.45)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to cut back on spending, hold off buying new things and keep savings in cash."
+    },
+    {
+     "focus": "AUDIENCE:4",
+     "label": "Higher-income, tech-comfortable, big-city",
+     "expect": {
+      "headline": "Prices will rise, and big-city high earners will feel the squeeze: they will cut back and keep savings in cash.",
+      "line2": "A small shift here. Not in effect yet.",
+      "template": "SQ-T",
+      "lead": "trigger",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "certainty"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "prices will rise",
+        "trace": "trigger choice: prices 0.59, runner-up job_security 0.20; prices up: strength 0.827, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "announced",
+        "trace": "weight fact 1.0; gate happened 0.21, announced 0.99, opinion 0.0, forecast 0.46"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.99, runner-up shake_up 0.00; response sense down (spend+buy_new+subscribe+travel -1.44)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and keep savings in cash",
+        "trace": "spending: spend -0.82, buy_new -0.44 (peak pts at Higher-income, tech-comfortable, big-city); money: invest -0.76, borrow -0.29 (peak pts at Higher-income, tech-comfortable, big-city)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at Higher-income, tech-comfortable, big-city: now -0.82, next -0.71, later -0.31; peak now; keeps 38%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "spend -0.82 pts at Higher-income, tech-comfortable, big-city -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "About half as much as most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city -0.82 vs world -1.81 (x0.45)"
+       }
+      ]
+     },
+     "old": "Higher-income, tech-comfortable, big-city people are likelier to cut back on spending, keep savings in cash and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "10",
+   "fixture": "spec/sowhat-fixtures/10.json",
+   "text": "House prices in Canada jumped 9 percent this year as buyers rush back into the market",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.5665673603006968,
+      "surge": 0.43283085521962217,
+      "relief": 0.00017672544184232998
+     },
+     "state_moves": [
+      "rents, house prices or mortgage payments rise",
+      "everyday prices and the cost of living rise",
+      "people cut back on spending",
+      "people take on new debt"
+     ],
+     "text_only_top": [
+      [
+       "surge",
+       0.522
+      ],
+      [
+       "squeeze",
+       0.478
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "housing_cost": 0.9157279113034539,
+     "asset_values": 0.07991154824583253,
+     "prices": 0.003850627222233845
+    }
+   },
+   "weak_spot": "Frame was close (squeeze 0.57, surge 0.43). The world Size badge says Negligible while Canada moves 1.6+ pts: the badge is world-only.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Canada takes this squeeze almost alone: housing costs rise, so people there spend far less and take on debt.",
+      "line2": "Little changes elsewhere. A big shift there.",
+      "template": "SQ-W",
+      "lead": "who",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "housing costs rise",
+        "trace": "trigger choice: housing_cost 0.92, runner-up asset_values 0.08; housing_cost up: strength 0.994, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.94, announced 0.04, opinion 0.01, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.57, runner-up surge 0.43; response sense down (spend+buy_new+subscribe+travel -5.36)"
+       },
+       {
+        "kind": "response",
+        "text": "spend far less and take on debt",
+        "trace": "spending: spend -3.17, buy_new -1.53, subscribe -0.66 (peak pts at Canada); money: borrow +1.63, invest -0.28 (peak pts at Canada)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at Canada: now -3.17, next -2.66, later -1.34; peak now; keeps 42%"
+       },
+       {
+        "kind": "scale",
+        "text": "A big shift.",
+        "trace": "spend -3.17 pts at Canada -> band big (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Little changes elsewhere.",
+        "trace": "entry COUNTRY:can; world largest move 0.02 < 0.25; spend -3.17 at Canada"
+       }
+      ]
+     },
+     "old": "Concentrated in Canada: people there are likelier to cut back on spending, take on new debt and hold off buying new things."
+    },
+    {
+     "focus": "COUNTRY:can",
+     "label": "Canada",
+     "expect": {
+      "headline": "A big squeeze: housing costs rise, so people in Canada spend far less and take on debt.",
+      "line2": "Barely felt outside Canada. Fades slowly.",
+      "template": "SQ-S",
+      "lead": "scale",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "housing costs rise",
+        "trace": "trigger choice: housing_cost 0.92, runner-up asset_values 0.08; housing_cost up: strength 0.994, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.94, announced 0.04, opinion 0.01, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.57, runner-up surge 0.43; response sense down (spend+buy_new+subscribe+travel -5.36)"
+       },
+       {
+        "kind": "response",
+        "text": "spend far less and take on debt",
+        "trace": "spending: spend -3.17, buy_new -1.53, subscribe -0.66 (peak pts at Canada); money: borrow +1.63, invest -0.28 (peak pts at Canada)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at Canada: now -3.17, next -2.66, later -1.34; peak now; keeps 42%"
+       },
+       {
+        "kind": "scale",
+        "text": "A big shift.",
+        "trace": "spend -3.17 pts at Canada -> band big (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside Canada.",
+        "trace": "spend: Canada -3.17 vs world -0.02 (x158.50); share 0.005"
+       }
+      ]
+     },
+     "old": "People in Canada are likelier to cut back on spending, take on new debt and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "11",
+   "fixture": "spec/sowhat-fixtures/11.json",
+   "text": "An outsider candidate won a surprise victory in Brazil's presidential election",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "rift": 0.9846549713065618,
+      "scare": 0.011978387448263893,
+      "shake_up": 0.002782970243247648
+     },
+     "state_moves": [
+      "society becomes more polarised or unfair",
+      "riots, mass protest and disorder increase",
+      "people speak out more",
+      "people join protests, boycotts or strikes"
+     ],
+     "text_only_top": [
+      [
+       "shake_up",
+       0.881
+      ],
+      [
+       "rift",
+       0.087
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "social_division": 0.9893972859687793,
+     "civil_unrest": 0.010602714031220772
+    }
+   },
+   "weak_spot": "Only expected readings (no reported change) and 0.4 pts in Brazil: the hedge \"should\" carries the weight.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "This rift stays in Brazil: social divides should deepen, and people there push back in public and brush off official rules.",
+      "line2": "Little changes elsewhere. A small shift there.",
+      "template": "RF-W",
+      "lead": "who",
+      "frame": "rift",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "social divides should deepen",
+        "trace": "trigger choice: social_division 0.99, runner-up civil_unrest 0.01; social_division up: strength 0.855, expected (expected_in_effect), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.96, announced 0.95, opinion 0.01, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "rift",
+        "trace": "frame choice: rift 0.98, runner-up scare 0.01; response sense flat (spend+buy_new+subscribe+travel -0.22)"
+       },
+       {
+        "kind": "response",
+        "text": "push back in public and brush off official rules",
+        "trace": "voice: share +0.50, protest +0.41, vote +0.33 (peak pts at Brazil); rules: break_rules +0.40 (peak pts at Brazil)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "share at Brazil: now +0.50, next +0.41, later +0.28; peak now; keeps 56%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "share +0.50 pts at Brazil -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Little changes elsewhere.",
+        "trace": "entry COUNTRY:bra; world largest move 0.01 < 0.25; share +0.50 at Brazil"
+       }
+      ]
+     },
+     "old": "Concentrated in Brazil: people there are likelier to speak out more, join protests, boycotts or strikes and ignore official rules and guidance."
+    },
+    {
+     "focus": "COUNTRY:bra",
+     "label": "Brazil",
+     "expect": {
+      "headline": "Social divides should deepen, and people in Brazil take sides: they push back in public and brush off official rules.",
+      "line2": "A small shift here. Barely felt outside Brazil.",
+      "template": "RF-T",
+      "lead": "trigger",
+      "frame": "rift",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "who"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "social divides should deepen",
+        "trace": "trigger choice: social_division 0.99, runner-up civil_unrest 0.01; social_division up: strength 0.855, expected (expected_in_effect), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.96, announced 0.95, opinion 0.01, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "rift",
+        "trace": "frame choice: rift 0.98, runner-up scare 0.01; response sense flat (spend+buy_new+subscribe+travel -0.22)"
+       },
+       {
+        "kind": "response",
+        "text": "push back in public and brush off official rules",
+        "trace": "voice: share +0.50, protest +0.41, vote +0.33 (peak pts at Brazil); rules: break_rules +0.40 (peak pts at Brazil)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "share at Brazil: now +0.50, next +0.41, later +0.28; peak now; keeps 56%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "share +0.50 pts at Brazil -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside Brazil.",
+        "trace": "share: Brazil +0.50 vs world +0.01 (x50.00); share 0.027"
+       }
+      ]
+     },
+     "old": "People in Brazil are likelier to speak out more, join protests, boycotts or strikes and ignore official rules and guidance."
+    }
+   ]
+  },
+  {
+   "id": "12",
+   "fixture": "spec/sowhat-fixtures/12.json",
+   "text": "Ford will close its Michigan assembly plant, cutting 3,000 jobs",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.6334932671451781,
+      "blow": 0.3568817384345869,
+      "shake_up": 0.00553515683474417
+     },
+     "state_moves": [
+      "jobs and incomes become less secure",
+      "factories produce less",
+      "people cut back on spending",
+      "people apply for benefits, aid or entitlements"
+     ],
+     "text_only_top": [
+      [
+       "blow",
+       0.955
+      ],
+      [
+       "squeeze",
+       0.026
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "job_security": 0.9872107062652238,
+     "industrial_output": 0.012248282722147012,
+     "pay_growth": 0.0005410110126292041
+    }
+   },
+   "weak_spot": null,
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Only the United States feels this squeeze: jobs will get less secure, so people there will cut back and apply for aid.",
+      "line2": "Elsewhere, barely a ripple. Not in effect yet.",
+      "template": "SQ-W",
+      "lead": "who",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "certainty"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs will get less secure",
+        "trace": "trigger choice: job_security 0.99, runner-up industrial_output 0.01; job_security down: strength 0.999, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "announced",
+        "trace": "weight fact 1.0; gate happened 0.2, announced 0.98, opinion 0.0, forecast 0.05"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.63, runner-up blow 0.36; response sense down (spend+buy_new+subscribe+travel -4.21)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and apply for aid",
+        "trace": "spending: spend -2.57, buy_new -1.64 (peak pts at United States); support: claim_support +1.75 (peak pts at United States)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at United States: now -2.57, next -2.16, later -1.10; peak now; keeps 43%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "spend -2.57 pts at United States -> band clear (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Elsewhere, barely a ripple.",
+        "trace": "entry COUNTRY:usa; world largest move 0.11 < 0.25; spend -2.57 at United States"
+       }
+      ]
+     },
+     "old": "Concentrated in the United States: people there are likelier to cut back on spending, apply for benefits, aid or entitlements and hold off buying new things."
+    },
+    {
+     "focus": "REGION:usa-rural",
+     "label": "United States · rural areas",
+     "expect": {
+      "headline": "Jobs will get less secure, and people in the rural United States will feel the squeeze: they will cut back.",
+      "line2": "Not in effect yet. Many times as much as most people.",
+      "template": "SQ-T",
+      "lead": "trigger",
+      "frame": "squeeze",
+      "shrink": [
+       "dropped 2nd response theme"
+      ],
+      "line2_beats": [
+       "certainty",
+       "who"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs will get less secure",
+        "trace": "trigger choice: job_security 0.99, runner-up industrial_output 0.01; job_security down: strength 0.999, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "announced",
+        "trace": "weight fact 1.0; gate happened 0.2, announced 0.98, opinion 0.0, forecast 0.05"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.63, runner-up blow 0.36; response sense down (spend+buy_new+subscribe+travel -4.67)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back",
+        "trace": "spending: spend -2.83, buy_new -1.84 (peak pts at United States · rural areas); support: claim_support +2.01 (peak pts at United States · rural areas)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at United States · rural areas: now -2.83, next -2.38, later -1.21; peak now; keeps 43%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "spend -2.83 pts at United States · rural areas -> band clear (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Many times as much as most people.",
+        "trace": "spend: United States · rural areas -2.83 vs world -0.11 (x25.73)"
+       }
+      ]
+     },
+     "old": "People in the United States (rural areas) are likelier to cut back on spending, apply for benefits, aid or entitlements and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "13",
+   "fixture": "spec/sowhat-fixtures/13.json",
+   "text": "Regulators approved a new vaccine that cuts malaria deaths by half",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "boost": 0.9883411704337657,
+      "relief": 0.004030028574019487,
+      "scare": 0.0026535090067080886
+     },
+     "state_moves": [
+      "exposure to illness, injury or outbreak decreases",
+      "hospitals, clinics, staff or medicine supply come under less strain",
+      "people put off health care and health habits",
+      "people travel more"
+     ],
+     "text_only_top": [
+      [
+       "boost",
+       0.995
+      ],
+      [
+       "relief",
+       0.002
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "health_risk": 0.9797419404876034,
+     "care_strain": 0.020258059512396634
+    }
+   },
+   "weak_spot": "Changed 2026-10-06 (review fix 2): the approval happened (gate happened 0.98), only its effects are pending, so the event is plain present, the reading says 'should' and line 2 says 'Effects not felt yet.' (no modal 'will'). The engine lowers health actions because health risk falls; the vaccine itself is a health action, so the so-what is faithful to the numbers but misses the obvious take-up.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Health risks should fall, and people ease off on precautions and travel a bit more.",
+      "line2": "A tiny shift that reaches a large minority. Effects not felt yet.",
+      "template": "BO-T",
+      "lead": "trigger",
+      "frame": "boost",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "certainty"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "health risks should fall",
+        "trace": "trigger choice: health_risk 0.98, runner-up care_strain 0.02; health_risk down: strength 0.993, expected (expected_pending), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "pending",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.99, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "boost",
+        "trace": "frame choice: boost 0.99, runner-up relief 0.00; response sense up (spend+buy_new+subscribe+travel +0.44)"
+       },
+       {
+        "kind": "response",
+        "text": "ease off on precautions and travel a bit more",
+        "trace": "protection: health_action -0.59, stockpile_prepare -0.34 (peak pts at World); travel: travel +0.44 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "health_action at World: now -0.59, next -0.47, later -0.20; peak now; keeps 34%"
+       },
+       {
+        "kind": "scale",
+        "text": "A tiny shift that reaches a large minority.",
+        "trace": "Size 10.8 (Negligible); health_action reach 36.3% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Older, tech-wary people react more than most people.",
+        "trace": "health_action: Older, set in their ways, tech-wary -0.97 vs world -0.59 (x1.64)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to put off health care and health habits, travel more and buy only what they need now."
+    },
+    {
+     "focus": "AUDIENCE:6",
+     "label": "Older, set in their ways, tech-wary",
+     "expect": {
+      "headline": "Health risks should fall, and older, tech-wary people ease off on precautions and travel a bit more.",
+      "line2": "A small shift here. Effects not felt yet.",
+      "template": "BO-T",
+      "lead": "trigger",
+      "frame": "boost",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "certainty"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "health risks should fall",
+        "trace": "trigger choice: health_risk 0.98, runner-up care_strain 0.02; health_risk down: strength 0.993, expected (expected_pending), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "pending",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.99, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "boost",
+        "trace": "frame choice: boost 0.99, runner-up relief 0.00; response sense up (spend+buy_new+subscribe+travel +0.71)"
+       },
+       {
+        "kind": "response",
+        "text": "ease off on precautions and travel a bit more",
+        "trace": "protection: health_action -0.97, stockpile_prepare -0.57 (peak pts at Older, set in their ways, tech-wary); travel: travel +0.71 (peak pts at Older, set in their ways, tech-wary)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "health_action at Older, set in their ways, tech-wary: now -0.97, next -0.78, later -0.33; peak now; keeps 34%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "health_action -0.97 pts at Older, set in their ways, tech-wary -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "More than most people.",
+        "trace": "health_action: Older, set in their ways, tech-wary -0.97 vs world -0.59 (x1.64)"
+       }
+      ]
+     },
+     "old": "Older, set in their ways, tech-wary people are likelier to put off health care and health habits, travel more and buy only what they need now."
+    }
+   ]
+  },
+  {
+   "id": "14",
+   "fixture": "spec/sowhat-fixtures/14.json",
+   "text": "Oil prices spiked 20 percent after attacks on tankers in the Gulf",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.9931135024142717,
+      "surge": 0.004576609008975393,
+      "freeze": 0.0014008810620846203
+     },
+     "state_moves": [
+      "everyday prices and the cost of living rise",
+      "fuel, electricity or heating costs rise or supply gets tighter",
+      "people cut back on spending",
+      "people hold off buying new things"
+     ],
+     "text_only_top": [
+      [
+       "squeeze",
+       0.992
+      ],
+      [
+       "surge",
+       0.004
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "energy_fuel": 0.9856064024620863,
+     "prices": 0.01096788870743062,
+     "market_volatility": 0.0028905177753923016
+    }
+   },
+   "weak_spot": "Changed 2026-10-06 (honesty about place): ask_country answered 'global' with no probability (a part of the world, no country in it: 'the Gulf'), so the place is unresolved. No place, no WHO, no 'major squeeze' frame: the plain template, and line 2 gives the size without a reach claim.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Fuel and power costs rise, and people spend far less.",
+      "line2": "A major shift. Builds, then eases.",
+      "template": "PL-T",
+      "lead": "trigger",
+      "frame": "plain",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "fuel and power costs rise",
+        "trace": "trigger choice: energy_fuel 0.99, runner-up prices 0.01; energy_fuel up: strength 0.942, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.03, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "shift",
+        "trace": "frame choice: squeeze 0.99, runner-up surge 0.00; response sense down (spend+buy_new+subscribe+travel -12.10); place not resolved (WORLD:world), plain used"
+       },
+       {
+        "kind": "response",
+        "text": "spend far less",
+        "trace": "spending: spend -6.82, buy_new -3.23, subscribe -2.05 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "Builds, then eases.",
+        "trace": "spend at World: now -4.26, next -6.82, later -3.03; peak next; keeps 44%"
+       },
+       {
+        "kind": "scale",
+        "text": "A major shift.",
+        "trace": "Size 53.8 (Major); spend reach 100.0% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Big-city high earners react about half as much as most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city -3.53 vs world -6.82 (x0.52)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to cut back on spending, switch brands or providers and drop or avoid subscriptions and contracts."
+    },
+    {
+     "focus": "AUDIENCE:4",
+     "label": "Higher-income, tech-comfortable, big-city",
+     "expect": {
+      "headline": "Fuel and power costs rise, and big-city high earners spend far less and keep savings in cash.",
+      "line2": "A big shift here. Builds, then eases.",
+      "template": "PL-T",
+      "lead": "trigger",
+      "frame": "plain",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "fuel and power costs rise",
+        "trace": "trigger choice: energy_fuel 0.99, runner-up prices 0.01; energy_fuel up: strength 0.942, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.03, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "shift",
+        "trace": "frame choice: squeeze 0.99, runner-up surge 0.00; response sense down (spend+buy_new+subscribe+travel -6.19); place not resolved (WORLD:world), plain used"
+       },
+       {
+        "kind": "response",
+        "text": "spend far less and keep savings in cash",
+        "trace": "spending: spend -3.53, buy_new -1.69, subscribe -0.97 (peak pts at Higher-income, tech-comfortable, big-city); money: invest -3.15, borrow +0.28 (peak pts at Higher-income, tech-comfortable, big-city)"
+       },
+       {
+        "kind": "arc",
+        "text": "Builds, then eases.",
+        "trace": "spend at Higher-income, tech-comfortable, big-city: now -1.91, next -3.53, later -1.50; peak next; keeps 42%"
+       },
+       {
+        "kind": "scale",
+        "text": "A big shift.",
+        "trace": "spend -3.53 pts at Higher-income, tech-comfortable, big-city -> band big (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "About half as much as most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city -3.53 vs world -6.82 (x0.52)"
+       }
+      ]
+     },
+     "old": "Higher-income, tech-comfortable, big-city people are likelier to cut back on spending, keep savings in cash and drop or avoid subscriptions and contracts."
+    }
+   ]
+  },
+  {
+   "id": "15",
+   "fixture": "spec/sowhat-fixtures/15.json",
+   "text": "A large tech firm said it will cut 10,000 jobs and replace them with AI tools",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.9015671107026586,
+      "shake_up": 0.08363980208387985,
+      "freeze": 0.008273015524675666
+     },
+     "state_moves": [
+      "jobs and incomes become less secure",
+      "more daily life and work moves onto newer digital tools",
+      "people cut back on spending",
+      "people hold off buying new things"
+     ],
+     "text_only_top": [
+      [
+       "shake_up",
+       0.405
+      ],
+      [
+       "blow",
+       0.304
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "job_security": 0.7666433920374096,
+     "tech_adoption": 0.23325356524556007,
+     "pay_growth": 8.587782826575168e-05
+    }
+   },
+   "weak_spot": "Changed 2026-10-06 (certainty rule): happened 0.1 < 0.5 and announced 0.99 > forecast 0.83, so it reads 'announced' ('will', 'Not in effect yet.'), not 'forecast'.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Jobs will get less secure, and people will feel the squeeze: they will cut back and apply for aid.",
+      "line2": "Not in effect yet. A minor shift that reaches most people.",
+      "template": "SQ-T",
+      "lead": "trigger",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "certainty",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs will get less secure",
+        "trace": "trigger choice: job_security 0.77, runner-up tech_adoption 0.23; job_security down: strength 0.999, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "announced",
+        "trace": "weight forecast 0.3; gate happened 0.1, announced 0.99, opinion 0.0, forecast 0.83"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.90, runner-up shake_up 0.08; response sense down (spend+buy_new+subscribe+travel -1.43)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and apply for aid",
+        "trace": "spending: spend -0.85, buy_new -0.56 (peak pts at World); support: claim_support +0.51 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at World: now -0.85, next -0.73, later -0.39; peak now; keeps 46%"
+       },
+       {
+        "kind": "scale",
+        "text": "A minor shift that reaches most people.",
+        "trace": "Size 13.5 (Minor); spend reach 78.3% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Big-city high earners react about half as much as most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city -0.44 vs world -0.85 (x0.52)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to cut back on spending, hold off buying new things and apply for benefits, aid or entitlements."
+    },
+    {
+     "focus": "COUNTRY:usa",
+     "label": "United States",
+     "expect": {
+      "headline": "Jobs will get less secure, and people in the United States will feel the squeeze: they will cut back.",
+      "line2": "A small shift here. Not in effect yet.",
+      "template": "SQ-T",
+      "lead": "trigger",
+      "frame": "squeeze",
+      "shrink": [
+       "dropped 2nd response theme"
+      ],
+      "line2_beats": [
+       "scale",
+       "certainty"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs will get less secure",
+        "trace": "trigger choice: job_security 0.77, runner-up tech_adoption 0.23; job_security down: strength 0.999, reported (reported), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "announced",
+        "trace": "weight forecast 0.3; gate happened 0.1, announced 0.99, opinion 0.0, forecast 0.83"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.90, runner-up shake_up 0.08; response sense down (spend+buy_new+subscribe+travel -1.27)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back",
+        "trace": "spending: spend -0.77, buy_new -0.48 (peak pts at United States); support: claim_support +0.51 (peak pts at United States)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at United States: now -0.77, next -0.65, later -0.33; peak now; keeps 43%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "spend -0.77 pts at United States -> band small (cuts 0.25/1/3/8)"
+       }
+      ]
+     },
+     "old": "People in the United States are likelier to cut back on spending, apply for benefits, aid or entitlements and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "16",
+   "fixture": "spec/sowhat-fixtures/16.json",
+   "text": "Wildfires forced 50,000 people to evacuate in California",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "scare": 0.540491700675479,
+      "blow": 0.4519691156637163,
+      "shake_up": 0.003395907872933085
+     },
+     "state_moves": [
+      "farmland, forest or soil is lost or damaged",
+      "more people leave a place than arrive in it",
+      "people travel less",
+      "people seek care, get tested or change a health habit"
+     ],
+     "text_only_top": [
+      [
+       "scare",
+       0.948
+      ],
+      [
+       "blow",
+       0.045
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "migration_flow": 0.9445477258971251,
+     "land_degradation": 0.04254152966444035,
+     "health_risk": 0.0064249912919616585
+    }
+   },
+   "weak_spot": "The trigger chose \"more people move away\" (0.95) over land damage; true to the story but not what most readers would lead with.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Only the United States feels this scare: more people move away, and people there travel less and protect themselves.",
+      "line2": "Elsewhere, barely a ripple. A small shift there.",
+      "template": "SC-W",
+      "lead": "who",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "more people move away",
+        "trace": "trigger choice: migration_flow 0.94, runner-up land_degradation 0.04; migration_flow down: strength 0.844, reported (reported), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.95, announced 0.11, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.54, runner-up blow 0.45; response sense down (spend+buy_new+subscribe+travel -0.90)"
+       },
+       {
+        "kind": "response",
+        "text": "travel less and protect themselves",
+        "trace": "travel: travel -0.76 (peak pts at United States); protection: health_action +0.68, stockpile_prepare +0.39 (peak pts at United States)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "travel at United States: now -0.76, next -0.58, later -0.20; peak now; keeps 26%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "travel -0.76 pts at United States -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Elsewhere, barely a ripple.",
+        "trace": "entry COUNTRY:usa; world largest move 0.03 < 0.25; travel -0.76 at United States"
+       }
+      ]
+     },
+     "old": "Concentrated in the United States: people there are likelier to travel less, seek care, get tested or change a health habit and stock up on supplies or buy protection or insurance."
+    },
+    {
+     "focus": "COUNTRY:usa",
+     "label": "United States",
+     "expect": {
+      "headline": "More people move away, so people in the United States travel less and protect themselves.",
+      "line2": "A small shift here. Barely felt outside the United States.",
+      "template": "SC-T",
+      "lead": "trigger",
+      "frame": "scare",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "who"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "more people move away",
+        "trace": "trigger choice: migration_flow 0.94, runner-up land_degradation 0.04; migration_flow down: strength 0.844, reported (reported), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.95, announced 0.11, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "scare",
+        "trace": "frame choice: scare 0.54, runner-up blow 0.45; response sense down (spend+buy_new+subscribe+travel -0.90)"
+       },
+       {
+        "kind": "response",
+        "text": "travel less and protect themselves",
+        "trace": "travel: travel -0.76 (peak pts at United States); protection: health_action +0.68, stockpile_prepare +0.39 (peak pts at United States)"
+       },
+       {
+        "kind": "arc",
+        "text": "A quick jolt that fades.",
+        "trace": "travel at United States: now -0.76, next -0.58, later -0.20; peak now; keeps 26%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "travel -0.76 pts at United States -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside the United States.",
+        "trace": "travel: United States -0.76 vs world -0.03 (x25.33); share 0.044"
+       }
+      ]
+     },
+     "old": "People in the United States are likelier to travel less, seek care, get tested or change a health habit and stock up on supplies or buy protection or insurance."
+    }
+   ]
+  },
+  {
+   "id": "17",
+   "fixture": "spec/sowhat-fixtures/17.json",
+   "text": "A regional US bank collapsed after a run on deposits, and regulators took control",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "freeze": 0.3542492820719176,
+      "squeeze": 0.3292934831962421,
+      "blow": 0.13849309624922557
+     },
+     "state_moves": [
+      "financial markets swing more wildly",
+      "more people leave a place than arrive in it",
+      "people cut back on spending",
+      "people keep savings in cash"
+     ],
+     "text_only_top": [
+      [
+       "blow",
+       0.4
+      ],
+      [
+       "freeze",
+       0.36
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "market_volatility": 0.5238532691410587,
+     "asset_values": 0.4388778442979436,
+     "borrowing_cost": 0.033876660216532066
+    }
+   },
+   "weak_spot": "Frame margin is thin (freeze 0.35, squeeze 0.33) and the trigger margin too (0.52 vs 0.44): two readings were picked and the word budget dropped the second.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Only the United States feels this freeze: markets swing harder, so people there cut back and keep savings in cash.",
+      "line2": "Little changes elsewhere. A clear shift there.",
+      "template": "FR-W",
+      "lead": "who",
+      "frame": "freeze",
+      "shrink": [
+       "dropped 2nd trigger"
+      ],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "markets swing harder",
+        "trace": "trigger choice: market_volatility 0.52, runner-up asset_values 0.44; market_volatility up: strength 0.961, reported (reported), size minor; asset_values down: strength 0.982, expected (expected_in_effect), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.85, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "freeze",
+        "trace": "frame choice: freeze 0.35, runner-up squeeze 0.33; response sense down (spend+buy_new+subscribe+travel -2.09)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and keep savings in cash",
+        "trace": "spending: spend -1.27, buy_new -0.82 (peak pts at United States); money: invest -1.15 (peak pts at United States)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at United States: now -1.27, next -1.09, later -0.57; peak now; keeps 45%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "spend -1.27 pts at United States -> band clear (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Little changes elsewhere.",
+        "trace": "entry COUNTRY:usa; world largest move 0.06 < 0.25; spend -1.27 at United States"
+       }
+      ]
+     },
+     "old": "Concentrated in the United States: people there are likelier to cut back on spending, keep savings in cash and hold off buying new things."
+    },
+    {
+     "focus": "COUNTRY:usa",
+     "label": "United States",
+     "expect": {
+      "headline": "Markets swing harder, and people in the United States wait and see: they cut back and keep savings in cash.",
+      "line2": "Barely felt outside the United States. A clear shift here.",
+      "template": "FR-T",
+      "lead": "trigger",
+      "frame": "freeze",
+      "shrink": [
+       "dropped 2nd trigger"
+      ],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "markets swing harder",
+        "trace": "trigger choice: market_volatility 0.52, runner-up asset_values 0.44; market_volatility up: strength 0.961, reported (reported), size minor; asset_values down: strength 0.982, expected (expected_in_effect), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.98, announced 0.85, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "freeze",
+        "trace": "frame choice: freeze 0.35, runner-up squeeze 0.33; response sense down (spend+buy_new+subscribe+travel -2.09)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back and keep savings in cash",
+        "trace": "spending: spend -1.27, buy_new -0.82 (peak pts at United States); money: invest -1.15 (peak pts at United States)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at United States: now -1.27, next -1.09, later -0.57; peak now; keeps 45%"
+       },
+       {
+        "kind": "scale",
+        "text": "A clear shift.",
+        "trace": "spend -1.27 pts at United States -> band clear (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside the United States.",
+        "trace": "spend: United States -1.27 vs world -0.06 (x21.17); share 0.044"
+       }
+      ]
+     },
+     "old": "People in the United States are likelier to cut back on spending, keep savings in cash and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "18",
+   "fixture": "spec/sowhat-fixtures/18.json",
+   "text": "A record number of migrants crossed into Germany this month",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "surge": 0.8489955323458599,
+      "rift": 0.13965401742434627,
+      "ripple": 0.005411442788840075
+     },
+     "state_moves": [
+      "more people arrive in a place than leave it",
+      "society becomes more polarised or unfair",
+      "people speak out more",
+      "people join protests, boycotts or strikes"
+     ],
+     "text_only_top": [
+      [
+       "surge",
+       0.967
+      ],
+      [
+       "rift",
+       0.012
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "migration_flow": 0.9987775664060133,
+     "social_division": 0.0012224335939867
+    }
+   },
+   "weak_spot": null,
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Only Germany feels this surge: more people move in, and people there push back in public and brush off official rules.",
+      "line2": "Elsewhere, barely a ripple. A small shift there.",
+      "template": "SU-W",
+      "lead": "who",
+      "frame": "surge",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "more people move in",
+        "trace": "trigger choice: migration_flow 1.00, runner-up social_division 0.00; migration_flow up: strength 0.942, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.92, announced 0.01, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "surge",
+        "trace": "frame choice: surge 0.85, runner-up rift 0.14; response sense flat (spend+buy_new+subscribe+travel +0.00)"
+       },
+       {
+        "kind": "response",
+        "text": "push back in public and brush off official rules",
+        "trace": "voice: share +0.74, protest +0.60, vote +0.50 (peak pts at Germany); rules: break_rules +0.56 (peak pts at Germany)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "share at Germany: now +0.74, next +0.62, later +0.42; peak now; keeps 57%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "share +0.74 pts at Germany -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Elsewhere, barely a ripple.",
+        "trace": "entry COUNTRY:deu; world largest move 0.01 < 0.25; share +0.74 at Germany"
+       }
+      ]
+     },
+     "old": "Concentrated in Germany: people there are likelier to speak out more, join protests, boycotts or strikes and ignore official rules and guidance."
+    },
+    {
+     "focus": "COUNTRY:deu",
+     "label": "Germany",
+     "expect": {
+      "headline": "More people move in, and people in Germany respond: they push back in public and brush off official rules.",
+      "line2": "A small shift here. Barely felt outside Germany.",
+      "template": "SU-T",
+      "lead": "trigger",
+      "frame": "surge",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "who"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "more people move in",
+        "trace": "trigger choice: migration_flow 1.00, runner-up social_division 0.00; migration_flow up: strength 0.942, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.92, announced 0.01, opinion 0.0, forecast 0.0"
+       },
+       {
+        "kind": "frame",
+        "text": "surge",
+        "trace": "frame choice: surge 0.85, runner-up rift 0.14; response sense flat (spend+buy_new+subscribe+travel +0.00)"
+       },
+       {
+        "kind": "response",
+        "text": "push back in public and brush off official rules",
+        "trace": "voice: share +0.74, protest +0.60, vote +0.50 (peak pts at Germany); rules: break_rules +0.56 (peak pts at Germany)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "share at Germany: now +0.74, next +0.62, later +0.42; peak now; keeps 57%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "share +0.74 pts at Germany -> band small (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside Germany.",
+        "trace": "share: Germany +0.74 vs world +0.01 (x74.00); share 0.011"
+       }
+      ]
+     },
+     "old": "People in Germany are likelier to speak out more, join protests, boycotts or strikes and ignore official rules and guidance."
+    }
+   ]
+  },
+  {
+   "id": "19",
+   "fixture": "spec/sowhat-fixtures/19.json",
+   "text": "A severe drought in Kenya has destroyed crops, leaving millions short of food",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.5312491300368203,
+      "scare": 0.3381871825219237,
+      "blow": 0.11843690898562419
+     },
+     "state_moves": [
+      "farmland, forest or soil is lost or damaged",
+      "more people struggle to get enough affordable food",
+      "people cut back on spending",
+      "people hold off buying new things"
+     ],
+     "text_only_top": [
+      [
+       "blow",
+       0.796
+      ],
+      [
+       "scare",
+       0.192
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "food_insecurity": 0.9867175813558426,
+     "land_degradation": 0.011963023721226065,
+     "health_risk": 0.0007179477529621692
+    }
+   },
+   "weak_spot": null,
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "This squeeze stays in Kenya: food shortages spread, so people there cut back sharply and apply for aid.",
+      "line2": "Elsewhere, barely a ripple. A big shift there.",
+      "template": "SQ-W",
+      "lead": "who",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "scale"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "food shortages spread",
+        "trace": "trigger choice: food_insecurity 0.99, runner-up land_degradation 0.01; food_insecurity up: strength 0.993, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.96, announced 0.01, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.53, runner-up scare 0.34; response sense down (spend+buy_new+subscribe+travel -7.49)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back sharply and apply for aid",
+        "trace": "spending: spend -3.85, buy_new -2.29, subscribe -0.65 (peak pts at Kenya); support: claim_support +1.59 (peak pts at Kenya)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at Kenya: now -3.85, next -3.32, later -1.55; peak now; keeps 40%"
+       },
+       {
+        "kind": "scale",
+        "text": "A big shift.",
+        "trace": "spend -3.85 pts at Kenya -> band big (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Elsewhere, barely a ripple.",
+        "trace": "entry COUNTRY:ken; world largest move 0.03 < 0.25; spend -3.85 at Kenya"
+       }
+      ]
+     },
+     "old": "Concentrated in Kenya: people there are likelier to cut back on spending, hold off buying new things and apply for benefits, aid or entitlements."
+    },
+    {
+     "focus": "COUNTRY:ken",
+     "label": "Kenya",
+     "expect": {
+      "headline": "A big squeeze: food shortages spread, so people in Kenya cut back sharply and apply for aid.",
+      "line2": "Barely felt outside Kenya. Fades slowly.",
+      "template": "SQ-S",
+      "lead": "scale",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "who",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "food shortages spread",
+        "trace": "trigger choice: food_insecurity 0.99, runner-up land_degradation 0.01; food_insecurity up: strength 0.993, reported (reported), size notable"
+       },
+       {
+        "kind": "certainty",
+        "text": "happened",
+        "trace": "weight fact 1.0; gate happened 0.96, announced 0.01, opinion 0.0, forecast 0.01"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.53, runner-up scare 0.34; response sense down (spend+buy_new+subscribe+travel -7.49)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back sharply and apply for aid",
+        "trace": "spending: spend -3.85, buy_new -2.29, subscribe -0.65 (peak pts at Kenya); support: claim_support +1.59 (peak pts at Kenya)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at Kenya: now -3.85, next -3.32, later -1.55; peak now; keeps 40%"
+       },
+       {
+        "kind": "scale",
+        "text": "A big shift.",
+        "trace": "spend -3.85 pts at Kenya -> band big (cuts 0.25/1/3/8)"
+       },
+       {
+        "kind": "who",
+        "text": "Barely felt outside Kenya.",
+        "trace": "spend: Kenya -3.85 vs world -0.03 (x128.33); share 0.007"
+       }
+      ]
+     },
+     "old": "People in Kenya are likelier to cut back on spending, hold off buying new things and apply for benefits, aid or entitlements."
+    }
+   ]
+  },
+  {
+   "id": "20",
+   "fixture": "spec/sowhat-fixtures/20.json",
+   "text": "Economists warn a recession may be coming next year",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "squeeze": 0.9707177232265847,
+      "freeze": 0.02461328516082817,
+      "scare": 0.0015974730916712787
+     },
+     "state_moves": [
+      "share, property and savings values fall",
+      "jobs and incomes become less secure",
+      "people cut back on spending",
+      "people hold off buying new things"
+     ],
+     "text_only_top": [
+      [
+       "squeeze",
+       0.568
+      ],
+      [
+       "freeze",
+       0.386
+      ]
+     ]
+    },
+    "trigger_choice": {
+     "job_security": 0.6818214086789378,
+     "asset_values": 0.24924665571943097,
+     "industrial_output": 0.05922645577299929
+    }
+   },
+   "weak_spot": "Forecast at 0.3 weight: under half a point. Same opener as 15 would have had (same frame, certainty and trigger) before the gate fix; the feed rule in the ontology flips the variant when two stories in a row share it. Certainty: happened 0.02 < 0.5 and forecast 0.99 > announced 0.12, so forecast (the 2026-10-06 certainty rule; opinion 0.71 is under the 0.9 cut).",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "If this forecast comes true, jobs would get less secure, and people would cut back a little and keep savings in cash.",
+      "line2": "A tiny shift that reaches a large minority. Builds, then eases.",
+      "template": "SQ-C",
+      "lead": "certainty",
+      "frame": "squeeze",
+      "shrink": [],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs would get less secure",
+        "trace": "trigger choice: job_security 0.68, runner-up asset_values 0.25; job_security down: strength 0.996, expected (expected_pending), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "forecast",
+        "trace": "weight forecast 0.3; gate happened 0.02, announced 0.12, opinion 0.71, forecast 0.99"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.97, runner-up freeze 0.02; response sense down (spend+buy_new+subscribe+travel -0.76)"
+       },
+       {
+        "kind": "response",
+        "text": "cut back a little and keep savings in cash",
+        "trace": "spending: spend -0.45, buy_new -0.31 (peak pts at World); money: invest -0.26 (peak pts at World)"
+       },
+       {
+        "kind": "arc",
+        "text": "Builds, then eases.",
+        "trace": "spend at World: now -0.36, next -0.45, later -0.24; peak next; keeps 53%"
+       },
+       {
+        "kind": "scale",
+        "text": "A tiny shift that reaches a large minority.",
+        "trace": "Size 7.3 (Negligible); spend reach 35.7% at Next"
+       },
+       {
+        "kind": "who",
+        "text": "Big-city high earners react a bit less than most people.",
+        "trace": "spend: Higher-income, tech-comfortable, big-city -0.30 vs world -0.45 (x0.67)"
+       }
+      ]
+     },
+     "old": "Worldwide, people are likelier to cut back on spending, hold off buying new things and keep savings in cash."
+    },
+    {
+     "focus": "COUNTRY:deu",
+     "label": "Germany",
+     "expect": {
+      "headline": "If this forecast comes true, jobs would get less secure, and people in Germany would spend a bit less.",
+      "line2": "A small shift here. Fades slowly.",
+      "template": "SQ-C",
+      "lead": "certainty",
+      "frame": "squeeze",
+      "shrink": [
+       "dropped 2nd response theme"
+      ],
+      "line2_beats": [
+       "scale",
+       "arc"
+      ],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "jobs would get less secure",
+        "trace": "trigger choice: job_security 0.68, runner-up asset_values 0.25; job_security down: strength 0.996, expected (expected_pending), size major"
+       },
+       {
+        "kind": "certainty",
+        "text": "forecast",
+        "trace": "weight forecast 0.3; gate happened 0.02, announced 0.12, opinion 0.71, forecast 0.99"
+       },
+       {
+        "kind": "frame",
+        "text": "squeeze",
+        "trace": "frame choice: squeeze 0.97, runner-up freeze 0.02; response sense down (spend+buy_new+subscribe+travel -0.62)"
+       },
+       {
+        "kind": "response",
+        "text": "spend a bit less",
+        "trace": "spending: spend -0.38 (peak pts at Germany); money: invest -0.31 (peak pts at Germany)"
+       },
+       {
+        "kind": "arc",
+        "text": "Fades slowly.",
+        "trace": "spend at Germany: now -0.33, next -0.38, later -0.20; peak next; keeps 53%"
+       },
+       {
+        "kind": "scale",
+        "text": "A small shift.",
+        "trace": "spend -0.38 pts at Germany -> band small (cuts 0.25/1/3/8)"
+       }
+      ]
+     },
+     "old": "People in Germany are likelier to cut back on spending, keep savings in cash and hold off buying new things."
+    }
+   ]
+  },
+  {
+   "id": "21",
+   "fixture": "spec/sowhat-fixtures/21.json",
+   "text": "Opinion: our leaders are failing young people, and it is time we said so",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "rift": 0.9186189053790953,
+      "ripple": 0.07197526432445224,
+      "shake_up": 0.00464480144729543
+     },
+     "state_moves": [
+      "government, business or media come to be seen as less credible and trustworthy"
+     ],
+     "text_only_top": [
+      [
+       "rift",
+       0.91
+      ],
+      [
+       "ripple",
+       0.089
+      ]
+     ]
+    },
+    "trigger_choice": null
+   },
+   "weak_spot": "Opinion with one tiny expected reading: the honest form is \"nothing to say\".",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "An opinion piece: on our numbers no one changes what they do.",
+      "line2": "",
+      "template": "NO-O",
+      "lead": "quiet",
+      "frame": "rift",
+      "shrink": [],
+      "line2_beats": [],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "trust in institutions could fall",
+        "trace": "only reading: trust_institutions down; trust_institutions down: strength 0.56, expected (expected_pending), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "opinion",
+        "trace": "weight opinion 0.3; gate happened 0.09, announced 0.01, opinion 1.0, forecast 0.02"
+       },
+       {
+        "kind": "frame",
+        "text": "rift",
+        "trace": "frame choice: rift 0.92, runner-up ripple 0.07; response sense flat (spend+buy_new+subscribe+travel +0.00)"
+       },
+       {
+        "kind": "response",
+        "text": "none",
+        "trace": "no decision at World moves 0.25+ pts (largest share +0.04)"
+       }
+      ]
+     },
+     "old": "Worldwide the average person barely moves."
+    },
+    {
+     "focus": "COUNTRY:usa",
+     "label": "United States",
+     "expect": {
+      "headline": "An opinion piece: on our numbers no one changes what they do.",
+      "line2": "",
+      "template": "NO-O",
+      "lead": "quiet",
+      "frame": "rift",
+      "shrink": [],
+      "line2_beats": [],
+      "beats": [
+       {
+        "kind": "trigger",
+        "text": "trust in institutions could fall",
+        "trace": "only reading: trust_institutions down; trust_institutions down: strength 0.56, expected (expected_pending), size minor"
+       },
+       {
+        "kind": "certainty",
+        "text": "opinion",
+        "trace": "weight opinion 0.3; gate happened 0.09, announced 0.01, opinion 1.0, forecast 0.02"
+       },
+       {
+        "kind": "frame",
+        "text": "rift",
+        "trace": "frame choice: rift 0.92, runner-up ripple 0.07; response sense flat (spend+buy_new+subscribe+travel +0.00)"
+       },
+       {
+        "kind": "response",
+        "text": "none",
+        "trace": "no decision at United States moves 0.25+ pts (largest share +0.04)"
+       }
+      ]
+     },
+     "old": "Nothing here shifts a decision."
+    }
+   ]
+  },
+  {
+   "id": "22",
+   "fixture": "spec/sowhat-fixtures/22.json",
+   "text": "A local zoo welcomed a baby giraffe named Daisy",
+   "story": {
+    "frame_choice": {
+     "p": {
+      "ripple": 0.997720679453683,
+      "boost": 0.0013655814459717216,
+      "squeeze": 0.0002497213550612605
+     },
+     "state_moves": [],
+     "text_only_top": [
+      [
+       "ripple",
+       0.998
+      ],
+      [
+       "boost",
+       0.001
+      ]
+     ]
+    },
+    "trigger_choice": null
+   },
+   "weak_spot": "No reading cleared the bar: nothing to say.",
+   "foci": [
+    {
+     "focus": "WORLD:world",
+     "label": "World",
+     "expect": {
+      "headline": "Nothing to say: this story moves none of the things we track.",
+      "line2": "",
+      "template": "NO-X",
+      "lead": "quiet",
+      "frame": null,
+      "shrink": [],
+      "line2_beats": [],
+      "beats": [
+       {
+        "kind": "certainty",
+        "text": "no_impact",
+        "trace": "identify.counted false; status no_impact_expected; closest miss light news flow 0.563"
+       }
+      ]
+     },
+     "old": "No material impact expected."
+    },
+    {
+     "focus": "COUNTRY:ind",
+     "label": "India",
+     "expect": {
+      "headline": "Nothing to say: this story moves none of the things we track.",
+      "line2": "",
+      "template": "NO-X",
+      "lead": "quiet",
+      "frame": null,
+      "shrink": [],
+      "line2_beats": [],
+      "beats": [
+       {
+        "kind": "certainty",
+        "text": "no_impact",
+        "trace": "identify.counted false; status no_impact_expected; closest miss light news flow 0.563"
+       }
+      ]
+     },
+     "old": "No material impact expected."
+    }
+   ]
+  }
+ ]
+}

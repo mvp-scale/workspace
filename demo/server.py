@@ -415,7 +415,7 @@ def world_lab_proxy(method, sub, body):
         return 503, {"error": "The world engine service is not running. Start it with: /workspace/kev/.venv/bin/python probes/world-engine/world_service.py"}
 
 
-WORLD_ENGINE = "http://127.0.0.1:8112"  # probes/world-engine/world_service2.py (five-stage world engine, started by hand)
+WORLD_ENGINE = os.environ.get("WORLD_ENGINE_URL", "http://127.0.0.1:8112")  # probes/world-engine/world_service2.py (five-stage world engine, started by hand)
 
 
 def world_engine_proxy(method, sub, body):

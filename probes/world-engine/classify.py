@@ -5,12 +5,12 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, "/workspace/probes/persona")
 import offline as O
-from rules import load
+from rules import load, load_opt
 from world_model import GENRE, SCOPE
 YES, ATTR_MIN = 0.65, 0.65
 EXTRA = {"us_focus": "This story is mainly about the United States.", "foreign_focus": "This story is mainly about events in another country.", "recent": "This story reports a development from the last few days."}
 def attributes():
-    rows = [r for r in load("dial_attributes") if r["attribute"] != "todo"] + load("dial_attributes_extra"); idx = defaultdict(list)
+    rows = [r for r in load_opt("dial_attributes") if r["attribute"] != "todo"] + load_opt("dial_attributes_extra"); idx = defaultdict(list)
     for r in rows: idx[(r["dial_id"], r["direction"])].append(r)
     return idx
 ATTRS = attributes()
@@ -31,6 +31,12 @@ def _country_rows():
     import csv, os
     return list(csv.DictReader(open(os.environ.get("WORLD_COUNTRIES", "/workspace/probes/world-engine/data/countries_world100.csv"))))
 def countries(): return [(r["id"], r["name"]) for r in _country_rows()]
+def region_text(region, rows, max_chars=300, top=12):
+    """Option text for the region step: the region's name plus its member countries from the data, so the model does not place a country by geography alone (Mexico is Latin America here, Turkey is Europe & Central Asia).
+    All members when the text stays under max_chars, else the `top` most populous. The option key stays the region label; no threshold is involved."""
+    mem = sorted(((float(r["pop_m"] or 0), r["name"]) for r in rows if r["region"] == region), reverse=True); names = [n for _, n in mem]
+    full = f"{region.strip()}: " + ", ".join(names)
+    return full if len(full) <= max_chars else f"{region.strip()}: " + ", ".join(names[:top]) + ", and others"
 def ask_country(ev, today=None):
     """Which country is the story mainly about? The server allows 2 to 64 options per question, so with many countries it asks which part of the world first, then which country in it.
     Returns (country id or 'global', probabilities)."""
@@ -38,7 +44,7 @@ def ask_country(ev, today=None):
     if len(rows) <= 63 or "region" not in rows[0]:
         crit = {r["id"]: r["name"] for r in rows}; crit["global"] = "No single country in this list, or the whole world"
         a = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": crit}})["c"]; return a["choice"], {k: round(float(v), 3) for k, v in a["probabilities"].items()}
-    regions = sorted({r["region"] for r in rows}); crit = {g: g for g in regions}; crit["GLOBAL"] = "The whole world, or no single part of it"
+    regions = sorted({r["region"] for r in rows}); crit = {g: region_text(g, rows) for g in regions}; crit["GLOBAL"] = "The whole world, or no single part of it"
     g = O.call(st, {"g": {"type": "choice", "instructions": "Which part of the world is this story mainly about?", "criteria": crit}})["g"]; pg = {k: float(v) for k, v in g["probabilities"].items()}
     if g["choice"] == "GLOBAL": return "global", {"global": round(pg["GLOBAL"], 3)}
     inr = {r["id"]: r["name"] for r in rows if r["region"] == g["choice"]}; inr["other_here"] = "A different country in this part of the world, or no single country"
@@ -100,7 +106,7 @@ def misses(P, k=3):
     return sorted(rows, key=lambda x: -x["mean"])[:k]
 
 # ---------- expected impact: what the story is likely to DO if it plays out as reported (added 2026-10-05) ----------
-PHRASES = {r["dial_id"]: r for r in load("impact_phrases")}; MODES = {m["mode"]: m for m in load("impact_modes")}; LEVELS = load("impact_levels")
+PHRASES = {r["dial_id"]: r for r in load_opt("impact_phrases")}; MODES = {m["mode"]: m for m in load("impact_modes")}; LEVELS = load("impact_levels")
 EXPECT_MIN, EXPECT_TOP = 0.5, 4
 def allowed_dials(placement):
     """Conditions a story may be expected to move: those plausible for the domains it was placed in (our mapping in domains.csv; guess)."""
@@ -138,3 +144,11 @@ def severity(ev, dials, today=None):
     for d in qs:
         pr = {k: float(v) for k, v in a[d]["probabilities"].items()}; out[d] = {"level": a[d]["choice"], "mult": sum(pr.get(k, 0.0) * m for k, m in mult.items()) / (sum(pr.values()) or 1.0), "p": {k: round(v, 3) for k, v in pr.items()}}
     return out
+
+# ---------- So-what story questions (added 2026-10-06; see spec/so-what-contract.md) ----------
+def ask_sowhat(jobs):
+    """jobs: [(name, state, question)], each one typed choice question in its own short call (the two states differ), run in parallel.
+    Same call style as classify_kind: O.call(state, {name: question})[name]. Returns {name: answer} with answer['choice'] and answer['probabilities']."""
+    with ThreadPoolExecutor(max(1, len(jobs))) as ex:
+        futs = {n: ex.submit(O.call, st, {n: q}) for n, st, q in jobs}
+        return {n: f.result()[n] for n, f in futs.items()}

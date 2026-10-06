@@ -44,8 +44,8 @@ class WorldPopulation:
         col = {"tech_comfort": self.tech, "price_attention": self.price, "privacy_stance": self.privacy, "social_ease": self.social, "time_pressure": self.time, "novelty_seeking": self.novelty, "financial_stress": 1 + 0.5 * (3 - inc),
                "optimism": cl(3 + .6 * rr.standard_normal(n)), "safety_concern": cl(3 + .7 * rr.standard_normal(n)), "institutional_trust": cl(3 + .7 * rr.standard_normal(n)), "liquidity": cl(1 + .9 * inc + (age >= 60) * .5 + .5 * rr.standard_normal(n)),
                "habit_inertia": cl(2.2 + age / 50 + .6 * rr.standard_normal(n)), "loss_aversion": cl(3 + .6 * rr.standard_normal(n)), "tenure": np.full(n, 3.0), "life_stage": 1 + 4 * age / 90}
-        import engine as E
-        self.base = np.column_stack([col[e] for e in E.ELS]).astype(np.float32); self.sal = rr.uniform(.3, 1.0, (n, len(E.DIALS))).astype(np.float32)
+        import engine as E      # states with no start recipe here (most of the v2 states) start neutral: 3.0 = no effect on any decision
+        self.base = np.column_stack([col.get(e, np.full(n, 3.0)) for e in E.ELS]).astype(np.float32); self.sal = rr.uniform(.3, 1.0, (n, len(E.DIALS))).astype(np.float32)
         self.flags = np.column_stack([age < 30, age >= 60, self.area == "large city", np.isin(self.area, ["rural area", "small town"]), self.work == "retired", inc / 3, self.caregiver, self.household == "lives alone", np.char.find(self.household, "children") >= 0, self.household == "lives with housemates"]).astype(np.float32)
         self.traits_truth = np.column_stack([self.tech, self.price, self.privacy, self.social, self.time, self.novelty])
     def wmean(self, x, mask=None):

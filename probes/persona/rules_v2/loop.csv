@@ -1,0 +1,8 @@
+step,name,what_happens
+1,ingest,read new report lines from the ledger; dial changes from classifier readings; news_overload from report count
+2,dial_update,"each dial: multiply by event factors, then drift back toward 1 at its own half-life; optimism computed from the others"
+3,perceive,"each persona perceives each dial through its own salience (and region, once regional dials exist)"
+4,modify_elements,effective element = base element x product over dials of perceived dial ^ strength (grid)
+5,persist,"blend with the previous state (inertia), as in ConsumerSim; strength fitted on a calibration period"
+6,gates,"for each decision met this tick, act with probability sigmoid(bias + sum of weights x standardised elements)"
+7,log,"write dial values, events, per-cohort rates and the cause of each change to the ledger"

@@ -7,6 +7,7 @@
 <meta name="description" content="A compact way to tell a big story: one sentence, one picture of where it lands, one chain of why, and the method behind it.">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
+<script src="/static/sowhat.js"></script>
 <style>
   html { scrollbar-gutter: stable; }
   .we2 { --for: #4f8ff7; --against: #e9843b; --good: var(--for); --bad: var(--against); }
@@ -18,7 +19,7 @@
   .prog { height: 2px; margin-top: 6px; border-radius: 2px; overflow: hidden; } .prog.on::after { content: ""; display: block; height: 100%; width: 28%; background: var(--accent); animation: slide 1s linear infinite; } @keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
   .empty { margin-top: 28px; } .empty h2 { font-size: 15px; margin: 0 0 4px; } .empty p { color: var(--text-3); font-size: 13.5px; margin: 0 0 14px; max-width: 640px; } .meth { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 18px; } @media (max-width: 1000px) { .meth { grid-template-columns: repeat(2, 1fr); } } .meth div { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 12px; font-size: 12.5px; color: var(--text-2); line-height: 1.4; } .meth b { display: block; color: var(--text); font-size: 13.5px; margin-bottom: 3px; } .meth i { display: block; font-style: normal; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
   .res { display: grid; gap: 12px; margin-top: 12px; }
-  .sw { position: relative; display: grid; grid-template-rows: auto auto 1fr; gap: 6px; height: 222px; padding: 14px 20px 16px 24px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, var(--surface)) 0%, var(--surface) 62%); border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border)); border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent), 0 12px 34px rgba(0, 0, 0, .38); } .sw::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--accent); }
+  .sw { position: relative; display: grid; grid-template-rows: auto auto 1fr; gap: 6px; height: 266px; padding: 14px 20px 16px 24px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, var(--surface)) 0%, var(--surface) 62%); border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border)); border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent), 0 12px 34px rgba(0, 0, 0, .38); } .sw::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--accent); }
   .swk { display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); font-weight: 600; min-height: 28px; } .swk .k { color: var(--accent); } .swk .for { text-transform: none; letter-spacing: 0; font-weight: 400; } .lens { font: inherit; font-size: 12.5px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; max-width: 280px; text-transform: none; letter-spacing: 0; } .cta { display: flex; flex-direction: column; gap: 6px; justify-content: center; min-width: 0; } .cta-main { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; min-height: 58px; padding: 8px 16px; border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-text); font: inherit; font-size: 16px; font-weight: 700; letter-spacing: -.005em; cursor: pointer; text-align: left; box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 45%, transparent); transition: transform .12s, box-shadow .12s; } .cta-main:hover { transform: translateY(-1px); box-shadow: 0 9px 26px color-mix(in srgb, var(--accent) 55%, transparent); } .cta-main small { font-size: 11.5px; font-weight: 500; opacity: .9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .cta-links { display: flex; justify-content: space-between; gap: 8px; } .cta-links button { background: none; border: 0; color: var(--text-2); font: inherit; font-size: 12px; cursor: pointer; padding: 2px 2px; white-space: nowrap; } .cta-links button:hover { color: var(--accent); text-decoration: underline; }
   .swh { font-size: 25px; font-weight: 650; letter-spacing: -.015em; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 62px; }
   .swb { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 270px; gap: 10px; align-items: stretch; } @media (max-width: 1000px) { .sw { height: auto; } .swb { grid-template-columns: 1fr 1fr; } } .cl { min-width: 0; border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px; padding: 8px 12px; } .cl .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; } .cl .v { font-size: 18px; font-weight: 650; letter-spacing: -.01em; margin: 1px 0; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 24px; } .cl .s { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -54,11 +55,60 @@
   .tkv { position: relative; flex: 1; min-width: 0; height: 34px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); } .trk { position: absolute; left: 0; top: 0; display: flex; gap: 40px; white-space: nowrap; will-change: transform; }
   .ti { display: inline-flex; flex-direction: column; font-size: 12.5px; line-height: 17px; color: var(--text-2); } .ti .c { color: var(--accent); font-weight: 700; } .ti .tp { color: var(--text-3); letter-spacing: .03em; } .ti .ef { margin-left: 8px; color: var(--text-3); font-size: 11.5px; } .ti .ef b { font-weight: 600; margin-right: 6px; }
   .tkn { flex: none; font-size: 11.5px; color: var(--text-3); white-space: nowrap; } .tkn button { background: none; border: 0; color: var(--text-3); font: inherit; font-size: 11.5px; cursor: pointer; text-decoration: underline; padding: 0 0 0 10px; } .tkn button:hover { color: var(--accent); }
+  .ico { width: 1em; height: 1em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .t1 { --tc: var(--text-3); } .t2 { --tc: var(--s1); } .t3 { --tc: var(--s4); } .t4 { --tc: var(--s2); } .t5 { --tc: var(--s8); }
+  .swk .size.imp { display: inline-flex; align-items: center; gap: 7px; padding: 2px 10px 2px 8px; color: var(--tc); border-color: color-mix(in srgb, var(--tc) 60%, var(--border)); background: color-mix(in srgb, var(--tc) 11%, var(--surface)); text-transform: none; letter-spacing: 0; }
+  .swk .size.imp.t5 { background: color-mix(in srgb, var(--tc) 22%, var(--surface)); box-shadow: 0 0 14px color-mix(in srgb, var(--tc) 45%, transparent); }
+  /* So what, composed: highlighted spans by beat, line 2, chips. Highlights sweep in left to right once per new result. */
+  .swm { min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+  .swh.c { font-size: 20px; line-height: 1.3; -webkit-line-clamp: 2; height: 54px; min-height: 54px; } @media (max-width: 1000px) { .swh.c { height: auto; -webkit-line-clamp: 4; } }
+  .swh [data-beat] { --h: 2px; --c: var(--text-3); background: linear-gradient(var(--c), var(--c)) left bottom / 100% var(--h) no-repeat; padding-bottom: 2px; cursor: help; }
+  .swh [data-beat="trigger"] { --c: var(--s4); --h: 3px; } .swh [data-beat="response"] { --c: var(--s1); --h: 100%; background-image: linear-gradient(color-mix(in srgb, var(--s1) 17%, transparent), color-mix(in srgb, var(--s1) 17%, transparent)); border-radius: 4px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--s1) 17%, transparent); }
+  .swh [data-beat="who"] { --c: var(--s6); background-image: repeating-linear-gradient(90deg, var(--c) 0 3px, transparent 3px 6px); } .swh [data-beat="scale"] { --c: var(--s2); --h: 3px; background-image: repeating-linear-gradient(90deg, var(--c) 0 8px, transparent 8px 12px); }
+  .swh [data-beat="arc"] { --c: var(--s5); --h: 5px; background-image: linear-gradient(var(--c), var(--c)), linear-gradient(var(--c), var(--c)); background-position: left bottom, left top 100%; background-size: 100% 1.5px, 100% 1.5px; } .swh [data-beat="certainty"] { --c: var(--s7); --h: 3px; font-style: italic; } .swh [data-beat="frame"] { --c: var(--s3); --h: 100%; background-image: linear-gradient(color-mix(in srgb, var(--s3) 22%, transparent), color-mix(in srgb, var(--s3) 22%, transparent)); border-radius: 4px; }
+  .swh.new [data-beat] { animation: swsweep .55s ease-out both; animation-delay: calc(var(--i, 0) * 170ms); }
+  @keyframes swsweep { from { background-size: 0 var(--h); } to { background-size: 100% var(--h); } }
+  .swh.new [data-beat="arc"] { animation-name: swsweep2; } @keyframes swsweep2 { from { background-size: 0 1.5px, 0 1.5px; } to { background-size: 100% 1.5px, 100% 1.5px; } }
+  @media (prefers-reduced-motion: reduce) { .swh.new [data-beat] { animation: none; } }
+  .sw2 { font-size: 14px; line-height: 1.35; color: var(--text-2); min-height: 19px; } .sw2 [data-beat] { cursor: help; }
+  .swcs { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; } .swc { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; font-size: 11.5px; line-height: 17px; padding: 1px 9px 1px 6px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-2); background: var(--surface-2); cursor: help; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .swc .ico { color: var(--cc, var(--text-3)); } .swc b { font-weight: 600; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-right: 1px; }
+  .swc[data-beat="frame"] { --cc: var(--s3); } .swc[data-beat="response"] { --cc: var(--s1); } .swc[data-beat="who"] { --cc: var(--s6); } .swc[data-beat="scale"] { --cc: var(--s2); } .swc[data-beat="arc"] { --cc: var(--s5); }
+  .size .ic { display: flex; font-size: 15px; } .size .mb { width: 54px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--text-3) 30%, transparent); overflow: hidden; } .size .mb i { display: block; height: 100%; width: 0; background: var(--tc); transition: width .55s cubic-bezier(.2, .8, .2, 1); } .size .n { font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  .wsub { font-weight: 400; color: var(--text-3); }
+  .lb { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+  .hz { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 2px; }
+  .hzb { display: inline-flex; align-items: center; gap: 6px; height: 34px; border: 0; background: none; color: var(--text-3); font: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 0 13px; border-radius: 8px; cursor: pointer; transition: background .2s, color .2s; } .hzb .ico { font-size: 14px; } .hzb:hover { color: var(--text); } .hzb.on { background: var(--accent); color: var(--accent-text); box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .mvs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; } .mvk { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; margin-right: 2px; cursor: help; }
+  .mv { display: inline-flex; align-items: center; gap: 7px; height: 36px; border: 1px solid color-mix(in srgb, var(--tc) 45%, var(--border)); border-left: 4px solid var(--tc); background: var(--surface-2); color: var(--text); font: inherit; font-size: 12.5px; border-radius: 9px; padding: 0 10px 0 8px; cursor: pointer; transition: background .2s; } .mv:hover { background: color-mix(in srgb, var(--tc) 10%, var(--surface-2)); }
+  .mv .mi { display: flex; font-size: 16px; color: var(--tc); } .mv .mn { font-weight: 600; white-space: nowrap; } .mv .mvv { font-weight: 650; font-variant-numeric: tabular-nums; min-width: 8ch; text-align: right; white-space: nowrap; } .mv .pg { display: flex; color: var(--text-3); } .pgl { width: 16px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+  .mv.on { background: color-mix(in srgb, var(--tc) 17%, var(--surface)); box-shadow: 0 0 0 1px var(--tc) inset; }
+  .mv.pulse { animation: pulse 1.9s ease-in-out infinite; } @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 1px var(--tc) inset, 0 0 0 0 color-mix(in srgb, var(--tc) 60%, transparent); } 50% { box-shadow: 0 0 0 1px var(--tc) inset, 0 0 0 7px transparent; } }
+  .mvm { width: auto; min-height: 36px; font: inherit; font-size: 12.5px; border-radius: 9px; background: var(--surface-2); color: var(--text-2); border: 1px dashed var(--border-strong); padding: 0 8px; cursor: pointer; } .mvm.on { border-style: solid; border-color: var(--accent); color: var(--text); }
+  .mvw { grid-column: 1 / -1; height: 18px; font-size: 12.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ins { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 12px; }
+  .ib { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; min-width: 0; min-height: 112px; } .ibh { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; } .ibh .tag { text-transform: lowercase; letter-spacing: 0; font-weight: 500; font-size: 11px; padding: 0 7px; }
+  .rs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .rc { --rc: var(--text-3); position: relative; overflow: hidden; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-width: 0; height: 58px; padding: 0 9px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); cursor: help; }
+  .rc.d-strained { --rc: var(--against); } .rc.d-built { --rc: var(--for); } .rc.d-mixed { --rc: var(--text-2); }
+  .rc::after { content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: var(--w); background: var(--rc); animation: grow .8s cubic-bezier(.2, .8, .2, 1) both; } @keyframes grow { from { width: 0; } }
+  .rc .ri { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; color: var(--rc); background: color-mix(in srgb, var(--rc) 15%, transparent); }
+  .rc .rm { min-width: 0; } .rc b { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rc .via1 { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc .sc { text-align: right; line-height: 1.15; } .rc .a { font-size: 10.5px; color: var(--rc); font-weight: 700; white-space: nowrap; } .rc .n { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .ch { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+  .cs { flex: 1 1 0; min-width: 58px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; cursor: help; animation: litup .6s both; animation-delay: calc(var(--i) * 130ms); }
+  .ca { flex: none; width: 8px; margin-top: 4px; font-size: 16px; line-height: 24px; color: var(--text-3); animation: litup .6s both; animation-delay: calc(var(--i) * 130ms - 60ms); }
+  .cs .ci { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; color: var(--kc); border: 2px solid color-mix(in srgb, var(--kc) calc(30% + 70% * var(--st)), transparent); background: color-mix(in srgb, var(--kc) calc(8% + 22% * var(--st)), var(--surface)); animation: flash 1s both; animation-delay: calc(var(--i) * 130ms); }
+  .cs .cn { max-width: 100%; font-size: 11px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .cs .ck { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: var(--kc); white-space: nowrap; }
+  @keyframes litup { from { opacity: .12; transform: translateY(4px) scale(.92); filter: grayscale(1); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes flash { 0% { box-shadow: 0 0 0 0 transparent; } 40% { box-shadow: 0 0 16px 2px var(--kc); } 100% { box-shadow: 0 0 0 0 transparent; } }
+  @media (max-width: 1000px) { .ins { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .lb { grid-template-columns: 1fr; } .rs { grid-template-columns: 1fr; } .swk { flex-wrap: wrap; } .mvw { height: auto; white-space: normal; } }
+  @media (prefers-reduced-motion: reduce) { .mv.pulse, .rc::after, .cs, .ca, .cs .ci { animation: none !important; } .size .mb i, .hzb, .mv { transition: none; } }
 </style>
 </head>
 <body>
 <main class="page we2">
-  <header class="w2h"><div><h1>World engine 2</h1><p>One sentence, one picture of where it lands, one chain of why, and the method behind it.</p></div><span><a href="/worldengine2-how">How it works (live, GPU)</a> · <a href="/worldengine">World engine (original)</a></span></header>
+  <header class="w2h"><div><h1>World engine 2</h1><p>What it means, who feels it, and why.</p></div><span><a href="/worldengine2-how">How it works (live, GPU)</a> · <a href="/worldengine">World engine (original)</a></span></header>
   <section class="ask2">
     <div class="askrow"><textarea id="ask" rows="1" aria-label="Ask the world engine" placeholder="Type an event, a product, or a message. For example: “Fuel prices jump 25% in Brazil”"></textarea><button class="btn primary go" id="go" type="button">Ask</button></div>
     <div class="eg" id="eg"></div>
@@ -69,22 +119,26 @@
 </main>
 <script>
 const { el } = Jev, $ = (id) => document.getElementById(id), api = (p, b) => Jev.api("/api/world-engine/" + p, b ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) } : undefined);
-const S = { state: null, res: null, text: "", focus: "WORLD:world", col: 0, tab: "moves", lens: "places", runId: 0, led: {}, ledP: {}, sel: null, all: false, tdom: null, tdial: null, nums: false, busy: false };
+const S = { state: null, res: null, text: "", focus: "WORLD:world", col: 0, tab: "moves", lens: "places", runId: 0, led: {}, ledP: {}, sel: null, all: false, tdom: null, tdial: null, nums: false, busy: false, imp: null, hz: 0, vc: {}, touched: false };
 const KINDS_FALLBACK = [{ id: "crazy_tech", label: "Crazy tech", mode: "event" }, { id: "ridiculous", label: "Ridiculous product", mode: "offer" }, { id: "sensible", label: "Sensible service", mode: "offer" }, { id: "local_shock", label: "Local shock", mode: "event" }, { id: "policy", label: "New policy", mode: "event" }, { id: "macro", label: "World event", mode: "event" }];
 const DEC_SHORT = { spend: "spending", buy_new: "buying new things", subscribe: "subscriptions", travel: "travel", change_work: "changing jobs", move: "moving home", switch_brand: "switching providers", share: "speaking out" };
 const DIAL_SHORT = { prices: "prices", housing_cost: "housing costs", energy_fuel: "energy costs", financial_conditions: "financing", job_security: "job security", crime: "crime", war_terror: "conflict", health_risk: "health risk", trust_institutions: "trust in institutions", community: "community", social_division: "division", tech_pace: "tech pace", disruption: "disruption", environment: "environmental harm", optimism: "outlook", news_overload: "news overload" };
+/* Names are id-driven: the tables below are only overrides for the v1 ids; any other id (ruleset v2 or later) gets a name derived from the payload's own name. */
+const capName = (n, max = 22) => { let t = String(n || "").replace(/\s*\(.*$/, "").trim(); const m = t.match(/^(\S+(?:\s\S+)?)\s+(?:or|and)\s/); if (m && t.length > max) t = m[1]; if (t.length > max) { const w = t.split(" "); t = ""; for (const x of w) { if ((t + " " + x).trim().length > max) break; t = (t + " " + x).trim(); } t = t || w[0].slice(0, max); } return t; };
+const dialShort = (id, name) => DIAL_SHORT[id] || capName(name || id, 26).toLowerCase();
 const pm = (v, d = 1) => v == null ? "–" : (v > 0.0049 ? "+" : v < -0.0049 ? "−" : "") + Math.abs(v).toFixed(d), pctr = (v) => Math.round(v * 100) + "%", arrow = (d) => d === "up" ? "▲" : "▼";
 const rowOf = (id) => S.res.read.rows.find(x => x.id === id), isEvent = () => S.res.identify.mode === "event", mapOf = () => (S.state && S.state.map) || null;
-const phrase = (id, v) => { const m = mapOf(), p = m && m.phrases[id]; return p ? (v < 0 ? p.down : p.up) : `${DEC_SHORT[id] || id} ${pm(v)}`; };
+const decName = (id) => { if (DEC_SHORT[id]) return DEC_SHORT[id]; const c = S.res && S.res.read.cols.find(x => x.id === id); return c ? capName(c.label, 26).toLowerCase() : id; };
+const phrase = (id, v) => { const m = mapOf(), p = m && m.phrases && m.phrases[id]; return p ? (v < 0 ? p.down : p.up) : `${decName(id)} ${pm(v)}`; };
 const joinNice = (a) => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
 const placeName = (label) => { const [c, rest] = label.split(" · "), the = /^United /.test(c) ? "the " : ""; return rest ? `${the}${c} (${rest})` : the + c; };
-const leadOrder = (row, cols) => row.values.map((v, j) => ({ v, j, id: cols[j].id })).filter(x => Math.abs(x.v) >= .05).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)), maxAbs = (row) => Math.max(0, ...row.values.map(Math.abs));
+const leadOrder = (row, cols) => vals(row).map((v, j) => ({ v, j, id: cols[j].id })).filter(x => Math.abs(x.v) >= .05).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)), maxAbs = (row) => Math.max(0, ...vals(row).map(Math.abs));
 function directionOf(row, cols) {   // by rule (our choice, a guess): the consumption decisions decide the label
-  const cons = row.values.reduce((a, v, j) => ["spend", "buy_new", "subscribe", "travel"].includes(cols[j].id) ? a + v : a, 0), lead = leadOrder(row, cols)[0];
+  const cons = vals(row).reduce((a, v, j) => ["spend", "buy_new", "subscribe", "travel"].includes(cols[j].id) ? a + v : a, 0), lead = leadOrder(row, cols)[0];
   return cons <= -1 ? "Pulling back" : cons >= 1 ? "Leaning in" : lead && ["switch_brand", "change_work", "move", "share"].includes(lead.id) ? "Shifting" : lead ? "Little net change" : "No change";
 }
-const cval = (r) => isEvent() ? r.values[S.col] : r.total - rowOf("WORLD:world").total;
-const scaleMax = () => Math.max(isEvent() ? 1 : 5, ...S.res.read.rows.filter(x => x.level === "country" || x.level === "region").map(x => Math.abs(cval(x))));
+const cval = (r) => isEvent() ? vals(r)[S.col] : r.total - rowOf("WORLD:world").total;
+const scaleMax = () => { const rows = S.res.read.rows.filter(x => x.level === "country" || x.level === "region"), id = S.res.read.cols[S.col] && S.res.read.cols[S.col].id; if (S.imp && id) return Math.max(1, ...rows.flatMap(x => { const P = S.imp.places[x.id]; return [Math.abs(x.values[S.col]), ...(P && P[id] ? P[id].map(Math.abs) : [])]; })); return Math.max(isEvent() ? 1 : 5, ...rows.map(x => Math.abs(cval(x)))); };   /* with impact the colour scale is fixed across Now, Next and Later so a fading push visibly fades */
 function shade(v, mx) { if (v == null || Math.abs(v) < (isEvent() ? 0.05 : 0.3)) return { bg: "var(--surface-2)", fg: "var(--text-3)", neutral: true }; const p = Math.round(16 + 46 * Math.min(1, Math.abs(v) / mx)); return { bg: `color-mix(in srgb, var(${v > 0 ? "--for" : "--against"}) ${p}%, var(--surface-2))`, fg: p > 38 ? "#fff" : "var(--text)", neutral: false }; }
 /* ---------- treemap: area is people, colour is the change ---------- */
 const NW = 900, NH = 420;
@@ -114,11 +168,158 @@ function buildMap(rootId) {
     } else for (const c of lay(rows.filter(r => r.level === "country"), 0, 0, NW, NH)) tileCountry(c);
   } return { box, tiles };
 }
-function paintMap() { const mx = scaleMax(), R = S.res.read, what = isEvent() ? R.cols[S.col].label + " (points vs no event)" : "support vs the world average (points)"; for (const t of S.map.tiles) { const v = cval(t.row), s = shade(v, mx); t.el.style.background = s.bg; t.el.style.color = s.fg; t.val.textContent = s.neutral ? "" : pm(v); t.el.classList.toggle("sel", S.focus === t.row.id); t.el.title = `${t.row.label} · ${what}: ${pm(v)} · ${(t.row.share * 100).toFixed(1)}% of people`; } }
+function paintMap() { const mx = scaleMax(), R = S.res.read, what = isEvent() ? R.cols[S.col].label + (S.imp ? " · " + S.imp.horizons[S.hz].label : "") + " (points vs no event)" : "support vs the world average (points)"; for (const t of S.map.tiles) { const v = cval(t.row), s = shade(v, mx); t.el.style.background = s.bg; t.el.style.color = s.fg; t.val.textContent = s.neutral ? "" : pm(v); t.el.classList.toggle("sel", S.focus === t.row.id); t.el.title = `${t.row.label} · ${what}: ${pm(v)} · ${(t.row.share * 100).toFixed(1)}% of people`; } }
+/* ---------- impact: size, Now/Next/Later, movers, resources, chain. All from response.impact; if it is missing the page shows the older view. ---------- */
+const NS = "http://www.w3.org/2000/svg", TIERS = ["Negligible", "Minor", "Notable", "Major", "Historic"], tierN = (t) => Math.max(1, TIERS.indexOf(t) + 1);
+const IC = {
+  dot: ["c:12,12,3"],
+  spend: ["c:12,12,9", "M14.5 9.5C14 8.5 13 8 12 8c-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5", "M12 6v2M12 16v2"],
+  buy_new: ["M6 8h12l-1 12H7z", "M9 8a3 3 0 0 1 6 0"],
+  subscribe: ["M4 12a8 8 0 0 1 14-5.3L20 9", "M20 4v5h-5", "M20 12a8 8 0 0 1-14 5.3L4 15", "M4 20v-5h5"],
+  travel: ["M22 2 11 13", "M22 2l-7 20-4-9-9-4z"],
+  change_work: ["M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", "M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"],
+  move: ["M3 11l9-8 9 8", "M5 10v10h14V10", "M10 20v-6h4v6"],
+  switch_brand: ["M4 8h14", "M14 4l4 4-4 4", "M20 16H6", "M10 12l-4 4 4 4"],
+  share: ["M4 12v6h16v-6", "M12 3v12", "M8 7l4-4 4 4"],
+  home: ["M3 11l9-8 9 8", "M5 10v10h14V10", "M10 20v-6h4v6"],
+  vote: ["M4 13h16v7H4z", "M8 13V7l4-3 4 3v6", "M10 9h4"],
+  flag: ["M5 21V4", "M5 4h13l-3 4 3 4H5"],
+  cross: ["M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"],
+  heart: ["M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"],
+  cap: ["M2 9l10-5 10 5-10 5z", "M6 11v5c3 2.5 9 2.5 12 0v-5"],
+  shop: ["M4 9l1-5h14l1 5", "M4 9a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 6 0 2.5 2.5 0 0 0 5 0", "M5 11v9h14v-9"],
+  gift: ["M4 11h16v9H4z", "M3 8h18v3H3z", "M12 8v12", "M12 8C9 8 8 4 10 4s2 2 2 4c0-2 0-4 2-4s1 4-2 4"],
+  card: ["M3 6h18v12H3z", "M3 10h18", "M6 15h4"],
+  trend: ["M3 17l6-6 4 4 8-8", "M15 7h6v6"],
+  ban: ["c:12,12,9", "M5.6 5.6l12.8 12.8"],
+  doc: ["M6 3h9l4 4v14H6z", "M14 3v5h5", "M9 13h7M9 17h7"],
+  tree: ["c:12,9,6", "M12 15v6", "M9 21h6"],
+  bowl: ["M4 11h16a8 8 0 0 1-16 0z", "M8 7c1-2 2-2 2-4", "M14 7c1-2 2-2 2-4"],
+  cloud: ["M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.5-1A4 4 0 0 1 17 18z"],
+  gem: ["M6 4h12l4 6-10 11L2 10z", "M2 10h20", "M10 4 8 10l4 11 4-11-2-6"],
+  bridge: ["M2 18h20", "M4 18V9", "M20 18V9", "M4 9c4 6 12 6 16 0", "M12 14v4"],
+  factory: ["M3 20V9l6 4V9l6 4V6h3v14z"],
+  chip: ["M7 7h10v10H7z", "M10 10h4v4h-4z", "M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4"],
+  truck: ["M2 6h12v10H2z", "M14 10h4l3 3v3h-7", "c:6,18,2", "c:17,18,2"],
+  coins: ["M4 8c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z", "M4 8v4c0 1.7 3.6 3 8 3s8-1.3 8-3V8", "M4 12v4c0 1.7 3.6 3 8 3s8-1.3 8-3v-4"],
+  bank: ["M3 9l9-6 9 6", "M5 10v8", "M10 10v8", "M14 10v8", "M19 10v8", "M3 20h18"],
+  link: ["M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7L11.8 6.5", "M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"],
+  person: ["c:12,8,4", "M4 21a8 8 0 0 1 16 0"],
+  group: ["c:9,8,3.5", "M2 20a7 7 0 0 1 14 0", "c:17,9,2.5", "M17 14a5 5 0 0 1 5 5"],
+  box: ["M12 2l9 5v10l-9 5-9-5V7z", "M12 12l9-5", "M12 12v10", "M12 12 3 7"],
+  bolt: ["M13 2 4 14h7l-1 8 9-12h-7z"],
+  eye: ["M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z", "c:12,12,3"],
+  leaf: ["M5 19c0-9 6-14 15-14 0 9-5 15-14 15", "M5 19l8-8"],
+  drop: ["M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"],
+  book: ["M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2z", "M4 5v16"],
+  shield: ["M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"],
+  topic: ["M4 9h16", "M4 15h16", "M10 3 8 21", "M16 3l-2 18"],
+  condition: ["M4 18a8 8 0 1 1 16 0", "M12 18l4-5", "M7 12v.01M12 8v.01M17 12v.01"],
+  place: ["M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12z", "c:12,10,2.5"],
+  now: ["M13 2 4 14h7l-1 8 9-12h-7z"],
+  next: ["M5 12h14", "M13 6l6 6-6 6"],
+  later: ["M7 3h10", "M7 21h10", "M8 3v3l4 6-4 6v3", "M16 3v3l-4 6 4 6v3"],
+  tier1: ["c:12,12,9", "M8 12h8"],
+  tier2: ["c:12,12,3", "c:12,12,8"],
+  tier3: ["M3 17l6-6 4 4 8-8", "M15 7h6v6"],
+  tier4: ["M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 3 1-1-2-1-4 0-5z"],
+  tier5: ["M12 2l3 7 7 .6-5.3 4.7 1.6 7.2L12 17.8 5.7 21.5l1.6-7.2L2 9.6 9 9z"]
+};
+IC.work = IC.change_work;
+const RES_IC = { financial: "spend", human: "person", produced: "box", social: "group", energy_minerals: "bolt", attention: "eye", land_food: "leaf", water: "drop", knowledge: "book", legitimacy: "shield" };
+/* Icon rule: the v1 id tables first, then a keyword rule over the id and name, then a neutral dot. Works for any id. */
+const ICON_RULES = [[/vote|ballot|elect/, "vote"], [/protest|strike|rally/, "flag"], [/break_rules|ignore|rules|compl/, "ban"], [/claim|benefit|welfare|support/, "doc"], [/borrow|debt|loan|credit|monetary/, "card"], [/invest|saving/, "trend"], [/wealth|asset/, "coins"], [/stockpile|prepare/, "box"],
+  [/start_business|business|enterprise/, "shop"], [/donate|volunt|give|charit/, "gift"], [/family|care_|care |kin|marri/, "heart"], [/health|medic|clinic|wellbeing/, "cross"], [/study|train|skill|educat|school/, "cap"], [/knowledge|inform|learn|book/, "book"],
+  [/water|drop|rain/, "drop"], [/biodivers|ecosys|wildlife|forest|species/, "tree"], [/land|soil|farm|crop/, "leaf"], [/food|meal|nutri|grain/, "bowl"], [/atmos|climate|air |air_|emission|carbon|weather/, "cloud"], [/energy|fuel|power|solar|oil|electric/, "bolt"], [/mineral|material|metal|mining/, "gem"],
+  [/infrastr|built|road|transport|bridge/, "bridge"], [/housing|home|house|rent|tenure|move/, "home"], [/capital|factory|industr|product|manufact/, "factory"], [/supply|trade|logistic|shipping|freight/, "truck"], [/comput|network|digital|tech|software|internet/, "chip"], [/public_fin|state_cap|government|police|safety|tax/, "bank"],
+  [/legitim|institution|law|court/, "shield"], [/trust|cohes|solidar/, "link"], [/communit|social|group|ties|share|public|engage/, "group"], [/popul|people|person|demograph|migrat/, "person"], [/labou?r|work|job|employ|career/, "work"], [/attention|time|media|news/, "eye"],
+  [/money|financ|spend|price|cost|income|wage|cash|buy|shop|subscrib/, "spend"], [/travel|trip|tour|flight/, "travel"], [/switch|brand|provider/, "switch_brand"]];
+const iconFor = (kind, id, name) => {
+  if (kind === "resource" && RES_IC[id]) return RES_IC[id]; if (kind === "decision" && IC[id] && !["person", "group", "dot"].includes(id)) return id;
+  for (const key of [String(id).toLowerCase(), String(name || "").toLowerCase()]) for (const [re, ic] of ICON_RULES) if (re.test(key) && IC[ic]) return ic; return "dot";
+};
+const KIND = { topic: ["topic", "topic", "--s7"], condition: ["condition", "condition", "--s4"], resource: ["resource", null, "--s3"], state: ["person state", "person", "--s5"], decision: ["decision", null, "--s1"], group: ["group", "group", "--s2"], place: ["place", "place", "--s6"] };
+const DSHORT = { spend: "Spend", buy_new: "Buy new", subscribe: "Subscribe", travel: "Travel", change_work: "Change work", move: "Move home", switch_brand: "Switch brand", share: "Share", vote: "Vote", protest: "Protest", health_action: "Health action", study_train: "Study", family_change: "Family change", stockpile_prepare: "Stockpile", start_business: "Start business", donate_volunteer: "Give or join", claim_support: "Claim support", borrow: "Borrow", invest: "Invest", break_rules: "Ignore rules" };
+const dshort = (id, label) => DSHORT[id] || capName(label || id, 16);
+const ptf = (x) => pm(x, Math.abs(x) < 1 ? 2 : 1) + " pts", RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function ico(name) {
+  const s = document.createElementNS(NS, "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "ico"); s.setAttribute("aria-hidden", "true");
+  for (const d of IC[name] || IC.dot) { const c = d.startsWith("c:"), p = document.createElementNS(NS, c ? "circle" : "path"); if (c) { const [x, y, r] = d.slice(2).split(","); p.setAttribute("cx", x); p.setAttribute("cy", y); p.setAttribute("r", r); } else p.setAttribute("d", d); s.append(p); }
+  return s;
+}
+function pglyph(p) {      // how much of the push is left by Later: sticks / slow fade / fades
+  const s = document.createElementNS(NS, "svg"), d = p >= 0.75 ? "M1 4h14" : p >= 0.4 ? "M1 3C6 3 10 6 15 9" : "M1 2C4 2 5 9 15 10", q = document.createElementNS(NS, "path");
+  s.setAttribute("viewBox", "0 0 16 12"); s.setAttribute("class", "pgl"); s.setAttribute("aria-hidden", "true"); q.setAttribute("d", d); s.append(q); return s;
+}
+function tween(n, to, f) {     // animate a number in place; the first paint and reduced motion set it directly
+  const from = n._v == null ? to : n._v; n._v = to; cancelAnimationFrame(n._r);
+  if (RM || from === to) { n.textContent = f(to); return; }
+  const t0 = performance.now(), step = (t) => { const k = Math.min(1, (t - t0) / 450), e = 1 - Math.pow(1 - k, 3); n.textContent = f(from + (to - from) * e); if (k < 1) n._r = requestAnimationFrame(step); }; n._r = requestAnimationFrame(step);
+}
+function vals(r) {          // a row's decision changes at the chosen horizon (Now uses the exact numbers already on the page)
+  const I = S.imp; if (!I || S.hz === 0) return r.values; const P = I.places && I.places[r.id]; if (!P) return r.values;
+  const k = S.hz + "|" + r.id; return S.vc[k] || (S.vc[k] = S.res.read.cols.map((c, j) => P[c.id] ? P[c.id][S.hz] : r.values[j]));
+}
+function setImp() {         // use impact only if it is complete and matches this page's decisions; otherwise fall back to the older view
+  S.imp = null; S.hz = 0; S.vc = {}; S.touched = false;
+  try { const I = S.res && S.res.impact, R = S.res.read; if (isEvent() && I && Array.isArray(I.rank) && I.rank.length && Array.isArray(I.horizons) && I.horizons.length === 3 && I.places && I.significance && R.cols.some(c => c.id === I.rank[0].decision)) { S.imp = I; S.col = R.cols.findIndex(c => c.id === I.rank[0].decision); } } catch (e) { S.imp = null; }
+}
+function sizeBadge(u) {
+  u.szIc = el("span", { class: "ic" }); u.szT = el("span", { class: "tt" }); u.szF = el("i"); u.szN = el("span", { class: "n" });
+  return el("span", { class: "size imp" }, u.szIc, u.szT, el("span", { class: "mb" }, u.szF), u.szN);
+}
+const num0 = (x) => typeof x === "number" && isFinite(x);
+function paintSize(u) {
+  const s = S.imp.significance, n = tierN(s.tier); u.size.style.display = ""; u.size.className = "size imp t" + n;
+  if (u.szTier !== n) { u.szIc.replaceChildren(ico("tier" + n)); u.szTier = n; }
+  const stz = S.res && S.res.impact && S.res.impact.story, ent = stz && stz.entry, loc = ent && ent.local && num0(ent.entry_max) ? [[1, "small"], [3, "clear"], [8, "big"], [1e9, "huge"]].find(t => ent.entry_max < t[0])[1] : null;   /* a local story: the score is the world's, so say so and name the size where it lands */
+  u.szT.textContent = loc ? `Size · ${s.tier} worldwide · ${loc} there` : "Size · " + s.tier; void u.szF.offsetWidth; u.szF.style.width = Math.max(2, Math.min(100, s.score)) + "%"; tween(u.szN, s.score, (x) => String(Math.round(x)));
+  u.size.title = `Size ${Math.round(s.score)} of 100: ${s.tier}.${loc ? `\nThis story lands in one place: the world average is ${s.tier.toLowerCase()}, but its biggest move there is ${ent.entry_max.toFixed(1)} points (${loc}).` : ""}\nScore = size × reach × staying power × stakes. Bands are our guess.\n` + (s.summary || []).join("\n");
+}
+function impCells(u, f, w) {
+  const I = S.imp, R = S.res.read, col = R.cols[S.col], m = I.rank.find(x => x.decision === col.id) || I.rank[0], hl = I.horizons[S.hz].label, wv = [m.now, m.next, m.later], v = vals(f)[S.col], nm = dshort(m.decision, m.label), where = f.id === w.id ? "world" : f.label.split(" · ").pop();
+  const put = (k, label, to, fmt, sub, cls, tip) => { const c = u.cells[k]; c.l.textContent = label; tween(c.v, to, fmt); c.s.textContent = sub; c.v.className = "v " + (cls || ""); c.root.title = tip; };
+  put(0, "Change", v, ptf, `${nm} · ${hl} · ${where}`, v > .0049 ? "pos" : v < -.0049 ? "neg" : "", `Points of likelihood vs no event, for ${nm}, at ${hl}, in ${where}.`);
+  put(1, "Reach", m.reach, (x) => Math.round(x) + "% of people", `${nm} · move 0.5+ pts at Next`, "", `Share of people whose ${nm.toLowerCase()} changes by at least 0.5 points at Next.`);
+  put(2, "Still felt", wv[0] ? wv[S.hz] / wv[0] * 100 : 0, (x) => Math.round(x) + "%", S.hz === 0 ? "the first push" : "of the Now push", "", `${nm} at ${hl}, as a share of its Now change (world level). Keeps ${Math.round(m.persistence * 100)}% by Later.`);
+  put(3, "Stakes", m.stakes, (x) => Math.round(x) + " / 5", "weight of one act · guess", "", `How big one ${nm.toLowerCase()} act is for a person and the world, 1 to 5. Our guess.`);
+}
+function buildImp(u) {
+  const I = S.imp, R = S.res.read, idx = (d) => R.cols.findIndex(c => c.id === d), ok = I.rank.filter(x => idx(x.decision) >= 0), top = ok.slice(0, 5), rest = ok.slice(5);
+  const pick = (d) => { S.col = idx(d); S.touched = true; render(); };
+  u.hzb = I.horizons.map((h, k) => el("button", { type: "button", class: "hzb", title: `${h.label}: ${h.ticks} ticks. We assume one tick is about a day (unconfirmed).`, onclick: () => { S.hz = k; render(); } }, ico(["now", "next", "later"][k]), el("span", { text: h.label })));
+  u.mvs = top.map(m => { const val = el("b", { class: "mvv" }); return { m, val, b: el("button", { type: "button", class: "mv t" + tierN(m.tier), onclick: () => pick(m.decision) }, el("span", { class: "mi" }, ico(iconFor("decision", m.decision, m.label))), el("span", { class: "mn", text: dshort(m.decision, m.label) }), val, el("span", { class: "pg" }, pglyph(m.persistence))) }; });
+  u.restIds = rest.map(m => m.decision);
+  u.more = rest.length ? el("select", { class: "mvm", "aria-label": "More decisions", onchange: (e) => e.target.value && pick(e.target.value) }, el("option", { value: "", text: "More" }), rest.map(m => el("option", { value: m.decision, text: `${dshort(m.decision, m.label)} · ${m.tier}` }))) : null;
+  u.why = el("div", { class: "mvw" });
+  const lb = el("div", { class: "lb" }, el("div", { class: "hz", role: "group", "aria-label": "When" }, ...u.hzb), el("div", { class: "mvs" }, el("span", { class: "mvk", title: "Ranked by size, reach, staying power and stakes. Derived by rule.", text: "Biggest movers" }), ...u.mvs.map(x => x.b), u.more), u.why);
+  const word = { strained: "strained", built: "built", mixed: "mixed", none: "quiet" }, mark = { strained: "▼", built: "▲", mixed: "◆", none: "–" };
+  const lst = (k, a) => a && a.length ? `${k}: ` + a.map(x => `${x.name} ${pm(x.delta, 2)}`).join(", ") : null;
+  const rcard = (r) => { const via = r.via || {}, one = [(via.conditions || [])[0], (via.states || [])[0], (via.decisions || [])[0]].filter(Boolean).map(x => x.id && DSHORT[x.id] ? DSHORT[x.id] : capName(x.name, 22)), d = word[r.direction] ? r.direction : "none";
+    return el("div", { class: "rc d-" + d, style: `--w:${Math.max(2, Math.min(100, r.score))}%`, title: [`${r.name}: ${word[d]}. Score ${Math.round(r.score)} of 100 (our scale, a guess).`, lst("Conditions", via.conditions), lst("Person states", via.states), lst("Decisions", via.decisions)].filter(Boolean).join("\n") },
+      el("span", { class: "ri" }, ico(iconFor("resource", r.id, r.name))), el("div", { class: "rm" }, el("b", { text: capName(r.name, 30) }), el("div", { class: "via1", text: one.length ? "via " + one.join(" › ") : "nothing moved it" })), el("div", { class: "sc" }, el("div", { class: "a", text: `${mark[d]} ${word[d]}` }), el("div", { class: "n", text: String(Math.round(r.score)) }))); };
+  const chain = (I.chain || []).slice(0, 12), steps = [];
+  chain.forEach((c, k) => { const K = KIND[c.kind] || ["step", "dot", "--text-3"], icon = c.kind === "decision" || c.kind === "resource" ? iconFor(c.kind, c.id, c.name) : K[1], st = Math.max(0, Math.min(1, c.strength == null ? 1 : c.strength));
+    if (k) steps.push(el("span", { class: "ca", style: `--i:${k}`, text: "›" }));
+    steps.push(el("div", { class: "cs", style: `--i:${k};--kc:var(${K[2]});--st:${st}`, title: `${K[0]}: ${c.name}. Strength ${Math.round(st * 100)}% (relative, derived).` }, el("span", { class: "ci" }, ico(icon || "dot")), el("span", { class: "cn", text: capName(c.name, 26) }), el("span", { class: "ck", text: K[0] }))); });
+  const box = (t, tag, body) => el("div", { class: "ib" }, el("div", { class: "ibh" }, el("span", { text: t }), el("span", { class: "tag", text: tag })), body);
+  const ins = el("div", { class: "ins" }, box("Resources used", "guess", el("div", { class: "rs" }, ...(I.resources || []).slice(0, 3).map(rcard))), box("Story chain", "derived", el("div", { class: "ch" }, ...steps)));
+  return { lb, ins };
+}
+function paintImp(u) {
+  const I = S.imp, R = S.res.read, cur = R.cols[S.col].id, k = S.hz, hl = I.horizons[k].label;
+  u.hzb.forEach((b, j) => { b.classList.toggle("on", j === k); b.setAttribute("aria-pressed", String(j === k)); });
+  u.mvs.forEach(x => { const m = x.m, v = [m.now, m.next, m.later][k]; x.b.classList.toggle("on", m.decision === cur); x.b.classList.toggle("pulse", !S.touched && m === I.rank[0]); tween(x.val, v, ptf); x.val.className = "mvv " + (v > .0049 ? "pos" : v < -.0049 ? "neg" : "");
+    x.b.title = `${m.label}: ${m.tier}. ${ptf(v)} at ${hl}, world level. Keeps ${Math.round(m.persistence * 100)}% by Later (the small curve).`; });
+  if (u.more) { const inRest = u.restIds.includes(cur); u.more.value = inRest ? cur : ""; u.more.classList.toggle("on", inRest); }
+  const m = I.rank.find(x => x.decision === cur) || I.rank[0], segs = String(m.why || "").split("; ").map(t => t.replace(/one act is a (\d)\/5 step/, "stakes $1/5"));
+  u.why.textContent = (!S.touched && m === I.rank[0] ? "Start here · " : "") + segs.join(" · "); u.why.title = m.why || "";
+}
+
 /* ---------- run ---------- */
 async function go(modeOverride) {
   const t = $("ask").value.trim(); if (t.length < 8 || S.busy) return; S.busy = true; S.text = t; $("prog").classList.add("on"); $("go").disabled = true;
-  try { S.res = await api("request", { text: t, mode: modeOverride || "auto" }); S.runId++; S.fedAtAsk = TK.fed; S.focus = "WORLD:world"; S.led = {}; S.ledP = {}; S.sel = null; S.tdom = null; S.tdial = null; S.tab = "moves"; S.all = false; S.nums = false; S.lens = "places"; S.mapKey = null; ui = null; S.col = isEvent() ? bestCol() : 0; render(); }
+  try { S.res = await api("request", { text: t, mode: modeOverride || "auto" }); S.runId++; S.fedAtAsk = TK.fed; S.focus = "WORLD:world"; S.led = {}; S.ledP = {}; S.sel = null; S.tdom = null; S.tdial = null; S.tab = "moves"; S.all = false; S.nums = false; S.lens = "places"; S.mapKey = null; ui = null; S.col = isEvent() ? bestCol() : 0; setImp(); render(); }
   catch (e) { $("out").replaceChildren(el("div", { class: "panel", style: "margin-top:14px;color:var(--bad)", text: e.message })); }
   finally { S.busy = false; $("prog").classList.remove("on"); $("go").disabled = false; }
 }
@@ -128,51 +329,84 @@ let ui = null;
 /* ---------- shell: built once per result, then patched in place so nothing jumps ---------- */
 function shell() {
   const u = {}, cell = () => { const l = el("div", { class: "l" }), v = el("div", { class: "v" }), s = el("div", { class: "s" }); return { root: el("div", { class: "cl" }, l, v, s), l, v, s }; };
-  u.lens = el("select", { class: "lens", "aria-label": "So what for", onchange: (e) => focus(e.target.value) }); u.head = el("div", { class: "swh" }); u.cells = [cell(), cell(), cell(), cell()]; u.cta = el("div", { class: "cta" });
-  u.size = el("span", { class: "size" });
-  u.card = el("div", { class: "sw" }, el("div", { class: "swk" }, el("span", { class: "k", text: "So what" }), el("span", { class: "for", text: "for" }), u.lens, u.size), u.head, el("div", { class: "swb" }, ...u.cells.map(c => c.root), u.cta));
+  u.lens = el("select", { class: "lens", "aria-label": "So what for", onchange: (e) => focus(e.target.value) }); u.head = el("div", { class: "swh" }); u.l2 = el("div", { class: "sw2" }); u.chips = el("div", { class: "swcs" }); u.cells = [cell(), cell(), cell(), cell()]; u.cta = el("div", { class: "cta" });
+  u.size = S.imp ? sizeBadge(u) : el("span", { class: "size" });
+  u.card = el("div", { class: "sw" }, el("div", { class: "swk" }, el("span", { class: "k", text: "So what" }), el("span", { class: "for", text: "for" }), u.lens, u.size), el("div", { class: "swm" }, u.head, u.l2, u.chips), el("div", { class: "swb" }, ...u.cells.map(c => c.root), u.cta));
   u.trail = el("div", { class: "trail" });
   u.wTitle = el("h2"); u.seg = el("div", { class: "seg" }); u.sel = el("select", { "aria-label": "Decision", onchange: (e) => { S.col = +e.target.value; render(); } }); u.wBody = el("div", { style: "flex:1;min-height:0;display:flex;flex-direction:column" }); u.legend = el("div", { class: "legend" });
   u.where = el("div", { class: "panel" }, el("div", { class: "ph" }, u.wTitle, el("div", { class: "r" }, u.sel, u.seg)), u.wBody, u.legend);
   u.tabs = el("div", { class: "tabs2" }); u.tb = el("div", { class: "tb" }); u.side = el("div", { class: "panel" }, u.tabs, u.tb);
-  u.root = el("div", { class: "res" }, u.card, u.trail, el("div", { class: "main" }, u.where, u.side)); return u;
+  const ip = S.imp ? buildImp(u) : null;
+  u.root = el("div", { class: "res" }, u.card, ip && ip.lb, ip && ip.ins, u.trail, el("div", { class: "main" }, u.where, u.side)); return u;
 }
 function render() {
   const r = S.res; if (!r) return; if (!ui || !ui.root.isConnected) { ui = shell(); $("out").replaceChildren(ui.root); }
   const u = ui, R = r.read, ev = isEvent(), f = rowOf(S.focus) || R.rows[0], w = R.rows[0], cs = R.rows.filter(x => x.level === "country");
-  paintCard(u, r, R, f, w, cs, ev); paintTrail(u, R, f, w, cs, ev); paintWhere(u, R, f, ev, cs); paintTabs(u, r, R, f, w, ev);
+  paintCard(u, r, R, f, w, cs, ev); paintTrail(u, R, f, w, cs, ev); paintWhere(u, R, f, ev, cs); paintTabs(u, r, R, f, w, ev); if (S.imp && ev) paintImp(u);
 }
 function nextStop(R, f, cs, ev) {
-  const score = (x) => ev ? Math.abs(x.values[S.col]) : x.total, best = (a) => a.length ? a.reduce((p, q) => score(q) > score(p) ? q : p) : null;
+  const score = (x) => ev ? Math.abs(vals(x)[S.col]) : x.total, best = (a) => a.length ? a.reduce((p, q) => score(q) > score(p) ? q : p) : null;
   return f.level === "world" ? best(cs) : f.level === "country" ? best(R.rows.filter(x => x.parent === f.id)) : f.level === "region" ? best(R.rows.filter(x => x.level === "audience")) : null;
 }
+/* ---------- So what, composed (static/sowhat.js): the sentence, its highlighted beats, line 2 and the chips. Any missing piece returns null and the older text stays. ---------- */
+S.sw = { tables: null, run: -1, prev: "", last: "" };
+async function swLoad() { try { const t = await api("sowhat"); if (t && (t.frames || t.lexicon)) { S.sw.tables = t; if (S.res && ui) render(); } } catch (e) { S.sw.tables = null; } }
+const SW_CHIPS = ["frame", "response", "arc", "scale", "who"], SW_LABEL = { frame: "Frame", response: "Response", arc: "Arc", scale: "Scale", who: "Who" };
+function swCompose(r, R, f) {
+  try {
+    const I = r.impact, st = I && I.story; if (!st || !S.sw.tables || !window.SoWhat || !I.places || !Array.isArray(I.rank)) return null;
+    if (S.sw.run !== S.runId) { S.sw.prev = S.sw.last; S.sw.run = S.runId; S.sw.fresh = true; }   /* feed rule: the previous result's opening decides a variant, fixed for this result */
+    const out = SoWhat.compose({ story: st, focus: f.id, rows: R.rows, places: I.places, rank: I.rank, text: S.text, tables: S.sw.tables, prev: S.sw.prev });
+    if (out && out.headline) S.sw.last = out.headline; return out;
+  } catch (e) { return null; }
+}
+function swRuns(text, spans, line, tr) {      /* split a line into runs by beat (the later span wins where two overlap, so the frame word inside a who phrase keeps its own style) */
+  const b = new Array(text.length).fill(null); for (const s of spans.filter(x => x.line === line)) for (let k = s.start; k < s.end && k < text.length; k++) b[k] = s.beat;
+  const runs = []; for (let k = 0; k < text.length;) { let e = k + 1; while (e < text.length && b[e] === b[k]) e++; runs.push({ beat: b[k], text: text.slice(k, e) }); k = e; } return runs;
+}
+function swLine(node, text, spans, line, beats, animate) {
+  let n = 0; const kids = swRuns(text, spans, line).map(x => { if (!x.beat) return document.createTextNode(x.text); const bt = beats.find(b => b.kind === x.beat), tip = bt ? swTip(bt) : "";
+    return el("span", { "data-beat": x.beat, title: tip, style: animate ? `--i:${n++}` : null }, document.createTextNode(x.text)); });
+  node.replaceChildren(...kids);
+}
+function swTip(b) { return `${SW_LABEL[b.kind] || (b.kind[0].toUpperCase() + b.kind.slice(1))}: ${b.text}\n` + (b.kind === "frame" ? `Chosen by the classifier, p=${b.p != null ? b.p.toFixed(2) : "?"}.\n` : "") + (b.trace || ""); }
+function swPaint(u, out) {
+  const anim = !!S.sw.fresh && !RM; S.sw.fresh = false;
+  u.head.className = "swh c" + (anim ? " new" : ""); swLine(u.head, out.headline, out.spans, 1, out.beats, anim); u.l2.textContent = ""; swLine(u.l2, out.line2, out.spans, 2, out.beats, false);
+  const bs = SW_CHIPS.map(k => out.beats.find(b => b.kind === k)).filter(b => b && (b.short || b.text));
+  u.chips.replaceChildren(...bs.map(b => el("span", { class: "swc", "data-beat": b.kind, title: swTip(b) }, el("b", { text: SW_LABEL[b.kind] }), b.kind === "response" ? ico(iconFor("decision", b.decision)) : ico(b.icon), el("span", { text: b.short || b.text }))));
+  u.head.title = ""; u.composed = true;
+}
+function swClear(u) { if (!u.composed && !u.l2.firstChild && !u.chips.firstChild) return; u.head.className = "swh"; u.l2.textContent = ""; u.chips.replaceChildren(); u.composed = false; }
 /* The "so what" is built by rule from the numbers, never written by hand. */
 function paintCard(u, r, R, f, w, cs, ev) {
   const sizeOf = () => { if (!ev) return null; const sc = R.rows.filter(x => x.level === "country"), avg = sc.reduce((a, x) => a + x.share * Math.max(...x.values.map(Math.abs)), 0), peak = sc.reduce((m, x) => { const v = Math.max(...x.values.map(Math.abs)); return v > m.v ? { v, label: x.label } : m; }, { v: 0, label: "" });
-    const L = [[0.25, "Negligible", 1], [1, "Small", 2], [3, "Moderate", 3], [8, "Large", 4], [1e9, "Extreme", 5]].find(t => avg < t[0]); return { avg, peak, name: L[1], cls: L[2] }; };
-  { const z = ev ? sizeOf() : null; u.size.style.display = z ? "" : "none"; if (z) { u.size.textContent = "Size: " + z.name; u.size.className = "size s" + z.cls; u.size.title = `The average person's biggest change in any decision is ${z.avg.toFixed(2)} points of likelihood. Hardest-hit place: ${z.peak.label} (${z.peak.v.toFixed(1)} points). Bands (under 0.25 negligible, 1 small, 3 moderate, 8 large, above extreme) are our judgement.`; } }
+    const B = [[0.25, "Negligible", 1], [1, "Small", 2], [3, "Moderate", 3], [8, "Large", 4], [1e9, "Extreme", 5]], local = avg < 0.25 && peak.v >= 0.25, L = B.find(t => (local ? peak.v : avg) < t[0]); return { avg, peak, name: L[1] + (local ? " · local" : ""), cls: L[2], local }; };   /* a story that lands in one country has a tiny average: size it by where it lands */
+  if (S.imp && ev) paintSize(u); else { const z = ev ? sizeOf() : null; u.size.style.display = z ? "" : "none"; if (z) { u.size.textContent = "Size: " + z.name; u.size.className = "size s" + z.cls; u.size.title = `The average person's biggest change in any decision is ${z.avg.toFixed(2)} points of likelihood. Hardest-hit place: ${z.peak.label} (${z.peak.v.toFixed(1)} points). Bands (under 0.25 negligible, 1 small, 3 moderate, 8 large, above extreme) are our judgement.${z.local ? " The world average is tiny, so the band is taken from the hardest-hit place." : ""}`; } }
   const i = r.identify, setCell = (k, label, val, sub, d, tip) => { const c = u.cells[k]; c.l.textContent = label; c.v.textContent = val; c.s.textContent = sub; c.v.className = "v " + (d == null ? "" : d > 0.0049 ? "pos" : d < -0.0049 ? "neg" : ""); c.root.title = tip || `${label}: ${val}. ${sub}`; };
   const rootC = f.level === "country" ? f.id : f.level === "region" ? f.parent : ""; if (u.lensKey !== S.runId + "|" + rootC) { const og = (label, rows, fn) => el("optgroup", { label }, rows.map(x => el("option", { value: x.id, text: fn(x) }))); u.lens.replaceChildren(el("option", { value: w.id, text: "the world" }), og("Countries", [...cs].sort((a, b) => b.share - a.share), x => x.label), ...(rootC ? [og("Regions of " + ((rowOf(rootC) || {}).label || ""), R.rows.filter(x => x.level === "region" && x.parent === rootC), x => x.label.split(" · ").pop())] : []), og("Audiences", R.rows.filter(x => x.level === "audience"), x => x.label)); u.lensKey = S.runId + "|" + rootC; }
   u.lens.value = f.id;
   let nx = null;
   if (!ev) {
-    nx = nextStop(R, f, cs, ev);
+    nx = nextStop(R, f, cs, ev); swClear(u);
     const best = cs.reduce((a, b) => b.total > a.total ? b : a), low = cs.reduce((a, b) => b.total < a.total ? b : a), aud = R.rows.filter(x => x.level === "audience"), top = aud.reduce((a, b) => b.total > a.total ? b : a);
     u.head.textContent = `${f.total.toFixed(1)}% of people${f.id === w.id ? "" : ` in ${placeName(f.label)}`} would take this up. The best fit is ${top.label} (${top.total.toFixed(1)}%).`;
     setCell(0, "Support today", f.total.toFixed(1) + "%", f.id === w.id ? "across all people" : `in ${f.label}`, null); setCell(1, "Strongest place", best.label, best.total.toFixed(1) + "%", null); setCell(2, "Best fit", top.total.toFixed(1) + "%", top.label, null); setCell(3, "Weakest place", low.label, low.total.toFixed(1) + "%", null);
   } else {
     const hot = cs.reduce((a, b) => maxAbs(b) > maxAbs(a) ? b : a), world = f.level === "world", row = world ? hot : f, ord = leadOrder(row, R.cols), lead = ord[0], reach = cs.filter(x => x.values.some(v => Math.abs(v) >= .5)), reachPct = Math.round(reach.reduce((a, x) => a + x.share, 0) * 100);
-    const rd = i.readings, reps = rd.filter(x => x.basis !== "expected"), exps = rd.filter(x => x.basis === "expected"), byAmt = [...rd].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)), short = (x) => `${DIAL_SHORT[x.dial] || x.name} ${arrow(x.direction)}`;
+    const rd = i.readings, reps = rd.filter(x => x.basis !== "expected"), exps = rd.filter(x => x.basis === "expected"), byAmt = [...rd].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)), short = (x) => `${dialShort(x.dial, x.name)} ${arrow(x.direction)}`;
     if (lead) nx = nextStop(R, f, cs, ev);
     if (!lead) u.head.textContent = i.counted ? "Nothing here shifts a decision." : "No material impact expected.";
     else if (world) { const j = lead.j, contrib = cs.map(c => c.share * Math.abs(c.values[j])), conc = Math.max(...contrib) / (contrib.reduce((a, b) => a + b, 0) || 1), wv = w.values[j], wo = leadOrder(w, R.cols);
       u.head.textContent = conc >= .6 && Math.abs(wv) < 1 ? `Concentrated in ${placeName(hot.label)}: people there are likelier to ${joinNice(ord.slice(0, 3).map(x => phrase(x.id, x.v)))}.` : wo.length ? `Worldwide, people are likelier to ${joinNice(wo.slice(0, 3).map(x => phrase(x.id, x.v)))}.` : "Worldwide the average person barely moves."; }
     else u.head.textContent = `${f.level === "audience" ? `${f.label} people are` : `People in ${placeName(f.label)} are`} likelier to ${joinNice(ord.slice(0, 3).map(x => phrase(x.id, x.v)))}.`;
+    { const sw = swCompose(r, R, f); if (sw) swPaint(u, sw); else swClear(u); }
+    if (S.imp) impCells(u, f, w); else {
     setCell(0, "Now", reps.length ? byAmt.filter(x => x.basis !== "expected").slice(0, 2).map(short).join(", ") : i.counted ? "Nothing reported yet" : "Nothing", reps.length ? "reported in the story" : i.counted ? "no condition reported as changing" : "no impact expected", null);
     setCell(1, "Direction", directionOf(row, R.cols), i.counted ? `driven by ${byAmt.slice(0, 3).map(short).join(", ")}` : "no conditions move", lead ? lead.v : null);
-    if (lead && exps.length && row.parts) { const k = 1 / (exps[0].mode_weight || 1), full = row.parts.reported[lead.j] + row.parts.expected[lead.j] * k; setCell(2, "If it plays out", pm(full) + " pts", `${DEC_SHORT[lead.id]} · ${exps[0].mode === "expected_pending" ? "pending" : "in effect"}`, full, `A scenario, not a prediction: the expected part at full weight (about ${k.toFixed(1)} times what is counted now). Approximate: assumes effects scale in proportion.`); }
+    if (lead && exps.length && row.parts) { const k = 1 / (exps[0].mode_weight || 1), full = row.parts.reported[lead.j] + row.parts.expected[lead.j] * k; setCell(2, "If it plays out", pm(full) + " pts", `${decName(lead.id)} · ${exps[0].mode === "expected_pending" ? "pending" : "in effect"}`, full, `A scenario, not a prediction: the expected part at full weight (about ${k.toFixed(1)} times what is counted now). Approximate: assumes effects scale in proportion.`); }
     else setCell(2, "If it plays out", !i.counted ? "Nothing" : exps.length ? "—" : "Fully counted", !i.counted ? "no effect expected" : exps.length ? "no decision shifts" : "nothing more to come", null);
-    setCell(3, "Reach", lead ? (world ? reachPct + "% of people" : (f.share * 100).toFixed(1) + "% of people") : "None", lead ? (world ? `${reach.length} of ${cs.length} countries move 0.5+` : f.label) : "no one moves", null);
+    setCell(3, "Reach", lead ? (world ? reachPct + "% of people" : (f.share * 100).toFixed(1) + "% of people") : "None", lead ? (world ? `${reach.length} of ${cs.length} countries move 0.5+` : f.label) : "no one moves", null); }
   }
   // the call to action: one big block that names the next stop; the quieter actions sit under it
   const main = nx ? el("button", { class: "cta-main", type: "button", title: `Next stop on the biggest move: ${nx.label}`, onclick: () => focus(nx.id) }, el("span", { text: "Go deeper →" }), el("small", { text: `${nx.label.split(" · ").pop()} · ${ev ? pm(cval(nx)) + " pts" : nx.total.toFixed(1) + "%"}` }))
@@ -181,7 +415,7 @@ function paintCard(u, r, R, f, w, cs, ev) {
   const links = []; if (ev && i.counted && nx) links.push(el("button", { type: "button", text: "Add to the world's news", onclick: confirmThen(commit) }));
   links.push(el("button", { type: "button", text: "How it was made", onclick: () => { S.tab = "method"; render(); } })); if (f.level !== "world") links.push(el("button", { type: "button", text: "← World", onclick: () => focus(w.id) }));
   u.cta.replaceChildren(main, el("div", { class: "cta-links" }, ...links));
-  if (ev) u.head.title = "Built by rule from the numbers: the place with the biggest move, its three largest decision changes (rules/decision_phrases.csv), and a concentration test (one country holds 60% or more of the movement).";
+  if (ev && !u.composed) u.head.title = "Built by rule from the numbers: the place with the biggest move, its three largest decision changes (rules/decision_phrases.csv), and a concentration test (one country holds 60% or more of the movement).";
 }
 /* adding to the world changes the engine's state, so it takes two clicks: the first arms the button, the second (within 4 s) does it */
 function confirmThen(fn) { return (e) => { const b = e.currentTarget; if (b.dataset.armed) { clearTimeout(+b.dataset.armed); delete b.dataset.armed; return fn(); } const kids = [...b.childNodes]; b.replaceChildren(el("span", { text: "Click again to confirm" }), b.classList.contains("cta-main") ? el("small", { text: "this adds it to the engine's world" }) : ""); b.dataset.armed = setTimeout(() => { delete b.dataset.armed; b.replaceChildren(...kids); }, 4000); }; }
@@ -196,10 +430,10 @@ function paintTrail(u, R, f, w, cs, ev) {
 }
 /* ---------- where it lands: places (treemap) or groups (ranked bars) ---------- */
 function paintWhere(u, R, f, ev, cs) {
-  u.wTitle.textContent = "Where it lands";
+  u.wTitle.replaceChildren("Where it lands", S.imp && ev ? el("span", { class: "wsub", text: ` · ${dshort(R.cols[S.col].id, R.cols[S.col].label)} · ${S.imp.horizons[S.hz].label}` }) : null);
   u.seg.replaceChildren(...[["places", "Places"], ["groups", "Groups"]].map(([k, l]) => el("button", { type: "button", class: S.lens === k ? "on" : "", text: l, onclick: () => { S.lens = k; render(); } })));
-  if (u.selKey !== S.runId + "|" + ev) { u.sel.replaceChildren(...R.cols.map((c, j) => el("option", { value: j, text: c.label }))); u.selKey = S.runId + "|" + ev; } u.sel.value = String(S.col); u.sel.style.display = ev ? "" : "none";
-  const lg = ev ? ["Less likely", "No change", "More likely"] : ["Below the world average", "World average", "Above"]; u.legend.replaceChildren(el("span", { text: lg[0] }), el("div", { class: "bar" }), el("span", { text: lg[2] }), el("span", { style: "margin-left:auto", text: S.lens === "places" ? "Area is people" : "Each row is a group of similar people; groups cut across countries" }));
+  if (u.selKey !== S.runId + "|" + ev) { u.sel.replaceChildren(...R.cols.map((c, j) => el("option", { value: j, text: c.label }))); u.selKey = S.runId + "|" + ev; } u.sel.value = String(S.col); u.sel.style.display = ev && !S.imp ? "" : "none";
+  const lg = ev ? ["Less likely", "No change", "More likely"] : ["Below the world average", "World average", "Above"]; u.legend.replaceChildren(el("span", { text: lg[0] }), el("div", { class: "bar" }), el("span", { text: lg[2] }), el("span", { style: "margin-left:auto", text: S.lens === "places" ? "Area is people" : "Groups cut across countries" }));
   if (S.lens === "places") {
     const root = f.level === "country" ? f.id : f.level === "region" ? f.parent : "WORLD:world", key = S.runId + "|" + root;
     if (S.mapKey !== key) { S.map = buildMap(root); S.mapKey = key; } paintMap(); u.wBody.replaceChildren(S.map.box);
@@ -216,26 +450,26 @@ function paintTabs(u, r, R, f, w, ev) {
 }
 function movesBody(r, R, f, w, ev) {
   const world = f.level === "world", th = ev ? 0.3 : 0.5;
-  const pairs = world ? R.rows.filter(x => ["country", "audience"].includes(x.level)).flatMap(x => R.cols.map((c, j) => ({ r: x, c, v: x.values[j] }))).filter(p => Math.abs(p.v) >= th) : R.cols.map((c, j) => ({ r: f, c, v: f.values[j] })).filter(x => Math.abs(x.v) >= 0.05);
+  const pairs = world ? R.rows.filter(x => ["country", "audience"].includes(x.level)).flatMap(x => R.cols.map((c, j) => ({ r: x, c, v: vals(x)[j] }))).filter(p => Math.abs(p.v) >= th) : R.cols.map((c, j) => ({ r: f, c, v: vals(f)[j] })).filter(x => Math.abs(x.v) >= 0.05);
   const all = [...pairs].sort((a, b) => Math.abs(b.v) - Math.abs(a.v)), shown = S.all ? all.slice(0, 12) : all.slice(0, 3), mx = Math.max(1, ...all.map(x => Math.abs(x.v)));
   if (!all.length) return el("div", { class: "cap", text: ev ? "Nothing moves here." : "Nothing pulls or pushes here." });
   return el("div", {}, el("div", { class: "sec", text: world ? (ev ? "Biggest moves, anywhere" : "Biggest pulls and pushes") : `Biggest moves in ${f.label}` }),
-    ...shown.map(it => el("div", { class: "grow", title: "Click to see why", onclick: () => { S.sel = { node: it.r.id, col: it.c.id }; S.tab = "why"; ensureLedger(it.r.id, it.c.id); render(); } }, el("span", { class: "nm", text: world ? `${it.r.label} · ${it.c.label}` : it.c.label }), el("div", { class: "dbar" }, el("i", { class: it.v > 0 ? "up" : "dn", style: `width:${Math.min(50, Math.abs(it.v) / mx * 50)}%` })), el("span", { class: "val " + (it.v > 0 ? "pos" : "neg"), text: pm(it.v) }))),
+    ...shown.map(it => el("div", { class: "grow", title: "Click to see why", onclick: () => { S.sel = { node: it.r.id, col: it.c.id }; S.tab = "why"; ensureLedger(it.r.id, it.c.id); render(); } }, el("span", { class: "nm", text: world ? `${it.r.label} · ${capName(it.c.label, 26)}` : capName(it.c.label, 26) }), el("div", { class: "dbar" }, el("i", { class: it.v > 0 ? "up" : "dn", style: `width:${Math.min(50, Math.abs(it.v) / mx * 50)}%` })), el("span", { class: "val " + (it.v > 0 ? "pos" : "neg"), text: pm(it.v) }))),
     all.length > 3 ? el("button", { class: "more", type: "button", text: S.all ? "Show fewer" : `Show ${Math.min(all.length, 12) - 3} more`, onclick: () => { S.all = !S.all; render(); } }) : null,
-    el("div", { class: "cap", text: "Click a line to see why it moves." }));
+    el("div", { class: "cap", text: "Click a line for why." }));
 }
 async function ensureLedger(node, col) { const key = node + "|" + col; if (S.led[key] || S.ledP[key]) return; S.ledP[key] = 1; const run = S.runId; try { S.led[key] = await api("drill", { node, col }); } catch (e) { S.led[key] = { error: e.message, ledger: [] }; } delete S.ledP[key]; if (run === S.runId && ui && ui.root.isConnected && S.tab === "why") render(); }
 function whyBody(r, R, f, w, ev) {
   if (!S.sel) { const world = f.level === "world", pool = world ? R.rows.filter(x => x.level === "country") : [f]; let b = null; for (const x of pool) R.cols.forEach((c, j) => { if (!b || Math.abs(x.values[j]) > Math.abs(b.v)) b = { r: x, c, v: x.values[j] }; }); S.sel = b && Math.abs(b.v) >= .05 ? { node: b.r.id, col: b.c.id } : null; }
   if (!S.sel) return el("div", { class: "cap", text: "Nothing moves here, so there is nothing to explain." });
   const row = rowOf(S.sel.node), col = R.cols.find(c => c.id === S.sel.col), key = S.sel.node + "|" + S.sel.col, d = S.led[key]; ensureLedger(S.sel.node, S.sel.col);
-  const head = el("div", { class: "sec", text: `Why: ${row.label} · ${col.label}` }); if (!d) return el("div", {}, head, el("div", { class: "cap", text: "Loading the chain…" }));
+  const head = el("div", { class: "sec", text: `Why: ${row.label} · ${col.label}${S.imp ? " · Now" : ""}` }); if (!d) return el("div", {}, head, el("div", { class: "cap", text: "Loading the chain…" }));
   const rows = (d.ledger || []).filter(x => Math.abs(x.push) >= 0.005), top = rows.slice(0, 3), blocks = [head];
   if (d.parts) { const rep = d.parts.reported, exp = d.parts.expected, inter = d.value - rep - exp, tot = Math.abs(rep) + Math.abs(exp) + Math.abs(inter) || 1, seg = (c, v) => el("i", { class: c, style: `width:${Math.abs(v) / tot * 100}%` });
     blocks.push(el("div", { class: "split" }, el("div", { class: "sv" }, el("b", { class: d.value > 0.0049 ? "pos" : d.value < -0.0049 ? "neg" : "", text: pm(d.value) + " pts" }), el("span", { text: `expected ${pm(exp)} · reported ${pm(rep)}` + (Math.abs(inter) >= .05 ? ` · interaction ${pm(inter)}` : "") })), el("div", { class: "sb", title: "Each part is the same event run alone; effects interact, so parts need not add up exactly" }, seg("rep", rep), seg("exp", exp), seg("int", inter)))); }
   if (!top.length) return el("div", {}, ...blocks, el("div", { class: "cap", text: d.error || "No person factor changed here, so nothing attracts or detracts." }));
-  const via = (x) => (x.via || []).map(v => el("span", { class: "via" + (v.basis === "expected" ? " exp" : ""), title: v.basis === "expected" ? "Expected, not reported" : v.basis === "reported" ? "Reported in the story" : "Follows from the conditions that moved", text: `${(DIAL_SHORT[v.dial] || v.name)} ${arrow(v.direction)}${v.basis === "expected" ? " expected" : ""}` }));
-  if (ev) { const nm = (x) => x.factor.toLowerCase(), cause = [...new Set(top.slice(0, 2).flatMap(x => (x.via || []).map(v => `${DIAL_SHORT[v.dial] || v.name} ${arrow(v.direction)}`)))]; blocks.push(el("p", { class: "why1", text: `Mostly through ${joinNice(top.slice(0, 2).map(x => `${nm(x)} (${pm(x.push)})`))}, which move because of ${joinNice(cause.length ? cause : ["the conditions above"])}.` })); }
+  const via = (x) => (x.via || []).map(v => el("span", { class: "via" + (v.basis === "expected" ? " exp" : ""), title: v.basis === "expected" ? "Expected, not reported" : v.basis === "reported" ? "Reported in the story" : "Follows from the conditions that moved", text: `${dialShort(v.dial, v.name)} ${arrow(v.direction)}${v.basis === "expected" ? " expected" : ""}` }));
+  if (ev) { const nm = (x) => x.factor.toLowerCase(), cause = [...new Set(top.slice(0, 2).flatMap(x => (x.via || []).map(v => `${dialShort(v.dial, v.name)} ${arrow(v.direction)}`)))]; blocks.push(el("p", { class: "why1", text: `Mostly through ${joinNice(top.slice(0, 2).map(x => `${nm(x)} (${pm(x.push)})`))}, which move because of ${joinNice(cause.length ? cause : ["the conditions above"])}.` })); }
   top.forEach(x => blocks.push(el("div", { class: "chain" }, el("div", { class: "t" }, el("span", { text: x.factor }), el("span", { class: x.push > 0 ? "pos" : "neg", text: pm(x.push, 2) })), ev ? el("div", {}, ...via(x)) : el("div", { class: "cap", style: "margin:2px 0 0", text: x.rule.length > 110 ? x.rule.slice(0, 108) + "…" : x.rule }))));
   blocks.push(el("button", { class: "more", type: "button", text: S.nums ? "Hide the numbers" : "Show the numbers", onclick: () => { S.nums = !S.nums; render(); } }));
   if (S.nums) blocks.push(el("table", { class: "t2" }, el("thead", {}, el("tr", {}, ["Factor", "State", "Weight", "Push (pts)"].map(h => el("th", { text: h })))), el("tbody", {}, rows.slice(0, 8).map(x => el("tr", {}, el("td", { text: x.factor }), el("td", { class: "n", text: x.state == null ? "–" : pm(x.state, 2) }), el("td", { class: "n", text: x.weight == null ? "–" : pm(x.weight, 2) }), el("td", { class: "n " + (x.push > 0 ? "pos" : "neg"), text: pm(x.push, 2) }))))));
@@ -267,6 +501,7 @@ function methodBody(r, R, w, ev) {
     ["React", "100,000 modelled people in 8 audiences each answer 8 decision rules.", "Each person's own numbers decide; every weight is visible.", "Modelled people", "why"],
     ["Tell", "One sentence, built by rule: the place with the biggest move and what its people are likelier to do (the three largest decision changes).", "If one country holds 60% or more of the movement and the world average is under 1 point, it says Concentrated in…; otherwise Worldwide…", "Our rules", null]]
   : [["Read", "An offer, read as 10 properties (price, app, ID check, audience…).", "Each property is a yes/no question.", "Model reading", null], ["Place", tags.join(", ") || "Other", "One of 14 topic domains plus Other.", "Our regrouping", "touch"], ["Estimate", "Take-up for each of 100,000 modelled people.", "A model fitted on 39 ideas rated by 400 generated people.", "Fitted", "moves"], ["Spread", "An offer does not move the world; it is read against today's world.", "", "—", null], ["React", "Support by place and by audience.", "", "Modelled people", "why"], ["Tell", "One sentence, built by rule from support and the best-fit group.", "", "Our rules", null]];
+  if (S.imp && ev) { const sg = S.imp.significance; steps.push(["Size", `Score ${Math.round(sg.score)} of 100 (${sg.tier}). Resources and chain come from the same run.`, "Score = size × reach × staying power × stakes. " + (S.imp.note || ""), "Guessed bands", "moves"]); }
   return el("div", {}, el("div", { class: "sec", text: "How this answer was made" }), ...steps.map(([n, o, why, tag, tab], k) => el("div", { class: "step" }, el("div", { class: "n", text: String(k + 1) }), el("div", {}, el("b", { text: n }), el("div", { class: "o", text: o }), why ? el("div", { class: "w", text: why }) : null, tab ? el("a", { text: "Look here →", onclick: () => { S.tab = tab; render(); } }) : null), el("span", { class: "tag", text: tag }))));
 }
 /* ---------- live ticker: COUNTRY:TOPIC:headline, scrolling right to left. The ENGINE feeds each headline into the world model (one tick each) while this page is open; this strip only shows them. ---------- */
@@ -276,7 +511,7 @@ function tkNode(it) {
   const ef = (it.effects || []).slice(0, 4);
   return el("span", { class: "ti", title: `${it.c}:${it.t}  ·  ${it.src || "ticker"}${it.kind ? " (" + it.kind + ")" : ""}  ·  world tick ${it.tick}` },
     el("span", { class: "t1" }, el("span", { class: "c", text: it.c }), el("span", { class: "tp", text: ":" + it.t + ":" }), ...hl(it.x)),
-    el("span", { class: "t2" }, ef.length ? ef.map(e => el("b", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${DIAL_SHORT[e.dial] || e.name}${e.basis === "expected" ? "*" : ""}` })) : el("i", { text: "no measurable effect" })));
+    el("span", { class: "t2" }, ef.length ? ef.map(e => el("b", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${dialShort(e.dial, e.name)}${e.basis === "expected" ? "*" : ""}` })) : el("i", { text: "no measurable effect" })));
 }
 function tkAdd(it) {                                         // a new headline enters just off the right edge of the strip and passes once; nothing is looped or repeated
   TK.items.push(it); TK.items = TK.items.slice(-40); const node = tkNode(it); trk.append(node);
@@ -333,9 +568,9 @@ async function idea(kind, btn) {
 }
 function paintChips(kinds) { $("eg").replaceChildren(el("span", { class: "lab", text: "Surprise me:" }), ...kinds.map(k => el("button", { type: "button", title: k.blurb || k.label, text: k.label, onclick: (e) => idea(k.id, e.currentTarget) })), el("button", { type: "button", title: "Any kind, picked at random", text: "Random", onclick: (e) => idea("random", e.currentTarget) }), el("span", { class: "src", id: "src" })); }
 paintChips(KINDS_FALLBACK); Jev.api("/api/idea-kinds").then(k => paintChips(k.kinds)).catch(() => {});
-$("out").replaceChildren(el("div", { class: "empty" }, el("h2", { text: "Ask about anything, large or small" }), el("p", { text: "The engine reads it, places it, estimates what it does, spreads it through the world, and tells you what it means. The same six steps run every time:" }),
+$("out").replaceChildren(el("div", { class: "empty" }, el("h2", { text: "Ask about anything, large or small" }), el("p", { text: "Six steps run every time:" }),
   el("div", { class: "meth" }, [["Read", "What kind of thing is it, and how much does it count?"], ["Place", "Which of 14 topics is it about?"], ["Estimate", "What is reported, and what is expected?"], ["Spread", "Where does it enter, and who does it reach?"], ["React", "What do people decide?"], ["Tell", "So what, in one sentence."]].map(([a, b], k) => el("div", {}, el("i", { text: String(k + 1) }), el("b", { text: a }), b)))));
-api("state").then(s => { S.state = s; }).catch(e => $("out").append(el("div", { class: "panel", style: "color:var(--bad);margin-top:14px", text: "Could not reach the world engine: " + e.message })));
+swLoad(); api("state").then(s => { S.state = s; }).catch(e => $("out").append(el("div", { class: "panel", style: "color:var(--bad);margin-top:14px", text: "Could not reach the world engine: " + e.message })));
 </script>
 </body>
 </html>

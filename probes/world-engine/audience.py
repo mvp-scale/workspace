@@ -5,7 +5,8 @@ Only ONE decision is registered in v0: take-up (would this person take the item 
 import sys, json, hashlib, time, email.utils
 import numpy as np
 import engine as E
-L = "/workspace/probes/world-engine/ledger"; RULES = "/workspace/probes/persona/rules"
+import rules as RU
+L = "/workspace/probes/world-engine/ledger"; RULES = RU.R        # the active ruleset folder (WE_RULES)
 def build_world(seed=0):
     ev = {e["evidence_id"]: e for e in map(json.loads, open(f"{L}/evidence.jsonl"))}; ms = [json.loads(l) for l in open(f"{L}/measurements.jsonl")]; cl = json.load(open(f"{L}/clusters.json")); groups = {}
     for m in ms: groups.setdefault(cl[m["evidence_id"]], []).append(m)
@@ -32,7 +33,7 @@ class Service:
         self.ref = {k: self.aud.probability(self.pop, self.eff, self.ref_iv[i]) for i, k in enumerate(self.ref_names)}
         d = np.linalg.norm(self.ref_iv[:, None] - self.ref_iv[None], axis=2); np.fill_diagonal(d, 9); self.nn = np.sort(d.min(1))
     def snapshot(self):
-        rules = hashlib.sha1(b"".join(open(f"{RULES}/{f}.csv", "rb").read() for f in ("dials", "elements", "grid", "decisions", "decision_weights"))).hexdigest()[:10]
+        rules = hashlib.sha1(b"".join(open(f"{RULES}/{f}.csv", "rb").read() for f in ("dials", "elements", "grid", "decisions", "decision_weights") + (("dial_ties",) if RU.exists("dial_ties") else ()))).hexdigest()[:10]
         return {"world_tick": self.w.tick, "world_digest": self.w.digest(), "people": self.n, "population_seed": 1, "run_seed": self.seed, "rules_hash": rules, "classifier": "Winnow-12B", "decision_model": f"take-up ridge fitted on {len(self.ref_names)} ideas x 400 people", "created": time.strftime("%Y-%m-%d %H:%M:%S")}
     def level_answer(self, p, refs):
         out = {}

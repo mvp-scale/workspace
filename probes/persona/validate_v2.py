@@ -22,7 +22,7 @@ decs = load('decisions.csv'); grid = load('grid.csv'); dw = load('decision_weigh
 layers = {'resource': res, 'dial': dials, 'domain': doms, 'element': els, 'decision': decs}
 
 # counts
-exp = {'resource': 26, 'dial': 38, 'domain': 49, 'element': 47, 'decision': 20}
+exp = {'resource': 26, 'dial': 39, 'domain': 49, 'element': 47, 'decision': 20}
 for k, n in exp.items(): check(len(layers[k]) == n, f'{k} count {len(layers[k])} != {n}')
 # unique ids
 for k, rows in layers.items():
@@ -127,7 +127,7 @@ notes.append(f'links: topic->condition {tc}, condition->condition {len(ties)}, c
 # id_map
 seen = defaultdict(set)
 for m in idmap:
-    check(m['action'] in ('keep', 'rename', 'merge', 'split', 'retire'), f"id_map action {m['action']}")
+    check(m['action'] in ('keep', 'rename', 'merge', 'split', 'retire', 'new'), f"id_map action {m['action']}")
     seen[m['layer']].add(m['old_id'])
     for n in split(m['new_ids']):
         if n.startswith('outlook'): continue
@@ -137,6 +137,49 @@ for layer, fn in v1files.items():
     for r in load(fn, V1): check(r['id'] in seen[layer], f"id_map missing v1 {layer} {r['id']}")
 topic_new = {n for m in idmap if m['layer'] == 'domain' for n in split(m['new_ids'])}
 check(set(TOP) <= topic_new, f'topics not in id_map: {sorted(set(TOP)-topic_new)}')
+
+
+# ---- banks: full coverage of v2 ids; every question non-empty and ends with '?' ----
+def bank_checks():
+    da = load('dial_attributes.csv') + load('dial_attributes_extra.csv')
+    conds = {i for i, r in DIAL.items()}
+    for d in conds:
+        for dr in ('up', 'down'):
+            n = sum(1 for r in da if r['dial_id'] == d and r['direction'] == dr)
+            check(n >= 2, f'dial_attributes: {d} {dr} has {n} attributes (need >=2)')
+    check({r['dial_id'] for r in da} <= conds, 'dial_attributes: unknown dial id')
+    for r in da:
+        check(r['attribute'].strip() and r['attribute'] != 'todo' and r['definition'].strip(), f"dial_attributes: {r['dial_id']} {r['direction']} blank attribute/definition")
+        qs = (r['question_1'], r['question_2'])
+        check(all(q.strip().endswith('.') and '?' not in q and len(q.strip()) > 10 for q in qs), f"dial_attributes: {r['dial_id']}/{r['attribute']} must be a statement ending with '.' and no '?'")
+        check(qs[0] != qs[1], f"dial_attributes: {r['dial_id']}/{r['attribute']} two questions identical")
+    ip = load('impact_phrases.csv'); cond = {i for i, r in DIAL.items() if r['kind'] in ('condition', 'media')}
+    check({r['dial_id'] for r in ip} == cond and len(ip) == len(cond), 'impact_phrases: need exactly one row per condition-kind and media-kind dial (a missing row made classify.severity raise KeyError)')
+    check(all(r['up'].strip() and r['down'].strip() for r in ip), 'impact_phrases: blank phrase')
+    dp = load('decision_phrases.csv')
+    check({r['decision_id'] for r in dp} == DEC and len(dp) == len(DEC), 'decision_phrases: need exactly one row per decision')
+    check(all(r['up'].strip() and r['down'].strip() for r in dp), 'decision_phrases: blank phrase')
+    eq = load('element_questions.csv')
+    for e, r in EL.items():
+        n = sum(1 for q in eq if q['element_id'] == e)
+        check(n == int(r['n_questions_target']), f"element_questions: {e} has {n}, target {r['n_questions_target']}")
+    check({q['element_id'] for q in eq} <= set(EL), 'element_questions: unknown element id')
+    for q in eq: check(q['question'].strip().endswith('.') and '?' not in q['question'] and len(q['question'].strip()) > 10, f"element_questions: {q['element_id']} must be a statement ending with '.' and no '?'")
+    for n in ('impact_modes', 'impact_levels', 'loop'):
+        check(open(os.path.join(V2, n + '.csv')).read() == open(os.path.join(V1, n + '.csv')).read(), f'{n}.csv must equal v1')
+    dr, er, xr, ks = load('dial_resources.csv'), load('element_resources.csv'), load('decision_resources.csv'), load('decision_stakes.csv')
+    check({x['dial_id'] for x in dr} == set(DIAL) and len(dr) == len(DIAL), 'dial_resources: one row per condition')
+    for x in dr: check(x['resource_id'] == DIAL[x['dial_id']]['resource_id'] and x['role'] == 'level_of' and x['up_means'] in ('strain', 'build') and x['status'] == 'guess' and x['why'].strip(), f"dial_resources bad row {x['dial_id']}")
+    moving = {i for i, r in EL.items() if r['kind'] == 'state'}
+    check({x['element_id'] for x in er} == moving, 'element_resources: must cover exactly the moving states')
+    for x in er: check(x['resource_id'] in RES and x['weight'] in ('0.2', '0.5', '0.8') and x['up_means'] in ('strain', 'build') and x['status'] == 'guess' and x['why'].strip(), f"element_resources bad row {x}")
+    check({x['decision_id'] for x in xr} == DEC, 'decision_resources: every decision needs a row')
+    for x in xr: check(x['resource_id'] in RES and x['direction'] in ('draw', 'build') and x['weight'] in ('0.2', '0.5', '0.8') and x['status'] == 'guess' and x['why'].strip(), f"decision_resources bad row {x}")
+    check({x['decision_id'] for x in ks} == DEC and len(ks) == len(DEC) and all(1 <= int(x['stakes']) <= 5 and x['status'] == 'guess' and x['why'].strip() for x in ks), 'decision_stakes: one row per decision, stakes 1..5, status guess')
+    unreached = sorted(RES - {x['resource_id'] for x in dr + er + xr})
+    check(not unreached, f'resources not reached by any bank: {unreached}')
+    notes.append(f'banks: attrs {len(da)}, impact {len(ip)}, decision_phrases {len(dp)}, element_questions {len(eq)}, dial_res {len(dr)}, el_res {len(er)}, dec_res {len(xr)}, stakes {len(ks)}')
+bank_checks()
 
 print('COUNTS:', {k: len(v) for k, v in layers.items()}, 'grid', len(grid), 'weights', len(dw), 'ties', len(ties), 'id_map', len(idmap))
 for n in notes: print('NOTE:', n)
