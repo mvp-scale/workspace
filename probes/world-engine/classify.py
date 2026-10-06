@@ -27,14 +27,23 @@ def ask(ev, today=None):
     for j in range(0, len(names), 20):
         a = O.call(state, {k: {"type": "noul", "instructions": QS[k]} for k in names[j:j + 20]}); P.update({k: a[k]["noul"] for k in a})
     return P
-def countries():
-    import csv
-    return [(r["id"], r["name"]) for r in csv.DictReader(open("/workspace/probes/world-engine/data/countries.csv"))]
+def _country_rows():
+    import csv, os
+    return list(csv.DictReader(open(os.environ.get("WORLD_COUNTRIES", "/workspace/probes/world-engine/data/countries_world100.csv"))))
+def countries(): return [(r["id"], r["name"]) for r in _country_rows()]
 def ask_country(ev, today=None):
-    """Typed choice question: which country is the story mainly about? (one of the simulated countries, or 'global' for none or all)."""
-    today = today or datetime.date.today().isoformat(); crit = {i: n for i, n in countries()}; crit["global"] = "No single country in this list, or the whole world"
-    a = O.call(f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}", {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": crit}})["c"]
-    return a["choice"], {k: round(float(v), 3) for k, v in a["probabilities"].items()}
+    """Which country is the story mainly about? The server allows 2 to 64 options per question, so with many countries it asks which part of the world first, then which country in it.
+    Returns (country id or 'global', probabilities)."""
+    today = today or datetime.date.today().isoformat(); st = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"; rows = _country_rows()
+    if len(rows) <= 63 or "region" not in rows[0]:
+        crit = {r["id"]: r["name"] for r in rows}; crit["global"] = "No single country in this list, or the whole world"
+        a = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": crit}})["c"]; return a["choice"], {k: round(float(v), 3) for k, v in a["probabilities"].items()}
+    regions = sorted({r["region"] for r in rows}); crit = {g: g for g in regions}; crit["GLOBAL"] = "The whole world, or no single part of it"
+    g = O.call(st, {"g": {"type": "choice", "instructions": "Which part of the world is this story mainly about?", "criteria": crit}})["g"]; pg = {k: float(v) for k, v in g["probabilities"].items()}
+    if g["choice"] == "GLOBAL": return "global", {"global": round(pg["GLOBAL"], 3)}
+    inr = {r["id"]: r["name"] for r in rows if r["region"] == g["choice"]}; inr["other_here"] = "A different country in this part of the world, or no single country"
+    c = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": inr}})["c"]; pc = {k: round(float(v) * pg[g["choice"]], 3) for k, v in c["probabilities"].items()}
+    return ("global" if c["choice"] == "other_here" else c["choice"]), pc
 def read(P):
     g = {k: P[f"g|{k}"] for k in GENRE}; gate = (g["happened"] >= .5 or g["announced"] >= .5) and g["opinion"] < .5 and P["x|recent"] >= .3
     entry = "COUNTRY:usa" if P["x|us_focus"] >= .5 else ("WORLD:world" if P["x|foreign_focus"] >= .5 else "COUNTRY:usa")

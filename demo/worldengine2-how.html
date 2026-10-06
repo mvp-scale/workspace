@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How World engine 2 works · Jev Bench Console</title>
+<meta name="description" content="The live engine, drawn by the GPU: 100,000 modelled people, six measured stages, and each headline lighting up where it lands.">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<style>
+  html { scrollbar-gutter: stable; }
+  .hw { --for: #4f8ff7; --against: #e9843b; --glass: rgba(14, 18, 30, .62); --glass-line: rgba(255, 255, 255, .10); --ink: #e8ecf6; --ink2: #9aa6c0; --ink3: #66728f; }
+  .hwh { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 10px; } .hwh h1 { margin: 0; } .hwh p { margin: 2px 0 0; color: var(--text-2); font-size: 13px; }
+  /* stage rail */
+  .rail { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .stg { position: relative; text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 9px 11px 8px; height: 86px; overflow: hidden; cursor: pointer; font: inherit; color: inherit; transition: border-color .25s, box-shadow .25s, background-color .25s; }
+  .stg .n { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); } .stg .t { font-size: 14px; font-weight: 650; margin-top: 1px; }
+  .stg .v { margin-top: 5px; font-size: 12px; color: var(--text-2); line-height: 1.3; height: 32px; overflow: hidden; } .stg .ms { position: absolute; right: 10px; top: 9px; font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .stg::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: linear-gradient(90deg, transparent, var(--accent), transparent); transform: translateX(-100%); opacity: 0; }
+  .stg.lit { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent), 0 6px 22px color-mix(in srgb, var(--accent) 22%, transparent); } .stg.lit::after { opacity: 1; transform: translateX(100%); transition: transform .7s ease-in; }
+  .stg.sel { background: var(--accent-soft); }
+  .def { margin-top: 8px; height: 74px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; line-height: 1.45; color: var(--text-2); overflow: hidden; } .def b { color: var(--text); } .def .tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 99px; font-size: 10.5px; border: 1px solid var(--border); color: var(--text-3); }
+  /* stage */
+  .stage { position: relative; margin-top: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--glass-line); background: radial-gradient(120% 90% at 50% 0%, #121a30 0%, #090c16 70%); height: min(84vh, 860px); min-height: 560px; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; } .stage canvas.drag { cursor: grabbing; }
+  .gl { position: absolute; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 12px; color: var(--ink); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); }
+  .ctl { left: 12px; top: 12px; right: 330px; padding: 7px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .ctl .lb { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 4px 0 2px; }
+  .chip { border: 1px solid transparent; background: transparent; color: var(--ink2); border-radius: 8px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; transition: background-color .2s, color .2s; } .chip:hover { background: rgba(255,255,255,.07); } .chip.on { background: rgba(255,255,255,.14); color: var(--ink); border-color: var(--glass-line); }
+  .side { right: 12px; top: 12px; bottom: 12px; width: 306px; padding: 12px 13px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .side h3 { margin: 0 0 4px; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink3); font-weight: 600; }
+  .side p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--ink2); } .side p b { color: var(--ink); font-weight: 600; }
+  .gpu .row { display: grid; grid-template-columns: 54px 1fr 46px; gap: 7px; align-items: center; font-size: 11.5px; color: var(--ink2); height: 17px; } .gpu .bar { height: 5px; border-radius: 9px; background: rgba(255,255,255,.08); overflow: hidden; } .gpu .bar i { display: block; height: 100%; width: 0; border-radius: 9px; background: linear-gradient(90deg, #4f8ff7, #8fb8ff); transition: width .5s ease; }
+  .gpu .ms { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); } .gpu .dev { font-size: 12px; color: var(--ink); height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .gpu .mem { font-size: 11.5px; color: var(--ink3); height: 16px; margin-bottom: 3px; }
+  .feedl { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 5px; } .fi { border-left: 2px solid var(--glass-line); padding: 1px 0 1px 8px; font-size: 11.5px; line-height: 1.35; color: var(--ink2); height: 47px; overflow: hidden; } .fi.new { border-left-color: #8fb8ff; }
+  .fi .h { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .fi .e { display: flex; gap: 8px; margin-top: 1px; white-space: nowrap; overflow: hidden; font-size: 11px; } .fi .u { color: var(--for); } .fi .d { color: var(--against); }
+  .leg { left: 12px; bottom: 12px; padding: 8px 11px; font-size: 11.5px; color: var(--ink2); display: flex; align-items: center; gap: 9px; } .leg .ramp { width: 150px; height: 8px; border-radius: 9px; background: linear-gradient(90deg, var(--against), #4a5068 50%, var(--for)); }
+  .hov { pointer-events: none; padding: 9px 11px; font-size: 12px; min-width: 200px; opacity: 0; transition: opacity .15s; z-index: 3; } .hov.on { opacity: 1; } .hov b { font-size: 13px; } .hov .r { display: flex; justify-content: space-between; gap: 14px; color: var(--ink2); font-variant-numeric: tabular-nums; } .hov .r.sel { color: var(--ink); }
+  .lbl { position: absolute; transform: translate(-50%, -50%); pointer-events: none; color: var(--ink); font-size: 12px; text-align: center; text-shadow: 0 1px 8px #000; white-space: nowrap; } .lbl small { display: block; color: var(--ink3); font-size: 10.5px; } .lbl.sm { font-size: 10px; color: var(--ink3); }
+  .live { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; background: none; color: var(--text-2); font: inherit; font-size: 12px; cursor: pointer; } .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); } .live.on i { background: #e5484d; box-shadow: 0 0 0 0 rgba(229,72,77,.6); animation: pul 1.6s infinite; } @keyframes pul { 70% { box-shadow: 0 0 0 7px rgba(229,72,77,0); } 100% { box-shadow: 0 0 0 0 rgba(229,72,77,0); } }
+  .views { left: 12px; top: 12px; right: 330px; padding: 6px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; z-index: 2; } .views .sep { width: 1px; height: 18px; background: var(--glass-line); margin: 0 4px; }
+  .ctl { top: 58px !important; } .stage canvas.gcv { cursor: grab; }
+  @media (max-width: 1000px) { .views { right: 12px; } }
+  .nogl { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink2); font-size: 14px; text-align: center; padding: 30px; }
+  @media (max-width: 1000px) { .rail { grid-template-columns: repeat(3, 1fr); } .ctl { right: 12px; top: 12px; } .side { display: none; } }
+</style>
+</head>
+<body>
+<main class="page hw">
+  <header class="hwh"><div><h1>How World engine 2 works</h1><p>The live engine, drawn by the GPU: every dot is one of the 100,000 modelled people, and each headline lights up where it lands.</p></div><div style="display:flex;gap:12px;align-items:center"><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine2">← World engine 2</a></div></header>
+  <section class="rail" id="rail"></section>
+  <section class="def" id="def"></section>
+  <section class="stage" id="stage"></section>
+</main>
+<script>
+const { el } = Jev, $ = (id) => document.getElementById(id), api = (p, b) => Jev.api("/api/world-engine/" + p, b ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) } : undefined);
+const iso = (c) => (GR.data && GR.data.iso2[c]) || null;      // headline country code -> engine country id
+const DIAL_SHORT = { prices: "prices", housing_cost: "housing costs", energy_fuel: "energy costs", financial_conditions: "financing", job_security: "job security", crime: "crime", war_terror: "conflict", health_risk: "health risk", trust_institutions: "trust", community: "community", social_division: "division", tech_pace: "tech pace", disruption: "disruption", optimism: "optimism", environment: "environment", news_overload: "news overload" };
+const STAGES = [
+  { k: "headline", n: "1 · Headline", t: "A story arrives", tag: "real text", def: "<b>A headline from the bank</b> of 518: real feeds (BBC, NPR, Guardian, Al Jazeera, tech and science), satire, and our own funny lines, rolled in a shuffled loop. The text is real; satire is read as if it happened." },
+  { k: "read", n: "2 · Read", t: "The model reads it", tag: "model read", def: "<b>Winnow-12B, running on this GPU, answers yes/no questions</b>: which of 16 conditions does it move, is it a fact, a forecast or an opinion, which country and topic. No prose, only probabilities. Time shown is the whole read." },
+  { k: "spread", n: "3 · Spread", t: "It spreads", tag: "rules, strengths guessed", def: "<b>The headline enters at its country</b> and travels world → country → settlement type through channels with a gain and a delay, then fades at each condition's own rate. This step is plain arithmetic." },
+  { k: "people", n: "4 · People", t: "100,000 people feel it", tag: "simulated people", def: "<b>Each modelled person</b> gets their place's change, scaled by what their audience is exposed to; their own traits turn that into a state. The GPU does all 100,000 at once. The people are simulated from stated country figures, not individuals." },
+  { k: "decide", n: "5 · Decide", t: "Likelihoods move", tag: "hand-weighted rules", def: "<b>Eight decisions</b> (spend, buy, switch, move and so on) are weighted sums of a person's states, squeezed to a 0 to 100% likelihood. The weights are set by hand and are guesses until fitted." },
+  { k: "show", n: "6 · Show", t: "Every place at once", tag: "measured here", def: "<b>One grouped sum</b> gives the average for every country, region and audience in a single step, however many places there are. This picture is drawn from the same numbers, change since the feed started." },
+];
+const S = { layout: null, d: 0, mode: "change", tick: -1, since: 0, seq: 0, on: false, items: [], gpu: null, world: null, stageSel: "read", fed: 0 };
+
+/* ---------- stage rail + definition ---------- */
+const RAIL = {};
+function buildRail() {
+  for (const s of STAGES) {
+    const ms = el("span", { class: "ms" }), v = el("div", { class: "v", text: "waiting…" });
+    const b = el("button", { type: "button", class: "stg", onclick: () => { S.stageSel = s.k; paintDef(); } }, el("div", { class: "n", text: s.n }), ms, el("div", { class: "t", text: s.t }), v);
+    RAIL[s.k] = { b, ms, v }; $("rail").append(b);
+  }
+  paintDef();
+}
+function paintDef() {
+  const s = STAGES.find(x => x.k === S.stageSel); $("def").replaceChildren(); const d = $("def");
+  const parts = s.def.split(/<\/?b>/); d.append(el("b", { text: s.n.replace(/^\d · /, "") }), el("span", { class: "tag", text: s.tag }), el("div", { style: "margin-top:3px" }, parts[0], el("b", { text: parts[1] || "" }), parts.slice(2).join("")));
+  for (const k in RAIL) RAIL[k].b.classList.toggle("sel", k === S.stageSel);
+}
+const fmtMs = (x) => x == null ? "" : x >= 100 ? Math.round(x) + " ms" : x.toFixed(1) + " ms";
+function lightUp(it) {
+  const seq = ["headline", "read", "spread", "people", "decide", "show"]; seq.forEach((k, i) => setTimeout(() => { const b = RAIL[k].b; b.classList.remove("lit"); void b.offsetWidth; b.classList.add("lit"); setTimeout(() => b.classList.remove("lit"), 900); }, i * 170));
+  RAIL.headline.v.textContent = `${it.c}:${it.t}  ${it.x}`; RAIL.read.ms.textContent = fmtMs(it.read_ms); RAIL.read.v.textContent = `${(it.effects || []).length} conditions moved · ${it.src || "ticker"}`;
+  RAIL.spread.ms.textContent = fmtMs(it.apply_ms); RAIL.spread.v.textContent = `world tick ${it.tick}, enters at ${it.c === "WORLD" || !iso(it.c) ? "the world" : it.c}`;
+}
+function paintGpuRail() {
+  const g = S.gpu; if (!g) return; const m = g.ms; RAIL.people.ms.textContent = fmtMs(m.state + m.effect); RAIL.people.v.textContent = `${g.people.toLocaleString()} people · ${g.gpu ? "on the GPU" : "on the CPU"}`;
+  RAIL.decide.ms.textContent = fmtMs(m.decide); RAIL.decide.v.textContent = "8 decisions per person"; RAIL.show.ms.textContent = fmtMs(m.group); RAIL.show.v.textContent = `${g.places} places in one sum · ${Math.round(FPS.v)} fps drawing`;
+}
+
+/* ---------- WebGL stage ---------- */
+const FPS = { v: 60, last: 0 };
+const G = { pulseU: new Float32Array(100).fill(-1e6), gl: null, prog: null, loc: {}, n: 0, buf: {}, mix: 1, mixStart: 0, vmax: 0.1, vmaxT: 0.1, view: { s: 1, x: 0, y: 0 }, pulse: new Float32Array(8).fill(-1e6), cur: null, tgt: null, prev: null, cent: [], R: 1, order: [], dirty: true, labels: [] };
+const VS = `#version 300 es
+in vec2 a_pos; in vec2 a_rel; in float a_prev; in float a_tgt; in float a_c; in float a_aud; in float a_set;
+uniform vec2 u_scale; uniform vec2 u_off; uniform float u_mix, u_vmax, u_size, u_now, u_zoom; uniform float u_pulse[100]; uniform int u_mode;
+out vec4 v_col;
+vec3 pal(float a) { return 0.55 + 0.45 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + a * 0.125)); }
+void main() {
+  vec2 p = a_pos * u_scale + u_off; gl_Position = vec4(p, 0.0, 1.0);
+  float v = clamp(mix(a_prev, a_tgt, u_mix) / u_vmax, -1.0, 1.0), mag = pow(abs(v), 0.55);
+  vec3 neu = vec3(0.30, 0.34, 0.44), pos = vec3(0.31, 0.56, 0.97), neg = vec3(0.93, 0.52, 0.22);
+  vec3 col = mix(neu, v >= 0.0 ? pos : neg, mag); float al = 0.38 + 0.5 * mag;
+  if (u_mode == 1) { col = pal(a_aud); al = 0.55; }
+  float t = u_now - u_pulse[int(a_c)]; float ring = 0.0;
+  if (t > 0.0 && t < 3.4) { float d = (length(a_rel) - t * 0.85) / 0.17; ring = exp(-d * d) * exp(-t * 0.8); }
+  col += vec3(1.0, 0.93, 0.78) * ring * 0.95; al = min(1.0, al + ring);
+  gl_PointSize = u_size * (1.0 + ring * 1.6 + mag * 0.4); v_col = vec4(col, al);
+}`;
+const FS = `#version 300 es
+precision mediump float; in vec4 v_col; out vec4 o;
+void main() { float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.12, d) * v_col.a; o = vec4(v_col.rgb * a, a); }`;
+function sh(gl, t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
+function rng(i) { let t = (i + 0x6D2B79F5) | 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+const b64 = (s, Ctor) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Ctor(u.buffer); };
+
+function buildGeometry() {
+  const L = S.layout, n = L.n, ctry = b64(L.country, Uint8Array), setl = b64(L.settle, Uint8Array), seg = b64(L.seg, Uint8Array), nmax = Math.max(...L.countries.map(c => c.n));
+  G.rad = L.countries.map(c => Math.max(0.22, Math.sqrt(c.n / nmax)));                              // a cluster's size follows the number of people modelled for it
+  const order = L.countries.map((c, i) => i).sort((a, b) => G.rad[b] - G.rad[a]), gap = 0.34, rowW = Math.sqrt(order.reduce((a, i) => a + Math.pow(2 * G.rad[i] + gap, 2), 0)) * 1.4;
+  G.cent = []; let x = 0, y = 0, rowH = 0, maxX = 0; for (const i of order) { const d = 2 * G.rad[i] + gap; if (x + d > rowW && x > 0) { x = 0; y += rowH; rowH = 0; } if (!rowH) rowH = d; G.cent[i] = { x: x + d / 2, y: -(y + rowH / 2) }; x += d; maxX = Math.max(maxX, x); }
+  const totalH = y + rowH, mx = maxX / 2, my = totalH / 2; for (const c of G.cent) { c.x -= mx; c.y += my; } G.bounds = { w: maxX, h: totalH };
+  const rank = []; order.forEach((ci, r) => { rank[ci] = r; });
+  const pos = new Float32Array(n * 2), rel = new Float32Array(n * 2), c = new Float32Array(n), aud = new Float32Array(n), st = new Float32Array(n), sub = [0, 1, 2].map(k => ({ x: Math.cos(Math.PI / 2 + k * 2.0944) * 0.5, y: Math.sin(Math.PI / 2 + k * 2.0944) * 0.5 })), sg = [0.17, 0.19, 0.21];
+  for (let i = 0; i < n; i++) {
+    const ci = ctry[i], k = Math.min(2, setl[i]), u1 = Math.max(1e-6, rng(i * 2)), u2 = rng(i * 2 + 1), r = Math.sqrt(-2 * Math.log(u1)) * sg[k], a = 6.2831853 * u2;
+    let rx = sub[k].x + Math.cos(a) * r, ry = sub[k].y + Math.sin(a) * r; const d = Math.hypot(rx, ry); if (d > 0.97) { rx *= 0.97 / d; ry *= 0.97 / d; }
+    const R = G.rad[ci]; pos[2 * i] = G.cent[ci].x + rx * R; pos[2 * i + 1] = G.cent[ci].y + ry * R; rel[2 * i] = rx; rel[2 * i + 1] = ry; c[i] = ci; aud[i] = seg[i]; st[i] = k;
+  }
+  G.n = n; G.cur = new Float32Array(n); G.prev = new Float32Array(n); G.tgt = new Float32Array(n); G.pulse = new Float32Array(L.countries.length).fill(-1e6);
+  const gl = G.gl, mk = (name, data, size) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, name === "a_prev" || name === "a_tgt" ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW); G.buf[name] = { b, size }; };
+  mk("a_pos", pos, 2); mk("a_rel", rel, 2); mk("a_c", c, 1); mk("a_aud", aud, 1); mk("a_set", st, 1); mk("a_prev", G.prev, 1); mk("a_tgt", G.tgt, 1);
+  const st2 = $("stage"); G.labels = []; L.countries.forEach((cc, i) => { const l = el("div", { class: "lbl" }, cc.name, el("small", { text: `${cc.pop_m.toLocaleString()} M people` })); st2.append(l); G.labels.push({ l, x: G.cent[i].x, y: G.cent[i].y - G.rad[i] - 0.12, kind: "c", r: G.rad[i] }); });
+  L.countries.forEach((cc, i) => { if (rank[i] >= 14) return; L.settles.forEach((s2, k) => { const l = el("div", { class: "lbl sm", text: s2.name }); l.style.display = "none"; st2.append(l); G.labels.push({ l, x: G.cent[i].x + sub[k].x * G.rad[i], y: G.cent[i].y + sub[k].y * G.rad[i] - 0.3 * G.rad[i], kind: "s", r: G.rad[i] }); }); });
+  fitView(); G.dirty = true;
+}
+function fitView() { const c = $("stage").querySelector(".pcv"), W = c.clientWidth, H = c.clientHeight, usable = W - (W > 1000 ? 345 : 0) - 24, spanX = G.bounds.w + 0.5, spanY = G.bounds.h + 1.2; G.fit = Math.min(usable / spanX, (H - 70) / spanY); G.cam = { s: G.fit, cx: 0, cy: -0.1, offx: -(W > 1000 ? 172 : 0) }; G.tcam = { ...G.cam }; G.dirty = true; }
+function worldToScreen(x, y, W, H) { const k = G.cam; return [W / 2 + k.offx + (x - k.cx) * k.s, H / 2 - (y - k.cy) * k.s]; }
+function screenToWorld(px, py, W, H) { const k = G.cam; return [(px - W / 2 - k.offx) / k.s + k.cx, -(py - H / 2) / k.s + k.cy]; }
+
+function initGL() {
+  const st = $("stage"), cv = el("canvas", { class: "pcv" }); st.append(cv);
+  const gl = cv.getContext("webgl2", { antialias: false, alpha: false, premultipliedAlpha: true }); if (!gl) { st.append(el("div", { class: "nogl", text: "This browser has no WebGL2, so the live picture cannot be drawn. The stage timings and definitions above still work." })); return false; }
+  G.gl = gl; const p = gl.createProgram(); gl.attachShader(p, sh(gl, gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl, gl.FRAGMENT_SHADER, FS)); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  G.prog = p; for (const u of ["u_scale", "u_off", "u_mix", "u_vmax", "u_size", "u_now", "u_pulse", "u_mode"]) G.loc[u] = gl.getUniformLocation(p, u);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.clearColor(0.035, 0.05, 0.09, 1);
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao); G.vao = vao;
+  const ro = new ResizeObserver(() => { if (!cv.clientWidth) return; const d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.round(cv.clientWidth * d); cv.height = Math.round(cv.clientHeight * d); if (G.n) { const was = G.cam.s / G.fit; fitView(); G.cam.s = G.tcam.s = G.fit * was; } G.dirty = true; }); ro.observe(cv);
+  // pan, zoom, click
+  let drag = null; cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, cx: G.tcam.cx, cy: G.tcam.cy, moved: false }; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); });
+  cv.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; G.tcam.cx = drag.cx - dx / G.tcam.s; G.tcam.cy = drag.cy + dy / G.tcam.s; G.cam.cx = G.tcam.cx; G.cam.cy = G.tcam.cy; G.dirty = true; } hover(e.clientX - r.left, e.clientY - r.top); });
+  cv.addEventListener("pointerup", (e) => { const was = drag; drag = null; cv.classList.remove("drag"); if (was && !was.moved) { const r = cv.getBoundingClientRect(), [wx, wy] = screenToWorld(e.clientX - r.left, e.clientY - r.top, r.width, r.height), ci = nearest(wx, wy); if (ci >= 0) { const H = cv.clientHeight; G.tcam = { s: Math.min(G.fit * 40, 0.42 * H / G.rad[ci]), cx: G.cent[ci].x, cy: G.cent[ci].y, offx: G.tcam.offx }; } } });
+  cv.addEventListener("pointerleave", () => { $("hov").classList.remove("on"); });
+  cv.addEventListener("dblclick", () => { fitView(); });
+  cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = screenToWorld(px, py, r.width, r.height), f = Math.exp(-e.deltaY * 0.0016), ns = Math.min(G.fit * 40, Math.max(G.fit * 0.8, G.tcam.s * f));
+    G.tcam.s = ns; G.tcam.cx = wx - (px - r.width / 2 - G.tcam.offx) / ns; G.tcam.cy = wy + (py - r.height / 2) / ns; }, { passive: false });
+  return true;
+}
+function nearest(wx, wy) { let best = -1, bd = 1.08; G.cent.forEach((c, i) => { const d = Math.hypot(wx - c.x, wy - c.y) / G.rad[i]; if (d < bd) { bd = d; best = i; } }); return best; }
+function hover(px, py) {
+  const cv = $("stage").querySelector("canvas"), [wx, wy] = screenToWorld(px, py, cv.clientWidth, cv.clientHeight), ci = nearest(wx, wy), h = $("hov"); if (ci < 0 || !S.layout) { h.classList.remove("on"); return; }
+  const c = S.layout.countries[ci], row = S.world && S.world.rows.find(r => r.id === "COUNTRY:" + c.id); h.replaceChildren(el("b", { text: c.name }), el("div", { class: "r", style: "margin-bottom:4px" }, el("span", { text: "real population" }), el("span", { text: `${c.pop_m.toLocaleString()} M` })), el("div", { class: "r", style: "margin-bottom:5px" }, el("span", { text: "people drawn" }), el("span", { text: c.n.toLocaleString() })),
+    ...(row ? S.layout.decisions.map((d, j) => el("div", { class: "r" + (j === S.d ? " sel" : "") }, el("span", { text: d.label.replace(/ \(.*/, "") }), el("span", { text: (row.move[j] >= 0 ? "+" : "−") + Math.abs(row.move[j]).toFixed(2) + " pts" }))) : [el("div", { class: "r", text: "waiting for the first headline…" })]));
+  const W = cv.clientWidth; h.style.left = Math.min(W - 230 - (W > 1000 ? 340 : 0), px + 16) + "px"; h.style.top = Math.max(8, Math.min(cv.clientHeight - 230, py + 12)) + "px"; h.classList.add("on");
+}
+function setTarget(vals) {            // vals: Float32Array of points. Start the glide from wherever the dots are drawn now.
+  const m = G.mix; for (let i = 0; i < G.n; i++) G.prev[i] = G.prev[i] * (1 - m) + G.tgt[i] * m; G.tgt.set(vals); G.mix = 0; G.mixStart = performance.now();
+  const gl = G.gl; gl.bindBuffer(gl.ARRAY_BUFFER, G.buf.a_prev.b); gl.bufferSubData(gl.ARRAY_BUFFER, 0, G.prev); gl.bindBuffer(gl.ARRAY_BUFFER, G.buf.a_tgt.b); gl.bufferSubData(gl.ARRAY_BUFFER, 0, G.tgt);
+  const a = Array.from(vals, Math.abs).sort((x, y) => x - y); G.vmaxT = Math.max(0.03, a[Math.floor(a.length * 0.985)] || 0.03); $("legmax").textContent = `±${G.vmaxT.toFixed(2)} pts`; G.dirty = true;
+}
+function frame(now) {
+  requestAnimationFrame(frame); const gl = G.gl; if (!gl || !G.n || GR.view !== "people") return;
+  const dt = now - (FPS.last || now); FPS.last = now; if (dt > 0) FPS.v = FPS.v * 0.95 + (1000 / dt) * 0.05;
+  const k = G.cam, t = G.tcam; for (const f of ["s", "cx", "cy"]) { const d = t[f] - k[f]; if (Math.abs(d) > 1e-4 * (f === "s" ? k.s : 1)) { k[f] += d * 0.14; G.dirty = true; } } k.offx = t.offx;
+  if (G.mix < 1) { G.mix = Math.min(1, (now - G.mixStart) / 900); G.dirty = true; } G.vmax += (G.vmaxT - G.vmax) * 0.08; if (Math.abs(G.vmaxT - G.vmax) > 1e-4) G.dirty = true;
+  const nowS = now / 1000; if (nowS - G.lastPulse < 3.6) G.dirty = true;
+  if (!G.dirty) return; G.dirty = false;
+  const cv = gl.canvas, W = cv.clientWidth, H = cv.clientHeight; gl.viewport(0, 0, cv.width, cv.height); gl.clear(gl.COLOR_BUFFER_BIT); gl.useProgram(G.prog); gl.bindVertexArray(G.vao);
+  for (const [name, { b, size }] of Object.entries(G.buf)) { const loc = gl.getAttribLocation(G.prog, name); if (loc < 0) continue; gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0); }
+  const mixE = G.mix < 1 ? 1 - Math.pow(1 - G.mix, 3) : 1;
+  gl.uniform2f(G.loc.u_scale, 2 * k.s / W, 2 * k.s / H); gl.uniform2f(G.loc.u_off, 2 * (k.offx - k.cx * k.s) / W, -2 * k.cy * k.s / H); gl.uniform1f(G.loc.u_mix, mixE); gl.uniform1f(G.loc.u_vmax, G.vmax);
+  gl.uniform1f(G.loc.u_size, Math.max(1.6, Math.min(7, 1.9 * Math.sqrt(k.s / G.fit)) * (cv.width / W))); gl.uniform1f(G.loc.u_now, nowS); G.pulseU.fill(-1e6); G.pulseU.set(G.pulse.subarray(0, 100)); gl.uniform1fv(G.loc.u_pulse, G.pulseU); gl.uniform1i(G.loc.u_mode, S.mode === "audience" ? 1 : 0);
+  gl.drawArrays(gl.POINTS, 0, G.n);
+  for (const lb of G.labels) { const [x, y] = worldToScreen(lb.x, lb.y, W, H), px = k.s * lb.r; lb.l.style.left = x + "px"; lb.l.style.top = y + "px"; lb.l.style.display = lb.kind === "s" ? (px > 150 ? "" : "none") : (px > 34 ? "" : "none"); }
+}
+G.lastPulse = -1e6;
+function pulseAt(it) {
+  const ci = S.layout ? S.layout.countries.findIndex(c => c.id === iso(it.c)) : -1, now = performance.now() / 1000; G.lastPulse = now;
+  if (ci >= 0) G.pulse[ci] = now; else for (let i = 0; i < G.pulse.length; i++) G.pulse[i] = now + (i % 12) * 0.1;       // a story with no country of ours lands on the whole world, one after another
+  G.dirty = true;
+}
+
+/* ---------- side panel + controls ---------- */
+const UI = {};
+function buildStage() {
+  const st = $("stage"); UI.hov = el("div", { class: "gl hov", id: "hov" });
+  UI.ctl = el("div", { class: "gl ctl" }, el("span", { class: "lb", text: "Colour by change in" }));
+  UI.chips = []; S.layout.decisions.forEach((d, j) => { const c = el("button", { type: "button", class: "chip" + (j === S.d ? " on" : ""), text: d.label.replace(/ \(.*/, ""), title: d.label, onclick: () => { S.d = j; UI.chips.forEach((x, i) => x.classList.toggle("on", i === j)); S.mode = "change"; UI.modeA.classList.remove("on"); fetchValues(true); } }); UI.chips.push(c); UI.ctl.append(c); });
+  UI.modeA = el("button", { type: "button", class: "chip", text: "Audiences", title: "Colour by audience group instead", onclick: () => { S.mode = S.mode === "audience" ? "change" : "audience"; UI.modeA.classList.toggle("on", S.mode === "audience"); G.dirty = true; } }); UI.ctl.append(el("span", { class: "lb", style: "margin-left:8px", text: "or" }), UI.modeA);
+  UI.leg = el("div", { class: "gl leg" }, el("span", { text: "down" }), el("div", { class: "ramp" }), el("span", { text: "up" }), el("span", { id: "legmax", style: "color:var(--ink)", text: "±—" }), el("span", { style: "color:var(--ink3)", text: "points since the feed started · scroll to zoom, drag to move, click a country" }));
+  UI.gpu = el("div", { class: "gpu" }); UI.feed = el("div", { class: "feedl" });
+  UI.what = el("p"); UI.side = el("div", { class: "gl side" }, el("div", {}, el("h3", { text: "What you are looking at" }), UI.what),
+    el("div", {}, el("h3", { text: "The GPU" }), UI.gpu), el("div", { style: "flex:1;min-height:0;display:flex;flex-direction:column" }, el("h3", { text: "Latest headlines" }), UI.feed));
+  UI.views = el("div", { class: "gl views" }); st.append(UI.views, UI.ctl, UI.leg, UI.side, UI.hov);
+  for (let i = 0; i < 4; i++) UI.feed.append(el("div", { class: "fi" }, el("div", { class: "h", text: "—" }), el("div", { class: "e" })));
+  UI.gpuRows = {}; for (const [k, lab] of [["state", "state"], ["effect", "effect"], ["decide", "decide"], ["group", "group"], ["spread", "spread"]]) { const bar = el("i"), ms = el("span", { class: "ms", text: "" }); UI.gpuRows[k] = { bar, ms }; UI.gpu.append(el("div", { class: "row" }, el("span", { text: lab }), el("div", { class: "bar" }, bar), ms)); }
+  UI.dev = el("div", { class: "dev", text: "…" }); UI.mem = el("div", { class: "mem", text: "" }); UI.gpu.prepend(UI.dev, UI.mem);
+}
+function paintGpu() {
+  const g = S.gpu; if (!g) return; UI.dev.textContent = g.gpu ? g.device : "CPU (no GPU found)"; UI.mem.textContent = g.gpu ? `${g.engine_mb} MB of tensors held · ${(g.free_mb / 1000).toFixed(1)} of ${(g.total_mb / 1000).toFixed(1)} GB free` : `${g.people.toLocaleString()} people`;
+  const mx = Math.max(...Object.values(g.ms), 0.1); for (const k in UI.gpuRows) { const v = g.ms[k]; UI.gpuRows[k].bar.style.width = Math.max(3, v / mx * 100) + "%"; UI.gpuRows[k].ms.textContent = fmtMs(v); }
+}
+function paintFeed() {
+  const rows = UI.feed.children, last = S.items.slice(-4).reverse();
+  for (let i = 0; i < rows.length; i++) { const it = last[i], r = rows[i]; if (!it) continue; r.classList.toggle("new", i === 0); r.children[0].textContent = `${it.c}:${it.t}  ${it.x}`; r.children[1].replaceChildren(...(it.effects || []).slice(0, 3).map(e => el("span", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${DIAL_SHORT[e.dial] || e.name}` }))); }
+}
+
+
+/* ---------- knowledge graph (Canvas 2D): the real layers the engine runs on, live heat, and each headline's path ---------- */
+const GR = { data: null, view: "meaning", layers: { topics: true, conditions: true, states: true, decisions: true, resources: false }, nodes: new Map(), cols: [], edges: [], adj: new Map(), cam: null, tcam: null, fit: 1, hover: null, tcache: new Map(), HL: 560, pad: 250, particles: [], dirty: true, cv: null, ctx: null, W: 0, H: 0, story: null, last: 0 };
+const COLW = 280, ROW = 36, TOPN = 14, NEU = [130, 145, 175], POS = [79, 143, 247], NEG = [233, 132, 59];
+const LAYER_INFO = { topics: "Topics", conditions: "Conditions", states: "Person states", decisions: "Decisions", resources: "Resources" };
+const VIEW_TEXT = {
+  meaning: ["The knowledge graph the engine runs on. ", "A story is placed in one of 14 topics, which can move 16 world conditions; those change 15 states of a person; those weigh into 8 decisions. Every line is a real rule: its width is the strength, blue raises and orange lowers. Node colour is the live world, how far it has moved since the feed started. Each headline sends light along its own path. Hover a node to see its definition and strongest links."],
+  places: ["How a story reaches people. ", "It enters the world, passes to a country (the biggest are shown, the rest are grouped), then to that country's metro, town and rural parts, and reaches each modelled person there. Every person also belongs to an audience, which scales how much of it they feel. Colour is the change in the chosen decision since the feed started."],
+  people: ["Each dot is one modelled person. ", "Each country is a cluster sized by how many people stand for it (more for big countries); its real population is on the label. Colour is how much that person's likelihood of the chosen decision has changed since the feed started. Each headline sends a pulse from the country it lands in."],
+};
+function grModel() {
+  const m = GR.data.meaning, P = GR.data.places, cols = [], edges = [], L = GR.layers, add = (key, label, nodes, gap) => cols.push({ key, label, nodes, gap });
+  const node = (id, name, def, kind, extra) => Object.assign({ id, name, def: def || "", kind, glow: 0, val: 0, heat: 0 }, extra);
+  add("story", "Story", [node("story", "A story arrives", "A headline, read by the model. It enters the graph at the layer on its right.", "story")], 0.78);
+  if (GR.view === "meaning") {
+    if (L.topics) add("topics", "Topics (14)", m.topics.map(t => node("t:" + t.id, t.name, t.definition, "topic", { status: t.status })), 1);
+    if (L.conditions) add("conditions", "Conditions (16)", m.conditions.map(c => node("c:" + c.id, c.name, c.definition, "condition")), 1);
+    if (L.states) add("states", "Person states (15)", m.states.map(c => node("s:" + c.id, c.name, c.definition, "state")), 1);
+    if (L.decisions) add("decisions", "Decisions (8)", m.decisions.map(c => node("d:" + c.id, c.name, "What a person might choose to do. Likelihood is a weighted sum of person states.", "decision")), 1);
+    if (L.resources) add("resources", "Resources (10)", m.resources.map(c => node("r:" + c.id, c.name, c.definition, "resource")), 1);
+    const has = (k) => cols.some(c => c.key === k), E = (list, pa, pb, kind) => { for (const e of list) edges.push({ a: pa + e.a, b: pb + e.b, w: e.w, kind }); };
+    if (has("topics") && has("conditions")) E(m.topic_condition, "t:", "c:", "topic");
+    if (has("conditions") && has("states")) E(m.condition_state, "c:", "s:", "signed");
+    if (has("states") && has("decisions")) E(m.state_decision, "s:", "d:", "signed");
+    if (has("topics") && has("resources")) E(m.topic_resource, "t:", "r:", "topic");
+    if (cols[1]) for (const n of cols[1].nodes) edges.push({ a: "story", b: n.id, w: 0.25, kind: "story" });
+  } else {
+    const byPop = [...P.countries].sort((a, b) => b.pop_m - a.pop_m), top = byPop.slice(0, TOPN), rest = byPop.slice(TOPN); GR.top = new Set(top.map(c => c.id)); GR.restIds = rest.map(c => c.id);
+    add("world", "World", [node("w", "World", "The whole world. A story with no country of ours lands here first.", "place", { rows: ["WORLD:world"] })], 0.85);
+    add("countries", `Countries (${P.countries.length})`, [...top.map(c => node("co:" + c.id, c.name, `${c.pop_m.toLocaleString()} M people in the real country.`, "place", { rows: ["COUNTRY:" + c.id] })),
+      ...(rest.length ? [node("co:rest", `${rest.length} more countries`, `The other ${rest.length} countries together (${rest.reduce((a, c) => a + c.pop_m, 0).toLocaleString()} M people). Hover the People view for each one.`, "place", { rows: rest.map(c => "COUNTRY:" + c.id) })] : [])], 1);
+    add("regions", "Parts of each country", P.settles.map(x => node("st:" + x.id, x.name, "The metro, town or rural part of every country. Each country has its own channel to each part; shown here pooled across countries.", "place", { rows: P.countries.map(c => `REGION:${c.id}-${x.id}`) })), 1);
+    add("people", "People", [node("p", `${GR.data.people.toLocaleString()} modelled people`, "Each person has a place, an audience and their own traits. The GPU works out all of them at once.", "place", { rows: ["WORLD:world"] })], 0.95);
+    add("audiences", "Audiences (8)", P.audiences.map(a => node("au:" + a.id, a.name, `${(a.share * 100).toFixed(0)}% of people. Audiences are groups found from traits and habits; they cut across countries and scale what each person feels.`, "place", { rows: ["AUDIENCE:" + a.id] })), 1);
+    edges.push({ a: "story", b: "w", w: 1, kind: "topic" });
+    const co = cols[2].nodes; for (const c of co) { edges.push({ a: "w", b: c.id, w: c.id === "co:rest" ? 0.6 : 0.6, kind: "topic" }); for (const x of P.settles) edges.push({ a: c.id, b: "st:" + x.id, w: 1, kind: "topic" }); }
+    for (const x of P.settles) edges.push({ a: "st:" + x.id, b: "p", w: 0.6, kind: "topic" });
+    for (const a of P.audiences) edges.push({ a: "au:" + a.id, b: "p", w: Math.max(0.25, a.share * 3), kind: "topic" });
+  }
+  // untangle: sweep the columns, ordering each by the average position of the nodes it is linked to (both sides), several times
+  const nb = new Map(); for (const e of edges) { (nb.get(e.b) || nb.set(e.b, []).get(e.b)).push(e.a); (nb.get(e.a) || nb.set(e.a, []).get(e.a)).push(e.b); }
+  const frac = new Map(); const refresh = () => { for (const c of cols) c.nodes.forEach((n, i) => frac.set(n.id, (i + 0.5) / c.nodes.length)); }; refresh();
+  if (GR.view === "meaning") for (let pass = 0; pass < 6; pass++) for (let k = (pass % 2 ? cols.length - 1 : 2); pass % 2 ? k >= 1 : k < cols.length; k += (pass % 2 ? -1 : 1)) { const bc = (n) => { const q = (nb.get(n.id) || []).filter(x => x !== "story" && frac.has(x)).map(x => frac.get(x)); return q.length ? q.reduce((a, b) => a + b, 0) / q.length : 2; }; cols[k].nodes.sort((a, b) => bc(a) - bc(b)); refresh(); }
+  GR.cols = cols; GR.edges = edges; GR.nodes = new Map(); GR.adj = new Map(); GR.HL = Math.max(...cols.map(c => c.nodes.length)) * ROW; let x = 0;
+  cols.forEach((c, ci) => { if (ci) x += c.gap * COLW; c.x = x; c.nodes.forEach((n, i) => { n.col = ci; n.x = x; n.y = c.nodes.length === 1 ? GR.HL / 2 : (i + 0.5) / c.nodes.length * GR.HL; GR.nodes.set(n.id, n); }); });
+  for (const e of edges) { e.A = GR.nodes.get(e.a); e.B = GR.nodes.get(e.b); if (!e.A || !e.B) continue; for (const n of [e.A, e.B]) (GR.adj.get(n.id) || GR.adj.set(n.id, []).get(n.id)).push(e); }
+  GR.edges = edges.filter(e => e.A && e.B); GR.tcache.clear();
+}
+function grFit() { GR.tcache.clear(); const W = GR.W, H = GR.H, panel = W > 1000 ? 345 : 0, lastX = GR.cols[GR.cols.length - 1].x, spanX = lastX + GR.pad + 30, spanY = GR.HL + 150;
+  GR.fit = Math.max(0.2, Math.min((W - panel - 28) / spanX, (H - 64) / spanY, 1.6)); GR.cam = { s: GR.fit, cx: (lastX + GR.pad) / 2 - 10, cy: GR.HL / 2 + 22, ox: -panel / 2 }; GR.tcam = { ...GR.cam }; GR.dirty = true; }
+const grXY = (x, y) => [GR.W / 2 + GR.cam.ox + (x - GR.cam.cx) * GR.cam.s, GR.H / 2 + 24 + (y - GR.cam.cy) * GR.cam.s];
+const grWorld = (px, py) => [(px - GR.W / 2 - GR.cam.ox) / GR.cam.s + GR.cam.cx, (py - GR.H / 2 - 24) / GR.cam.s + GR.cam.cy];
+function grRefresh() {                 // live heat from /world: conditions, states, decisions, places
+  const w = S.world; if (!w || !GR.data) return; const byId = new Map(w.rows.map(r => [r.id, r])), W0 = byId.get("WORLD:world"), d = S.d;
+  const di = new Map(w.dials.map((x, i) => [x.id, i])), si = new Map((w.state_ids || []).map((x, i) => [x, i])), dj = new Map(GR.data.meaning.decisions.map((x, i) => [x.id, i]));
+  for (const n of GR.nodes.values()) {
+    if (n.kind === "condition") n.val = W0.dials ? W0.dials[di.get(n.id.slice(2))] : 0; else if (n.kind === "state") n.val = W0.states ? W0.states[si.get(n.id.slice(2))] : 0; else if (n.kind === "decision") n.val = W0.move[dj.get(n.id.slice(2))];
+    else if (n.kind === "place") { let sw = 0, sv = 0; for (const id of n.rows) { const r = byId.get(id); if (r) { sw += r.share; sv += r.share * r.move[d]; } } n.val = sw ? sv / sw : 0; }
+  }
+  for (const c of GR.cols) { const k0 = c.nodes[0].kind, floor = { condition: 0.004, state: 0.01, decision: 0.05, place: 0.05 }[k0] || 1; const mx = Math.max(floor, ...c.nodes.map(n => Math.abs(n.val))); for (const n of c.nodes) n.heat = ["topic", "story", "resource"].includes(n.kind) ? 0 : Math.max(-1, Math.min(1, n.val / mx)); }
+  GR.dirty = true;
+}
+function grParticle(a, b) { const A = GR.nodes.get(a), B = GR.nodes.get(b); if (!A || !B) return; GR.particles.push({ A, B, t0: performance.now(), dur: 700 }); A.glow = Math.max(A.glow, 0.7); GR.dirty = true; }
+function grFlow(it) {
+  if (!GR.cv || GR.view === "people" || !GR.data) return; GR.story = it; const steps = [], uniq = (a) => [...new Set(a.map(x => x.join(">")))].map(x => x.split(">")), vis = (k) => GR.cols.some(c => c.key === k);
+  if (GR.view === "meaning") {
+    const topic = GR.data.topic_of[it.t], T = topic && vis("topics") ? "t:" + topic : null, conds = (it.effects || []).map(e => "c:" + e.dial).filter(id => GR.nodes.has(id));
+    if (T) { steps.push([["story", T]]); const out = [], has = new Set(GR.edges.filter(e => e.a === T).map(e => e.b)); for (const c of conds) out.push(has.has(c) ? [T, c] : ["story", c]); if (vis("resources")) for (const e of GR.edges.filter(e => e.a === T && e.b.startsWith("r:"))) out.push([T, e.b]); steps.push(uniq(out)); }
+    else if (conds.length) steps.push(uniq(conds.map(c => ["story", c])));
+    else if (GR.cols[1]) steps.push([["story", GR.cols[1].nodes[0].id]]);
+    const top = (from, kindTo, n) => GR.edges.filter(e => e.a === from && e.b.startsWith(kindTo)).sort((x, y) => Math.abs(y.w) - Math.abs(x.w)).slice(0, n);
+    const se = conds.flatMap(c => top(c, "s:", 2)), sset = new Map(); for (const e of se) sset.set(e.b, (sset.get(e.b) || 0) + Math.abs(e.w)); const keepS = [...sset].sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0]);
+    if (se.length) steps.push(uniq(se.filter(e => keepS.includes(e.b)).map(e => [e.a, e.b])));
+    const de = keepS.flatMap(s => top(s, "d:", 2)), dset = new Map(); for (const e of de) dset.set(e.b, (dset.get(e.b) || 0) + Math.abs(e.w)); const keepD = [...dset].sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0]);
+    if (de.length) steps.push(uniq(de.filter(e => keepD.includes(e.b)).map(e => [e.a, e.b])));
+  } else {
+    const P = GR.data.places, cid = GR.data.iso2[it.c], co = cid ? (GR.top.has(cid) ? "co:" + cid : "co:rest") : null, st = P.settles.map(x => "st:" + x.id);
+    steps.push([["story", "w"]]);
+    if (co) { steps.push([["w", co]]); steps.push(st.map(x => [co, x])); steps.push([...st.map(x => [x, "p"]), ...P.audience_mix.filter(m => m.a === cid).sort((x, y) => y.w - x.w).slice(0, 3).map(m => ["au:" + m.b, "p"])]); }
+    else { const cs = GR.cols[2].nodes.map(n => n.id); steps.push(cs.map(c => ["w", c])); steps.push(cs.flatMap(c => st.map(x => [c, x]))); steps.push([...st.map(x => [x, "p"]), ...P.audiences.map(a => ["au:" + a.id, "p"])]); }
+  }
+  steps.forEach((edges, i) => setTimeout(() => { for (const [a, b] of edges) grParticle(a, b); }, i * 560));
+  const tp = GR.nodes.get(GR.data.topic_of[it.t] && "t:" + GR.data.topic_of[it.t]); if (tp) tp.glow = 1;
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`, mixc = (v) => v >= 0 ? POS : NEG;
+function bez(A, B, t) { const [x1, y1] = grXY(A.x, A.y), [x2, y2] = grXY(B.x, B.y), mx = (x1 + x2) / 2, u = 1 - t; return [u * u * u * x1 + 3 * u * u * t * mx + 3 * u * t * t * mx + t * t * t * x2, u * u * u * y1 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y2]; }
+function grDraw(now) {
+  const ctx = GR.ctx, W = GR.W, H = GR.H, dpr = GR.dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const hv = GR.hover, inc = hv ? new Set((GR.adj.get(hv) || []).flatMap(e => [e.a, e.b])) : null; inc && inc.add(hv); const sc = GR.cam.s / GR.fit;
+  ctx.font = "600 10.5px system-ui, sans-serif"; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; for (const c of GR.cols) { const [x, y] = grXY(c.x, -46); ctx.fillStyle = "rgba(154,166,192,.75)"; ctx.fillText(c.label.toUpperCase(), x - 6, y); }
+  ctx.lineCap = "round"; for (const e of GR.edges) {
+    const [x1, y1] = grXY(e.A.x, e.A.y), [x2, y2] = grXY(e.B.x, e.B.y), mx = (x1 + x2) / 2, on = hv && (e.a === hv || e.b === hv), dim = hv && !on, aw = Math.min(1, Math.abs(e.w));
+    const col = e.kind === "signed" ? (e.w > 0 ? POS : NEG) : NEU, base = e.kind === "story" ? 0.035 : e.kind === "signed" ? 0.06 + 0.30 * aw * aw : 0.045 + 0.10 * aw;      // weak links fade, so the strong structure shows first
+    ctx.strokeStyle = rgba(col, dim ? base * 0.3 : on ? Math.min(0.95, base * 2.8 + 0.25) : base); ctx.lineWidth = (0.45 + 1.5 * aw * (e.kind === "signed" ? 1 : 0.55)) * Math.min(1.6, Math.max(0.75, sc)) * (on ? 1.6 : 1);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.bezierCurveTo(mx, y1, mx, y2, x2, y2); ctx.stroke();
+  }
+  ctx.globalCompositeOperation = "lighter"; const keep = []; for (const p of GR.particles) {
+    const t = (now - p.t0) / p.dur; if (t >= 1) { p.B.glow = 1; continue; } keep.push(p); const e = t * t * (3 - 2 * t);
+    for (let k = 0; k < 6; k++) { const tt = Math.max(0, e - k * 0.028), [x, y] = bez(p.A, p.B, tt), r = (3.2 - k * 0.42) * Math.min(1.5, Math.max(0.8, sc)); ctx.fillStyle = `rgba(255,236,190,${0.75 - k * 0.11})`; ctx.beginPath(); ctx.arc(x, y, Math.max(0.6, r), 0, 6.283); ctx.fill(); }
+  } GR.particles = keep; ctx.globalCompositeOperation = "source-over";
+  // nodes + labels: the label sits to the right of its node and is cut to the room before the next column, so neighbours never overlap
+  const rowPx = ROW * GR.cam.s, fs = Math.max(9.5, Math.min(12.5, rowPx * 0.5)); ctx.font = `${fs}px system-ui, sans-serif`; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  const fitText = (txt, maxW) => { const key = txt + "|" + Math.round(maxW) + "|" + Math.round(fs * 2); let v = GR.tcache.get(key); if (v) return v; v = txt; if (ctx.measureText(v).width > maxW) { let lo = 1, hi = txt.length; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (ctx.measureText(txt.slice(0, mid) + "…").width <= maxW) lo = mid; else hi = mid - 1; } v = txt.slice(0, lo).trimEnd() + "…"; } GR.tcache.set(key, v); return v; };
+  const wrap = (txt, maxW, lines) => { const words = txt.split(" "), out = []; let cur = ""; for (let i = 0; i < words.length; i++) { const t = cur ? cur + " " + words[i] : words[i]; if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = words[i]; if (out.length === lines - 1) { cur = words.slice(i).join(" "); break; } } else cur = t; } out.push(fitText(cur, maxW)); return out; };
+  GR.cols.forEach((c, ci) => { const next = GR.cols[ci + 1], room = ((next ? next.x - c.x : GR.pad) * GR.cam.s); for (const n of c.nodes) {
+    const [x, y] = grXY(n.x, n.y), dim = hv && !inc.has(n.id), big = n.kind === "story" || n.id === "p", r = Math.min(big ? 9 : 5.4, Math.max(2.6, rowPx * 0.26)) * (big ? 1 : Math.min(1.5, Math.max(0.9, sc))), h = n.heat, col = h === 0 ? NEU : mixc(h), al = dim ? 0.3 : 1;
+    if (n.glow > 0.02) { const g = ctx.createRadialGradient(x, y, 0, x, y, r * 4.2); g.addColorStop(0, `rgba(255,236,190,${0.55 * n.glow * al})`); g.addColorStop(1, "rgba(255,236,190,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 4.2, 0, 6.283); ctx.fill(); n.glow = Math.max(0, n.glow - 0.016 / 1.7); }
+    if (Math.abs(h) > 0.02) { ctx.fillStyle = rgba(col, 0.18 * Math.abs(h) * al); ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = h === 0 ? rgba(NEU, 0.85 * al) : rgba(col, (0.55 + 0.45 * Math.abs(h)) * al); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.strokeStyle = `rgba(255,255,255,${(hv === n.id ? 0.95 : 0.22) * al})`; ctx.lineWidth = hv === n.id ? 1.6 : 0.8; ctx.stroke();
+    const maxW = Math.max(40, room - r - 30), tx = x + r + 7; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = `rgba(8,11,21,${0.85 * al})`; ctx.fillStyle = `rgba(232,236,246,${(n.kind === "story" ? 0.95 : 0.84) * al})`;
+    if (n.kind === "story") { const lines = wrap(GR.story ? GR.story.x : n.name, maxW, 4), lh = fs * 1.25, y0 = y - (lines.length - 1) * lh / 2; lines.forEach((ln, i) => { ctx.strokeText(ln, tx, y0 + i * lh); ctx.fillText(ln, tx, y0 + i * lh); }); }
+    else { const t = fitText(n.name, maxW); ctx.strokeText(t, tx, y); ctx.fillText(t, tx, y); }
+  } });
+}
+function grFrame(now) {
+  requestAnimationFrame(grFrame); if (GR.view === "people" || !GR.cv) return;
+  const k = GR.cam, t = GR.tcam; for (const f of ["s", "cx", "cy"]) { const d = t[f] - k[f]; if (Math.abs(d) > 1e-3 * (f === "s" ? k.s : 1)) { k[f] += d * 0.16; GR.dirty = true; } } k.ox = t.ox;
+  const live = GR.particles.length || [...GR.nodes.values()].some(n => n.glow > 0.02); if (!GR.dirty && !live) return; GR.dirty = false; grDraw(now);
+}
+function grHover(px, py) {
+  let best = null, bd = 14; for (const n of GR.nodes.values()) { const [x, y] = grXY(n.x, n.y), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = n; } }
+  const id = best ? best.id : null, h = $("hov"); if (id !== GR.hover) { GR.hover = id; GR.dirty = true; }
+  if (!best) { h.classList.remove("on"); return; }
+  const links = (GR.adj.get(best.id) || []).filter(e => e.kind !== "story").map(e => ({ o: e.a === best.id ? e.B : e.A, w: e.w, signed: e.kind === "signed" })).sort((a, b) => Math.abs(b.w) - Math.abs(a.w)).slice(0, 4);
+  const units = { condition: " (world level)", state: " (std units)", decision: " pts", place: " pts" }[best.kind] || "", live = ["condition", "state", "decision", "place"].includes(best.kind) && S.world ? (best.val >= 0 ? "+" : "−") + Math.abs(best.val).toFixed(best.kind === "decision" || best.kind === "place" ? 2 : 3) + units + " since the feed started" : null;
+  h.replaceChildren(el("b", { text: best.name }), best.def ? el("div", { style: "color:var(--ink2);margin:3px 0 5px;line-height:1.35;white-space:normal;max-width:240px", text: best.def.length > 170 ? best.def.slice(0, 168) + "…" : best.def }) : null, live ? el("div", { class: "r sel", style: "margin-bottom:4px" }, el("span", { text: "live" }), el("span", { text: live })) : null,
+    ...links.map(l => el("div", { class: "r" }, el("span", { text: (l.signed ? (l.w > 0 ? "raises " : "lowers ") : "linked to ") + l.o.name.slice(0, 26) }), el("span", { text: l.signed ? Math.round(Math.abs(l.w) * 100) + "%" : "" }))));
+  const W = GR.W; h.style.maxWidth = "270px"; h.style.left = Math.min(W - 280 - (W > 1000 ? 340 : 0), px + 16) + "px"; h.style.top = Math.max(60, Math.min(GR.H - 250, py + 12)) + "px"; h.classList.add("on");
+}
+function initGraph() {
+  const st = $("stage"), cv = el("canvas", { class: "gcv" }); st.prepend(cv); GR.cv = cv; GR.ctx = cv.getContext("2d");
+  const ro = new ResizeObserver(() => { if (!cv.clientWidth) return; GR.dpr = Math.min(2, window.devicePixelRatio || 1); GR.W = cv.clientWidth; GR.H = cv.clientHeight; cv.width = Math.round(GR.W * GR.dpr); cv.height = Math.round(GR.H * GR.dpr); if (GR.cols.length) grFit(); GR.dirty = true; }); ro.observe(cv);
+  let drag = null; cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, cx: GR.tcam.cx, cy: GR.tcam.cy }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); if (drag) { GR.tcam.cx = drag.cx - (e.clientX - drag.x) / GR.tcam.s; GR.tcam.cy = drag.cy - (e.clientY - drag.y) / GR.tcam.s; GR.cam.cx = GR.tcam.cx; GR.cam.cy = GR.tcam.cy; GR.dirty = true; } grHover(e.clientX - r.left, e.clientY - r.top); });
+  cv.addEventListener("pointerup", () => { drag = null; }); cv.addEventListener("pointerleave", () => { GR.hover = null; GR.dirty = true; $("hov").classList.remove("on"); }); cv.addEventListener("dblclick", () => grFit());
+  cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = grWorld(px, py), ns = Math.min(GR.fit * 8, Math.max(GR.fit * 0.6, GR.tcam.s * Math.exp(-e.deltaY * 0.0016))); GR.tcam.s = ns; GR.tcam.cx = wx - (px - GR.W / 2 - GR.tcam.ox) / ns; GR.tcam.cy = wy - (py - GR.H / 2 - 24) / ns; }, { passive: false });
+  requestAnimationFrame(grFrame);
+}
+function setView(v) {
+  GR.view = v; const people = v === "people"; for (const c of UI.viewChips) c.b.classList.toggle("on", c.k === v);
+  GR.cv.style.display = people ? "none" : ""; const pv = $("stage").querySelector(".pcv"); if (pv) pv.style.display = people ? "" : "none"; for (const l of $("stage").querySelectorAll(".lbl")) l.dataset.off = people ? "" : "1", l.style.display = people ? "" : "none";
+  UI.ctl.style.display = v === "meaning" ? "none" : ""; UI.leg.style.display = people ? "" : "none"; UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
+  if (people) { if (!G.gl) { if (initGL()) { buildGeometry(); fetchValues(true); requestAnimationFrame(frame); } } else { const c = $("stage").querySelector(".pcv"); if (c) { G.dirty = true; } } return; }
+  grModel(); GR.W = GR.cv.clientWidth; GR.H = GR.cv.clientHeight; GR.dpr = GR.dpr || Math.min(2, window.devicePixelRatio || 1); grFit(); grRefresh(); GR.dirty = true;
+}
+function buildViews() {
+  UI.viewChips = []; const mk = (k, label) => { const b = el("button", { type: "button", class: "chip", text: label, onclick: () => setView(k) }); UI.viewChips.push({ k, b }); UI.views.append(b); };
+  mk("meaning", "Meaning chain"); mk("places", "Places chain"); mk("people", "People (GPU)");
+  UI.layerBox = el("span", { style: "display:contents" }, el("span", { class: "sep" }), el("span", { class: "lb", text: "Layers" }), ...Object.entries(LAYER_INFO).map(([k, label]) => el("button", { type: "button", class: "chip" + (GR.layers[k] ? " on" : ""), text: label, "data-layer": k, onclick: (e) => { GR.layers[k] = !GR.layers[k]; e.currentTarget.classList.toggle("on", GR.layers[k]); grModel(); grFit(); grRefresh(); } })));
+  UI.views.append(UI.layerBox);
+}
+
+/* ---------- data ---------- */
+let fetching = false;
+async function fetchValues(force) {
+  if (fetching || !G.n) return; fetching = true;
+  try { const v = await api("people?d=" + S.d); if (!force && v.tick === S.tick && S.shownTick === v.tick && S.shownD === S.d) return; const i16 = b64(v.v, Int16Array), f = new Float32Array(i16.length); for (let i = 0; i < i16.length; i++) f[i] = i16[i] / v.scale; setTarget(f); S.shownTick = v.tick; S.shownD = S.d; } catch (e) { /* keep the last picture */ } finally { fetching = false; }
+}
+async function poll() {
+  if (document.hidden) return;
+  try {
+    const d = await Jev.api("/api/world-engine/live?since=" + S.since); if (d.seq < S.since) { S.since = 0; S.items = []; }
+    S.since = Math.max(S.since, d.seq); S.on = d.on; S.fed = d.fed; $("live").classList.toggle("on", d.on); $("livet").textContent = d.on ? "LIVE" : "PAUSED";
+    const fresh = d.items.filter(i => i.seq > (S.seqSeen || 0)); const first = !S.seqSeen; if (d.items.length) S.seqSeen = d.items[d.items.length - 1].seq;
+    if (!first) for (const it of fresh) { S.items.push(it); setTimeout(() => { lightUp(it); pulseAt(it); grFlow(it); }, 0); } else for (const it of d.items.slice(-4)) S.items.push(it);
+    if (fresh.length || first) paintFeed();
+    if (d.tick !== S.tick || (G.n && S.shownD !== S.d)) { S.tick = d.tick; fetchValues(); api("world").then(w => { S.world = w; grRefresh(); }).catch(() => {}); api("gpu").then(g => { S.gpu = g; paintGpu(); paintGpuRail(); }).catch(() => {}); }
+  } catch (e) { /* try again next beat */ }
+}
+const liveCall = (b) => api("live", b);
+$("live").onclick = async () => { try { await liveCall({ on: !S.on }); try { localStorage.setItem("we2.live", S.on ? "0" : "1"); } catch (e) {} await poll(); } catch (e) {} };
+(async () => {
+  buildRail();
+  try { [S.layout, GR.data] = await Promise.all([api("people_layout"), api("graph")]); buildStage(); buildViews(); initGraph(); setView("meaning"); } catch (e) { $("stage").append(el("div", { class: "nogl", text: "Could not start the picture: " + e.message })); }
+  let want = true; try { want = localStorage.getItem("we2.live") !== "0"; } catch (e) {} try { await liveCall({ on: want, interval: 4 }); } catch (e) {}
+  await poll(); setInterval(poll, 1500);
+})();
+</script>
+</body>
+</html>

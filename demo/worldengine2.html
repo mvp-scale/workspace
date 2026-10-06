@@ -56,7 +56,7 @@
 </head>
 <body>
 <main class="page we2">
-  <header class="w2h"><div><h1>World engine 2</h1><p>One sentence, one picture of where it lands, one chain of why, and the method behind it.</p></div><a href="/worldengine">← World engine (original)</a></header>
+  <header class="w2h"><div><h1>World engine 2</h1><p>One sentence, one picture of where it lands, one chain of why, and the method behind it.</p></div><span><a href="/worldengine2-how">How it works (live, GPU)</a> · <a href="/worldengine">World engine (original)</a></span></header>
   <section class="ask2">
     <div class="askrow"><textarea id="ask" rows="1" aria-label="Ask the world engine" placeholder="Type an event, a product, or a message. For example: “Fuel prices jump 25% in Brazil”"></textarea><button class="btn primary go" id="go" type="button">Ask</button></div>
     <div class="eg" id="eg"></div>
@@ -101,9 +101,15 @@ function buildMap(rootId) {
   const lay = (list, x, y, w, h) => squarify(list.map(r => ({ row: r, value: r.share })).sort((a, b) => b.value - a.value), x, y, w, h);
   const tile = (q, name, big) => { const val = el("span", { class: "tv" }), t = el("button", { type: "button", class: "tile" + (big ? " big" : ""), style: pos(q.x, q.y, q.w, q.h), onclick: () => focus(q.row.id) }, q.w > 64 && q.h > 34 ? el("span", { class: "tn", text: name }) : null, q.w > 38 && q.h > 22 ? val : null); tiles.push({ el: t, row: q.row, val }); box.append(t); };
   if (rootId.startsWith("COUNTRY:")) lay(rows.filter(r => r.parent === rootId), 0, 0, NW, NH).forEach(q => tile(q, short(q.row), true));
-  else for (const c of lay(rows.filter(r => r.level === "country"), 0, 0, NW, NH)) {
-    const kids = rows.filter(r => r.parent === c.row.id);
-    if (c.w >= 110 && c.h >= 70 && kids.length) { box.append(el("div", { class: "frame", style: pos(c.x, c.y, c.w, c.h) }), el("button", { type: "button", class: "flabel", style: pos(c.x + 2, c.y + 2, c.w - 4, 16), text: c.row.label, onclick: () => focus(c.row.id) })); lay(kids, c.x + 2, c.y + 20, c.w - 4, c.h - 22).forEach(q => tile(q, short(q.row))); } else tile(c, c.row.label);
+  else {
+    const tileCountry = (c) => { const kids = rows.filter(r => r.parent === c.row.id);
+      if (c.w >= 110 && c.h >= 70 && kids.length) { box.append(el("div", { class: "frame", style: pos(c.x, c.y, c.w, c.h) }), el("button", { type: "button", class: "flabel", style: pos(c.x + 2, c.y + 2, c.w - 4, 16), text: c.row.label, onclick: () => focus(c.row.id) })); lay(kids, c.x + 2, c.y + 20, c.w - 4, c.h - 22).forEach(q => tile(q, short(q.row))); } else tile(c, c.row.label); };
+    const regionOf = (id) => ((S.state.countries.find(c => "COUNTRY:" + c.id === id) || {}).region || "Other").replace("Middle East, North Africa, Afghanistan & Pakistan", "Middle East, N. Africa, Pakistan").trim();
+    const groups = new Map(); for (const c of rows.filter(r => r.level === "country")) { const g = regionOf(c.id); (groups.get(g) || groups.set(g, []).get(g)).push(c); }
+    if (groups.size > 1) for (const gq of lay([...groups].map(([g, list]) => ({ id: "RG:" + g, g, list, share: list.reduce((a, b) => a + b.share, 0) })), 0, 0, NW, NH)) {          // part of the world -> countries, so 100 countries stay readable
+      box.append(el("div", { class: "frame", style: pos(gq.x, gq.y, gq.w, gq.h) }), el("div", { class: "flabel", style: pos(gq.x + 3, gq.y + 2, gq.w - 6, 16), text: `${gq.row.g} · ${(gq.row.share * 100).toFixed(0)}%` }));
+      lay(gq.row.list, gq.x + 3, gq.y + 19, gq.w - 6, gq.h - 22).forEach(tileCountry);
+    } else for (const c of lay(rows.filter(r => r.level === "country"), 0, 0, NW, NH)) tileCountry(c);
   } return { box, tiles };
 }
 function paintMap() { const mx = scaleMax(), R = S.res.read, what = isEvent() ? R.cols[S.col].label + " (points vs no event)" : "support vs the world average (points)"; for (const t of S.map.tiles) { const v = cval(t.row), s = shade(v, mx); t.el.style.background = s.bg; t.el.style.color = s.fg; t.val.textContent = s.neutral ? "" : pm(v); t.el.classList.toggle("sel", S.focus === t.row.id); t.el.title = `${t.row.label} · ${what}: ${pm(v)} · ${(t.row.share * 100).toFixed(1)}% of people`; } }
@@ -140,7 +146,7 @@ function nextStop(R, f, cs, ev) {
 /* The "so what" is built by rule from the numbers, never written by hand. */
 function paintCard(u, r, R, f, w, cs, ev) {
   const i = r.identify, setCell = (k, label, val, sub, d, tip) => { const c = u.cells[k]; c.l.textContent = label; c.v.textContent = val; c.s.textContent = sub; c.v.className = "v " + (d == null ? "" : d > 0.0049 ? "pos" : d < -0.0049 ? "neg" : ""); c.root.title = tip || `${label}: ${val}. ${sub}`; };
-  if (u.lensKey !== S.runId) { const og = (label, rows, fn) => el("optgroup", { label }, rows.map(x => el("option", { value: x.id, text: fn(x) }))); u.lens.replaceChildren(el("option", { value: w.id, text: "the world" }), og("Countries", cs, x => x.label), og("Regions", R.rows.filter(x => x.level === "region"), x => x.label), og("Audiences", R.rows.filter(x => x.level === "audience"), x => x.label)); u.lensKey = S.runId; }
+  const rootC = f.level === "country" ? f.id : f.level === "region" ? f.parent : ""; if (u.lensKey !== S.runId + "|" + rootC) { const og = (label, rows, fn) => el("optgroup", { label }, rows.map(x => el("option", { value: x.id, text: fn(x) }))); u.lens.replaceChildren(el("option", { value: w.id, text: "the world" }), og("Countries", [...cs].sort((a, b) => b.share - a.share), x => x.label), ...(rootC ? [og("Regions of " + ((rowOf(rootC) || {}).label || ""), R.rows.filter(x => x.level === "region" && x.parent === rootC), x => x.label.split(" · ").pop())] : []), og("Audiences", R.rows.filter(x => x.level === "audience"), x => x.label)); u.lensKey = S.runId + "|" + rootC; }
   u.lens.value = f.id;
   let nx = null;
   if (!ev) {
@@ -262,7 +268,7 @@ const TK = { items: [], since: 0, x: 0, last: 0, speed: 46, on: false, fed: 0, t
 const trk = $("trk"), tkv = $("tkv");
 function tkNode(it) {
   const ef = (it.effects || []).slice(0, 4);
-  return el("span", { class: "ti", title: `${it.c}:${it.t}  ·  world tick ${it.tick}` },
+  return el("span", { class: "ti", title: `${it.c}:${it.t}  ·  ${it.src || "ticker"}${it.kind ? " (" + it.kind + ")" : ""}  ·  world tick ${it.tick}` },
     el("span", { class: "t1" }, el("span", { class: "c", text: it.c }), el("span", { class: "tp", text: ":" + it.t + ":" }), ...hl(it.x)),
     el("span", { class: "t2" }, ef.length ? ef.map(e => el("b", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${DIAL_SHORT[e.dial] || e.name}${e.basis === "expected" ? "*" : ""}` })) : el("i", { text: "no measurable effect" })));
 }

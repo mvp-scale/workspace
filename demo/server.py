@@ -395,7 +395,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/worldengine2-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
@@ -419,7 +419,7 @@ WORLD_ENGINE = "http://127.0.0.1:8112"  # probes/world-engine/world_service2.py 
 
 
 def world_engine_proxy(method, sub, body):
-    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live", "/world"):
+    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live", "/world", "/people_layout", "/people", "/gpu", "/graph"):
         return 404, {"error": "not found"}
     try:
         req = urllib.request.Request(WORLD_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)
