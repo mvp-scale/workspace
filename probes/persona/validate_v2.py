@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Validate probes/persona/rules_v2 (standard library only). Exit 1 on any failure."""
+import csv, os, sys
+from collections import Counter, defaultdict
+HERE = os.path.dirname(os.path.abspath(__file__))
+V2 = os.path.join(HERE, 'rules_v2')
+V1 = os.path.join(HERE, 'rules')
+LEVELS = {0.2, 0.5, 0.8}
+POLITICAL = {'econ_orientation', 'cultural_orientation', 'group_identity', 'religiosity'}
+fails = []; notes = []
+def load(name, d=V2):
+    p = os.path.join(d, name)
+    if not os.path.exists(p): return []
+    with open(p, newline='') as f: return list(csv.DictReader(f))
+def check(ok, msg):
+    if not ok: fails.append(msg)
+def split(s): return [x.strip() for x in (s or '').split(';') if x.strip()]
+def words(s): return len((s or '').split())
+
+res = load('resources.csv'); dials = load('dials.csv'); doms = load('domains.csv'); els = load('elements.csv')
+decs = load('decisions.csv'); grid = load('grid.csv'); dw = load('decision_weights.csv'); ties = load('dial_ties.csv'); idmap = load('id_map.csv')
+layers = {'resource': res, 'dial': dials, 'domain': doms, 'element': els, 'decision': decs}
+
+# counts
+exp = {'resource': 26, 'dial': 38, 'domain': 49, 'element': 47, 'decision': 20}
+for k, n in exp.items(): check(len(layers[k]) == n, f'{k} count {len(layers[k])} != {n}')
+# unique ids
+for k, rows in layers.items():
+    c = Counter(r['id'] for r in rows)
+    check(all(v == 1 for v in c.values()), f'duplicate ids in {k}: {[i for i, v in c.items() if v > 1]}')
+# no id across layers
+owner = defaultdict(list)
+for k, rows in layers.items():
+    for r in rows: owner[r['id']].append(k)
+shared = {i: l for i, l in owner.items() if len(l) > 1}
+check(not shared, f'ids shared across layers: {shared}')
+for i in ('health_status', 'debt_burden', 'minerals_materials'):
+    check(owner.get(i) == ['element'] if i != 'minerals_materials' else owner.get(i) == ['resource'], f'collision id {i} wrong owner {owner.get(i)}')
+notes.append('collisions fixed: health_status=%s debt_burden=%s minerals_materials=%s' % (owner.get('health_status'), owner.get('debt_burden'), owner.get('minerals_materials')))
+
+RES = {r['id'] for r in res}; DIAL = {r['id']: r for r in dials}; TOP = {r['id']: r for r in doms}
+EL = {r['id']: r for r in els}; DEC = {r['id'] for r in decs}
+# optimism
+check('optimism' not in DIAL, "optimism present as a dial row")
+check('optimism' in EL and EL['optimism']['kind'] == 'state', 'optimism must be a state')
+check([r for r in dials if r['kind'] == 'outcome'] == [], "no outcome-kind dial row expected (outlook is an engine readout, documented in README)")
+readme = open(os.path.join(V2, 'README.md')).read() if os.path.exists(os.path.join(V2, 'README.md')) else ''
+check('outlook' in readme, 'README must document the outlook readout')
+# columns
+check(list(dials[0].keys())[:7] == ['id', 'name', 'kind', 'definition', 'half_life_ticks', 'grounding_series', 'status'] and 'resource_id' in dials[0] and 'up_means' in dials[0], 'dials columns')
+check(all(r['kind'] in ('trait', 'state', 'derived') for r in els), 'element kinds')
+# dials -> resource
+for r in dials:
+    check(r['resource_id'] in RES, f"dial {r['id']} resource_id {r['resource_id']!r} missing")
+    check(bool(r['up_means']), f"dial {r['id']} has no up_means")
+# topics
+route = {}
+for t in doms:
+    ds = split(t['dials']); route[t['id']] = ds
+    if t['id'] == 'other':
+        check(not ds, 'other must have no dials'); continue
+    check(1 <= len(ds) <= 3, f"topic {t['id']} has {len(ds)} dials")
+    for d in ds: check(d in DIAL, f"topic {t['id']} dangling dial {d}")
+    derived = []
+    for d in ds:
+        r = DIAL.get(d, {}).get('resource_id')
+        if r and r not in derived: derived.append(r)
+    check(split(t['resources']) == derived, f"topic {t['id']} resources not derived from dials")
+check('other' in TOP, "'other' row missing")
+reach = {d for ds in route.values() for d in ds}
+declared = sorted(d for d, r in DIAL.items() if d not in reach)
+undeclared = [d for d in declared if DIAL[d]['kind'] == 'condition']
+notes.append('conditions reached by no topic (declared, kind != condition): %s' % declared)
+check(not undeclared, f'conditions unreachable and undeclared: {undeclared}')
+
+# grid
+cond_in = defaultdict(list)
+for g in grid:
+    s = float(g['strength']); e = g['element_id']; d = g['dial_id']
+    check(e in EL, f'grid dangling element {e}'); check(d in DIAL, f'grid dangling dial {d}')
+    check(abs(s) in LEVELS, f'grid {e}<-{d} strength {s} off scale')
+    check(g['status'].startswith('guess'), f'grid {e}<-{d} status')
+    if g['moderated_by']: check(g['moderated_by'] in EL, f"grid {e} moderated_by dangling {g['moderated_by']}")
+    need = abs(s) >= 0.8 or s < 0 or 'contested' in g['status'] or d == 'migration_flow'
+    check(not need or g['why'].strip(), f'grid {e}<-{d} needs why')
+    check(not g['why'] or words(g['why']) <= 15, f'grid {e}<-{d} why >15 words')
+    check(e in EL and EL[e]['kind'] == 'state', f'grid links into non-moving element {e}')
+    cond_in[e].append(d)
+check(len(grid) == len({(g['element_id'], g['dial_id']) for g in grid}), 'duplicate grid pair')
+moving = [e for e, r in EL.items() if r['kind'] == 'state']
+for e in moving:
+    check(1 <= len(cond_in[e]) <= 4, f'moving state {e} has {len(cond_in[e])} condition links')
+# ties
+out = Counter()
+for t in ties:
+    s = float(t['strength']); out[t['from_dial']] += 1
+    check(t['from_dial'] in DIAL and t['to_dial'] in DIAL, f"tie dangling {t['from_dial']}->{t['to_dial']}")
+    check(abs(s) in LEVELS, 'tie strength off scale'); check(t['why'].strip() and words(t['why']) <= 15, f"tie {t['from_dial']} why")
+check(len(ties) <= 12, f'{len(ties)} ties > 12'); check(all(v <= 1 for v in out.values()), 'more than 1 outgoing tie from a condition')
+# every condition useful downstream
+feeds = {g['dial_id'] for g in grid} | {t['from_dial'] for t in ties}
+dead = [d for d, r in DIAL.items() if d not in feeds and r['kind'] == 'condition']
+check(not dead, f'conditions feeding no state or tie: {dead}')
+# decision weights
+inputs = defaultdict(list); per_state = defaultdict(set)
+for w in dw:
+    s = float(w['weight']); d = w['decision_id']; e = w['element_id']
+    check(d in DEC, f'dw dangling decision {d}'); check(e in EL, f'dw dangling element {e}')
+    check(abs(s) in LEVELS, f'dw {d}<-{e} off scale'); check(w['status'].startswith('guess'), f'dw {d}<-{e} status')
+    need = abs(s) >= 0.8 or s < 0 or 'contested' in w['why'] or e in POLITICAL
+    check(not need or w['why'].strip(), f'dw {d}<-{e} needs why')
+    check(not w['why'] or words(w['why']) <= 15, f'dw {d}<-{e} why >15 words')
+    inputs[d].append(e); per_state[e].add(d)
+check(len(dw) == len({(w['decision_id'], w['element_id']) for w in dw}), 'duplicate dw pair')
+for d in DEC:
+    n = len(inputs[d]); check(4 <= n <= 6, f'decision {d} has {n} inputs (need 4..6)')
+for e, ds in per_state.items(): check(len(ds) <= 4, f'state {e} feeds {len(ds)} decisions (>4)')
+unlinked = sorted(e for e in EL if e not in per_state)
+notes.append('states with no decision link (flagged): %s' % unlinked)
+check(not unlinked, f'states with no decision link: {unlinked}')
+# fixed elements have no incoming condition links
+# totals
+tc = sum(len(v) for v in route.values())
+total = tc + len(ties) + len(grid) + len(dw)
+check(total <= 375, f'total links {total} > 375')
+notes.append(f'links: topic->condition {tc}, condition->condition {len(ties)}, condition->state {len(grid)}, state->decision {len(dw)}, total {total}')
+# id_map
+seen = defaultdict(set)
+for m in idmap:
+    check(m['action'] in ('keep', 'rename', 'merge', 'split', 'retire'), f"id_map action {m['action']}")
+    seen[m['layer']].add(m['old_id'])
+    for n in split(m['new_ids']):
+        if n.startswith('outlook'): continue
+        check(n in layers.get(m['layer'], []) or any(n == r['id'] for r in layers[m['layer']]), f"id_map {m['old_id']}-> {n} not in v2 {m['layer']}")
+v1files = {'dial': 'dials.csv', 'domain': 'domains.csv', 'element': 'elements.csv', 'decision': 'decisions.csv', 'resource': 'resources.csv'}
+for layer, fn in v1files.items():
+    for r in load(fn, V1): check(r['id'] in seen[layer], f"id_map missing v1 {layer} {r['id']}")
+topic_new = {n for m in idmap if m['layer'] == 'domain' for n in split(m['new_ids'])}
+check(set(TOP) <= topic_new, f'topics not in id_map: {sorted(set(TOP)-topic_new)}')
+
+print('COUNTS:', {k: len(v) for k, v in layers.items()}, 'grid', len(grid), 'weights', len(dw), 'ties', len(ties), 'id_map', len(idmap))
+for n in notes: print('NOTE:', n)
+if fails:
+    print('FAIL (%d):' % len(fails)); [print('  -', f) for f in fails]; sys.exit(1)
+print('ALL CHECKS PASSED')

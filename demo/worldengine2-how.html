@@ -21,7 +21,7 @@
   .stg.sel { background: var(--accent-soft); }
   .def { margin-top: 8px; height: 74px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; line-height: 1.45; color: var(--text-2); overflow: hidden; } .def b { color: var(--text); } .def .tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 99px; font-size: 10.5px; border: 1px solid var(--border); color: var(--text-3); }
   /* stage */
-  .stage { position: relative; margin-top: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--glass-line); background: radial-gradient(120% 90% at 50% 0%, #121a30 0%, #090c16 70%); height: min(84vh, 860px); min-height: 560px; }
+  .stage { position: relative; margin-top: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--glass-line); background: radial-gradient(120% 90% at 50% 0%, #121a30 0%, #090c16 70%); height: min(90vh, 1000px); min-height: 600px; }
   .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; } .stage canvas.drag { cursor: grabbing; }
   .gl { position: absolute; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 12px; color: var(--ink); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); }
   .ctl { left: 12px; top: 12px; right: 330px; padding: 7px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -40,6 +40,7 @@
   .live { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; background: none; color: var(--text-2); font: inherit; font-size: 12px; cursor: pointer; } .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); } .live.on i { background: #e5484d; box-shadow: 0 0 0 0 rgba(229,72,77,.6); animation: pul 1.6s infinite; } @keyframes pul { 70% { box-shadow: 0 0 0 7px rgba(229,72,77,0); } 100% { box-shadow: 0 0 0 0 rgba(229,72,77,0); } }
   .views { left: 12px; top: 12px; right: 330px; padding: 6px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; z-index: 2; } .views .sep { width: 1px; height: 18px; background: var(--glass-line); margin: 0 4px; }
   .ctl { top: 58px !important; } .stage canvas.gcv { cursor: grab; }
+  .views .lb { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 4px 0 2px; } .views .chip { min-width: 28px; }
   @media (max-width: 1000px) { .views { right: 12px; } }
   .nogl { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink2); font-size: 14px; text-align: center; padding: 30px; }
   @media (max-width: 1000px) { .rail { grid-template-columns: repeat(3, 1fr); } .ctl { right: 12px; top: 12px; } .side { display: none; } }
@@ -118,7 +119,7 @@ function paintFeed() {
 
 /* ---------- knowledge graph (Canvas 2D): the real layers the engine runs on, live heat, and each headline's path ---------- */
 const GR = { data: null, view: "meaning", layers: { topics: true, conditions: true, states: true, decisions: true, resources: false }, nodes: new Map(), cols: [], edges: [], adj: new Map(), cam: null, tcam: null, fit: 1, hover: null, tcache: new Map(), HL: 560, pad: 250, particles: [], dirty: true, cv: null, ctx: null, W: 0, H: 0, story: null, last: 0 };
-const COLW = 280, ROW = 36, TOPN = 14, NEU = [130, 145, 175], POS = [79, 143, 247], NEG = [233, 132, 59];
+const COLW = 330, ROW = 46, TOPN = 14, NEU = [130, 145, 175], POS = [79, 143, 247], NEG = [233, 132, 59];
 const LAYER_INFO = { topics: "Topics", conditions: "Conditions", states: "Person states", decisions: "Decisions", resources: "Resources" };
 const VIEW_TEXT = {
   meaning: ["The knowledge graph the engine runs on. ", "A story is placed in one of 14 topics, which can move 16 world conditions; those change 15 states of a person; those weigh into 8 decisions. Every line is a real rule: its width is the strength, blue raises and orange lowers. Node colour is the live world, how far it has moved since the feed started. Each headline sends light along its own path. Hover a node to see its definition and strongest links."],
@@ -264,7 +265,7 @@ function initGraph() {
   let drag = null; cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, cx: GR.tcam.cx, cy: GR.tcam.cy }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); if (drag) { GR.tcam.cx = drag.cx - (e.clientX - drag.x) / GR.tcam.s; GR.tcam.cy = drag.cy - (e.clientY - drag.y) / GR.tcam.s; GR.cam.cx = GR.tcam.cx; GR.cam.cy = GR.tcam.cy; GR.dirty = true; } grHover(e.clientX - r.left, e.clientY - r.top); });
   cv.addEventListener("pointerup", () => { drag = null; }); cv.addEventListener("pointerleave", () => { GR.hover = null; GR.dirty = true; $("hov").classList.remove("on"); }); cv.addEventListener("dblclick", () => grFit());
-  cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = grWorld(px, py), ns = Math.min(GR.fit * 8, Math.max(GR.fit * 0.6, GR.tcam.s * Math.exp(-e.deltaY * 0.0016))); GR.tcam.s = ns; GR.tcam.cx = wx - (px - GR.W / 2 - GR.tcam.ox) / ns; GR.tcam.cy = wy - (py - GR.H / 2 - 24) / ns; }, { passive: false });
+  cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = grWorld(px, py), ns = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * Math.exp(-e.deltaY * 0.0016))); GR.tcam.s = ns; GR.tcam.cx = wx - (px - GR.W / 2 - GR.tcam.ox) / ns; GR.tcam.cy = wy - (py - GR.H / 2 - 24) / ns; }, { passive: false });
   requestAnimationFrame(grFrame);
 }
 function setView(v) {
@@ -276,7 +277,9 @@ function buildViews() {
   UI.viewChips = []; const mk = (k, label) => { const b = el("button", { type: "button", class: "chip", text: label, onclick: () => setView(k) }); UI.viewChips.push({ k, b }); UI.views.append(b); };
   mk("meaning", "Meaning chain"); mk("places", "Places chain");
   UI.layerBox = el("span", { style: "display:contents" }, el("span", { class: "sep" }), el("span", { class: "lb", text: "Layers" }), ...Object.entries(LAYER_INFO).map(([k, label]) => el("button", { type: "button", class: "chip" + (GR.layers[k] ? " on" : ""), text: label, "data-layer": k, onclick: (e) => { GR.layers[k] = !GR.layers[k]; e.currentTarget.classList.toggle("on", GR.layers[k]); grModel(); grFit(); grRefresh(); } })));
-  UI.views.append(UI.layerBox);
+  const zoom = (f) => { GR.tcam.s = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * f)); GR.dirty = true; };
+  UI.views.append(UI.layerBox, el("span", { class: "sep" }), el("button", { type: "button", class: "chip", text: "−", title: "Zoom out", onclick: () => zoom(1 / 1.35) }), el("button", { type: "button", class: "chip", text: "+", title: "Zoom in", onclick: () => zoom(1.35) }),
+    el("button", { type: "button", class: "chip", text: "Fit", title: "Fit the whole graph (or double-click the picture)", onclick: () => grFit() }), el("span", { class: "lb", text: "scroll to zoom · drag to move" }));
 }
 
 /* ---------- data ---------- */
