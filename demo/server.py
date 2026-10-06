@@ -21,6 +21,7 @@ from pathlib import Path
 
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
+import idea_api  # random example ideas (crazy tech, ridiculous products, local shocks...) for /worldengine2
 import imagelab_api  # image tasks and stored answers for /imagelab
 import persona_api  # seeded personas, extractors and audience scoring for /personalab
 
@@ -394,7 +395,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
@@ -418,7 +419,7 @@ WORLD_ENGINE = "http://127.0.0.1:8112"  # probes/world-engine/world_service2.py 
 
 
 def world_engine_proxy(method, sub, body):
-    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset"):
+    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live"):
         return 404, {"error": "not found"}
     try:
         req = urllib.request.Request(WORLD_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)
@@ -456,9 +457,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         if path.startswith("/api/world-engine/"):
-            return self._send(*world_engine_proxy("GET", path[len("/api/world-engine"):], None))
+            return self._send(*world_engine_proxy("GET", self.path[len("/api/world-engine"):], None))      # self.path keeps the query string (?since=N)
         if path.startswith("/api/world-lab/"):
             return self._send(*world_lab_proxy("GET", path[len("/api/world-lab"):], None))
+        if path.startswith("/api/idea"):
+            r = idea_api.handle_get(path, self.path.partition("?")[2])
+            return self._send(*r) if r else self._send(404, {"error": "not found"})
         if path == "/api/audio-files":
             return self._send(200, audio_library.list_files())
         if path.startswith("/api/detector-"):

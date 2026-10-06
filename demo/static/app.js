@@ -1,6 +1,6 @@
 /* Jev Bench Console — shared helpers. Every page loads this first: <script src="/static/app.js"></script> */
 (() => {
-  const NAV = [["/", "Leaderboard"], ["/compare", "Baseline compare"], ["/scenarios", "Scenario lab"], ["/imagelab", "Image lab"], ["/worldengine", "World engine"], ["/flow", "Conversation flow"], ["/models", "How they work"], ["/report", "Report"]];
+  const NAV = [["/", "Leaderboard"], ["/compare", "Baseline compare"], ["/scenarios", "Scenario lab"], ["/imagelab", "Image lab"], ["/worldengine", "World engine"], ["/worldengine2", "World engine 2"], ["/flow", "Conversation flow"], ["/models", "How they work"], ["/report", "Report"]];
 
   const el = (tag, attrs, ...kids) => {
     const n = document.createElement(tag);

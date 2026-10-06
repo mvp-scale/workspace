@@ -1,7 +1,7 @@
 """World engine service v2 (mock-up): multi-country world, five stages (collect, identify, propagate, decide, read), attractor/detractor ledgers.
 JSON over HTTP on 127.0.0.1:8112; the console proxies /api/world-engine/*.   Run: /workspace/kev/.venv/bin/python world_service2.py
 Inputs are simulated at the start (data/*.csv, ledger/); everything else is derived by rules. Every strength is a guess or a fit until backtested."""
-import sys, json, time, copy, datetime, email.utils, hashlib, threading, csv
+import sys, json, time, copy, datetime, email.utils, hashlib, threading, csv, random, urllib.parse
 import numpy as np
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, "/workspace/probes/persona"); sys.path.insert(0, "/workspace/probes/world-engine")
@@ -176,7 +176,7 @@ class Session:
                               "values": [[float(sum(a_[i] for i in f["feats"]))] + [float(sum(c_[i, k] for i in f["feats"])) for k in range(10)] for f in FACTORS if f["feats"]], "note": "weight of each factor on take-up (logit per unit), on its own and in interaction with each property of the offer; fitted on 39 ideas x 400 people"}, "rule": "logit = intercept + person factors + offer properties + their interaction (ridge fitted on 39 ideas x 400 people); push = (node vs world average on a factor) x (that factor's weight for this offer)"},
                    "read": {"mode": "offer", "cols": cols, "rows": rows, "value_label": "push on support (points vs the average person)", "total_label": "support"}})
     # ---------------- drill: the attractor/detractor ledger for one cell
-    def drill(self, node, col):
+    def drill(self, node, col, want_series=False):
         L_ = self.last; m = self.masks[node]; rows = []
         if not L_: return {"error": "no request yet"}
         if L_["mode"] == "offer":
@@ -192,7 +192,7 @@ class Session:
                     Pb = self.pop.wmean(L_["Pm"][:, i], m); z = (Pb - L_["mu"][i]) / L_["sd"][i]; wps = L_["wi"][i] * L_["sd"][i]; push = z * wps * scale
                     top = sorted(enumerate(L_["c"][i] * L_["iv"]), key=lambda t: -abs(t[1]))[:2]; why = "; ".join(f"{PROP_LABEL[IQ[k]]} {v:+.2f}" for k, v in top if abs(v) > 0.01)
                     rows.append({"tag": "A" if push > 0 else "D", "factor": FEAT_LABEL[FEATS[i]], "state": z, "state_label": "sd from world average", "weight": wps, "rule": "main effect + interaction with: " + (why or "nothing"), "push": push})
-            series = [self.hm(self.aud.probability(self.pop, W2.effective(self.pop, W2.person_delta(self.w, self.pop, self.seg_gain, at=h)), L_["iv"]), m) * 100 for h in self.hist]
+            series = [] if not want_series else [self.hm(self.aud.probability(self.pop, W2.effective(self.pop, W2.person_delta(self.w, self.pop, self.seg_gain, at=h)), L_["iv"]), m) * 100 for h in self.hist]
             return jn({"mode": "offer", "node": node, "col": col, "support": sup * 100, "ledger": sorted(rows, key=lambda r: -abs(r["push"])), "series": series, "series_label": "support after each story (%)"})
         j = E.DECS.index(col); p0, p1 = L_["p0"][:, j], L_["p1"][:, j]; b = self.hm(p0, m); scale = b * (1 - b) * 100; z0 = (L_["eff0"] - 3) / 1.5; z1 = (L_["eff1"] - 3) / 1.5
         s = float(self.hm(self.pop.sal.mean(1), m)); d0 = np.array([self.hm(L_["d0"][:, k], m) for k in range(len(DIALS))]); d1 = np.array([self.hm(L_["d1"][:, k], m) for k in range(len(DIALS))])
@@ -204,8 +204,23 @@ class Session:
             dz = self.hm(z1[:, e_i], m) - self.hm(z0[:, e_i], m); push = w_ * dz * scale; contrib = E.GRID[e_i] * dl; k = int(np.argmax(np.abs(contrib))); top = abs(contrib[k])
             via = [{"dial": DIALS[i], "name": DIAL_NAME[DIALS[i]], "direction": "up" if dl[i] > 0 else "down", "basis": basis.get(DIALS[i], "derived"), "mode": basis_mode.get(DIALS[i])} for i in np.argsort(-np.abs(contrib))[:2] if top > 1e-6 and abs(contrib[i]) >= 0.25 * top]
             rows.append({"tag": "A" if push > 0 else "D", "factor": EL_NAME[e], "state": self.hm(z1[:, e_i], m), "state_label": "standardised state now", "weight": float(w_), "via": via, "rule": (f"moved by {DIAL_NAME[DIALS[k]]} ({dl[k]:+.3f} in log perceived dial)" if top > 1e-6 else "not moved by this event"), "delta": dz, "push": push})
-        series = [self.hm(E.Population.propensity(None, W2.effective(self.pop, W2.person_delta(self.w, self.pop, self.seg_gain, at=h)))[:, j], m) * 100 for h in self.hist] + [self.hm(p1, m) * 100]
+        series = [] if not want_series else [self.hm(E.Population.propensity(None, W2.effective(self.pop, W2.person_delta(self.w, self.pop, self.seg_gain, at=h)))[:, j], m) * 100 for h in self.hist] + [self.hm(p1, m) * 100]
         return jn({"mode": "event", "node": node, "col": col, "value": (self.hm(p1, m) - b) * 100, "parts": {k: float(self.hm(v[:, j] - L_["p0"][:, j], m) * 100) for k, v in L_["parts"].items()}, "ledger": sorted(rows, key=lambda r: -abs(r["push"])), "series": series, "series_label": "propensity after each story, then after the event (%)"})
+    def prepare_feed(self, it):
+        """Read one ticker headline into readings, without touching the world (this calls the model, so it runs outside the engine lock). The headline's own country and topic are used,
+        not guessed: the topic limits which conditions may be expected to move, the country decides where it enters. Amounts are scaled down (FEED_SCALE): a headline nudges the world, an ask is measured against it."""
+        ev = {"evidence_id": "feed", "published_at": datetime.date.today().isoformat(), "title": it["x"], "description": ""}
+        P = C.ask(ev); r = C.read(P); sign = lambda x: 0.10 if x["direction"] == "up" else -0.10
+        readings = [dict(x, amount=sign(x) * x["strength"], basis="reported") for x in r["readings"] if x["direction"] != "conflict"]
+        dom = TICKER_TOPIC.get(it["t"]); allowed = {v for d in C.DOMAINS if d["id"] == dom for v in d.get("dials", "").split("; ") if v}
+        for x in C.expected(ev, {x["dial"] for x in readings}, allowed): readings.append(dict(x, amount=sign(x) * x["strength"] * x["mode_weight"]))
+        w_, wtype, _ = C.type_weight(r["gate"]["happened"], r["gate"]["announced"], r["gate"]["opinion"], P["g|forecast"])
+        for x in readings: x["amount"] *= w_ * FEED_SCALE
+        cid = TICKER_COUNTRY.get(it["c"]); return {"it": it, "readings": readings, "entry": f"COUNTRY:{cid}" if cid in self.cid else "WORLD:world", "cid": cid}
+    def apply_feed(self, prep):
+        """Put a prepared headline into the world: one tick, then clip every node so a long run of headlines cannot push the world to extremes (FEED_CAP)."""
+        self.apply({"event": f"feed{LIVE['seq'] + 1}", "entry": prep["entry"], "count": 1, "readings": prep["readings"], "title": prep["it"]["x"], "country": prep["cid"], "source": "ticker"}, 1)
+        for n in self.w.delta: np.clip(self.w.delta[n], -FEED_CAP, FEED_CAP, out=self.w.delta[n])
     def commit(self):
         if not self.last or self.last["mode"] != "event" or not self.last["counted"]: return {"error": "nothing to commit"}
         self.apply(self.last["event"], 3); self.last = None; return {"ok": True, "events": len(self.events)}
@@ -224,24 +239,63 @@ class Session:
         return jn({"tick": self.w.tick, "digest": self.w.digest(), "people": self.pop.n, "countries": [{"id": c["id"], "name": c["name"], "pop_m": c["pop_m"], "median_age": c["median_age"], "income_k": c["income_k"], "urban": c["urban"], "source": c["source"]} for c in self.countries],
                    "map": self.map_info(), "anchors": base["anchors"], "events": [{"title": e["title"], "entry": e["entry"], "country": e.get("country"), "source": e["source"], "readings": [{"dial": r["dial"], "name": DIAL_NAME[r["dial"]], "amount": r["amount"]} for r in e["readings"]]} for e in self.events],
                    "rules": {"domains": len(C.DOMAINS), "dials": len(DIALS), "elements": len(E.ELS), "grid_cells": int((E.GRID != 0).sum()), "decisions": len(E.DECS), "decision_weights": int((E.W != 0).sum()), "factors": len(FACTORS), "questions": len(C.QS)}, "audiences": len(self.segs), "boot_seconds": self.boot, "dials": dials})
+# ---------------- live ticker: headlines fed into the world one tick at a time, only while some page is watching
+TICKER_FILE = "/workspace/demo/ticker.json"; FEED_SCALE, FEED_CAP, FEED_IDLE_S = 0.5, 0.4, 25
+TICKER_COUNTRY = {"US": "usa", "DE": "germany", "JP": "japan", "BR": "brazil", "IN": "india", "NG": "nigeria", "ID": "indonesia", "MX": "mexico", "WORLD": None}
+TICKER_TOPIC = {"ECONOMY": "economy_housing", "WORK": "work_labour", "ENERGY": "energy_resources", "CLIMATE": "environment_climate", "HEALTH": "health", "CRIME": "safety_crime", "CONFLICT": "conflict_security",
+                "LAW": "government_law", "DIPLOMACY": "international_migration", "SOCIETY": "society_identity", "CULTURE": "culture_leisure", "TECH": "technology_science", "SCHOOL": "education", "BUSINESS": "business_corporate"}
+LIVE = {"on": False, "interval": 7.0, "seen": 0.0, "next": 0.0, "seq": 0, "fed": 0, "items": [], "err": None}; LIVE_LOCK = threading.Lock()
+def live_pick(rng, recent):
+    bank = json.load(open(TICKER_FILE)); idx = [i for i in range(len(bank)) if i not in recent] or list(range(len(bank))); i = rng.choice(idx); recent.append(i); del recent[:-max(1, len(bank) // 2)]
+    it = dict(bank[i]); it["x"] = it["x"].replace("{pct}", rng.choice(["8", "12", "15", "20", "30"])).replace("{n}", rng.choice(["3", "12", "40", "120"])); return it
+def feeder_loop():
+    """Feeds one headline every LIVE['interval'] seconds while it is switched on AND a page has asked for /live in the last FEED_IDLE_S seconds, so closing the page stops the drift."""
+    rng, recent = random.Random(), []
+    while True:
+        time.sleep(0.4)
+        with LIVE_LOCK: go = LIVE["on"] and S is not None and time.time() - LIVE["seen"] < FEED_IDLE_S and time.time() >= LIVE["next"]; gap = LIVE["interval"]
+        if not go: continue
+        try:
+            it = live_pick(rng, recent); prep = S.prepare_feed(it)
+            with LOCK: S.apply_feed(prep); tick = S.w.tick
+            eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) >= 0.002]
+            with LIVE_LOCK: LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "c": it["c"], "t": it["t"], "x": it["x"], "effects": eff, "tick": tick}); del LIVE["items"][:-60]; LIVE["err"] = None
+        except Exception as e:
+            with LIVE_LOCK: LIVE["err"] = f"{type(e).__name__}: {str(e)[:100]}"
+        with LIVE_LOCK: LIVE["next"] = time.time() + gap
+def live_status(since=0, watching=True):
+    with LIVE_LOCK:
+        if watching: LIVE["seen"] = time.time()
+        out = {"on": LIVE["on"], "interval": LIVE["interval"], "seq": LIVE["seq"], "fed": LIVE["fed"], "err": LIVE["err"], "items": [i for i in LIVE["items"] if i["seq"] > since]}
+    out["tick"] = S.w.tick; out["events"] = len(S.events); return out
 S = None
 class H(BaseHTTPRequestHandler):
     def _send(self, code, obj): b = json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type", "application/json"); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
         if self.path.startswith("/state"):
             with LOCK: return self._send(200, S.state())
+        if self.path.startswith("/live"): return self._send(200, live_status(int(dict(urllib.parse.parse_qsl(self.path.partition("?")[2])).get("since", 0) or 0)))
         self._send(404, {"error": "not found"})
     def do_POST(self):
         try:
             req = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000)))
             with LOCK:
                 if self.path == "/request": t = str(req["text"]).strip(); assert 8 <= len(t) <= 1500 and req["mode"] in ("event", "offer", "auto"); return self._send(200, S.request(t, req["mode"]))
-                if self.path == "/drill": return self._send(200, S.drill(str(req["node"]), str(req["col"])))
+                if self.path == "/drill": return self._send(200, S.drill(str(req["node"]), str(req["col"]), bool(req.get("series"))))
                 if self.path == "/commit": return self._send(200, S.commit())
-                if self.path == "/reset": S.reset(); return self._send(200, S.state())
+                if self.path == "/reset":
+                    S.reset()
+                    with LIVE_LOCK: LIVE["items"].clear(); LIVE["fed"] = 0
+                    return self._send(200, S.state())
+                if self.path == "/live":
+                    with LIVE_LOCK:
+                        if "on" in req: LIVE["on"] = bool(req["on"]); LIVE["seen"] = time.time(); LIVE["next"] = 0.0
+                        if "interval" in req: LIVE["interval"] = min(60.0, max(3.0, float(req["interval"])))
+                    return self._send(200, live_status(1 << 60))
             self._send(404, {"error": "not found"})
         except (AssertionError, KeyError, ValueError, StopIteration): self._send(400, {"error": "bad request"})
         except OSError as e: self._send(502, {"error": f"classifier not reachable: {e}"})
     def log_message(self, *a): pass
 if __name__ == "__main__":
+    threading.Thread(target=feeder_loop, daemon=True).start()
     S = Session(); print(f"world engine ready: {S.pop.n:,} people, {len(S.countries)} countries, {len(S.segs)} audiences, {len(S.events)} events, boot {S.boot}s", flush=True); ThreadingHTTPServer(("127.0.0.1", 8112), H).serve_forever()
