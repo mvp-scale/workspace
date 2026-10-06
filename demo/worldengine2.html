@@ -45,10 +45,12 @@
   .trow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; } .trow:hover { background: var(--surface-2); } .trow.sel { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); } .trow.dim .nm { color: var(--text-3); } .trow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .trow .tg { font-size: 11.5px; color: var(--text-3); white-space: nowrap; } .trow .tg.exp { font-style: italic; } .ind { margin-left: 14px; border-left: 1px solid var(--border); padding-left: 8px; } .trow.static { grid-template-columns: minmax(0, 1fr) 90px 74px; cursor: default; } .trow.static:hover { background: none; }
   .step { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 13px; } .step:first-child { border-top: 0; } .step .n { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; } .step b { display: block; font-size: 13.5px; } .step .o { color: var(--text-2); margin-top: 2px; line-height: 1.4; } .step .w { color: var(--text-3); font-size: 11.5px; margin-top: 2px; line-height: 1.4; } .tag { align-self: start; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-2); white-space: nowrap; } .step a { color: var(--accent); cursor: pointer; font-size: 12px; }
   .cap { font-size: 12.5px; color: var(--text-3); margin: 8px 0 0; line-height: 1.45; }
-  .tick { display: flex; align-items: center; gap: 12px; height: 31px; margin-top: 6px; padding-top: 7px; border-top: 1px solid var(--border); }
+  .ti .pn { color: var(--against); font-weight: 600; } .ti .en { color: #dc4a4a; font-weight: 600; } .ti .ep { color: #2f9e5f; font-weight: 600; }
+  .ti .t2 { display: flex; gap: 10px; font-size: 11px; line-height: 15px; color: var(--text-3); opacity: .9; } .ti .t2 b { font-weight: 600; } .ti .t2 b.u { color: var(--for); } .ti .t2 b.d { color: var(--against); } .ti .t2 i { font-style: normal; opacity: .7; }
+  .tick { display: flex; align-items: center; gap: 12px; height: 45px; margin-top: 6px; padding-top: 7px; border-top: 1px solid var(--border); }
   .live { flex: none; display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border-strong); border-radius: 999px; padding: 1px 10px; font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--text-3); cursor: pointer; } .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); } .live.on { color: var(--accent); border-color: var(--accent); } .live.on i { background: var(--accent); animation: blip 1.4s ease-in-out infinite; } @keyframes blip { 50% { opacity: .25; } }
-  .tkv { position: relative; flex: 1; min-width: 0; height: 20px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); } .trk { position: absolute; left: 0; top: 0; display: flex; gap: 40px; white-space: nowrap; will-change: transform; }
-  .ti { font-size: 12.5px; line-height: 20px; color: var(--text-2); } .ti .c { color: var(--accent); font-weight: 700; } .ti .tp { color: var(--text-3); letter-spacing: .03em; } .ti .ef { margin-left: 8px; color: var(--text-3); font-size: 11.5px; } .ti .ef b { font-weight: 600; margin-right: 6px; }
+  .tkv { position: relative; flex: 1; min-width: 0; height: 34px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); } .trk { position: absolute; left: 0; top: 0; display: flex; gap: 40px; white-space: nowrap; will-change: transform; }
+  .ti { display: inline-flex; flex-direction: column; font-size: 12.5px; line-height: 17px; color: var(--text-2); } .ti .c { color: var(--accent); font-weight: 700; } .ti .tp { color: var(--text-3); letter-spacing: .03em; } .ti .ef { margin-left: 8px; color: var(--text-3); font-size: 11.5px; } .ti .ef b { font-weight: 600; margin-right: 6px; }
   .tkn { flex: none; font-size: 11.5px; color: var(--text-3); white-space: nowrap; } .tkn button { background: none; border: 0; color: var(--text-3); font: inherit; font-size: 11.5px; cursor: pointer; text-decoration: underline; padding: 0 0 0 10px; } .tkn button:hover { color: var(--accent); }
 </style>
 </head>
@@ -258,14 +260,19 @@ function methodBody(r, R, w, ev) {
 /* ---------- live ticker: COUNTRY:TOPIC:headline, scrolling right to left. The ENGINE feeds each headline into the world model (one tick each) while this page is open; this strip only shows them. ---------- */
 const TK = { items: [], since: 0, x: 0, last: 0, speed: 46, on: false, fed: 0, tick: 0, events: 0, err: null };
 const trk = $("trk"), tkv = $("tkv");
-function tkNode(it) { return el("span", { class: "ti", title: `${it.c}:${it.t}  ·  world tick ${it.tick}` }, el("span", { class: "c", text: it.c }), el("span", { class: "tp", text: ":" + it.t + ":" }), it.x, it.effects && it.effects.length ? el("span", { class: "ef" }, ...it.effects.map(e => el("b", { text: `${arrow(e.dir)}${DIAL_SHORT[e.dial] || e.name}${e.basis === "expected" ? "*" : ""}` }))) : null); }
-function tkAdd(it) {                                         // a new headline enters just off the right edge of the strip, so it shows within a second or two
-  TK.items.push(it); TK.items = TK.items.slice(-40); const node = tkNode(it), edge = tkv.getBoundingClientRect().right, ref = [...trk.children].find(c => c.getBoundingClientRect().left >= edge); trk.insertBefore(node, ref || null);
-  for (let g = 0; g < 10 && trk.scrollWidth < tkv.clientWidth * 1.7; g++) for (const old of TK.items) trk.append(tkNode(old));      // short list: loop the recent ones so the strip never runs dry
+function tkNode(it) {
+  const ef = (it.effects || []).slice(0, 4);
+  return el("span", { class: "ti", title: `${it.c}:${it.t}  ·  world tick ${it.tick}` },
+    el("span", { class: "t1" }, el("span", { class: "c", text: it.c }), el("span", { class: "tp", text: ":" + it.t + ":" }), ...hl(it.x)),
+    el("span", { class: "t2" }, ef.length ? ef.map(e => el("b", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${DIAL_SHORT[e.dial] || e.name}${e.basis === "expected" ? "*" : ""}` })) : el("i", { text: "no measurable effect" })));
+}
+function tkAdd(it) {                                         // a new headline enters just off the right edge of the strip and passes once; nothing is looped or repeated
+  TK.items.push(it); TK.items = TK.items.slice(-40); const node = tkNode(it); trk.append(node);
+  const edge = tkv.getBoundingClientRect().right, left = node.getBoundingClientRect().left; if (left < edge) node.style.marginLeft = (edge - left + 8) + "px";
 }
 function tkFrame(now) {
-  requestAnimationFrame(tkFrame); const dt = Math.min(0.1, (now - (TK.last || now)) / 1000); TK.last = now; if (!TK.items.length) return;
-  TK.x -= TK.speed * dt; const first = trk.firstElementChild; if (first) { const w = first.offsetWidth + 40; if (-TK.x >= w) { TK.x += w; trk.append(first); } }
+  requestAnimationFrame(tkFrame); const dt = Math.min(0.1, (now - (TK.last || now)) / 1000); TK.last = now; if (!trk.children.length) { TK.x = 0; return; }
+  TK.x -= TK.speed * dt; const first = trk.firstElementChild; if (first) { const w = first.offsetWidth + 40 + (parseFloat(first.style.marginLeft) || 0); if (-TK.x >= w) { TK.x += w; first.remove(); } }
   trk.style.transform = `translateX(${TK.x}px)`;
 }
 function tkPaint() {
@@ -275,10 +282,10 @@ function tkPaint() {
 async function tkPoll() {
   if (document.hidden) return;                                // no page watching means the engine stops feeding by itself after 25 s
   try {
-    const d = await Jev.api("/api/world-engine/live?since=" + TK.since);
+    const first = TK.since === 0, d = await Jev.api("/api/world-engine/live?since=" + TK.since);
     if (d.seq < TK.since) { TK.since = 0; TK.items = []; trk.replaceChildren(); }       // the engine was reset or restarted
     TK.since = Math.max(TK.since, d.seq); Object.assign(TK, { on: d.on, fed: d.fed, tick: d.tick, events: d.events, err: d.err });
-    for (const it of d.items) { if (!TK.items.length) trk.replaceChildren(); tkAdd(it); }
+    for (const it of (first ? d.items.slice(-4) : d.items)) { if (!TK.items.length) trk.replaceChildren(); tkAdd(it); }
     tkPaint(); if (ui && ui.root.isConnected) { const h = ui.trail.querySelector(".hint"); if (h) h.replaceWith(hintEl()); }
   } catch (e) { /* keep the last picture; try again on the next beat */ }
 }
@@ -287,7 +294,22 @@ async function resetWorld() { await Jev.api("/api/world-engine/reset", { method:
 $("live").onclick = async () => { try { await liveCall({ on: !TK.on }); try { localStorage.setItem("we2.live", TK.on ? "0" : "1"); } catch (e) {} await tkPoll(); } catch (e) {} };
 $("tkc").after(el("button", { type: "button", text: "Reset world", title: "Put the world back to its starting state", onclick: confirmThen(resetWorld) }));
 trk.append(el("span", { class: "ti", text: "Waiting for the first headline…" }));
-(async () => { let want = true; try { want = localStorage.getItem("we2.live") !== "0"; } catch (e) {} try { await liveCall({ on: want, interval: 7 }); } catch (e) {} await tkPoll(); setInterval(tkPoll, 3000); requestAnimationFrame(tkFrame); })();
+(async () => { let want = true; try { want = localStorage.getItem("we2.live") !== "0"; } catch (e) {} try { await liveCall({ on: want, interval: 4 }); } catch (e) {} await tkPoll(); setInterval(tkPoll, 3000); requestAnimationFrame(tkFrame); })();
+/* ---------- headline words: proper nouns (products, places, firms) in orange, charged words coloured by tone ---------- */
+const NEG = /^(crash\w*|collaps\w*|panic\w*|ban(s|ned)?|fear\w*|war|strikes?|shortages?|surg\w*|plunge\w*|slump\w*|fall\w*|drop\w*|cuts?|lose\w*|loss\w*|fire\w*|ill\w*|sick\w*|cancel\w*|fraud|scandal|riot\w*|attack\w*|flood\w*|heat\w*|outage\w*|breach\w*|hack\w*|recall\w*|warn\w*|risk\w*|threat\w*|crisis|storm\w*|blackout\w*|delay\w*|fine[sd]?|sue[sd]?|lawsuit\w*|layoff\w*|jobless|shut\w*|bankrupt\w*)$/i;
+const POS = /^(record|boost\w*|win\w*|won|relief|cheap\w*|free|rise|rises|grow\w*|gain\w*|launch\w*|deal|cure\w*|breakthrough\w*|hope\w*|joy\w*|celebrat\w*|safe\w*|better|best|saves?|savings|raise[sd]?|hire[sd]?|jobs|boom\w*|rescue\w*|peace|agree\w*|approve[sd]?|opens?|reopen\w*)$/i;
+const STOP = /^(The|A|An|In|On|At|After|As|With|For|And|But|To|Of|New|Local|City|Mayor|Man|Woman|Report|Study|Why|How|What|Who|Not|No|All|Some|Now|Is|Are|It|Its|This|That)$/;
+function hl(text) {
+  const out = [], parts = text.split(/(\s+)/); let run = [], gap = "";
+  const flush = () => { if (run.length) { out.push(el("span", { class: "pn", text: run.join("") })); run = []; } if (gap) { out.push(gap); gap = ""; } };
+  for (const w of parts) {
+    if (/^\s+$/.test(w)) { if (run.length) gap += w; else out.push(w); continue; }
+    const bare = w.replace(/^[^\w$£€]+|[^\w%]+$/g, ""), tone = NEG.test(bare) ? "en" : POS.test(bare) ? "ep" : "", proper = !tone && /^[A-Z][\w'-]+$/.test(bare) && !STOP.test(bare);
+    if (proper) { if (gap) { run.push(gap); gap = ""; } run.push(w); continue; }
+    flush(); out.push(tone ? el("span", { class: tone, text: w }) : w);
+  }
+  flush(); return out;
+}
 /* ---------- ask bar ---------- */
 const ask = $("ask"); function autosize() { ask.style.height = "auto"; ask.style.height = Math.min(110, ask.scrollHeight) + "px"; }
 ask.addEventListener("input", autosize); ask.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(); } }); $("go").onclick = () => go();

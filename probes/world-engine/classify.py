@@ -99,7 +99,7 @@ def allowed_dials(placement):
     for t in placement:
         if t["tagged"]: out |= {v for v in rows[t["id"]].get("dials", "").split("; ") if v}
     return out
-def expected(ev, reported_dials, allowed=None, today=None):
+def expected(ev, reported_dials, allowed=None, today=None, min_p=None, min_net=0.05):
     """For every condition the story did not report directly, ask whether it is likely to push it up or down if it plays out as reported.
     Net direction = P(up) - P(down), so a story that could go either way gets a small net effect instead of none. Pending items (a hearing, a plan) are weighted lower than items already in effect."""
     today = today or datetime.date.today().isoformat(); state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"; qs = {}
@@ -115,6 +115,6 @@ def expected(ev, reported_dials, allowed=None, today=None):
     for d in PHRASES:
         if d in reported_dials or f"e|{d}|up" not in P: continue
         pu, pd = P[f"e|{d}|up"], P[f"e|{d}|down"]; net = pu - pd
-        if max(pu, pd) >= EXPECT_MIN and abs(net) > 0.05:
+        if max(pu, pd) >= (EXPECT_MIN if min_p is None else min_p) and abs(net) > min_net:
             out.append({"dial": d, "direction": "up" if net > 0 else "down", "strength": round(abs(net), 3), "p_up": round(pu, 3), "p_down": round(pd, 3), "p_done": round(done, 3), "mode": mode, "basis": "expected", "mode_weight": float(MODES[mode]["weight"]), "attributes": ["expected impact"]})
     return sorted(out, key=lambda x: -x["strength"])[:EXPECT_TOP]

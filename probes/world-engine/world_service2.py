@@ -74,7 +74,7 @@ class Session:
             c = use[0].get("country", "usa"); evs.append({"event": cid, "title": use[0]["title"], "entry": f"COUNTRY:{c}" if c in self.cid else "WORLD:world", "country": c, "count": len(use), "readings": list(best.values()), "published": email.utils.parsedate_to_datetime(ev[use[0]["evidence_id"]]["published_at"]), "source": "feed"})
         evs.sort(key=lambda e: e["published"]); self.w = W2.World2(self.countries, 0, True); self.events = []; self.hist = [self.w.totals()]
         for e in evs: self.apply(e, 1)
-        self.w.run(2); self.hist.append(self.w.totals()); self.cache = {}; self.last = None
+        self.w.run(2); self.hist.append(self.w.totals()); self.cache = {}; self.last = None; self.live_at = len(self.hist) - 1; self.world_cache = None
     def apply(self, e, settle=1, world=None):
         w = world or self.w; t = w.tick; e = dict(e)
         for r in e["readings"]: w.add(t, e["entry"], r["dial"], r["amount"], e["event"])
@@ -206,6 +206,18 @@ class Session:
             rows.append({"tag": "A" if push > 0 else "D", "factor": EL_NAME[e], "state": self.hm(z1[:, e_i], m), "state_label": "standardised state now", "weight": float(w_), "via": via, "rule": (f"moved by {DIAL_NAME[DIALS[k]]} ({dl[k]:+.3f} in log perceived dial)" if top > 1e-6 else "not moved by this event"), "delta": dz, "push": push})
         series = [] if not want_series else [self.hm(E.Population.propensity(None, W2.effective(self.pop, W2.person_delta(self.w, self.pop, self.seg_gain, at=h)))[:, j], m) * 100 for h in self.hist] + [self.hm(p1, m) * 100]
         return jn({"mode": "event", "node": node, "col": col, "value": (self.hm(p1, m) - b) * 100, "parts": {k: float(self.hm(v[:, j] - L_["p0"][:, j], m) * 100) for k, v in L_["parts"].items()}, "ledger": sorted(rows, key=lambda r: -abs(r["push"])), "series": series, "series_label": "propensity after each story, then after the event (%)"})
+    def world_now(self):
+        """The world as it stands now against the world when the feed started (the end of the reset): per place and audience, the change in each decision (points) and in each condition. Cached per tick."""
+        if self.world_cache and self.world_cache[0] == self.w.tick: return self.world_cache[1]
+        h0 = self.hist[self.live_at]; p0 = E.Population.propensity(None, W2.effective(self.pop, W2.person_delta(self.w, self.pop, self.seg_gain, at=h0)))
+        p1 = E.Population.propensity(None, self.eff_prop()[0]); tot = self.w.totals(); nd = range(len(E.DECS)); rows = []
+        for rw in self.rows:
+            m = self.masks[rw["id"]]; n = rw["id"]; dd = (tot[n] - h0[n]) if n in tot else None
+            rows.append({"id": n, "label": rw["label"], "level": n.split(":")[0].lower(), "share": round(self.pop.wmean(m.astype(float)), 4),
+                         "now": [self.hm(p1[:, j], m) * 100 for j in nd], "move": [self.hm(p1[:, j] - p0[:, j], m) * 100 for j in nd], "dials": None if dd is None else [float(x) for x in dd]})
+        out = jn({"tick": self.w.tick, "since_tick": self.live_at, "decisions": [{"id": d, "label": DEC_NAME[d]} for d in E.DECS], "dials": [{"id": d, "name": DIAL_NAME[d]} for d in DIALS], "rows": rows,
+                  "note": "change since the live feed started: decision likelihood (points) and each condition's level, from the same rules as an ask"})
+        self.world_cache = (self.w.tick, out); return out
     def prepare_feed(self, it):
         """Read one ticker headline into readings, without touching the world (this calls the model, so it runs outside the engine lock). The headline's own country and topic are used,
         not guessed: the topic limits which conditions may be expected to move, the country decides where it enters. Amounts are scaled down (FEED_SCALE): a headline nudges the world, an ask is measured against it."""
@@ -213,7 +225,7 @@ class Session:
         P = C.ask(ev); r = C.read(P); sign = lambda x: 0.10 if x["direction"] == "up" else -0.10
         readings = [dict(x, amount=sign(x) * x["strength"], basis="reported") for x in r["readings"] if x["direction"] != "conflict"]
         dom = TICKER_TOPIC.get(it["t"]); allowed = {v for d in C.DOMAINS if d["id"] == dom for v in d.get("dials", "").split("; ") if v}
-        for x in C.expected(ev, {x["dial"] for x in readings}, allowed): readings.append(dict(x, amount=sign(x) * x["strength"] * x["mode_weight"]))
+        for x in C.expected(ev, {x["dial"] for x in readings}, allowed, min_p=0.0, min_net=0.0): readings.append(dict(x, amount=sign(x) * x["strength"] * x["mode_weight"]))
         w_, wtype, _ = C.type_weight(r["gate"]["happened"], r["gate"]["announced"], r["gate"]["opinion"], P["g|forecast"])
         for x in readings: x["amount"] *= w_ * FEED_SCALE
         cid = TICKER_COUNTRY.get(it["c"]); return {"it": it, "readings": readings, "entry": f"COUNTRY:{cid}" if cid in self.cid else "WORLD:world", "cid": cid}
@@ -240,7 +252,7 @@ class Session:
                    "map": self.map_info(), "anchors": base["anchors"], "events": [{"title": e["title"], "entry": e["entry"], "country": e.get("country"), "source": e["source"], "readings": [{"dial": r["dial"], "name": DIAL_NAME[r["dial"]], "amount": r["amount"]} for r in e["readings"]]} for e in self.events],
                    "rules": {"domains": len(C.DOMAINS), "dials": len(DIALS), "elements": len(E.ELS), "grid_cells": int((E.GRID != 0).sum()), "decisions": len(E.DECS), "decision_weights": int((E.W != 0).sum()), "factors": len(FACTORS), "questions": len(C.QS)}, "audiences": len(self.segs), "boot_seconds": self.boot, "dials": dials})
 # ---------------- live ticker: headlines fed into the world one tick at a time, only while some page is watching
-TICKER_FILE = "/workspace/demo/ticker.json"; FEED_SCALE, FEED_CAP, FEED_IDLE_S = 0.5, 0.4, 25
+TICKER_FILE = "/workspace/demo/ticker.json"; FEED_SCALE, FEED_CAP, FEED_IDLE_S, FEED_EXPECT_MIN = 0.5, 0.4, 25, 0.0     # ticker headlines keep every non-zero reading (asks use a 0.5 bar): each one is only a nudge, and small is not none
 TICKER_COUNTRY = {"US": "usa", "DE": "germany", "JP": "japan", "BR": "brazil", "IN": "india", "NG": "nigeria", "ID": "indonesia", "MX": "mexico", "WORLD": None}
 TICKER_TOPIC = {"ECONOMY": "economy_housing", "WORK": "work_labour", "ENERGY": "energy_resources", "CLIMATE": "environment_climate", "HEALTH": "health", "CRIME": "safety_crime", "CONFLICT": "conflict_security",
                 "LAW": "government_law", "DIPLOMACY": "international_migration", "SOCIETY": "society_identity", "CULTURE": "culture_leisure", "TECH": "technology_science", "SCHOOL": "education", "BUSINESS": "business_corporate"}
@@ -258,7 +270,7 @@ def feeder_loop():
         try:
             it = live_pick(rng, recent); prep = S.prepare_feed(it)
             with LOCK: S.apply_feed(prep); tick = S.w.tick
-            eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) >= 0.002]
+            eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) > 0]
             with LIVE_LOCK: LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "c": it["c"], "t": it["t"], "x": it["x"], "effects": eff, "tick": tick}); del LIVE["items"][:-60]; LIVE["err"] = None
         except Exception as e:
             with LIVE_LOCK: LIVE["err"] = f"{type(e).__name__}: {str(e)[:100]}"
@@ -274,6 +286,8 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/state"):
             with LOCK: return self._send(200, S.state())
+        if self.path.startswith("/world"):
+            with LOCK: return self._send(200, S.world_now())
         if self.path.startswith("/live"): return self._send(200, live_status(int(dict(urllib.parse.parse_qsl(self.path.partition("?")[2])).get("since", 0) or 0)))
         self._send(404, {"error": "not found"})
     def do_POST(self):

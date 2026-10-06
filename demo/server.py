@@ -419,7 +419,7 @@ WORLD_ENGINE = "http://127.0.0.1:8112"  # probes/world-engine/world_service2.py 
 
 
 def world_engine_proxy(method, sub, body):
-    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live"):
+    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live", "/world"):
         return 404, {"error": "not found"}
     try:
         req = urllib.request.Request(WORLD_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)
