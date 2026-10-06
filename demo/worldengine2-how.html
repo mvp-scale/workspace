@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How World engine 2 works · Jev Bench Console</title>
-<meta name="description" content="The live engine, drawn by the GPU: 100,000 modelled people, six measured stages, and each headline lighting up where it lands.">
+<meta name="description" content="The knowledge graph the engine runs on, layer by layer, with six measured stages and each headline lighting up its own path.">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
 <style>
@@ -47,7 +47,7 @@
 </head>
 <body>
 <main class="page hw">
-  <header class="hwh"><div><h1>How World engine 2 works</h1><p>The live engine, drawn by the GPU: every dot is one of the 100,000 modelled people, and each headline lights up where it lands.</p></div><div style="display:flex;gap:12px;align-items:center"><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine2">← World engine 2</a></div></header>
+  <header class="hwh"><div><h1>How World engine 2 works</h1><p>The knowledge graph the engine runs on, layer by layer, with each headline lighting up its own path through it.</p></div><div style="display:flex;gap:12px;align-items:center"><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine2">← World engine 2</a></div></header>
   <section class="rail" id="rail"></section>
   <section class="def" id="def"></section>
   <section class="stage" id="stage"></section>
@@ -89,109 +89,7 @@ function lightUp(it) {
 }
 function paintGpuRail() {
   const g = S.gpu; if (!g) return; const m = g.ms; RAIL.people.ms.textContent = fmtMs(m.state + m.effect); RAIL.people.v.textContent = `${g.people.toLocaleString()} people · ${g.gpu ? "on the GPU" : "on the CPU"}`;
-  RAIL.decide.ms.textContent = fmtMs(m.decide); RAIL.decide.v.textContent = "8 decisions per person"; RAIL.show.ms.textContent = fmtMs(m.group); RAIL.show.v.textContent = `${g.places} places in one sum · ${Math.round(FPS.v)} fps drawing`;
-}
-
-/* ---------- WebGL stage ---------- */
-const FPS = { v: 60, last: 0 };
-const G = { pulseU: new Float32Array(100).fill(-1e6), gl: null, prog: null, loc: {}, n: 0, buf: {}, mix: 1, mixStart: 0, vmax: 0.1, vmaxT: 0.1, view: { s: 1, x: 0, y: 0 }, pulse: new Float32Array(8).fill(-1e6), cur: null, tgt: null, prev: null, cent: [], R: 1, order: [], dirty: true, labels: [] };
-const VS = `#version 300 es
-in vec2 a_pos; in vec2 a_rel; in float a_prev; in float a_tgt; in float a_c; in float a_aud; in float a_set;
-uniform vec2 u_scale; uniform vec2 u_off; uniform float u_mix, u_vmax, u_size, u_now, u_zoom; uniform float u_pulse[100]; uniform int u_mode;
-out vec4 v_col;
-vec3 pal(float a) { return 0.55 + 0.45 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + a * 0.125)); }
-void main() {
-  vec2 p = a_pos * u_scale + u_off; gl_Position = vec4(p, 0.0, 1.0);
-  float v = clamp(mix(a_prev, a_tgt, u_mix) / u_vmax, -1.0, 1.0), mag = pow(abs(v), 0.55);
-  vec3 neu = vec3(0.30, 0.34, 0.44), pos = vec3(0.31, 0.56, 0.97), neg = vec3(0.93, 0.52, 0.22);
-  vec3 col = mix(neu, v >= 0.0 ? pos : neg, mag); float al = 0.38 + 0.5 * mag;
-  if (u_mode == 1) { col = pal(a_aud); al = 0.55; }
-  float t = u_now - u_pulse[int(a_c)]; float ring = 0.0;
-  if (t > 0.0 && t < 3.4) { float d = (length(a_rel) - t * 0.85) / 0.17; ring = exp(-d * d) * exp(-t * 0.8); }
-  col += vec3(1.0, 0.93, 0.78) * ring * 0.95; al = min(1.0, al + ring);
-  gl_PointSize = u_size * (1.0 + ring * 1.6 + mag * 0.4); v_col = vec4(col, al);
-}`;
-const FS = `#version 300 es
-precision mediump float; in vec4 v_col; out vec4 o;
-void main() { float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.12, d) * v_col.a; o = vec4(v_col.rgb * a, a); }`;
-function sh(gl, t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
-function rng(i) { let t = (i + 0x6D2B79F5) | 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
-const b64 = (s, Ctor) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Ctor(u.buffer); };
-
-function buildGeometry() {
-  const L = S.layout, n = L.n, ctry = b64(L.country, Uint8Array), setl = b64(L.settle, Uint8Array), seg = b64(L.seg, Uint8Array), nmax = Math.max(...L.countries.map(c => c.n));
-  G.rad = L.countries.map(c => Math.max(0.22, Math.sqrt(c.n / nmax)));                              // a cluster's size follows the number of people modelled for it
-  const order = L.countries.map((c, i) => i).sort((a, b) => G.rad[b] - G.rad[a]), gap = 0.34, rowW = Math.sqrt(order.reduce((a, i) => a + Math.pow(2 * G.rad[i] + gap, 2), 0)) * 1.4;
-  G.cent = []; let x = 0, y = 0, rowH = 0, maxX = 0; for (const i of order) { const d = 2 * G.rad[i] + gap; if (x + d > rowW && x > 0) { x = 0; y += rowH; rowH = 0; } if (!rowH) rowH = d; G.cent[i] = { x: x + d / 2, y: -(y + rowH / 2) }; x += d; maxX = Math.max(maxX, x); }
-  const totalH = y + rowH, mx = maxX / 2, my = totalH / 2; for (const c of G.cent) { c.x -= mx; c.y += my; } G.bounds = { w: maxX, h: totalH };
-  const rank = []; order.forEach((ci, r) => { rank[ci] = r; });
-  const pos = new Float32Array(n * 2), rel = new Float32Array(n * 2), c = new Float32Array(n), aud = new Float32Array(n), st = new Float32Array(n), sub = [0, 1, 2].map(k => ({ x: Math.cos(Math.PI / 2 + k * 2.0944) * 0.5, y: Math.sin(Math.PI / 2 + k * 2.0944) * 0.5 })), sg = [0.17, 0.19, 0.21];
-  for (let i = 0; i < n; i++) {
-    const ci = ctry[i], k = Math.min(2, setl[i]), u1 = Math.max(1e-6, rng(i * 2)), u2 = rng(i * 2 + 1), r = Math.sqrt(-2 * Math.log(u1)) * sg[k], a = 6.2831853 * u2;
-    let rx = sub[k].x + Math.cos(a) * r, ry = sub[k].y + Math.sin(a) * r; const d = Math.hypot(rx, ry); if (d > 0.97) { rx *= 0.97 / d; ry *= 0.97 / d; }
-    const R = G.rad[ci]; pos[2 * i] = G.cent[ci].x + rx * R; pos[2 * i + 1] = G.cent[ci].y + ry * R; rel[2 * i] = rx; rel[2 * i + 1] = ry; c[i] = ci; aud[i] = seg[i]; st[i] = k;
-  }
-  G.n = n; G.cur = new Float32Array(n); G.prev = new Float32Array(n); G.tgt = new Float32Array(n); G.pulse = new Float32Array(L.countries.length).fill(-1e6);
-  const gl = G.gl, mk = (name, data, size) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, name === "a_prev" || name === "a_tgt" ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW); G.buf[name] = { b, size }; };
-  mk("a_pos", pos, 2); mk("a_rel", rel, 2); mk("a_c", c, 1); mk("a_aud", aud, 1); mk("a_set", st, 1); mk("a_prev", G.prev, 1); mk("a_tgt", G.tgt, 1);
-  const st2 = $("stage"); G.labels = []; L.countries.forEach((cc, i) => { const l = el("div", { class: "lbl" }, cc.name, el("small", { text: `${cc.pop_m.toLocaleString()} M people` })); st2.append(l); G.labels.push({ l, x: G.cent[i].x, y: G.cent[i].y - G.rad[i] - 0.12, kind: "c", r: G.rad[i] }); });
-  L.countries.forEach((cc, i) => { if (rank[i] >= 14) return; L.settles.forEach((s2, k) => { const l = el("div", { class: "lbl sm", text: s2.name }); l.style.display = "none"; st2.append(l); G.labels.push({ l, x: G.cent[i].x + sub[k].x * G.rad[i], y: G.cent[i].y + sub[k].y * G.rad[i] - 0.3 * G.rad[i], kind: "s", r: G.rad[i] }); }); });
-  fitView(); G.dirty = true;
-}
-function fitView() { const c = $("stage").querySelector(".pcv"), W = c.clientWidth, H = c.clientHeight, usable = W - (W > 1000 ? 345 : 0) - 24, spanX = G.bounds.w + 0.5, spanY = G.bounds.h + 1.2; G.fit = Math.min(usable / spanX, (H - 70) / spanY); G.cam = { s: G.fit, cx: 0, cy: -0.1, offx: -(W > 1000 ? 172 : 0) }; G.tcam = { ...G.cam }; G.dirty = true; }
-function worldToScreen(x, y, W, H) { const k = G.cam; return [W / 2 + k.offx + (x - k.cx) * k.s, H / 2 - (y - k.cy) * k.s]; }
-function screenToWorld(px, py, W, H) { const k = G.cam; return [(px - W / 2 - k.offx) / k.s + k.cx, -(py - H / 2) / k.s + k.cy]; }
-
-function initGL() {
-  const st = $("stage"), cv = el("canvas", { class: "pcv" }); st.append(cv);
-  const gl = cv.getContext("webgl2", { antialias: false, alpha: false, premultipliedAlpha: true }); if (!gl) { st.append(el("div", { class: "nogl", text: "This browser has no WebGL2, so the live picture cannot be drawn. The stage timings and definitions above still work." })); return false; }
-  G.gl = gl; const p = gl.createProgram(); gl.attachShader(p, sh(gl, gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl, gl.FRAGMENT_SHADER, FS)); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
-  G.prog = p; for (const u of ["u_scale", "u_off", "u_mix", "u_vmax", "u_size", "u_now", "u_pulse", "u_mode"]) G.loc[u] = gl.getUniformLocation(p, u);
-  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.clearColor(0.035, 0.05, 0.09, 1);
-  const vao = gl.createVertexArray(); gl.bindVertexArray(vao); G.vao = vao;
-  const ro = new ResizeObserver(() => { if (!cv.clientWidth) return; const d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.round(cv.clientWidth * d); cv.height = Math.round(cv.clientHeight * d); if (G.n) { const was = G.cam.s / G.fit; fitView(); G.cam.s = G.tcam.s = G.fit * was; } G.dirty = true; }); ro.observe(cv);
-  // pan, zoom, click
-  let drag = null; cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, cx: G.tcam.cx, cy: G.tcam.cy, moved: false }; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); });
-  cv.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; G.tcam.cx = drag.cx - dx / G.tcam.s; G.tcam.cy = drag.cy + dy / G.tcam.s; G.cam.cx = G.tcam.cx; G.cam.cy = G.tcam.cy; G.dirty = true; } hover(e.clientX - r.left, e.clientY - r.top); });
-  cv.addEventListener("pointerup", (e) => { const was = drag; drag = null; cv.classList.remove("drag"); if (was && !was.moved) { const r = cv.getBoundingClientRect(), [wx, wy] = screenToWorld(e.clientX - r.left, e.clientY - r.top, r.width, r.height), ci = nearest(wx, wy); if (ci >= 0) { const H = cv.clientHeight; G.tcam = { s: Math.min(G.fit * 40, 0.42 * H / G.rad[ci]), cx: G.cent[ci].x, cy: G.cent[ci].y, offx: G.tcam.offx }; } } });
-  cv.addEventListener("pointerleave", () => { $("hov").classList.remove("on"); });
-  cv.addEventListener("dblclick", () => { fitView(); });
-  cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = screenToWorld(px, py, r.width, r.height), f = Math.exp(-e.deltaY * 0.0016), ns = Math.min(G.fit * 40, Math.max(G.fit * 0.8, G.tcam.s * f));
-    G.tcam.s = ns; G.tcam.cx = wx - (px - r.width / 2 - G.tcam.offx) / ns; G.tcam.cy = wy + (py - r.height / 2) / ns; }, { passive: false });
-  return true;
-}
-function nearest(wx, wy) { let best = -1, bd = 1.08; G.cent.forEach((c, i) => { const d = Math.hypot(wx - c.x, wy - c.y) / G.rad[i]; if (d < bd) { bd = d; best = i; } }); return best; }
-function hover(px, py) {
-  const cv = $("stage").querySelector("canvas"), [wx, wy] = screenToWorld(px, py, cv.clientWidth, cv.clientHeight), ci = nearest(wx, wy), h = $("hov"); if (ci < 0 || !S.layout) { h.classList.remove("on"); return; }
-  const c = S.layout.countries[ci], row = S.world && S.world.rows.find(r => r.id === "COUNTRY:" + c.id); h.replaceChildren(el("b", { text: c.name }), el("div", { class: "r", style: "margin-bottom:4px" }, el("span", { text: "real population" }), el("span", { text: `${c.pop_m.toLocaleString()} M` })), el("div", { class: "r", style: "margin-bottom:5px" }, el("span", { text: "people drawn" }), el("span", { text: c.n.toLocaleString() })),
-    ...(row ? S.layout.decisions.map((d, j) => el("div", { class: "r" + (j === S.d ? " sel" : "") }, el("span", { text: d.label.replace(/ \(.*/, "") }), el("span", { text: (row.move[j] >= 0 ? "+" : "−") + Math.abs(row.move[j]).toFixed(2) + " pts" }))) : [el("div", { class: "r", text: "waiting for the first headline…" })]));
-  const W = cv.clientWidth; h.style.left = Math.min(W - 230 - (W > 1000 ? 340 : 0), px + 16) + "px"; h.style.top = Math.max(8, Math.min(cv.clientHeight - 230, py + 12)) + "px"; h.classList.add("on");
-}
-function setTarget(vals) {            // vals: Float32Array of points. Start the glide from wherever the dots are drawn now.
-  const m = G.mix; for (let i = 0; i < G.n; i++) G.prev[i] = G.prev[i] * (1 - m) + G.tgt[i] * m; G.tgt.set(vals); G.mix = 0; G.mixStart = performance.now();
-  const gl = G.gl; gl.bindBuffer(gl.ARRAY_BUFFER, G.buf.a_prev.b); gl.bufferSubData(gl.ARRAY_BUFFER, 0, G.prev); gl.bindBuffer(gl.ARRAY_BUFFER, G.buf.a_tgt.b); gl.bufferSubData(gl.ARRAY_BUFFER, 0, G.tgt);
-  const a = Array.from(vals, Math.abs).sort((x, y) => x - y); G.vmaxT = Math.max(0.03, a[Math.floor(a.length * 0.985)] || 0.03); $("legmax").textContent = `±${G.vmaxT.toFixed(2)} pts`; G.dirty = true;
-}
-function frame(now) {
-  requestAnimationFrame(frame); const gl = G.gl; if (!gl || !G.n || GR.view !== "people") return;
-  const dt = now - (FPS.last || now); FPS.last = now; if (dt > 0) FPS.v = FPS.v * 0.95 + (1000 / dt) * 0.05;
-  const k = G.cam, t = G.tcam; for (const f of ["s", "cx", "cy"]) { const d = t[f] - k[f]; if (Math.abs(d) > 1e-4 * (f === "s" ? k.s : 1)) { k[f] += d * 0.14; G.dirty = true; } } k.offx = t.offx;
-  if (G.mix < 1) { G.mix = Math.min(1, (now - G.mixStart) / 900); G.dirty = true; } G.vmax += (G.vmaxT - G.vmax) * 0.08; if (Math.abs(G.vmaxT - G.vmax) > 1e-4) G.dirty = true;
-  const nowS = now / 1000; if (nowS - G.lastPulse < 3.6) G.dirty = true;
-  if (!G.dirty) return; G.dirty = false;
-  const cv = gl.canvas, W = cv.clientWidth, H = cv.clientHeight; gl.viewport(0, 0, cv.width, cv.height); gl.clear(gl.COLOR_BUFFER_BIT); gl.useProgram(G.prog); gl.bindVertexArray(G.vao);
-  for (const [name, { b, size }] of Object.entries(G.buf)) { const loc = gl.getAttribLocation(G.prog, name); if (loc < 0) continue; gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0); }
-  const mixE = G.mix < 1 ? 1 - Math.pow(1 - G.mix, 3) : 1;
-  gl.uniform2f(G.loc.u_scale, 2 * k.s / W, 2 * k.s / H); gl.uniform2f(G.loc.u_off, 2 * (k.offx - k.cx * k.s) / W, -2 * k.cy * k.s / H); gl.uniform1f(G.loc.u_mix, mixE); gl.uniform1f(G.loc.u_vmax, G.vmax);
-  gl.uniform1f(G.loc.u_size, Math.max(1.6, Math.min(7, 1.9 * Math.sqrt(k.s / G.fit)) * (cv.width / W))); gl.uniform1f(G.loc.u_now, nowS); G.pulseU.fill(-1e6); G.pulseU.set(G.pulse.subarray(0, 100)); gl.uniform1fv(G.loc.u_pulse, G.pulseU); gl.uniform1i(G.loc.u_mode, S.mode === "audience" ? 1 : 0);
-  gl.drawArrays(gl.POINTS, 0, G.n);
-  for (const lb of G.labels) { const [x, y] = worldToScreen(lb.x, lb.y, W, H), px = k.s * lb.r; lb.l.style.left = x + "px"; lb.l.style.top = y + "px"; lb.l.style.display = lb.kind === "s" ? (px > 150 ? "" : "none") : (px > 34 ? "" : "none"); }
-}
-G.lastPulse = -1e6;
-function pulseAt(it) {
-  const ci = S.layout ? S.layout.countries.findIndex(c => c.id === iso(it.c)) : -1, now = performance.now() / 1000; G.lastPulse = now;
-  if (ci >= 0) G.pulse[ci] = now; else for (let i = 0; i < G.pulse.length; i++) G.pulse[i] = now + (i % 12) * 0.1;       // a story with no country of ours lands on the whole world, one after another
-  G.dirty = true;
+  RAIL.decide.ms.textContent = fmtMs(m.decide); RAIL.decide.v.textContent = "8 decisions per person"; RAIL.show.ms.textContent = fmtMs(m.group); RAIL.show.v.textContent = `${g.places} places in one sum`;
 }
 
 /* ---------- side panel + controls ---------- */
@@ -199,13 +97,11 @@ const UI = {};
 function buildStage() {
   const st = $("stage"); UI.hov = el("div", { class: "gl hov", id: "hov" });
   UI.ctl = el("div", { class: "gl ctl" }, el("span", { class: "lb", text: "Colour by change in" }));
-  UI.chips = []; S.layout.decisions.forEach((d, j) => { const c = el("button", { type: "button", class: "chip" + (j === S.d ? " on" : ""), text: d.label.replace(/ \(.*/, ""), title: d.label, onclick: () => { S.d = j; UI.chips.forEach((x, i) => x.classList.toggle("on", i === j)); S.mode = "change"; UI.modeA.classList.remove("on"); fetchValues(true); } }); UI.chips.push(c); UI.ctl.append(c); });
-  UI.modeA = el("button", { type: "button", class: "chip", text: "Audiences", title: "Colour by audience group instead", onclick: () => { S.mode = S.mode === "audience" ? "change" : "audience"; UI.modeA.classList.toggle("on", S.mode === "audience"); G.dirty = true; } }); UI.ctl.append(el("span", { class: "lb", style: "margin-left:8px", text: "or" }), UI.modeA);
-  UI.leg = el("div", { class: "gl leg" }, el("span", { text: "down" }), el("div", { class: "ramp" }), el("span", { text: "up" }), el("span", { id: "legmax", style: "color:var(--ink)", text: "±—" }), el("span", { style: "color:var(--ink3)", text: "points since the feed started · scroll to zoom, drag to move, click a country" }));
+  UI.cap = el("div", { class: "cap2" }); UI.chips = []; GR.data.meaning.decisions.forEach((d, j) => { const c = el("button", { type: "button", class: "chip" + (j === S.d ? " on" : ""), text: d.name.replace(/ \(.*/, ""), title: d.name, onclick: () => { S.d = j; UI.chips.forEach((x, i) => x.classList.toggle("on", i === j)); grRefresh(true); } }); UI.chips.push(c); UI.ctl.append(c); }); UI.ctl.append(UI.cap);
   UI.gpu = el("div", { class: "gpu" }); UI.feed = el("div", { class: "feedl" });
   UI.what = el("p"); UI.side = el("div", { class: "gl side" }, el("div", {}, el("h3", { text: "What you are looking at" }), UI.what),
     el("div", {}, el("h3", { text: "The GPU" }), UI.gpu), el("div", { style: "flex:1;min-height:0;display:flex;flex-direction:column" }, el("h3", { text: "Latest headlines" }), UI.feed));
-  UI.views = el("div", { class: "gl views" }); st.append(UI.views, UI.ctl, UI.leg, UI.side, UI.hov);
+  UI.views = el("div", { class: "gl views" }); st.append(UI.views, UI.ctl, UI.side, UI.hov);
   for (let i = 0; i < 4; i++) UI.feed.append(el("div", { class: "fi" }, el("div", { class: "h", text: "—" }), el("div", { class: "e" })));
   UI.gpuRows = {}; for (const [k, lab] of [["state", "state"], ["effect", "effect"], ["decide", "decide"], ["group", "group"], ["spread", "spread"]]) { const bar = el("i"), ms = el("span", { class: "ms", text: "" }); UI.gpuRows[k] = { bar, ms }; UI.gpu.append(el("div", { class: "row" }, el("span", { text: lab }), el("div", { class: "bar" }, bar), ms)); }
   UI.dev = el("div", { class: "dev", text: "…" }); UI.mem = el("div", { class: "mem", text: "" }); UI.gpu.prepend(UI.dev, UI.mem);
@@ -227,11 +123,10 @@ const LAYER_INFO = { topics: "Topics", conditions: "Conditions", states: "Person
 const VIEW_TEXT = {
   meaning: ["The knowledge graph the engine runs on. ", "A story is placed in one of 14 topics, which can move 16 world conditions; those change 15 states of a person; those weigh into 8 decisions. Every line is a real rule: its width is the strength, blue raises and orange lowers. Node colour is the live world, how far it has moved since the feed started. Each headline sends light along its own path. Hover a node to see its definition and strongest links."],
   places: ["How a story reaches people. ", "It enters the world, passes to a country (the biggest are shown, the rest are grouped), then to that country's metro, town and rural parts, and reaches each modelled person there. Every person also belongs to an audience, which scales how much of it they feel. Colour is the change in the chosen decision since the feed started."],
-  people: ["Each dot is one modelled person. ", "Each country is a cluster sized by how many people stand for it (more for big countries); its real population is on the label. Colour is how much that person's likelihood of the chosen decision has changed since the feed started. Each headline sends a pulse from the country it lands in."],
 };
 function grModel() {
   const m = GR.data.meaning, P = GR.data.places, cols = [], edges = [], L = GR.layers, add = (key, label, nodes, gap) => cols.push({ key, label, nodes, gap });
-  const node = (id, name, def, kind, extra) => Object.assign({ id, name, def: def || "", kind, glow: 0, val: 0, heat: 0 }, extra);
+  const node = (id, name, def, kind, extra) => Object.assign({ id, name, def: def || "", kind, glow: 0, val: 0, heat: 0, hs: 0, vs: 0, flash: 0, fsign: 1, hold: 0 }, extra);
   add("story", "Story", [node("story", "A story arrives", "A headline, read by the model. It enters the graph at the layer on its right.", "story")], 0.78);
   if (GR.view === "meaning") {
     if (L.topics) add("topics", "Topics (14)", m.topics.map(t => node("t:" + t.id, t.name, t.definition, "topic", { status: t.status })), 1);
@@ -271,14 +166,19 @@ function grFit() { GR.tcache.clear(); const W = GR.W, H = GR.H, panel = W > 1000
   GR.fit = Math.max(0.2, Math.min((W - panel - 28) / spanX, (H - 64) / spanY, 1.6)); GR.cam = { s: GR.fit, cx: (lastX + GR.pad) / 2 - 10, cy: GR.HL / 2 + 22, ox: -panel / 2 }; GR.tcam = { ...GR.cam }; GR.dirty = true; }
 const grXY = (x, y) => [GR.W / 2 + GR.cam.ox + (x - GR.cam.cx) * GR.cam.s, GR.H / 2 + 24 + (y - GR.cam.cy) * GR.cam.s];
 const grWorld = (px, py) => [(px - GR.W / 2 - GR.cam.ox) / GR.cam.s + GR.cam.cx, (py - GR.H / 2 - 24) / GR.cam.s + GR.cam.cy];
-function grRefresh() {                 // live heat from /world: conditions, states, decisions, places
-  const w = S.world; if (!w || !GR.data) return; const byId = new Map(w.rows.map(r => [r.id, r])), W0 = byId.get("WORLD:world"), d = S.d;
+const UNIT = { place: 3, decision: 3, condition: 0.04, state: 0.15 }, EPS = { place: 0.02, decision: 0.02, condition: 0.0004, state: 0.002 };     // full colour at about one UNIT (smoothly, tanh); the same scale for every node, so size of impact is visible and grows as news lands
+function grRefresh(switching) {                 // live values from /world: conditions, states, decisions, places
+  const w = S.world; if (!w || !GR.data) return; const byId = new Map(w.rows.map(r => [r.id, r])), W0 = byId.get("WORLD:world"), d = S.d, now = performance.now();
   const di = new Map(w.dials.map((x, i) => [x.id, i])), si = new Map((w.state_ids || []).map((x, i) => [x, i])), dj = new Map(GR.data.meaning.decisions.map((x, i) => [x.id, i]));
   for (const n of GR.nodes.values()) {
-    if (n.kind === "condition") n.val = W0.dials ? W0.dials[di.get(n.id.slice(2))] : 0; else if (n.kind === "state") n.val = W0.states ? W0.states[si.get(n.id.slice(2))] : 0; else if (n.kind === "decision") n.val = W0.move[dj.get(n.id.slice(2))];
-    else if (n.kind === "place") { let sw = 0, sv = 0; for (const id of n.rows) { const r = byId.get(id); if (r) { sw += r.share; sv += r.share * r.move[d]; } } n.val = sw ? sv / sw : 0; }
+    const old = n.val; let v = 0;
+    if (n.kind === "condition") v = W0.dials ? W0.dials[di.get(n.id.slice(2))] : 0; else if (n.kind === "state") v = W0.states ? W0.states[si.get(n.id.slice(2))] : 0; else if (n.kind === "decision") v = W0.move[dj.get(n.id.slice(2))];
+    else if (n.kind === "place") { let sw = 0, sv = 0; for (const id of n.rows) { const r = byId.get(id); if (r) { sw += r.share; sv += r.share * r.move[d]; } } v = sw ? sv / sw : 0; } else continue;
+    n.val = v; n.heat = Math.tanh(v / UNIT[n.kind]); const wasSeen = n.seen; n.seen = true;
+    if (switching) { n.hold = now + n.col * 140; n.pending = true; }                                   // the new decision ripples through the columns, left to right
+    else if (wasSeen && Math.abs(v - old) > EPS[n.kind]) { n.flash = Math.min(1, 0.35 + Math.abs(v - old) / (UNIT[n.kind] * 0.15)); n.fsign = v >= old ? 1 : -1; }      // a headline just moved this node
   }
-  for (const c of GR.cols) { const k0 = c.nodes[0].kind, floor = { condition: 0.004, state: 0.01, decision: 0.05, place: 0.05 }[k0] || 1; const mx = Math.max(floor, ...c.nodes.map(n => Math.abs(n.val))); for (const n of c.nodes) n.heat = ["topic", "story", "resource"].includes(n.kind) ? 0 : Math.max(-1, Math.min(1, n.val / mx)); }
+  if (UI.cap) { const dn = GR.data.meaning.decisions[d]; UI.cap.textContent = `${dn.name.replace(/ \(.*/, "")}: the world has moved ${(W0.move[d] >= 0 ? "+" : "−") + Math.abs(W0.move[d]).toFixed(2)} points since the feed started`; }
   GR.dirty = true;
 }
 function grParticle(a, b) { const A = GR.nodes.get(a), B = GR.nodes.get(b); if (!A || !B) return; GR.particles.push({ A, B, t0: performance.now(), dur: 700 }); A.glow = Math.max(A.glow, 0.7); GR.dirty = true; }
@@ -324,19 +224,29 @@ function grDraw(now) {
   const fitText = (txt, maxW) => { const key = txt + "|" + Math.round(maxW) + "|" + Math.round(fs * 2); let v = GR.tcache.get(key); if (v) return v; v = txt; if (ctx.measureText(v).width > maxW) { let lo = 1, hi = txt.length; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (ctx.measureText(txt.slice(0, mid) + "…").width <= maxW) lo = mid; else hi = mid - 1; } v = txt.slice(0, lo).trimEnd() + "…"; } GR.tcache.set(key, v); return v; };
   const wrap = (txt, maxW, lines) => { const words = txt.split(" "), out = []; let cur = ""; for (let i = 0; i < words.length; i++) { const t = cur ? cur + " " + words[i] : words[i]; if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = words[i]; if (out.length === lines - 1) { cur = words.slice(i).join(" "); break; } } else cur = t; } out.push(fitText(cur, maxW)); return out; };
   GR.cols.forEach((c, ci) => { const next = GR.cols[ci + 1], room = ((next ? next.x - c.x : GR.pad) * GR.cam.s); for (const n of c.nodes) {
-    const [x, y] = grXY(n.x, n.y), dim = hv && !inc.has(n.id), big = n.kind === "story" || n.id === "p", r = Math.min(big ? 9 : 5.4, Math.max(2.6, rowPx * 0.26)) * (big ? 1 : Math.min(1.5, Math.max(0.9, sc))), h = n.heat, col = h === 0 ? NEU : mixc(h), al = dim ? 0.3 : 1;
+    const [x, y] = grXY(n.x, n.y), dim = hv && !inc.has(n.id), big = n.kind === "story" || n.id === "p", h = n.hs, r = Math.min(big ? 9 : 5.4, Math.max(2.6, rowPx * 0.26)) * (big ? 1 : Math.min(1.5, Math.max(0.9, sc))) * (1 + 0.45 * Math.abs(h)), col = Math.abs(h) < 0.01 ? NEU : mixc(h), al = dim ? 0.3 : 1;
     if (n.glow > 0.02) { const g = ctx.createRadialGradient(x, y, 0, x, y, r * 4.2); g.addColorStop(0, `rgba(255,236,190,${0.55 * n.glow * al})`); g.addColorStop(1, "rgba(255,236,190,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 4.2, 0, 6.283); ctx.fill(); n.glow = Math.max(0, n.glow - 0.016 / 1.7); }
-    if (Math.abs(h) > 0.02) { ctx.fillStyle = rgba(col, 0.18 * Math.abs(h) * al); ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 6.283); ctx.fill(); }
-    ctx.fillStyle = h === 0 ? rgba(NEU, 0.85 * al) : rgba(col, (0.55 + 0.45 * Math.abs(h)) * al); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.strokeStyle = `rgba(255,255,255,${(hv === n.id ? 0.95 : 0.22) * al})`; ctx.lineWidth = hv === n.id ? 1.6 : 0.8; ctx.stroke();
+    if (n.flash > 0.02) { ctx.strokeStyle = rgba(mixc(n.fsign), 0.85 * n.flash * al); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r * (1.5 + (1 - n.flash) * 3.4), 0, 6.283); ctx.stroke(); n.flash *= 0.93; }
+    if (Math.abs(h) > 0.02) { ctx.fillStyle = rgba(col, 0.2 * Math.abs(h) * al); ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = Math.abs(h) < 0.01 ? rgba(NEU, 0.85 * al) : rgba(col, (0.5 + 0.5 * Math.abs(h)) * al); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.strokeStyle = `rgba(255,255,255,${(hv === n.id ? 0.95 : 0.22) * al})`; ctx.lineWidth = hv === n.id ? 1.6 : 0.8; ctx.stroke();
     const maxW = Math.max(40, room - r - 30), tx = x + r + 7; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = `rgba(8,11,21,${0.85 * al})`; ctx.fillStyle = `rgba(232,236,246,${(n.kind === "story" ? 0.95 : 0.84) * al})`;
     if (n.kind === "story") { const lines = wrap(GR.story ? GR.story.x : n.name, maxW, 4), lh = fs * 1.25, y0 = y - (lines.length - 1) * lh / 2; lines.forEach((ln, i) => { ctx.strokeText(ln, tx, y0 + i * lh); ctx.fillText(ln, tx, y0 + i * lh); }); }
-    else { const t = fitText(n.name, maxW); ctx.strokeText(t, tx, y); ctx.fillText(t, tx, y); }
+    else {
+      const t = fitText(n.name, maxW), unit = UNIT[n.kind], showV = unit && S.world && rowPx >= 27 && Math.abs(n.vs) >= unit * 0.0015, ty = showV ? y - fs * 0.5 : y; ctx.strokeText(t, tx, ty); ctx.fillText(t, tx, ty);
+      if (showV) { const v = n.vs, txt = (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(n.kind === "condition" ? 3 : 2) + (n.kind === "state" ? " sd" : n.kind === "condition" ? "" : " pts"); ctx.font = `600 ${Math.max(9, fs - 1.5)}px system-ui, sans-serif`; ctx.fillStyle = rgba(mixc(v), 0.95 * al); ctx.strokeText(txt, tx, y + fs * 0.75); ctx.fillText(txt, tx, y + fs * 0.75); ctx.font = `${fs}px system-ui, sans-serif`; }
+    }
   } });
 }
 function grFrame(now) {
-  requestAnimationFrame(grFrame); if (GR.view === "people" || !GR.cv) return;
+  requestAnimationFrame(grFrame); if (!GR.cv) return;
   const k = GR.cam, t = GR.tcam; for (const f of ["s", "cx", "cy"]) { const d = t[f] - k[f]; if (Math.abs(d) > 1e-3 * (f === "s" ? k.s : 1)) { k[f] += d * 0.16; GR.dirty = true; } } k.ox = t.ox;
-  const live = GR.particles.length || [...GR.nodes.values()].some(n => n.glow > 0.02); if (!GR.dirty && !live) return; GR.dirty = false; grDraw(now);
+  let moving = GR.particles.length > 0;
+  for (const n of GR.nodes.values()) {
+    if (n.pending && now >= n.hold) { n.pending = false; n.glow = Math.max(n.glow, 0.85); }
+    if (!n.pending) { const u = UNIT[n.kind] || 1; n.hs += (n.heat - n.hs) * 0.1; n.vs += (n.val - n.vs) * 0.1; if (Math.abs(n.heat - n.hs) > 0.003 || Math.abs(n.val - n.vs) > u * 0.003) moving = true; else { n.hs = n.heat; n.vs = n.val; } }
+    else moving = true; if (n.glow > 0.02 || n.flash > 0.02) moving = true;
+  }
+  if (!GR.dirty && !moving) return; GR.dirty = false; grDraw(now);
 }
 function grHover(px, py) {
   let best = null, bd = 14; for (const n of GR.nodes.values()) { const [x, y] = grXY(n.x, n.y), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = n; } }
@@ -358,41 +268,34 @@ function initGraph() {
   requestAnimationFrame(grFrame);
 }
 function setView(v) {
-  GR.view = v; const people = v === "people"; for (const c of UI.viewChips) c.b.classList.toggle("on", c.k === v);
-  GR.cv.style.display = people ? "none" : ""; const pv = $("stage").querySelector(".pcv"); if (pv) pv.style.display = people ? "" : "none"; for (const l of $("stage").querySelectorAll(".lbl")) l.dataset.off = people ? "" : "1", l.style.display = people ? "" : "none";
-  UI.ctl.style.display = v === "meaning" ? "none" : ""; UI.leg.style.display = people ? "" : "none"; UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
-  if (people) { if (!G.gl) { if (initGL()) { buildGeometry(); fetchValues(true); requestAnimationFrame(frame); } } else { const c = $("stage").querySelector(".pcv"); if (c) { G.dirty = true; } } return; }
+  GR.view = v; for (const c of UI.viewChips) c.b.classList.toggle("on", c.k === v);
+  UI.ctl.style.display = v === "meaning" ? "none" : ""; UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
   grModel(); GR.W = GR.cv.clientWidth; GR.H = GR.cv.clientHeight; GR.dpr = GR.dpr || Math.min(2, window.devicePixelRatio || 1); grFit(); grRefresh(); GR.dirty = true;
 }
 function buildViews() {
   UI.viewChips = []; const mk = (k, label) => { const b = el("button", { type: "button", class: "chip", text: label, onclick: () => setView(k) }); UI.viewChips.push({ k, b }); UI.views.append(b); };
-  mk("meaning", "Meaning chain"); mk("places", "Places chain"); mk("people", "People (GPU)");
+  mk("meaning", "Meaning chain"); mk("places", "Places chain");
   UI.layerBox = el("span", { style: "display:contents" }, el("span", { class: "sep" }), el("span", { class: "lb", text: "Layers" }), ...Object.entries(LAYER_INFO).map(([k, label]) => el("button", { type: "button", class: "chip" + (GR.layers[k] ? " on" : ""), text: label, "data-layer": k, onclick: (e) => { GR.layers[k] = !GR.layers[k]; e.currentTarget.classList.toggle("on", GR.layers[k]); grModel(); grFit(); grRefresh(); } })));
   UI.views.append(UI.layerBox);
 }
 
 /* ---------- data ---------- */
-let fetching = false;
-async function fetchValues(force) {
-  if (fetching || !G.n) return; fetching = true;
-  try { const v = await api("people?d=" + S.d); if (!force && v.tick === S.tick && S.shownTick === v.tick && S.shownD === S.d) return; const i16 = b64(v.v, Int16Array), f = new Float32Array(i16.length); for (let i = 0; i < i16.length; i++) f[i] = i16[i] / v.scale; setTarget(f); S.shownTick = v.tick; S.shownD = S.d; } catch (e) { /* keep the last picture */ } finally { fetching = false; }
-}
 async function poll() {
   if (document.hidden) return;
   try {
     const d = await Jev.api("/api/world-engine/live?since=" + S.since); if (d.seq < S.since) { S.since = 0; S.items = []; }
     S.since = Math.max(S.since, d.seq); S.on = d.on; S.fed = d.fed; $("live").classList.toggle("on", d.on); $("livet").textContent = d.on ? "LIVE" : "PAUSED";
     const fresh = d.items.filter(i => i.seq > (S.seqSeen || 0)); const first = !S.seqSeen; if (d.items.length) S.seqSeen = d.items[d.items.length - 1].seq;
-    if (!first) for (const it of fresh) { S.items.push(it); setTimeout(() => { lightUp(it); pulseAt(it); grFlow(it); }, 0); } else for (const it of d.items.slice(-4)) S.items.push(it);
+    if (!first) for (const it of fresh) { S.items.push(it); setTimeout(() => { lightUp(it); grFlow(it); }, 0); } else for (const it of d.items.slice(-4)) S.items.push(it);
     if (fresh.length || first) paintFeed();
-    if (d.tick !== S.tick || (G.n && S.shownD !== S.d)) { S.tick = d.tick; fetchValues(); api("world").then(w => { S.world = w; grRefresh(); }).catch(() => {}); api("gpu").then(g => { S.gpu = g; paintGpu(); paintGpuRail(); }).catch(() => {}); }
+    if (d.tick !== S.tick) { S.tick = d.tick; api("world").then(w => { S.world = w; grRefresh(); }).catch(() => {}); api("gpu").then(g => { S.gpu = g; paintGpu(); paintGpuRail(); }).catch(() => {}); }
   } catch (e) { /* try again next beat */ }
 }
 const liveCall = (b) => api("live", b);
 $("live").onclick = async () => { try { await liveCall({ on: !S.on }); try { localStorage.setItem("we2.live", S.on ? "0" : "1"); } catch (e) {} await poll(); } catch (e) {} };
 (async () => {
   buildRail();
-  try { [S.layout, GR.data] = await Promise.all([api("people_layout"), api("graph")]); buildStage(); buildViews(); initGraph(); setView("meaning"); } catch (e) { $("stage").append(el("div", { class: "nogl", text: "Could not start the picture: " + e.message })); }
+  try { GR.data = await api("graph"); buildStage(); buildViews(); initGraph(); setView("meaning"); } catch (e) { $("stage").append(el("div", { class: "nogl", text: "Could not start the picture: " + e.message })); }
   let want = true; try { want = localStorage.getItem("we2.live") !== "0"; } catch (e) {} try { await liveCall({ on: want, interval: 4 }); } catch (e) {}
   await poll(); setInterval(poll, 1500);
 })();
