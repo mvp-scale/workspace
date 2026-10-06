@@ -47,6 +47,8 @@
   .cap { font-size: 12.5px; color: var(--text-3); margin: 8px 0 0; line-height: 1.45; }
   .ti .pn { color: var(--against); font-weight: 600; } .ti .en { color: #dc4a4a; font-weight: 600; } .ti .ep { color: #2f9e5f; font-weight: 600; }
   .ti .t2 { display: flex; gap: 10px; font-size: 11px; line-height: 15px; color: var(--text-3); opacity: .9; } .ti .t2 b { font-weight: 600; } .ti .t2 b.u { color: var(--for); } .ti .t2 b.d { color: var(--against); } .ti .t2 i { font-style: normal; opacity: .7; }
+  .swk .size { margin-left: auto; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 99px; border: 1px solid var(--border); color: var(--text-2); white-space: nowrap; cursor: help; }
+  .swk .size.s1 { color: var(--text-3); } .swk .size.s2 { color: var(--text-2); } .swk .size.s3 { color: var(--text); border-color: var(--text-3); } .swk .size.s4 { color: var(--against); border-color: var(--against); } .swk .size.s5 { color: #fff; background: var(--against); border-color: var(--against); }
   .tick { display: flex; align-items: center; gap: 12px; height: 45px; margin-top: 6px; padding-top: 7px; border-top: 1px solid var(--border); }
   .live { flex: none; display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border-strong); border-radius: 999px; padding: 1px 10px; font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--text-3); cursor: pointer; } .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); } .live.on { color: var(--accent); border-color: var(--accent); } .live.on i { background: var(--accent); animation: blip 1.4s ease-in-out infinite; } @keyframes blip { 50% { opacity: .25; } }
   .tkv { position: relative; flex: 1; min-width: 0; height: 34px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%); } .trk { position: absolute; left: 0; top: 0; display: flex; gap: 40px; white-space: nowrap; will-change: transform; }
@@ -127,7 +129,8 @@ let ui = null;
 function shell() {
   const u = {}, cell = () => { const l = el("div", { class: "l" }), v = el("div", { class: "v" }), s = el("div", { class: "s" }); return { root: el("div", { class: "cl" }, l, v, s), l, v, s }; };
   u.lens = el("select", { class: "lens", "aria-label": "So what for", onchange: (e) => focus(e.target.value) }); u.head = el("div", { class: "swh" }); u.cells = [cell(), cell(), cell(), cell()]; u.cta = el("div", { class: "cta" });
-  u.card = el("div", { class: "sw" }, el("div", { class: "swk" }, el("span", { class: "k", text: "So what" }), el("span", { class: "for", text: "for" }), u.lens), u.head, el("div", { class: "swb" }, ...u.cells.map(c => c.root), u.cta));
+  u.size = el("span", { class: "size" });
+  u.card = el("div", { class: "sw" }, el("div", { class: "swk" }, el("span", { class: "k", text: "So what" }), el("span", { class: "for", text: "for" }), u.lens, u.size), u.head, el("div", { class: "swb" }, ...u.cells.map(c => c.root), u.cta));
   u.trail = el("div", { class: "trail" });
   u.wTitle = el("h2"); u.seg = el("div", { class: "seg" }); u.sel = el("select", { "aria-label": "Decision", onchange: (e) => { S.col = +e.target.value; render(); } }); u.wBody = el("div", { style: "flex:1;min-height:0;display:flex;flex-direction:column" }); u.legend = el("div", { class: "legend" });
   u.where = el("div", { class: "panel" }, el("div", { class: "ph" }, u.wTitle, el("div", { class: "r" }, u.sel, u.seg)), u.wBody, u.legend);
@@ -145,6 +148,9 @@ function nextStop(R, f, cs, ev) {
 }
 /* The "so what" is built by rule from the numbers, never written by hand. */
 function paintCard(u, r, R, f, w, cs, ev) {
+  const sizeOf = () => { if (!ev) return null; const sc = R.rows.filter(x => x.level === "country"), avg = sc.reduce((a, x) => a + x.share * Math.max(...x.values.map(Math.abs)), 0), peak = sc.reduce((m, x) => { const v = Math.max(...x.values.map(Math.abs)); return v > m.v ? { v, label: x.label } : m; }, { v: 0, label: "" });
+    const L = [[0.25, "Negligible", 1], [1, "Small", 2], [3, "Moderate", 3], [8, "Large", 4], [1e9, "Extreme", 5]].find(t => avg < t[0]); return { avg, peak, name: L[1], cls: L[2] }; };
+  { const z = ev ? sizeOf() : null; u.size.style.display = z ? "" : "none"; if (z) { u.size.textContent = "Size: " + z.name; u.size.className = "size s" + z.cls; u.size.title = `The average person's biggest change in any decision is ${z.avg.toFixed(2)} points of likelihood. Hardest-hit place: ${z.peak.label} (${z.peak.v.toFixed(1)} points). Bands (under 0.25 negligible, 1 small, 3 moderate, 8 large, above extreme) are our judgement.`; } }
   const i = r.identify, setCell = (k, label, val, sub, d, tip) => { const c = u.cells[k]; c.l.textContent = label; c.v.textContent = val; c.s.textContent = sub; c.v.className = "v " + (d == null ? "" : d > 0.0049 ? "pos" : d < -0.0049 ? "neg" : ""); c.root.title = tip || `${label}: ${val}. ${sub}`; };
   const rootC = f.level === "country" ? f.id : f.level === "region" ? f.parent : ""; if (u.lensKey !== S.runId + "|" + rootC) { const og = (label, rows, fn) => el("optgroup", { label }, rows.map(x => el("option", { value: x.id, text: fn(x) }))); u.lens.replaceChildren(el("option", { value: w.id, text: "the world" }), og("Countries", [...cs].sort((a, b) => b.share - a.share), x => x.label), ...(rootC ? [og("Regions of " + ((rowOf(rootC) || {}).label || ""), R.rows.filter(x => x.level === "region" && x.parent === rootC), x => x.label.split(" · ").pop())] : []), og("Audiences", R.rows.filter(x => x.level === "audience"), x => x.label)); u.lensKey = S.runId + "|" + rootC; }
   u.lens.value = f.id;

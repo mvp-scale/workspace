@@ -153,6 +153,9 @@ class Session:
         for x in readings: x["basis"] = "reported"
         pl = C.place(ev); self.log_unplaced(text, pl)
         for x in C.expected(ev, {x["dial"] for x in readings}, C.allowed_dials(pl)): readings.append(dict(x, amount=(0.10 if x["direction"] == "up" else -0.10) * x["strength"] * x["mode_weight"]))     # expected impact, own weight table
+        if readings:      # how large each change would be: a separate question from how sure the model is that it happens
+            sv = C.severity(ev, {x["dial"]: x["direction"] for x in readings})
+            for x in readings: x["severity"] = sv[x["dial"]]["level"]; x["size_mult"] = round(sv[x["dial"]]["mult"], 2); x["amount"] = x["amount"] * sv[x["dial"]]["mult"]
         w_, wtype, wwhy = C.type_weight(r["gate"]["happened"], r["gate"]["announced"], r["gate"]["opinion"], P["g|forecast"])      # a weight, not a wall
         for x in readings: x["amount"] = x["amount"] * w_
         ok = bool(readings) and w_ > 0
@@ -162,7 +165,7 @@ class Session:
             for i, a in enumerate(C.ATTRS.get((x["dial"], x["direction"]), [])):
                 m = (P[f"a|{x['dial']}|{x['direction']}|{i}|0"] + P[f"a|{x['dial']}|{x['direction']}|{i}|1"]) / 2
                 if m >= .65: evid.append({"dial": x["dial"], "attribute": a["attribute"], "q1": a["question_1"], "q2": a["question_2"], "p": round(m, 3)})
-        ident = {"mode": "event", "counted": ok, "status": "moved" if ok else "no_impact_expected", "weight": {"value": w_, "type": wtype, "why": wwhy}, "placement": pl, "exposure": self.exposure(pl), "misses": [dict(m, dial_name=DIAL_NAME[m["dial"]]) for m in C.misses(P)] if not readings else [], "gate": dict(r["gate"], forecast=round(P["g|forecast"], 2)), "country": country, "country_p": cp.get(country), "entry": entry, "readings": [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "direction": x["direction"], "strength": x["strength"], "amount": round(x["amount"], 4), "basis": x.get("basis", "reported"), "mode": x.get("mode", "reported"), "mode_weight": x.get("mode_weight", 1.0), "p_up": x.get("p_up"), "p_down": x.get("p_down"), "p_done": x.get("p_done")} for x in readings], "evidence": evid}
+        ident = {"mode": "event", "counted": ok, "status": "moved" if ok else "no_impact_expected", "weight": {"value": w_, "type": wtype, "why": wwhy}, "placement": pl, "exposure": self.exposure(pl), "misses": [dict(m, dial_name=DIAL_NAME[m["dial"]]) for m in C.misses(P)] if not readings else [], "gate": dict(r["gate"], forecast=round(P["g|forecast"], 2)), "country": country, "country_p": cp.get(country), "entry": entry, "readings": [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "direction": x["direction"], "strength": x["strength"], "amount": round(x["amount"], 4), "basis": x.get("basis", "reported"), "mode": x.get("mode", "reported"), "mode_weight": x.get("mode_weight", 1.0), "p_up": x.get("p_up"), "p_down": x.get("p_down"), "p_done": x.get("p_done"), "severity": x.get("severity"), "size_mult": x.get("size_mult", 1.0)} for x in readings], "evidence": evid}
         t0 = self.w.tick; w0 = self.branch([], entry); w2 = self.branch(readings if ok else [], entry)      # control run (no event) and event run: same 3 ticks, noise off, so only the event differs
         eff0, d0 = self.eff_prop(w0); eff1, d1 = self.eff_prop(w2); p0, p1 = E.Population.propensity(None, eff0), E.Population.propensity(None, eff1)
         # the event run twice more, with only the reported or only the expected readings: how much of each move comes from which basis (parts need not add up exactly, because effects interact)

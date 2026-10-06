@@ -38,6 +38,9 @@ def validate():
             if x not in rnames: issues.append(f"domains: {d['id']} names an unknown resource {x}")
     if {r["decision_id"] for r in load("decision_phrases")} != decs: issues.append("decision_phrases: needs exactly one row per decision")
     mw = {m["mode"]: float(m["weight"]) for m in load("impact_modes")}
+    lv = [(r["id"], float(r["multiplier"])) for r in load("impact_levels")]
+    if dict(lv).get("notable") != 1.0: issues.append("impact_levels: 'notable' must stay 1.0 so ordinary stories keep their old numbers")
+    if [m for _, m in lv] != sorted(m for _, m in lv): issues.append("impact_levels: multipliers must rise from minor to extreme")
     if mw.get("reported") != 1.0: issues.append("impact_modes: 'reported' must stay 1.0 so reported stories keep their old numbers")
     tws = {t["type"]: float(t["weight"]) for t in load("type_weights")}
     if tws.get("fact") != 1.0: issues.append("type_weights: 'fact' must stay 1.0 so counted stories keep their old numbers")

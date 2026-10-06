@@ -100,7 +100,7 @@ def misses(P, k=3):
     return sorted(rows, key=lambda x: -x["mean"])[:k]
 
 # ---------- expected impact: what the story is likely to DO if it plays out as reported (added 2026-10-05) ----------
-PHRASES = {r["dial_id"]: r for r in load("impact_phrases")}; MODES = {m["mode"]: m for m in load("impact_modes")}
+PHRASES = {r["dial_id"]: r for r in load("impact_phrases")}; MODES = {m["mode"]: m for m in load("impact_modes")}; LEVELS = load("impact_levels")
 EXPECT_MIN, EXPECT_TOP = 0.5, 4
 def allowed_dials(placement):
     """Conditions a story may be expected to move: those plausible for the domains it was placed in (our mapping in domains.csv; guess)."""
@@ -127,3 +127,14 @@ def expected(ev, reported_dials, allowed=None, today=None, min_p=None, min_net=0
         if max(pu, pd) >= (EXPECT_MIN if min_p is None else min_p) and abs(net) > min_net:
             out.append({"dial": d, "direction": "up" if net > 0 else "down", "strength": round(abs(net), 3), "p_up": round(pu, 3), "p_down": round(pd, 3), "p_done": round(done, 3), "mode": mode, "basis": "expected", "mode_weight": float(MODES[mode]["weight"]), "attributes": ["expected impact"]})
     return sorted(out, key=lambda x: -x["strength"])[:EXPECT_TOP]
+def severity(ev, dials, today=None):
+    """How LARGE would each change be? (The yes/no questions say how sure the model is that a condition moves; this is the separate question of by how much.) One typed choice per condition over the
+    levels in rules/impact_levels.csv; the size multiplier is the probability-weighted average of the levels' multipliers, so it varies smoothly. dials: {dial id: 'up' or 'down'}."""
+    today = today or datetime.date.today().isoformat(); state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"
+    crit = {lv["id"]: lv["definition"] for lv in LEVELS}; mult = {lv["id"]: float(lv["multiplier"]) for lv in LEVELS}
+    qs = {d: {"type": "choice", "instructions": f"Suppose the main development in this story plays out as described. How large would the change be in this: {PHRASES[d][dr]}? Judge it for ordinary people worldwide.", "criteria": crit} for d, dr in dials.items()}
+    if not qs: return {}
+    a = O.call(state, qs); out = {}
+    for d in qs:
+        pr = {k: float(v) for k, v in a[d]["probabilities"].items()}; out[d] = {"level": a[d]["choice"], "mult": sum(pr.get(k, 0.0) * m for k, m in mult.items()) / (sum(pr.values()) or 1.0), "p": {k: round(v, 3) for k, v in pr.items()}}
+    return out
