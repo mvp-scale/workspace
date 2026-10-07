@@ -155,6 +155,7 @@ def main():
         "so1": lambda: measure_inprocess("so1", "so1_decider", "Qwen/Qwen3.5-4B"),
         "laya": lambda: measure_inprocess("laya", "laya_local", str(ROOT / "data/models/laya")),
         "verdict": lambda: measure_inprocess("verdict", "verdict_local", str(ROOT / "data/models/verdict")),
+        "clef-flash": lambda: measure_inprocess("clef-flash", "clef_local", str(ROOT / "data/models/clef-flash")),
     }
     wi, cy = ROOT / "models/winnow-inference", ROOT / "models/cygnet-recipe"
     def winnow_job(tag, vision):

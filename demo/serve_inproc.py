@@ -36,6 +36,9 @@ def make(model):
     if model == "verdict":
         from jevbench.adapters.verdict_local import VerdictLocalAdapter
         return VerdictLocalAdapter(endpoint=str(ROOT / "data/models/verdict")), {"base": "GLiClass ModernBERT-base 151M (CPU)", "readout": "option head with abstention slot"}
+    if model == "clef-flash":
+        from jevbench.adapters.clef_local import ClefLocalAdapter
+        return ClefLocalAdapter(endpoint=str(ROOT / "data/models/clef-flash")), {"base": "Qwen/Qwen3.5-9B with vision encoder (BF16)", "readout": "joint schema head, one logit per option"}
     raise SystemExit(f"unknown model {model}")
 
 
@@ -63,13 +66,14 @@ def answer(q, probs):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True, choices=["semif", "so1", "laya", "verdict"])
+    ap.add_argument("--model", required=True, choices=["semif", "so1", "laya", "verdict", "clef-flash"])
     ap.add_argument("--port", type=int, required=True)
     ap.add_argument("--host", default="127.0.0.1")
     a = ap.parse_args()
     adapter, identity = make(a.model)
     t0 = time.time(); adapter.load(); print(f"{a.model} loaded in {time.time() - t0:.1f}s", flush=True)
-    lock = threading.Lock()
+    # Adapters that batch internally (thread_safe = True, e.g. clef-flash) take concurrent requests; the rest are serialised.
+    lock = threading.Lock() if not getattr(adapter, "thread_safe", False) else __import__("contextlib").nullcontext()
 
     class H(BaseHTTPRequestHandler):
         def _send(self, code, body):

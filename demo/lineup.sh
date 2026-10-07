@@ -7,7 +7,7 @@
 set -euo pipefail
 U=/etc/systemd/system
 LINEUP="kev-4b semif so1 laya verdict"
-declare -A PORT=( [kev-4b]=8010 [semif]=8012 [so1]=8013 [laya]=8014 [verdict]=8015 )
+declare -A PORT=( [kev-4b]=8010 [semif]=8012 [so1]=8013 [laya]=8014 [verdict]=8015 [clef-flash]=8017 )
 
 unit_kev() { cat <<EOT
 [Unit]
@@ -32,14 +32,13 @@ EOT
 unit_inproc() { cat <<EOT
 [Unit]
 Description=$1 served through its jevbench adapter (same code as its benchmark numbers)
-After=network.target kev-4b.service
+After=network.target $2
 
 [Service]
 WorkingDirectory=/workspace/jevbench
 Environment=HF_HOME=/workspace/data/models/hf-cache
 TimeoutStartSec=900
-ExecStartPre=/bin/bash -c 'until curl -sf http://127.0.0.1:8010/v1/models >/dev/null; do sleep 2; done'
-ExecStart=/workspace/models/$1/.venv/bin/python /workspace/demo/serve_inproc.py --model $1 --port ${PORT[$1]}
+$3ExecStart=/workspace/models/$1/.venv/bin/python /workspace/demo/serve_inproc.py --model $1 --port ${PORT[$1]}
 Restart=on-failure
 RestartSec=5
 StandardOutput=append:/workspace/logs/$1.log
@@ -53,7 +52,9 @@ EOT
 case "${1:-status}" in
   install)
     unit_kev > $U/kev-4b.service
-    for m in semif so1 laya verdict; do unit_inproc $m > $U/$m.service; done
+    for m in semif so1 laya verdict; do unit_inproc $m kev-4b.service "ExecStartPre=/bin/bash -c 'until curl -sf http://127.0.0.1:8010/v1/models >/dev/null; do sleep 2; done'
+" > $U/$m.service; done
+    unit_inproc clef-flash "" "" > $U/clef-flash.service   # standalone: no wait for kev-4b; clef-flash is installed but NOT enabled or in LINEUP: 9B bf16 does not fit beside the others
     systemctl daemon-reload
     systemctl disable --now kev-proxy kev jeff 2>/dev/null || true   # retired: kev-0.5b, kev-0.8b and jeff no longer fit next to the top models
     systemctl enable kev-4b semif so1 laya verdict ;;

@@ -217,6 +217,16 @@ services:
     heavy: true
     tags: [cpu, model]
 
+  clef-flash:
+    kind: systemd
+    desc: Clef Flash (Cloudflare, 9B bf16; about 19 GiB, so it runs alone, not in the models profile)
+    port: 8017
+    match: serve_inproc
+    health: /healthz
+    boot: 300
+    heavy: true
+    tags: [gpu, model, solo]
+
   share:
     kind: script
     desc: Cloudflare quick tunnels for demo and voice (public links)

@@ -56,7 +56,7 @@
   <div class="page-head">
     <div>
       <h1>How they work</h1>
-      <p>Nine models, four techniques — the ideas they share, and the trick that sets each apart.</p>
+      <p>The models and the techniques behind them — the ideas they share, and the trick that sets each apart.</p>
     </div>
     <div class="actions"><button class="btn" id="print" type="button">Print</button></div>
   </div>
@@ -234,6 +234,7 @@ const FAM = {
   hosted: { name: "Hosted API", short: "Hosted", flow: m => [["State + question", "typed options"], ["Hosted model", "internals not published"], ["Probabilities", "one per option", 1]] },
   logits: { name: "Read the LLM's letter scores", short: "Letter logits", flow: m => [["State + options", "lettered A, B, C"], ["Frozen LLM", short(m.base)], ["Letter scores", "next-word logits"], ["Probabilities", "softmax", 1]] },
   pointer: { name: "Pointer head", short: "Pointer head", flow: m => [["State + options", "‹opt› marked"], ["LoRA-tuned LLM", short(m.base)], ["Pointer head", "learned"], ["Probabilities", "softmax", 1]] },
+  joint: { name: "Joint schema head", short: "Joint head", flow: m => [["State + schema", "all questions at once"], ["Decoder backbone", short(m.base)], ["Joint schema head", "routes state to questions"], ["Probabilities", "softmax per question", 1]] },
   encoder: { name: "Encoder with option head", short: "Encoder", flow: m => [["State + options", "with markers"], ["Encoder", short(m.base)], ["Option head", "one score each"], ["Probabilities", "per option", 1]] },
 };
 const PARTS = [

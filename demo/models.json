@@ -285,6 +285,33 @@
       "sauce": "Adds an abstention slot, so the model can say the evidence is insufficient. The benchmark drops that slot and renormalises.",
       "code": "VERD2H",
       "verify": "verdict"
+    },
+    {
+      "id": "clef-flash",
+      "name": "Clef Flash",
+      "code": "CLEF9B",
+      "vendor": "Cloudflare",
+      "kind": "Open, decoder",
+      "open": true,
+      "licence": "Apache-2.0",
+      "params": "9B",
+      "price": "Self-hosted",
+      "public_rank": null,
+      "public_score": null,
+      "base": "Qwen/Qwen3.5-9B (with its vision encoder)",
+      "architecture": "Decoder backbone with a joint schema head",
+      "family": "joint",
+      "interface": "TypeSafe-compatible /v1/systemone (systemone() in joint_schema_model.py)",
+      "repo": "https://huggingface.co/Cloudflare/clef-flash",
+      "verify": "clef-flash",
+      "served_as": "In-process, local GPU (bf16)",
+      "sauce": "A small transformer head reads the backbone's final hidden states, routes evidence from the state to each question, and scores every option of every question jointly in one forward pass.",
+      "how": [
+        "The Qwen3.5-9B backbone reads the state (text, JSON, images or video) once.",
+        "A joint schema head routes evidence from the state to each question and returns one logit per allowed option.",
+        "A softmax per question gives the probabilities; there is no generation and no output parsing.",
+        "The card says it was tested on a single H200; the larger sibling is Clef (not yet added)."
+      ]
     }
   ],
   "tiers": [

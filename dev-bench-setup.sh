@@ -1,7 +1,7 @@
 #!/bin/bash
 # Install the top open Jev-class models for benchmarking, one isolated venv each, the same way every time.
 #
-#   ./dev-bench-setup.sh [laya|verdict|semif|so1 ...]   # default: all
+#   ./dev-bench-setup.sh [laya|verdict|semif|so1|clef-flash ...]   # default: all
 #
 # Layout (all ignored by git):
 #   /workspace/models/<name>/.venv      isolated env (Python 3.12, CUDA torch, the model's own package)
@@ -53,6 +53,12 @@ setup_so1() {        # IkerMoel open-alternative-jev, Qwen3.5-4B
   hf so1 Qwen/Qwen3.5-4B
 }
 
+setup_clef_flash() { # Cloudflare Clef Flash, Qwen3.5-9B + joint schema head; card tested torch 2.11 / transformers 5.10.2
+  venv clef-flash torch==2.11.0
+  "$(py clef-flash)" -c "import transformers" 2>/dev/null || pip clef-flash transformers==5.10.2 huggingface_hub pillow accelerate safetensors torchvision --extra-index-url "https://download.pytorch.org/whl/$TORCH_CUDA_TAG"
+  hf clef-flash Cloudflare/clef-flash --local-dir /workspace/data/models/clef-flash
+}
+
 verify() {  # import check + CUDA visibility for each installed env
   for n in "$@"; do
     "$(py "$n")" -c "import torch;print('$n ok  torch', torch.__version__, 'cuda', torch.cuda.is_available())" 2>&1 | tail -1
@@ -61,6 +67,6 @@ verify() {  # import check + CUDA visibility for each installed env
 
 targets=("$@"); [ ${#targets[@]} -eq 0 ] && targets=(laya verdict semif so1)
 for t in "${targets[@]}"; do
-  echo "=== $t ==="; "setup_$t"
+  echo "=== $t ==="; "setup_${t//-/_}"
 done
 verify "${targets[@]}"
