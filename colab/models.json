@@ -1,0 +1,276 @@
+{
+ "note": "Every model under about 20 GiB, one loads at a time. vram_gib is the measured peak GPU memory on our RTX 5090 (llama.cpp ones with -ub 16384 and the vision projector). The gateway refuses a model that does not fit the GPU it runs on.",
+ "models": [
+  {
+   "id": "clef-flash-q4km",
+   "name": "Clef Flash Q4_K_M",
+   "kind": "llama",
+   "repo": "bartowski/Cloudflare_clef-flash-GGUF",
+   "file": "Cloudflare_clef-flash-Q4_K_M.gguf",
+   "mmproj": "mmproj-Cloudflare_clef-flash-f16.gguf",
+   "vram_gib": 10.8,
+   "vision": true,
+   "gpu_hint": "T4 (free tier)",
+   "note": "9B decision model, Q4_K_M (about 5.3 bits per weight). Within about 0.4 points of full precision on our tests.",
+   "verified": "text, image and video-as-frames through the gateway (CPU only: the box's GPU was busy)"
+  },
+  {
+   "id": "clef-flash-q2k",
+   "name": "Clef Flash Q2_K",
+   "kind": "llama",
+   "repo": "bartowski/Cloudflare_clef-flash-GGUF",
+   "file": "Cloudflare_clef-flash-Q2_K.gguf",
+   "mmproj": "mmproj-Cloudflare_clef-flash-f16.gguf",
+   "vram_gib": 9.3,
+   "vision": true,
+   "gpu_hint": "T4 (free tier)",
+   "note": "Q2_K (about 3.7 bits per weight). About 7 points below full precision on world knowledge, 3 on images.",
+   "verified": "text, image and video-as-frames through the gateway (CPU only: the box's GPU was busy)"
+  },
+  {
+   "id": "clef-flash",
+   "name": "Clef Flash (full precision)",
+   "kind": "proc",
+   "vram_gib": 18.5,
+   "vision": true,
+   "gpu_hint": "24 GB (paid tier)",
+   "note": "Cloudflare's 9B decision model in bf16, with images. Needs a 24 GB GPU.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh clef-flash"
+   ],
+   "cmd": [
+    "${ROOT}/models/clef-flash/.venv/bin/python",
+    "${ROOT}/demo/serve_inproc.py",
+    "--model",
+    "clef-flash",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/jevbench",
+   "health": "/healthz",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "laya",
+   "name": "Laya",
+   "kind": "proc",
+   "vram_gib": 3.1,
+   "vision": false,
+   "gpu_hint": "any",
+   "note": "ModernBERT-large encoder, 421M. Text only, 512 tokens per question.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh laya"
+   ],
+   "cmd": [
+    "${ROOT}/models/laya/.venv/bin/python",
+    "${ROOT}/demo/serve_inproc.py",
+    "--model",
+    "laya",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/jevbench",
+   "health": "/healthz",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "verdict",
+   "name": "openJev Verdict",
+   "kind": "proc",
+   "vram_gib": 0,
+   "vision": false,
+   "gpu_hint": "any, no GPU needed",
+   "note": "151M encoder with an abstention slot. Runs on CPU.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh verdict"
+   ],
+   "cmd": [
+    "${ROOT}/models/verdict/.venv/bin/python",
+    "${ROOT}/demo/serve_inproc.py",
+    "--model",
+    "verdict",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/jevbench",
+   "health": "/healthz",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "semif",
+   "name": "SemIf",
+   "kind": "proc",
+   "vram_gib": 8.6,
+   "vision": false,
+   "gpu_hint": "24 GB preferred",
+   "note": "Qwen3.5-4B read through answer-letter logits. Benchmarked in bf16; a T4 has no native bf16, so use 24 GB or accept slower.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh semif"
+   ],
+   "cmd": [
+    "${ROOT}/models/semif/.venv/bin/python",
+    "${ROOT}/demo/serve_inproc.py",
+    "--model",
+    "semif",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/jevbench",
+   "health": "/healthz",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "so1",
+   "name": "open-alternative-jev",
+   "kind": "proc",
+   "vram_gib": 8.6,
+   "vision": false,
+   "gpu_hint": "24 GB preferred",
+   "note": "Qwen3.5-4B, options scored separately. Benchmarked in bf16 (same T4 caveat as SemIf).",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh so1"
+   ],
+   "cmd": [
+    "${ROOT}/models/so1/.venv/bin/python",
+    "${ROOT}/demo/serve_inproc.py",
+    "--model",
+    "so1",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/jevbench",
+   "health": "/healthz",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "kev-0.5b",
+   "name": "kev 0.5B",
+   "kind": "proc",
+   "vram_gib": 2.7,
+   "vision": false,
+   "gpu_hint": "any",
+   "note": "Smallest kev: Qwen LoRA with a pointer head. Prototype.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh kev"
+   ],
+   "cmd": [
+    "${ROOT}/kev/.venv/bin/python",
+    "${ROOT}/demo/serve_kev.py",
+    "--run",
+    "${ROOT}/data/kev/runs/kev",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/kev",
+   "env": {
+    "HF_HOME": "${ROOT}/data/kev/hf-cache",
+    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+   },
+   "health": "/v1/models",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "kev-0.8b",
+   "name": "kev 0.8B",
+   "kind": "proc",
+   "vram_gib": 4.5,
+   "vision": false,
+   "gpu_hint": "T4 (free tier)",
+   "note": "kev 0.8B.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh kev"
+   ],
+   "cmd": [
+    "${ROOT}/kev/.venv/bin/python",
+    "${ROOT}/demo/serve_kev.py",
+    "--run",
+    "jaredpalmer/kev-0.8b",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/kev",
+   "env": {
+    "HF_HOME": "${ROOT}/data/kev/hf-cache",
+    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+   },
+   "health": "/v1/models",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "kev-4b",
+   "name": "kev 4B",
+   "kind": "proc",
+   "vram_gib": 17.8,
+   "vision": false,
+   "gpu_hint": "24 GB (paid tier)",
+   "note": "kev 4B in bf16. 8.5 GiB loaded but about 17.8 GiB at the load-time peak, so it needs 24 GB.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh kev"
+   ],
+   "cmd": [
+    "${ROOT}/kev/.venv/bin/python",
+    "${ROOT}/demo/serve_kev.py",
+    "--run",
+    "jaredpalmer/kev-4b",
+    "--port",
+    "${port}"
+   ],
+   "cwd": "${ROOT}/kev",
+   "env": {
+    "HF_HOME": "${ROOT}/data/kev/hf-cache",
+    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    "KEV_DTYPE": "bf16"
+   },
+   "health": "/v1/models",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "jeff",
+   "name": "jeff",
+   "kind": "proc",
+   "vram_gib": 9.5,
+   "vision": false,
+   "gpu_hint": "T4 (free tier)",
+   "note": "GLiFormer encoder, about 400M. 3 GiB loaded, 9.5 GiB peak.",
+   "setup": [
+    "bash ${ROOT}/dev-bench-setup.sh jeff"
+   ],
+   "cmd": [
+    "${ROOT}/jeff/.venv/bin/jeff"
+   ],
+   "cwd": "${ROOT}/jeff",
+   "env": {
+    "JEFF_HOST": "127.0.0.1",
+    "JEFF_PORT": "${port}",
+    "JEFF_API_KEYS": "devkey",
+    "JEFF_DEVICE": "cuda",
+    "JEFF_MODEL": "${ROOT}/data/jeff/models/gliformer-large-v1",
+    "HF_HOME": "${ROOT}/data/jeff/hf-cache"
+   },
+   "headers": {
+    "Authorization": "Bearer devkey"
+   },
+   "health": "/healthz",
+   "verified": "recipe from our own scripts; not yet run through the gateway"
+  },
+  {
+   "id": "winnow",
+   "name": "Winnow-12B (Q8)",
+   "kind": "pending",
+   "vram_gib": 14.7,
+   "vision": true,
+   "gpu_hint": "24 GB",
+   "status": "recipe not written yet",
+   "note": "Needs the winnow-inference llama.cpp build (EldanRing/winnow-inference) and its GGUF. Fits a 24 GB GPU."
+  },
+  {
+   "id": "cygnet",
+   "name": "Cygnet",
+   "kind": "none",
+   "vram_gib": 28.6,
+   "vision": false,
+   "status": "excluded: 28.6 GiB, over the 20 GiB limit",
+   "note": "vLLM serving of a Gemma 12B; reserves most of the card by design."
+  }
+ ]
+}
