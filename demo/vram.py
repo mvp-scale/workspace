@@ -175,6 +175,9 @@ def main():
     jobs["clef-flash-q4km"] = lambda: measure_served("clef-flash-q4km", [str(lc / "llama-b11430/llama-server"), "-m", str(ROOT / "data/models/clef-flash-q4km/Cloudflare_clef-flash-Q4_K_M.gguf"), "--alias", "clef-flash-q4km",
         "--host", "127.0.0.1", "--port", "8018", "-ngl", "999", "-c", "131072", "-np", "8", "-b", "16384", "-ub", "16384"], {"LD_LIBRARY_PATH": f"{lc}/llama-b11430:{lc}/cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64"},
         ROOT, "http://127.0.0.1:8018", "http://127.0.0.1:8018/health", {})
+    jobs["clef-flash-q2k"] = lambda: measure_served("clef-flash-q2k", [str(lc / "llama-b11430/llama-server"), "-m", str(ROOT / "data/models/clef-flash-q2k/Cloudflare_clef-flash-Q2_K.gguf"), "--alias", "clef-flash-q2k",
+        "--host", "127.0.0.1", "--port", "8019", "-ngl", "999", "-c", "131072", "-np", "8", "-b", "16384", "-ub", "16384"], {"LD_LIBRARY_PATH": f"{lc}/llama-b11430:{lc}/cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64"},
+        ROOT, "http://127.0.0.1:8019", "http://127.0.0.1:8019/health", {})
     for tag, run, port in (("kev-4b", "jaredpalmer/kev-4b", "8010"), ("kev-0.8b", "jaredpalmer/kev-0.8b", "8011"), ("kev-0.5b", str(ROOT / "data/kev/runs/kev"), "8008")):
         jobs[tag + "-bf16"] = (lambda tag=tag, run=run, port=port: measure_served(tag + "-bf16", [kevpy, str(ROOT / "demo/serve_kev.py"), "--run", run, "--port", port], {**kev_env, "KEV_DTYPE": "bf16"},
                                ROOT / "kev", f"http://127.0.0.1:{port}", f"http://127.0.0.1:{port}/v1/models", {}))

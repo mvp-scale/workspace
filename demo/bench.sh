@@ -6,11 +6,11 @@ cd "$(dirname "$0")/../jevbench" || exit 1
 B=${BENCH_OUT:-/workspace/data/bench}
 TIERS=${@:-original easy hard}
 MODELS=${MODELS:-jeff kev-0.5b kev-0.8b kev-4b jev}   # e.g. MODELS=kev-4b demo/bench.sh hard
-declare -A EP=( [jeff]=http://127.0.0.1:8000 [kev-0.5b]=http://127.0.0.1:8009 [kev-0.8b]=http://127.0.0.1:8011 [kev-4b]=http://127.0.0.1:8010 [clef-flash-q4km]=http://127.0.0.1:8018 )
+declare -A EP=( [jeff]=http://127.0.0.1:8000 [kev-0.5b]=http://127.0.0.1:8009 [kev-0.8b]=http://127.0.0.1:8011 [kev-4b]=http://127.0.0.1:8010 [clef-flash-q4km]=http://127.0.0.1:8018 [clef-flash-q2k]=http://127.0.0.1:8019 )
 # Tasks in flight for a server that batches across requests (llama.cpp slots, vLLM). Probe sets only: leaderboard tiers stay serial because
 # per-item latency under concurrency includes queue time. CONCURRENCY=N overrides.
-declare -A CONC=( [clef-flash-q4km]=8 )
-declare -A COST=( [clef-flash-q4km]=local_gpu_no_provider_tariff )
+declare -A CONC=( [clef-flash-q4km]=8 [clef-flash-q2k]=8 )
+declare -A COST=( [clef-flash-q4km]=local_gpu_no_provider_tariff [clef-flash-q2k]=local_gpu_no_provider_tariff )
 for tier in $TIERS; do
   for n in $MODELS; do
     out=$B/$n-$tier; [ -e "$out" ] && { echo "skip $n-$tier"; continue; }

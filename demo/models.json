@@ -340,6 +340,33 @@
         "Images work through a separate 0.92 GB vision projector (--mmproj); the Image Lab results use it. Video is not tested.",
         "Run to find how far the model can be shrunk before accuracy drops; compare it with the full-precision Clef Flash."
       ]
+    },
+    {
+      "id": "clef-flash-q2k",
+      "name": "Clef Flash Q2",
+      "code": "CLF9Q2",
+      "vendor": "Cloudflare (quantized by bartowski)",
+      "kind": "Open, decoder, quantized",
+      "open": true,
+      "licence": "Apache-2.0",
+      "params": "9B (Q2_K, about 3.7 bits per weight)",
+      "price": "Self-hosted",
+      "public_rank": null,
+      "public_score": null,
+      "base": "Cloudflare/clef-flash, Q2_K GGUF",
+      "architecture": "Decoder backbone with a joint schema head",
+      "family": "joint",
+      "interface": "llama.cpp llama-server, native /v1/systemone",
+      "repo": "https://huggingface.co/bartowski/Cloudflare_clef-flash-GGUF",
+      "verify": "clef-flash-q2k",
+      "served_as": "llama.cpp server b11430, local GPU (text only here)",
+      "sauce": "The same Clef Flash model with its backbone quantized to Q2_K by a third party. The decision head is kept at Q8_0, per the quantizer's card, and no importance matrix was used (the quantizer says that is not possible for a decision model), so the quantizer warns of a larger quality loss than usual. Not made or tested by Cloudflare.",
+      "how": [
+        "Same mechanism as Clef Flash: one forward pass, one logit per option, a softmax per question.",
+        "Q2_K is a mixed quantization: 4.19 GB for 9.08B parameters is about 3.7 bits per weight on average, not 2. Our Q4_K_M is about 5.3.",
+        "The quantizer's card says the decision head is stored at Q8_0 in every quantized file, and that no importance matrix was used.",
+        "Text only here: the vision projector was not loaded for this copy. Run to find how far the model can be shrunk before world-knowledge accuracy drops."
+      ]
     }
   ],
   "tiers": [

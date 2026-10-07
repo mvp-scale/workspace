@@ -48,6 +48,7 @@ BACKENDS = {  # keyed by the same model ids as the leaderboard, best first; code
     "kev-0.5b": {"url": os.environ.get("KEV05_URL", "http://127.0.0.1:8009"), "key": ""},
     "verdict": {"url": os.environ.get("VERDICT_URL", "http://127.0.0.1:8015"), "key": ""},
     "clef-flash-q4km": {"url": os.environ.get("CLEF_Q4KM_URL", "http://127.0.0.1:8018"), "key": ""},
+    "clef-flash-q2k": {"url": os.environ.get("CLEF_Q2K_URL", "http://127.0.0.1:8019"), "key": ""},
     "clef-flash": {"url": os.environ.get("CLEF_FLASH_URL", "http://127.0.0.1:8017"), "key": ""},
 }
 

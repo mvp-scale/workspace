@@ -232,7 +232,7 @@ services:
     desc: Clef Flash Q4_K_M (bartowski GGUF, llama.cpp b11430, native /v1/systemone, text and images; about 10-11 GiB)
     port: 8018
     cmd:
-      - models/llama-cpp-b11430/llama-b11430/llama-server
+      - models/llama-cpp-b11430/llama-b11430/clef-flash-q4km
       - -m
       - data/models/clef-flash-q4km/Cloudflare_clef-flash-Q4_K_M.gguf
       - --alias
@@ -254,12 +254,44 @@ services:
       - --mmproj
       - data/models/clef-flash-q4km/mmproj-Cloudflare_clef-flash-f16.gguf
     env: {LD_LIBRARY_PATH: "/workspace/models/llama-cpp-b11430/llama-b11430:/workspace/models/llama-cpp-b11430/cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64"}
-    match: llama-server.*clef-flash
+    match: --alias clef-flash-q4km
     health: /health
     boot: 120
     flex: true
     tags: [gpu, model]
     log: logs/clef-flash-q4km.log
+
+  clef-flash-q2k:
+    kind: proc
+    desc: Clef Flash Q2_K (bartowski GGUF, about 3.7 bits per weight, llama.cpp b11430, text only)
+    port: 8019
+    cmd:
+      - models/llama-cpp-b11430/llama-b11430/clef-flash-q2k
+      - -m
+      - data/models/clef-flash-q2k/Cloudflare_clef-flash-Q2_K.gguf
+      - --alias
+      - clef-flash-q2k
+      - --host
+      - 127.0.0.1
+      - --port
+      - ${port}
+      - -ngl
+      - "999"
+      - -c
+      - "131072"
+      - -np
+      - "8"
+      - -b
+      - "16384"
+      - -ub
+      - "16384"
+    env: {LD_LIBRARY_PATH: "/workspace/models/llama-cpp-b11430/llama-b11430:/workspace/models/llama-cpp-b11430/cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64"}
+    match: --alias clef-flash-q2k
+    health: /health
+    boot: 120
+    flex: true
+    tags: [gpu, model]
+    log: logs/clef-flash-q2k.log
 
   share:
     kind: script

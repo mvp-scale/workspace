@@ -38,7 +38,7 @@ After=network.target $2
 WorkingDirectory=/workspace/jevbench
 Environment=HF_HOME=/workspace/data/models/hf-cache
 TimeoutStartSec=900
-$3ExecStart=/workspace/models/$1/.venv/bin/python /workspace/demo/serve_inproc.py --model $1 --port ${PORT[$1]}
+$3ExecStart=/workspace/models/$1/.venv/bin/$1 /workspace/demo/serve_inproc.py --model $1 --port ${PORT[$1]}
 Restart=on-failure
 RestartSec=5
 StandardOutput=append:/workspace/logs/$1.log
@@ -51,6 +51,8 @@ EOT
 
 case "${1:-status}" in
   install)
+    # nvidia-smi names a process by how it was launched; a link per model (to python) tells the servers apart instead of five identical 'python's
+    for m in semif so1 laya verdict clef-flash; do ln -sf python /workspace/models/$m/.venv/bin/$m; done
     unit_kev > $U/kev-4b.service
     for m in semif so1 laya verdict; do unit_inproc $m kev-4b.service "ExecStartPre=/bin/bash -c 'until curl -sf http://127.0.0.1:8010/v1/models >/dev/null; do sleep 2; done'
 " > $U/$m.service; done

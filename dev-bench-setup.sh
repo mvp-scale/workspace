@@ -62,7 +62,15 @@ setup_clef_flash() { # Cloudflare Clef Flash, Qwen3.5-9B + joint schema head; ca
 setup_clef_flash_q4km() { # bartowski Q4_K_M GGUF served by the official prebuilt llama.cpp b11430 (CUDA 12.8); needs a build with the clef architecture (PR 29831)
   local L=$M/llama-cpp-b11430; mkdir -p "$L" /workspace/data/models/clef-flash-q4km
   [ -x "$L/llama-b11430/llama-server" ] || { (cd "$L" && gh release download b11430 --repo ggml-org/llama.cpp --pattern "llama-b11430-bin-ubuntu-cuda-12.8-x64.tar.gz" --pattern "cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64.tar.gz" && for f in *.tar.gz; do tar xzf "$f"; done); }
+  ln -sf llama-server "$L/llama-b11430/clef-flash-q4km"   # nvidia-smi shows the launch name: give each server its own
   "$M/clef-flash/.venv/bin/hf" download bartowski/Cloudflare_clef-flash-GGUF Cloudflare_clef-flash-Q4_K_M.gguf --local-dir /workspace/data/models/clef-flash-q4km >/dev/null
+}
+
+setup_clef_flash_q2k() { # bartowski Q2_K GGUF (about 3.7 bits per weight, made without an imatrix); same llama.cpp b11430 as the Q4
+  local L=$M/llama-cpp-b11430; mkdir -p "$L" /workspace/data/models/clef-flash-q2k
+  [ -x "$L/llama-b11430/llama-server" ] || setup_clef_flash_q4km
+  ln -sf llama-server "$L/llama-b11430/clef-flash-q2k"
+  "$M/clef-flash/.venv/bin/hf" download bartowski/Cloudflare_clef-flash-GGUF Cloudflare_clef-flash-Q2_K.gguf --local-dir /workspace/data/models/clef-flash-q2k >/dev/null
 }
 
 verify() {  # import check + CUDA visibility for each installed env

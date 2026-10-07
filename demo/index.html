@@ -149,7 +149,7 @@ function families(rows, tier) {
   return el("div", { class: "table-wrap" }, t);
 }
 
-const LOCAL = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "cygnet", "winnow", "semif", "so1", "laya", "verdict", "clef-flash", "clef-flash-q4km"];
+const LOCAL = ["jeff", "kev-0.5b", "kev-0.8b", "kev-4b", "cygnet", "winnow", "semif", "so1", "laya", "verdict", "clef-flash", "clef-flash-q4km", "clef-flash-q2k"];
 const extra = () => Promise.all([Jev.api("api/vram"), Jev.api("api/probe-macro"), Jev.api("api/agreement")]).then(([vram, macro, agree]) => ({ vram, macro, agree })).catch(() => null);
 const gbOf = (mb) => mb / 1024;
 

@@ -54,6 +54,8 @@ Add the systemd unit in `demo/lineup.sh` (`unit_inproc`) **and** an entry in `se
 - Only models that share `kev-4b`'s start-up memory spike should wait on it. A standalone model must not have the `ExecStartPre` wait, or it sits in "activating" forever when kev-4b is down.
 - **GPU budget before anything else**: `nvidia-smi` and `./service.sh` status. A 9B bf16 model needs about 19 GiB; Winnow takes about 15 GiB. If it will not fit beside the `models` profile, tag it `solo`, leave it out of `profiles.models` and out of `LINEUP`, and say so in the desc.
 
+**Name the process.** `nvidia-smi` names a process by how it was launched (its `argv[0]`, cut from the left), so five Python services all read `.../bin/python` and every llama.cpp server reads `.../llama-server`. Launch each model through a link named for it: `ln -sf python <venv>/bin/<id>` for in-process models (the venv still works, because Python finds `pyvenv.cfg` next to the link) and `ln -sf llama-server <dir>/<id>` for llama.cpp (needs only `LD_LIBRARY_PATH`). Use that path as `ExecStart`/`cmd`, and keep `service.yaml` `match:` on something present in both the old and new command lines (`--alias <id>`), never a prefix shared with another model: a loose `match` makes `./service.sh stop <a>` hit model `<b>`. Verified on a CUDA process: `nvidia-smi` showed `.../.venv/bin/clef-flash-bf16`.
+
 ## 6. Fact sheet
 
 Append to `demo/models.json`: `id, name, code, vendor, kind, open, licence, params, price, base, architecture, family, interface, repo, verify, served_as, sauce, how[], public_rank, public_score`. Facts only, `null` when unknown.
@@ -87,6 +89,8 @@ Every new in-process model should ship a batching path if its author's code can 
 **Private ledger.** `bench-batch.sh` gives every run its own `$out/ledger.jsonl`. Do not point local-model runs at the shared `data/probe-runs-v2/ledger.jsonl` (180k+ lines): each reserve/settle re-reads the whole file, 1.5 s per item against 0.17 s of model time (measured). Local models cost $0, so the shared guard adds nothing. Paid APIs keep the shared ledger and `demo/bench.sh`.
 
 **Load once.** Each set is a new process that reloads the model (about 8 s each). Acceptable at 72 sets; a single process that loops over sets is the next improvement.
+
+**Gate every run on a healthy server and a free GPU.** Before measuring or benchmarking, check `curl :<port>/health` (or `/healthz`) answers and `nvidia-smi` shows room for the model: `demo/vram.py` refuses unless the GPU is idle, and a llama.cpp server with `-ub 16384` needs about 9 GiB beyond its weights. A chain that does not check this runs the whole benchmark against nothing: every item fails (the runner stops after 3 straight errors, so each set holds only a few rows) and it leaves result directories that make a rerun skip. After any failed run, delete that model's `data/bench/<id>-*` and `data/probe-runs-v2/<id>-*` before rerunning, and read the `done: N/M attempted, F failed` lines, not just whether the chain finished. Another service may have been started meanwhile; look at `nvidia-smi` first.
 
 Probe runs go to `data/probe-runs-v2/`, never `data/bench/` (the leaderboard averages everything in `data/bench/`). After each run check `results.jsonl` for failed items; a failure is an error, not 0% accuracy. Existing complete runs are skipped, so a failed run's directory must be removed before a rerun.
 
