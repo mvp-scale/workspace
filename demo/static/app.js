@@ -150,6 +150,11 @@
     return { rows: rows.map(r => ({ ...r, info: info[r.id] || { id: r.id, name: r.id } })), models: meta.models, tiers: meta.tiers };
   }).catch(e => { cache = null; throw e; });
 
-  window.Jev = { ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  /* Heat-map colour: accuracy relative to chance, in seven steps. Shared by the Scenario lab and the Image lab. */
+  const STEP_MIX = { "-3": 60, "-2": 38, "-1": 18, "0": 0, "1": 18, "2": 38, "3": 62 };
+  const heat = { STEPS: [-3, -2, -1, 0, 1, 2, 3],
+    stepOf: (acc, chance) => Math.max(-3, Math.min(3, Math.round((acc >= chance ? (acc - chance) / (1 - chance) : -(chance - acc) / chance) * 4))),
+    stepBg: (i) => i === 0 ? "var(--surface-2)" : `color-mix(in srgb, var(${i > 0 ? "--good" : "--bad"}) ${STEP_MIX[i]}%, var(--surface))` };
+  window.Jev = { heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();

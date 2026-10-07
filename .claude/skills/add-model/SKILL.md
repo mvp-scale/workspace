@@ -96,6 +96,8 @@ Check the card for `images`/`videos` and test it; do not assume text-only from a
 
 ## 8. Show it in the demo
 
+The Scenario lab and Image lab share their heat map, model strip and colour scale (`table.heat`, `.strip`/`.mrow`, `.scale` in `static/app.css`; `Jev.heat` in `static/app.js`). Keep the two labs' structure aligned: an overview heat map (rows grouped, a column per model in one fixed order, an Average row, the chance-centred scale), and a per-item "Model comparison" strip with the 95% interval bar. A new model must show in those views without clicking into a task; check the overview, a domain and a task page after onboarding. The Image Lab discovers models from `data/image-lab/runs/<id>/` and reads fact sheets from `/api/models`.
+
 The Leaderboard, Scenario lab and Baseline compare discover models from `data/` directories and `BACKENDS`, so they pick the model up once the data and the `server.py` entry exist. The **demo server must be restarted** (`./service.sh restart demo`) to load `BACKENDS`; check first that no window study is running (`probes/window_study.py`). Optional hand-typed reference maps in `demo/scenarios.html` (p50 latency, WEAK accuracy) are not required.
 
 ## 9. Verify, then report

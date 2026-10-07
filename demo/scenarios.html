@@ -80,24 +80,6 @@
   .provenance { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   details.more summary { cursor: pointer; color: var(--text-2); font-weight: 500; }
   pre.notes { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); max-height: 320px; overflow: auto; }
-  /* Overview heat table */
-  table.heat td.cell { text-align: center; font-variant-numeric: tabular-nums; cursor: pointer; padding: 6px 8px; font-size: 11px; }
-  table.heat td.cell a { color: inherit; text-decoration: none; display: block; }
-  table.heat td.cell.na { color: var(--text-3); cursor: default; font-size: 12px; }
-  table.heat td.below { color: var(--bad); font-weight: 600; }
-  table.heat thead th { white-space: normal; vertical-align: bottom; }
-  table.heat thead tr + tr th { top: 0; position: static; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-3); font-size: 11px; text-align: center; }
-  /* Model strip */
-  .strip { display: grid; gap: 2px; }
-  .mrow { display: grid; grid-template-columns: 220px minmax(0, 1fr) 200px; gap: 12px; align-items: center; width: 100%; text-align: left; font: inherit; color: inherit; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 4px 8px; cursor: pointer; }
-  .mrow:hover { background: var(--surface-2); }
-  .mrow[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
-  .mrow .val { font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--text-2); }
-  .mrow .val b { color: var(--text); font-weight: 650; }
-  .ci { position: relative; height: 16px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 3px; }
-  .ci .rng { position: absolute; top: 3px; bottom: 3px; background: color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 2px; }
-  .ci .pt { position: absolute; top: 1px; bottom: 1px; width: 3px; margin-left: -1.5px; background: var(--accent); border-radius: 1px; }
-  .ci .ch { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 2px dashed var(--text-3); }
   .legend { color: var(--text-3); font-size: 12px; }
   /* Confusion matrix */
   table.cm th, table.cm td { padding: 4px 8px; text-align: center; font-variant-numeric: tabular-nums; }
@@ -246,21 +228,6 @@
   
   .txtwrap .btn { min-height: 20px; padding: 0 6px; font-size: 12px; }
   th.fam { text-align: center; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-  table.heat { width: 100%; } table.heat td.cell { padding: 0; min-width: 44px; height: 28px; line-height: 28px; border: 1px solid var(--surface); }
-  table.heat td.cell a { height: 28px; line-height: 28px; }
-  table.heat td.cell.na { background: repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--warn) 45%, transparent) 5px 6px); }
-  table.heat td.macro { border-right: 2px solid var(--border); }
-  table.heat th.vh { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; height: 110px; text-align: left; padding: 6px 2px; font-size: 11.5px; }
-  table.heat th.fam { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); text-align: center; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
-  table.heat tr.rowgroup th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); padding: 5px 8px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-  table.heat tr.avgrow td { border-top: 2px solid var(--border); font-weight: 600; }
-  table.heat td.subj { text-align: left; padding: 6px 10px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  table.heat th.mcolh { text-align: left; padding: 8px 10px; white-space: nowrap; font-size: 13.5px; font-weight: 600; background: var(--surface-2); border-bottom: 2px solid var(--border-strong); text-transform: none; letter-spacing: normal; vertical-align: top; }
-  table.heat thead tr:has(th.mcolh) th { vertical-align: top; padding-top: 8px; }
-  table.heat th.mcolh .msize { display: block; font-size: 11px; font-weight: 600; color: var(--text-2); margin-top: 3px; }
-  table.heat th.mcolh .mbase { display: block; font-size: 10px; font-weight: 400; color: var(--text-3); margin-top: 1px; }
-  .scale { display: flex; align-items: center; gap: 0; margin-top: 10px; font-size: 11.5px; color: var(--text-3); }
-  .scale i { width: 32px; height: 14px; display: block; border: 1px solid var(--surface); } .scale span { padding: 0 8px; } .scale .mid { margin-left: 12px; }
   td.idc { max-width: 170px; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
   td.conf { min-width: 150px; }
   .qline { color: var(--text-3); font-size: 11.5px; margin-bottom: 3px; }
@@ -483,9 +450,7 @@ function textBlock(item, code, showQ) {
   }
   return wrap;
 }
-const STEPS = [-3, -2, -1, 0, 1, 2, 3], STEP_MIX = { "-3": 60, "-2": 38, "-1": 18, "0": 0, "1": 18, "2": 38, "3": 62 };
-const stepOf = (acc, chance) => Math.max(-3, Math.min(3, Math.round((acc >= chance ? (acc - chance) / (1 - chance) : -(chance - acc) / chance) * 4)));
-const stepBg = (i) => i === 0 ? "var(--surface-2)" : `color-mix(in srgb, var(${i > 0 ? "--good" : "--bad"}) ${STEP_MIX[i]}%, var(--surface))`;
+const { STEPS, stepOf, stepBg } = Jev.heat;  /* shared with the Image lab: static/app.js */
 const heatBg = (acc, chance) => {
   if (acc >= chance) return `color-mix(in srgb, var(--good) ${Math.round(clamp01((acc - chance) / (1 - chance)) * 42)}%, transparent)`;
   return `color-mix(in srgb, var(--bad) ${Math.round(clamp01((chance - acc) / chance) * 42 + 8)}%, transparent)`;
