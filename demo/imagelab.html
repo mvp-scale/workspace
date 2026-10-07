@@ -54,8 +54,10 @@
   /* Heat map and model strip use the shared styles in static/app.css (same as the Scenario lab). */
   table.heat th.mcolh .mavg { display: block; font-size: 13px; font-weight: 650; color: var(--text); margin-top: 4px; }
   .mverdict { margin: 8px 0 0; }
-  table.lab-t td.mcell { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; font-weight: 400; color: var(--text-2); } table.lab-t td.mcell.best { font-weight: 700; color: var(--text); }
-  table.lab-t td.mcell small { display: block; color: var(--text-3); font-weight: 400; font-size: 11px; }
+  /* The shared .heat cell is a fixed 28px strip; these rows are taller (two lines, badges), so the cell fills the row and centres its number. */
+  table.heat.lab-t td.cell { height: auto; line-height: 1.2; vertical-align: middle; }
+  table.heat.lab-t td.cell a { height: auto; line-height: 1.2; display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 4px 6px; }
+  table.heat.lab-t th.mcolh { min-width: 92px; }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
   table.lab-t td.rowlink { cursor: pointer; } table.lab-t tr.rowgroup th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); padding: 5px 12px; }
   table.domains tr.domain { cursor: pointer; } table.domains tr.domain td { vertical-align: top; }
@@ -203,7 +205,6 @@ function poolScore(tasks, model) {
   return { ...d, lat };
 }
 const ranked = (tasks) => ALL.map(m => ({ m, d: poolScore(tasks, m) })).sort((a, b) => (b.d.acc ?? -1) - (a.d.acc ?? -1));
-const bestOf = (tasks) => { const r = ranked(tasks).filter(x => x.d.n); return r.length ? r[0].d.acc : null; };
 function domainScore(tasks, model) {
   const scored = tasks.map(t => stats(t, model)).filter(s => s.n);
   const k = scored.reduce((a, s) => a + s.k, 0);
@@ -228,56 +229,30 @@ function sepLine(rows) {
     : `${Jev.nameOf(top.m)} leads and its interval does not overlap ${r.filter(x => x.d.hi < top.d.lo).map(x => Jev.nameOf(x.m)).join(", ") || "the lowest model's"}; the gap to the lowest is ${spread.toFixed(1)} points.`;
   return el("p", { class: "small muted mverdict", text: (sameImages ? `All ${r.length} models answered the same ${top.d.n} images. ` : "Models answered different numbers of images. ") + body });
 }
-/* Same layout as the Scenario lab's World knowledge map: rows grouped (here by business domain), a column per model strongest
-   first with code, size and base model in the header, colour = distance from chance, an Average row, click a cell to open it. */
+/* The domain table and the task table ARE the heat map (same cells and colours as the Scenario lab): each model's percentage is the coloured
+   cell, colour = distance from chance, a column per model in one fixed order. */
 let INFO = {};
 const sizeLabel = (id) => INFO[id]?.params || "size not published";
 const shortBase = (id) => { const b = INFO[id]?.base; return b ? b.split(/ \+ | \(/)[0].split(",")[0].replace(/^[\w.-]+\//, "") : null; };
 const fullName = (id) => `${Jev.codeOf(id)} ${Jev.nameOf(id)}`;
-function heatMap(D, tasks, heading, lead) {
-  const done = tasks.filter(t => ALL.some(m => stats(t, m).n));
-  const cell = {}; done.forEach(t => { cell[t.id] = {}; ALL.forEach(m => { cell[t.id][m] = stats(t, m); }); });
-  const macro = (m) => { const v = done.map(t => cell[t.id][m]).filter(x => x.n); return v.length ? { acc: v.reduce((a, x) => a + x.acc, 0) / v.length, ch: v.reduce((a, x) => a + x.chance, 0) / v.length, k: v.length } : null; };
-  const M = Object.fromEntries(ALL.map(m => [m, macro(m)]));
-  const order = ALL;  // one fixed order (strongest overall first, set in paint) so a model keeps its column in every view
+function modelHead(m, tasks) {
+  const d = poolScore(tasks, m), base = shortBase(m);
+  return el("th", { class: "mcolh", title: `${fullName(m)}, ${sizeLabel(m)}${base ? `, base ${base}` : ""}: ${d.n ? `${pct0(d.acc)} over ${d.n} images` : "not run"}` },
+    Jev.tag(m, { name: false }), el("span", { class: "msize" }, sizeLabel(m)), base ? el("span", { class: "mbase" }, base) : null,
+    el("span", { class: "mavg", text: d.n ? `${pct0(d.acc)} average` : "not run" }));
+}
+function heatTd(x, m, what, href) {
+  if (!x.n) return el("td", { class: "cell na", title: `${fullName(m)} has no results on ${what}` }, "–");
+  const title = `${fullName(m)} on ${what}: ${x.k}/${x.n} correct = ${pct0(x.acc)}; Wilson 95% interval ${pct0(x.lo)} to ${pct0(x.hi)}; chance ${pct0(x.chance)}`;
+  return el("td", { class: "cell" + (x.hi < x.chance ? " below" : ""), style: `background:${Jev.heat.stepBg(Jev.heat.stepOf(x.acc, x.chance))}`, title },
+    el("a", { href, "aria-label": title, onclick: (e) => e.stopPropagation() }, pct0(x.acc)));
+}
+function heatFoot(cells, tasks, unit) {
   let above = 0, below = 0, within = 0;
-  done.forEach(t => order.forEach(m => { const x = cell[t.id][m]; if (!x.n) return; if (x.lo > x.chance) above++; else if (x.hi < x.chance) below++; else within++; }));
-  const head = el("tr", {}, el("th", { text: "Task" }), order.map(m => { const base = shortBase(m);
-    return el("th", { class: "mcolh", title: `${fullName(m)}, ${sizeLabel(m)}${base ? `, base ${base}` : ""}: average ${M[m] ? pct0(M[m].acc) : "not run"} across ${M[m] ? M[m].k : 0} of ${done.length} tasks` },
-      Jev.tag(m, { name: false }), el("span", { class: "msize" }, sizeLabel(m)), base ? el("span", { class: "mbase" }, base) : null,
-      el("span", { class: "mavg", text: M[m] ? `${pct0(M[m].acc)} average` : "not run" })); }));
-  const body = [];
-  for (const area of D.areas) {
-    const list = done.filter(t => t.area === area);
-    if (!list.length) continue;
-    body.push(el("tr", { class: "rowgroup" }, el("th", { colspan: order.length + 1, text: `${area} (${list.length})` })));
-    for (const t of list) {
-      const nn = `${String(t.n).padStart(2, "0")} ${t.title}`;
-      body.push(el("tr", {}, el("td", { class: "subj", title: `${nn}: ${t.items.length} images, chance ${chanceText(t)}`, text: nn }),
-        order.map(m => { const x = cell[t.id][m];
-          if (!x.n) return el("td", { class: "cell na", title: `${fullName(m)} has no results on ${t.title}` }, "–");
-          const title = `${fullName(m)} on ${t.title}: ${x.k}/${x.n} correct = ${pct0(x.acc)}; Wilson 95% interval ${pct0(x.lo)} to ${pct0(x.hi)}; chance ${pct0(x.chance)}`;
-          return el("td", { class: "cell" + (x.hi < x.chance ? " below" : ""), style: `background:${Jev.heat.stepBg(Jev.heat.stepOf(x.acc, x.chance))}`, title },
-            el("a", { href: hashOf({ ...route(), task: t.id, area: t.area, model: m }), "aria-label": title }, pct0(x.acc))); })));
-    }
-  }
-  body.push(el("tr", { class: "avgrow" }, el("td", { class: "subj", text: "Average" }), order.map(m => { const mm = M[m];
-    return el("td", { class: "cell" + (mm ? "" : " na"), style: mm ? `background:${Jev.heat.stepBg(Jev.heat.stepOf(mm.acc, mm.ch))}` : "",
-      title: mm ? `Average over ${mm.k} of ${done.length} tasks: ${pct0(mm.acc)} (mean chance ${pct0(mm.ch)}). Unweighted, as in the Scenario lab.` : "not run" }, mm ? pct0(mm.acc) : "–"); })));
-  const exportCsv = () => {
-    const h = ["task", "domain", "n_images", ...order.flatMap(m => [`${m}_acc`, `${m}_ci95_lo`, `${m}_ci95_hi`, `${m}_n`])];
-    const rows = [h, ...done.map(t => [`${t.n} ${t.title}`, t.area, t.items.length, ...order.flatMap(m => { const x = cell[t.id][m]; return x.n ? [x.acc.toFixed(4), x.lo.toFixed(4), x.hi.toFixed(4), x.n] : ["", "", "", ""]; })]),
-      ["average", "", "", ...order.flatMap(m => [M[m] ? M[m].acc.toFixed(4) : "", "", "", M[m] ? M[m].k : 0])]];
-    Jev.download("image-lab-accuracy.csv", Jev.csv(rows), "text/csv");
-  };
-  const notBuiltN = tasks.length - done.length;
-  return el("section", { class: "section", style: "margin-top:0", "aria-labelledby": "hm-h" },
-    el("header", {}, el("div", {}, el("h2", { id: "hm-h", text: heading }), el("p", { class: "small", text: lead })),
-      el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: exportCsv, text: "Export CSV" }))),
-    done.length ? el("div", { class: "table-wrap" }, el("table", { class: "data heat" }, el("thead", {}, head), el("tbody", {}, body))) : Jev.empty("No results yet", "No model has stored answers for these tasks."),
-    el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), Jev.heat.STEPS.map(i => el("i", { style: `background:${Jev.heat.stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
-    el("p", { class: "legend", style: "margin-top:6px", text: `Intervals are Wilson 95% (approximate). Of ${above + below + within} model-by-task cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.${notBuiltN ? ` ${notBuiltN} task(s) in this view have no stored answers.` : ""}` }),
-    sepLine(ranked(done)));
+  cells.forEach(x => { if (!x.n) return; if (x.lo > x.chance) above++; else if (x.hi < x.chance) below++; else within++; });
+  return [el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), Jev.heat.STEPS.map(i => el("i", { style: `background:${Jev.heat.stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
+    el("p", { class: "legend", style: "margin-top:6px", text: `Colour is each model's accuracy against chance; hover a cell for the count and the Wilson 95% interval, click it to open that model. Of ${above + below + within} model-by-${unit} cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.` }),
+    sepLine(ranked(tasks))];
 }
 
 /* Model comparison for one task: the Scenario lab's strip (best first, 95% interval bar, select a model for detail below). */
@@ -321,7 +296,7 @@ function taskRows(tasks, model) {
     const s = stats(t, model), v = verdictOf(s), open = () => go({ task: t.id, area: t.area });
     return el("tr", { class: built(t) ? null : "off", tabindex: "0", onclick: open, onkeydown: (e) => { if (e.key === "Enter") open(); } },
       el("td", { class: "rowlink" }, el("a", { href: hashOf({ ...route(), task: t.id, area: t.area }), text: `${String(t.n).padStart(2, "0")} ${t.title}`, onclick: (e) => e.stopPropagation() })),
-      ALL.map(m => { const x = stats(t, m), top = bestOf([t]); return el("td", { class: "mcell" + (x.n && top != null && x.acc === top && ALL.length > 1 ? " best" : ""), title: x.n ? `${Jev.nameOf(m)}: ${x.k} of ${x.n}` : "" }, x.n ? [pct0(x.acc), el("small", { text: `${x.k}/${x.n}` })] : "–"); }),
+      ALL.map(m => heatTd(stats(t, m), m, t.title, hashOf({ ...route(), task: t.id, area: t.area, model: m }))),
       el("td", {}, s.n ? badge(v) : el("span", { class: "badge", text: t.status.replaceAll("_", " ").toLowerCase() }), t.research_only ? el("span", { class: "pill", style: "margin-left:6px", title: "Research benchmark, not for clinical use", text: "research" }) : null),
       el("td", { style: "min-width:140px" }, s.n ? ibar(s) : null),
       el("td", { class: "num", text: s.n ? `${s.k}/${s.n}` : built(t) ? "not run" : "–" }),
@@ -337,12 +312,12 @@ function domainRow(area, tasks, model) {
     el("td", {}, el("div", { class: "dname", text: area }), el("div", { class: "small muted", text: IDEA[area] || "" })),
     el("td", { class: "num", text: `${d.built} of ${d.tasks}` }),
     el("td", { class: "num", text: String(d.images) }),
-    ALL.map(m => { const x = poolScore(tasks, m), top = bestOf(tasks); return el("td", { class: "mcell" + (x.n && x.acc === top && ALL.length > 1 ? " best" : ""), title: x.n ? `${Jev.nameOf(m)}: ${x.k} of ${x.n}` : "" }, x.n ? [pct0(x.acc), el("small", { text: `${x.k}/${x.n}` })] : "–"); }),
+    ALL.map(m => heatTd(poolScore(tasks, m), m, `${area} (${d.n || d.images} images)`, hashOf({ ...route(), area, task: null, model: m }))),
     el("td", {}, d.n ? badge(d.verdict) : el("span", { class: "badge", text: "Not run" }), el("div", { class: "dim small", text: mix })));
 }
 function taskTable(tasks, model) {
-  return el("table", { class: "data lab-t" },
-    el("thead", {}, el("tr", {}, el("th", { text: "Task" }), ALL.map(m => el("th", { class: "num", title: Jev.nameOf(m) }, Jev.tag(m, { name: false }))),
+  return el("table", { class: "data lab-t heat" },
+    el("thead", {}, el("tr", {}, el("th", { text: "Task" }), ALL.map(m => modelHead(m, tasks)),
       ["Verdict", "95% interval", "Correct", "Same answer reworded", "Source, or why not built"].map((h, i) => el("th", { class: i === 2 || i === 3 ? "num" : "", title: i < 4 ? `For the selected model, ${Jev.nameOf(model)}` : null, text: h })))),
     el("tbody", {}, taskRows(tasks, model)));
 }
@@ -355,35 +330,34 @@ function overview(D, model) {
     const tasks = D.tasks.filter(t => t.area === area);
     return tasks.length ? domainRow(area, tasks, model) : null;
   });
-  const nImg = D.tasks.reduce((a, t) => a + t.items.length, 0);
   return el("div", { class: "view-in" },
-    heatMap(D, D.tasks, "All tasks: accuracy by model", `${D.tasks.filter(t => ALL.some(m => stats(t, m).n)).length} tasks, ${nImg} images, ${ALL.length} models, every model on the same images. Rows are grouped by business domain; columns are models, strongest overall first (the same order in every view), with code, size and base model in each header. Click a cell to open that model on that task.`),
-    el("div", { class: "toolbar", style: "margin-top:22px" },
-      el("div", {}, el("h2", { style: "margin:0;font-size:15px", text: "By domain" }),
-        el("p", { class: "small muted", text: "One row per domain, a column per model. Open a domain to see its tasks." })),
+    el("div", { class: "toolbar" },
+      el("div", {}, el("h2", { style: "margin:0;font-size:15px", text: "All tasks, by domain" }),
+        el("p", { class: "small muted", text: `One row per domain, a column per model, every model on the same ${D.tasks.reduce((a, t) => a + t.items.length, 0)} images. Colour shows how far above or below chance each model is. Click a percentage to open that model in the domain, or the row to see its tasks.` })),
       el("button", { class: "btn", type: "button", onclick: () => exportAll(D, model), text: "Export CSV" })),
     el("div", { class: "kpis", style: "margin-top:12px" },
       kpi("Built and run", `${done.length} of ${D.tasks.length}`, "scored images"),
       kpi("Works", count("works"), "85%+ and interval above 70%"), kpi("Assist only", count("assist"), "needs a human check"),
       kpi("Not ready", count("not"), "under 60%, or near chance"), kpi("Not built", blocked + needs, `${blocked} blocked, ${needs} need you`)),
-    el("div", { class: "table-wrap", style: "margin-top:12px" }, el("table", { class: "data lab-t domains" },
-      el("thead", {}, el("tr", {}, ["Domain", "Tasks built", "Images"].map((h, i) => el("th", { class: i ? "num" : "", text: h })), ALL.map(m => el("th", { class: "num", title: Jev.nameOf(m) }, Jev.tag(m, { name: false }))), el("th", { title: `Rating for the selected model, ${Jev.nameOf(model)}`, text: "Rating" }))),
+    el("div", { class: "table-wrap", style: "margin-top:12px" }, el("table", { class: "data lab-t domains heat" },
+      el("thead", {}, el("tr", {}, ["Domain", "Tasks built", "Images"].map((h, i) => el("th", { class: i ? "num" : "", text: h })), ALL.map(m => modelHead(m, D.tasks)), el("th", { title: `Rating for the selected model, ${Jev.nameOf(model)}`, text: "Rating" }))),
       el("tbody", {}, rows))),
-    el("p", { class: "small muted", style: "margin-top:8px", text: `Each model column is that model's accuracy over every scored image in the domain, pooled (best in bold). Rating is for the selected model, ${Jev.nameOf(model)}.` }));
+    heatFoot(D.areas.flatMap(a => { const ts = D.tasks.filter(t => t.area === a); return ts.length ? ALL.map(m => poolScore(ts, m)) : []; }), D.tasks, "domain"),
+    el("p", { class: "small muted", style: "margin-top:8px", text: `Each percentage is that model's accuracy over every scored image in the domain, pooled. Rating is for the selected model, ${Jev.nameOf(model)}.` }));
 }
 function domainView(D, model, area) {
   const tasks = D.tasks.filter(t => t.area === area);
   const d = domainScore(tasks, model);
   const mix = d.n ? `${d.k}/${d.n} correct` : `${d.built} of ${d.tasks} built`;
   return el("div", { class: "view-in" },
-    heatMap(D, tasks, `${area}: accuracy by model`, `${tasks.length} tasks in this domain. Same colours and layout as the overview; click a cell to open that model on that task.`),
-    el("div", { class: "toolbar", style: "margin-top:22px" },
+    el("div", { class: "toolbar" },
       el("div", {}, el("h2", { style: "margin:0;font-size:15px", text: area }),
         el("p", { class: "small muted", text: IDEA[area] || "" })),
       el("div", { style: "display:flex;gap:8px;align-items:center" },
         d.n ? badge(d.verdict) : el("span", { class: "badge", text: "Not run" }),
         el("span", { class: "small muted", text: `${d.tasks} tasks · ${d.images} images · ${d.n ? pct0(d.acc) : "not run"} · ${mix}` }))),
     el("div", { class: "table-wrap", style: "margin-top:12px" }, taskTable(tasks, model)),
+    heatFoot(tasks.flatMap(t => ALL.map(m => stats(t, m))), tasks, "task"),
     area === "Medical and dental" ? [layered3Table(D), layeredTable(D)] : null,
     el("div", { class: "legend", style: "margin-top:10px" }, el("span", {}, el("i", { class: "sw" }), "95% Wilson interval"), el("span", {}, el("i", { class: "sw t" }), "accuracy"), el("span", {}, el("i", { class: "sw c" }), "chance")));
 }
