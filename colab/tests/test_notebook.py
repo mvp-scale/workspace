@@ -81,6 +81,22 @@ class TestStartStop(unittest.TestCase):
             os.environ.pop("HF_TOKEN", None)
             self.assertFalse(notebook.use_hf_token())  # not on Colab: google.colab cannot be imported
 
+    def test_a_key_that_starts_with_a_dash_works_and_is_not_on_the_command_line(self):
+        """token_urlsafe can start with "-" (about 1 start in 64). On the command line that is read as a flag and the gateway exits."""
+        for key in ("-starts-with-a-dash", "--looks-like-a-flag"):
+            client, info = notebook.start("/nonexistent/llama-server", port=free_pair(), key=key)
+            self.assertEqual(info["key"], key)
+            self.assertEqual(client.call("GET", "/v1/models").status, 200)
+            self.assertEqual(notebook.Client(client.url, "wrong").call("GET", "/v1/models").status, 401)
+            cmdline = Path(f"/proc/{info['pid']}/cmdline").read_bytes().decode()
+            self.assertNotIn(key, cmdline)  # not visible in `ps`
+            notebook.stop()
+
+    def test_every_random_key_the_generator_can_make_is_accepted(self):
+        with mock.patch.object(notebook.secrets, "token_urlsafe", return_value="-random-key-with-a-leading-dash"):
+            _, info = notebook.start("/nonexistent/llama-server", port=free_pair())
+        self.assertEqual(info["key"], "-random-key-with-a-leading-dash")
+
     def test_the_key_is_printed(self):
         with mock.patch("builtins.print") as shown:
             _, info = notebook.start("/nonexistent/llama-server", port=free_pair())
@@ -483,6 +499,47 @@ class TestShowPanel(unittest.TestCase):
         with patch:
             notebook.show_panel({"port": 8001, "key": "k"})
         output.serve_kernel_port_as_iframe.assert_called_once()
+
+    def test_a_big_banner_comes_before_the_link_so_nobody_misses_it(self):
+        output, patch = self.colab()
+        with Said() as said, patch, mock.patch.dict("sys.modules", {"IPython": None, "IPython.display": None}):
+            output.serve_kernel_port_as_window.side_effect = lambda *a, **k: said.lines.append("<<the link>>")
+            notebook.show_panel({"port": 8001, "key": "k"})
+        self.assertIn("YOUR JEV CONSOLE IS READY", said.text)
+        self.assertIn("Click the link just below", said.text)
+        self.assertLess(said.text.index("YOUR JEV CONSOLE IS READY"), said.text.index("<<the link>>"))
+
+    def test_in_a_notebook_the_banner_is_big_coloured_html(self):
+        shown = []
+        display_module = mock.Mock(HTML=lambda html_text: html_text, display=shown.append)
+        output, patch = self.colab()
+        with (
+            patch,
+            mock.patch.dict("sys.modules", {"IPython": mock.Mock(display=display_module), "IPython.display": display_module}),
+        ):
+            notebook.show_panel({"port": 8001, "key": "k"})
+        self.assertEqual(len(shown), 1)
+        self.assertIn("Your Jev console is ready", shown[0])
+        self.assertIn("font-size:24px", shown[0])
+        self.assertIn("background:#1a73e8", shown[0])
+
+    def test_colabs_may_stop_working_warning_is_not_shown_to_the_user(self):
+        import warnings
+
+        output, patch = self.colab()
+        output.serve_kernel_port_as_window.side_effect = lambda *a, **k: warnings.warn(
+            "This function may stop working due to changes in browser security.", stacklevel=2
+        )
+        with Said(), patch, warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            notebook.show_panel({"port": 8001, "key": "k"})
+        self.assertEqual([w for w in caught if "may stop working" in str(w.message)], [])
+
+    def test_the_link_text_is_a_plain_instruction(self):
+        output, patch = self.colab()
+        with Said(), patch:
+            notebook.show_panel({"port": 8001, "key": "k"})
+        self.assertIn("OPEN THE JEV CONSOLE", output.serve_kernel_port_as_window.call_args.kwargs["anchor_text"])
 
     def test_outside_colab_the_address_is_printed(self):
         with Said() as said, mock.patch.dict("sys.modules", {"google": None, "google.colab": None}):

@@ -12,6 +12,7 @@ reset()          stop everything and clear the half-finished state, optionally d
 from __future__ import annotations
 
 import contextlib
+import html
 import json
 import os
 import secrets
@@ -23,6 +24,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import warnings
 from pathlib import Path
 
 from . import DATA, __version__, catalog
@@ -318,8 +320,6 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tup
                 "jevgw",
                 "--port",
                 str(port),
-                "--key",
-                key,
                 "--llama-bin",
                 llama_bin,
                 "--work",
@@ -330,6 +330,10 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tup
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=True,
+            env={
+                **os.environ,
+                "GATEWAY_KEY": key,
+            },  # not on the command line: a key that starts with "-" is read as a flag, and argv shows in `ps`
         )
     for _ in range(60):
         if proc.poll() is not None:
@@ -347,10 +351,31 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tup
     return Client(f"http://127.0.0.1:{port}", key), {**state, "reused": False}
 
 
+def _call_to_action(headline: str, detail: str) -> None:
+    """A banner nobody can miss: big, coloured, above the link it points to. Plain text where HTML cannot be shown."""
+    try:
+        from IPython.display import HTML, display
+    except ImportError:
+        bar = "=" * 72
+        _say(f"\n{bar}\n  >>>  {headline.upper()}  <<<\n  {detail}\n{bar}")
+        return
+    display(
+        HTML(
+            '<div style="margin:14px 0 8px;padding:18px 24px;border-radius:12px;background:#1a73e8;color:#fff;font-family:system-ui,sans-serif">'
+            f'<div style="font-size:24px;font-weight:700;line-height:1.3">&#9654; {html.escape(headline)}</div>'
+            f'<div style="font-size:16px;margin-top:6px">{html.escape(detail)}</div></div>'
+        )
+    )
+
+
 def show_panel(info: dict, inline: bool = False) -> None:
-    """Show where the Jev console is. On Colab that is a link that opens it as its own full browser tab (nothing to scroll past);
-    `inline=True` also embeds it in the notebook. Anywhere else, its address is printed."""
+    """Point the user at the Jev console, with a banner and, on Colab, a link that opens it as its own full browser tab (nothing to scroll
+    past). `inline=True` also embeds it in the notebook. Anywhere else, its address is printed."""
     path = f"/#key={info['key']}"
+    _call_to_action(
+        "Your Jev console is ready",
+        "Click the link just below to open it in its own tab: load models, try them, see response times.",
+    )
     try:
         from google.colab import output
     except ImportError:
@@ -358,8 +383,12 @@ def show_panel(info: dict, inline: bool = False) -> None:
         return
     as_tab = getattr(output, "serve_kernel_port_as_window", None)
     if as_tab:
-        as_tab(info["port"], path=path, anchor_text="Open the Jev console in its own tab")
-    if inline or not as_tab:  # without the tab link (an older Colab), the embedded console is the only way
+        with warnings.catch_warnings():
+            warnings.simplefilter(
+                "ignore"
+            )  # Colab warns that this call "may stop working"; if it does, the embedded console below takes over
+            as_tab(info["port"], path=path, anchor_text="\u25b6  OPEN THE JEV CONSOLE  (opens a new tab)")
+    if inline or not as_tab:  # without the tab link (an older Colab, or one that dropped it), the embedded console is the way in
         output.serve_kernel_port_as_iframe(info["port"], path=path, height="650")
 
 
@@ -567,7 +596,7 @@ def console(client: Client, info: dict) -> None:
         return
     show_panel(info)
     _say(f"""
-Open the link above: the Jev console opens as its own page, so you can keep it beside the notebook. Model on the GPU now: {loaded}
+The Jev console opens as its own page, so you can keep it beside the notebook. Model on the GPU now: {loaded}
 
  Models         Load, Unload, Enable, Disable and Delete files. One model is on the GPU at a time; loading another unloads the
                 current one. "On disk" shows what is already downloaded.
