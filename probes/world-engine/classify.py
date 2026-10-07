@@ -38,18 +38,25 @@ def region_text(region, rows, max_chars=300, top=12):
     full = f"{region.strip()}: " + ", ".join(names)
     return full if len(full) <= max_chars else f"{region.strip()}: " + ", ".join(names[:top]) + ", and others"
 def ask_country(ev, today=None):
-    """Which country is the story mainly about? The server allows 2 to 64 options per question, so with many countries it asks which part of the world first, then which country in it.
-    Returns (country id or 'global', probabilities)."""
+    """Which country is the story mainly about? Returns (country id or 'global', probabilities). Same return as ever; ask_country_detailed adds the numbers behind it."""
+    r = ask_country_detailed(ev, today); return r[0], r[1]
+def ask_country_detailed(ev, today=None):
+    """The server allows 2 to 64 options per question, so with many countries it asks which part of the world first, then which country in it.
+    Returns (country id or 'global', probabilities, detail). detail: path 'flat' or 'region'; region_choice; global_p = the region step's GLOBAL probability (None on the flat path, where it is the 'global' option);
+    other_here_p = the country step's own 'other_here' probability (None unless the country step ran); chose_global, chose_other_here."""
     today = today or datetime.date.today().isoformat(); st = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"; rows = _country_rows()
     if len(rows) <= 63 or "region" not in rows[0]:
         crit = {r["id"]: r["name"] for r in rows}; crit["global"] = "No single country in this list, or the whole world"
-        a = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": crit}})["c"]; return a["choice"], {k: round(float(v), 3) for k, v in a["probabilities"].items()}
+        a = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": crit}})["c"]; pr = {k: round(float(v), 3) for k, v in a["probabilities"].items()}
+        return a["choice"], pr, {"path": "flat", "region_choice": None, "global_p": pr.get("global"), "other_here_p": None, "chose_global": a["choice"] == "global", "chose_other_here": False}
     regions = sorted({r["region"] for r in rows}); crit = {g: region_text(g, rows) for g in regions}; crit["GLOBAL"] = "The whole world, or no single part of it"
     g = O.call(st, {"g": {"type": "choice", "instructions": "Which part of the world is this story mainly about?", "criteria": crit}})["g"]; pg = {k: float(v) for k, v in g["probabilities"].items()}
-    if g["choice"] == "GLOBAL": return "global", {"global": round(pg["GLOBAL"], 3)}
+    det = {"path": "region", "region_choice": g["choice"], "global_p": round(pg["GLOBAL"], 3), "other_here_p": None, "chose_global": g["choice"] == "GLOBAL", "chose_other_here": False}
+    if g["choice"] == "GLOBAL": return "global", {"global": round(pg["GLOBAL"], 3)}, det
     inr = {r["id"]: r["name"] for r in rows if r["region"] == g["choice"]}; inr["other_here"] = "A different country in this part of the world, or no single country"
     c = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": inr}})["c"]; pc = {k: round(float(v) * pg[g["choice"]], 3) for k, v in c["probabilities"].items()}
-    return ("global" if c["choice"] == "other_here" else c["choice"]), pc
+    det["other_here_p"] = round(float(c["probabilities"].get("other_here", 0.0)), 3); det["chose_other_here"] = c["choice"] == "other_here"
+    return ("global" if c["choice"] == "other_here" else c["choice"]), pc, det
 def read(P):
     g = {k: P[f"g|{k}"] for k in GENRE}; gate = (g["happened"] >= .5 or g["announced"] >= .5) and g["opinion"] < .5 and P["x|recent"] >= .3
     entry = "COUNTRY:usa" if P["x|us_focus"] >= .5 else ("WORLD:world" if P["x|foreign_focus"] >= .5 else "COUNTRY:usa")

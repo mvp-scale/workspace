@@ -52,6 +52,9 @@ class LazyMasks:
         try: self[k]; return True
         except (KeyError, ValueError): return False
 OLD_COUNTRY = {"usa": "usa", "germany": "deu", "japan": "jpn", "brazil": "bra", "india": "ind", "nigeria": "nga", "indonesia": "idn", "mexico": "mex"}      # ids in the saved event ledger
+def full_readings(readings, w_):
+    """The same readings counted in full: every amount divided by the type weight (a pure scaling step, so sign, mode_weight, size_mult and basis stay). Contract 1.1."""
+    return [dict(x, amount=x["amount"] / w_) for x in readings]
 class Session:
     def __init__(self):
         t0 = time.time(); self.pop = WorldPopulation(); self.countries = self.pop.countries; self.cid = [c["id"] for c in self.countries]; self.cname = {c["id"]: c["name"] for c in self.countries}
@@ -151,7 +154,7 @@ class Session:
         return w
     def request_event(self, text):
         ev = {"evidence_id": "req", "published_at": datetime.date.today().isoformat(), "title": text, "description": ""}
-        P = C.ask(ev); r = C.read(P); country, cp = C.ask_country(ev); entry = f"COUNTRY:{country}" if country in self.cid else "WORLD:world"
+        P = C.ask(ev); r = C.read(P); country, cp, pdet = C.ask_country_detailed(ev); entry = f"COUNTRY:{country}" if country in self.cid else "WORLD:world"
         readings = [dict(x, amount=(0.10 if x["direction"] == "up" else -0.10) * x["strength"]) for x in r["readings"] if x["direction"] != "conflict"]
         for x in readings: x["basis"] = "reported"
         pl = C.place(ev); self.log_unplaced(text, pl)
@@ -181,8 +184,8 @@ class Session:
         D, Bs = self.gm(p1 - p0) * 100, self.gm(p0) * 100; Pt = {b_: self.gm(parts[b_] - p0) * 100 for b_ in parts}
         for i, rw in enumerate(self.rows): rows.append({**rw, "share": round(self.share[i], 4), "values": D[i].tolist(), "base": Bs[i].tolist(), "parts": {b_: Pt[b_][i].tolist() for b_ in Pt}})
         prop_rows = [{"id": n, "label": next(x["label"] for x in self.rows if x["id"] == n), "level": n.split(":")[0].lower(), "delta": (tot1[n] - tot0[n]).tolist(), "first_tick": first.get(n)} for n in w2.nodes]
-        impact = self.impact(w0, w2, p0, p1, pl, readings, ok)
-        st_ = self.story(text, ident, impact)
+        impact = self.impact(w0, w2, p0, p1, pl, readings, ok, w_, entry, RU.sowhat_version() == 2)
+        st_ = self.story(text, ident, impact, pdet)
         if st_ is not None: impact["story"] = st_        # no key for a ruleset without So-what tables (v1) or a classifier failure: the old page text stays
         return jn({"impact": impact, "identify": ident, "propagate": {"dials": [{"id": d, "name": DIAL_NAME[d]} for d in DIALS], "rows": prop_rows, "note": "change in each dial at each node versus a control run with no event, after 3 ticks"}, "decide": {"kind": "state decisions", "cols": cols, "matrix": {"rows": [{"id": d, "label": DEC_NAME[d], "kind": "decision"} for d in E.DECS], "cols": [{"id": e, "label": EL_NAME[e]} for e in E.ELS if abs(E.W[:, E.ELS.index(e)]).sum() > 0],
                               "values": [[float(E.W[j, E.ELS.index(e)]) for e in E.ELS if abs(E.W[:, E.ELS.index(e)]).sum() > 0] for j in range(len(E.DECS))], "note": "weight of each person state on each decision (rules/decision_weights.csv, hand-set guesses)"}, "rule": "propensity = sigmoid(bias + sum of weights x standardised person states); weights in rules/decision_weights.csv"},
@@ -201,15 +204,16 @@ class Session:
     def horizons(self):
         hl = sorted(float(r["half_life_ticks"]) for r in E.D_ROWS if r["kind"] == "condition"); med = hl[len(hl) // 2] if len(hl) % 2 else (hl[len(hl) // 2 - 1] + hl[len(hl) // 2]) / 2
         t2 = int(round(med / 5.0) * 5); t1 = max(5, int(round(t2 / 5 / 5.0) * 5)); return [("now", 3, "Now"), ("next", t1, "Next"), ("later", t2, "Later")]
-    def impact(self, w0, w2, p0, p1, pl, readings, ok):
-        """w0/w2: the control and event branches after 3 ticks. They are copied, then run on to Next and Later with noise off, so the forward view is the same arithmetic (ties, decay) with no new random numbers."""
-        t_start = time.time(); hz = self.horizons(); snaps = {"now": (w0.totals(), w2.totals(), p0, p1, self.eff_prop(w0)[0], self.eff_prop(w2)[0])}
+    def core(self, w0, w2, p0, p1):
+        """The Now / Next / Later arithmetic shared by the real run and the if-true run: control and event branches are copied, run on with noise off, and every decision is scored (rank), every row's points listed (places).
+        w0/w2: the control and event branches after 3 ticks. Returns the pieces impact() and if_true() both read."""
+        hz = self.horizons(); snaps = {"now": (w0.totals(), w2.totals(), p0, p1, self.eff_prop(w0)[0], self.eff_prop(w2)[0])}
         a, b = copy.deepcopy(w0), copy.deepcopy(w2); a.noise = b.noise = False; done = 3
         for hid, ticks, _ in hz[1:]:
             a.run(ticks - done); b.run(ticks - done); done = ticks
             ta, tb = a.totals(), b.totals(); ea, eb = self.eff_prop(a, at=ta)[0], self.eff_prop(b, at=tb)[0]
             snaps[hid] = (ta, tb, E.Population.propensity(None, ea), E.Population.propensity(None, eb), ea, eb)
-        ids = [h[0] for h in hz]; wt = self.pop.wt; nd = len(E.DECS); R = len(self.rows)
+        ids = [h[0] for h in hz]; wt = self.pop.wt
         D = {h: self.gm(snaps[h][3] - snaps[h][2]) * 100 for h in ids}                                  # R x 8, points
         reach = (wt[:, None] * (np.abs(snaps["next"][3] - snaps["next"][2]) * 100 >= 0.5)).sum(0) / wt.sum() * 100       # % of people moved by at least 0.5 pts at Next
         stakes = {r["decision_id"]: int(r["stakes"]) for r in C.load_opt("decision_stakes")}; stakes = {d: stakes.get(d, 3) for d in E.DECS}      # no stakes table (v2 so far): every act counts as a middling 3/5 step, so stakes cannot favour any decision
@@ -225,8 +229,32 @@ class Session:
             rank.append({"decision": d, "label": DEC_NAME[d], "now": round(v["now"], 3), "next": round(v["next"], 3), "later": round(v["later"], 3), "reach": round(float(reach[j]), 1), "persistence": round(pers, 3), "peak_h": peak_h, "stakes": st,
                          "score": round(float(score), 1), "tier": self.tier(score), "why": why})
         rank.sort(key=lambda r: -r["score"])
-        top = rank[0]; jt = E.DECS.index(top["decision"])
         places = {rw["id"]: {d: [round(float(D[h][i, j]), 2) for h in ids] for j, d in enumerate(E.DECS)} for i, rw in enumerate(self.rows)}
+        sig = 0.7 * rank[0]["score"] + 0.3 * float(np.mean([r["score"] for r in rank[:3]]))
+        return {"hz": hz, "snaps": snaps, "ids": ids, "D": D, "reach": reach, "stakes": stakes, "rank": rank, "places": places, "sig": sig}
+    def significance_rows(self, c):
+        """Size score and tier for every row: the same formula as the world Size (0.7 x top score + 0.3 x mean of the top 3 decision scores) but reach is measured over that row's own people
+        (share of the row's people moved by 0.5 points or more at Next). `c` is a core() result. Row WORLD:world is the real significance (same arithmetic, so equal)."""
+        ids, D, snaps, stakes = c["ids"], c["D"], c["snaps"], c["stakes"]; moved = (np.abs(snaps["next"][3] - snaps["next"][2]) * 100 >= 0.5).astype(float)
+        RR = self.gm(moved) * 100                                                        # R x 8: % of each row's people moved by >= 0.5 pts at Next
+        V = np.stack([D[h] for h in ids], 0); pk = V[np.abs(V).argmax(0), np.arange(V.shape[1])[:, None], np.arange(V.shape[2])[None, :]]      # R x 8 peak with sign (first horizon wins a tie, as max() does)
+        pers = np.where(np.abs(pk) < 1e-9, 0.0, np.clip(V[ids.index("later")] / np.where(np.abs(pk) < 1e-9, 1.0, pk), 0, 1)); size = 1 - np.exp(-np.abs(pk) / self.SIZE_REF)
+        st = np.array([stakes[d] for d in E.DECS], float)[None, :]
+        score = 100 * (self.SCORE_W["size"] * size + self.SCORE_W["reach"] * RR / 100 + self.SCORE_W["persistence"] * pers + self.SCORE_W["stakes"] * st / 5) * np.sqrt(size)
+        top = np.sort(score, 1)[:, ::-1]; sg = 0.7 * top[:, 0] + 0.3 * top[:, :3].mean(1)
+        out = {rw["id"]: {"score": round(float(sg[i]), 1), "tier": self.tier(float(sg[i]))} for i, rw in enumerate(self.rows)}
+        ws = round(c["sig"], 1); out["WORLD:world"] = {"score": ws, "tier": self.tier(c["sig"])}      # the world row is the badge itself
+        return out
+    def if_true(self, readings, w_, entry, w0):
+        """What would happen if the story were true (contract 1.1): the event branch run again with every reading's amount divided by the type weight (mode_weight and size_mult stay), through the same arithmetic.
+        None when the story is not hedged (weight 1 or more) or nothing is counted."""
+        if not readings or not (0 < w_ < 1): return None
+        full = full_readings(readings, w_); w2 = self.branch(full, entry); eff0, _ = self.eff_prop(w0); eff1, _ = self.eff_prop(w2)
+        c = self.core(w0, w2, E.Population.propensity(None, eff0), E.Population.propensity(None, eff1)); sr = self.significance_rows(c); rk = [{k: r[k] for k in ("decision", "reach", "persistence", "score", "tier")} for r in c["rank"]]
+        return {"type_weight_removed": w_, "method": "branch", "places": c["places"], "rank": rk, "significance": {"score": round(c["sig"], 1), "tier": self.tier(c["sig"]), "top_decision": c["rank"][0]["decision"]}, "significance_rows": sr}
+    def impact(self, w0, w2, p0, p1, pl, readings, ok, w_=1.0, entry="WORLD:world", v2=False):
+        t_start = time.time(); c = self.core(w0, w2, p0, p1); hz, snaps, ids, D, rank, places = c["hz"], c["snaps"], c["ids"], c["D"], c["rank"], c["places"]
+        top = rank[0]; jt = E.DECS.index(top["decision"])
         # ---- resources: net pressure = sum of signed, scaled contributions; condition move / 0.10 (one reported reading), state move / 0.5 sd x weight, decision move / 4 pts x weight x 0.5 (an act changes a resource less than a condition does), then each contribution is squashed by tanh to at most 1 and scaled by min(1, sqrt(4 / number of links)) so a resource with many links (Financial) cannot win just by having more of them (guess scales)
         res = C.load("resources"); dr = RU.dial_resources(); er = C.load_opt("element_resources"); xr = C.load_opt("decision_resources"); Mw = self.M[0]; out_res = []; contrib = {}
         for hid in ("now", "next"):
@@ -257,17 +285,21 @@ class Session:
         ia = max(aud, key=lambda i: abs(vn[i])); ip = max(plc, key=lambda i: abs(vn[i]))
         chain.append({"kind": "group", "id": self.rows[ia]["id"], "name": self.rows[ia]["label"], "strength": round(min(1.0, abs(vn[ia]) / (abs(vn[ia]) + abs(vn[0]) + 1e-9)), 3)})
         chain.append({"kind": "place", "id": self.rows[ip]["id"], "name": self.rows[ip]["label"], "strength": round(min(1.0, abs(vn[ip]) / (abs(vn[ip]) + abs(vn[0]) + 1e-9)), 3)})
-        sig = 0.7 * rank[0]["score"] + 0.3 * float(np.mean([r["score"] for r in rank[:3]]))
+        sig = c["sig"]
         summary = [f"Biggest mover: {top['label']} ({top['now']:+.2f} now, {top['later']:+.2f} later pts)", f"Reaches {top['reach']:.0f}% of people ({top['label']}, Next)", f"Strongest in {self.rows[ip]['label']} ({vn[ip]:+.1f} pts)"]
-        return {"horizons": [{"id": h, "ticks": t, "label": l} for h, t, l in hz], "rank": rank, "places": places,
-                "significance": {"score": round(sig, 1), "tier": self.tier(sig), "top_decision": top["decision"], "summary": summary}, "resources": out_res, "chain": chain[:12],
-                "ms": round((time.time() - t_start) * 1000), "note": "Now = 3 ticks; Next and Later re-run the same branches longer with noise off. Score weights, size reference, bands and resource scales are guesses (rules/decision_stakes.csv and friends are guesses too)."}
-    def story(self, text, ident, impact):
+        out = {"horizons": [{"id": h, "ticks": t, "label": l} for h, t, l in hz], "rank": rank, "places": places,
+               "significance": {"score": round(sig, 1), "tier": self.tier(sig), "top_decision": top["decision"], "summary": summary}, "resources": out_res, "chain": chain[:12]}
+        if v2:      # So-what v2 backend fields (spec/so-what-v2-contract.md 1.1, 1.2); absent for v1 rules
+            out["significance_rows"] = self.significance_rows(c); it = self.if_true(readings, w_, entry, w0)
+            if it: out["if_true"] = it
+        out.update({"ms": round((time.time() - t_start) * 1000), "note": "Now = 3 ticks; Next and Later re-run the same branches longer with noise off. Score weights, size reference, bands and resource scales are guesses (rules/decision_stakes.csv and friends are guesses too)."})
+        return out
+    def story(self, text, ident, impact, place=None):
         """So-what story-level beats (spec/so-what-contract.md): None when the active ruleset has no So-what tables."""
-        t = RU.sowhat_tables()
+        v = RU.sowhat_version(); t = RU.sowhat2_tables() if v == 2 else RU.sowhat_tables()
         if not t["frames"]: return None
         import sowhat_story as SS
-        try: return SS.build_story(text, ident, impact, t["frames"], C.PHRASES, {r["decision_id"]: r for r in C.load_opt("decision_phrases")})
+        try: return SS.build_story(text, ident, impact, t["frames"], C.PHRASES, {r["decision_id"]: r for r in C.load_opt("decision_phrases")}, version=v, place=place)
         except (OSError, KeyError, ValueError) as e: print(f"so-what story skipped: {e!r}", file=sys.stderr, flush=True); return None
     def request_offer(self, text):
         iv = self.item(text); p = self.aud
@@ -467,7 +499,7 @@ class H(BaseHTTPRequestHandler):
             q = dict(urllib.parse.parse_qsl(self.path.partition("?")[2])); j = max(0, min(len(E.DECS) - 1, int(q.get("d", 0) or 0)))
             with LOCK: return self._send(200, S.people_values(j))
         if self.path.startswith("/sowhat"):
-            t = RU.sowhat_tables(); return self._send(200, {"version": 1, "set": os.path.basename(RU.R), "available": bool(t["frames"]), **t})
+            t = RU.sowhat_serve(); return self._send(200, {"set": os.path.basename(RU.R), **t})
         if self.path.startswith("/graph"):
             with LOCK: return self._send(200, S.graph_info())
         if self.path.startswith("/gpu"):

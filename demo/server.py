@@ -419,7 +419,7 @@ WORLD_ENGINE = os.environ.get("WORLD_ENGINE_URL", "http://127.0.0.1:8112")  # pr
 
 
 def world_engine_proxy(method, sub, body):
-    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live", "/world", "/people_layout", "/people", "/gpu", "/graph"):
+    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live", "/world", "/people_layout", "/people", "/gpu", "/graph", "/sowhat"):
         return 404, {"error": "not found"}
     try:
         req = urllib.request.Request(WORLD_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)

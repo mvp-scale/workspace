@@ -50,15 +50,33 @@ def guard(probs, places, row, label):
     g["fired"] = True; g["to"] = ru if passes(ru, sn) else "plain"
     g["trace"] = f"{top} needs {SENSE_NEEDED[top].replace('_', ' ')} but sense is {sn} ({v:+.2f}); {'runner-up ' + ru if g['to'] == ru else 'plain'}"
     return g["to"], g
-def build_story(text, ident, impact, frames, phr, dphr, ask=None, today=None):
-    """ident: the `identify` block, impact: the `impact` block (places, significance), frames: sowhat_frames rows, phr: {dial: {up, down}}, dphr: {decision: {up, down}}.
+def djb2(t):
+    """The page's seed hash (sowhat.js `hash`): h = h * 33 xor char code, unsigned 32-bit, start 5381."""
+    h = 5381
+    for ch in t: h = ((h * 33) ^ ord(ch)) & 0xFFFFFFFF
+    return h
+def topic_of(ident):
+    """The top tagged placement (v2 contract 1.3): p is its forced-choice probability; None when nothing is tagged."""
+    t = next((x for x in ident.get("placement") or [] if x.get("tagged")), None)
+    return {"id": t["id"], "name": t["name"], "p": t["p_choice"]} if t else None
+def place_status(entry, place):
+    """(status, trace): 'single' when the entry is a country row; 'worldwide' when the region step chose GLOBAL; 'unresolved' when it did not and the country step answered other_here (a place with no row, or several countries); else 'worldwide' (no part of the world was singled out).
+    place is classify.ask_country_detailed's detail dict (None: judged from the entry alone)."""
+    if entry.startswith("COUNTRY:"): return "single", f"country step resolved {entry.split(':')[1]}" + (f" (region step GLOBAL {place['global_p']}, other_here {place['other_here_p']})" if place else "")
+    if not place: return "worldwide", "no place detail"
+    gp, oh = place["global_p"], place["other_here_p"]
+    if place["chose_global"]: return "worldwide", f"region step chose GLOBAL ({gp})"
+    if place["chose_other_here"]: return "unresolved", f"region step chose {place['region_choice']} (GLOBAL {gp}), country step answered other_here ({oh}): a place with no row, or several countries; entry stays the world row"
+    return "worldwide", f"no country in {place['region_choice']} chosen (GLOBAL {gp}, other_here {oh})"
+def build_story(text, ident, impact, frames, phr, dphr, ask=None, today=None, version=1, place=None):
+    """ident: the `identify` block, impact: the `impact` block (places, significance), frames: sowhat_frames rows (v2: sowhat2_frames rows; the ones with classifier_option "no", like plain, are not offered to the classifier but are valid frame ids), version: 1 or 2 (2 adds story.topic, story.seed, frame.in_table), phr: {dial: {up, down}}, dphr: {decision: {up, down}}.
     ask(jobs) -> {name: answer}, jobs = [(name, state, question)]. Returns the `story` dict of the contract."""
     if ask is None:
         import classify as C; ask = C.ask_sowhat
     today = today or datetime.date.today().isoformat(); counted = bool(ident.get("counted")); readings = ident.get("readings", []) if counted else []
     places = impact["places"]; entry = ident.get("entry", "WORLD:world"); state = story_state(text, today)
     parts, line = moves_line(ident.get("readings", []), places, entry, phr, dphr, counted)
-    fcrit = {f["id"]: f["probe_statement"] for f in frames}; jobs = [("sowhat_frame", state + "\n" + line, {"type": "choice", "instructions": FRAME_Q, "criteria": fcrit})]
+    fcrit = {f["id"]: f["probe_statement"] for f in frames if f.get("classifier_option") != "no"}; table_ids = {f["id"] for f in frames}; jobs = [("sowhat_frame", state + "\n" + line, {"type": "choice", "instructions": FRAME_Q, "criteria": fcrit})]
     usable = [x for x in readings if x.get("direction") in ("up", "down") and (phr.get(x["dial"]) or {}).get(x["direction"])]       # a dial without an impact_phrases row cannot be offered (and cannot crash)
     top_r = (sorted_readings([x for x in usable if x.get("basis") != "expected"]) + sorted_readings([x for x in usable if x.get("basis") == "expected"]))[:MAX_TRIGGER_READINGS]; asked = len(top_r) >= 2      # reported readings first, expected ones fill the rest
     if asked: jobs.append(("sowhat_trigger", state, {"type": "choice", "instructions": TRIGGER_Q, "criteria": {x["dial"]: phr[x["dial"]][x["direction"]] for x in top_r}}))
@@ -70,6 +88,7 @@ def build_story(text, ident, impact, frames, phr, dphr, ask=None, today=None):
     ftrace = f"frame choice: {order[0][0]} {f2(order[0][1])}, runner-up {order[1][0]} {f2(order[1][1])}" + (f"; guard: {g['trace']}" if g["fired"] else "")
     frame = {"id": fid, "p": round(fp[fid], 3) if fid in fp else None, "raw_id": order[0][0], "raw_p": round(order[0][1], 3), "runner_up": {"id": order[1][0], "p": round(order[1][1], 3)},
              "probs": {k: round(v, 3) for k, v in order}, "state_moves": parts, "guard": g, "question": "sowhat_frame", "trace": ftrace}
+    if version >= 2: frame["in_table"] = fid in table_ids
     trig = {"asked": asked, "picks": [], "runner_up": None, "probs": {}, "question": "sowhat_trigger", "trace": ""}
     if counted and top_r:
         by = {x["dial"]: x for x in top_r}
@@ -87,5 +106,8 @@ def build_story(text, ident, impact, frames, phr, dphr, ask=None, today=None):
         trig["trace"] = head + "; " + "; ".join(notes)
     sig = impact.get("significance") or {}
     scale = {"tier": sig.get("tier"), "score": sig.get("score"), "trace": f"Size {sig.get('score')} ({sig.get('tier')})"}
-    return {"version": VERSION, "certainty": certainty(ident), "frame": frame, "trigger": trig, "scale": scale,
+    out = {"version": VERSION if version < 2 else version, "certainty": certainty(ident), "frame": frame, "trigger": trig, "scale": scale,
             "entry": {"id": entry, "place": place_kind(ident, entry), "local": bool(local), "world_max": round(world_max, 2), "entry_max": round(entry_max, 2)}, "cost": {"questions": len(jobs), "calls": len(jobs), "ms": ms}}
+    if version >= 2: out["topic"] = topic_of(ident); out["seed"] = djb2(text); out["place_status"], out["place_trace"] = place_status(entry, place)
+    if version >= 2 and place: out["place"] = {k: place[k] for k in ("path", "region_choice", "global_p", "other_here_p")}
+    return out

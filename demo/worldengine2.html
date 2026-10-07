@@ -66,13 +66,17 @@
   .swh [data-beat="trigger"] { --c: var(--s4); --h: 3px; } .swh [data-beat="response"] { --c: var(--s1); --h: 100%; background-image: linear-gradient(color-mix(in srgb, var(--s1) 17%, transparent), color-mix(in srgb, var(--s1) 17%, transparent)); border-radius: 4px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--s1) 17%, transparent); }
   .swh [data-beat="who"] { --c: var(--s6); background-image: repeating-linear-gradient(90deg, var(--c) 0 3px, transparent 3px 6px); } .swh [data-beat="scale"] { --c: var(--s2); --h: 3px; background-image: repeating-linear-gradient(90deg, var(--c) 0 8px, transparent 8px 12px); }
   .swh [data-beat="arc"] { --c: var(--s5); --h: 5px; background-image: linear-gradient(var(--c), var(--c)), linear-gradient(var(--c), var(--c)); background-position: left bottom, left top 100%; background-size: 100% 1.5px, 100% 1.5px; } .swh [data-beat="certainty"] { --c: var(--s7); --h: 3px; font-style: italic; } .swh [data-beat="frame"] { --c: var(--s3); --h: 100%; background-image: linear-gradient(color-mix(in srgb, var(--s3) 22%, transparent), color-mix(in srgb, var(--s3) 22%, transparent)); border-radius: 4px; }
+  .swh [data-beat="hook"], .sw2 [data-beat="hook"] { background: none; padding-bottom: 0; }
+  .swh [data-beat="contrast"], .sw2 [data-beat="contrast"] { --c: var(--s4); --h: 2px; background-image: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 9px); }
+  .swh [data-beat="anchor"], .sw2 [data-beat="anchor"] { --c: var(--accent); --h: 100%; font-weight: 700; color: var(--text); padding: 0 4px; margin: 0 -1px; border-radius: 5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; background-image: linear-gradient(color-mix(in srgb, var(--accent) 34%, transparent), color-mix(in srgb, var(--accent) 34%, transparent)); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 62%, transparent); }
   .swh.new [data-beat] { animation: swsweep .55s ease-out both; animation-delay: calc(var(--i, 0) * 170ms); }
+  .swh.new [data-beat="hook"] { animation: none; }
   @keyframes swsweep { from { background-size: 0 var(--h); } to { background-size: 100% var(--h); } }
   .swh.new [data-beat="arc"] { animation-name: swsweep2; } @keyframes swsweep2 { from { background-size: 0 1.5px, 0 1.5px; } to { background-size: 100% 1.5px, 100% 1.5px; } }
   @media (prefers-reduced-motion: reduce) { .swh.new [data-beat] { animation: none; } }
   .sw2 { font-size: 14px; line-height: 1.35; color: var(--text-2); min-height: 19px; } .sw2 [data-beat] { cursor: help; }
   .swcs { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; } .swc { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; font-size: 11.5px; line-height: 17px; padding: 1px 9px 1px 6px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-2); background: var(--surface-2); cursor: help; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .swc .ico { color: var(--cc, var(--text-3)); } .swc b { font-weight: 600; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-right: 1px; }
-  .swc[data-beat="frame"] { --cc: var(--s3); } .swc[data-beat="response"] { --cc: var(--s1); } .swc[data-beat="who"] { --cc: var(--s6); } .swc[data-beat="scale"] { --cc: var(--s2); } .swc[data-beat="arc"] { --cc: var(--s5); }
+  .swc[data-beat="anchor"] { --cc: var(--accent); border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong)); color: var(--text); font-weight: 650; } .swc[data-beat="register"] { --cc: var(--s2); } .swc[data-beat="frame"] { --cc: var(--s3); } .swc[data-beat="response"] { --cc: var(--s1); } .swc[data-beat="who"] { --cc: var(--s6); } .swc[data-beat="scale"] { --cc: var(--s2); } .swc[data-beat="arc"] { --cc: var(--s5); }
   .size .ic { display: flex; font-size: 15px; } .size .mb { width: 54px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--text-3) 30%, transparent); overflow: hidden; } .size .mb i { display: block; height: 100%; width: 0; background: var(--tc); transition: width .55s cubic-bezier(.2, .8, .2, 1); } .size .n { font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
   .wsub { font-weight: 400; color: var(--text-3); }
   .lb { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
@@ -219,6 +223,7 @@ const IC = {
   now: ["M13 2 4 14h7l-1 8 9-12h-7z"],
   next: ["M5 12h14", "M13 6l6 6-6 6"],
   later: ["M7 3h10", "M7 21h10", "M8 3v3l4 6-4 6v3", "M16 3v3l-4 6 4 6v3"],
+  number: ["M9 3 7 21", "M17 3l-2 18", "M4 9h17", "M3 15h17"],
   tier1: ["c:12,12,9", "M8 12h8"],
   tier2: ["c:12,12,3", "c:12,12,8"],
   tier3: ["M3 17l6-6 4 4 8-8", "M15 7h6v6"],
@@ -351,12 +356,13 @@ function nextStop(R, f, cs, ev) {
 /* ---------- So what, composed (static/sowhat.js): the sentence, its highlighted beats, line 2 and the chips. Any missing piece returns null and the older text stays. ---------- */
 S.sw = { tables: null, run: -1, prev: "", last: "" };
 async function swLoad() { try { const t = await api("sowhat"); if (t && (t.frames || t.lexicon)) { S.sw.tables = t; if (S.res && ui) render(); } } catch (e) { S.sw.tables = null; } }
-const SW_CHIPS = ["frame", "response", "arc", "scale", "who"], SW_LABEL = { frame: "Frame", response: "Response", arc: "Arc", scale: "Scale", who: "Who" };
+const SW_CHIPS = ["frame", "register", "response", "anchor", "arc", "who"], SW_LABEL = { frame: "Frame", register: "Size here", response: "Response", anchor: "Number", arc: "Arc", scale: "Scale", who: "Who", hook: "Lead", contrast: "Other side", certainty: "Certainty", trigger: "Trigger", stake: "Stakes", turn: "Turn" };
 function swCompose(r, R, f) {
   try {
     const I = r.impact, st = I && I.story; if (!st || !S.sw.tables || !window.SoWhat || !I.places || !Array.isArray(I.rank)) return null;
     if (S.sw.run !== S.runId) { S.sw.prev = S.sw.last; S.sw.run = S.runId; S.sw.fresh = true; }   /* feed rule: the previous result's opening decides a variant, fixed for this result */
-    const out = SoWhat.compose({ story: st, focus: f.id, rows: R.rows, places: I.places, rank: I.rank, text: S.text, tables: S.sw.tables, prev: S.sw.prev });
+    const id = r.identify || {}, w = id.weight && typeof id.weight === "object" ? id.weight.value : null;
+    const out = SoWhat.compose({ story: st, focus: f.id, rows: R.rows, places: I.places, rank: I.rank, significance: I.significance, significance_rows: I.significance_rows, if_true: I.if_true || null, readings: id.readings, weight: w, text: S.text, tables: S.sw.tables, prev: S.sw.prev });
     if (out && out.headline) S.sw.last = out.headline; return out;
   } catch (e) { return null; }
 }

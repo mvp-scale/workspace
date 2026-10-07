@@ -18,6 +18,22 @@ def sowhat_tables(rules=None):
     """The three So-what tables of the active ruleset (or of the folder `rules`) as lists of rows; every one is [] when the ruleset has no So-what tables."""
     d = R if rules is None else (rules if os.path.isabs(rules) else f"{BASE}/{rules}")
     return {n[7:]: (list(csv.DictReader(open(f"{d}/{n}.csv"))) if os.path.exists(f"{d}/{n}.csv") else []) for n in SOWHAT}
+SOWHAT2 = ("frames", "hooks", "templates", "lexicon")      # v2 tables: sowhat2_<name>.csv (spec/so-what-v2-contract.md)
+def sowhat_version(rules=None):
+    """2 when the active ruleset (or folder `rules`) has sowhat2_frames.csv, 1 when it has the v1 So-what tables, else 0."""
+    d = R if rules is None else (rules if os.path.isabs(rules) else f"{BASE}/{rules}")
+    return 2 if os.path.exists(f"{d}/sowhat2_frames.csv") else 1 if os.path.exists(f"{d}/sowhat_frames.csv") else 0
+def sowhat2_tables(rules=None):
+    """The So-what v2 tables as lists of rows, plus `lexicon_v1` (sowhat_lexicon.csv: conditions, places, audiences, who bands, read by the v2 composer); {} when the ruleset has no v2 tables."""
+    if sowhat_version(rules) != 2: return {}
+    d = R if rules is None else (rules if os.path.isabs(rules) else f"{BASE}/{rules}")
+    rd = lambda n: list(csv.DictReader(open(f"{d}/{n}.csv"))) if os.path.exists(f"{d}/{n}.csv") else []
+    return {**{n: rd(f"sowhat2_{n}") for n in SOWHAT2}, "lexicon_v1": rd("sowhat_lexicon")}
+def sowhat_serve(rules=None):
+    """What GET /sowhat sends: the v2 tables (version 2) when the ruleset has them, else the v1 tables (version 1), else empty (version 1, available false)."""
+    t2 = sowhat2_tables(rules)
+    if t2: return {"version": 2, "available": bool(t2["frames"]), **t2}
+    t = sowhat_tables(rules); return {"version": 1, "available": bool(t["frames"]), **t}
 def _up_means(text):
     t = (text or "").strip().lower()
     return t if t in ("strain", "build") else "strain" if t.endswith("(bad)") else "build" if "(good" in t else "neutral"

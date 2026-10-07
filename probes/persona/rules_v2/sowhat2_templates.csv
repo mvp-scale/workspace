@@ -1,0 +1,110 @@
+id,families,join,trigger_in_hook,needs,certainty,register,template,note
+B01,TRIGGER|STAKE|TURN|SCALE|IF,colon,0,,any,any,"{Hook} {trigger}, and {subj} {resp}{resp2}{soft_tail}.",
+B02,TRIGGER|STAKE|TURN|SCALE|IF,colon,0,causal|coherent,any,any,"{Hook} {trigger}, so {subj} {resp}{resp2}{soft_tail}.",
+B03,TRIGGER|STAKE|TURN|SCALE,colon,0,plain_trigger|coherent,any,any,"{Hook} as {trigger}, {subj} {resp}{resp2}{soft_tail}.","""as"" only with a plain-present trigger (no modal, no should)"
+B04,TRIGGER|STAKE|TURN|SCALE,colon,0,,any,any,{Hook} {trigger}; {subj} {resp}{resp2}{soft_tail}.,
+B05,TRIGGER|STAKE|TURN|SCALE,colon,0,anchor,any,any,"{Hook} {trigger}, and {anchor}.",
+B06,TRIGGER|STAKE|TURN|SCALE,colon,0,anchor|plain_trigger|coherent,any,any,"{Hook} as {trigger}, {anchor}.",
+B07,TURN,colon,0,turn_shift,any,any,"{Hook} {trigger}, and {subj} {now_resp} at first, then {later_resp}.",TURN with a different theme leading at Now and at Later; the modal goes on now_resp
+B08,TURN,colon,0,turn_shift,any,any,"{Hook} {trigger}; at first {subj} {now_resp}, later they {later_resp}.",
+B11,TRIGGER|IF,colon,1,,any,any,{Hook} {subj} {resp}{resp2}{soft_tail}.,
+B12,TRIGGER|IF,colon,1,anchor,any,any,{Hook} {anchor}.,
+B13,IF,colon,1,local,any,any,{Hook} {subj} {resp}{resp2}; the effect is local{soft_tail}.,"hedged local story at world focus (v2.1: no ""elsewhere"" clause, no second modal)"
+B14,IF,colon,1,local,any,any,"{Hook} {subj} {resp}{resp2}, and little spills over{soft_tail}.",v2.1
+B15,IF,colon,1,local,any,any,"{Hook} the effect is concentrated in {place}, and {there} {resp}{resp2}{soft_tail}.",v2.1
+B16,TRIGGER|IF,colon,1,,any,any,{Hook} the response is that {subj} {resp}{resp2}{soft_tail}.,"v2.2: more bodies for hooks that already hold the trigger, so B11 does not dominate"
+B17,TRIGGER|IF,colon,1,,any,any,{Hook} what changes is that {subj} {resp}{resp2}{soft_tail}.,"v2.2: more bodies for hooks that already hold the trigger, so B11 does not dominate"
+B18,TRIGGER|IF,colon,1,,any,any,{Hook} the main change is that {subj} {resp}{resp2}{soft_tail}.,"v2.2: more bodies for hooks that already hold the trigger, so B11 does not dominate"
+B21,TRIGGER,comma,1,,any,any,{Hook} {subj} {resp}{resp2}{soft_tail}.,
+B22,TRIGGER,comma,1,anchor,any,any,{Hook} {anchor}.,
+B31,IF,comma,0,,any,any,"{Hook} {trigger}, and {subj} {resp}{resp2}{soft_tail}.",
+B32,IF,comma,0,,any,any,{Hook} {trigger}: {subj} {resp}{resp2}{soft_tail}.,
+B33,IF,comma,0,causal|coherent,any,any,"{Hook} {trigger}, so {subj} {resp}{resp2}{soft_tail}.",
+B34,IF,comma,0,local,any,any,"{Hook} {trigger}, and {place} {feels} it almost alone: {there} {resp}{resp2}{soft_tail}.",
+B36,IF,comma,0,local,any,any,"{Hook} {trigger}, and {place} is where it lands: {there} {resp}{resp2}{soft_tail}.","v2.1: rotates ""almost alone"""
+B37,IF,comma,0,local,any,any,"{Hook} {trigger}, with {place} the one place to feel it: {there} {resp}{resp2}{soft_tail}.",v2.1
+B38,IF,comma,0,local,any,any,"{Hook} {trigger}, and the effect stays in {place}: {there} {resp}{resp2}{soft_tail}.",v2.1
+B35,IF,comma,0,anchor,any,any,"{Hook} {trigger}, and {anchor}.",
+B41,TRIGGER,bare,1,,any,any,{Hook} {subj} {resp}{resp2}{soft_tail}.,
+B42,TRIGGER,bare,1,anchor,any,any,{Hook} {anchor}.,
+B51,TRIGGER,to,1,no_modal,any,any,{Hook} {subj} to {resp}{resp2}{soft_tail}.,
+B61,TRIGGER,they,1,,any,any,{Hook} they {resp}{resp2}{soft_tail}.,
+B62,TRIGGER,they,1,anchor,any,any,{Hook} {anchor}.,
+B65,IF,ifso,1,,any,any,"{Hook} if so, {subj} {resp}{resp2}{soft_tail}.",
+B66,IF,ifso,1,anchor,any,any,"{Hook} if so, {anchor}.",
+B71,CONTRAST,colon,1,,any,any,"{Hook} on balance, {subj} {resp}{resp2}{soft_tail}.",
+B72,CONTRAST,colon,1,,any,any,"{Hook} overall, {subj} {resp}{resp2}{soft_tail}.",
+B73,CONTRAST,colon,1,,any,any,{Hook} the net effect is that {subj} {resp}{resp2}{soft_tail}.,
+B74,CONTRAST,colon,1,anchor,any,any,"{Hook} on balance, {anchor}.",
+B81,WHO_LOCAL|WHO_MOST|WHO_OPP,colon,0,,any,any,"{Hook} {trigger}, and {there} {resp}{resp2}{soft_tail}.",
+B82,WHO_LOCAL|WHO_MOST|WHO_OPP,colon,0,causal|coherent,any,any,"{Hook} {trigger}, so {there} {resp}{resp2}{soft_tail}.",
+B83,WHO_LOCAL|WHO_MOST|WHO_OPP,colon,0,plain_trigger|coherent,any,any,"{Hook} as {trigger}, {there} {resp}{resp2}{soft_tail}.",
+B84,WHO_LOCAL|WHO_MOST|WHO_OPP,colon,0,anchor,any,any,"{Hook} {trigger}, and {anchor}.","{grp} = the {there} form (""people there"")"
+B85,WHO_LOCAL,comma,0,,any,any,"{Hook} {trigger}, and {there} {resp}{resp2}{soft_tail}.",
+B86,WHO_LOCAL,comma,0,anchor,any,any,"{Hook} {trigger}, and {anchor}.",
+B87,WHO_LOCAL|WHO_MOST|WHO_OPP,colon,0,partner,any,any,"{Hook} {trigger}, but {trigger2}; on balance, {there} {resp}{resp2}{soft_tail}.",mixed story under a WHO hook: preferred over the plain WHO bodies when a partner exists
+B88,IF,comma,0,partner,any,any,"{Hook} {trigger}, but {trigger2}; on balance, {subj} {resp}{resp2}{soft_tail}.",mixed hedged story
+B89,WHO_LOCAL,comma,0,partner,any,any,"{Hook} {trigger}, but {trigger2}; on balance, {there} {resp}{resp2}{soft_tail}.",
+QS01,QUIET_SMALL,none,0,,happened|pending,any,"{Trigger}, yet daily choices hold steady{for_subj}.",
+QS02,QUIET_SMALL,none,0,,happened|pending,any,"{Trigger}, but {qsubj} carry on much as before.",
+QS03,QUIET_SMALL,none,0,,happened|pending,any,"{Trigger}; on our numbers, habits barely shift{for_subj}.",
+QS04,QUIET_SMALL,none,0,,happened|pending,any,"News, not a turning point{for_subj}: {trigger}, and choices stay put.",
+QS05,QUIET_SMALL,none,0,,happened|pending|announced,any,"{Trigger}, though too faintly to change what {qsubj} do.",
+QS06,QUIET_SMALL,none,0,,happened|pending,any,"Little follows from this{for_subj}: {trigger}, and routines hold.",
+QS07,QUIET_SMALL,none,0,,happened|pending,any,"{Trigger}, and that is about all: no choice moves much{for_subj}.",
+QS08,QUIET_SMALL,none,0,,happened|pending|announced,any,"For daily life, not much{for_subj}: {trigger}, and little else.",
+QA01,QUIET_SMALL,none,0,,announced,any,"{Trigger}, yet choices will barely move{for_subj}.",
+QA02,QUIET_SMALL,none,0,,announced,any,"{Trigger}, but {qsubj} will carry on much as before.",
+QA03,QUIET_SMALL,none,0,,announced,any,"Coming, but small{for_subj}: {trigger}, and habits will hold.",
+QA04,QUIET_SMALL,none,0,,announced,any,"{Trigger}; even then, routines will hardly change{for_subj}.",
+QA05,QUIET_SMALL,none,0,,announced,any,"Announced, not life-changing{for_subj}: {trigger}, and little else will follow.",
+QN01,QUIET_NOTABLE,none,0,,happened|pending,any,"Big news, small footprint{for_subj}: {trigger}, and choices barely move.",
+QN02,QUIET_NOTABLE,none,0,,happened|pending,any,"Weighty news, little change in what {qsubj} do: {trigger}.",
+QN03,QUIET_NOTABLE,none,0,,happened|pending,any,"{Trigger}: serious, yet everyday choices hardly move{for_subj}.",
+QN04,QUIET_NOTABLE,none,0,,happened|pending,any,"Loud news, quiet effect{for_subj}: {trigger}, and routines hold.",
+QN05,QUIET_NOTABLE,none,0,,happened|pending,any,"{Trigger}, a real change that still leaves habits almost untouched{for_subj}.",
+QN06,QUIET_NOTABLE,none,0,,happened|pending,any,"Serious, but not life-changing{for_subj}: {trigger}.",
+QF01,QUIET_FORECAST,none,0,,forecast,any,"Even if the forecast holds, {trigger}, and few {qsubj} would change course.",
+QF02,QUIET_FORECAST,none,0,,forecast,any,"{Trigger} if forecasters are right, but choices would barely move{for_subj}.",
+QF03,QUIET_FORECAST,none,0,,forecast,any,"Taking the forecast at face value, {trigger}; even then, little would change{for_subj}.",
+QF04,QUIET_FORECAST,none,0,,forecast|unclear,any,"Should it come true, {trigger}, yet {qsubj} would carry on much as before.",
+QF05,QUIET_FORECAST,none,0,,forecast,any,"A forecast that {trigger}; even in full, it would leave choices almost untouched{for_subj}.",
+QF06,QUIET_FORECAST,none,0,,forecast,any,"{Trigger} on this forecast, though too faintly to change what {qsubj} do.",
+QF12,QUIET_FORECAST,none,0,,forecast,any,"If it came to pass, {trigger}; {qsubj} would still carry on as usual{for_subj}.",v2.1
+QF13,QUIET_FORECAST,none,0,,forecast,any,"{Trigger}, forecasters say, yet the numbers show little shift in what {qsubj} do.",v2.1
+QF14,QUIET_FORECAST,none,0,,forecast,any,"Even in the forecast's own terms, {trigger}, with almost no change in what {qsubj} do.",v2.1
+QF07,QUIET_FORECAST,none,0,,unclear,any,"Even if this holds, {trigger}, and few {qsubj} would change course.",
+QF08,QUIET_FORECAST,none,0,,announced_w,any,"{Trigger} if it goes ahead, but choices will barely move{for_subj}.",
+QF09,QUIET_FORECAST,none,0,,announced_w,any,"Once in force, {trigger}, yet habits will hardly change{for_subj}.",
+QF11,QUIET_FORECAST,none,0,,announced_w,any,"Even once it takes effect, {trigger}, and few {qsubj} will change course.",
+QF10,QUIET_FORECAST,none,0,,unclear,any,"{Trigger} if it proves right, but routines would hold{for_subj}.",
+QO01,QUIET_OPINION,none,0,,opinion,any,"One writer's case that {trigger}; even if right, choices would barely shift{for_subj}.",
+QO02,QUIET_OPINION,none,0,,opinion,any,"An argument that {trigger}, but even taken at its word, habits would hold{for_subj}.",
+QO03,QUIET_OPINION,none,0,,opinion,any,"Even granting the writer the point, {trigger}, yet {qsubj} would barely change course.",
+QO04,QUIET_OPINION,none,0,,opinion,any,"A view, not a change{for_subj}: {trigger}, and even then choices stay put.",
+QO05,QUIET_OPINION,none,0,,opinion,any,"Opinion that {trigger}; taken at face value, it still moves little{for_subj}.",
+QO06,QUIET_OPINION,none,0,,opinion,any,"The writer argues {trigger}; even so, {qsubj} would carry on much as before.",
+QE01,QUIET_ELSEWHERE,none,0,,any,any,"{Trigger} in {entry_place}, but it barely reaches {focus_subj}.",
+QE02,QUIET_ELSEWHERE,none,0,,any,any,"A story for {entry_place}: {trigger}, and {focus_subj} barely feel it.",
+QE03,QUIET_ELSEWHERE,none,0,,any,any,"{Trigger}, but the effect stays in {entry_place}, not with {focus_subj}.",
+QE04,QUIET_ELSEWHERE,none,0,,any,any,Little of this reaches {focus_subj}: {trigger} in {entry_place}.,
+QE05,QUIET_ELSEWHERE,none,0,,any,any,{Trigger} in {entry_place}; {focus_subj} carry on much as before.,
+QE06,QUIET_ELSEWHERE,none,0,,any,any,"Felt in {entry_place}, hardly by {focus_subj}: {trigger} there.",
+NX01,NOTHING,none,0,,no_impact,any,A {topic} story that moves none of the things we track.,
+NX02,NOTHING,none,0,,no_impact,any,"On our numbers, this {topic} story changes no one's choices.",
+NX03,NOTHING,none,0,,no_impact,any,Nothing in this {topic} story moves what people do.,
+NX04,NOTHING,none,0,,no_impact,any,A {topic} item with no effect we can measure.,
+NX05,NOTHING,none,0,,no_impact,any,This {topic} story leaves every measure we track unmoved.,
+NX06,NOTHING,none,0,,no_impact,any,No measurable effect from this {topic} story.,
+QV01,QUIET_VAGUE,none,0,,no_impact,any,Too vague to place: nothing here moves the things we track.,
+QV02,QUIET_VAGUE,none,0,,no_impact,any,"No clear event here, and none of our measures moves.",
+QV03,QUIET_VAGUE,none,0,,no_impact,any,Nothing concrete to measure: no choice shifts.,
+QV04,QUIET_VAGUE,none,0,,no_impact,any,"A story with no clear change in it, so nothing moves.",
+QV05,QUIET_VAGUE,none,0,,no_impact,any,"We find no event to measure here, and no effect.",
+QV06,QUIET_VAGUE,none,0,,no_impact,any,"Without a clear change to track, there is no effect to report.",
+UP01,UNRESOLVED_PLACE,none,0,,any,any,"{Trigger} in a place our model does not cover, so we cannot say who it reaches.","v2.2: the place is not in our model; no response, no figure"
+UP02,UNRESOLVED_PLACE,none,0,,any,any,"The place in this story is not in our model; {trigger}, but we cannot say who is affected.","v2.2: the place is not in our model; no response, no figure"
+UP03,UNRESOLVED_PLACE,none,0,,any,any,"{Trigger}, but where this happens is outside our model, so we cannot size it for anyone.","v2.2: the place is not in our model; no response, no figure"
+UP04,UNRESOLVED_PLACE,none,0,,any,any,"Not enough to place: {trigger}, in a place our model does not cover.","v2.2: the place is not in our model; no response, no figure"
+UP05,UNRESOLVED_PLACE,none,0,,any,any,"Outside our model's map: {trigger}, so we show no effect for anyone.","v2.2: the place is not in our model; no response, no figure"
+UP06,UNRESOLVED_PLACE,none,0,,any,any,"{Trigger}; the place is not one we model, so no effect is shown.","v2.2: the place is not in our model; no response, no figure"
