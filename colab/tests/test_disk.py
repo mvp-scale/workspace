@@ -109,6 +109,7 @@ class TestGatewayDisk(Base):
         for patch in (
             mock.patch.dict(KINDS, {"llama": FakeServer}),
             mock.patch.object(catalog, "gpu_info", lambda: ("T", 16 * 1024)),
+            mock.patch.object(catalog, "gpu_free_mib", lambda: 16 * 1024),
         ):
             patch.start()
             self.addCleanup(patch.stop)
@@ -150,7 +151,9 @@ class TestGatewayDisk(Base):
             self.gw.select("a", wait=False)
             started.wait(5)
             self.assertEqual(self.gw.status()["loading"], "a")
-            self.assertEqual(self.gw.progress(), {"phase": "downloading", "done_gib": 0.0, "total_gib": 6.0})
+            progress = self.gw.progress()
+            self.assertEqual((progress["phase"], progress["done_gib"], progress["total_gib"]), ("downloading", 0.0, 6.0))
+            self.assertIn("elapsed_s", progress)
             self.gw.select("a", wait=False)  # asking again while it loads is a no-op
             with self.assertRaises(Refused):  # a different model has to wait
                 self.gw.select("b", wait=False)

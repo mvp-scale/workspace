@@ -192,8 +192,11 @@ function renderHeader(s) {
   if (d) $("keep").textContent = d.keep;
   const st = $("state"); st.className = "chip " + (s.loaded ? "good" : s.loading ? "warn" : "");
   st.textContent = s.loaded ? `loaded: ${s.loaded}` : s.loading ? `loading ${s.loading}…` : "no model loaded";
-  const pr = s.progress;
-  $("loadinfo").textContent = pr ? (pr.phase === "downloading" ? `downloading: ${pr.done_gib} of ${pr.total_gib} GiB` : "starting the model server (the first start can take several minutes)")
+  const pr = s.progress, mins = (t) => (t >= 60 ? `${Math.floor(t / 60)}m${String(t % 60).padStart(2, "0")}s` : `${t}s`);
+  const doing = !pr ? "" : pr.phase === "downloading" ? `downloading ${pr.done_gib} of ${pr.total_gib} GiB`
+    : pr.phase === "installing" ? `installing its environment and weights (first time only, a few minutes)`
+    : "starting the model server (the first start compiles GPU code, about a minute)";
+  $("loadinfo").textContent = pr ? `${doing} · ${mins(pr.elapsed_s || 0)} elapsed${pr.detail ? " · " + pr.detail : ""}`
     : s.loaded && s.load_s != null ? `loaded in ${s.load_s} s, warm-up ${s.warm_ms ?? "?"} ms` : s.error ? `last load failed: ${s.error.slice(0, 160)}. Press Load to retry.` : "";
 }
 

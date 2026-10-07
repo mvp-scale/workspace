@@ -46,6 +46,38 @@ def fits(entry: dict, gpu_mib: int) -> bool:
     return need == 0 or need + HEADROOM_MIB <= gpu_mib
 
 
+def _gpu_memory_mib(field: str) -> int | None:
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", f"--query-gpu={field}", "--format=csv,noheader,nounits"], text=True, timeout=10
+        )
+        return int(out.strip().splitlines()[0])
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+        return None
+
+
+def gpu_free_mib() -> int | None:
+    """Free memory on GPU 0 in MiB, or None if it cannot be read."""
+    return _gpu_memory_mib("memory.free")
+
+
+def gpu_used_mib() -> int | None:
+    """Used memory on GPU 0 in MiB, or None if it cannot be read."""
+    return _gpu_memory_mib("memory.used")
+
+
+def gpu_utilization() -> tuple[int, int] | None:
+    """(GPU utilization %, memory used MiB) of GPU 0 in one call, or None if it cannot be read."""
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used", "--format=csv,noheader,nounits"], text=True, timeout=10
+        )
+        util, used = out.strip().splitlines()[0].split(",")
+        return int(util), int(used)
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+        return None
+
+
 def gpu_info() -> tuple[str | None, int]:
     """(name, total MiB) of GPU 0, or (None, 0) on a CPU-only machine."""
     try:

@@ -29,6 +29,9 @@ class FakeServer:
     def warm(self):
         return 1.0
 
+    def verify_gpu(self, used_before):
+        pass
+
     def answer(self, body):
         if FakeServer.gate:
             FakeServer.gate.wait(5)
@@ -55,6 +58,7 @@ class Base(unittest.TestCase):
         patches = [
             mock.patch.dict(KINDS, {"proc": FakeServer}),
             mock.patch.object(catalog, "gpu_info", lambda: ("Test GPU", 16 * 1024)),
+            mock.patch.object(catalog, "gpu_free_mib", lambda: 16 * 1024),
         ]
         for p in patches:
             p.start()
@@ -97,7 +101,9 @@ class TestAuthAndPlumbing(Base):
     def test_panel_is_not_served_through_the_tunnel(self):
         self.assertEqual(self.call("GET", "/", key=None)[0], 200)
         for header in ("Cf-Ray", "Cf-Connecting-Ip"):
-            self.assertEqual(self.call("GET", "/", key=None, headers={header: "x"})[0], 404)
+            status, body, response = self.call("GET", "/", key=None, headers={header: "x"})
+            self.assertEqual((status, response.getheader("Content-Type")), (200, "application/json"))  # a note, not the panel
+            self.assertIn("/v1/systemone", body["call"])
         self.assertEqual(self.call("GET", "/v1/models", headers={"Cf-Ray": "x"})[0], 200)  # the API still works through it
 
     def test_x_api_key_header_also_works(self):
@@ -184,6 +190,27 @@ class TestModels(Base):
         gw = manager.Gateway(dict(MODELS), {"work": self.work.name}, only={"small"})
         self.addCleanup(gw.shutdown)
         self.assertEqual(gw.disabled, {"other", "huge", "later"})
+
+
+class TestProgressDetail(Base):
+    def test_a_load_in_flight_reports_elapsed_time_and_the_latest_log_line(self):
+        import time
+        from pathlib import Path
+
+        Path(self.work.name, "other.log").write_text("loading tensors\nwarming up the kernels\n")
+        self.gw.loading, self.gw.loading_since = "other", time.time() - 42
+        progress = self.gw.status()["progress"]
+        self.assertGreaterEqual(progress["elapsed_s"], 42)
+        self.assertEqual(progress["detail"], "warming up the kernels")
+        self.gw.loading = None
+
+    def test_status_reports_free_gpu_memory_for_the_preflight(self):
+        self.assertEqual(self.call("GET", "/v1/models")[1]["gpu_free_gib"], 16.0)
+
+    def test_status_carries_the_first_time_estimate(self):
+        self.gw.models["small"]["first_run_min"] = "2-4"
+        entry = next(m for m in self.call("GET", "/v1/models")[1]["models"] if m["id"] == "small")
+        self.assertEqual(entry["first_run_min"], "2-4")
 
 
 class TestLimits(Base):

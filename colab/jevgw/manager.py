@@ -8,10 +8,11 @@ import threading
 import time
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from . import catalog
-from .backends import KINDS, Server, log
-from .disk import Disk, DiskFull, files_of
+from .backends import KINDS, Server, last_line, log
+from .disk import Disk, DiskFull
 
 
 class Refused(Exception):
@@ -30,12 +31,21 @@ class Stats:
         self._n = defaultdict(int)
         self._errors = defaultdict(int)
         self._ms: dict[str, deque] = defaultdict(lambda: deque(maxlen=keep))
+        self._done: deque = deque(maxlen=20000)  # completion times, for the recent request rate
 
     def record(self, model: str | None, status: int, ms: float) -> None:
         with self._lock:
             self._n[model] += 1
             self._errors[model] += status >= 400
             self._ms[model].append(ms)
+            self._done.append(time.monotonic())
+
+    def rate(self, window: float = 30.0) -> float:
+        """Completed requests per second over the last `window` seconds (the real throughput, whatever the callers sent)."""
+        now = time.monotonic()
+        with self._lock:
+            recent = [t for t in self._done if now - t <= window]
+        return round(len(recent) / window, 2)
 
     def snapshot(self) -> dict:
         with self._lock:
@@ -64,6 +74,7 @@ class Gateway:
         self.error: str | None = None
         self.stats = Stats()
         self._future = None
+        self.loading_since: float | None = None
         # One long-lived thread does every launch and stop (see backends._die_with_parent).
         self._pool = ThreadPoolExecutor(1, thread_name_prefix="launcher")
 
@@ -84,7 +95,7 @@ class Gateway:
         if self.loading and self.loading != model_id:
             raise Refused(f"still loading {self.loading}; wait for it to finish", 409)
         if self.loading != model_id:
-            self.loading, self.error = model_id, None
+            self.loading, self.error, self.loading_since = model_id, None, time.time()
             self._future = self._pool.submit(self._load, model_id, entry)
         if wait:
             self._future.result()
@@ -136,16 +147,19 @@ class Gateway:
     def _load(self, model_id: str, entry: dict) -> None:
         try:
             self._unload()
+            self._require_free_gpu_memory(entry)
             self._make_room(entry)
             log("load", model_id)
             started = time.time()
             server = KINDS[entry["kind"]](entry, self.cfg)
+            used_before = catalog.gpu_used_mib()
             try:
                 server.start()
+                self.warm_ms = server.warm()
+                server.verify_gpu(used_before)
             except Exception:
                 server.stop()
                 raise
-            self.warm_ms = server.warm()
             if self.disk:
                 self.disk.touch(model_id, time.time())
             self.cur, self.cur_id, self.load_s = server, model_id, round(time.time() - started, 1)
@@ -155,20 +169,34 @@ class Gateway:
             log("load failed:", self.error[:300])
             raise
         finally:
-            self.loading = None
+            self.loading, self.loading_since = None, None
 
     def progress(self) -> dict | None:
         """What a load in flight is doing: downloading (with GiB done) or starting the model server."""
         if not self.loading:
             return None
-        entry = self.models[self.loading]
-        if self.disk and files_of(entry) and not self.disk.cached(entry):
+        entry, work = self.models[self.loading], Path(self.cfg.get("work", "."))
+        elapsed = round(time.time() - self.loading_since) if self.loading_since else 0
+        if self.disk and self.disk.tracks(entry) and not self.disk.cached(entry):
+            if entry["kind"] == "proc":
+                detail = last_line(work / f"{self.loading}.setup.log")
+                return {"phase": "installing", "total_gib": entry.get("install_gib", 0), "elapsed_s": elapsed, "detail": detail}
             done, total = self.disk.downloaded_gib(entry)
-            return {"phase": "downloading", "done_gib": round(done, 2), "total_gib": round(total, 2)}
-        return {"phase": "starting"}
+            return {"phase": "downloading", "done_gib": round(done, 2), "total_gib": round(total, 2), "elapsed_s": elapsed}
+        return {"phase": "starting", "elapsed_s": elapsed, "detail": last_line(work / f"{self.loading}.log")}
+
+    def _require_free_gpu_memory(self, entry: dict) -> None:
+        """Before downloading anything: is the GPU memory this model needs actually free? Something else may be using it."""
+        free, need = catalog.gpu_free_mib(), entry.get("vram_gib", 0) * 1024
+        if free is not None and need and free < need:
+            raise Refused(
+                f"{entry['id']} needs about {entry['vram_gib']} GiB of GPU memory and only {free / 1024:.1f} GiB is free: "
+                "something else is using the GPU. Free it (Runtime > Restart session) and try again",
+                409,
+            )
 
     def _make_room(self, entry: dict) -> None:
-        if not self.disk or not files_of(entry):  # recipe models bring their own install
+        if not self.disk or not self.disk.tracks(entry):
             return
         try:
             for gone in self.disk.make_room(entry, self.models):
@@ -193,10 +221,11 @@ class Gateway:
         return status, out, model_id
 
     def status(self) -> dict:
-        keep = ("id", "name", "kind", "vram_gib", "vision", "gpu_hint", "note", "status", "verified")
+        keep = ("id", "name", "kind", "vram_gib", "vision", "gpu_hint", "note", "status", "verified", "first_run_min")
         return {
             "gpu": self.gpu,
             "gpu_gib": round(self.gpu_mib / 1024, 1),
+            "gpu_free_gib": None if (free := catalog.gpu_free_mib()) is None else round(free / 1024, 1),
             "loaded": self.cur_id,
             "loading": self.loading,
             "progress": self.progress(),
@@ -208,7 +237,7 @@ class Gateway:
                 {**{k: e[k] for k in keep if k in e}, "fits": self.fits(e), "loaded": mid == self.cur_id,
                  "enabled": mid not in self.disabled, "runnable": catalog.runnable(e),
                  "cached": bool(self.disk and self.disk.cached(e)),
-                 "disk_gib": round(e.get("file_gib", 0) + e.get("mmproj_gib", 0), 2) or None}
+                 "disk_gib": round(e.get("file_gib", 0) + e.get("mmproj_gib", 0) or e.get("install_gib", 0), 2) or None}
                 for mid, e in self.models.items()
             ],
         }  # fmt: skip

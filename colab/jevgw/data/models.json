@@ -14,7 +14,8 @@
    "vision": true,
    "gpu_hint": "T4 (free tier)",
    "note": "9B decision model, Q4_K_M (about 5.3 bits per weight). Within about 0.4 points of full precision on our tests.",
-   "verified": "text, image and video-as-frames through the gateway (CPU only: the box's GPU was busy)"
+   "verified": "text, image and video-as-frames through the gateway on a Colab T4 (llama.cpp b11430 with its CUDA 12.8 runtime libraries): p50 0.36 s, 0.61 s and 0.72 s per call; load 65 s, plus a one-time 59 s warm-up while the T4's GPU code compiles",
+   "first_run_min": "6-9"
   },
   {
    "id": "clef-flash-q2k",
@@ -29,7 +30,8 @@
    "vision": true,
    "gpu_hint": "T4 (free tier)",
    "note": "Q2_K (about 3.7 bits per weight). About 7 points below full precision on world knowledge, 3 on images.",
-   "verified": "text, image and video-as-frames through the gateway (CPU only: the box's GPU was busy)"
+   "verified": "text, image and video-as-frames through the gateway on CPU (the dev box's GPU was busy); not yet run on a T4",
+   "first_run_min": "5-8"
   },
   {
    "id": "clef-flash",
@@ -75,30 +77,25 @@
    ],
    "cwd": "${ROOT}/jevbench",
    "health": "/healthz",
-   "verified": "recipe from our own scripts; not yet run through the gateway"
+   "verified": "on a Colab T4 through the gateway: 129 s from nothing (install, weights, load), 2.6 GB on the GPU, p50 0.24 s per 3-question call",
+   "install_gib": 7,
+   "resident_gib": 2.6,
+   "paths": [
+    "models/laya",
+    "data/models/laya"
+   ],
+   "first_run_min": "2-4"
   },
   {
    "id": "verdict",
    "name": "openJev Verdict",
-   "kind": "proc",
+   "kind": "none",
    "vram_gib": 0,
    "vision": false,
    "gpu_hint": "any, no GPU needed",
    "note": "151M encoder with an abstention slot. Runs on CPU.",
-   "setup": [
-    "bash ${ROOT}/dev-bench-setup.sh verdict"
-   ],
-   "cmd": [
-    "${ROOT}/models/verdict/.venv/bin/python",
-    "${ROOT}/demo/serve_inproc.py",
-    "--model",
-    "verdict",
-    "--port",
-    "${port}"
-   ],
-   "cwd": "${ROOT}/jevbench",
-   "health": "/healthz",
-   "verified": "recipe from our own scripts; not yet run through the gateway"
+   "verified": "recipe from our own scripts; not yet run through the gateway",
+   "status": "CPU only: not offered here, because these models run on a GPU only"
   },
   {
    "id": "semif",
@@ -121,7 +118,15 @@
    ],
    "cwd": "${ROOT}/jevbench",
    "health": "/healthz",
-   "verified": "recipe from our own scripts; not yet run through the gateway"
+   "verified": "on a Colab T4 through the gateway: 175 s from nothing, 8 GB on the GPU, p50 1.2 s per 3-question call (the T4 has no native bf16, and the optional fast kernels are not installed)",
+   "install_gib": 13,
+   "resident_gib": 8.0,
+   "paths": [
+    "models/semif",
+    "models/openjev",
+    "data/models/hf-cache"
+   ],
+   "first_run_min": "3-5"
   },
   {
    "id": "so1",
@@ -144,7 +149,15 @@
    ],
    "cwd": "${ROOT}/jevbench",
    "health": "/healthz",
-   "verified": "recipe from our own scripts; not yet run through the gateway"
+   "verified": "on a Colab T4 through the gateway: 60 s once Semif's shared weights are there, 8 GB on the GPU, p50 1.15 s per 3-question call",
+   "install_gib": 12,
+   "resident_gib": 8.0,
+   "paths": [
+    "models/so1",
+    "models/open-alternative-jev",
+    "data/models/hf-cache"
+   ],
+   "first_run_min": "2-5"
   },
   {
    "id": "kev-0.5b",
@@ -171,7 +184,13 @@
     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
    },
    "health": "/v1/models",
-   "verified": "recipe from our own scripts; not yet run through the gateway"
+   "verified": "recipe from our own scripts; not yet run through the gateway",
+   "install_gib": 8,
+   "paths": [
+    "kev",
+    "data/kev"
+   ],
+   "first_run_min": "2-4"
   },
   {
    "id": "kev-0.8b",
@@ -198,7 +217,13 @@
     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
    },
    "health": "/v1/models",
-   "verified": "recipe from our own scripts; not yet run through the gateway"
+   "verified": "recipe from our own scripts; not yet run through the gateway",
+   "install_gib": 8,
+   "paths": [
+    "kev",
+    "data/kev"
+   ],
+   "first_run_min": "2-5"
   },
   {
    "id": "kev-4b",
@@ -255,7 +280,15 @@
     "Authorization": "Bearer devkey"
    },
    "health": "/healthz",
-   "verified": "recipe from our own scripts; not yet run through the gateway"
+   "verified": "recipe from our own scripts; not yet run through the gateway",
+   "install_gib": 8,
+   "resident_gib": 2.5,
+   "paths": [
+    "jeff",
+    "data/jeff"
+   ],
+   "default_model": "jev-latest",
+   "first_run_min": "2-4"
   },
   {
    "id": "winnow",

@@ -34,13 +34,24 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+class _DropAuthAcrossHosts(urllib.request.HTTPRedirectHandler):
+    """Hugging Face redirects to a signed CDN URL, which rejects a request that also carries our token: send it only to the first host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None and urllib.parse.urlsplit(newurl).netloc != urllib.parse.urlsplit(req.full_url).netloc:
+            new.remove_header("Authorization")
+        return new
+
+
 def _open(url: str, have: int):
     headers = {"User-Agent": "jevgw"}
     if token := os.environ.get("HF_TOKEN"):
         headers["Authorization"] = f"Bearer {token}"
     if have:
         headers["Range"] = f"bytes={have}-"
-    return urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60)
+    opener = urllib.request.build_opener(_DropAuthAcrossHosts)
+    return opener.open(urllib.request.Request(url, headers=headers), timeout=60)
 
 
 def _attempt(url: str, part: Path, final: Path) -> None:

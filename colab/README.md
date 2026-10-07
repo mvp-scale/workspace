@@ -4,10 +4,10 @@ Load any of our decision models that fits the GPU, call it with text, images and
 One model at a time behind one TypeSafe-compatible `/v1/systemone`, a control panel, and an optional public endpoint.
 
 ## Quick start
-**Colab.** Upload the one file `jevgw_colab.ipynb` (File > Upload notebook), Runtime > GPU, run the cells top to bottom. Nothing else is needed: no clone, no
-repository. Its cells write the gateway's source (readable, in the notebook), install llama.cpp and download model files from Hugging Face. Step 4 opens the
-control panel inside the notebook. Free Colab is a **T4 (16 GB, about 15 GiB usable)**; paid plans offer larger GPUs (check Colab's current list).
-The notebook carries only the models that run on stock llama.cpp (the Clef Flash GGUFs); the other models need our adapter code and run from the repo (below).
+**Colab.** Upload the one file `jevgw_colab.ipynb` (File > Upload notebook), choose Runtime > Change runtime type > T4 GPU, then Runtime > Run all. It is
+short (about 14 cells, the code hidden behind titles): the first cell `pip install`s this package from GitHub, and the package carries the gateway, the control
+panel and the recipes for every model that fits a T4. The expectations (a few minutes the first time, a Hugging Face token makes downloads faster, about 2-3
+requests per second, GPU only) are at the top of the notebook. Free Colab is a **T4 (16 GB, about 15 GiB usable)**; paid plans offer larger GPUs.
 
 **Anywhere with a CUDA GPU.**
 ```
@@ -15,6 +15,12 @@ python -m jevgw --llama-bin /path/to/llama-server --model clef-flash-q4km --tunn
 python -m jevgw.client --url http://127.0.0.1:8000 --key <key> -n 5                    # text, image, video: round trip and model time
 ```
 The first load of a model installs its packages and downloads its weights. The key is printed at start (or set `GATEWAY_KEY`).
+
+## What the notebook tells you
+Nothing runs silently. Step 1 prints each finding (GPU and driver, disk, memory, network). Loading a model prints a **pre-flight** (GPU memory needed vs free, disk
+needed vs free and what will be deleted, network, whether your Hugging Face token is used, and a typical first-time duration), refuses before downloading anything
+if it cannot work, then prints each phase change and, every 30 seconds, the elapsed time and the latest line of the install or server log. The last cell reopens the
+Jev console and explains each part of it. Stopping a cell mid-load is safe: the load continues in the background and running the cell again rejoins it.
 
 ## Safe to run again
 For people who just want to play with a classifier: **Runtime > Run all** is the whole procedure, and every cell can be run again.
@@ -48,7 +54,7 @@ numbers. Each catalog entry declares its file sizes (`file_gib`, `mmproj_gib`); 
 | clef-flash-q2k | 9.3 | yes | yes | yes |
 | clef-flash (bf16) | 18.5 | no | yes | yes |
 | laya | 3.1 | yes | yes | no |
-| verdict | CPU | yes | yes | no |
+| verdict (CPU only: not offered, GPU-only rule) | CPU | no | no | no |
 | semif, so1 | 8.6 | yes (bf16 is emulated on a T4) | yes | no |
 | kev-0.5b, kev-0.8b | 2.7, 4.5 | yes | yes | no |
 | kev-4b | 17.8 | no | yes | no |
@@ -62,14 +68,27 @@ POST /v1/systemone   {"state", "questions", "images"?}            Authorization:
 GET  /v1/models      what fits, what is loaded, load and warm-up time
 GET  /v1/stats       calls, errors, p50, p95 per model            GET /v1/tunnel   the tunnel's status
 POST /admin/select   {"model"}      POST /admin/unload      POST /admin/enable {"model","enabled"}      POST /admin/purge {"model"}      POST /admin/tunnel {"action": "start"|"stop"}
+GET  /metrics        Prometheus text: requests, errors, latency, throughput, in flight, 429s, GPU use, disk (key required)
 GET  /healthz        200 once a model is loaded, 503 while loading; no key, no secrets
 ```
 Responses carry `X-Request-Id`, `X-Model`, `X-Gateway-Version`; `/v1/systemone` also `X-Latency-Ms` (time inside the model). A model is warmed with one
 throwaway call after loading, so the first real call is not the cold one. Video goes in as sampled frames in `images`.
 
 Built in for a test service: API key on everything but `/healthz` and the local panel · rate limit (default 600/min, `--per-minute`) and an in-flight cap
-(`--max-inflight`, answers 429 with `Retry-After`) · 503 with `Retry-After` while loading · CORS for browser clients · request ids · a request log with
+(`--max-inflight`, default twice the model server's 4 slots; an overloaded request gets an immediate 429 with `Retry-After` computed from the measured throughput) · 503 with `Retry-After` while loading · CORS for browser clients · request ids · a request log with
 no bodies (`work/requests.jsonl`) · request bodies capped at 32 MB · children are stopped with the gateway.
+
+## Throughput
+Measured on a Colab T4 with Clef Flash Q4 and a 3-question text request (`python -m jevgw.client` or any load tool; the benchmark and its numbers are in
+the commit history):
+- **The GPU is the ceiling: about 2.6 requests per second**, flat from 1 to 32 concurrent callers (GPU 85-100% busy, at the T4's 70 W power limit).
+  More concurrency adds only waiting. A bigger GPU raises the ceiling; the gateway does not limit it.
+- Latency at 1 caller is the model's own (376 ms). Under overload the gateway answers 429 at once instead of queueing: with the default capacity of 8, p50 stays
+  near 1.8 s and p95 under 3 s at 32 callers (it was 11-12 s, with failed calls, with the old limit of 64).
+- Two defects found by measuring and fixed: a new connection to the model server on every call, and Nagle's algorithm adding a fixed 41 ms to every response
+  (the headers and body leave in two writes). The gateway's overhead is now about 0.3 ms.
+- Callers should treat 429 as "come back after `Retry-After` seconds" and 503 as "a model is loading". Scrape `/metrics` for `jevgw_throughput_rps`,
+  `jevgw_in_flight`, `jevgw_rejected_total` and `jevgw_gpu_utilization_percent` to see how close to the ceiling you are.
 
 ## Serve mode and the terms
 Colab's FAQ (research.google.com/colaboratory/faq.html) lists, for all runtimes: "file hosting, media serving, or other web service offerings not
@@ -94,18 +113,21 @@ start. `dist/llama-b11430-t4.tar.gz` (145 MB, not in git) is built with real sm_
 
 ## Layout
 ```
-jevgw/                  notebook.py (the notebook's idempotent helpers)  catalog.py (models.json, what fits)  backends.py (llama + recipe servers)  manager.py (load, unload, enable, stats)
-                        disk.py (disk budget, least-recently-used deletion)
-                        tunnel.py (cloudflared + watchdog)   server.py (HTTP API)  client.py (calls and timing)  ui/index.html (panel)  __main__.py
-models.json             the catalog and each model's recipe        setup_llama.sh   llama.cpp install        jevgw_colab.ipynb   the standalone notebook, built by build_notebook.py
-vendor/                 copies of our install and serve scripts and adapters; ./vendor.sh refreshes them from the main repo
+jevgw/                  the package (pip-installable: pyproject.toml)
+  notebook.py           the notebook's idempotent helpers: setup, start, wait_ready, test, stop, reset
+  catalog.py  backends.py  manager.py  disk.py  download.py  tunnel.py  server.py  metrics.py  client.py  __main__.py     ui/index.html (panel)
+  data/models.json      the model list and each model's recipe       data/setup_llama.sh   llama.cpp install
+  data/vendor/          copies of our install and serve scripts and adapters (./vendor.sh refreshes them from the main repo)
+jevgw_colab.ipynb       the notebook, generated by build_notebook.py (a test fails if it is stale)
 tests/                  python -m unittest discover -s tests -t .        lint: uvx ruff check . && uvx ruff format --check .
 ```
-Adding a model: add its entry to `models.json` (kind `llama` with a GGUF, or `proc` with setup and launch commands), run `./vendor.sh` if its scripts changed,
-`python build_notebook.py` (it embeds this folder's files, so the notebook never drifts from the code).
+Adding a model: add its entry to `jevgw/data/models.json` (kind `llama` with a GGUF and its sizes, or `proc` with setup and launch commands, `install_gib` and
+`paths` for the disk budget), run `./vendor.sh` if its scripts changed, then `python build_notebook.py`: the notebook's table and dropdown come from the list.
+Every repository a recipe clones is pinned to the commit it was validated with, so a later upstream change cannot break an install.
 
 ## What has and has not been tested
-Tested on our RTX 5090 box: 49 unit tests (including the disk budget, the panel being hidden from the tunnel, background loads, retries and the notebook helpers' idempotency) with a fake model server (auth, CORS, load / switch / unload / enable, refusals, rate limit, in-flight cap, stats,
+Tested on a Colab T4 (the notebook's cells driven through the Colab MCP bridge): install from nothing, GPU check, model download and load, text, image and video calls, the tunnel's health endpoint, and the load test above.
+Tested on our RTX 5090 box: 142 unit tests (including the disk budget, the pre-flight and setup checks, the progress heartbeat, re-running every step, GPU-only rules and the notebook's own structure) with a fake model server (auth, CORS, load / switch / unload / enable, refusals, rate limit, in-flight cap, stats,
 request log, keep-alive, tunnel restart and stop); the panel in a browser (Load, Unload, Enable, Disable, the test box, the tunnel); a real Cloudflare tunnel
 (public calls, the key check, restart after killing cloudflared); llama.cpp Clef Flash Q2 and Q4 with text, image and video-as-frames (CPU only, the GPU was busy);
 Verdict and Laya through the recipe backend; the fit rule for T4, L4 and A100 sizes; the T4 build's sm_75 code; the keep-alive audio's format.

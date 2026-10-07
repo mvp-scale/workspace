@@ -3,16 +3,13 @@
 import json
 import tempfile
 import unittest
-from pathlib import Path
 
-from jevgw import catalog
-
-ROOT = Path(__file__).resolve().parent.parent
+from jevgw import DATA, catalog
 
 
 class TestCatalog(unittest.TestCase):
     def setUp(self):
-        self.models = catalog.load(ROOT / "models.json")
+        self.models = catalog.load(DATA / "models.json")
 
     def test_every_runnable_model_has_what_its_kind_needs(self):
         for model in self.models.values():
@@ -29,8 +26,15 @@ class TestCatalog(unittest.TestCase):
 
         t4, l4 = fitting(15), fitting(22.4)
         self.assertEqual(l4 - t4, {"clef-flash", "kev-4b"})  # the two that need a 24 GB card
-        self.assertTrue({"clef-flash-q4km", "clef-flash-q2k", "laya", "verdict", "jeff"} <= t4)
+        self.assertTrue({"clef-flash-q4km", "clef-flash-q2k", "laya", "jeff"} <= t4)
         self.assertNotIn("cygnet", l4)  # over the 20 GiB limit, never offered
+
+    def test_no_cpu_model_can_be_loaded(self):
+        """These models run on a GPU only: anything that needs no GPU memory is not offered at all."""
+        for model in self.models.values():
+            if catalog.runnable(model):
+                self.assertGreater(model.get("vram_gib", 0), 0, model["id"])
+        self.assertFalse(catalog.runnable(self.models["verdict"]))
 
     def test_cpu_models_fit_anywhere(self):
         self.assertTrue(catalog.fits({"vram_gib": 0}, 0))

@@ -1,7 +1,7 @@
 """The HTTP API and the control panel.
 
 Public:   GET /healthz.  GET / (the panel) answers only requests that did not come through the tunnel.
-Key:      GET  /v1/models /v1/stats /v1/tunnel
+Key:      GET  /v1/models /v1/stats /v1/tunnel /metrics
           POST /v1/systemone  /admin/select  /admin/unload  /admin/enable  /admin/purge  /admin/tunnel
 The key is "Authorization: Bearer <key>" or "X-API-Key: <key>". Every response carries X-Request-Id and X-Gateway-Version.
 """
@@ -16,7 +16,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import __version__
+from . import __version__, metrics
+from .backends import SLOTS
 from .manager import Gateway, Refused
 from .tunnel import Tunnel
 
@@ -24,6 +25,14 @@ HERE = Path(__file__).resolve().parent
 MAX_BODY = 32 * 1024 * 1024  # a few base64 images
 PUBLIC = {("GET", "/"), ("GET", "/healthz")}
 TUNNEL_HEADERS = ("Cf-Ray", "Cf-Connecting-Ip")  # Cloudflare adds these to everything it forwards
+
+
+ENDPOINT_NOTE = {
+    "service": "Jev gateway: the API endpoint (the control panel is only available inside the notebook)",
+    "health": "GET /healthz (no key): 200 when a model is loaded, 503 while loading",
+    "call": "POST /v1/systemone with {state, questions, images?} and the header Authorization: Bearer <your API key>",
+    "models": "GET /v1/models (with the key): what is loaded and what fits",
+}
 
 
 class RateLimit:
@@ -51,8 +60,13 @@ class App:
     """Everything a request handler needs."""
 
     def __init__(self, gateway: Gateway, key: str, tunnel: Tunnel | None = None, work: str | None = None,
-                 max_inflight: int = 64, per_minute: int = 600):  # fmt: skip
+                 max_inflight: int = 0, per_minute: int = 600):  # fmt: skip
         self.gw, self.key, self.tunnel = gateway, key, tunnel
+        max_inflight = (
+            max_inflight or 2 * SLOTS
+        )  # the model works on SLOTS at once; a few more may wait, the rest are told to come back
+        self.capacity, self.rejected, self.in_flight = max_inflight, 0, 0
+        self._count_lock = threading.Lock()
         self.started = time.time()
         self.inflight = threading.BoundedSemaphore(max_inflight)
         self.limit = RateLimit(per_minute)
@@ -70,6 +84,9 @@ class App:
 def make_handler(app: App):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
+        # The headers and the body go out in two writes. With Nagle's algorithm on, the second waits for the client's delayed ACK:
+        # a fixed ~40 ms added to every response, measured, whatever the model's speed.
+        disable_nagle_algorithm = True
 
         # -- plumbing ------------------------------------------------------------------------------------------------
 
@@ -128,8 +145,12 @@ def make_handler(app: App):
                 if method == "OPTIONS":
                     return self._send(204, b"", {"Access-Control-Allow-Methods": "GET, POST, OPTIONS"})
                 route = ROUTES.get((method, path))
-                if route is None or (path == "/" and self._via_tunnel()):
-                    return self._send(404, {"error": "not found"})  # the panel is for the notebook, not the public URL
+                if route is None:
+                    return self._send(404, {"error": "not found"})
+                if (
+                    path == "/" and self._via_tunnel()
+                ):  # the panel is for the notebook, not the public URL: say what is here instead
+                    return self._send(200, ENDPOINT_NOTE)
                 if (method, path) not in PUBLIC and not self._authed():
                     return self._send(401, {"error": "missing or wrong API key (Authorization: Bearer <key>)"})
                 body = self._read() if method == "POST" else b""
@@ -172,7 +193,18 @@ def make_handler(app: App):
             self._send(200, app.gw.status())
 
         def stats(self, _body):
-            self._send(200, {"version": __version__, "up_s": round(time.time() - app.started), "stats": app.gw.stats.snapshot()})
+            self._send(
+                200,
+                {
+                    "version": __version__,
+                    "up_s": round(time.time() - app.started),
+                    "throughput_rps": app.gw.stats.rate(),
+                    "in_flight": app.in_flight,
+                    "capacity": app.capacity,
+                    "rejected": app.rejected,
+                    "stats": app.gw.stats.snapshot(),
+                },
+            )
 
         def tunnel_status(self, _body):
             self._send(200, app.tunnel.status() if app.tunnel else {"running": False, "available": False})
@@ -182,7 +214,9 @@ def make_handler(app: App):
             if wait:
                 return self._send(429, {"error": "rate limit"}, {"Retry-After": str(max(1, round(wait)))})
             if not app.inflight.acquire(blocking=False):
-                return self._send(429, {"error": "too many requests in flight"}, {"Retry-After": "1"})
+                return self._reject()
+            with app._count_lock:
+                app.in_flight += 1
             try:
                 started = time.perf_counter()
                 status, out, self.model = app.gw.answer(body)
@@ -191,7 +225,24 @@ def make_handler(app: App):
                 )
                 self._send(status, out, extra)
             finally:
+                with app._count_lock:
+                    app.in_flight -= 1
                 app.inflight.release()
+
+        def _reject(self):
+            """Overloaded: answer at once with how long to wait, from the throughput actually being achieved, instead of queueing for seconds."""
+            with app._count_lock:
+                app.rejected += 1
+            rate = app.gw.stats.rate()
+            retry = max(1, round(app.capacity / rate)) if rate else 1
+            self._send(
+                429,
+                {"error": f"busy: {app.capacity} requests already in progress", "retry_after_s": retry, "throughput_rps": rate},
+                {"Retry-After": str(retry)},
+            )
+
+        def metrics(self, _body):
+            self._send(200, metrics.render(app).encode(), ctype="text/plain; version=0.0.4; charset=utf-8")
 
         def select(self, body):
             data = self._json(body)
@@ -224,7 +275,7 @@ def make_handler(app: App):
                 raise Refused(str(err), 502) from None
 
     ROUTES = {
-        ("GET", "/"): "panel", ("GET", "/healthz"): "health", ("GET", "/v1/models"): "models", ("GET", "/v1/stats"): "stats",
+        ("GET", "/"): "panel", ("GET", "/healthz"): "health", ("GET", "/v1/models"): "models", ("GET", "/v1/stats"): "stats", ("GET", "/metrics"): "metrics",
         ("GET", "/v1/tunnel"): "tunnel_status", ("POST", "/v1/systemone"): "systemone", ("POST", "/admin/select"): "select",
         ("POST", "/admin/unload"): "unload", ("POST", "/admin/enable"): "enable", ("POST", "/admin/purge"): "purge",
         ("POST", "/admin/tunnel"): "tunnel_action",
@@ -232,9 +283,17 @@ def make_handler(app: App):
     return Handler
 
 
+class GatewayHTTPServer(ThreadingHTTPServer):
+    """One thread per connection, with a listen queue deep enough for a burst: the default of 5 refuses connections when a few dozen
+    clients arrive at once, which showed up as failed calls (not 429s) at 32 concurrent."""
+
+    request_queue_size = 256
+    daemon_threads = True
+
+
 def serve(app: App, port: int, host: str = "127.0.0.1") -> ThreadingHTTPServer:
     """Start the server on a background thread and return it (call .shutdown() to stop)."""
-    server = ThreadingHTTPServer((host, port), make_handler(app))
+    server = GatewayHTTPServer((host, port), make_handler(app))
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True, name="http").start()
     return server

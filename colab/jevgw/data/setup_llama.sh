@@ -8,7 +8,18 @@
 set -euo pipefail
 TAG=${TAG:-b11430}; LLAMA_DIR=${LLAMA_DIR:-$PWD/llama}; mkdir -p "$LLAMA_DIR"; cd "$LLAMA_DIR"
 cc=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d . || true)
-if [ -x "$LLAMA_DIR/bin/llama-server" ]; then echo "$LLAMA_DIR/bin/llama-server"; exit 0; fi
+# The official build is linked against CUDA 12.8; newer Colab images only have CUDA 13, so its GPU library cannot load and llama.cpp
+# silently falls back to the CPU. llama.cpp publishes the three runtime libraries it needs as a separate bundle: put them beside the server.
+ensure_cuda_libs() {
+  local bin="$1"
+  [ -f "$bin/libggml-cuda.so" ] || return 0
+  LD_LIBRARY_PATH="$bin:${LD_LIBRARY_PATH:-}" ldd "$bin/libggml-cuda.so" | grep -E "libcudart|libcublas" | grep -q "not found" || return 0
+  echo "fetching the CUDA 12.8 runtime libraries llama.cpp needs (about 570 MB)" >&2
+  local tmp; tmp=$(mktemp -d "$LLAMA_DIR/.cudart.XXXXXX")
+  curl -fsSL --retry 3 "https://github.com/ggml-org/llama.cpp/releases/download/$TAG/cudart-llama-$TAG-bin-ubuntu-cuda-12.8-x64.tar.gz" | tar xz -C "$tmp"
+  mv "$tmp"/*/*.so.12 "$bin/"; rm -rf "$tmp"
+}
+if [ -x "$LLAMA_DIR/bin/llama-server" ]; then ensure_cuda_libs "$LLAMA_DIR/bin"; echo "$LLAMA_DIR/bin/llama-server"; exit 0; fi
 rm -rf "$LLAMA_DIR/bin"
 # Everything is built in a scratch folder and moved into bin/ only when it is complete, so an interrupted run leaves nothing half-done
 # and running this again is always safe.
@@ -28,4 +39,5 @@ else
 fi
 [ -x "$tmp/bin/llama-server" ] || { echo "llama-server missing after install" >&2; exit 1; }
 rm -rf bin; mv "$tmp/bin" bin
+ensure_cuda_libs "$LLAMA_DIR/bin"
 echo "$LLAMA_DIR/bin/llama-server"

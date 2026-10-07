@@ -1,8 +1,10 @@
 """Helpers for the Colab notebook. Every function is safe to call again: re-running a cell never needs an "undo" first.
 
+setup()          check the GPU and disk, use your Hugging Face token if you added one, install the llama.cpp server
 ensure_llama()   install the llama.cpp server, or notice it is already installed and working
 start()          start the gateway, or reuse the one already running (same port, same key)
 wait_ready()     load a model in the background, show download progress, retry a failed load
+test()           time text, image and video calls against the loaded model
 stop()           stop the gateway (and with it the model server and the tunnel)
 reset()          stop everything and clear the half-finished state, optionally deleting downloaded models
 """
@@ -23,9 +25,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from . import DATA, __version__, catalog
+from .backends import require_gpu
 from .client import Client
 
-APP = Path(__file__).resolve().parent.parent
 WORK = Path(os.environ.get("JEVGW_WORK", "/content/work"))  # logs, state and downloaded models
 LLAMA_DIR = Path(os.environ.get("JEVGW_LLAMA", "/content/llama"))
 
@@ -45,18 +48,27 @@ def _llama_works(binary: Path) -> bool:
         return False
 
 
+def _require_gpu(binary: str) -> None:
+    """The install is only good if llama.cpp sees the GPU. Models run on the GPU only."""
+    require_gpu(binary)
+    _say("llama.cpp sees the GPU")
+
+
 def ensure_llama(t4_url: str = "") -> str:
     """The path to a working llama-server. A missing, half-downloaded or broken install is removed and done again."""
     binary = LLAMA_DIR / "bin" / "llama-server"
     if binary.exists() and _llama_works(binary):
         _say("llama.cpp is already installed:", binary)
+        _require_gpu(str(binary))
         return str(binary)
     if LLAMA_DIR.exists():
         _say("removing a broken llama.cpp install and starting it again")
         shutil.rmtree(LLAMA_DIR)
-    _say("installing llama.cpp (about a minute)")
+    _say(
+        "Installing llama.cpp for the Clef models: about 1-2 minutes, downloads roughly 700 MB (the engine plus the CUDA libraries it needs)..."
+    )
     result = subprocess.run(
-        ["bash", str(APP / "setup_llama.sh")],
+        ["bash", str(DATA / "setup_llama.sh")],
         capture_output=True,
         text=True,
         env={**os.environ, "LLAMA_DIR": str(LLAMA_DIR), "LLAMA_T4_URL": t4_url},
@@ -65,7 +77,99 @@ def ensure_llama(t4_url: str = "") -> str:
         _say(result.stderr.strip())
     if result.returncode:
         raise RuntimeError("llama.cpp install failed; run this cell again to retry.\n" + (result.stdout + result.stderr)[-1500:])
-    return result.stdout.strip().splitlines()[-1]
+    binary = result.stdout.strip().splitlines()[-1]
+    _require_gpu(binary)
+    return binary
+
+
+# -- first cell: look at the machine --------------------------------------------------------------------------------------
+
+
+def _meminfo_gib() -> tuple[float, float] | None:
+    """(total, available) system RAM in GiB, or None where /proc is missing."""
+    try:
+        values = {
+            line.split(":")[0]: int(line.split()[1]) for line in Path("/proc/meminfo").read_text().splitlines() if ":" in line
+        }
+        return values["MemTotal"] / 2**20, values["MemAvailable"] / 2**20
+    except (OSError, KeyError, ValueError):
+        return None
+
+
+def _reachable(url: str, timeout: float = 10.0) -> bool:
+    try:
+        urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=timeout)
+        return True
+    except urllib.error.HTTPError:
+        return True  # it answered: the site is up, whatever it thinks of a HEAD request
+    except OSError:
+        return False
+
+
+MIN_DRIVER = 525  # NVIDIA's minimum driver for the CUDA 12 libraries llama.cpp is built with
+
+
+def setup(t4_url: str = "") -> str:
+    """Everything the first cell needs: checks the machine, then installs llama.cpp. Returns the llama-server path.
+
+    Every check prints what it found. A machine that cannot work (no GPU, a driver too old for the CUDA libraries) stops here with the fix,
+    before anything large is downloaded. Safe to run again.
+    """
+    _say("Checking this machine...")
+    name, mib = catalog.gpu_info()
+    if not name:
+        raise SystemExit("  No GPU. Runtime > Change runtime type > T4 GPU, then run this cell again.")
+    driver = subprocess.run(
+        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"], capture_output=True, text=True
+    ).stdout.strip()
+    if driver.split(".")[0].isdigit() and int(driver.split(".")[0]) < MIN_DRIVER:
+        raise SystemExit(
+            f"  The GPU driver ({driver}) is older than {MIN_DRIVER}, which the CUDA 12 libraries need. Pick a newer runtime."
+        )
+    _say(f"  GPU        {name}, {mib / 1024:.1f} GiB, driver {driver}: ok")
+    total, _, free = shutil.disk_usage(WORK.parent if WORK.parent.exists() else "/")
+    _say(f"  Disk       {free / 2**30:.0f} of {total / 2**30:.0f} GiB free (models need 5-13 GB each; only the last two stay)")
+    if ram := _meminfo_gib():
+        _say(f"  Memory     {ram[1]:.1f} of {ram[0]:.1f} GiB free")
+    for label, url in (("GitHub", "https://github.com"), ("Hugging Face", "https://huggingface.co")):
+        if not _reachable(url):
+            raise SystemExit(f"  Cannot reach {label} ({url}). Check the runtime's internet access and run this cell again.")
+    _say("  Network    GitHub and Hugging Face reachable: ok")
+    models = catalog.load(DATA / "models.json")
+    fits = [m["id"] for m in models.values() if catalog.runnable(m) and catalog.fits(m, mib)]
+    _say(f"  Models     {len(fits)} fit this GPU: {', '.join(fits)}")
+    use_hf_token()
+    return ensure_llama(t4_url)
+
+
+# -- the Hugging Face token --------------------------------------------------------------------------------------------
+
+
+def use_hf_token() -> bool:
+    """Pass the Colab secret `HF_TOKEN` to downloads, if there is one. Works the same without. The token is never printed.
+
+    Colab secrets (the key icon in the sidebar) are not environment variables, so the secret is read through `google.colab.userdata`.
+    A signed-in download gets Hugging Face's higher rate limits, which helps with the multi-GiB model files.
+    """
+    if os.environ.get("HF_TOKEN"):
+        _say("downloads will use your Hugging Face token (HF_TOKEN is set)")
+        return True
+    try:
+        from google.colab import userdata
+
+        token = userdata.get("HF_TOKEN")
+    except Exception:  # noqa: BLE001 - not on Colab, no such secret, or notebook access not granted: all mean "no token"
+        token = None
+    if not token:
+        _say(
+            "No Hugging Face token found. Downloads still work, but a token gets you higher rate limits and faster downloads.\n"
+            "To add one: Colab sidebar > key icon (Secrets) > Add new secret, name HF_TOKEN, value your token from "
+            "huggingface.co/settings/tokens (a read token is enough) > turn on Notebook access. Then run this cell again."
+        )
+        return False
+    os.environ["HF_TOKEN"] = token
+    _say("downloads will use your Hugging Face token (from the Colab secret HF_TOKEN)")
+    return True
 
 
 # -- the gateway process -----------------------------------------------------------------------------------------------
@@ -131,10 +235,23 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tup
     A gateway left by an earlier run of this cell is reused if it still answers, and stopped if it does not. A busy port is skipped.
     """
     state = _read_state()
-    if state and _alive(state["pid"]) and _is_ours(state["port"]) and key in ("", state["key"]):
-        _say(f"the gateway is already running on port {state['port']}; reusing it")
+    token = bool(os.environ.get("HF_TOKEN"))
+    if (
+        state
+        and _alive(state["pid"])
+        and _is_ours(state["port"])
+        and key in ("", state["key"])
+        and (state.get("token", False) or not token)
+        and state.get("version") == __version__  # a gateway started by an older install would still run the old code
+    ):
+        client = Client(f"http://127.0.0.1:{state['port']}", state["key"])
+        loaded = client.models().get("loaded")
+        _say(
+            f"The gateway is already running on port {state['port']}; reusing it"
+            + (f" ({loaded} stays loaded)" if loaded else "")
+        )
         _say(f"API key: {state['key']}")
-        return Client(f"http://127.0.0.1:{state['port']}", state["key"]), {**state, "reused": True}
+        return client, {**state, "reused": True}
     stop()
     WORK.mkdir(parents=True, exist_ok=True)
     port, key = _free_port(port), key or secrets.token_urlsafe(12)
@@ -156,7 +273,6 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tup
                 "--keep",
                 str(keep),
             ],
-            cwd=APP,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -170,9 +286,9 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tup
     else:
         proc.terminate()
         raise RuntimeError(f"the gateway did not answer within a minute; see {log_path}")
-    state = {"pid": proc.pid, "port": port, "key": key}
+    state = {"pid": proc.pid, "port": port, "key": key, "token": token, "version": __version__}
     _state_file().write_text(json.dumps(state))
-    _say(f"the gateway is running on port {port}")
+    _say(f"The gateway is running on port {port}")
     _say(f"API key: {key}")
     return Client(f"http://127.0.0.1:{port}", key), {**state, "reused": False}
 
@@ -213,7 +329,32 @@ def reset(delete_models: bool = False) -> None:
     _say("reset done" + (" (downloaded models deleted)" if delete_models else " (downloaded models kept)"))
 
 
+# -- testing a loaded model --------------------------------------------------------------------------------------------
+
+
+def test(client: Client, image: str = "", video: str = "", n: int = 5) -> list[dict]:
+    """Five timed calls (after one warm-up) with text, then an image and a video's frames if the loaded model takes them."""
+    from . import client as calls
+
+    loaded = next((m for m in client.models()["models"] if m["loaded"]), None)
+    if not loaded:
+        raise RuntimeError("no model is loaded: run the load cell first")
+    rows = [calls.bench(client, "text, 3 questions", calls.TEXT, n)]
+    if loaded.get("vision"):
+        rows += calls.demo(client, image or None, video or None, frames=6, n=n, text=False)
+    else:
+        _say(f"{loaded['name']} takes text only: no image or video test")
+    for row in filter(None, rows):
+        _say(f"  {row['test']} -> {json.dumps(row['answers'])[:170]}")
+    return [row for row in rows if row]
+
+
 # -- loading a model ---------------------------------------------------------------------------------------------------
+
+
+def _clock(seconds: float) -> str:
+    seconds = int(seconds)
+    return f"{seconds // 60}m{seconds % 60:02d}s" if seconds >= 60 else f"{seconds}s"
 
 
 def _describe(status: dict) -> str:
@@ -221,34 +362,149 @@ def _describe(status: dict) -> str:
     if progress.get("phase") == "downloading":
         total, done = progress["total_gib"], progress["done_gib"]
         return f"downloading {done:.1f} of {total:.1f} GiB ({done / total:.0%})" if total else "downloading"
-    return "starting the model server (the first start on a T4 can take several minutes)"
+    if progress.get("phase") == "installing":
+        total = progress.get("total_gib")
+        size = f", about {total:.0f} GB" if total else ""
+        return f"installing its Python environment and weights (first time only{size}; a few minutes)"
+    return "starting the model server (the first start on a T4 compiles GPU code and takes about a minute)"
 
 
-def wait_ready(client: Client, model: str, timeout: float = 3600, poll: float = 5, retries: int = 2) -> dict:
-    """Load `model` in the background and wait for it, printing progress. Run it again at any point: it picks up where things are.
+def preflight(client: Client, model: str, status: dict | None = None) -> None:
+    """Print what this load needs against what the machine has, before anything is downloaded. Raises if it cannot work."""
+    status = status or client.models()
+    entry = next((m for m in status["models"] if m["id"] == model), None)
+    if entry is None:
+        raise RuntimeError(
+            f"unknown model {model!r}; the choices are: {', '.join(m['id'] for m in status['models'] if m['runnable'])}"
+        )
+    _say(f"Pre-flight for {entry['name']} ({model}):")
+    free_gpu, need_gpu = status.get("gpu_free_gib"), entry.get("vram_gib") or 0
+    if not entry["runnable"] or not entry["enabled"] or not entry["fits"]:
+        why = entry.get("status") or (
+            "it is disabled in the panel"
+            if not entry["enabled"]
+            else f"it needs about {need_gpu} GiB and this GPU has {status['gpu_gib']} GiB"
+        )
+        raise RuntimeError(f"  {model} cannot be loaded here: {why}.")
+    if free_gpu is not None and free_gpu < need_gpu:
+        raise RuntimeError(
+            f"  GPU memory: {model} needs about {need_gpu} GiB but only {free_gpu} GiB is free: something else is using the GPU. "
+            "Run cell 6 with 'reset', or Runtime > Restart session, then try again."
+        )
+    _say(
+        f"  GPU memory   needs about {need_gpu} GiB, {free_gpu if free_gpu is not None else '?'} GiB free of {status['gpu_gib']}: ok"
+    )
+    size, disk = entry.get("disk_gib") or 0, status.get("disk")
+    if entry.get("cached"):
+        _say("  Disk         already downloaded: nothing to fetch")
+    elif disk:
+        if size and disk["free_gib"] < size + 3:
+            _say(
+                f"  Disk         needs about {size:.0f} GB, {disk['free_gib']} GiB free: older models will be deleted to make room"
+            )
+        else:
+            _say(f"  Disk         needs about {size:.0f} GB, {disk['free_gib']} GiB free: ok")
+        if not _reachable("https://huggingface.co"):
+            raise RuntimeError(
+                "  Network      cannot reach huggingface.co: check the runtime's internet access and run this cell again."
+            )
+    token = (
+        "your Hugging Face token is used"
+        if os.environ.get("HF_TOKEN")
+        else "no Hugging Face token: downloads work but are slower"
+    )
+    typical = (
+        "a minute or less" if entry.get("cached") else f"typically {entry.get('first_run_min', 'a few')} minutes the first time"
+    )
+    _say(f"  Time         {typical}  ({token})")
 
-    A load that fails (a dropped download, a crashed server) is retried up to `retries` times; the last error is raised.
-    Refusals (does not fit this GPU, not enough disk, disabled) raise at once with the reason.
-    """
-    deadline, failures, last_line = time.time() + timeout, 0, ""
-    client.select(model, wait=False)
-    while time.time() < deadline:
+
+def _wait_ready(client: Client, model: str, timeout: float, poll: float, retries: int, heartbeat: float) -> dict:
+    status = client.models()
+    if status["loaded"] == model:
+        _say(f"{model} is already loaded (load {status['load_s']} s). Nothing to do.")
+        return status
+    preflight(client, model, status)
+    if status["loaded"]:
+        _say(f"  (loading {model} unloads {status['loaded']} first; only one model fits on the GPU at a time)")
+    started = time.monotonic()
+    deadline, failures, last_phase, last_beat = started + timeout, 0, "", started
+    while status["loading"] and status["loading"] != model and time.monotonic() < deadline:
+        _say(f"  {status['loading']} is still loading; waiting for it to finish first...")
+        time.sleep(poll)
         status = client.models()
+    client.select(model, wait=False)
+    while time.monotonic() < deadline:
+        status = client.models()
+        now = time.monotonic()
         if status["loaded"] == model:
             _say(
-                f"\n{model} is loaded (load {status['load_s']} s, warm-up {status['warm_ms']} ms). Free disk {status['disk']['free_gib']} GiB."
+                f"\nReady: {model} is loaded ({_clock(now - started)} in total; load {status['load_s']} s, warm-up {status['warm_ms']} ms). "
+                f"Free disk {status['disk']['free_gib']} GiB.\n"
             )
             return status
         if status["loading"] == model:
-            line = f"  {model}: {_describe(status)}"
-            if line != last_line:
-                _say(line)
-                last_line = line
+            phase = _describe(status)
+            detail = (status.get("progress") or {}).get("detail")
+            if phase != last_phase:
+                _say(f"  [{_clock(now - started)}] {phase}")
+                last_phase, last_beat = phase, now
+            elif now - last_beat >= heartbeat:
+                _say(
+                    f"  [{_clock(now - started)}] still working: {phase.split(' (')[0].split(';')[0]}"
+                    + (f"   > {detail}" if detail else "")
+                )
+                last_beat = now
         else:  # not loading and not loaded: it failed or was unloaded
             failures += 1
             if failures > retries:
                 raise RuntimeError(f"{model} failed to load {failures} times. Last error: {status.get('error')}")
-            _say(f"  load failed ({status.get('error')}); retrying ({failures}/{retries})")
+            _say(f"  Load failed: {status.get('error')}\n  Retrying ({failures}/{retries})...")
             client.select(model, wait=False)
+            last_phase = ""
         time.sleep(poll)
-    raise TimeoutError(f"{model} was not ready after {timeout / 60:.0f} minutes; run this cell again to keep waiting")
+    raise TimeoutError(
+        f"{model} was not ready after {timeout / 60:.0f} minutes; run this cell again to keep waiting (nothing is lost)"
+    )
+
+
+def wait_ready(
+    client: Client, model: str, timeout: float = 3600, poll: float = 5, retries: int = 2, heartbeat: float = 30
+) -> dict:
+    """Load `model` in the background and wait for it, saying what is happening. Run it again at any point: it picks up where things are.
+
+    Prints a pre-flight check first, then a line whenever the phase changes and a heartbeat (elapsed time and the latest line of the install or
+    server log) every `heartbeat` seconds, so a long step never looks stuck. If another model is still loading it waits for that one first.
+    A load that fails (a dropped download, a crashed server) is retried up to `retries` times; the last error is raised.
+    """
+    try:
+        return _wait_ready(client, model, timeout, poll, retries, heartbeat)
+    except KeyboardInterrupt:
+        _say("\nStopped waiting. The model keeps loading in the background: run this cell again to rejoin it.")
+        raise
+
+
+# -- the last step: how to use the console -----------------------------------------------------------------------------
+
+
+def console(client: Client, info: dict) -> None:
+    """Show the Jev console again, here, and say what to do with it."""
+    try:
+        loaded = client.models().get("loaded") or "no model yet (use the Load button, or run the load cell)"
+    except OSError:
+        _say("The gateway is not running (it was stopped or reset). Run cell 2 to start it, then this cell again.")
+        return
+    show_panel(info)
+    _say(f"""
+The Jev console is above (scroll up if you cannot see it). Model on the GPU now: {loaded}
+
+ Models         Load, Unload, Enable, Disable and Delete files. One model is on the GPU at a time; loading another unloads the
+                current one. "On disk" shows what is already downloaded.
+ Try a model    Pick Text, Image or Video, edit the state and the questions, press Run (or Run x5 for timings). The questions are
+                typed: noul = a yes/no probability, choice = pick one label, score = a number on a scale you describe.
+ Response times p50 and p95 for each model since the gateway started. The header shows the GPU, free disk and the loaded model.
+
+ From code in this notebook ({client.url}, key {info["key"]}):
+     client.systemone({{"state": "Our checkout is failing.", "questions": {{"outage": {{"type": "noul", "instructions": "Is a service down?"}}}}}}).data
+
+ Something stuck?  Run the cell again (it is safe), or cell 6 with 'reset'.  Want a public URL?  Cell 5 (off by default; read its note).""")

@@ -10,18 +10,17 @@ import signal
 import time
 from pathlib import Path
 
-from . import __version__, catalog
+from . import DATA, __version__, catalog
+from .backends import install_vendor
 from .disk import Disk
 from .manager import Gateway
 from .server import App, serve
 from .tunnel import Tunnel
 
-ROOT = Path(__file__).resolve().parent.parent
-
 
 def parse(argv=None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(prog="jevgw", description=__doc__)
-    ap.add_argument("--catalog", default=str(ROOT / "models.json"), help="the model list and recipes")
+    ap.add_argument("--catalog", default=str(DATA / "models.json"), help="the model list and recipes")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--host", default="127.0.0.1", help="leave as is: the tunnel and the Colab panel reach it locally")
     ap.add_argument(
@@ -29,8 +28,12 @@ def parse(argv=None) -> argparse.Namespace:
     )
     ap.add_argument("--model", help="load this model at start")
     ap.add_argument("--only", help="comma-separated ids: every other model starts disabled")
-    ap.add_argument("--root", default=str(ROOT / "vendor"), help="where models/ and data/ are installed (the JEV_ROOT layout)")
-    ap.add_argument("--work", default=str(ROOT / "work"), help="logs, downloaded GGUF files, setup markers")
+    ap.add_argument(
+        "--work",
+        default=os.environ.get("JEVGW_WORK", str(Path.home() / ".jevgw")),
+        help="logs, downloaded models, installed environments",
+    )
+    ap.add_argument("--root", help="where model environments and weights are installed (default: <work>/root)")
     ap.add_argument("--keep", type=int, default=2, help="downloaded models kept on disk; the least recently used are deleted")
     ap.add_argument("--disk-margin-gib", type=float, default=5.0, help="free disk space always left alone")
     ap.add_argument("--llama-bin", default=os.environ.get("LLAMA_BIN", "llama-server"))
@@ -38,7 +41,12 @@ def parse(argv=None) -> argparse.Namespace:
         "--tunnel", action="store_true", help="start a Cloudflare quick tunnel at launch (the panel can also start one)"
     )
     ap.add_argument("--no-tunnel-support", action="store_true", help="refuse tunnel requests entirely")
-    ap.add_argument("--max-inflight", type=int, default=64, help="concurrent /v1/systemone calls before answering 429")
+    ap.add_argument(
+        "--max-inflight",
+        type=int,
+        default=0,
+        help="concurrent /v1/systemone calls before answering 429 (0: twice the model server's slots)",
+    )
     ap.add_argument("--per-minute", type=int, default=600, help="rate limit for /v1/systemone; 0 turns it off")
     return ap.parse_args(argv)
 
@@ -46,12 +54,14 @@ def parse(argv=None) -> argparse.Namespace:
 def main(argv=None) -> None:
     args = parse(argv)
     work = Path(args.work)
+    root = Path(args.root or work / "root")
+    install_vendor(root)
     (work / "weights").mkdir(parents=True, exist_ok=True)
-    cfg = {"llama_bin": args.llama_bin, "weights": str(work / "weights"), "work": str(work), "root": args.root,
-           "here": str(ROOT), "child_port": args.port + 1}  # fmt: skip
+    cfg = {"llama_bin": args.llama_bin, "weights": str(work / "weights"), "work": str(work), "root": str(root),
+           "here": str(DATA), "child_port": args.port + 1}  # fmt: skip
     models = catalog.load(args.catalog)
     only = set(args.only.split(",")) if args.only else None
-    disk = Disk(cfg["weights"], work / "disk.json", args.keep, args.disk_margin_gib)
+    disk = Disk(cfg["weights"], work / "disk.json", args.keep, args.disk_margin_gib, root=root)
     gateway = Gateway(models, cfg, only, disk)
     tunnel = None if args.no_tunnel_support else Tunnel(args.port, str(work))
     app = App(gateway, args.key, tunnel, str(work), args.max_inflight, args.per_minute)

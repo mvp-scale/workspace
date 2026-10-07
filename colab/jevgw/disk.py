@@ -1,9 +1,10 @@
-"""Disk budget for downloaded model files.
+"""Disk budget for everything a model keeps on disk.
 
-A Colab session has far less disk than a server, and a GGUF is several GiB, so downloads are budgeted: at most `keep` models stay on
-disk and a margin of free space is always left. Before a model is downloaded, the least recently used ones are deleted until it fits.
-Files are shared between models (both Clef quants use one vision projector), so a file is deleted only when no other cached model,
-and not the one about to load, needs it.
+A Colab session has far less disk than a server. A GGUF is several GiB, and a model that runs in Python brings its own environment (CUDA
+PyTorch alone is several GiB) plus its weights, so installs are budgeted: at most `keep` models stay on disk and a margin of free space is
+always left. Before a model is installed or downloaded, the least recently used ones are deleted until it fits.
+Things are shared between models (both Clef quants use one vision projector; Semif and so1 use the same Qwen weights; the kev models share
+one environment), so a path is deleted only when no other installed model, and not the one about to load, still needs it.
 """
 
 from __future__ import annotations
@@ -31,20 +32,51 @@ def files_of(entry: dict) -> dict[str, float]:
 
 class Disk:
     def __init__(
-        self, folder: str | Path, state_file: str | Path, keep: int = 2, margin_gib: float = 5.0, usage=shutil.disk_usage
+        self,
+        folder: str | Path,
+        state_file: str | Path,
+        keep: int = 2,
+        margin_gib: float = 5.0,
+        usage=shutil.disk_usage,
+        root: str | Path | None = None,
+        caches: tuple[Path, ...] = (Path.home() / ".cache" / "uv", Path.home() / ".cache" / "pip"),
     ):
+        """`folder` holds downloaded model files, `root` the installed environments of models that run in Python."""
         self.folder, self.state_file = Path(folder), Path(state_file)
+        self.root = Path(root) if root else None
         self.keep, self.margin = keep, margin_gib * GIB
         self._usage = usage
+        self.caches = caches  # downloaded wheels: only a speed-up for the next install, so the first thing to free
         self.folder.mkdir(parents=True, exist_ok=True)
 
     # -- what is on disk ---------------------------------------------------------------------------------------------
 
+    def _locations(self, entry: dict) -> list[Path]:
+        """Everything this model keeps on disk, as paths."""
+        if entry.get("kind") == "llama":
+            return [self.folder / name for name in files_of(entry)]
+        if entry.get("kind") == "proc" and entry.get("paths") and self.root:
+            return [self.root / path for path in entry["paths"]]
+        return []
+
+    def _marker(self, entry: dict) -> Path:
+        return self.state_file.parent / f"{entry['id']}.setup-done"  # written by Proc when its setup has finished
+
+    def tracks(self, entry: dict) -> bool:
+        """True if the budget manages this model's disk use."""
+        return bool(self._locations(entry))
+
     def cached(self, entry: dict) -> bool:
-        names = files_of(entry)
-        return bool(names) and all((self.folder / name).exists() for name in names)
+        locations = self._locations(entry)
+        if not locations:
+            return False
+        if entry["kind"] == "proc":
+            return self._marker(entry).exists() and locations[0].exists()
+        return all(path.exists() for path in locations)
 
     def _missing_bytes(self, entry: dict) -> float:
+        if entry.get("kind") == "proc":
+            return 0.0 if self.cached(entry) else entry.get("install_gib", 0) * GIB
         return sum(gib * GIB for name, gib in files_of(entry).items() if not (self.folder / name).exists())
 
     def _stamps(self) -> dict[str, float]:
@@ -60,7 +92,7 @@ class Disk:
         self.state_file.write_text(json.dumps(stamps))
 
     def downloaded_gib(self, entry: dict) -> tuple[float, float]:
-        """(GiB on disk so far, GiB expected) for a model, counting a download in flight.
+        """(GiB on disk so far, GiB expected) for a model file download in flight.
 
         A download goes to `.partial/<name>.incomplete` (see download.py). The gateway loads one model at a time and downloads its files one
         after another, so every partial file counts.
@@ -85,7 +117,7 @@ class Disk:
     # -- making room -------------------------------------------------------------------------------------------------
 
     def make_room(self, target: dict, models: dict[str, dict]) -> list[str]:
-        """Delete least recently used cached models until `target` fits within `keep` and the free-space margin.
+        """Delete least recently used installed models until `target` fits within `keep` and the free-space margin.
 
         Returns the ids deleted. Raises DiskFull if it still cannot fit.
         """
@@ -97,7 +129,9 @@ class Disk:
         evicted: list[str] = []
         while True:
             fits_count = len(others) + 1 <= self.keep
-            fits_space = need == 0 or self._usage(self.folder).free - need >= self.margin  # nothing to download, nothing to fit
+            fits_space = need == 0 or self._usage(self.folder).free - need >= self.margin  # nothing to install, nothing to fit
+            if fits_count and not fits_space and self._free_caches():
+                continue
             if fits_count and fits_space:
                 return evicted
             if not others:
@@ -109,12 +143,26 @@ class Disk:
             self.delete(victim, models, keep_for=target)
             evicted.append(victim)
 
+    def _free_caches(self) -> bool:
+        """Delete the package caches. True if there was anything to delete."""
+        found = [path for path in self.caches if path.exists()]
+        for path in found:
+            shutil.rmtree(path, ignore_errors=True)
+        return bool(found)
+
     def delete(self, model_id: str, models: dict[str, dict], keep_for: dict | None = None) -> None:
-        """Delete a model's files, except any still needed by `keep_for` or by another cached model."""
-        needed: set[str] = set(files_of(keep_for)) if keep_for else set()
+        """Delete a model's files and environments, except paths still needed by `keep_for` or by another installed model."""
+        needed = set(self._locations(keep_for)) if keep_for else set()
         for other_id, other in models.items():
             if other_id != model_id and self.cached(other):
-                needed |= set(files_of(other))
-        for name in files_of(models[model_id]):
-            if name not in needed:
-                (self.folder / name).unlink(missing_ok=True)
+                needed |= set(self._locations(other))
+        entry = models[model_id]
+        for path in self._locations(entry):
+            if path in needed:
+                continue
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                path.unlink(missing_ok=True)
+        if entry.get("kind") == "proc":
+            self._marker(entry).unlink(missing_ok=True)  # its setup runs again next time, skipping what is still there

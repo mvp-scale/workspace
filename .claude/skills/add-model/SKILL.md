@@ -106,7 +106,7 @@ The Leaderboard, Scenario lab and Baseline compare discover models from `data/` 
 
 ## 8b. Offer it on Colab
 
-If the model's peak GPU memory is under about 20 GiB, add it to `colab/models.json` (`kind: llama` with a GGUF plus its `file_gib` and `mmproj_gib` sizes for the disk budget, or `kind: proc` with the same setup and launch recipe the main repo uses; `vram_gib` is the measured peak, and say in `verified` what was actually run through the gateway). Only `llama` entries go into the standalone notebook (`colab/jevgw_colab.ipynb`); `proc` models need our adapter code and run from the repo. Run `colab/vendor.sh` if its server wrapper or setup function changed, `python colab/build_notebook.py`, and `python -m unittest discover -s colab/tests -t colab`.
+If the model's peak GPU memory is under about 14 GiB (a free T4), add it to `colab/jevgw/data/models.json`: `kind: llama` with a GGUF plus `file_gib` and `mmproj_gib`, or `kind: proc` with the same setup and launch recipe the main repo uses plus `install_gib` and `paths` (the folders under the install root it owns, for the disk budget). `vram_gib` is the measured peak; say in `verified` what was actually run through the gateway on a T4. Pin every repository the setup clones to the commit you validated (`clone <owner/repo> <dir> <sha>` in `dev-bench-setup.sh`). Run `colab/vendor.sh` if its server wrapper or setup function changed, `python colab/build_notebook.py` (the notebook's table and dropdown are generated from the list), and `python -m unittest discover -s colab/tests -t colab`. Load it on a real T4 before saying it works: a model that only ran on this box can fail on Colab (an unpinned clone did).
 
 ## 9. Verify, then report
 

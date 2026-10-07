@@ -28,7 +28,12 @@ venv() {
 }
 py()  { echo "$M/$1/.venv/bin/python"; }
 pip() { local n=$1; shift; uv pip install -q --python "$(py "$n")" "$@"; }
-clone() { [ -d "$M/$2" ] || git clone -q --depth 1 "https://github.com/$1.git" "$M/$2"; }
+# clone <owner/repo> <dir> <commit>: the exact commit each model was validated with, so a later change upstream cannot break an install
+clone() {
+  [ -d "$2" ] && return 0
+  mkdir -p "$2" && git -C "$2" init -q && git -C "$2" remote add origin "https://github.com/$1.git" &&
+    git -C "$2" fetch -q --depth 1 origin "$3" && git -C "$2" checkout -q FETCH_HEAD
+}
 hf() { local n=$1; shift; "$M/$n/.venv/bin/hf" download "$@" >/dev/null; }
 
 setup_laya() {       # Convai Innovations, ModernBERT-large 421M
@@ -37,19 +42,19 @@ setup_laya() {       # Convai Innovations, ModernBERT-large 421M
   hf laya convaiinnovations/laya --local-dir $ROOT/data/models/laya
 }
 setup_verdict() {    # heman10x openJev Verdict 1.4, ModernBERT-base 151M (author's rlcd engine)
-  clone Heman10x-NGU/openJev-verdict-2.0 openJev-verdict-2.0
+  clone Heman10x-NGU/openJev-verdict-2.0 "$M/openJev-verdict-2.0" bff28567cff463b833bf044f351a8b7945d53e07
   venv verdict
   "$(py verdict)" -c "import core.engine_encoder" 2>/dev/null || pip verdict -e "$M/openJev-verdict-2.0"
   hf verdict heman10x/rlcd-modernbert-151m --local-dir $ROOT/data/models/verdict
 }
 setup_semif() {      # TheoLeeCJ SemIf (formerly OpenJev), Qwen3.5-4B; repo pins torch==2.10.0
-  clone TheoLeeCJ/openjev openjev
+  clone TheoLeeCJ/openjev "$M/openjev" ca3ba65f142967030ecb453346e94d6f476a69df
   venv semif torch==2.10.0
   "$(py semif)" -c "import semif_phase1" 2>/dev/null || pip semif -e "$M/openjev"
   hf semif Qwen/Qwen3.5-4B
 }
 setup_so1() {        # IkerMoel open-alternative-jev, Qwen3.5-4B
-  clone ikermoel/open-alternative-jev open-alternative-jev
+  clone ikermoel/open-alternative-jev "$M/open-alternative-jev" 6ad87d7ce2f4ef472acb9253419134a2643a57d2
   venv so1
   "$(py so1)" -c "import so1" 2>/dev/null || pip so1 -e "$M/open-alternative-jev"
   hf so1 Qwen/Qwen3.5-4B
@@ -76,7 +81,7 @@ setup_clef_flash_q2k() { # bartowski Q2_K GGUF (about 3.7 bits per weight, made 
 }
 
 setup_kev() {        # kev decision models (Qwen LoRA, pointer head): the repo, CUDA torch, and the 0.5b release; 0.8b and 4b come from the Hub when served
-  [ -d "$ROOT/kev" ] || git clone -q --depth 1 https://github.com/jaredpalmer/kev.git "$ROOT/kev"
+  clone jaredpalmer/kev "$ROOT/kev" bd058057ad0aa9df3dd6d14e3542c95a5ce367b2
   [ -x "$ROOT/kev/.venv/bin/python" ] || (cd "$ROOT/kev" && uv sync -q --extra serve)
   "$ROOT/kev/.venv/bin/python" -c "import torch;assert torch.cuda.is_available()" 2>/dev/null ||
     uv pip install -q --python "$ROOT/kev/.venv/bin/python" torch --index-url "https://download.pytorch.org/whl/$TORCH_CUDA_TAG"
@@ -84,7 +89,7 @@ setup_kev() {        # kev decision models (Qwen LoRA, pointer head): the repo, 
   [ -d "$ROOT/data/kev/runs/kev" ] || { curl -fsSL https://github.com/jaredpalmer/kev/releases/download/v0.1.0/kev-0.5b.tar.gz | tar xz -C "$ROOT/data/kev/runs" && mv "$ROOT/data/kev/runs/kev-0.5b" "$ROOT/data/kev/runs/kev"; }
 }
 setup_jeff() {       # jeff: GLiFormer encoder server (Python 3.12 only)
-  [ -d "$ROOT/jeff" ] || git clone -q --depth 1 https://github.com/logan-markewich/jeff.git "$ROOT/jeff"
+  clone logan-markewich/jeff "$ROOT/jeff" 34b32f99a727c47b679adde33f4702a001e02979
   [ -x "$ROOT/jeff/.venv/bin/python" ] || (cd "$ROOT/jeff" && uv sync -q --extra dev)
   [ -d "$ROOT/data/jeff/models/gliformer-large-v1" ] || (cd "$ROOT/jeff" && uv run hf download knowledgator/gliformer-large-v1 --local-dir "$ROOT/data/jeff/models/gliformer-large-v1" >/dev/null)
 }

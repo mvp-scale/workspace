@@ -213,9 +213,9 @@ def bench(client: Client, label: str, body: dict, n: int = 5) -> dict | None:
     return row
 
 
-def demo(client: Client, image=None, video=None, frames: int = 6, n: int = 5) -> list[dict]:
+def demo(client: Client, image=None, video=None, frames: int = 6, n: int = 5, text: bool = True) -> list[dict]:
     """Text, image and video tests against whatever model is loaded."""
-    rows = [bench(client, "text, 3 questions", TEXT, n)]
+    rows = [bench(client, "text, 3 questions", TEXT, n)] if text else []
     invoice = {
         "total": {
             "type": "choice",

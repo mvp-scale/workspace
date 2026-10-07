@@ -16,10 +16,16 @@ SHA = hashlib.sha256(DATA).hexdigest()
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
-    sha, honour_range, fail_first, hits = SHA, True, 0, []
+    sha, honour_range, fail_first, hits, auth, redirect_to = SHA, True, 0, [], [], None
 
     def do_GET(self):
         Handler.hits.append(self.headers.get("Range"))
+        Handler.auth.append((self.server.server_address[1], self.headers.get("Authorization")))
+        if Handler.redirect_to and self.server.server_address[1] != Handler.redirect_to.server_address[1]:
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{Handler.redirect_to.server_address[1]}{self.path}")
+            self.end_headers()
+            return
         if self.path.endswith("missing.gguf"):
             return self.send_error(404)
         if Handler.fail_first > 0:
@@ -56,6 +62,7 @@ class TestDownload(unittest.TestCase):
 
     def setUp(self):
         Handler.sha, Handler.honour_range, Handler.fail_first, Handler.hits = SHA, True, 0, []
+        Handler.auth, Handler.redirect_to = [], None
         self.dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.dir.cleanup)
         self.folder = Path(self.dir.name)
@@ -101,6 +108,18 @@ class TestDownload(unittest.TestCase):
             self.get(tries=1)
         self.assertFalse((self.folder / "m.gguf").exists())
         self.assertFalse((self.folder / ".partial" / "m.gguf.incomplete").exists())
+
+    def test_the_token_goes_to_the_first_host_only(self):
+        cdn = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=cdn.serve_forever, daemon=True).start()
+        self.addCleanup(cdn.server_close)
+        self.addCleanup(cdn.shutdown)
+        Handler.redirect_to = cdn
+        with mock.patch.dict(os.environ, {"HF_TOKEN": "hf_secret"}):
+            self.assertEqual(Path(self.get()).read_bytes(), DATA)
+        by_port = dict(Handler.auth)
+        self.assertEqual(by_port[self.server.server_address[1]], "Bearer hf_secret")
+        self.assertIsNone(by_port[cdn.server_address[1]])
 
     def test_missing_file_is_a_clear_error_without_retries(self):
         with self.assertRaises(RuntimeError) as caught:
