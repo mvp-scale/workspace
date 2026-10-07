@@ -1,16 +1,8 @@
 """The generated notebook is short, valid, and agrees with the package's model list."""
 
-import base64
-import hashlib
-import io
 import json
-import os
 import re
-import subprocess
-import sys
-import tempfile
 import unittest
-import zipfile
 from pathlib import Path
 
 import build_notebook
@@ -22,22 +14,20 @@ HERE = Path(__file__).resolve().parent.parent
 class TestNotebook(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.wheel = build_notebook.make_wheel()
-        cls.cells = build_notebook.build(cls.wheel)
+        cls.cells = build_notebook.build()
         cls.code = ["".join(c["source"]) for c in cls.cells if c["cell_type"] == "code"]
         cls.text = "\n".join("".join(c["source"]) for c in cls.cells if c["cell_type"] == "markdown")
 
-    def embedded(self):
-        """The wheel exactly as the notebook's code would decode it."""
-        namespace: dict = {}
-        exec(next(src for src in self.code if "JEVGW_WHEEL_B64" in src).split("\n", 1)[1], namespace)  # noqa: S102
-        return namespace, base64.b64decode(namespace["JEVGW_WHEEL_B64"])
-
-    def test_it_is_compact_and_holds_no_source_files(self):
+    def test_it_is_short_and_readable_with_no_blob_inside(self):
+        """No bundled binaries or encoded payloads: every line in the file is something a person can read."""
         self.assertLessEqual(len(self.cells), 18)
+        self.assertLess(len(json.dumps(self.cells)), 30_000)
         self.assertFalse(any("%%writefile" in src for src in self.code))
-        visible = [src for src in self.code if "JEVGW_WHEEL_B64" not in src]
-        self.assertLess(len("".join(visible)), 12_000)  # everything a person might read; the package itself is one collapsed cell
+        for src in self.code:
+            self.assertLess(len(src), 4_000)
+            self.assertNotIn("base64", src)
+            self.assertNotIn("b64decode", src)
+            self.assertIsNone(re.search(r"[A-Za-z0-9+/=]{200,}", src), "a long encoded string")
 
     def test_code_cells_are_form_cells_with_a_title_and_compile(self):
         for cell, src in zip([c for c in self.cells if c["cell_type"] == "code"], self.code, strict=True):
@@ -45,74 +35,23 @@ class TestNotebook(unittest.TestCase):
             self.assertTrue(src.startswith("#@title "), src[:40])
             compile(src, "cell", "exec")
 
-    def test_nothing_is_fetched_from_github_to_run_it(self):
-        for src in self.code:
-            self.assertNotIn(
-                "github.com", src.replace('https://github.com"', "")
-            )  # the network pre-check names the host; nothing installs from it
-            self.assertNotIn("git+", src)
-            self.assertNotIn("ls-remote", src)
+    def test_it_installs_the_package_from_the_public_repository_at_a_release_tag_it_names(self):
+        install = self.code[0]
+        self.assertIn(build_notebook.REPO, install)
+        self.assertIn(f"subdirectory={build_notebook.SUBDIR}", install)
+        self.assertIn(f'"{build_notebook.REF}"', install)
+        self.assertEqual(build_notebook.REF, f"v{__version__}")  # a tag, never a branch that moves
+        self.assertNotIn('"main"', install)
+        self.assertIn(build_notebook.REPO, self.text)  # and the notebook says where the code comes from
 
-    def test_the_embedded_package_matches_the_repository_exactly(self):
-        namespace, wheel = self.embedded()
-        self.assertEqual(hashlib.sha256(wheel).hexdigest(), namespace["JEVGW_SHA256"])
-        self.assertEqual(namespace["JEVGW_VERSION"], __version__)
-        with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
-            packaged = {n: archive.read(n) for n in archive.namelist() if n.startswith("jevgw/")}
-        repo = {
-            f"jevgw/{p.relative_to(HERE / 'jevgw').as_posix()}": p.read_bytes()
-            for p in (HERE / "jevgw").rglob("*")
-            if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"
-        }
-        self.assertEqual(packaged, repo)  # every file, byte for byte: the notebook cannot drift from the code
-
-    def test_the_wheel_is_built_the_same_way_every_time(self):
-        self.assertEqual(build_notebook.make_wheel(), self.wheel)
-
-    def test_the_embedded_package_installs_without_a_network_and_imports(self):
-        _, wheel = self.embedded()
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / f"jevgw-{__version__}-py3-none-any.whl"
-            path.write_bytes(wheel)
-            pip = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "-q",
-                    "--no-deps",
-                    "--no-index",
-                    "--target",
-                    f"{folder}/site",
-                    str(path),
-                ],
-                capture_output=True,
-                text=True,
-            )
-            if "No module named pip" in pip.stderr:
-                self.skipTest("pip is not available here")
-            self.assertEqual(pip.returncode, 0, pip.stderr)
-            check = subprocess.run(
-                [
-                    sys.executable,
-                    "-c",
-                    "import jevgw, jevgw.notebook, jevgw.server; from jevgw import DATA, catalog; print(jevgw.__version__, len(catalog.load(DATA / 'models.json')), (DATA / 'vendor' / 'dev-bench-setup.sh').exists())",
-                ],
-                env={**os.environ, "PYTHONPATH": f"{folder}/site"},
-                capture_output=True,
-                text=True,
-                cwd=folder,
-            )
-        self.assertEqual(check.stdout.strip(), f"{__version__} 13 True", check.stderr)
-
-    def test_the_install_cell_is_idempotent_checks_the_hash_and_fails_with_one_message(self):
-        install = next(src for src in self.code if "nvidia-smi" in src and "pip" in src)
+    def test_the_install_cell_is_idempotent_and_fails_with_one_plain_message(self):
+        install = self.code[0]
         self.assertLess(install.index("nvidia-smi"), install.index("pip"))  # no GPU: stop before installing anything
         self.assertIn("T4 GPU", install)
         self.assertIn("is already installed", install)
-        self.assertLess(install.index("is already installed"), install.index("pip"))
-        self.assertIn("checksum mismatch", install)
+        self.assertLess(install.index("is already installed"), install.index("pip"))  # the right version is there: skip pip
+        self.assertIn("ls-remote", install)  # an unpublished release is reported plainly before pip's long error
+        self.assertIn("is not published", install)
         self.assertIn("from None", install)  # no chained traceback: Colab's error display cannot cope with one
         self.assertIn("del sys.modules[name]", install)  # after an upgrade, never keep running the old code
 
@@ -179,13 +118,13 @@ class TestNotebook(unittest.TestCase):
         self.assertIn("web service offerings", self.text)
 
     def test_every_cell_has_a_unique_stable_id(self):
-        ids = [cell["id"] for cell in build_notebook.with_ids(build_notebook.build(self.wheel))]
+        ids = [cell["id"] for cell in build_notebook.with_ids(build_notebook.build())]
         self.assertEqual(len(set(ids)), len(ids))
-        self.assertEqual(ids, [cell["id"] for cell in build_notebook.with_ids(build_notebook.build(self.wheel))])
+        self.assertEqual(ids, [cell["id"] for cell in build_notebook.with_ids(build_notebook.build())])
 
     def test_the_committed_notebook_is_current(self):
         committed = json.loads((HERE / "jevgw_colab.ipynb").read_text())["cells"]
-        self.assertEqual(committed, build_notebook.with_ids(build_notebook.build(self.wheel)), "run python build_notebook.py")
+        self.assertEqual(committed, build_notebook.with_ids(build_notebook.build()), "run python build_notebook.py")
 
 
 if __name__ == "__main__":

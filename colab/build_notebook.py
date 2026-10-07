@@ -1,64 +1,24 @@
 #!/usr/bin/env python3
-"""Write jevgw_colab.ipynb: one self-contained notebook. The `jevgw` package travels inside it as a checksummed wheel in one collapsed cell, so running it needs
-no GitHub and no repository, only the tools and models it downloads.
+"""Write jevgw_colab.ipynb: a short, readable notebook that installs the `jevgw` package from this public repository at a fixed release tag.
 
-The other cells are titled form cells (code hidden until you expand it) that call the package. The
-model table and the model dropdown are generated from the package's model list, so the notebook cannot disagree with it. Run this after
-changing the list.
+Nothing is bundled in the file: the one install cell names the repository and the exact version, so anyone can read what runs. The other cells
+are titled form cells (code hidden until you expand it) that call the package. The model table and the model dropdown are generated from the
+package's model list, so the notebook cannot disagree with it. Run this after changing the list, and tag the release (see the README).
 """
 
 from __future__ import annotations
 
-import base64
 import hashlib
-import io
 import json
-import zipfile
 from pathlib import Path
 
 from jevgw import __version__
 
 HERE = Path(__file__).resolve().parent
+REPO = "https://github.com/mvp-scale/workspace"  # public: everything the notebook installs is readable here
+SUBDIR = "colab"
+REF = f"v{__version__}"  # the exact release the notebook installs, never a branch that moves
 T4_GIB = 14.0  # usable memory on Colab's free GPU, in GiB, for the dropdown and the table
-
-
-def make_wheel() -> bytes:
-    """The package `jevgw` as an installable wheel, built the same way every time (fixed timestamps and order), so the notebook generated
-    from the same source is byte-for-byte the same file and a test can prove the embedded copy matches the repository."""
-    pkg, dist = HERE / "jevgw", f"jevgw-{__version__}.dist-info"
-    files = {
-        f"jevgw/{path.relative_to(pkg).as_posix()}": path.read_bytes()
-        for path in sorted(pkg.rglob("*"))
-        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
-    }
-    files[f"{dist}/METADATA"] = (
-        f"Metadata-Version: 2.1\nName: jevgw\nVersion: {__version__}\nRequires-Python: >=3.10\n"
-        "Summary: One decision model at a time behind one TypeSafe-compatible /v1/systemone endpoint, with a control panel.\n"
-    ).encode()
-    files[f"{dist}/WHEEL"] = b"Wheel-Version: 1.0\nGenerator: build_notebook\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
-    record = [
-        f"{name},sha256={base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b'=').decode()},{len(data)}"
-        for name, data in files.items()
-    ]
-    files[f"{dist}/RECORD"] = ("\n".join([*record, f"{dist}/RECORD,,"]) + "\n").encode()
-    out = io.BytesIO()
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for name, data in files.items():
-            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type, info.external_attr = zipfile.ZIP_DEFLATED, 0o644 << 16
-            archive.writestr(info, data)
-    return out.getvalue()
-
-
-def payload_cell(wheel: bytes) -> dict:
-    """The package, embedded: three assignments in a form cell whose code stays collapsed."""
-    encoded = base64.b64encode(wheel).decode()
-    lines = "\n".join(encoded[i : i + 100] for i in range(0, len(encoded), 100))
-    text = (
-        f'JEVGW_VERSION = "{__version__}"\nJEVGW_SHA256 = "{hashlib.sha256(wheel).hexdigest()}"\n'
-        f'JEVGW_WHEEL_B64 = """\n{lines}\n"""'
-    )
-    return code(text, "The Jev gateway package, embedded in this file (nothing to do here; do not edit)")
 
 
 def md(text: str) -> dict:
@@ -101,7 +61,7 @@ time on Colab's free **T4 GPU**, opens the **Jev console** in its own browser ta
 ### What will happen
 | Step | What it does | Typical time |
 |---|---|---|
-| 1 · Install | Checks the GPU, disk, network and tools, installs the gateway (included in this file), and installs llama.cpp for the Clef models | 1–2 min |
+| 1 · Install | Checks the GPU, disk, network and tools, installs the gateway, and installs llama.cpp for the Clef models | 1–2 min |
 | 2 · Start | Starts the gateway and gives you a link that opens the Jev console in its own tab | seconds |
 | 3 · Load a model | Pre-flight check (GPU memory, disk, network), then download or install, then start | **2–9 min the first time** (table below); seconds if it is already on disk |
 | 4 · Test | Times five calls with text, and an image and a video for models that take them | under a minute |
@@ -128,49 +88,43 @@ your API key on every call). Google may disconnect the session or restrict your 
 use is undocumented and may stop working; this notebook does not play it."""
 
 
-def build(wheel: bytes | None = None) -> list[dict]:
-    wheel = wheel if wheel is not None else make_wheel()
+def build() -> list[dict]:
     models = t4_models()
     ids = [m["id"] for m in models]
     return [
         md(INTRO),
         md("### Models that fit a T4\n" + table(models)),
         md(
-            "### Included package\nThe notebook carries the Jev gateway package inside it (the next cell), so nothing is fetched from GitHub to run it. "
-            "The only downloads are the tools and models listed below."
+            "### Where the code comes from\n"
+            f"Cell 1 installs the Jev gateway package, version `{REF}`, from the public repository {REPO} (folder `{SUBDIR}`). "
+            "Everything it installs is readable there at that tag; nothing is bundled inside this file. The only other downloads are the tools and models listed here."
         ),
-        payload_cell(wheel),
         md("## 1 · Install and check the machine"),
         code(
-            """import base64, hashlib, shutil, subprocess, sys, tempfile
+            f"""REPO, REF = "{REPO}", "{REF}"  # the public repository and the exact release this notebook installs
+import shutil, subprocess, sys
 from importlib.metadata import PackageNotFoundError, version
-from pathlib import Path
 
 def stop(message):
     raise SystemExit(message) from None  # one clear message, no chained traceback
 
 if not shutil.which("nvidia-smi"):
     stop("No GPU found. Runtime > Change runtime type > T4 GPU, then run this cell again.")
-home = Path("/content") if Path("/content").is_dir() else Path(tempfile.gettempdir())
-marker = home / ".jevgw-package-sha256"
 try:
     have = version("jevgw")
 except PackageNotFoundError:
     have = None
-if have == JEVGW_VERSION and marker.exists() and marker.read_text() == JEVGW_SHA256:
-    print(f"The Jev gateway package {JEVGW_VERSION} is already installed.")
+if have == REF[1:]:
+    print(f"The Jev gateway package {{REF}} is already installed.")
 else:
-    wheel = base64.b64decode(JEVGW_WHEEL_B64)
-    if hashlib.sha256(wheel).hexdigest() != JEVGW_SHA256:
-        stop("The package inside this notebook is damaged (checksum mismatch). Download the notebook again.")
-    print("Installing the Jev gateway package (a few seconds)...")
-    path = home / f"jevgw-{JEVGW_VERSION}-py3-none-any.whl"
-    path.write_bytes(wheel)
-    result = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--no-deps", "--force-reinstall", str(path)],
+    published = subprocess.run(["git", "ls-remote", "--exit-code", "--tags", REPO, f"refs/tags/{{REF}}"], capture_output=True)
+    if published.returncode == 2:  # git's code for "no such tag": say so plainly, before pip's long error
+        stop(f"Release {{REF}} is not published at {{REPO}}. Check that you have the latest copy of this notebook.")
+    print(f"Installing the Jev gateway package {{REF}} from {{REPO}} (10-20 seconds)...")
+    result = subprocess.run([sys.executable, "-m", "pip", "install", "-q", f"jevgw @ git+{{REPO}}@{{REF}}#subdirectory={SUBDIR}"],
                             capture_output=True, text=True)
     if result.returncode:
-        stop(f"Could not install the Jev gateway package:\\n{result.stderr[-800:]}")
-    marker.write_text(JEVGW_SHA256)
+        stop(f"Could not install the Jev gateway package from GitHub:\\n{{result.stderr[-800:]}}\\nCheck the connection and run this cell again.")
     for name in [n for n in sys.modules if n == "jevgw" or n.startswith("jevgw.")]:
         del sys.modules[name]  # use the version just installed, not an older one this session already imported
 from jevgw import notebook
