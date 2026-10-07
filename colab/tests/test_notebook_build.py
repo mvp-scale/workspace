@@ -40,6 +40,10 @@ class TestNotebook(unittest.TestCase):
         self.assertIn("already installed", install)
         self.assertIn("PackageNotFoundError", install)
         self.assertIn("del sys.modules[name]", install)
+        self.assertIn("from None", install)  # no chained traceback: Colab's error display cannot cope with one
+        self.assertIn("ls-remote", install)  # an unpublished version is reported plainly before pip runs
+        self.assertIn("is not published", install)
+        self.assertNotIn("raise SystemExit(f", install.replace("raise SystemExit(message) from None", ""))
         self.assertLess(install.index("already installed"), install.index("pip"))
 
     def test_it_stops_before_installing_anything_if_there_is_no_gpu(self):

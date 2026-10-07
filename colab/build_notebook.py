@@ -99,21 +99,30 @@ def build() -> list[dict]:
             f"""REF = "{REF}"  #@param {{type:"string"}}
 import re, shutil, subprocess, sys
 from importlib.metadata import PackageNotFoundError, version
+
+def stop(message):
+    raise SystemExit(message) from None  # one clear message, no chained traceback
+
 if not shutil.which("nvidia-smi"):
-    raise SystemExit("No GPU found. Runtime > Change runtime type > T4 GPU, then run this cell again.")
+    stop("No GPU found. Runtime > Change runtime type > T4 GPU, then run this cell again.")
 try:
     have = version("jevgw")
 except PackageNotFoundError:
     have = None
-if re.fullmatch(r"v\\d+\\.\\d+\\.\\d+", REF) and have == REF[1:]:
+is_release = bool(re.fullmatch(r"v\\d+\\.\\d+\\.\\d+", REF))
+if is_release and have == REF[1:]:
     print(f"The Jev gateway package {{REF}} is already installed.")
 else:
+    repo_url = "{REPO}"
+    if is_release:  # fail with a plain message if the version has not been published, before pip's long error
+        found = subprocess.run(["git", "ls-remote", "--exit-code", "--tags", repo_url, f"refs/tags/{{REF}}"], capture_output=True)
+        if found.returncode == 2:
+            stop(f"Version {{REF}} is not published at {{repo_url}} (yet). Ask the notebook's author, or set REF to a branch name such as main to try the latest.")
     print("Installing the Jev gateway package (10-20 seconds)...")
-    try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "-q", f"jevgw @ git+{REPO}@{{REF}}#subdirectory={SUBDIR}"],
-                       check=True, capture_output=True, text=True)
-    except subprocess.CalledProcessError as err:
-        raise SystemExit(f"Could not install jevgw ({{REF}}) from GitHub:\\n{{err.stderr[-800:]}}\\nCheck the connection and run this cell again.")
+    result = subprocess.run([sys.executable, "-m", "pip", "install", "-q", f"jevgw @ git+{{repo_url}}@{{REF}}#subdirectory={SUBDIR}"],
+                            capture_output=True, text=True)
+    if result.returncode:
+        stop(f"Could not install jevgw ({{REF}}) from GitHub:\\n{{result.stderr[-800:]}}\\nCheck the connection and run this cell again.")
     for name in [n for n in sys.modules if n == "jevgw" or n.startswith("jevgw.")]:
         del sys.modules[name]  # use the version just installed, not an older one this session already imported
 from jevgw import notebook
