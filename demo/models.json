@@ -359,13 +359,13 @@
       "interface": "llama.cpp llama-server, native /v1/systemone",
       "repo": "https://huggingface.co/bartowski/Cloudflare_clef-flash-GGUF",
       "verify": "clef-flash-q2k",
-      "served_as": "llama.cpp server b11430, local GPU (text only here)",
+      "served_as": "llama.cpp server b11430, local GPU (text and images)",
       "sauce": "The same Clef Flash model with its backbone quantized to Q2_K by a third party. The decision head is kept at Q8_0, per the quantizer's card, and no importance matrix was used (the quantizer says that is not possible for a decision model), so the quantizer warns of a larger quality loss than usual. Not made or tested by Cloudflare.",
       "how": [
         "Same mechanism as Clef Flash: one forward pass, one logit per option, a softmax per question.",
         "Q2_K is a mixed quantization: 4.19 GB for 9.08B parameters is about 3.7 bits per weight on average, not 2. Our Q4_K_M is about 5.3.",
         "The quantizer's card says the decision head is stored at Q8_0 in every quantized file, and that no importance matrix was used.",
-        "Text only here: the vision projector was not loaded for this copy. Run to find how far the model can be shrunk before world-knowledge accuracy drops."
+        "Images work through the same separate 0.92 GB vision projector as the Q4 (kept at 16-bit); the Image Lab results use it. Video is not tested. Measured here: on world-knowledge text it lost about 7 points against 16-bit, on images about 3."
       ]
     }
   ],
