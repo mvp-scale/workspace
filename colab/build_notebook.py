@@ -114,7 +114,8 @@ LLAMA_BIN = notebook.ensure_llama(LLAMA_T4_URL)"""),
             "## 4. Start the gateway and open the control panel\nRun it as often as you like: a running gateway is reused (same key), a stuck one is replaced, a busy port is skipped. The panel loads, unloads, enables, disables and deletes models."
         ),
         code("""KEEP = 2  #@param {type:"integer"}  # models kept on disk
-client, info = notebook.start(LLAMA_BIN, KEEP)
+API_KEY = ""  #@param {type:"string"}  # leave empty for a random key (it is printed below); or choose your own
+client, info = notebook.start(LLAMA_BIN, KEEP, key=API_KEY)
 KEY = info["key"]
 notebook.show_panel(info)"""),
         md(

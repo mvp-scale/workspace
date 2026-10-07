@@ -124,18 +124,20 @@ def _free_port(preferred: int) -> int:
     raise RuntimeError(f"no free port from {preferred} to {preferred + 49}")
 
 
-def start(llama_bin: str, keep: int = 2, port: int = 8000) -> tuple[Client, dict]:
-    """Start the gateway, or reuse the running one. Returns (client, {"port", "key", "reused"}).
+def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tuple[Client, dict]:
+    """Start the gateway, or reuse the running one. Returns (client, {"port", "key", "reused"}). The key is printed.
 
+    `key` is the API key to use; leave it empty to get a random one. A running gateway with a different key is replaced.
     A gateway left by an earlier run of this cell is reused if it still answers, and stopped if it does not. A busy port is skipped.
     """
     state = _read_state()
-    if state and _alive(state["pid"]) and _is_ours(state["port"]):
-        _say(f"the gateway is already running on port {state['port']}; reusing it (same key)")
+    if state and _alive(state["pid"]) and _is_ours(state["port"]) and key in ("", state["key"]):
+        _say(f"the gateway is already running on port {state['port']}; reusing it")
+        _say(f"API key: {state['key']}")
         return Client(f"http://127.0.0.1:{state['port']}", state["key"]), {**state, "reused": True}
     stop()
     WORK.mkdir(parents=True, exist_ok=True)
-    port, key = _free_port(port), secrets.token_urlsafe(12)
+    port, key = _free_port(port), key or secrets.token_urlsafe(12)
     log_path = WORK / "gateway.log"
     with open(log_path, "w") as log:
         proc = subprocess.Popen(
@@ -171,6 +173,7 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000) -> tuple[Client, dict
     state = {"pid": proc.pid, "port": port, "key": key}
     _state_file().write_text(json.dumps(state))
     _say(f"the gateway is running on port {port}")
+    _say(f"API key: {key}")
     return Client(f"http://127.0.0.1:{port}", key), {**state, "reused": False}
 
 

@@ -28,6 +28,19 @@ class TestStartStop(unittest.TestCase):
         self.assertTrue(info2["reused"])
         self.assertEqual((info2["pid"], info2["key"], again.key), (info["pid"], info["key"], client.key))
 
+    def test_a_chosen_key_is_used_and_a_different_key_replaces_the_gateway(self):
+        _, first = notebook.start("/nonexistent/llama-server", port=18740, key="my-own-key")
+        self.assertEqual(first["key"], "my-own-key")
+        _, same = notebook.start("/nonexistent/llama-server", port=18740, key="my-own-key")
+        self.assertTrue(same["reused"])
+        _, other = notebook.start("/nonexistent/llama-server", port=18740, key="another")
+        self.assertEqual((other["reused"], other["key"]), (False, "another"))
+
+    def test_the_key_is_printed(self):
+        with mock.patch("builtins.print") as shown:
+            _, info = notebook.start("/nonexistent/llama-server", port=18750)
+        self.assertIn(f"API key: {info['key']}", [c.args[0] for c in shown.call_args_list])
+
     def test_stale_state_is_replaced_not_an_error(self):
         notebook.start("/nonexistent/llama-server", port=18710)
         state = json.loads((Path(self.dir.name) / "gateway.json").read_text())
