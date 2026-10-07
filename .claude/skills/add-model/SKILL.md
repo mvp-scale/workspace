@@ -104,6 +104,10 @@ The Scenario lab and Image lab share their heat map, model strip and colour scal
 
 The Leaderboard, Scenario lab and Baseline compare discover models from `data/` directories and `BACKENDS`, so they pick the model up once the data and the `server.py` entry exist. The **demo server must be restarted** (`./service.sh restart demo`) to load `BACKENDS`; check first that no window study is running (`probes/window_study.py`). Optional hand-typed reference maps in `demo/scenarios.html` (p50 latency, WEAK accuracy) are not required.
 
+## 8b. Offer it on Colab
+
+If the model's peak GPU memory is under about 20 GiB, add it to `colab/models.json` (`kind: llama` with a GGUF, or `kind: proc` with the same setup and launch recipe the main repo uses; `vram_gib` is the measured peak, and say in `verified` what was actually run through the gateway). Run `colab/vendor.sh` if its server wrapper or setup function changed, `python colab/build_notebook.py`, and `python -m unittest discover -s colab/tests -t colab`.
+
 ## 9. Verify, then report
 
 - `./service.sh check`, `python3 -c "import json; json.load(open('demo/models.json'))"`, `bash -n` on every edited script.

@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jev gateway</title>
+<style>
+  :root {
+    --bg: #fafafa; --surface: #fff; --surface-2: #f4f4f5; --border: #e4e4e7; --text: #18181b; --text-2: #52525b; --text-3: #71717a;
+    --accent: #1d4ed8; --good: #15803d; --warn: #a16207; --bad: #b91c1c; --radius: 6px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0b0d; --surface: #131316; --surface-2: #1b1b1f; --border: #2a2a30; --text: #ececf0; --text-2: #a1a1aa; --text-3: #7c7c86;
+            --accent: #6d9cff; --good: #4ade80; --warn: #facc15; --bad: #f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  h1 { font-size: 18px; margin: 0; } h2 { font-size: 14px; margin: 0 0 8px; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .muted { color: var(--text-2); } .small { font-size: 12px; } .mono { font-family: var(--mono); font-size: 12px; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; background: var(--surface-2); }
+  .chip.good { color: var(--good); border-color: currentColor; } .chip.warn { color: var(--warn); border-color: currentColor; }
+  .chip.bad { color: var(--bad); border-color: currentColor; }
+  button { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 10px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); } button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input, textarea, select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; }
+  textarea { width: 100%; font-family: var(--mono); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; } th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.loaded td { background: color-mix(in srgb, var(--good) 8%, var(--surface)); }
+  pre { margin: 8px 0 0; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: 280px; font: 12px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 8px; } .tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .table-wrap { overflow-x: auto; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="row"><h1>Jev gateway</h1><span class="chip" id="version"></span><span class="chip" id="gpu">GPU: ?</span></div>
+    <div class="row" role="status" aria-live="polite"><span class="chip" id="state">not connected</span><span class="small muted" id="loadinfo"></span></div>
+  </header>
+
+  <section class="card" id="keybar">
+    <div class="row">
+      <label for="key">API key</label>
+      <input id="key" type="password" size="28" autocomplete="off" placeholder="the key printed when the gateway started">
+      <button class="primary" id="connect">Connect</button>
+      <span class="small muted" id="keymsg"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Models</h2>
+    <p class="small muted" style="margin:0 0 8px">One model is on the GPU at a time. Load unloads the current one first. A model that does not fit this GPU cannot be loaded; a disabled model cannot be loaded.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Model</th><th class="num">GiB</th><th>Takes</th><th>State</th><th>Actions</th></tr></thead>
+      <tbody id="models"></tbody>
+    </table></div>
+    <p class="small bad" id="modelerr" style="color: var(--bad)"></p>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Public endpoint (Cloudflare quick tunnel)</h2>
+      <p class="small muted" style="margin:0 0 8px">For testing: no uptime guarantee, the URL changes whenever the tunnel restarts, 200 requests in flight at most, no streaming.
+        Check the host's terms before serving from it (Google Colab disallows it).</p>
+      <div class="row"><span class="chip" id="tstate">off</span><button id="tstart">Start tunnel</button><button id="tstop">Stop</button></div>
+      <div class="row" style="margin-top:8px"><span class="mono" id="turl"></span><button id="tcopy" hidden>Copy</button></div>
+      <div class="small muted" id="tinfo" style="margin-top:4px"></div>
+      <pre id="curl" hidden></pre>
+    </section>
+
+    <section class="card">
+      <h2>Response times</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Model</th><th class="num">Calls</th><th class="num">Errors</th><th class="num">p50 ms</th><th class="num">p95 ms</th></tr></thead>
+        <tbody id="stats"><tr><td colspan="5" class="muted">No calls yet.</td></tr></tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Try the loaded model</h2>
+    <div class="tabs" role="tablist" aria-label="Input type">
+      <button role="tab" aria-selected="true" data-tab="text">Text</button>
+      <button role="tab" aria-selected="false" data-tab="image">Image</button>
+      <button role="tab" aria-selected="false" data-tab="video">Video</button>
+    </div>
+    <div id="tab-image" hidden><input type="file" id="imgfile" accept="image/*"></div>
+    <div id="tab-video" hidden><div class="row"><input type="file" id="vidfile" accept="video/*"><label>frames <input id="nframes" type="number" min="1" max="16" value="6" style="width:60px"></label></div>
+      <p class="small muted" style="margin:4px 0 0">The server takes images, so the video is sampled into evenly spaced frames in your browser.</p></div>
+    <label class="small muted" for="state-text">State</label>
+    <textarea id="state-text" rows="2">Our checkout started returning errors and orders are blocked.</textarea>
+    <label class="small muted" for="questions">Questions (JSON)</label>
+    <textarea id="questions" rows="9"></textarea>
+    <div class="row" style="margin-top:8px"><button class="primary" id="run">Run</button><button id="run5">Run 5 times</button><span class="small muted" id="runinfo"></span></div>
+    <pre id="out" hidden></pre>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) { if (k === "text") n.textContent = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else if (v !== null && v !== undefined && v !== false) n.setAttribute(k, v === true ? "" : v); }
+  kids.flat().forEach((c) => c != null && n.append(c));
+  return n;
+};
+const chip = (text, tone = "") => el("span", { class: `chip ${tone}`, text });
+
+let KEY = sessionStorage.getItem("jevgw-key") || "";
+const hashKey = new URLSearchParams(location.hash.slice(1)).get("key");
+if (hashKey) { KEY = hashKey; sessionStorage.setItem("jevgw-key", KEY); history.replaceState(null, "", location.pathname); }
+let STATUS = null, BUSY = false, TAB = "text";
+
+async function api(method, path, body) {
+  const t0 = performance.now();
+  const res = await fetch(path, { method, headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  let json = null; try { json = await res.json(); } catch (_) { /* empty body */ }
+  return { ok: res.ok, status: res.status, json, ms: performance.now() - t0, serverMs: res.headers.get("X-Latency-Ms") };
+}
+
+const QUESTIONS = {
+  text: { team: { type: "choice", instructions: "Which team should handle this?", criteria: { billing: "Payments or invoices", technical: "Bugs or outages" } },
+          urgency: { type: "score", instructions: "How urgent is it?", criteria: ["Can wait", "This week", "Today"] },
+          outage: { type: "noul", instructions: "Is a service down?" } },
+  image: { subject: { type: "noul", instructions: "Does this image contain a person?" }, setting: { type: "choice", instructions: "Is it indoors or outdoors?", criteria: { indoors: null, outdoors: null } } },
+  video: { person: { type: "noul", instructions: "Is a person visible in these frames?" } },
+};
+function setTab(tab) {
+  TAB = tab;
+  document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  $("tab-image").hidden = tab !== "image"; $("tab-video").hidden = tab !== "video";
+  $("questions").value = JSON.stringify(QUESTIONS[tab], null, 1);
+  $("state-text").value = { text: "Our checkout started returning errors and orders are blocked.", image: "A photo.", video: "Frames sampled evenly from one video." }[tab];
+}
+
+function stateOf(m, s) {
+  if (m.loaded) return chip("loaded", "good");
+  if (s.loading === m.id) return chip("loading…", "warn");
+  if (!m.runnable) return chip(m.status || "no recipe yet", "");
+  if (!m.enabled) return chip("disabled", "");
+  if (!m.fits) return chip(`needs ${m.gpu_hint || m.vram_gib + " GiB"}`, "bad");
+  return chip("ready", "");
+}
+function renderModels(s) {
+  $("models").replaceChildren(...s.models.map((m) => {
+    const canLoad = m.runnable && m.enabled && m.fits && !BUSY && !m.loaded && !s.loading;
+    const takes = [m.vision ? "text, images" : "text"].join("");
+    return el("tr", { class: m.loaded ? "loaded" : "" },
+      el("td", {}, el("strong", { text: m.name }), el("div", { class: "small muted mono", text: m.id }),
+        m.note ? el("details", {}, el("summary", { class: "small muted", text: "About" }), el("div", { class: "small muted", text: m.note }),
+          m.verified ? el("div", { class: "small muted", text: `Verified: ${m.verified}` }) : null) : null),
+      el("td", { class: "num", text: m.vram_gib ? String(m.vram_gib) : "CPU" }),
+      el("td", { text: takes }),
+      el("td", {}, stateOf(m, s)),
+      el("td", {}, el("div", { class: "row" },
+        m.loaded ? el("button", { onclick: () => act("unload"), disabled: BUSY, text: "Unload" })
+                 : el("button", { class: "primary", onclick: () => act("load", m.id), disabled: !canLoad, text: "Load" }),
+        m.runnable ? el("button", { onclick: () => act("enable", m.id, !m.enabled), disabled: BUSY, text: m.enabled ? "Disable" : "Enable" }) : null)));
+  }));
+}
+
+async function act(kind, id, flag) {
+  $("modelerr").textContent = "";
+  BUSY = kind === "load"; if (STATUS) renderModels(STATUS);
+  const req = { load: () => api("POST", "/admin/select", { model: id }), unload: () => api("POST", "/admin/unload", {}),
+                enable: () => api("POST", "/admin/enable", { model: id, enabled: flag }) }[kind];
+  try {
+    const r = await req();
+    if (!r.ok) $("modelerr").textContent = (r.json && r.json.error) || `HTTP ${r.status}`;
+  } catch (e) { $("modelerr").textContent = String(e); }
+  BUSY = false; refresh();
+}
+
+function renderHeader(s) {
+  $("gpu").textContent = s.gpu ? `${s.gpu}, ${s.gpu_gib} GiB` : "no GPU";
+  const st = $("state"); st.className = "chip " + (s.loaded ? "good" : s.loading ? "warn" : "");
+  st.textContent = s.loaded ? `loaded: ${s.loaded}` : s.loading ? `loading ${s.loading}…` : "no model loaded";
+  $("loadinfo").textContent = s.loaded && s.load_s != null ? `loaded in ${s.load_s} s, warm-up ${s.warm_ms ?? "?"} ms` : s.error ? `last load failed: ${s.error.slice(0, 160)}` : "";
+}
+
+function renderTunnel(t) {
+  const on = t.running; $("tstate").textContent = on ? "on" : t.available === false ? "not available" : "off"; $("tstate").className = "chip " + (on ? "good" : "");
+  $("turl").textContent = on ? t.url : ""; $("tcopy").hidden = !on;
+  $("tstart").disabled = on || t.available === false; $("tstop").disabled = !on;
+  $("tinfo").textContent = on ? `up ${t.up_s}s, restarted ${t.restarts}×` : t.error ? `last error: ${t.error}` : "";
+  const c = $("curl"); c.hidden = !on;
+  if (on) c.textContent = `curl ${t.url}/v1/systemone \\\n  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \\\n  -d '{"state": "Our checkout is returning errors.", "questions": {"outage": {"type": "noul", "instructions": "Is a service down?"}}}'`;
+}
+
+function renderStats(stats) {
+  const rows = Object.entries(stats);
+  $("stats").replaceChildren(...(rows.length ? rows.map(([m, v]) => el("tr", {}, el("td", { class: "mono", text: m }), el("td", { class: "num", text: String(v.requests) }),
+    el("td", { class: "num", text: String(v.errors) }), el("td", { class: "num", text: String(v.p50_ms) }), el("td", { class: "num", text: String(v.p95_ms) })))
+    : [el("tr", {}, el("td", { colspan: 5, class: "muted", text: "No calls yet." }))]));
+}
+
+let timer = null;
+async function refresh() {
+  clearTimeout(timer);
+  try {
+    const [m, t, st] = await Promise.all([api("GET", "/v1/models"), api("GET", "/v1/tunnel"), api("GET", "/v1/stats")]);
+    if (m.status === 401) { $("state").textContent = "enter the API key"; $("state").className = "chip bad"; $("keymsg").textContent = KEY ? "that key was refused" : ""; return; }
+    $("keymsg").textContent = ""; STATUS = m.json;
+    renderHeader(m.json); renderModels(m.json); renderTunnel(t.json); renderStats(st.json.stats);
+    $("version").textContent = `v${st.json.version}`;
+  } catch (e) { $("state").textContent = "gateway unreachable"; $("state").className = "chip bad"; }
+  timer = setTimeout(refresh, STATUS && STATUS.loading ? 1500 : 4000);
+}
+
+async function frames(file, n) {
+  const url = URL.createObjectURL(file), v = document.createElement("video");
+  v.muted = true; v.src = url; await new Promise((ok, no) => { v.onloadedmetadata = ok; v.onerror = () => no(new Error("cannot read that video")); });
+  const c = document.createElement("canvas"), scale = Math.min(1, 640 / v.videoWidth); c.width = v.videoWidth * scale; c.height = v.videoHeight * scale;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    v.currentTime = v.duration * (i + 0.5) / n; await new Promise((ok) => { v.onseeked = ok; });
+    c.getContext("2d").drawImage(v, 0, 0, c.width, c.height); out.push(c.toDataURL("image/jpeg", 0.85));
+  }
+  URL.revokeObjectURL(url); return out;
+}
+const toDataUrl = (file) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); });
+
+async function buildBody() {
+  const body = { state: $("state-text").value, questions: JSON.parse($("questions").value) };
+  if (TAB === "image") { const f = $("imgfile").files[0]; if (!f) throw new Error("choose an image"); body.images = [await toDataUrl(f)]; }
+  if (TAB === "video") { const f = $("vidfile").files[0]; if (!f) throw new Error("choose a video"); body.images = await frames(f, Math.max(1, Math.min(16, +$("nframes").value || 6))); }
+  return body;
+}
+async function run(times) {
+  const out = $("out"); out.hidden = false; $("runinfo").textContent = "running…";
+  try {
+    const body = await buildBody(), ms = [], server = []; let last = null;
+    for (let i = 0; i < times; i++) { last = await api("POST", "/v1/systemone", body); ms.push(last.ms); if (last.serverMs) server.push(+last.serverMs); if (!last.ok) break; }
+    const med = (a) => a.length ? [...a].sort((x, y) => x - y)[a.length >> 1] : null;
+    $("runinfo").textContent = `HTTP ${last.status} · round trip ${Math.round(med(ms))} ms${server.length ? ` · model ${Math.round(med(server))} ms` : ""}${times > 1 ? ` (median of ${ms.length})` : ""}`;
+    out.textContent = JSON.stringify(last.json, null, 1);
+  } catch (e) { out.textContent = String(e); $("runinfo").textContent = "failed"; }
+  refresh();
+}
+
+document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+$("connect").addEventListener("click", () => { KEY = $("key").value.trim(); sessionStorage.setItem("jevgw-key", KEY); refresh(); });
+$("key").addEventListener("keydown", (e) => { if (e.key === "Enter") $("connect").click(); });
+$("run").addEventListener("click", () => run(1)); $("run5").addEventListener("click", () => run(5));
+$("tstart").addEventListener("click", async () => { $("tstate").textContent = "starting…"; const r = await api("POST", "/admin/tunnel", { action: "start" }); if (!r.ok) $("tinfo").textContent = r.json && r.json.error; refresh(); });
+$("tstop").addEventListener("click", async () => { await api("POST", "/admin/tunnel", { action: "stop" }); refresh(); });
+$("tcopy").addEventListener("click", () => navigator.clipboard.writeText($("turl").textContent));
+setTab("text"); if (KEY) $("key").value = KEY; refresh();
+</script>
+</body>
+</html>
