@@ -97,6 +97,15 @@ def main():
                 assert isinstance(questions, dict) and questions
             except (ValueError, KeyError, AssertionError):
                 return self._send(422, {"error": "need {state, questions:{id: question}}"})
+            if hasattr(adapter, "answer_request"):  # a model that decides all questions jointly and may take images (clef-flash)
+                t = time.perf_counter()
+                try:
+                    out = adapter.answer_request({**req, "model": req.get("model") or a.model})
+                except (ValueError, KeyError) as e:
+                    return self._send(422, {"error": f"{type(e).__name__}: {e}"})
+                except Exception as e:  # model error
+                    return self._send(500, {"error": f"{type(e).__name__}: {e}"})
+                return self._send(200, {**out, "model": a.model, "latency_ms": round((time.perf_counter() - t) * 1000, 1)})
             t = time.perf_counter(); answers, tokens = {}, 0
             try:
                 with lock:

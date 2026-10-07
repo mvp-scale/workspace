@@ -20,9 +20,13 @@ def data_url(rel):
     return f"data:{mime};base64," + base64.b64encode(raw).decode()
 
 
-def ask(endpoint, model, item):
-    body = {"model": model, "state": item["state"], "winnow": {"images": [data_url(p) for p in item["images"]]},
-            "questions": {"q": item["question"]}}
+def ask(endpoint, model, item, images_field="winnow"):
+    imgs = [data_url(p) for p in item["images"]]
+    body = {"model": model, "state": item["state"], "questions": {"q": item["question"]}}
+    if images_field == "top":  # OpenJev multimodal API (llama-server, clef): a top-level images array of data URLs
+        body["images"] = imgs
+    else:  # Winnow
+        body["winnow"] = {"images": imgs}
     req = urllib.request.Request(endpoint + "/v1/systemone", json.dumps(body).encode(), {"Content-Type": "application/json"})
     t = time.time()
     with urllib.request.urlopen(req, timeout=300) as r:
@@ -45,18 +49,20 @@ def main():
     ap.add_argument("--endpoint", default="http://127.0.0.1:8091")
     ap.add_argument("--model", default="Winnow-12B")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--images-field", choices=["winnow", "top"], default="winnow", help="where the server wants the images")
+    ap.add_argument("--out-name", default="winnow", help="results go to data/image-lab/runs/<out-name>/ (the Image Lab lists every such directory as a model)")
     a = ap.parse_args()
     files = [HERE / f"{t}.jsonl" for t in a.tasks] if a.tasks else sorted(HERE.glob("t[0-9][0-9]_*.jsonl"))
     for f in files:
         task = f.stem
-        dest = OUT / task / "results.jsonl"
+        dest = OUT.parent / a.out_name / task / "results.jsonl"
         if dest.exists() and not a.force:
             print(f"{task}: exists, skipped"); continue
         rows = []
         for item in (json.loads(l) for l in f.read_text().split("\n") if l.strip()):
             row = {"task_id": item["id"], "expected": item["expected"]}
             try:
-                ans, dt, toks = ask(a.endpoint, a.model, item)
+                ans, dt, toks = ask(a.endpoint, a.model, item, a.images_field)
                 pred, probs = score(item, ans)
                 row.update(predicted=pred, probs=probs, correct=pred == item["expected"], p_correct=probs.get(item["expected"], 0.0),
                            latency_s=round(dt, 3), input_tokens=toks)

@@ -59,6 +59,12 @@ setup_clef_flash() { # Cloudflare Clef Flash, Qwen3.5-9B + joint schema head; ca
   hf clef-flash Cloudflare/clef-flash --local-dir /workspace/data/models/clef-flash
 }
 
+setup_clef_flash_q4km() { # bartowski Q4_K_M GGUF served by the official prebuilt llama.cpp b11430 (CUDA 12.8); needs a build with the clef architecture (PR 29831)
+  local L=$M/llama-cpp-b11430; mkdir -p "$L" /workspace/data/models/clef-flash-q4km
+  [ -x "$L/llama-b11430/llama-server" ] || { (cd "$L" && gh release download b11430 --repo ggml-org/llama.cpp --pattern "llama-b11430-bin-ubuntu-cuda-12.8-x64.tar.gz" --pattern "cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64.tar.gz" && for f in *.tar.gz; do tar xzf "$f"; done); }
+  "$M/clef-flash/.venv/bin/hf" download bartowski/Cloudflare_clef-flash-GGUF Cloudflare_clef-flash-Q4_K_M.gguf --local-dir /workspace/data/models/clef-flash-q4km >/dev/null
+}
+
 verify() {  # import check + CUDA visibility for each installed env
   for n in "$@"; do
     "$(py "$n")" -c "import torch;print('$n ok  torch', torch.__version__, 'cuda', torch.cuda.is_available())" 2>&1 | tail -1

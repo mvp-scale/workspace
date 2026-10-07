@@ -22,6 +22,10 @@ Fetch the model card / README. Write down, from the card only: base model, param
 
 If it is an own-server or hosted model, skip step 3 and the adapter. If it is in-process, do everything.
 
+### Quantized or third-party variants of a model we already have
+
+Search the Hub for children of the parent: `https://huggingface.co/api/models?filter=base_model:quantized:<owner>/<repo>` (also `finetune`, `adapter`). Then **read each README and the file's declared architecture; do not rule one out from its file list**. Custom-head models (Clef) are only usable if the quantized copy keeps the head: it may be a separate file (`joint_head.safetensors`) or embedded in the GGUF (Clef's GGUFs carry it at Q8_0 and `llama-server` serves `/v1/systemone` natively, which a file-list check misses). Prefer, in order: a copy served by a mainstream runtime with native support for the decision head, then one with a documented adapter for our existing pattern, then one that needs a bespoke runtime pinned to a specific vLLM/CUDA. Quantized copies are unofficial: say so in `models.json`, cite the quantizer, and record what the card says was preserved (head precision, imatrix). Give the variant its own id (`clef-flash-q4km`) and a six-character code that differs from its parent (`CLF9Q4`). Its probe results are compared with the parent's: the point is to find the floor, so measure per-item agreement and accuracy against the full-precision runs.
+
 ## 2. Pick the id, code and family
 
 - `id`: lowercase, hyphenated, stable (`clef-flash`). It becomes directory names (`data/bench/<id>-<tier>`, `data/probe-runs-v2/<id>-<set>`), so **never rename it later**. The leaderboard splits the directory name on the last `-`, so tier and set names must not collide with the id's suffix.
@@ -45,7 +49,8 @@ Copy the closest adapter (`laya_local.py` for encoders, `clef_local.py` for a de
 
 Add the systemd unit in `demo/lineup.sh` (`unit_inproc`) **and** an entry in `service.yaml` (`kind: systemd`, `port`, `match: serve_inproc`, `health: /healthz`, `heavy: true`, tags). Run `./service.sh check`.
 
-- Next free port after 8017 (taken: 8008-8017, 8091, 8100, 8110, 8112, 8200).
+- llama.cpp servers: `kind: proc` like winnow, binary from the official prebuilt release that includes the architecture (check the PR is merged and the build number is at or after it; do not reuse another model's pinned build). Decision-mode **inputs must fit one physical batch**: pass `-b 16384 -ub 16384` (the card's max input) and `-np` slots with `-c` = slots x 16384, or inputs over 512 tokens fail with HTTP 500 "input is too large to process" and show up as failed items. Memory then is the weights plus compute buffers: Clef Flash Q4_K_M was 6.0 GiB at default batch and 9.7 GiB at `-ub 16384`. Measure with `demo/vram.py` (add a `measure_served` job).
+- Next free port after 8018 (taken: 8008-8018, 8091, 8100, 8110, 8112, 8200).
 - Only models that share `kev-4b`'s start-up memory spike should wait on it. A standalone model must not have the `ExecStartPre` wait, or it sits in "activating" forever when kev-4b is down.
 - **GPU budget before anything else**: `nvidia-smi` and `./service.sh` status. A 9B bf16 model needs about 19 GiB; Winnow takes about 15 GiB. If it will not fit beside the `models` profile, tag it `solo`, leave it out of `profiles.models` and out of `LINEUP`, and say so in the desc.
 
@@ -57,7 +62,7 @@ Also add the id to `BACKENDS` in `demo/server.py` and to `LOCAL` in `demo/index.
 
 ## 7. Measure (one model on the GPU at a time)
 
-Stop the model's own service first; the in-process runs load a second copy and will OOM beside it. Every step below needs an idle GPU for that model; other services may stay up only if the sum fits.
+Stop the model's own service first; in-process runs load a second copy and will OOM beside it. HTTP-served models (kev, llama.cpp) keep their service up and use `demo/bench.sh` (`MODELS=<id>`, endpoint in its `EP` map, `CONC[<id>]` for concurrency, private ledger per run) instead of `bench-batch.sh`. Every step below needs an idle GPU for that model; other services may stay up only if the sum fits.
 
 ```bash
 systemctl stop <id>

@@ -171,6 +171,10 @@ def main():
         f"--host 127.0.0.1 --port 8890 --max-model-len 16384 --gpu-memory-utilization 0.90 & python3 shim/decision_server.py & wait"],
         {"VLLM_USE_FLASHINFER_SAMPLER": "0", "SHIM_VLLM": "http://127.0.0.1:8890/v1/chat/completions", "SHIM_MODEL": "cygnet", "SHIM_TEMPERATURE": "3.4", "CYGNET_PORT": "8016"},
         cy, "http://127.0.0.1:8016", "http://127.0.0.1:8890/v1/models", {})
+    lc = ROOT / "models/llama-cpp-b11430"
+    jobs["clef-flash-q4km"] = lambda: measure_served("clef-flash-q4km", [str(lc / "llama-b11430/llama-server"), "-m", str(ROOT / "data/models/clef-flash-q4km/Cloudflare_clef-flash-Q4_K_M.gguf"), "--alias", "clef-flash-q4km",
+        "--host", "127.0.0.1", "--port", "8018", "-ngl", "999", "-c", "131072", "-np", "8", "-b", "16384", "-ub", "16384"], {"LD_LIBRARY_PATH": f"{lc}/llama-b11430:{lc}/cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64"},
+        ROOT, "http://127.0.0.1:8018", "http://127.0.0.1:8018/health", {})
     for tag, run, port in (("kev-4b", "jaredpalmer/kev-4b", "8010"), ("kev-0.8b", "jaredpalmer/kev-0.8b", "8011"), ("kev-0.5b", str(ROOT / "data/kev/runs/kev"), "8008")):
         jobs[tag + "-bf16"] = (lambda tag=tag, run=run, port=port: measure_served(tag + "-bf16", [kevpy, str(ROOT / "demo/serve_kev.py"), "--run", run, "--port", port], {**kev_env, "KEV_DTYPE": "bf16"},
                                ROOT / "kev", f"http://127.0.0.1:{port}", f"http://127.0.0.1:{port}/v1/models", {}))

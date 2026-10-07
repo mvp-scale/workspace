@@ -312,6 +312,33 @@
         "A softmax per question gives the probabilities; there is no generation and no output parsing.",
         "The card says it was tested on a single H200; the larger sibling is Clef (not yet added)."
       ]
+    },
+    {
+      "id": "clef-flash-q4km",
+      "name": "Clef Flash Q4",
+      "code": "CLF9Q4",
+      "vendor": "Cloudflare (quantized by bartowski)",
+      "kind": "Open, decoder, quantized",
+      "open": true,
+      "licence": "Apache-2.0",
+      "params": "9B (4-bit)",
+      "price": "Self-hosted",
+      "public_rank": null,
+      "public_score": null,
+      "base": "Cloudflare/clef-flash, Q4_K_M GGUF",
+      "architecture": "Decoder backbone with a joint schema head",
+      "family": "joint",
+      "interface": "llama.cpp llama-server, native /v1/systemone",
+      "repo": "https://huggingface.co/bartowski/Cloudflare_clef-flash-GGUF",
+      "verify": "clef-flash-q4km",
+      "served_as": "llama.cpp server b11430, local GPU",
+      "sauce": "The same Clef Flash model with its backbone quantized to 4 bits (Q4_K_M) by a third party. The decision head is kept at Q8_0, per the quantizer's card. Not made or tested by Cloudflare.",
+      "how": [
+        "Same mechanism as Clef Flash: one forward pass, one logit per option, a softmax per question.",
+        "The quantizer's card says the decision head is stored at Q8_0 in every quantized file, and that no importance matrix was used.",
+        "Text and JSON only here: llama.cpp's Clef support is text-only.",
+        "Run to find how far the model can be shrunk before accuracy drops; compare it with the full-precision Clef Flash."
+      ]
     }
   ],
   "tiers": [
