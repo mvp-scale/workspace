@@ -9,18 +9,23 @@ set -euo pipefail
 TAG=${TAG:-b11430}; LLAMA_DIR=${LLAMA_DIR:-$PWD/llama}; mkdir -p "$LLAMA_DIR"; cd "$LLAMA_DIR"
 cc=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d . || true)
 if [ -x "$LLAMA_DIR/bin/llama-server" ]; then echo "$LLAMA_DIR/bin/llama-server"; exit 0; fi
-mkdir -p bin
+rm -rf "$LLAMA_DIR/bin"
+# Everything is built in a scratch folder and moved into bin/ only when it is complete, so an interrupted run leaves nothing half-done
+# and running this again is always safe.
+tmp=$(mktemp -d "$LLAMA_DIR/.tmp.XXXXXX"); trap 'rm -rf "$tmp"' EXIT; mkdir -p "$tmp/bin"
 if [ "${BUILD:-0}" = 1 ]; then
   export PATH=/usr/local/cuda/bin:$PATH CUDACXX=/usr/local/cuda/bin/nvcc
   [ -d src ] || git clone -q --depth 1 --branch "$TAG" https://github.com/ggml-org/llama.cpp src
   cmake -S src -B bld -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="${cc:-75}" -DGGML_NATIVE=OFF -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release >/dev/null
   cmake --build bld --target llama-server -j"$(nproc)" >/dev/null
-  cp bld/bin/llama-server bld/bin/*.so* bin/
+  cp bld/bin/llama-server bld/bin/*.so* "$tmp/bin/"
 elif [ "$cc" = 75 ] && [ -n "${LLAMA_T4_URL:-}" ]; then
-  curl -fsSL "$LLAMA_T4_URL" | tar xz -C bin
+  curl -fsSL --retry 3 "$LLAMA_T4_URL" | tar xz -C "$tmp/bin"
 else
   [ "$cc" = 75 ] && echo "note: T4 with no LLAMA_T4_URL: using the official release, whose T4 code is PTX the driver compiles on first start (slow once, needs a recent driver). Set LLAMA_T4_URL or BUILD=1." >&2
-  curl -fsSL "https://github.com/ggml-org/llama.cpp/releases/download/$TAG/llama-$TAG-bin-ubuntu-cuda-12.8-x64.tar.gz" | tar xz
-  mv "llama-$TAG"/* bin/ && rmdir "llama-$TAG"
+  curl -fsSL --retry 3 "https://github.com/ggml-org/llama.cpp/releases/download/$TAG/llama-$TAG-bin-ubuntu-cuda-12.8-x64.tar.gz" | tar xz -C "$tmp"
+  mv "$tmp/llama-$TAG"/* "$tmp/bin/"
 fi
+[ -x "$tmp/bin/llama-server" ] || { echo "llama-server missing after install" >&2; exit 1; }
+rm -rf bin; mv "$tmp/bin" bin
 echo "$LLAMA_DIR/bin/llama-server"

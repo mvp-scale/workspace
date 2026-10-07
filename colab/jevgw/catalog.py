@@ -9,7 +9,7 @@ from pathlib import Path
 KINDS = {"llama", "proc", "pending", "none"}
 RUNNABLE = {"llama", "proc"}
 HEADROOM_MIB = 800  # CUDA context and the desktop's share: a model must fit with this much to spare
-_REQUIRED = {"llama": ("repo", "file"), "proc": ("cmd",)}
+_REQUIRED = {"llama": ("repo", "file", "file_gib"), "proc": ("cmd",)}
 
 
 class CatalogError(ValueError):
@@ -28,6 +28,8 @@ def load(path: str | Path) -> dict[str, dict]:
         for key in _REQUIRED.get(entry["kind"], ()):
             if key not in entry:
                 raise CatalogError(f"{entry['id']}: kind {entry['kind']!r} needs {key!r}")
+        if entry.get("mmproj") and "mmproj_gib" not in entry:
+            raise CatalogError(f"{entry['id']}: an mmproj needs 'mmproj_gib' (its size, for the disk budget)")
         if entry["id"] in models:
             raise CatalogError(f"duplicate id {entry['id']!r}")
         models[entry["id"]] = entry

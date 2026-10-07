@@ -76,10 +76,14 @@ class Client:
     def stats(self) -> dict:
         return self.call("GET", "/v1/stats").data["stats"]
 
-    def select(self, model: str) -> dict:
-        """Load a model (the current one is unloaded first). Blocks until it answers; raises if refused."""
-        response = self.call("POST", "/admin/select", {"model": model}, timeout=3600)
-        if response.status != 200:
+    def select(self, model: str, wait: bool = True) -> dict:
+        """Load a model (the current one is unloaded first). Raises if refused.
+
+        wait=True blocks until it answers. wait=False returns at once and the load runs in the background: watch `models()["progress"]`,
+        or use `jevgw.notebook.wait_ready`. Asking again for a model that is loading or loaded does nothing.
+        """
+        response = self.call("POST", "/admin/select", {"model": model, "wait": wait}, timeout=3600)
+        if response.status not in (200, 202):
             raise RuntimeError(f"{model}: HTTP {response.status}: {response.data.get('error')}")
         return response.data
 

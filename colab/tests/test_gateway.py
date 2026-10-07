@@ -94,6 +94,12 @@ class TestAuthAndPlumbing(Base):
         self.assertEqual((status, response.getheader("Content-Type")), (200, "text/html; charset=utf-8"))
         self.assertEqual(self.call("GET", "/healthz", key=None)[0], 503)  # nothing loaded yet
 
+    def test_panel_is_not_served_through_the_tunnel(self):
+        self.assertEqual(self.call("GET", "/", key=None)[0], 200)
+        for header in ("Cf-Ray", "Cf-Connecting-Ip"):
+            self.assertEqual(self.call("GET", "/", key=None, headers={header: "x"})[0], 404)
+        self.assertEqual(self.call("GET", "/v1/models", headers={"Cf-Ray": "x"})[0], 200)  # the API still works through it
+
     def test_x_api_key_header_also_works(self):
         status, _, _ = self.call("GET", "/v1/models", key=None, headers={"X-API-Key": KEY})
         self.assertEqual(status, 200)

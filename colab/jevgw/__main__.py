@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 from . import __version__, catalog
+from .disk import Disk
 from .manager import Gateway
 from .server import App, serve
 from .tunnel import Tunnel
@@ -30,6 +31,8 @@ def parse(argv=None) -> argparse.Namespace:
     ap.add_argument("--only", help="comma-separated ids: every other model starts disabled")
     ap.add_argument("--root", default=str(ROOT / "vendor"), help="where models/ and data/ are installed (the JEV_ROOT layout)")
     ap.add_argument("--work", default=str(ROOT / "work"), help="logs, downloaded GGUF files, setup markers")
+    ap.add_argument("--keep", type=int, default=2, help="downloaded models kept on disk; the least recently used are deleted")
+    ap.add_argument("--disk-margin-gib", type=float, default=5.0, help="free disk space always left alone")
     ap.add_argument("--llama-bin", default=os.environ.get("LLAMA_BIN", "llama-server"))
     ap.add_argument(
         "--tunnel", action="store_true", help="start a Cloudflare quick tunnel at launch (the panel can also start one)"
@@ -48,7 +51,8 @@ def main(argv=None) -> None:
            "here": str(ROOT), "child_port": args.port + 1}  # fmt: skip
     models = catalog.load(args.catalog)
     only = set(args.only.split(",")) if args.only else None
-    gateway = Gateway(models, cfg, only)
+    disk = Disk(cfg["weights"], work / "disk.json", args.keep, args.disk_margin_gib)
+    gateway = Gateway(models, cfg, only, disk)
     tunnel = None if args.no_tunnel_support else Tunnel(args.port, str(work))
     app = App(gateway, args.key, tunnel, str(work), args.max_inflight, args.per_minute)
     server = serve(app, args.port, args.host)

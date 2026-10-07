@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from . import catalog
 from .backends import KINDS, Server, log
+from .disk import Disk, DiskFull, files_of
 
 
 class Refused(Exception):
@@ -51,8 +52,8 @@ class Stats:
 
 
 class Gateway:
-    def __init__(self, models: dict[str, dict], cfg: dict, only: set[str] | None = None):
-        self.models, self.cfg = models, cfg
+    def __init__(self, models: dict[str, dict], cfg: dict, only: set[str] | None = None, disk: Disk | None = None):
+        self.models, self.cfg, self.disk = models, cfg, disk
         self.disabled = {mid for mid in models if only is not None and mid not in only}
         self.gpu, self.gpu_mib = catalog.gpu_info()
         self.cur: Server | None = None
@@ -62,6 +63,7 @@ class Gateway:
         self.warm_ms: float | None = None
         self.error: str | None = None
         self.stats = Stats()
+        self._future = None
         # One long-lived thread does every launch and stop (see backends._die_with_parent).
         self._pool = ThreadPoolExecutor(1, thread_name_prefix="launcher")
 
@@ -70,11 +72,22 @@ class Gateway:
 
     # -- state changes (each runs on the launcher thread, one at a time) ---------------------------------------------
 
-    def select(self, model_id: str) -> None:
-        """Unload the current model and load `model_id`. Blocks until it answers."""
-        if model_id not in self.models:
-            raise KeyError(model_id)
-        self._pool.submit(self._select, model_id).result()
+    def select(self, model_id: str, wait: bool = True) -> None:
+        """Unload the current model and load `model_id`. Safe to repeat: loaded or already loading is a no-op.
+
+        With wait=True this blocks until the model answers. With wait=False it returns at once, the load runs in the background,
+        and the state (loading, progress, error) is in status(). A failed load can simply be requested again.
+        """
+        entry = self._loadable(model_id)
+        if self.cur_id == model_id and self.cur:
+            return
+        if self.loading and self.loading != model_id:
+            raise Refused(f"still loading {self.loading}; wait for it to finish", 409)
+        if self.loading != model_id:
+            self.loading, self.error = model_id, None
+            self._future = self._pool.submit(self._load, model_id, entry)
+        if wait:
+            self._future.result()
 
     def unload(self) -> None:
         self._pool.submit(self._unload).result()
@@ -90,16 +103,27 @@ class Gateway:
         if self.cur_id == model_id:
             self.unload()
 
+    def purge(self, model_id: str) -> None:
+        """Delete a model's downloaded files. The loaded model cannot be purged."""
+        if model_id not in self.models:
+            raise KeyError(model_id)
+        if not self.disk:
+            raise Refused("this gateway does not manage disk", 404)
+        if model_id == self.cur_id or model_id == self.loading:
+            raise Refused(f"{model_id} is loaded; unload it first")
+        self.disk.delete(model_id, self.models)
+
     def _unload(self) -> None:
         if self.cur:
             log("unload", self.cur_id)
             self.cur.stop()
         self.cur, self.cur_id, self.load_s, self.warm_ms = None, None, None, None
 
-    def _select(self, model_id: str) -> None:
+    def _loadable(self, model_id: str) -> dict:
+        """The catalog entry, or the reason it cannot be loaded right now."""
+        if model_id not in self.models:
+            raise KeyError(model_id)
         entry = self.models[model_id]
-        if self.cur_id == model_id and self.cur:
-            return
         if entry["kind"] not in KINDS:
             raise Refused(f"{model_id} has no recipe yet ({entry.get('status', 'kind ' + entry['kind'])})", 422)
         if model_id in self.disabled:
@@ -107,9 +131,12 @@ class Gateway:
         if not self.fits(entry):
             raise Refused(f"{model_id} needs about {entry['vram_gib']} GiB; this GPU ({self.gpu or 'none'}) has "
                           f"{self.gpu_mib / 1024:.1f} GiB")  # fmt: skip
-        self.loading, self.error = model_id, None
+        return entry
+
+    def _load(self, model_id: str, entry: dict) -> None:
         try:
             self._unload()
+            self._make_room(entry)
             log("load", model_id)
             started = time.time()
             server = KINDS[entry["kind"]](entry, self.cfg)
@@ -119,6 +146,8 @@ class Gateway:
                 server.stop()
                 raise
             self.warm_ms = server.warm()
+            if self.disk:
+                self.disk.touch(model_id, time.time())
             self.cur, self.cur_id, self.load_s = server, model_id, round(time.time() - started, 1)
             log(f"ready {model_id} in {self.load_s}s (warm-up {self.warm_ms:.0f} ms)")
         except Exception as err:
@@ -127,6 +156,25 @@ class Gateway:
             raise
         finally:
             self.loading = None
+
+    def progress(self) -> dict | None:
+        """What a load in flight is doing: downloading (with GiB done) or starting the model server."""
+        if not self.loading:
+            return None
+        entry = self.models[self.loading]
+        if self.disk and files_of(entry) and not self.disk.cached(entry):
+            done, total = self.disk.downloaded_gib(entry)
+            return {"phase": "downloading", "done_gib": round(done, 2), "total_gib": round(total, 2)}
+        return {"phase": "starting"}
+
+    def _make_room(self, entry: dict) -> None:
+        if not self.disk or not files_of(entry):  # recipe models bring their own install
+            return
+        try:
+            for gone in self.disk.make_room(entry, self.models):
+                log(f"disk: deleted {gone} to make room for {entry['id']}")
+        except DiskFull as err:
+            raise Refused(str(err), 507) from None
 
     # -- serving -----------------------------------------------------------------------------------------------------
 
@@ -151,12 +199,16 @@ class Gateway:
             "gpu_gib": round(self.gpu_mib / 1024, 1),
             "loaded": self.cur_id,
             "loading": self.loading,
+            "progress": self.progress(),
             "load_s": self.load_s,
             "warm_ms": None if self.warm_ms is None else round(self.warm_ms),
             "error": self.error,
+            "disk": self.disk.status(self.models) if self.disk else None,
             "models": [
                 {**{k: e[k] for k in keep if k in e}, "fits": self.fits(e), "loaded": mid == self.cur_id,
-                 "enabled": mid not in self.disabled, "runnable": catalog.runnable(e)}
+                 "enabled": mid not in self.disabled, "runnable": catalog.runnable(e),
+                 "cached": bool(self.disk and self.disk.cached(e)),
+                 "disk_gib": round(e.get("file_gib", 0) + e.get("mmproj_gib", 0), 2) or None}
                 for mid, e in self.models.items()
             ],
         }  # fmt: skip

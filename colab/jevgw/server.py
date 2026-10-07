@@ -1,8 +1,8 @@
 """The HTTP API and the control panel.
 
-Public:   GET /  (the panel), GET /healthz
+Public:   GET /healthz.  GET / (the panel) answers only requests that did not come through the tunnel.
 Key:      GET  /v1/models /v1/stats /v1/tunnel
-          POST /v1/systemone  /admin/select  /admin/unload  /admin/enable  /admin/tunnel
+          POST /v1/systemone  /admin/select  /admin/unload  /admin/enable  /admin/purge  /admin/tunnel
 The key is "Authorization: Bearer <key>" or "X-API-Key: <key>". Every response carries X-Request-Id and X-Gateway-Version.
 """
 
@@ -23,6 +23,7 @@ from .tunnel import Tunnel
 HERE = Path(__file__).resolve().parent
 MAX_BODY = 32 * 1024 * 1024  # a few base64 images
 PUBLIC = {("GET", "/"), ("GET", "/healthz")}
+TUNNEL_HEADERS = ("Cf-Ray", "Cf-Connecting-Ip")  # Cloudflare adds these to everything it forwards
 
 
 class RateLimit:
@@ -99,6 +100,9 @@ def make_handler(app: App):
             token = self.headers.get("Authorization", "").removeprefix("Bearer ").strip() or self.headers.get("X-API-Key", "")
             return secrets.compare_digest(token.encode(), app.key.encode())
 
+        def _via_tunnel(self) -> bool:
+            return any(self.headers.get(name) for name in TUNNEL_HEADERS)
+
         def _read(self) -> bytes | None:
             length = int(self.headers.get("Content-Length") or 0)
             if length > MAX_BODY:
@@ -124,8 +128,8 @@ def make_handler(app: App):
                 if method == "OPTIONS":
                     return self._send(204, b"", {"Access-Control-Allow-Methods": "GET, POST, OPTIONS"})
                 route = ROUTES.get((method, path))
-                if route is None:
-                    return self._send(404, {"error": "not found"})
+                if route is None or (path == "/" and self._via_tunnel()):
+                    return self._send(404, {"error": "not found"})  # the panel is for the notebook, not the public URL
                 if (method, path) not in PUBLIC and not self._authed():
                     return self._send(401, {"error": "missing or wrong API key (Authorization: Bearer <key>)"})
                 body = self._read() if method == "POST" else b""
@@ -190,8 +194,10 @@ def make_handler(app: App):
                 app.inflight.release()
 
         def select(self, body):
-            app.gw.select(str(self._json(body).get("model", "")))
-            self._send(200, app.gw.status())
+            data = self._json(body)
+            wait = bool(data.get("wait", True))
+            app.gw.select(str(data.get("model", "")), wait)
+            self._send(200 if wait else 202, app.gw.status())
 
         def unload(self, _body):
             app.gw.unload()
@@ -200,6 +206,10 @@ def make_handler(app: App):
         def enable(self, body):
             data = self._json(body)
             app.gw.set_enabled(str(data.get("model", "")), bool(data.get("enabled", True)))
+            self._send(200, app.gw.status())
+
+        def purge(self, body):
+            app.gw.purge(str(self._json(body).get("model", "")))
             self._send(200, app.gw.status())
 
         def tunnel_action(self, body):
@@ -216,7 +226,8 @@ def make_handler(app: App):
     ROUTES = {
         ("GET", "/"): "panel", ("GET", "/healthz"): "health", ("GET", "/v1/models"): "models", ("GET", "/v1/stats"): "stats",
         ("GET", "/v1/tunnel"): "tunnel_status", ("POST", "/v1/systemone"): "systemone", ("POST", "/admin/select"): "select",
-        ("POST", "/admin/unload"): "unload", ("POST", "/admin/enable"): "enable", ("POST", "/admin/tunnel"): "tunnel_action",
+        ("POST", "/admin/unload"): "unload", ("POST", "/admin/enable"): "enable", ("POST", "/admin/purge"): "purge",
+        ("POST", "/admin/tunnel"): "tunnel_action",
     }  # fmt: skip
     return Handler
 
