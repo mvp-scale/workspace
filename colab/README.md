@@ -23,8 +23,8 @@ The notebook carries its own code, so it needs no repo. Free Colab gives a **T4 
 | kev-0.5b, kev-0.8b | 2.7, 4.5 | yes | yes | no |
 | kev-4b | 17.8 | no | yes | no |
 | jeff | 9.5 | yes | yes | no |
-| winnow-12b | 14.7 | tight | yes | yes | recipe not written yet |
-| cygnet | 28.6 | excluded (over 20 GiB) | | |
+| winnow-12b (recipe not written yet) | 14.7 | tight | yes | yes |
+| cygnet (excluded, over 20 GiB) | 28.6 | no | no | no |
 
 ## API
 ```
