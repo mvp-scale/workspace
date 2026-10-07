@@ -94,7 +94,7 @@ def table(models: list[dict]) -> str:
 
 INTRO = """# Try type-safe open-source models on a free Colab GPU
 These models answer **typed questions** (yes/no, multiple choice, a score) with probabilities instead of prose. This notebook loads one at a
-time on Colab's free **T4 GPU**, opens the **Jev console** (a control panel with a test box and response times), and shows how fast each answers.
+time on Colab's free **T4 GPU**, opens the **Jev console** in its own browser tab (a control panel with a test box and response times), and shows how fast each answers.
 
 **Quick start:** *Runtime → Change runtime type → T4 GPU*, then *Runtime → Run all*. Every cell is safe to run again.
 
@@ -102,10 +102,10 @@ time on Colab's free **T4 GPU**, opens the **Jev console** (a control panel with
 | Step | What it does | Typical time |
 |---|---|---|
 | 1 · Install | Checks the GPU, disk, network and tools, installs the gateway (included in this file), and installs llama.cpp for the Clef models | 1–2 min |
-| 2 · Start | Starts the gateway and opens the Jev console | seconds |
+| 2 · Start | Starts the gateway and gives you a link that opens the Jev console in its own tab | seconds |
 | 3 · Load a model | Pre-flight check (GPU memory, disk, network), then download or install, then start | **2–9 min the first time** (table below); seconds if it is already on disk |
 | 4 · Test | Times five calls with text, and an image and a video for models that take them | under a minute |
-| 7 · Console | Reopens the Jev console and tells you how to use it | seconds |
+| 7 · Console | Shows the link again and explains each part of the console | seconds |
 
 ### Good to know
 * **You will see it working.** Each step prints what it is doing, a line whenever the phase changes, and the elapsed time and the latest log line
@@ -209,8 +209,9 @@ notebook.test(client, IMAGE, VIDEO)""",
             """SERVE = False  #@param {type:"boolean"}
 if SERVE:
     tunnel = client.tunnel("start")
-    print("endpoint:", tunnel["url"], "   (check it first: open", tunnel["url"] + "/healthz)")
-    print("API key :", KEY)
+    print("Jev console (manage the gateway from any browser):", tunnel["url"] + "/#key=" + KEY)
+    print("  or open", tunnel["url"], "and enter the API key:", KEY)
+    print("API endpoint:", tunnel["url"] + "/v1/systemone", "   (check it first: open", tunnel["url"] + "/healthz)")
     print(f'curl {tunnel["url"]}/v1/systemone -H "Authorization: Bearer {KEY}" -H "Content-Type: application/json" '
           '-d \\'{"state": "Checkout is failing.", "questions": {"outage": {"type": "noul", "instructions": "Is a service down?"}}}\\'')
 else:

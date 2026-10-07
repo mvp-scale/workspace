@@ -1,6 +1,6 @@
 """The HTTP API and the control panel.
 
-Public:   GET /healthz.  GET / (the panel) answers only requests that did not come through the tunnel.
+Public:   GET /  (the console page; it asks for the key), GET /healthz
 Key:      GET  /v1/models /v1/stats /v1/tunnel /metrics
           POST /v1/systemone  /admin/select  /admin/unload  /admin/enable  /admin/purge  /admin/tunnel
 The key is "Authorization: Bearer <key>" or "X-API-Key: <key>". Every response carries X-Request-Id and X-Gateway-Version.
@@ -13,6 +13,7 @@ import secrets
 import threading
 import time
 import uuid
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -24,15 +25,34 @@ from .tunnel import Tunnel
 HERE = Path(__file__).resolve().parent
 MAX_BODY = 32 * 1024 * 1024  # a few base64 images
 PUBLIC = {("GET", "/"), ("GET", "/healthz")}
-TUNNEL_HEADERS = ("Cf-Ray", "Cf-Connecting-Ip")  # Cloudflare adds these to everything it forwards
 
 
-ENDPOINT_NOTE = {
-    "service": "Jev gateway: the API endpoint (the control panel is only available inside the notebook)",
-    "health": "GET /healthz (no key): 200 when a model is loaded, 503 while loading",
-    "call": "POST /v1/systemone with {state, questions, images?} and the header Authorization: Bearer <your API key>",
-    "models": "GET /v1/models (with the key): what is loaded and what fits",
-}
+class AuthGuard:
+    """Slows down someone guessing the API key. The console is served on the public address too, so a wrong key is the one thing that must
+    cost an attacker time: after `limit` wrong keys from one address within `window` seconds, that address is told to wait."""
+
+    def __init__(self, limit: int = 10, window: float = 60.0):
+        self.limit, self.window = limit, window
+        self._misses: dict[str, deque] = {}
+        self._lock = threading.Lock()
+
+    def wait_for(self, who: str) -> float:
+        """Seconds `who` must wait before trying again (0 if allowed)."""
+        now = time.monotonic()
+        with self._lock:
+            recent = self._misses.get(who)
+            while recent and now - recent[0] > self.window:
+                recent.popleft()
+            if not recent:
+                self._misses.pop(who, None)
+                return 0.0
+            return self.window - (now - recent[0]) if len(recent) >= self.limit else 0.0
+
+    def miss(self, who: str) -> None:
+        with self._lock:
+            if len(self._misses) > 10_000:  # a flood of different addresses must not grow memory without bound
+                self._misses.clear()
+            self._misses.setdefault(who, deque()).append(time.monotonic())
 
 
 class RateLimit:
@@ -70,6 +90,7 @@ class App:
         self.started = time.time()
         self.inflight = threading.BoundedSemaphore(max_inflight)
         self.limit = RateLimit(per_minute)
+        self.guard = AuthGuard()
         self.panel = (HERE / "ui" / "index.html").read_bytes()
         self.access_log = Path(work) / "requests.jsonl" if work else None
         self._log_lock = threading.Lock()
@@ -99,6 +120,8 @@ def make_handler(app: App):
                 "X-Request-Id": self.rid,
                 "X-Gateway-Version": __version__,
                 "X-Model": str(app.gw.cur_id),
+                "X-Content-Type-Options": "nosniff",
+                "Referrer-Policy": "no-referrer",
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Headers": "Authorization, Content-Type, X-API-Key, X-Request-Id",
                 "Access-Control-Expose-Headers": "X-Latency-Ms, X-Model, X-Request-Id",
@@ -110,15 +133,17 @@ def make_handler(app: App):
             for name, value in headers.items():
                 self.send_header(name, value)
             self.end_headers()
-            self.wfile.write(raw)
+            if not self.head_only:
+                self.wfile.write(raw)
             self.status = status
 
         def _authed(self) -> bool:
             token = self.headers.get("Authorization", "").removeprefix("Bearer ").strip() or self.headers.get("X-API-Key", "")
             return secrets.compare_digest(token.encode(), app.key.encode())
 
-        def _via_tunnel(self) -> bool:
-            return any(self.headers.get(name) for name in TUNNEL_HEADERS)
+        def _who(self) -> str:
+            """The caller's address: Cloudflare's header when the call came through the tunnel, else the socket's."""
+            return self.headers.get("Cf-Connecting-Ip") or self.client_address[0]
 
         def _read(self) -> bytes | None:
             length = int(self.headers.get("Content-Length") or 0)
@@ -141,18 +166,25 @@ def make_handler(app: App):
             self.rid = (self.headers.get("X-Request-Id") or "")[:64] or uuid.uuid4().hex[:12]
             self.status, self.model, self.body_read, started = 0, None, False, time.perf_counter()
             path = self.path.split("?")[0]
+            self.head_only = method == "HEAD"  # a HEAD is a GET without the body: monitors and link checkers send it
+            method = "GET" if method == "HEAD" else method
             try:
                 if method == "OPTIONS":
                     return self._send(204, b"", {"Access-Control-Allow-Methods": "GET, POST, OPTIONS"})
                 route = ROUTES.get((method, path))
                 if route is None:
                     return self._send(404, {"error": "not found"})
-                if (
-                    path == "/" and self._via_tunnel()
-                ):  # the panel is for the notebook, not the public URL: say what is here instead
-                    return self._send(200, ENDPOINT_NOTE)
-                if (method, path) not in PUBLIC and not self._authed():
-                    return self._send(401, {"error": "missing or wrong API key (Authorization: Bearer <key>)"})
+                if (method, path) not in PUBLIC:
+                    wait = app.guard.wait_for(self._who())
+                    if wait:
+                        return self._send(
+                            429,
+                            {"error": "too many wrong API keys from this address; wait a minute"},
+                            {"Retry-After": str(max(1, round(wait)))},
+                        )
+                    if not self._authed():
+                        app.guard.miss(self._who())
+                        return self._send(401, {"error": "missing or wrong API key (Authorization: Bearer <key>)"})
                 body = self._read() if method == "POST" else b""
                 if body is None:
                     return None
@@ -173,6 +205,9 @@ def make_handler(app: App):
 
         def do_POST(self):
             self._dispatch("POST")
+
+        def do_HEAD(self):
+            self._dispatch("HEAD")
 
         def do_OPTIONS(self):
             self._dispatch("OPTIONS")

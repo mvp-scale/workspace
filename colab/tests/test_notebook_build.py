@@ -159,6 +159,17 @@ class TestNotebook(unittest.TestCase):
         self.assertNotIn("? min", table)
         self.assertEqual(table.count(" min |"), len(build_notebook.t4_models()))
 
+    def test_the_public_endpoint_cell_prints_a_console_address_that_opens_the_whole_console(self):
+        serve = next(src for src in self.code if "SERVE" in src)
+        self.assertIn("/#key=", serve)
+        self.assertIn("manage the gateway from any browser", serve)
+        self.assertIn("/healthz", serve)
+
+    def test_the_second_cell_opens_the_console_as_a_link_not_an_embedded_window(self):
+        start = next(src for src in self.code if "notebook.start" in src)
+        self.assertIn("notebook.show_panel(info)", start)
+        self.assertNotIn("inline", start)
+
     def test_the_last_cell_guides_the_user_to_the_console(self):
         self.assertIn("notebook.console(", self.code[-1])
         self.assertIn("Jev console", "".join(self.cells[-2]["source"]))

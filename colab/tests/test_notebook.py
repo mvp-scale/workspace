@@ -456,6 +456,40 @@ class TestEnsureTools(unittest.TestCase):
         self.assertTrue(any("video test skipped" in str(c) for c in shown.call_args_list))
 
 
+class TestShowPanel(unittest.TestCase):
+    def colab(self, window=True):
+        output = mock.Mock(spec=["serve_kernel_port_as_iframe", *(["serve_kernel_port_as_window"] if window else [])])
+        google = mock.Mock(colab=mock.Mock(output=output))
+        return output, mock.patch.dict("sys.modules", {"google": google, "google.colab": google.colab})
+
+    def test_by_default_it_is_a_link_to_its_own_tab_not_a_tall_embedded_window(self):
+        output, patch = self.colab()
+        with patch:
+            notebook.show_panel({"port": 8001, "key": "k"})
+        output.serve_kernel_port_as_window.assert_called_once()
+        self.assertEqual(output.serve_kernel_port_as_window.call_args.args, (8001,))
+        self.assertEqual(output.serve_kernel_port_as_window.call_args.kwargs["path"], "/#key=k")
+        output.serve_kernel_port_as_iframe.assert_not_called()
+
+    def test_inline_also_embeds_it(self):
+        output, patch = self.colab()
+        with patch:
+            notebook.show_panel({"port": 8001, "key": "k"}, inline=True)
+        output.serve_kernel_port_as_window.assert_called_once()
+        output.serve_kernel_port_as_iframe.assert_called_once()
+
+    def test_an_older_colab_without_the_tab_link_falls_back_to_the_embedded_console(self):
+        output, patch = self.colab(window=False)
+        with patch:
+            notebook.show_panel({"port": 8001, "key": "k"})
+        output.serve_kernel_port_as_iframe.assert_called_once()
+
+    def test_outside_colab_the_address_is_printed(self):
+        with Said() as said, mock.patch.dict("sys.modules", {"google": None, "google.colab": None}):
+            notebook.show_panel({"port": 8001, "key": "k"})
+        self.assertIn("http://127.0.0.1:8001/#key=k", said.text)
+
+
 class TestConsoleGuide(unittest.TestCase):
     def test_explains_the_console_and_how_to_call_the_model_from_code(self):
         with Said() as said, mock.patch.object(notebook, "show_panel") as panel:
@@ -463,9 +497,12 @@ class TestConsoleGuide(unittest.TestCase):
         panel.assert_called_once()
         for expected in (
             "Jev console",
+            "own page",
             "Models",
             "Try a model",
             "Response times",
+            "Public address",
+            "any browser",
             "client.systemone",
             "k123",
             "http://127.0.0.1:8000",

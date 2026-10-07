@@ -347,14 +347,20 @@ def start(llama_bin: str, keep: int = 2, port: int = 8000, key: str = "") -> tup
     return Client(f"http://127.0.0.1:{port}", key), {**state, "reused": False}
 
 
-def show_panel(info: dict) -> None:
-    """The control panel inside the notebook (on Colab), or its address anywhere else."""
+def show_panel(info: dict, inline: bool = False) -> None:
+    """Show where the Jev console is. On Colab that is a link that opens it as its own full browser tab (nothing to scroll past);
+    `inline=True` also embeds it in the notebook. Anywhere else, its address is printed."""
+    path = f"/#key={info['key']}"
     try:
         from google.colab import output
-
-        output.serve_kernel_port_as_iframe(info["port"], path=f"/#key={info['key']}", height="900")
     except ImportError:
-        _say(f"panel: http://127.0.0.1:{info['port']}/#key={info['key']}")
+        _say(f"Jev console: http://127.0.0.1:{info['port']}{path}")
+        return
+    as_tab = getattr(output, "serve_kernel_port_as_window", None)
+    if as_tab:
+        as_tab(info["port"], path=path, anchor_text="Open the Jev console in its own tab")
+    if inline or not as_tab:  # without the tab link (an older Colab), the embedded console is the only way
+        output.serve_kernel_port_as_iframe(info["port"], path=path, height="650")
 
 
 def stop() -> None:
@@ -553,7 +559,7 @@ def wait_ready(
 
 
 def console(client: Client, info: dict) -> None:
-    """Show the Jev console again, here, and say what to do with it."""
+    """Show the Jev console, as its own tab, and say what to do with it."""
     try:
         loaded = client.models().get("loaded") or "no model yet (use the Load button, or run the load cell)"
     except OSError:
@@ -561,15 +567,17 @@ def console(client: Client, info: dict) -> None:
         return
     show_panel(info)
     _say(f"""
-The Jev console is above (scroll up if you cannot see it). Model on the GPU now: {loaded}
+Open the link above: the Jev console opens as its own page, so you can keep it beside the notebook. Model on the GPU now: {loaded}
 
  Models         Load, Unload, Enable, Disable and Delete files. One model is on the GPU at a time; loading another unloads the
                 current one. "On disk" shows what is already downloaded.
  Try a model    Pick Text, Image or Video, edit the state and the questions, press Run (or Run x5 for timings). The questions are
                 typed: noul = a yes/no probability, choice = pick one label, score = a number on a scale you describe.
  Response times p50 and p95 for each model since the gateway started. The header shows the GPU, free disk and the loaded model.
+ Public address Cell 5 turns on a Cloudflare address (off by default; read its note). The same console is served there, so you can manage
+                the gateway from any browser without the notebook: open it and enter your API key. Every action needs the key.
 
  From code in this notebook ({client.url}, key {info["key"]}):
      client.systemone({{"state": "Our checkout is failing.", "questions": {{"outage": {{"type": "noul", "instructions": "Is a service down?"}}}}}}).data
 
- Something stuck?  Run the cell again (it is safe), or cell 6 with 'reset'.  Want a public URL?  Cell 5 (off by default; read its note).""")
+ Something stuck?  Run the cell again (it is safe), or cell 6 with 'reset'.""")

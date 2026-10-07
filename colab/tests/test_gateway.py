@@ -98,13 +98,33 @@ class TestAuthAndPlumbing(Base):
         self.assertEqual((status, response.getheader("Content-Type")), (200, "text/html; charset=utf-8"))
         self.assertEqual(self.call("GET", "/healthz", key=None)[0], 503)  # nothing loaded yet
 
-    def test_panel_is_not_served_through_the_tunnel(self):
-        self.assertEqual(self.call("GET", "/", key=None)[0], 200)
-        for header in ("Cf-Ray", "Cf-Connecting-Ip"):
-            status, body, response = self.call("GET", "/", key=None, headers={header: "x"})
-            self.assertEqual((status, response.getheader("Content-Type")), (200, "application/json"))  # a note, not the panel
-            self.assertIn("/v1/systemone", body["call"])
-        self.assertEqual(self.call("GET", "/v1/models", headers={"Cf-Ray": "x"})[0], 200)  # the API still works through it
+    def test_the_console_page_is_served_on_the_public_address_too_and_everything_in_it_needs_the_key(self):
+        for headers in ({}, {"Cf-Ray": "x", "Cf-Connecting-Ip": "203.0.113.9"}):  # direct, and as Cloudflare's tunnel forwards it
+            status, body, response = self.call("GET", "/", key=None, headers=headers)
+            self.assertEqual((status, response.getheader("Content-Type")), (200, "text/html; charset=utf-8"))
+            self.assertIn(b"Jev gateway", body)
+            self.assertEqual(
+                self.call("GET", "/v1/models", key=None, headers=headers)[0], 401
+            )  # the page itself holds no secrets
+            self.assertEqual(self.call("POST", "/admin/select", {"model": "small"}, key=None, headers=headers)[0], 401)
+            self.assertEqual(self.call("POST", "/admin/tunnel", {"action": "start"}, key=None, headers=headers)[0], 401)
+
+    def test_head_is_answered_like_get_without_a_body(self):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port)
+        self.addCleanup(conn.close)
+        conn.request("HEAD", "/")
+        head = conn.getresponse()
+        self.assertEqual(head.status, 200)
+        self.assertEqual(head.read(), b"")
+        self.assertGreater(int(head.getheader("Content-Length")), 1000)  # the length a GET would send
+        conn.request("HEAD", "/v1/models")  # and the key rules are the same as for GET
+        self.assertEqual(conn.getresponse().status, 401)
+
+    def test_responses_carry_headers_that_suit_a_public_page(self):
+        _, _, response = self.call("GET", "/", key=None)
+        self.assertEqual(response.getheader("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(response.getheader("Referrer-Policy"), "no-referrer")
+        self.assertIsNone(response.getheader("X-Frame-Options"))  # Colab embeds the console in a frame
 
     def test_x_api_key_header_also_works(self):
         status, _, _ = self.call("GET", "/v1/models", key=None, headers={"X-API-Key": KEY})
@@ -190,6 +210,47 @@ class TestModels(Base):
         gw = manager.Gateway(dict(MODELS), {"work": self.work.name}, only={"small"})
         self.addCleanup(gw.shutdown)
         self.assertEqual(gw.disabled, {"other", "huge", "later"})
+
+
+class TestWrongKeys(Base):
+    """The console is public, so guessing the key has to be slow."""
+
+    def test_ten_wrong_keys_from_one_address_lock_that_address_out_for_a_minute(self):
+        headers = {"Cf-Connecting-Ip": "198.51.100.7"}
+        for _ in range(10):
+            self.assertEqual(self.call("GET", "/v1/models", key="wrong", headers=headers)[0], 401)
+        status, body, response = self.call("GET", "/v1/models", key="wrong", headers=headers)
+        self.assertEqual(status, 429)
+        self.assertIn("wrong API keys", body["error"])
+        self.assertGreaterEqual(int(response.getheader("Retry-After")), 1)
+        self.assertEqual(
+            self.call("GET", "/v1/models", key=KEY, headers=headers)[0], 429
+        )  # even the right key waits: it cannot be probed
+
+    def test_other_addresses_and_the_public_paths_are_not_affected(self):
+        for _ in range(10):
+            self.call("GET", "/v1/models", key="wrong", headers={"Cf-Connecting-Ip": "198.51.100.7"})
+        self.assertEqual(self.call("GET", "/v1/models", headers={"Cf-Connecting-Ip": "198.51.100.8"})[0], 200)
+        self.assertEqual(self.call("GET", "/healthz", key=None, headers={"Cf-Connecting-Ip": "198.51.100.7"})[0], 503)
+        self.assertEqual(self.call("GET", "/", key=None, headers={"Cf-Connecting-Ip": "198.51.100.7"})[0], 200)
+
+    def test_a_few_typos_are_forgiven_and_the_window_expires(self):
+        import time
+
+        from jevgw.server import AuthGuard
+
+        guard = AuthGuard(limit=3, window=0.2)
+        for _ in range(2):
+            guard.miss("a")
+        self.assertEqual(guard.wait_for("a"), 0)
+        guard.miss("a")
+        self.assertGreater(guard.wait_for("a"), 0)
+        time.sleep(0.25)
+        self.assertEqual(guard.wait_for("a"), 0)
+
+    def test_the_address_comes_from_cloudflare_when_present(self):
+        self.call("GET", "/v1/models", key="wrong", headers={"Cf-Connecting-Ip": "203.0.113.50"})
+        self.assertIn("203.0.113.50", self.app.guard._misses)
 
 
 class TestProgressDetail(Base):

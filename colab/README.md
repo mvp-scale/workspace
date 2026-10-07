@@ -35,8 +35,10 @@ For people who just want to play with a classifier: **Runtime > Run all** is the
 These helpers are `jevgw/notebook.py`, with unit tests (`tests/test_notebook.py`).
 
 ## The control panel
-`GET /` (no key needed to see it, but it answers only requests that did not come through the tunnel: the public URL serves the API, never the panel; every
-action needs the key). One table of every model: GiB, what it takes (text, images), state
+`GET /` serves the console page, on the local address and on the public tunnel address alike. The page holds no secrets and asks for the API key (or takes it from a
+`#key=` link, then removes it from the address bar and keeps it for that tab only); every call it makes needs the key. In Colab the notebook shows a link that opens it as its own
+browser tab; with the public address on, the same console is served there, so the gateway can be managed from any browser without the notebook. Because that makes it a public
+login page, ten wrong keys from one address lock that address out for a minute, and responses carry `nosniff` and `no-referrer` headers. One table of every model: GiB, what it takes (text, images), state
 (ready, loaded, disabled, needs 24 GB, no recipe yet) and **Load / Unload / Enable / Disable / Delete files**, and whether its weights are on disk. The header shows free disk. Plus the tunnel (start, stop, URL, curl),
 live p50/p95 per model, and a test box for text, an image, or a video (sampled into frames in your browser).
 
@@ -75,7 +77,7 @@ GET  /healthz        200 once a model is loaded, 503 while loading; no key, no s
 Responses carry `X-Request-Id`, `X-Model`, `X-Gateway-Version`; `/v1/systemone` also `X-Latency-Ms` (time inside the model). A model is warmed with one
 throwaway call after loading, so the first real call is not the cold one. Video goes in as sampled frames in `images`.
 
-Built in for a test service: API key on everything but `/healthz` and the local panel · rate limit (default 600/min, `--per-minute`) and an in-flight cap
+Built in for a test service: API key on everything but `/healthz` and the console page itself · rate limit (default 600/min, `--per-minute`) and an in-flight cap
 (`--max-inflight`, default twice the model server's 4 slots; an overloaded request gets an immediate 429 with `Retry-After` computed from the measured throughput) · 503 with `Retry-After` while loading · CORS for browser clients · request ids · a request log with
 no bodies (`work/requests.jsonl`) · request bodies capped at 32 MB · children are stopped with the gateway.
 

@@ -118,9 +118,10 @@ const el = (tag, props = {}, ...kids) => {
 };
 const chip = (text, tone = "") => el("span", { class: `chip ${tone}`, text });
 
-let KEY = sessionStorage.getItem("jevgw-key") || "";
+const store = { get: () => { try { return sessionStorage.getItem("jevgw-key") || ""; } catch (e) { return ""; } }, set: (v) => { try { sessionStorage.setItem("jevgw-key", v); } catch (e) {} } };
+let KEY = store.get();
 const hashKey = new URLSearchParams(location.hash.slice(1)).get("key");
-if (hashKey) { KEY = hashKey; sessionStorage.setItem("jevgw-key", KEY); history.replaceState(null, "", location.pathname); }
+if (hashKey) { KEY = hashKey; store.set(KEY); history.replaceState(null, "", location.pathname); }
 let STATUS = null, BUSY = false, TAB = "text";
 
 async function api(method, path, body) {
@@ -261,7 +262,7 @@ async function run(times) {
 }
 
 document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
-$("connect").addEventListener("click", () => { KEY = $("key").value.trim(); sessionStorage.setItem("jevgw-key", KEY); refresh(); });
+$("connect").addEventListener("click", () => { KEY = $("key").value.trim(); store.set(KEY); refresh(); });
 $("key").addEventListener("keydown", (e) => { if (e.key === "Enter") $("connect").click(); });
 $("run").addEventListener("click", () => run(1)); $("run5").addEventListener("click", () => run(5));
 $("tstart").addEventListener("click", async () => { $("tstate").textContent = "starting…"; const r = await api("POST", "/admin/tunnel", { action: "start" }); if (!r.ok) $("tinfo").textContent = r.json && r.json.error; refresh(); });
