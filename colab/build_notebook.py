@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Write clef_colab.ipynb: one self-contained notebook (the code travels inside it as a base64 tarball). Edit the files, then rerun this."""
-import base64, io, json, tarfile
+"""Write clef_colab.ipynb. The notebook clones this folder from GitHub. `--embed` instead packs the code into the notebook (a base64 tarball),
+for use before the code is published. Edit the files, then rerun this."""
+import base64, io, json, sys, tarfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -20,6 +21,24 @@ def md(s): return {"cell_type": "markdown", "metadata": {}, "source": s.strip("\
 def code(s): return {"cell_type": "code", "metadata": {}, "execution_count": None, "outputs": [], "source": s.strip("\n").splitlines(True)}
 
 
+CLONE = '''# clones just this folder from GitHub (a sparse clone: the repo holds more than the notebook needs)
+REPO = "https://github.com/mvp-scale/workspace"  #@param {type:"string"}
+BRANCH = "main"  #@param {type:"string"}
+SUBDIR = "colab"  #@param {type:"string"}  # leave empty if the repo root is this folder
+import os, subprocess
+def sh(c): subprocess.run(c, shell=True, check=True)
+sh("rm -rf /content/src")
+sh(f"git clone -q --depth 1 --branch {BRANCH} " + (f"--filter=blob:none --sparse {REPO} /content/src && git -C /content/src sparse-checkout set {SUBDIR}" if SUBDIR else f"{REPO} /content/src"))
+os.chdir(f"/content/src/{SUBDIR}")
+print(os.getcwd(), sorted(os.listdir()))'''
+if "--embed" in sys.argv:
+    CLONE = f'''# the code travels inside this notebook (built with --embed)
+import base64, io, os, tarfile
+BUNDLE = "{bundle()}"
+tarfile.open(fileobj=io.BytesIO(base64.b64decode(BUNDLE)), mode="r:gz").extractall("/content/clef")
+os.chdir("/content/clef")
+print(os.getcwd(), sorted(os.listdir()))'''
+
 ids = [m["id"] for m in json.loads((HERE / "models.json").read_text())["models"] if m.get("kind") in ("llama", "proc")]
 cells = [
     md("""# Try the Jev-class models on a Colab GPU
@@ -28,12 +47,7 @@ Everything runs and is called **from this notebook**. Run the cells top to botto
 
 **Terms.** Colab's FAQ disallows "web service offerings not related to interactive compute", so this notebook does not open a public URL or keep the session alive. See the README."""),
     md("## 1. Get the code"),
-    code(f'''# the gateway, the test client, the model list and the install scripts (written by build_notebook.py)
-import base64, io, tarfile
-BUNDLE = "{bundle()}"
-tarfile.open(fileobj=io.BytesIO(base64.b64decode(BUNDLE)), mode="r:gz").extractall("/content/clef")
-%cd /content/clef
-!ls'''),
+    code(CLONE),
     md("## 2. Which GPU, and which models fit it"),
     code('''import json, subprocess
 print(subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"], capture_output=True, text=True).stdout or "NO GPU: Runtime > Change runtime type > GPU")
@@ -48,7 +62,7 @@ A T4 has no ready-made code in the official build, so the first start compiles i
     code('''LLAMA_T4_URL = ""  #@param {type:"string"}
 import os
 os.environ["LLAMA_T4_URL"] = LLAMA_T4_URL
-LLAMA = !LLAMA_DIR=/content/clef/llama ./setup_llama.sh
+LLAMA = !LLAMA_DIR=$PWD/llama ./setup_llama.sh
 LLAMA_BIN = LLAMA[-1]
 print(LLAMA_BIN)'''),
     md("## 4. Start the gateway and load a model\nThe first load of a model installs its packages and downloads its weights (minutes). Later loads are fast."),
@@ -56,7 +70,7 @@ print(LLAMA_BIN)'''),
 import subprocess, sys, time, urllib.request, json, secrets
 KEY = secrets.token_urlsafe(12)
 URL = "http://127.0.0.1:8000"
-gw = subprocess.Popen([sys.executable, "gateway.py", "--port", "8000", "--key", KEY, "--llama-bin", LLAMA_BIN, "--root", "/content/clef/vendor", "--work", "/content/clef/work"])
+gw = subprocess.Popen([sys.executable, "gateway.py", "--port", "8000", "--key", KEY, "--llama-bin", LLAMA_BIN, "--root", os.path.abspath("vendor"), "--work", os.path.abspath("work")])
 time.sleep(2)
 import try_it
 t = time.time(); status = try_it.select(URL, KEY, MODEL)

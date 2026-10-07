@@ -7,7 +7,7 @@ One model at a time. Same `/v1/systemone` shape as the hosted API.
 1. Open `clef_colab.ipynb` in Google Colab (File > Upload notebook). Runtime > Change runtime type > GPU.
 2. Run the cells top to bottom. Pick a model in step 4, test it in step 5, switch in step 6.
 
-The notebook carries its own code, so it needs no repo. Free Colab gives a **T4 (16 GB, about 15 GiB usable)**; paid plans offer larger GPUs (check Colab's current list).
+The notebook clones this folder from GitHub (`REPO`, `BRANCH`, `SUBDIR` at the top; a sparse clone, so only `colab/` is fetched). Before the code is published, `python3 build_notebook.py --embed` builds a version that carries the code inside it. Free Colab gives a **T4 (16 GB, about 15 GiB usable)**; paid plans offer larger GPUs (check Colab's current list).
 
 ## Models
 `vram_gib` is peak GPU memory measured on our RTX 5090. The gateway refuses a model that does not fit the GPU it runs on.
