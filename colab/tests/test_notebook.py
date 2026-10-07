@@ -243,6 +243,16 @@ class TestWaitReady(unittest.TestCase):
         self.assertIn("Fetching 39 files: 85%", beats[0])
         self.assertIn("installing", beats[0])
 
+    def test_a_dropped_download_being_retried_is_shown_once(self):
+        note = "download of x.gguf failed (OSError: connection dropped after 629145 of 1572864 bytes); retrying (1/2)"
+        loading = status(
+            loading="m", progress={"phase": "downloading", "done_gib": 1, "total_gib": 4, "elapsed_s": 5, "detail": note}
+        )
+        client = FakeClient([status(), loading, loading, loading, status(loaded="m")])
+        with Said() as said:
+            notebook.wait_ready(client, "m", poll=0, heartbeat=3600)
+        self.assertEqual(sum("connection dropped" in line for line in said.lines), 1)
+
     def test_phase_changes_are_announced_once(self):
         starting = status(loading="m", progress={"phase": "starting", "elapsed_s": 1})
         client = FakeClient([status(), starting, starting, starting, status(loaded="m")])
@@ -302,6 +312,32 @@ class TestPreflight(unittest.TestCase):
         self.assertIn("needs about 18.5 GiB", str(caught.exception))
         self.assertEqual(client.selects, 0)
 
+    def test_switching_between_two_large_models_counts_the_memory_the_loaded_one_will_free(self):
+        """Q4 (10.8 GiB) is loaded, only 4.6 GiB is free, and Q2 needs 9.3: loading Q2 unloads Q4 first, so this must pass."""
+        loaded_q4 = status("m", vram_gib=9.3, loaded="big")
+        loaded_q4["models"].append({**loaded_q4["models"][0], "id": "big", "name": "BIG", "vram_gib": 10.8})
+        loaded_q4["gpu_free_gib"] = 4.6
+        with Said() as said, mock.patch.object(notebook, "_reachable", lambda url: True):
+            notebook.preflight(FakeClient(), "m", loaded_q4)
+        self.assertIn("(after unloading big)", said.text)
+        self.assertIn(
+            "15.0 GiB free of 15.0", said.text.replace("15.0 GiB free of 15.0", "15.0 GiB free of 15.0")
+        )  # capped at the card
+
+    def test_a_busy_gpu_is_still_refused_when_nothing_is_loaded(self):
+        busy = status(vram_gib=9.3)
+        busy["gpu_free_gib"] = 4.6
+        with Said(), self.assertRaises(RuntimeError):
+            notebook.preflight(FakeClient(), "m", busy)
+
+    def test_the_freed_memory_never_exceeds_the_card(self):
+        loaded = status("m", vram_gib=14.0, loaded="big")
+        loaded["models"].append({**loaded["models"][0], "id": "big", "name": "BIG", "vram_gib": 20.0})
+        loaded["gpu_free_gib"] = 14.0
+        with Said() as said, mock.patch.object(notebook, "_reachable", lambda url: True):
+            notebook.preflight(FakeClient(), "m", loaded)
+        self.assertIn("15.0 GiB free of 15.0", said.text)
+
     def test_refuses_when_the_gpu_is_busy(self):
         busy = status()
         busy["gpu_free_gib"] = 2.0
@@ -336,6 +372,7 @@ class TestSetupChecks(unittest.TestCase):
             mock.patch.object(notebook.subprocess, "run", return_value=completed),
             mock.patch.object(notebook, "_reachable", lambda url: reachable),
             mock.patch.object(notebook, "ensure_llama", lambda t4: "/llama"),
+            mock.patch.object(notebook, "ensure_tools", lambda: []),
             mock.patch.object(notebook, "use_hf_token", lambda: False),
         ):
             result = notebook.setup()
@@ -361,6 +398,62 @@ class TestSetupChecks(unittest.TestCase):
         with self.assertRaises(SystemExit) as caught:
             self.run_setup(reachable=False)
         self.assertIn("Cannot reach", str(caught.exception))
+
+
+class TestEnsureTools(unittest.TestCase):
+    def have(self, present):
+        return mock.patch.object(notebook.shutil, "which", lambda tool: f"/usr/bin/{tool}" if tool in present else None)
+
+    def test_a_normal_colab_machine_needs_nothing_installed(self):
+        everything = set(notebook.REQUIRED_TOOLS + notebook.OPTIONAL_TOOLS)
+        with Said() as said, self.have(everything), mock.patch.object(notebook, "_apt_install") as apt:
+            self.assertEqual(notebook.ensure_tools(), [])
+        apt.assert_not_called()
+        self.assertIn("Tools      ok", said.text)
+
+    def test_missing_tools_are_installed_with_apt_and_then_found(self):
+        present = set(notebook.REQUIRED_TOOLS)
+        installed = []
+
+        def fake_apt(tools):
+            installed.extend(tools)
+            present.update(tools)
+
+        with Said() as said, self.have(present), mock.patch.object(notebook, "_apt_install", fake_apt):
+            self.assertEqual(notebook.ensure_tools(), [])
+        self.assertEqual(sorted(installed), ["ffmpeg", "ffprobe"])
+        self.assertIn("installing ffmpeg, ffprobe", said.text)
+
+    def test_a_required_tool_that_cannot_be_installed_stops_with_its_name(self):
+        present = set(notebook.REQUIRED_TOOLS) - {"git"}
+        with Said(), self.have(present), mock.patch.object(notebook, "_apt_install"), self.assertRaises(SystemExit) as caught:
+            notebook.ensure_tools()
+        self.assertIn("git", str(caught.exception))
+
+    def test_a_missing_optional_tool_only_skips_the_video_test(self):
+        present = set(notebook.REQUIRED_TOOLS)
+        with Said() as said, self.have(present), mock.patch.object(notebook, "_apt_install"):
+            self.assertEqual(notebook.ensure_tools(), ["ffmpeg", "ffprobe"])
+        self.assertIn("the video test will be skipped", said.text)
+
+    def test_apt_packages_cover_every_tool(self):
+        for tool in notebook.REQUIRED_TOOLS + notebook.OPTIONAL_TOOLS:
+            self.assertIn(tool, notebook.APT_PACKAGE)
+
+    def test_the_video_test_is_skipped_not_crashed_without_ffmpeg(self):
+        from jevgw import client as calls
+
+        with (
+            Said(),
+            mock.patch.object(calls.shutil, "which", lambda tool: None),
+            mock.patch.object(calls, "bench", return_value={"test": "t", "answers": {}}),
+            mock.patch.object(calls, "sample_image"),
+            mock.patch.object(calls, "data_url", return_value="data:image/jpeg;base64,"),
+            mock.patch("builtins.print") as shown,
+        ):
+            rows = calls.demo(mock.Mock(), None, None, text=False)
+        self.assertEqual(len(rows), 1)  # the image test only
+        self.assertTrue(any("video test skipped" in str(c) for c in shown.call_args_list))
 
 
 class TestConsoleGuide(unittest.TestCase):

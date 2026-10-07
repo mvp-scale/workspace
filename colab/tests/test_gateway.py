@@ -204,6 +204,30 @@ class TestProgressDetail(Base):
         self.assertEqual(progress["detail"], "warming up the kernels")
         self.gw.loading = None
 
+    def test_a_recent_download_retry_is_part_of_the_progress(self):
+        import time
+
+        from jevgw import backends
+
+        self.gw.disk = mock.Mock()
+        self.gw.disk.tracks.return_value, self.gw.disk.cached.return_value = True, False
+        self.gw.disk.downloaded_gib.return_value = (1.0, 4.0)
+        self.addCleanup(
+            self.gw.models["small"].__setitem__, "kind", self.gw.models["small"]["kind"]
+        )  # the model table is shared by every test
+        self.gw.models["small"]["kind"] = "llama"
+        self.gw.loading, self.gw.loading_since = "small", time.time()
+        backends.RECENT_EVENT = (time.time(), "download of f.gguf failed (OSError: x); retrying (1/2)")
+        self.assertIn("retrying (1/2)", self.gw.progress()["detail"])
+        backends.RECENT_EVENT = (
+            time.time() - 600,
+            "download of f.gguf failed (OSError: x); retrying (1/2)",
+        )  # long ago: not news
+        self.assertEqual(self.gw.progress()["detail"], "")
+        backends.RECENT_EVENT = (time.time(), "ready small in 3s")  # not a download event
+        self.assertEqual(self.gw.progress()["detail"], "")
+        self.gw.loading = None
+
     def test_status_reports_free_gpu_memory_for_the_preflight(self):
         self.assertEqual(self.call("GET", "/v1/models")[1]["gpu_free_gib"], 16.0)
 

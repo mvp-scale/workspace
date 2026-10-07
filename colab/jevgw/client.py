@@ -12,6 +12,7 @@ import argparse
 import base64
 import io
 import json
+import shutil
 import statistics
 import subprocess
 import tempfile
@@ -231,6 +232,9 @@ def demo(client: Client, image=None, video=None, frames: int = 6, n: int = 5, te
             n,
         )
     )
+    if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+        print("video test skipped: ffmpeg is not installed on this machine")
+        return [row for row in rows if row]
     shots = video_frames(video, frames) if video else sample_video_frames(frames)
     moving = {"moving": {"type": "noul", "instructions": "Is a red square visible in these frames?"}}
     rows.append(

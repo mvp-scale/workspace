@@ -73,7 +73,12 @@ def install_vendor(root: Path) -> None:
         shutil.copytree(source / folder, root / folder, dirs_exist_ok=True)
 
 
+RECENT_EVENT: tuple[float, str] = (0.0, "")  # the latest line logged, for the progress detail
+
+
 def log(*args) -> None:
+    global RECENT_EVENT
+    RECENT_EVENT = (time.time(), " ".join(str(a) for a in args))
     print(time.strftime("%H:%M:%S"), *args, flush=True)
 
 

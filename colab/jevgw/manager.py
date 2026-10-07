@@ -10,7 +10,7 @@ from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from . import catalog
+from . import backends, catalog
 from .backends import KINDS, Server, last_line, log
 from .disk import Disk, DiskFull
 
@@ -182,7 +182,17 @@ class Gateway:
                 detail = last_line(work / f"{self.loading}.setup.log")
                 return {"phase": "installing", "total_gib": entry.get("install_gib", 0), "elapsed_s": elapsed, "detail": detail}
             done, total = self.disk.downloaded_gib(entry)
-            return {"phase": "downloading", "done_gib": round(done, 2), "total_gib": round(total, 2), "elapsed_s": elapsed}
+            when, event = backends.RECENT_EVENT
+            note = (
+                event if event.startswith("download of") and time.time() - when < 120 else ""
+            )  # a dropped connection being retried
+            return {
+                "phase": "downloading",
+                "done_gib": round(done, 2),
+                "total_gib": round(total, 2),
+                "elapsed_s": elapsed,
+                "detail": note,
+            }
         return {"phase": "starting", "elapsed_s": elapsed, "detail": last_line(work / f"{self.loading}.log")}
 
     def _require_free_gpu_memory(self, entry: dict) -> None:

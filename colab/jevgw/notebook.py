@@ -106,6 +106,59 @@ def _reachable(url: str, timeout: float = 10.0) -> bool:
         return False
 
 
+REQUIRED_TOOLS = (
+    "bash",
+    "curl",
+    "git",
+    "tar",
+    "ldd",
+)  # install llama.cpp, clone the model repositories, find missing CUDA libraries
+OPTIONAL_TOOLS = ("ffmpeg", "ffprobe")  # only the video test needs these
+APT_PACKAGE = {
+    "bash": "bash",
+    "curl": "curl",
+    "git": "git",
+    "tar": "tar",
+    "ldd": "libc-bin",
+    "ffmpeg": "ffmpeg",
+    "ffprobe": "ffmpeg",
+}
+
+
+def _apt_install(tools: list[str]) -> None:
+    """Install the Ubuntu packages that provide `tools`. Colab runs as root; elsewhere this may fail, and the caller reports what is missing."""
+    env = {**os.environ, "DEBIAN_FRONTEND": "noninteractive"}
+    packages = sorted({APT_PACKAGE[tool] for tool in tools})
+    for command in (["apt-get", "update", "-qq"], ["apt-get", "install", "-y", "-qq", *packages]):
+        with contextlib.suppress(OSError):
+            subprocess.run(command, env=env, capture_output=True, timeout=600)
+
+
+def ensure_tools() -> list[str]:
+    """Check the tools and Python packages the notebook relies on, installing what is missing. Returns the optional ones still missing.
+
+    Colab has all of these, so normally this just prints "ok". Anything required that cannot be installed stops here, before any large download.
+    """
+    missing = [tool for tool in REQUIRED_TOOLS + OPTIONAL_TOOLS if not shutil.which(tool)]
+    if missing:
+        _say(f"  Tools      installing {', '.join(missing)} (about a minute)...")
+        _apt_install(missing)
+        missing = [tool for tool in missing if not shutil.which(tool)]
+    required = [tool for tool in missing if tool in REQUIRED_TOOLS]
+    if required:
+        raise SystemExit(
+            f"  Missing tools that could not be installed: {', '.join(required)}. Install them (apt-get install ...) and run this cell again."
+        )
+    try:
+        import PIL  # noqa: F401 - used by the image and video tests
+    except ImportError:
+        _say("  Tools      installing Pillow for the image test...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], capture_output=True)
+    optional = [tool for tool in missing if tool in OPTIONAL_TOOLS]
+    _say("  Tools      " + ("ok" if not optional else f"ok, except {', '.join(optional)}: the video test will be skipped"))
+    return optional
+
+
 MIN_DRIVER = 525  # NVIDIA's minimum driver for the CUDA 12 libraries llama.cpp is built with
 
 
@@ -135,6 +188,7 @@ def setup(t4_url: str = "") -> str:
         if not _reachable(url):
             raise SystemExit(f"  Cannot reach {label} ({url}). Check the runtime's internet access and run this cell again.")
     _say("  Network    GitHub and Hugging Face reachable: ok")
+    ensure_tools()
     models = catalog.load(DATA / "models.json")
     fits = [m["id"] for m in models.values() if catalog.runnable(m) and catalog.fits(m, mib)]
     _say(f"  Models     {len(fits)} fit this GPU: {', '.join(fits)}")
@@ -386,13 +440,21 @@ def preflight(client: Client, model: str, status: dict | None = None) -> None:
             else f"it needs about {need_gpu} GiB and this GPU has {status['gpu_gib']} GiB"
         )
         raise RuntimeError(f"  {model} cannot be loaded here: {why}.")
-    if free_gpu is not None and free_gpu < need_gpu:
+    loaded = status.get("loaded")
+    reclaim = (
+        next((m.get("vram_gib") or 0 for m in status["models"] if m["id"] == loaded), 0) if loaded and loaded != model else 0
+    )
+    available = (
+        None if free_gpu is None else min(status["gpu_gib"], free_gpu + reclaim)
+    )  # loading unloads the current model first
+    if available is not None and available < need_gpu:
         raise RuntimeError(
-            f"  GPU memory: {model} needs about {need_gpu} GiB but only {free_gpu} GiB is free: something else is using the GPU. "
+            f"  GPU memory: {model} needs about {need_gpu} GiB but only {available:.1f} GiB would be free: something else is using the GPU. "
             "Run cell 6 with 'reset', or Runtime > Restart session, then try again."
         )
+    after = f" (after unloading {loaded})" if reclaim else ""
     _say(
-        f"  GPU memory   needs about {need_gpu} GiB, {free_gpu if free_gpu is not None else '?'} GiB free of {status['gpu_gib']}: ok"
+        f"  GPU memory   needs about {need_gpu} GiB, {'?' if available is None else f'{available:.1f}'} GiB free of {status['gpu_gib']}{after}: ok"
     )
     size, disk = entry.get("disk_gib") or 0, status.get("disk")
     if entry.get("cached"):
@@ -428,7 +490,7 @@ def _wait_ready(client: Client, model: str, timeout: float, poll: float, retries
     if status["loaded"]:
         _say(f"  (loading {model} unloads {status['loaded']} first; only one model fits on the GPU at a time)")
     started = time.monotonic()
-    deadline, failures, last_phase, last_beat = started + timeout, 0, "", started
+    deadline, failures, last_phase, last_beat, last_note = started + timeout, 0, "", started, ""
     while status["loading"] and status["loading"] != model and time.monotonic() < deadline:
         _say(f"  {status['loading']} is still loading; waiting for it to finish first...")
         time.sleep(poll)
@@ -449,6 +511,9 @@ def _wait_ready(client: Client, model: str, timeout: float, poll: float, retries
             if phase != last_phase:
                 _say(f"  [{_clock(now - started)}] {phase}")
                 last_phase, last_beat = phase, now
+            elif (status.get("progress") or {}).get("phase") == "downloading" and detail and detail != last_note:
+                _say(f"  [{_clock(now - started)}] {detail}")  # for example a dropped connection being retried
+                last_note = detail
             elif now - last_beat >= heartbeat:
                 _say(
                     f"  [{_clock(now - started)}] still working: {phase.split(' (')[0].split(';')[0]}"

@@ -1,6 +1,6 @@
 """jevgw: one decision model at a time behind one TypeSafe-compatible /v1/systemone endpoint."""
 
-__version__ = "0.3.0"
+__version__ = "0.3.2"
 
 from pathlib import Path
 
