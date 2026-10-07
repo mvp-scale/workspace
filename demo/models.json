@@ -310,7 +310,8 @@
         "The Qwen3.5-9B backbone reads the state (text, JSON, images or video) once.",
         "A joint schema head routes evidence from the state to each question and returns one logit per allowed option.",
         "A softmax per question gives the probabilities; there is no generation and no output parsing.",
-        "The card says it was tested on a single H200; the larger sibling is Clef (not yet added)."
+        "The card says it was tested on a single H200; the larger sibling is Clef (not yet added).",
+        "Takes images as well as text; the card also documents video, which we have not tested. Questions in one request are decided jointly."
       ]
     },
     {
@@ -331,12 +332,12 @@
       "interface": "llama.cpp llama-server, native /v1/systemone",
       "repo": "https://huggingface.co/bartowski/Cloudflare_clef-flash-GGUF",
       "verify": "clef-flash-q4km",
-      "served_as": "llama.cpp server b11430, local GPU",
+      "served_as": "llama.cpp server b11430, local GPU (text and images)",
       "sauce": "The same Clef Flash model with its backbone quantized to 4 bits (Q4_K_M) by a third party. The decision head is kept at Q8_0, per the quantizer's card. Not made or tested by Cloudflare.",
       "how": [
         "Same mechanism as Clef Flash: one forward pass, one logit per option, a softmax per question.",
         "The quantizer's card says the decision head is stored at Q8_0 in every quantized file, and that no importance matrix was used.",
-        "Text and JSON only here: llama.cpp's Clef support is text-only.",
+        "Images work through a separate 0.92 GB vision projector (--mmproj); the Image Lab results use it. Video is not tested.",
         "Run to find how far the model can be shrunk before accuracy drops; compare it with the full-precision Clef Flash."
       ]
     }
