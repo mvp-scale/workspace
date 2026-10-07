@@ -15,6 +15,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from .download import download
+
 DOWNLOAD_TRIES = 3
 PROBE_SECONDS = 1200  # a first start (installs, downloads, GPU kernel compile) can take many minutes
 WARM_BODY = b'{"state": "warm-up", "questions": {"q": {"type": "noul", "instructions": "Is this a test?"}}}'
@@ -107,20 +109,11 @@ class Server:
 
 
 def fetch(repo: str, name: str, dest: str) -> str:
-    """A file from the Hugging Face Hub, or from a folder listed in CLEF_LOCAL (colon-separated) that already holds it."""
+    """A file from the Hugging Face Hub (see download.py: standard library only), or from a folder listed in CLEF_LOCAL (colon-separated) that already holds it."""
     for folder in filter(None, os.environ.get("CLEF_LOCAL", "").split(":")):
         if (Path(folder) / name).exists():
             return str(Path(folder) / name)
-    from huggingface_hub import hf_hub_download
-
-    for attempt in range(1, DOWNLOAD_TRIES + 1):  # a dropped connection resumes from the partial file
-        try:
-            return hf_hub_download(repo, name, local_dir=dest)
-        except Exception as err:  # noqa: BLE001 - huggingface_hub raises several unrelated types for network trouble
-            if attempt == DOWNLOAD_TRIES:
-                raise
-            log(f"download of {name} failed ({type(err).__name__}); retrying ({attempt}/{DOWNLOAD_TRIES - 1})")
-            time.sleep(5 * attempt)
+    return download(repo, name, dest, DOWNLOAD_TRIES, log=log)
 
 
 class Llama(Server):

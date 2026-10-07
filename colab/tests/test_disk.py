@@ -88,9 +88,9 @@ class TestDisk(Base):
         self.assertEqual(self.disk.make_room(self.models["c"], self.models), [])
 
     def test_download_progress_counts_partial_files(self):
-        partial = self.weights / ".cache" / "huggingface" / "download"
+        partial = self.weights / ".partial"
         partial.mkdir(parents=True)
-        with open(partial / "YS5nZ3VmCg==.etag.hash.incomplete", "wb") as f:
+        with open(partial / "a.gguf.incomplete", "wb") as f:
             f.truncate(2 * GIB)
         done, total = self.disk.downloaded_gib(self.models["a"])
         self.assertEqual((round(done, 1), total), (2.0, 6.0))

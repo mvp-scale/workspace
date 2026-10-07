@@ -3,7 +3,7 @@ name = "jevgw"
 version = "0.2.0"
 description = "One decision model at a time behind one TypeSafe-compatible /v1/systemone endpoint, with a control panel and an optional tunnel."
 requires-python = ">=3.10"
-dependencies = []  # standard library only; huggingface_hub is used when a GGUF has to be downloaded
+dependencies = []  # standard library only (Pillow and ffmpeg are used by the built-in image and video samples, both on Colab)
 
 [tool.ruff]
 line-length = 130

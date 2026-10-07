@@ -13,18 +13,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 APP = "/content/gw"  # where the notebook writes the gateway
-SOURCES = [
-    "__init__.py",
-    "catalog.py",
-    "disk.py",
-    "backends.py",
-    "manager.py",
-    "tunnel.py",
-    "server.py",
-    "client.py",
-    "notebook.py",
-    "__main__.py",
-]
+SOURCES = sorted(p.name for p in (HERE / "jevgw").glob("*.py"))  # every module, so the notebook can never lack one
 
 
 def md(text: str) -> dict:

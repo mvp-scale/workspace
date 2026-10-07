@@ -62,10 +62,10 @@ class Disk:
     def downloaded_gib(self, entry: dict) -> tuple[float, float]:
         """(GiB on disk so far, GiB expected) for a model, counting a download in flight.
 
-        Hugging Face names a partial file after a hash, not the model file, so every `.incomplete` file counts: the gateway loads one
-        model at a time and downloads its files one after another.
+        A download goes to `.partial/<name>.incomplete` (see download.py). The gateway loads one model at a time and downloads its files one
+        after another, so every partial file counts.
         """
-        partial = self.folder / ".cache" / "huggingface" / "download"
+        partial = self.folder / ".partial"
         done = sum(f.stat().st_size for f in partial.glob("*.incomplete"))
         done += sum((self.folder / name).stat().st_size for name in files_of(entry) if (self.folder / name).exists())
         return done / GIB, sum(files_of(entry).values())
