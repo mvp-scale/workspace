@@ -31,7 +31,7 @@ default_profile: core
 
 # Profile entries: a service name, another profile name, or a mapping {service: name, port: N, env: {K: V}}
 profiles:
-  core:   [winnow, world, demo]                     # the classifier, the World Engine, the console
+  core:   [world, demo, voice, clef-flash-q4km]   # the World Engine, the console, live voice, Clef Flash 4-bit (not the 19 GiB bf16 one); winnow is optional: ./service.sh start winnow
   models: [kev-4b, semif, so1, laya, verdict]       # the five loaded decision models (about 30 of 31.8 GiB together)
   extras: [voice, mockups]
   full:   [core, models, extras]
@@ -116,7 +116,6 @@ services:
     match: world_service2\.py
     health: /live?since=0
     boot: 120
-    after: [winnow]
     heavy: true
     flex: true
     tags: [gpu, engine, core]

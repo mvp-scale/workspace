@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -398,7 +399,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/worldengine2-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/worldengine2-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
@@ -505,6 +506,23 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"error": "unknown set"})
         elif path == "/api/vram":
             self._send(200, vram())
+        elif path == "/api/latent":  # Latent lab: probes/latent_export.py per model; ?model=<tag>&set=<id> for one set, else models + sweep
+            q = dict(urllib.parse.parse_qsl(self.path.partition("?")[2]))
+            base = ROOT / "data" / "embed-zs"
+            models = sorted(d.name for d in (base / "latent").glob("*/") if (d / "index.json").is_file())
+            model = q.get("model") or ("Qwen3-Embedding-4B" if "Qwen3-Embedding-4B" in models else (models[0] if models else ""))
+            ok = lambda x: x.replace("_", "").replace("-", "").replace(".", "").isalnum()
+            if "set" not in q:
+                sweep = [json.loads(f.read_text()) for f in sorted((base / "sweep").glob("*.json"))]
+                curve = [json.loads(f.read_text()) for f in sorted((base / "curve").glob("*.json"))]
+                idx = base / "latent" / model / "index.json"
+                if not models or not idx.is_file():
+                    return self._send(404, {"error": "No latent export yet. Run probes/latent_export.py."})
+                return self._send(200, {"models": models, "model": model, "index": json.loads(idx.read_text()), "sweep": sweep, "curve": curve})
+            f = base / "latent" / model / f"{q['set']}.json"
+            if not (ok(model) and ok(q["set"])) or model not in models or not f.is_file():
+                return self._send(404, {"error": "No latent export for that model and set."})
+            self._send(200, f.read_bytes(), "application/json")
         elif path == "/api/batch-perf":
             self._send(200, batch_perf())
         elif path == "/api/decompose-tree":

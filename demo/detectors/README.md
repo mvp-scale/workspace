@@ -27,6 +27,7 @@ everywhere, so combining packs never duplicates it.
 | Conflict & debate · De-escalation | `conflict.json` | Heated conversations | 14 |
 | Operations · Emergency and control room | `operations.json` | Cockpit, control-room and dispatch traffic | 10 |
 | Conflict & debate · Public debate | `debate.json` | Interviews and debates | 11 |
+| Scouting · Scouting | `scout.json` | A scout troop or pack meeting: Scout Law, Oath, motto and slogan in ordinary talk | 20 |
 | YouTube personalities · The Spiffing Brit | `spiffing-brit.json` | An exploit-hunting gaming channel's humour: exploits, "perfectly balanced", devs jabs, tea | 12 |
 | YouTube personalities · Randa Rosa | `randa-rosa.json` | A beauty, nails and comedy creator: makeup, long-nail struggles, reveals, plus reported catchphrases (unverified) | 17 |
 

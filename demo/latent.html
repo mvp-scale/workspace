@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Latent lab · Jev Bench Console</title>
+<meta name="description" content="See a typed question become a vector, and watch different readouts pull an answer out of it, next to Clef Flash and Jev.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  /* Page-only tokens: chart series (validated reference palette) and a diverging pair for signed values. */
+  :root { --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100; --c5: #e87ba4; --c6: #008300; --c7: #6250d6; --c8: #e34948;
+          --pos: #2a78d6; --neg: #eb6834; --mid: #e4e4e7; --right: #15803d; --wrong: #b91c1c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
+          --pos: #3987e5; --neg: #d95926; --mid: #27272a; --right: #4ade80; --wrong: #f87171; } }
+  :root[data-theme="dark"] { --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
+          --pos: #3987e5; --neg: #d95926; --mid: #27272a; --right: #4ade80; --wrong: #f87171; }
+
+  .bar-ctl { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; margin-bottom: 4px; }
+  .bar-ctl .field select { width: auto; max-width: 100%; }
+  .bar-ctl .setinfo { flex: 1 1 320px; min-width: 0; }
+  .lane { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .lane .card h3 { font-size: 15px; } .lane .card p { color: var(--text-2); font-size: 13px; margin-top: 4px; }
+  .formula { font-family: var(--mono); font-size: 12.5px; background: var(--surface-2); border-radius: var(--radius-sm); padding: 6px 8px; margin-top: 8px; white-space: normal; overflow-wrap: anywhere; }
+  .dg { display: block; width: 100%; height: auto; margin-top: 8px; }
+  .dg text { font-family: var(--font); font-size: 11px; fill: var(--text-2); } .dg .tk { fill: var(--surface-2); stroke: var(--border-strong); } .dg .tk.s { fill: var(--accent-soft); stroke: var(--accent); }
+  .dg .arc { stroke: var(--accent); fill: none; opacity: .5; } .dg .ln { stroke: var(--text-3); fill: none; } .dg .vec { fill: var(--accent); }
+  .diffs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+  .diffs .card b { display: block; font-size: 13px; } .diffs .card span { color: var(--text-2); font-size: 13px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  svg.plot { display: block; width: 100%; height: auto; } svg.plot text { font-family: var(--font); font-size: 11px; fill: var(--text-3); }
+  svg.plot .axis { stroke: var(--border-strong); } svg.plot .grid { stroke: var(--border); } svg.plot .zero { stroke: var(--text-2); stroke-dasharray: 3 3; }
+  svg.plot circle.pt { stroke: var(--surface); stroke-width: 1; cursor: pointer; } svg.plot circle.pt:hover { stroke: var(--text); stroke-width: 1.5; }
+  svg.plot .sel { fill: none; stroke: var(--text); stroke-width: 2; pointer-events: none; }
+  svg.plot .drillmark { fill: none; stroke: var(--text-3); stroke-width: 1; pointer-events: none; }
+  svg.plot .opt { stroke: var(--surface); stroke-width: 1.5; } svg.plot .optlab { fill: var(--text); font-weight: 600; font-size: 11.5px; }
+  svg.plot .rowlab { fill: var(--text); font-size: 12px; font-weight: 600; } svg.plot .acc { fill: var(--text); font-size: 12px; font-family: var(--mono); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-2); margin-top: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .item-text { white-space: pre-wrap; font-size: 13.5px; max-height: 160px; overflow: auto; background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; }
+  .grids { display: grid; gap: 8px; }
+  .grow { display: grid; grid-template-columns: 180px minmax(0, 300px) 1fr; gap: 12px; align-items: center; }
+  .grow .lab { font-size: 13px; } .grow .lab small { display: block; color: var(--text-3); font-size: 11.5px; }
+  .grow canvas { width: 100%; height: auto; image-rendering: pixelated; border-radius: 3px; background: var(--surface-2); display: block; }
+  .grow .sum { font-family: var(--mono); font-size: 12.5px; }
+  .pbar { height: 8px; border-radius: 0 4px 4px 0; background: var(--accent); margin-top: 4px; }
+  .pbar.exp { background: var(--right); }
+  .scale { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); margin-top: 6px; }
+  .scale span.g { width: 140px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--neg), var(--mid), var(--pos)); }
+  .tip { position: fixed; z-index: 20; pointer-events: none; max-width: min(560px, 90vw); max-height: 60vh; overflow: hidden; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 8px 10px; font-size: 12.5px; box-shadow: 0 6px 22px rgb(0 0 0 / .18); }
+  .tip b { display: block; margin-bottom: 2px; }
+  .explain { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 8px; margin-top: 8px; }
+  .explain div { font-size: 12.5px; color: var(--text-2); } .explain b { color: var(--text); }
+  table.data td.barcell { min-width: 90px; }
+  .minibar { height: 6px; border-radius: 0 3px 3px 0; background: var(--accent); margin-top: 3px; }
+  table.data tr.cur td { background: var(--accent-soft); } table.data tbody tr { cursor: pointer; }
+  .waterfall { display: grid; gap: 6px; }
+  .wf { display: grid; grid-template-columns: minmax(150px, 260px) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 13px; }
+  .wf .tr { position: relative; height: 16px; background: var(--surface-2); border-radius: 0 4px 4px 0; }
+  .wf .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; background: var(--c1); }
+  .wf .fill.lab { background: var(--c7); } .wf .fill.ref { background: var(--text-3); }
+  .wf .ref-line { position: absolute; top: -3px; bottom: -3px; border-left: 2px dashed var(--text-2); }
+  .wf .v { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  .wf small { display: block; color: var(--text-3); font-size: 11.5px; }
+  .terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 8px; }
+  .terms div { font-size: 12.5px; color: var(--text-2); } .terms b { color: var(--text); display: block; font-size: 13px; }
+  .corr td { text-align: center; font-family: var(--mono); font-size: 12px; padding: 4px 8px; }
+  @media (max-width: 900px) { .wf { grid-template-columns: 1fr; gap: 3px; } }
+  @media (max-width: 900px) { .lane, .two, .diffs { grid-template-columns: 1fr; } .grow { grid-template-columns: 1fr; gap: 4px; } }
+</style>
+</head>
+<body>
+<main class="page" id="main">
+  <div class="page-head">
+    <div>
+      <h1>Latent lab</h1>
+      <p>Watch a typed question become a vector, then watch different readouts pull an answer out of it. Pick an embedding model and a labelled set at the top; every view below follows them. Every dot and every cell is a real measurement on our published labelled sets, next to Clef Flash and Jev on the same items.</p>
+    </div>
+  </div>
+
+  <div class="bar-ctl">
+    <div class="field"><label for="model">Embedding model</label><select id="model"></select></div>
+    <div class="field"><label for="set">Labelled set</label><select id="set"></select></div>
+    <div class="small muted setinfo" id="setinfo"></div>
+  </div>
+
+  <section class="section" style="margin-top:12px" aria-labelledby="h-model">
+    <div class="card stack">
+      <h2 id="h-model" style="font-size:16px">Selected model</h2>
+      <div class="row" id="modelBadges"></div>
+      <p class="small muted" id="modelText"></p>
+      <p class="small muted"><b>This page runs no model.</b> It reads vectors saved earlier and draws them. The readouts (cosine, bias correction, whitening, learned weights, angle combining) are plain arithmetic on the CPU in milliseconds. Only making the vectors needs a model, and the speeds below are what that costs.</p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-how">
+    <header><div><h2 id="h-how">Two ways to read the same request</h2><p class="small">Both end in the same arithmetic: one score per allowed answer, turned into probabilities. What differs is what goes in and how the scores are weighted.</p></div></header>
+    <div class="lane">
+      <div class="card">
+        <h3>Jev-class model (kev's open code; Jev's own internals are not published)</h3>
+        <p>State, question and every option sit in one sequence. Each option reads the state and the question but not the other options; the decide token reads everything (the arcs). So each option's vector already knows the text.</p>
+        <svg class="dg" viewBox="0 0 460 150" role="img" aria-label="Jev-class reading: options attend to the state">
+          <rect class="tk" x="6" y="30" width="150" height="26" rx="4"/><text x="81" y="47" text-anchor="middle">state (the transcript)</text>
+          <rect class="tk" x="162" y="30" width="96" height="26" rx="4"/><text x="210" y="47" text-anchor="middle">question</text>
+          <rect class="tk s" x="264" y="30" width="58" height="26" rx="4"/><text x="293" y="47" text-anchor="middle">yes …</text>
+          <rect class="tk s" x="328" y="30" width="58" height="26" rx="4"/><text x="357" y="47" text-anchor="middle">no …</text>
+          <rect class="tk" x="392" y="30" width="62" height="26" rx="4"/><text x="423" y="47" text-anchor="middle">decide</text>
+          <path class="arc" d="M293 30 C 250 0, 120 0, 80 30"/><path class="arc" d="M357 30 C 300 -8, 140 -8, 100 30"/><path class="arc" d="M423 30 C 380 6, 250 6, 210 30"/><path class="arc" d="M423 30 C 410 16, 370 16, 357 30"/><path class="arc" d="M423 30 C 400 10, 310 10, 293 30"/>
+          <path class="ln" d="M293 56 v28 M357 56 v28 M423 56 v28"/>
+          <rect class="vec" x="281" y="86" width="24" height="10" rx="2"/><rect class="vec" x="345" y="86" width="24" height="10" rx="2"/><rect class="vec" x="411" y="86" width="24" height="10" rx="2"/>
+          <text x="293" y="112" text-anchor="middle">h_yes</text><text x="357" y="112" text-anchor="middle">h_no</text><text x="423" y="112" text-anchor="middle">h_decide</text>
+          <text x="6" y="140">the head reads one vector per option (its closing token) and one at decide</text>
+        </svg>
+        <div class="formula">score_k = (W_k · h_opt_k) · (W_q · h_decide) / 16      learned W, 256-dim pointer space</div>
+      </div>
+      <div class="card">
+        <h3>Embedding simulation (what this page measures)</h3>
+        <p>Question and text go in together; the vector q is the model's last hidden state at the final token (Qwen3-Embedding uses last-token pooling). Each option is embedded on its own, without seeing the text.</p>
+        <svg class="dg" viewBox="0 0 460 150" role="img" aria-label="Embedding reading: options encoded separately">
+          <rect class="tk" x="6" y="30" width="96" height="26" rx="4"/><text x="54" y="47" text-anchor="middle">question</text>
+          <rect class="tk" x="108" y="30" width="150" height="26" rx="4"/><text x="183" y="47" text-anchor="middle">state (the transcript)</text>
+          <rect class="tk s" x="300" y="30" width="70" height="26" rx="4"/><text x="335" y="47" text-anchor="middle">yes …</text>
+          <rect class="tk s" x="384" y="30" width="70" height="26" rx="4"/><text x="419" y="47" text-anchor="middle">no …</text>
+          <path class="ln" d="M6 62 h252 M132 62 v22 M335 56 v28 M419 56 v28"/>
+          <rect class="vec" x="120" y="86" width="24" height="10" rx="2"/><rect class="vec" x="323" y="86" width="24" height="10" rx="2"/><rect class="vec" x="407" y="86" width="24" height="10" rx="2"/>
+          <text x="132" y="112" text-anchor="middle">q (last token)</text><text x="335" y="112" text-anchor="middle">o_yes</text><text x="419" y="112" text-anchor="middle">o_no</text>
+          <text x="6" y="140">three separate passes; nothing connects an option to the text until the score</text>
+        </svg>
+        <div class="formula">score_k = Σ_d  w_d · q_d · o_k,d  (+ b_k)      cosine: every w_d = 1, no b · learned: one w_d per dimension plus a per-option offset b_k</div>
+      </div>
+    </div>
+    <div class="diffs">
+      <div class="card"><b>1 · Option read in context</b><span>Jev-class: yes. Embedding: no, the option never sees the text.</span></div>
+      <div class="card"><b>2 · What the readout sees</b><span>Both boil the input down to a few vectors. Jev-class: one per option plus a decide vector, all read with the text. Embedding: one for question + text, one per option read alone.</span></div>
+      <div class="card"><b>3 · How dimensions are weighted</b><span>Jev-class: learned (kev projects both vectors into a 256-dimension space first). Cosine: every dimension equally. The readouts below change only this.</span></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-cmp">
+    <header><div><h2 id="h-cmp">Embedding models compared</h2><p class="small">Every model went through the same steps on the same items. Filled dot: a learned head (one logistic readout per question, 5-fold, every item scored by a fit that never saw it). Ring: the best readout that uses no labels (cosine, bias-corrected or whitened). Dashed lines: Clef Flash and Jev on the same sets. Speed: one call on this machine's CPU (i9-10900K, plain PyTorch, untuned), option vectors cached. Click a model (or use Embedding model at the top) to load it into every view on the page.</p></div>
+      <div class="segmented" id="grpSeg" role="group" aria-label="Group of sets"><button type="button" data-v="Tone and text type" aria-pressed="true">Tone and text type</button><button type="button" data-v="Reading and judging">Reading and judging</button><button type="button" data-v="Code security">Code security</button><button type="button" data-v="World knowledge">World knowledge</button></div>
+    </header>
+    <div class="card"><div id="cmpPlot"></div><div class="legend" id="cmpLegend"></div></div>
+    <div class="table-wrap" style="margin-top:10px"><table class="data" id="cmpTbl"></table></div>
+    <p class="small subtle" style="margin-top:6px">Cells: learned-head accuracy per set; blue at or above Clef Flash on that set, orange below, stronger colour for a bigger gap. Each set has 64–545 items, so a single cell carries about ±8–12 points of noise; group averages are steadier.</p>
+  </section>
+
+  <section class="section" aria-labelledby="h-curve">
+    <header><div><h2 id="h-curve">More examples per question</h2><p class="small">The comparison above gives each head about 80 examples (a 5-fold split of each set). Here each tone/text-type question's head trains on 80, 250, 1,000 or about 2,000 extra examples, built from the same sources with the same labelling rule, and is tested on the probe items, which no head ever sees. Dashed: Clef Flash and Jev on the same items. Click a line to highlight it.</p></div>
+      <div class="segmented" id="curveSeg" role="group" aria-label="Input"><button type="button" data-v="text" aria-pressed="true">Text only (one encode for every detector)</button><button type="button" data-v="ask">Question + text</button></div>
+    </header>
+    <div class="stack">
+      <div class="card"><div id="curvePlot"></div></div>
+      <div class="card"><h3 id="curveTitle">Per set</h3><div class="table-wrap" style="margin-top:6px"><table class="data" id="curveTbl"></table></div><p class="small subtle" style="margin-top:6px">AUC (how well the scores rank yes above no, 50% = chance) is in the tooltip. Below the full pool each figure is the mean of three random draws.</p></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-space">
+    <header><div><h2 id="h-space">The space</h2><p class="small">Each dot is one item's q vector, flattened from all its dimensions to the two directions where the items differ most. It is a shadow of the real space: separation here means separation there, but overlap here can hide separation in other directions. Click a dot to open it below. Ringed dots have their full vectors exported.</p></div>
+      <div class="row">
+        <div class="segmented" id="spaceSeg" role="group" aria-label="Space"><button type="button" data-v="raw" aria-pressed="true">Raw</button><button type="button" data-v="white">Whitened</button></div>
+        <div class="segmented" id="colourSeg" role="group" aria-label="Colour by"><button type="button" data-v="truth" aria-pressed="true">True answer</button><button type="button" data-v="right">Right or wrong (learned)</button></div>
+      </div>
+    </header>
+    <div class="card"><div id="scatter"></div><div class="legend" id="scLegend"></div></div>
+  </section>
+
+  <section class="section" aria-labelledby="h-strip">
+    <header><div><h2 id="h-strip">Every item, every readout</h2><p class="small">One dot per item. Position is how far the right answer is ahead of the best wrong answer: right of the dashed line means the readout got it right. Each row is scaled to its own spread, so compare where the dots fall against the line, not the widths. Colour is the true answer.</p></div></header>
+    <div class="card"><div id="strip"></div><div class="legend" id="stLegend"></div>
+      <div class="explain">
+        <div><b>Cosine</b> adds up q × o over every dimension with equal weight (the vectors are unit length). No labels, no training.</div>
+        <div><b>Whitened</b> first evens out the space so no direction dominates (from unlabelled vectors), then cosine.</div>
+        <div><b>Learned</b> gives each dimension its own weight, fitted on 80% of this set and scored on the other 20%. Every item is scored by a fit that never saw it.</div>
+        <div><b>Clef Flash, Jev</b> are the stored answers of the real models on the same items.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-ang" id="angSec">
+    <header><div><h2 id="h-ang">Asking from several angles</h2><p class="small">One question is one line through the space. Here the same question is asked five ways, each written before any was scored: the original, its opposite, two rephrasings and one adjacent question. The scores are then corrected, combined and checked against each other. Yes/no sets only.</p></div></header>
+    <div class="card stack">
+      <div class="terms">
+        <div><b>Calibration</b>Correcting a model's built-in lean so its scores and percentages mean what they say. The bias step here is <i>contextual calibration</i> (Zhao et al. 2021).</div>
+        <div><b>Ensembling</b>Asking several variants and combining the answers. With reworded questions this is <i>prompt ensembling</i>, or <i>test-time augmentation</i> in general.</div>
+        <div><b>Consistency checking</b>A statement and its opposite must agree (P(yes) + P(opposite yes) = 1). Used to find the “truth direction” without labels in <i>Contrast-Consistent Search</i> (Burns et al. 2022).</div>
+        <div><b>Learned trust (stacking)</b>A tiny model that weighs each angle by how reliable it has been. Five weights, fitted on 80% of the items and scored on the rest.</div>
+      </div>
+    </div>
+    <div class="two" style="margin-top:10px">
+      <div class="card"><h3>Step by step</h3><div class="waterfall" id="wf" style="margin-top:8px"></div><p class="small muted" id="agreeNote" style="margin-top:8px"></p></div>
+      <div class="card"><h3>The five angles</h3><div class="table-wrap" style="margin-top:6px"><table class="data" id="angTbl"></table></div></div>
+    </div>
+    <div class="card" style="margin-top:10px"><h3>Every item, every angle</h3><p class="small muted">One column per item, sorted by the combined score. Blue votes yes, orange votes no; stronger colour, stronger vote. Bottom row is the true answer. Columns where the angles split are the uncertain items.</p><div id="votes" style="margin-top:8px;overflow-x:auto"></div></div>
+    <div class="two" style="margin-top:10px">
+      <div class="card"><h3>Do the angles add information?</h3><p class="small muted">Correlation between angles across items (1 = always move together). Angles that move together repeat each other and add little; a combination only helps where they differ but are each right more often than not.</p><div class="table-wrap" style="margin-top:6px"><table class="data corr" id="corrTbl"></table></div></div>
+      <div class="card"><h3>What this costs</h3><p class="small muted" id="costNote"></p></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-item">
+    <header><div><h2 id="h-item">One item, dimension by dimension</h2><p class="small">Each grid is one vector, one cell per dimension. The option rows show q × o, cell by cell: the readout's score is the sum of that grid. Blue pushes towards the option, orange against it.</p></div>
+      <div class="row">
+        <div class="segmented" id="roSeg" role="group" aria-label="Readout"><button type="button" data-v="cosine" aria-pressed="true">Cosine</button><button type="button" data-v="whitened">Whitened</button><button type="button" data-v="learned">Learned</button></div>
+        <div class="segmented" id="sortSeg" role="group" aria-label="Cell order"><button type="button" data-v="0" aria-pressed="true">Natural order</button><button type="button" data-v="1">Largest first</button></div>
+      </div>
+    </header>
+    <div class="two">
+      <div class="card stack" id="itemCard"></div>
+      <div class="card"><div id="grids" class="grids"></div><div class="scale"><span>against</span><span class="g"></span><span>towards</span></div><p class="small muted" id="gridNote" style="margin-top:6px"></p></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-all">
+    <header><div><h2 id="h-all">Across all sets</h2><p class="small">Share of items answered right. Universal is one readout fitted on the other sets only, never on the set it is tested on. Click a row to open that set.</p></div></header>
+    <div class="table-wrap"><table class="data" id="allTbl"></table></div>
+  </section>
+</main>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const { el, api, fmt } = Jev;
+const S = { index: null, models: [], sweep: [], curve: [], curveMode: "text", curveHi: null, model: null, grp: "Tone and text type", set: null, data: null, sel: 0, space: "raw", colour: "truth", ro: "cosine", sorted: false };
+const ROWS = [["cosine", "Cosine"], ["whitened", "Whitened"], ["learned", "Learned"], ["clef", "Clef Flash"], ["jev", "Jev"]];
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS = "http://www.w3.org/2000/svg";
+const sv = (tag, a = {}, ...kids) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); for (const c of kids) n.append(c); return n; };
+const tip = document.getElementById("tip");
+const showTip = (e, title, body) => { tip.replaceChildren(el("b", { text: title }), el("div", { text: body })); tip.hidden = false;
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - 360) + "px"; tip.style.top = Math.min(e.clientY + 14, innerHeight - 140) + "px"; };
+const hideTip = () => { tip.hidden = true; };
+const dq = (o) => o.v.map(x => x * o.s);
+const labelsOf = () => S.data.items[0].options.map(o => o.label);
+const colourOfLabel = (l) => { const i = labelsOf().indexOf(l); return `var(--c${(i % 8) + 1})`; };
+const margin = (sc, e) => { const r = sc[e]; let best = -Infinity; sc.forEach((v, j) => { if (j !== e && v > best) best = v; }); return r - best; };
+const expIdx = (it) => it.options.findIndex(o => o.label === it.expected);
+const shorten = (s) => s;
+const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 1000) / 1000; };
+
+async function boot() {
+  let res; try { res = await api("/api/latent"); }
+  catch (e) { document.getElementById("main").append(Jev.empty("No export yet", "Run probes/embed_readouts.py or probes/embed_sweep.py, then probes/latent_export.py, and reload.")); return; }
+  Object.assign(S, { index: res.index, models: res.models, model: res.model, sweep: res.sweep, curve: res.curve || [] });
+  const sel = document.getElementById("set"), groups = {};
+  for (const m of S.index.sets) (groups[m.group] ||= []).push(m);
+  for (const g of ["Tone and text type", "Reading and judging", "Code security", "World knowledge"]) if (groups[g])
+    sel.append(el("optgroup", { label: g }, groups[g].map(m => el("option", { value: m.set, text: `${m.name} · ${m.n} items` }))));
+  const [wantSet, wantModel] = decodeURIComponent((location.hash || "").slice(1)).split("@");
+  sel.value = S.index.sets.some(m => m.set === wantSet) ? wantSet : "emotion_anger";
+  sel.addEventListener("change", () => load(sel.value));
+  const ms = document.getElementById("model");
+  ms.append(...S.models.map(t => el("option", { value: t, text: t + (sweepOf(t) ? ` · ${fmtParams(sweepOf(t).params)} · ${sweepOf(t).dim} dims` : "") })));
+  ms.addEventListener("change", () => setModel(ms.value, true));
+  seg("spaceSeg", v => { S.space = v; drawScatter(); });
+  seg("colourSeg", v => { S.colour = v; drawScatter(); });
+  seg("roSeg", v => { S.ro = v; drawItem(); });
+  seg("sortSeg", v => { S.sorted = v === "1"; drawItem(); });
+  seg("grpSeg", v => { S.grp = v; drawCmp(); });
+  seg("curveSeg", v => { S.curveMode = v; drawCurve(); });
+  if (wantModel && S.models.includes(wantModel)) await setModel(wantModel, true); else { ms.value = S.model; drawAll(); drawModel(); await load(sel.value); }
+  drawCmp(); drawCurve();
+  new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
+}
+const sweepOf = (t) => S.sweep.find(x => x.model.split("/").pop() === t);
+const fmtParams = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : Math.round(n / 1e6) + "M";
+async function setModel(t, quiet) {
+  S.model = t; document.getElementById("model").value = t;
+  const res = await api("/api/latent?model=" + encodeURIComponent(t)); S.index = res.index;
+  drawAll(); drawModel(); drawCmp(); await load(document.getElementById("set").value);
+  if (!quiet) document.getElementById("h-model").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+function drawModel() {
+  const sw = sweepOf(S.model), dim = S.index.sets[0] && S.index.sets[0].dim;
+  const badges = [S.model, `${dim} numbers per vector`, sw ? `${fmtParams(sw.params)} parameters` : null,
+    sw ? `CPU ${sw.cpu_ms.emotion_anger < 10 ? sw.cpu_ms.emotion_anger.toFixed(1) : Math.round(sw.cpu_ms.emotion_anger)} ms short · ${Math.round(sw.cpu_ms.manipulation_dialogue)} ms dialogue` : null, "vectors made once on the GPU"].filter(Boolean);
+  document.getElementById("modelBadges").replaceChildren(...badges.map((b, i) => el("span", { class: "badge" + (i === 0 ? " good" : ""), text: b })));
+  const q = /qwen3-embedding/i.test(S.model), st = /potion/i.test(S.model);
+  document.getElementById("modelText").textContent = q
+    ? `${S.model} is a Qwen3 language model trained to produce embeddings: its vector is the last hidden state at the final token, and it takes the question as an instruction with the text. Vectors were made in bf16 on the RTX 5090.`
+    : st ? `${S.model} is a static embedding (Model2Vec): every word has a fixed vector and a text's vector is their weighted average. No layers read the text in context, which is why it is so fast and why word order and negation are lost.`
+    : `${S.model} is an encoder-style embedding model: transformer layers read the whole text in both directions and the vectors are pooled into one. Vectors were made in full precision on the RTX 5090; the input was the question followed by the text.`;
+}
+function drawCmp() {
+  const sets = S.index.sets.filter(m => m.group === S.grp), names = new Set(sets.map(m => m.set));
+  const avg = (o, k) => { const v = sets.map(m => o[m.set] && o[m.set][k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const clef = avg(Object.fromEntries(S.index.sets.map(m => [m.set, m.acc])), "clef"), jev = avg(Object.fromEntries(S.index.sets.map(m => [m.set, m.acc])), "jev");
+  const chance = sets.reduce((a, m) => a + m.chance, 0) / sets.length;
+  const rows = S.sweep.map(sw => { const tag = sw.model.split("/").pop();
+    const best0 = avg(Object.fromEntries(Object.entries(sw.sets).map(([k, v]) => [k, { b: Math.max(v.cosine, v.calibrated, v.whitened) }])), "b");
+    return { tag, sw, learned: avg(sw.sets, "learned"), nolabel: best0, ms: sw.cpu_ms.emotion_anger }; }).filter(r => r.learned != null);
+  const W = 1100, H = 420, L = 56, R = 330, T = 16, B = 40;
+  const lo = Math.max(0, Math.min(chance, ...rows.map(r => r.nolabel)) - 0.05), hi = 1;
+  const X = ms => L + (Math.log10(ms) + 1) / 5 * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const svg = sv("svg", { class: "plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Accuracy against CPU time per call for each embedding model" });
+  [0.1, 1, 10, 100, 1000, 10000].forEach(ms => { svg.append(sv("line", { class: "grid", x1: X(ms), x2: X(ms), y1: T, y2: H - B }), sv("text", { x: X(ms), y: H - B + 16, "text-anchor": "middle" }, ms >= 1000 ? ms / 1000 + " s" : ms + " ms")); });
+  for (let v = Math.ceil(lo * 10) / 10; v <= 1.001; v += 0.1) svg.append(sv("line", { class: "grid", x1: L, x2: W - R, y1: Y(v), y2: Y(v) }), sv("text", { x: L - 6, y: Y(v) + 4, "text-anchor": "end" }, Math.round(v * 100) + "%"));
+  svg.append(sv("text", { x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle" }, "CPU time per call, short comment (log scale) →"));
+  for (const [v, lab] of [[clef, "Clef Flash"], [jev, "Jev"], [chance, "chance"]]) if (v != null)
+    svg.append(sv("line", { class: "zero", x1: L, x2: W - R, y1: Y(v), y2: Y(v) }), sv("text", { x: L + 6, y: Y(v) + (lab === "Clef Flash" ? 13 : -4), style: "fill:var(--text-2)" }, `${lab} ${Math.round(v * 100)}%`));
+  const labX = W - R + 70, used = [];
+  [...rows].sort((a, b) => b.learned - a.learned).forEach(r => {
+    const want = Y(r.learned) + 4, y = used.length ? Math.max(want, used[used.length - 1] + 13) : want; used.push(y);
+    r.ly = y;
+  });
+  rows.forEach(r => {
+    const x = X(r.ms), y1 = Y(r.learned), y0 = Y(r.nolabel), cur = r.tag === S.model, has = S.models.includes(r.tag);
+    svg.append(sv("line", { x1: x, x2: x, y1: y0, y2: y1, style: "stroke:var(--c1);stroke-width:1.5;opacity:.45" }));
+    svg.append(sv("circle", { cx: x, cy: y0, r: 4.5, style: "fill:var(--surface);stroke:var(--c1);stroke-width:1.5" }));
+    svg.append(sv("polyline", { points: `${x + 6},${y1} ${labX - 6},${r.ly - 4}`, style: `fill:none;stroke:${cur ? "var(--text-2)" : "var(--border)"};stroke-width:1` }));
+    const dot = sv("circle", { class: "pt", cx: x, cy: y1, r: cur ? 7 : 5.5, fill: "var(--c1)" });
+    const tipF = ev => showTip(ev, r.tag, `${fmtParams(r.sw.params)} parameters · ${r.sw.dim} dims · CPU ${r.ms.toFixed(1)} ms short, ${Math.round(r.sw.cpu_ms.manipulation_dialogue)} ms dialogue · learned ${fmt.pct(r.learned, 0)} · best without labels ${fmt.pct(r.nolabel, 0)}${has ? " · click to open" : ""}`);
+    const lab = sv("text", { x: labX, y: r.ly, style: `font-size:11px;fill:${cur ? "var(--text)" : "var(--text-2)"};font-weight:${cur ? 650 : 400};${has ? "cursor:pointer" : ""}` }, `${r.tag}  ${Math.round(r.learned * 100)}%`);
+    for (const n of [dot, lab]) { n.addEventListener("mousemove", tipF); n.addEventListener("mouseleave", hideTip); if (has) n.addEventListener("click", () => setModel(r.tag)); }
+    svg.append(dot, lab);
+    if (cur) svg.append(sv("circle", { class: "sel", cx: x, cy: y1, r: 10 }));
+  });
+  document.getElementById("cmpPlot").replaceChildren(svg);
+  document.getElementById("cmpLegend").replaceChildren(el("span", {}, el("i", { style: "background:var(--c1)" }), "learned head"),
+    el("span", {}, el("i", { style: "background:var(--surface);border:1.5px solid var(--c1)" }), "best without labels"), el("span", { text: "Dashed: Clef Flash, Jev and chance, averaged over the same sets." }));
+  // per-set table
+  const clefOf = Object.fromEntries(S.index.sets.map(m => [m.set, m.acc]));
+  const head = el("tr", {}, el("th", { text: "Model" }), el("th", { class: "num", text: "CPU ms" }), ...sets.map(m => el("th", { class: "num", text: m.name })), el("th", { class: "num", text: "Average" }));
+  const cell = (v, ref) => { const d = v - ref, c = d >= 0 ? "--pos" : "--neg", a = Math.min(60, Math.round(Math.abs(d) / 0.25 * 60));
+    return el("td", { class: "num", style: `background:color-mix(in srgb, var(${c}) ${a}%, transparent)`, text: fmt.pct(v, 0) }); };
+  const body = [...rows].sort((a, b) => a.sw.params - b.sw.params).map(r => el("tr", { class: r.tag === S.model ? "cur" : "", onclick: S.models.includes(r.tag) ? () => setModel(r.tag) : null, style: S.models.includes(r.tag) ? "" : "cursor:default" },
+    el("td", { text: `${r.tag} (${fmtParams(r.sw.params)})` }), el("td", { class: "num", text: r.ms < 10 ? r.ms.toFixed(1) : Math.round(r.ms) }),
+    ...sets.map(m => cell(r.sw.sets[m.set].learned, clefOf[m.set].clef)), cell(r.learned, clef)));
+  const ref = (k, n) => el("tr", {}, el("td", { text: n }), el("td", { class: "num subtle", text: k === "jev" ? "API" : "GPU" }), ...sets.map(m => el("td", { class: "num", text: fmt.pct(clefOf[m.set][k], 0) })), el("td", { class: "num", text: fmt.pct(k === "jev" ? jev : clef, 0) }));
+  document.getElementById("cmpTbl").replaceChildren(el("thead", {}, head), el("tbody", {}, body, ref("clef", "Clef Flash 9B"), ref("jev", "Jev")));
+}
+function seg(id, f) { const g = document.getElementById(id); g.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  g.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); f(b.dataset.v); }); }
+async function load(set) {
+  S.set = set; history.replaceState(null, "", "#" + set + "@" + S.model);
+  document.getElementById("scatter").replaceChildren(Jev.skeleton(3));
+  S.data = await api(`/api/latent?model=${encodeURIComponent(S.model)}&set=${encodeURIComponent(set)}`); S.sel = 0;
+  const m = S.data.meta;
+  document.getElementById("setinfo").textContent = `${m.type} · ${m.n} items · chance ${fmt.pct(m.chance, 0)} · source: ${m.source}`;
+  redraw(); drawAll();
+}
+function redraw() { if (!S.data) return; drawScatter(); drawStrip(); drawItem(); drawAngles(); }
+
+/* --- the space --- */
+function drawScatter() {
+  const W = 760, H = 420, P = 28, items = S.data.items, key = S.space === "raw" ? "raw" : "white";
+  const pts = items.map(it => it.map[key]);
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const X = v => P + (v - x0) / ((x1 - x0) || 1) * (W - 2 * P), Y = v => H - P - (v - y0) / ((y1 - y0) || 1) * (H - 2 * P);
+  const svg = sv("svg", { class: "plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Items projected to two dimensions" });
+  svg.append(sv("rect", { x: P, y: P / 2, width: W - 2 * P, height: H - 1.5 * P, fill: "none", class: "axis" }));
+  svg.append(sv("text", { x: W / 2, y: H - 6, "text-anchor": "middle" }, "direction 1 (most spread)"), sv("text", { x: 10, y: H / 2, transform: `rotate(-90 10 ${H / 2})`, "text-anchor": "middle" }, "direction 2"));
+  items.forEach((it, i) => {
+    const e = expIdx(it), c = S.colour === "truth" ? colourOfLabel(it.expected)
+      : (it.scores.learned && it.scores.learned.indexOf(Math.max(...it.scores.learned)) === e ? "var(--right)" : "var(--wrong)");
+    const p = sv("circle", { class: "pt", cx: X(pts[i][0]), cy: Y(pts[i][1]), r: 4, fill: c });
+    p.addEventListener("mousemove", ev => showTip(ev, `${it.expected} · ${it.id}`, shorten(it.state)));
+    p.addEventListener("mouseleave", hideTip); p.addEventListener("click", () => select(i));
+    svg.append(p);
+    if (items[i].options && it.drill) svg.append(sv("circle", { class: "drillmark", cx: X(pts[i][0]), cy: Y(pts[i][1]), r: 7 }));
+  });
+  // options are fixed across items for yes/no and labelled-choice sets: draw them where they land in the same projection
+  const ok = items.length > 1 && JSON.stringify(items[0].map["opts_" + key]) === JSON.stringify(items[1].map["opts_" + key]);
+  if (ok) items[0].map["opts_" + key].forEach((p, j) => {
+    const x = X(p[0]), y = Y(p[1]), inside = x > P && x < W - P && y > P / 2 && y < H - P;
+    const cx = Math.max(P + 6, Math.min(W - P - 6, x)), cy = Math.max(P / 2 + 6, Math.min(H - P - 6, y)), l = items[0].options[j].label;
+    svg.append(sv("rect", { class: "opt", x: cx - 6, y: cy - 6, width: 12, height: 12, transform: `rotate(45 ${cx} ${cy})`, fill: colourOfLabel(l) }),
+      sv("text", { class: "optlab", x: cx + 10, y: cy + 4 }, `option “${l}”${inside ? "" : " (off the edge)"}`));
+  });
+  const s = items[S.sel]; svg.append(sv("circle", { class: "sel", cx: X(s.map[key][0]), cy: Y(s.map[key][1]), r: 9 }));
+  document.getElementById("scatter").replaceChildren(svg);
+  const lg = document.getElementById("scLegend");
+  lg.replaceChildren(...(S.colour === "truth" ? labelsOf().map(l => el("span", {}, el("i", { style: `background:${colourOfLabel(l)}` }), `true answer: ${l}`))
+    : [el("span", {}, el("i", { style: "background:var(--right)" }), "learned readout right"), el("span", {}, el("i", { style: "background:var(--wrong)" }), "learned readout wrong")]),
+    el("span", { text: ok ? "◆ = where each option's vector lands" : "Options differ per item here, so they are not drawn." }));
+}
+
+/* --- every item, every readout --- */
+function drawStrip() {
+  const items = S.data.items, rows = ROWS.filter(([k]) => items.some(it => it.scores[k]));
+  const W = 760, RH = 62, L = 96, R = 70, H = rows.length * RH + 30;
+  const svg = sv("svg", { class: "plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Margin of the right answer for each readout" });
+  const mid = L + (W - L - R) / 2, half = (W - L - R) / 2 - 6;
+  svg.append(sv("line", { class: "zero", x1: mid, x2: mid, y1: 6, y2: H - 22 }));
+  svg.append(sv("text", { x: L, y: H - 6 }, "← further wrong"), sv("text", { x: W - R, y: H - 6, "text-anchor": "end" }, "further right →"));
+  rows.forEach(([k, name], r) => {
+    const y0 = 10 + r * RH, ms = items.map(it => it.scores[k] ? margin(it.scores[k], expIdx(it)) : null);
+    const vals = ms.filter(v => v != null).map(Math.abs).sort((a, b) => a - b), spread = vals[Math.floor(vals.length * 0.9)] || 1;
+    const acc = ms.filter(v => v != null && v > 0).length / ms.filter(v => v != null).length;
+    svg.append(sv("line", { class: "grid", x1: L, x2: W - R, y1: y0 + RH - 8, y2: y0 + RH - 8 }));
+    svg.append(sv("text", { class: "rowlab", x: 4, y: y0 + RH / 2 }, name), sv("text", { class: "acc", x: W - 4, y: y0 + RH / 2, "text-anchor": "end" }, fmt.pct(acc, 0)));
+    items.forEach((it, i) => {
+      if (ms[i] == null) return;
+      const x = mid + Math.max(-1.15, Math.min(1.15, ms[i] / spread)) * half / 1.15, y = y0 + 6 + hash(it.id + k) * (RH - 22);
+      const p = sv("circle", { class: "pt", cx: x, cy: y, r: i === S.sel ? 5.5 : 3.2, fill: colourOfLabel(it.expected), "fill-opacity": i === S.sel ? 1 : 0.8 });
+      p.addEventListener("mousemove", ev => showTip(ev, `${name}: ${ms[i] > 0 ? "right" : "wrong"} · true answer ${it.expected}`, shorten(it.state)));
+      p.addEventListener("mouseleave", hideTip); p.addEventListener("click", () => select(i));
+      svg.append(p);
+      if (i === S.sel) svg.append(sv("circle", { class: "sel", cx: x, cy: y, r: 8 }));
+    });
+  });
+  document.getElementById("strip").replaceChildren(svg);
+  document.getElementById("stLegend").replaceChildren(...labelsOf().map(l => el("span", {}, el("i", { style: `background:${colourOfLabel(l)}` }), `true answer: ${l}`)),
+    el("span", { text: "Percent at right = share of items right of the line." }));
+}
+
+/* --- one item, dimension by dimension --- */
+function select(i) { S.sel = i; drawScatter(); drawStrip(); drawItem(); document.getElementById("h-item").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }
+function drawItem() {
+  const it = S.data.items[S.sel], e = expIdx(it), card = document.getElementById("itemCard");
+  const ks = ROWS.filter(([k]) => it.scores[k]);
+  const val = (k, v) => k === "clef" || k === "jev" ? fmt.pct(v, 0) : (v >= 0 ? "+" : "") + v.toFixed(k === "learned" ? 2 : 3);
+  const pTable = el("table", { class: "data" }, el("thead", {}, el("tr", {}, el("th", { text: "Option" }), ...ks.map(([, n]) => el("th", { class: "num", text: n })))),
+    el("tbody", {}, it.options.map((o, j) => el("tr", {}, el("td", { text: (j === e ? "✓ " : "") + o.label }),
+      ...ks.map(([k]) => { const s = it.scores[k], top = s.indexOf(Math.max(...s)) === j;
+        return el("td", { class: "num", style: top ? "font-weight:650;color:var(--text)" : "color:var(--text-3)", text: val(k, s[j]) }); })))));
+  card.replaceChildren(
+    el("div", { class: "row" }, el("span", { class: "badge", text: it.id }), el("span", { class: "badge good", text: "true answer: " + it.expected }),
+      el("button", { class: "btn", type: "button", text: "Previous", disabled: S.sel === 0, onclick: () => select(S.sel - 1) }),
+      el("button", { class: "btn", type: "button", text: "Next", disabled: S.sel >= S.data.items.length - 1, onclick: () => select(S.sel + 1) })),
+    el("div", { class: "small muted", text: "Question: " + it.question }),
+    el("div", { class: "item-text", text: it.state }),
+    el("div", { class: "small muted", text: "Options: " + it.options.map(o => `${o.label} = ${o.desc}`).join(" · ") }),
+    el("h3", { text: "What each readout gives every option" }), el("div", { class: "table-wrap" }, pTable),
+    el("p", { class: "small subtle", text: "Cosine, whitened and learned columns are raw scores: only which option is highest matters. Clef Flash and Jev columns are the probabilities those models returned. Bold is each one's pick." }));
+  const grids = document.getElementById("grids"), note = document.getElementById("gridNote");
+  if (!it.drill) {
+    grids.replaceChildren(Jev.empty("Vectors not exported for this item", "Full vectors are exported for the first 12 items of each set (ringed in the space plot). Use Previous to step back to one."));
+    note.textContent = ""; return;
+  }
+  const d = it.drill, ro = S.ro;
+  const q = ro === "whitened" ? dq(d.qw) : dq(d.q);
+  const contrib = it.options.map((_, j) => ro === "learned" ? dq(d.contrib[j]) : (() => { const o = ro === "whitened" ? dq(d.ow[j]) : dq(d.o[j]); return q.map((v, k) => v * o[k]); })());
+  // the two options that matter: the true answer and its strongest rival under this readout
+  const sums = contrib.map((c, j) => c.reduce((a, b) => a + b, 0) + (ro === "learned" ? d.bias[j] : 0));
+  const rival = sums.map((v, j) => [v, j]).filter(([, j]) => j !== e).sort((a, b) => b[0] - a[0])[0][1];
+  const show = [e, rival];
+  const order = S.sorted ? [...q.keys()].sort((a, b) => Math.abs(contrib[e][b] - contrib[rival][b]) - Math.abs(contrib[e][a] - contrib[rival][a])) : [...q.keys()];
+  const rows = [[`q · question + text`, ro === "whitened" ? "whitened vector" : "embedding vector", q, null]];
+  if (ro !== "learned") show.forEach(j => rows.push([`o · option “${it.options[j].label}”`, ro === "whitened" ? "whitened option vector" : "option vector", ro === "whitened" ? dq(d.ow[j]) : dq(d.o[j]), null]));
+  show.forEach(j => rows.push([`${ro === "learned" ? "w × q × o" : "q × o"} · “${it.options[j].label}”${j === e ? " ✓" : ""}`, ro === "learned" ? "learned weight per cell" : "every cell weighted 1", contrib[j], sums[j]]));
+  rows.push([`difference · ✓ minus rival`, "where the decision is made", contrib[e].map((v, k) => v - contrib[rival][k]), sums[e] - sums[rival]]);
+  grids.replaceChildren(...rows.map(([t, sub, vec, sum]) => {
+    const cv = el("canvas", { width: 64, height: Math.ceil(vec.length / 64), "aria-label": t, role: "img" }); paint(cv, vec, order);
+    return el("div", { class: "grow" }, el("div", { class: "lab" }, t, el("small", { text: sub })), cv,
+      el("div", { class: "sum", text: sum == null ? "" : `sum ${sum >= 0 ? "+" : ""}${sum.toFixed(ro === "learned" ? 2 : 4)}` }));
+  }));
+  const diff = contrib[e].map((v, k) => v - contrib[rival][k]), tot = diff.reduce((a, b) => a + Math.abs(b), 0);
+  const top = [...diff].map(Math.abs).sort((a, b) => b - a), k50 = (() => { let c = 0; for (let i = 0; i < top.length; i++) { c += top[i]; if (c >= tot / 2) return i + 1; } return top.length; })();
+  note.textContent = `${ro === "learned" ? "Learned" : ro === "whitened" ? "Whitened" : "Cosine"}: the true answer ${sums[e] > sums[rival] ? "wins" : "loses"} against “${it.options[rival].label}” by ${(sums[e] - sums[rival]).toFixed(ro === "learned" ? 2 : 4)}. Half of the evidence (by size) sits in ${k50} of the ${q.length} dimensions.` + (ro === "learned" ? " These grids use one fit on the whole set, to show which dimensions it leans on; the table uses the held-out fit, so the totals differ a little. A per-option offset is added on top." : "");
+}
+function paint(cv, vec, order) {
+  const ctx = cv.getContext("2d"), img = ctx.createImageData(64, Math.ceil(vec.length / 64)), m = Math.max(...vec.map(Math.abs)) || 1;
+  const rgb = (c) => { const x = document.createElement("canvas").getContext("2d"); x.fillStyle = c; x.fillRect(0, 0, 1, 1); return x.getImageData(0, 0, 1, 1).data; };
+  const P = rgb(css("--pos")), N = rgb(css("--neg")), M = rgb(css("--mid"));
+  order.forEach((dim, k) => { const t = Math.max(-1, Math.min(1, vec[dim] / m)), a = Math.abs(t) ** 0.6, C = t >= 0 ? P : N;
+    for (let c = 0; c < 3; c++) img.data[k * 4 + c] = Math.round(M[c] + (C[c] - M[c]) * a); img.data[k * 4 + 3] = 255; });
+  ctx.putImageData(img, 0, 0);
+}
+
+/* --- across all sets --- */
+function drawAll() {
+  const t = document.getElementById("allTbl"), cols = [["cosine", "Cosine"], ["whitened", "Whitened"], ["universal", "Universal"], ["learned", "Learned"], ["clef", "Clef Flash"], ["jev", "Jev"]];
+  t.replaceChildren(el("thead", {}, el("tr", {}, el("th", { text: "Set" }), el("th", { text: "Group" }), el("th", { class: "num", text: "Chance" }), ...cols.map(([, n]) => el("th", { class: "num", text: n })))),
+    el("tbody", {}, S.index.sets.map(m => el("tr", { class: m.set === S.set ? "cur" : "", onclick: () => { document.getElementById("set").value = m.set; load(m.set); document.getElementById("h-space").scrollIntoView(); } },
+      el("td", { text: m.name }), el("td", { class: "subtle", text: m.group }), el("td", { class: "num", text: fmt.pct(m.chance, 0) }),
+      ...cols.map(([k]) => el("td", { class: "num barcell" }, fmt.pct(m.acc[k], 0), el("div", { class: "minibar", style: `width:${(m.acc[k] || 0) * 100}%;${k === "clef" || k === "jev" ? "background:var(--text-3)" : ""}` })))))));
+}
+
+/* --- asking from several angles --- */
+const ANG = { original: "Original", opposite: "Opposite", rephrase1: "Rephrase 1", rephrase2: "Rephrase 2", adjacent: "Adjacent" };
+async function drawAngles() {
+  const sec = document.getElementById("angSec");
+  let A; try { A = await api(`/api/latent?model=${encodeURIComponent(S.model)}&set=angles_${encodeURIComponent(S.set)}`); } catch { A = null; }
+  if (!A || A.set !== S.set) { sec.hidden = true; return; }
+  sec.hidden = false;
+  const m = A.methods, ref = S.data.meta.acc;
+  const steps = [
+    ["One question", "cosine, as asked", m.one_raw, ""], ["+ bias correction", "subtract the empty-input lean", m.one_bias, ""],
+    ["+ opposite question", "original and opposite averaged", m.pair, ""], ["All five angles", "averaged, no labels", m.all5, ""],
+    ["Five angles, learned trust", "5 weights from labelled items", m.stack, "lab"],
+    ["Clef Flash", "same items", ref.clef, "ref"], ["Jev", "same items", ref.jev, "ref"]];
+  document.getElementById("wf").replaceChildren(...steps.filter(x => x[2] != null).map(([t, sub, v, cls]) =>
+    el("div", { class: "wf" }, el("div", {}, t, el("small", { text: sub })),
+      el("div", { class: "tr" }, el("div", { class: "fill " + cls, style: `width:${v * 100}%` }), el("div", { class: "ref-line", style: `left:${S.data.meta.chance * 100}%`, title: "chance" })),
+      el("div", { class: "v", text: fmt.pct(v, 0) }))));
+  document.getElementById("agreeNote").textContent = `Dashed line: chance. When at least 4 of the 5 angles agree (${fmt.pct(m.agree_coverage, 0)} of items), the combined answer is right ${fmt.pct(m.agree_acc, 0)} of the time; the rest could be returned as unsure. The original and its opposite pointed the same way on only ${fmt.pct(m.opposite_consistency, 0)} of items, which is the single-question bias the correction removes.`;
+  document.getElementById("angTbl").replaceChildren(el("thead", {}, el("tr", {}, el("th", { text: "Angle" }), el("th", { text: "Question asked" }), el("th", { class: "num", text: "Alone" }), el("th", { class: "num", text: "Corrected" }))),
+    el("tbody", {}, A.order.map(k => el("tr", {}, el("td", { text: ANG[k] }), el("td", { style: "white-space:normal;min-width:240px", text: A.angles[k].instruction }),
+      el("td", { class: "num", text: fmt.pct(A.per_angle[k].raw, 0) }), el("td", { class: "num", text: fmt.pct(A.per_angle[k].bias, 0) })))));
+  // vote barcode
+  const its = [...A.items].sort((a, b) => a.all5 - b.all5), n = its.length, cw = Math.max(4, Math.min(9, Math.floor(1000 / n))), rh = 18, L = 96;
+  const W = L + n * cw + 4, rows = [...A.order.map(k => ANG[k]), "Combined", "True answer"], H = rows.length * rh + 22;
+  const svg = sv("svg", { class: "plot", viewBox: `0 0 ${W} ${H}`, width: W, style: `min-width:${Math.min(W, 640)}px` });
+  const pos = css("--pos"), neg = css("--neg");
+  rows.forEach((r, j) => svg.append(sv("text", { x: 0, y: j * rh + 13 }, r)));
+  its.forEach((it, i) => {
+    const x = L + i * cw;
+    const cells = [...it.z, it.all5];
+    cells.forEach((v, j) => svg.append(sv("rect", { x, y: j * rh + 2, width: cw - 1, height: rh - 3, fill: v >= 0 ? pos : neg, "fill-opacity": Math.min(1, 0.15 + Math.abs(v) / 2.5) })));
+    const right = (it.all5 >= 0) === (it.expected === "yes");
+    svg.append(sv("rect", { x, y: (rows.length - 1) * rh + 2, width: cw - 1, height: rh - 3, fill: it.expected === "yes" ? pos : neg }));
+    if (!right) svg.append(sv("text", { x: x + cw / 2, y: H - 4, "text-anchor": "middle", style: "fill:var(--wrong);font-size:9px" }, "×"));
+    const hit = sv("rect", { x, y: 0, width: cw, height: H - 14, fill: "transparent", style: "cursor:pointer" });
+    const idx = S.data.items.findIndex(d => d.id === it.id);
+    hit.addEventListener("mousemove", ev => showTip(ev, `${it.expected === "yes" ? "true answer yes" : "true answer no"} · combined ${it.all5 >= 0 ? "yes" : "no"}${right ? "" : " (wrong)"}`, shorten((S.data.items[idx] || {}).state || it.id)));
+    hit.addEventListener("mouseleave", hideTip); if (idx >= 0) hit.addEventListener("click", () => select(idx));
+    svg.append(hit);
+  });
+  svg.append(sv("text", { x: L, y: H - 4 }, "× = combined answer wrong"));
+  document.getElementById("votes").replaceChildren(svg);
+  // correlation
+  const head = el("tr", {}, el("th", { text: "" }), ...A.order.map(k => el("th", { class: "num", text: ANG[k] })));
+  document.getElementById("corrTbl").replaceChildren(el("thead", {}, head), el("tbody", {}, A.order.map((k, i) => el("tr", {}, el("td", { text: ANG[k] }),
+    ...A.corr[i].map((c, j) => el("td", { style: i === j ? "color:var(--text-3)" : `background:color-mix(in srgb, var(--accent) ${Math.round(Math.max(0, c) * 55)}%, transparent)`, text: c.toFixed(2) }))))));
+  document.getElementById("costNote").textContent = `Each angle is one more pass through the embedding model, so five angles cost five encodes per detector per window, plus three tiny empty-input encodes per angle that are computed once and cached. On this machine's CPU the 0.6B model takes about 0.27 s per short encode, so five angles is about 1.3 s; on the GPU the 4B takes about 36 ms each. If the original plus opposite gets most of the gain on a detector, two encodes is the cheaper setting. Numbers here are Qwen3-Embedding-4B; the angle wordings are in probes/angles.json.`;
+}
+
+/* --- more examples per question --- */
+function drawCurve() {
+  const C = S.curve; if (!C.length) { document.getElementById("curvePlot").replaceChildren(Jev.empty("No learning curves yet", "Run probes/tone_pools.py, then probes/embed_curve.py.")); return; }
+  const sets = Object.keys(C[0].sets), refOf = Object.fromEntries(S.index.sets.map(m => [m.set, m.acc]));
+  const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+  const clef = mean(sets.map(s => refOf[s].clef)), jev = mean(sets.map(s => refOf[s].jev));
+  const lines = C.map(c => { const tag = c.model.split("/").pop(), keys = Object.keys(c.sets[sets[0]][S.curveMode]);
+    return { tag, pts: keys.map((k, j) => ({ n: mean(sets.map(s => Object.values(c.sets[s][S.curveMode])[j].n)), acc: mean(sets.map(s => Object.values(c.sets[s][S.curveMode])[j].acc)) })) }; });
+  if (!S.curveHi || !lines.some(l => l.tag === S.curveHi)) S.curveHi = (lines.find(l => l.tag === S.model) || lines.reduce((a, b) => a.pts.at(-1).acc > b.pts.at(-1).acc ? a : b)).tag;
+  const W = 680, H = 380, L = 48, R = 240, T = 14, B = 36, lo = 0.5, hi = 0.95;
+  const X = n => L + (Math.log10(n) - Math.log10(60)) / (Math.log10(2600) - Math.log10(60)) * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const svg = sv("svg", { class: "plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Accuracy against number of training examples" });
+  [80, 250, 1000, 2000].forEach(n => svg.append(sv("line", { class: "grid", x1: X(n), x2: X(n), y1: T, y2: H - B }), sv("text", { x: X(n), y: H - B + 15, "text-anchor": "middle" }, n.toLocaleString())));
+  for (let v = 0.5; v <= 0.951; v += 0.05) svg.append(sv("line", { class: "grid", x1: L, x2: W - R, y1: Y(v), y2: Y(v) }), sv("text", { x: L - 6, y: Y(v) + 4, "text-anchor": "end" }, Math.round(v * 100) + "%"));
+  svg.append(sv("text", { x: (L + W - R) / 2, y: H - 4, "text-anchor": "middle" }, "examples per question (log scale) →"));
+  for (const [v, lab] of [[clef, "Clef Flash"], [jev, "Jev"]]) svg.append(sv("line", { class: "zero", x1: L, x2: W - R, y1: Y(v), y2: Y(v) }), sv("text", { x: L + 6, y: Y(v) + (lab === "Clef Flash" ? 13 : -4), style: "fill:var(--text-2)" }, `${lab} ${Math.round(v * 100)}%`));
+  const order = [...lines].sort((a, b) => (a.tag === S.curveHi) - (b.tag === S.curveHi));
+  const ends = [];
+  for (const l of order) {
+    const hiL = l.tag === S.curveHi, d = l.pts.map((p, i) => `${i ? "L" : "M"}${X(p.n).toFixed(1)},${Y(p.acc).toFixed(1)}`).join(" ");
+    const path = sv("path", { d, fill: "none", style: `stroke:${hiL ? "var(--c1)" : "var(--border-strong)"};stroke-width:${hiL ? 2.5 : 1.5};cursor:pointer` });
+    const hit = sv("path", { d, fill: "none", style: "stroke:transparent;stroke-width:12;cursor:pointer" });
+    hit.addEventListener("click", () => { S.curveHi = l.tag; drawCurve(); });
+    hit.addEventListener("mousemove", ev => showTip(ev, l.tag, l.pts.map(p => `${Math.round(p.n)}: ${fmt.pct(p.acc, 0)}`).join(" · ")));
+    hit.addEventListener("mouseleave", hideTip);
+    svg.append(path, hit);
+    l.pts.forEach(p => svg.append(sv("circle", { cx: X(p.n), cy: Y(p.acc), r: hiL ? 4 : 2.5, style: `fill:${hiL ? "var(--c1)" : "var(--border-strong)"};pointer-events:none` })));
+    ends.push({ l, y: Y(l.pts.at(-1).acc), hiL });
+  }
+  ends.sort((a, b) => a.y - b.y); let last = -99;
+  for (const e of ends) { const y = Math.max(e.y + 4, last + 11); last = y;
+    svg.append(sv("text", { x: X(e.l.pts.at(-1).n) + 8, y, style: `font-size:10.5px;fill:${e.hiL ? "var(--text)" : "var(--text-3)"};font-weight:${e.hiL ? 650 : 400};cursor:pointer` }, e.l.tag)); }
+  document.getElementById("curvePlot").replaceChildren(svg);
+  const c = C.find(x => x.model.split("/").pop() === S.curveHi), keys = Object.keys(c.sets[sets[0]][S.curveMode]);
+  const sw = sweepOf(S.curveHi);
+  document.getElementById("curveTitle").textContent = `${S.curveHi}${sw ? ` · CPU ${sw.cpu_ms.emotion_anger < 10 ? sw.cpu_ms.emotion_anger.toFixed(1) : Math.round(sw.cpu_ms.emotion_anger)} ms per call` : ""}`;
+  const nm = Object.fromEntries(S.index.sets.map(m => [m.set, m.name]));
+  const cell = (r, ref) => { const d = r.acc - ref, col = d >= 0 ? "--pos" : "--neg", a = Math.min(60, Math.round(Math.abs(d) / 0.25 * 60));
+    const td = el("td", { class: "num", style: `background:color-mix(in srgb, var(${col}) ${a}%, transparent)`, text: fmt.pct(r.acc, 0) });
+    td.addEventListener("mousemove", ev => showTip(ev, `${r.n} examples`, `accuracy ${fmt.pct(r.acc, 1)} · AUC ${fmt.pct(r.auc, 1)}`)); td.addEventListener("mouseleave", hideTip); return td; };
+  document.getElementById("curveTbl").replaceChildren(
+    el("thead", {}, el("tr", {}, el("th", { text: "Set" }), ...keys.map((k, j) => el("th", { class: "num", text: j === keys.length - 1 ? "all" : k })), el("th", { class: "num", text: "Clef" }), el("th", { class: "num", text: "Jev" }))),
+    el("tbody", {}, sets.map(s => el("tr", {}, el("td", { text: nm[s] || s }), ...Object.values(c.sets[s][S.curveMode]).map(r => cell(r, refOf[s].clef)),
+      el("td", { class: "num", text: fmt.pct(refOf[s].clef, 0) }), el("td", { class: "num", text: fmt.pct(refOf[s].jev, 0) })))));
+}
+boot();
+</script>
+</body>
+</html>

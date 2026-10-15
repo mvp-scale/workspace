@@ -1,0 +1,246 @@
+{
+ "_about": "Fixed question variants ('angles') per yes/no probe set, written on 2026-10-15 before any angle was scored. Each angle has its own instruction and yes/no descriptions. 'opposite' asks the negated question, so its yes means the original no (the scorer flips its sign). 'adjacent' asks a neighbouring concept that should mostly agree. Do not edit after results are seen; add a new file instead.",
+ "emotion_anger": {
+  "original": [
+   "Is the speaker expressing anger or annoyance?",
+   "The speaker expresses anger or annoyance",
+   "The speaker expresses something other than anger or annoyance"
+  ],
+  "opposite": [
+   "Is the speaker calm and free of anger or annoyance?",
+   "The speaker is calm, with no anger or annoyance",
+   "The speaker shows anger or annoyance"
+  ],
+  "rephrase1": [
+   "Does the speaker sound mad, irritated or fed up?",
+   "The speaker sounds mad, irritated or fed up",
+   "The speaker does not sound mad, irritated or fed up"
+  ],
+  "rephrase2": [
+   "Is there anger in how this person is writing?",
+   "The writing carries anger",
+   "The writing carries no anger"
+  ],
+  "adjacent": [
+   "Is the speaker hostile or confrontational towards someone?",
+   "The speaker is hostile or confrontational",
+   "The speaker is not hostile or confrontational"
+  ]
+ },
+ "emotion_fear": {
+  "original": [
+   "Is the speaker expressing fear or nervousness?",
+   "The speaker expresses fear, anxiety or nervousness",
+   "The speaker expresses something other than fear or nervousness"
+  ],
+  "opposite": [
+   "Is the speaker relaxed and unafraid?",
+   "The speaker is relaxed and unafraid",
+   "The speaker shows fear, anxiety or nervousness"
+  ],
+  "rephrase1": [
+   "Does the speaker sound scared, worried or anxious?",
+   "The speaker sounds scared, worried or anxious",
+   "The speaker does not sound scared, worried or anxious"
+  ],
+  "rephrase2": [
+   "Is there fear in how this person is writing?",
+   "The writing carries fear",
+   "The writing carries no fear"
+  ],
+  "adjacent": [
+   "Does the speaker feel threatened or unsafe?",
+   "The speaker feels threatened or unsafe",
+   "The speaker feels safe"
+  ]
+ },
+ "politeness_deference": {
+  "original": [
+   "Is the speaker being polite and deferential to the person they are addressing?",
+   "The speaker is polite and deferential (courteous, hedged, respectful request)",
+   "The speaker is impolite or blunt (curt, demanding, dismissive or rude)"
+  ],
+  "opposite": [
+   "Is the speaker being blunt, demanding or rude to the person they are addressing?",
+   "The speaker is blunt, demanding or rude",
+   "The speaker is polite and deferential"
+  ],
+  "rephrase1": [
+   "Does the speaker ask or speak courteously and respectfully?",
+   "The speaker is courteous and respectful",
+   "The speaker is not courteous or respectful"
+  ],
+  "rephrase2": [
+   "Is this a respectful, softened request?",
+   "It is a respectful, softened request",
+   "It is a curt or dismissive request"
+  ],
+  "adjacent": [
+   "Does the speaker show consideration for the other person's time or feelings?",
+   "The speaker shows consideration for the other person",
+   "The speaker shows no consideration for the other person"
+  ]
+ },
+ "threat_civil": {
+  "original": [
+   "Does this text threaten to harm the listener?",
+   "The text threatens violence or harm to the person addressed",
+   "The text contains no threat"
+  ],
+  "opposite": [
+   "Is this text free of any threat of harm?",
+   "The text contains no threat of harm",
+   "The text threatens violence or harm"
+  ],
+  "rephrase1": [
+   "Does the writer threaten to hurt someone?",
+   "The writer threatens to hurt someone",
+   "The writer does not threaten anyone"
+  ],
+  "rephrase2": [
+   "Is there a threat of violence in this text?",
+   "There is a threat of violence",
+   "There is no threat of violence"
+  ],
+  "adjacent": [
+   "Is this text intimidating or menacing?",
+   "The text is intimidating or menacing",
+   "The text is not intimidating or menacing"
+  ]
+ },
+ "phishing": {
+  "original": [
+   "Is this message trying to get the recipient to hand over credentials, money or access through impersonation, pressure or deception?",
+   "The message tries to obtain credentials, money or access through impersonation, pressure or deception",
+   "The message is a legitimate, non-deceptive communication"
+  ],
+  "opposite": [
+   "Is this a legitimate, honest message with no attempt to trick the recipient?",
+   "The message is legitimate and honest",
+   "The message tries to trick the recipient into giving credentials, money or access"
+  ],
+  "rephrase1": [
+   "Is this a phishing or scam email?",
+   "This is a phishing or scam email",
+   "This is a genuine email"
+  ],
+  "rephrase2": [
+   "Does this message impersonate someone to get passwords, payment or account access?",
+   "It impersonates someone to get passwords, payment or account access",
+   "It does not impersonate anyone or ask for passwords, payment or access"
+  ],
+  "adjacent": [
+   "Does this message create false urgency to make the reader act without thinking?",
+   "It creates false urgency to rush the reader",
+   "It does not rush the reader with false urgency"
+  ]
+ },
+ "sarcasm_headlines": {
+  "original": [
+   "Is this headline satirical or sarcastic rather than a straight news report?",
+   "The headline is satirical or sarcastic",
+   "The headline is a straight news report"
+  ],
+  "opposite": [
+   "Is this headline a straight, factual news report?",
+   "The headline is a straight, factual news report",
+   "The headline is satirical or sarcastic"
+  ],
+  "rephrase1": [
+   "Is this headline a joke or parody?",
+   "The headline is a joke or parody",
+   "The headline is meant seriously"
+  ],
+  "rephrase2": [
+   "Would this headline appear on a satire site like The Onion?",
+   "It reads like a satire-site headline",
+   "It reads like a real news headline"
+  ],
+  "adjacent": [
+   "Is this headline absurd or exaggerated for comic effect?",
+   "The headline is absurd or exaggerated for comic effect",
+   "The headline is plain and literal"
+  ]
+ },
+ "sarcasm_isarcasm": {
+  "original": [
+   "Does the speaker mean the opposite of what the words literally say?",
+   "The speaker means the opposite of the literal words",
+   "The speaker means what the words say"
+  ],
+  "opposite": [
+   "Does the speaker mean exactly what the words literally say?",
+   "The speaker means what the words say",
+   "The speaker means the opposite of the literal words"
+  ],
+  "rephrase1": [
+   "Is this tweet sarcastic?",
+   "The tweet is sarcastic",
+   "The tweet is sincere"
+  ],
+  "rephrase2": [
+   "Is the speaker being ironic?",
+   "The speaker is being ironic",
+   "The speaker is being literal"
+  ],
+  "adjacent": [
+   "Is the speaker mocking something by pretending to praise it?",
+   "The speaker mocks something by pretending to praise it",
+   "The speaker's praise or complaint is genuine"
+  ]
+ },
+ "manipulation_dialogue": {
+  "original": [
+   "Does one speaker in this dialogue try to manipulate the other, that is, use language to influence, alter, or control the other person's psychological state or perception for the manipulator's benefit?",
+   "One speaker uses language to influence, alter, or control the other's psychological state or perception for the manipulator's own benefit.",
+   "No speaker tries to manipulate the other; the conversation is ordinary."
+  ],
+  "opposite": [
+   "Is this an ordinary, honest conversation with no attempt to manipulate?",
+   "The conversation is ordinary and honest",
+   "One speaker tries to manipulate the other"
+  ],
+  "rephrase1": [
+   "Is one speaker playing mind games with the other?",
+   "One speaker plays mind games with the other",
+   "Nobody plays mind games"
+  ],
+  "rephrase2": [
+   "Does a speaker use guilt, flattery, pressure or distortion to get their way?",
+   "A speaker uses guilt, flattery, pressure or distortion to get their way",
+   "No speaker uses guilt, flattery, pressure or distortion"
+  ],
+  "adjacent": [
+   "Does one speaker make the other doubt their own feelings or memory?",
+   "One speaker makes the other doubt their feelings or memory",
+   "Neither speaker undermines the other's feelings or memory"
+  ]
+ },
+ "memsafety": {
+  "original": [
+   "Read the C function and decide whether it contains a memory-safety bug. Does this C function contain a memory-safety bug (out-of-bounds read or write, use after free, double free, null-pointer dereference, or leaked or uninitialised memory)?",
+   "The function contains at least one memory-safety bug that can occur when it runs: an out-of-bounds read or write, use after free, double free, null-pointer dereference, or leaked or uninitialised memory.",
+   "The function is memory-safe: all buffer accesses are in bounds, memory is freed exactly once and not used afterwards, pointers are checked or valid before dereference, allocations are released and variables are initialised before use."
+  ],
+  "opposite": [
+   "Is this C function memory-safe?",
+   "The function is memory-safe",
+   "The function has a memory-safety bug"
+  ],
+  "rephrase1": [
+   "Can this C code read or write memory it should not?",
+   "The code can access memory it should not",
+   "The code only accesses memory it owns"
+  ],
+  "rephrase2": [
+   "Is this C function vulnerable to a buffer overflow, use after free or null dereference?",
+   "It is vulnerable to one of these",
+   "It is not vulnerable to any of these"
+  ],
+  "adjacent": [
+   "Does this C function copy, index or free memory without checking sizes, bounds or ownership?",
+   "It copies, indexes or frees memory without the needed checks",
+   "Every copy, index and free is properly checked"
+  ]
+ }
+}
