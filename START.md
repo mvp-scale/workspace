@@ -7,7 +7,8 @@ Everything to bring the demo back up and look at the output. Run from `/workspac
 Run from `/workspace`. `service.yaml` says what exists and what is on; `./service.sh` acts on it (logic in `tools/service.py`). It replaces the old separate commands (`lineup.sh up`, hand-run demo, engine and Winnow launches).
 
 ```
-./service.sh up                     # THE IDEAL STATE: baseline (World Engine + console) up and healthy; leaves the rest alone
+./service.sh up                     # THE IDEAL STATE: baseline (World Engine + console) up and healthy; prints where to open it
+./service.sh up --share             # same, plus a public Cloudflare link (no login), printed at the end
 ./service.sh reset                  # restart the baseline cleanly;   ./service.sh down   stop everything
 ./service.sh start voice classifier # turn on-demand services on (also from the console's top bar: Voice, Classifier, Clef)
 ./service.sh help                   # every command, target and example (./service.sh help restart for one command)

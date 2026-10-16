@@ -23,7 +23,7 @@ def targets_text(cfg):
 
 
 DETAIL = {
-    "up": "up\n  The ideal state: starts whatever in the baseline profile is not running, leaves healthy services alone, then shows\n  everything. On-demand services (tag:demand: voice, classifier, Clef) are left as they are; turn them on with start.\n  ./service.sh up\n  ./service.sh up --dry-run",
+    "up": "up [--share]\n  The ideal state: starts whatever in the baseline profile is not running, leaves healthy services alone, then shows\n  everything and where to open it. On-demand services (tag:demand: voice, classifier, Clef) are left as they are.\n  --share also opens the public Cloudflare link (no login) and prints it.\n  ./service.sh up\n  ./service.sh up --share\n  ./service.sh up --dry-run",
     "reset": "reset\n  Restarts the baseline profile cleanly, in dependency order (asks once for heavy services; -y skips).\n  On-demand services keep running; restart one by name: ./service.sh restart voice",
     "down": "down\n  Stops every service that is running, on-demand ones and the public share included, in reverse dependency order.\n  ./service.sh down -y",
     "status": "status [target...]\n  Shows each service: port, up/down/loading, pid, uptime, plus extra copies on other ports and GPU memory.\n  ./service.sh                 everything\n  ./service.sh status world    one service\n  ./service.sh status models   one profile",
@@ -64,6 +64,7 @@ def help_text(cfg, topic=None):
   -y           skip the question when stopping or restarting heavy services
   --dry-run    print what would run and change nothing (try it before a big restart)
   --port N     run one flexible service on another port, e.g. a test copy
+  --share      with up or reset: also open the public Cloudflare link and print it
   --force      stop a process even if its command line does not match the service
 
 {C['b']}COMMON TASKS{C['z']}
@@ -395,6 +396,17 @@ def cmd_status(cfg, entries):
     if smi: print(f"  {C['d']}GPU memory: {smi}{C['z']}")
 
 
+def access(cfg):
+    """After up / reset: where to open the console, and the public link if the share is running."""
+    port = cfg["services"].get("demo", {}).get("port", 8100); link = None
+    if "share" in cfg["services"]:
+        m = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", sh([os.path.join(ROOT, cfg["services"]["share"]["script"]), "status"]))
+        link = m.group(0) if m else None
+    print(f"\n  {C['b']}Open{C['z']}    http://localhost:{port}            (from a laptop: forward port {port} only; voice goes through it)")
+    if link: print(f"  {C['b']}Share{C['z']}   {link}/   {C['r']}public, no login{C['z']}   flow with voice: {link}/flow   stop: ./service.sh stop share")
+    else: print(f"  {C['b']}Share{C['z']}   off   (./service.sh up --share for a public link)")
+
+
 def cmd_list(cfg):
     print(f"  {'SERVICE':<8} {'PORT':<6} {'KIND':<8} {'TAGS':<22} WHAT")
     for n, s in cfg["services"].items(): print(f"  {n:<8} {(':' + str(s['port'])) if s.get('port') else '-':<6} {s['kind']:<8} {','.join(s['tags']):<22} {s['desc']}")
@@ -446,6 +458,7 @@ def main(argv):
         if a in ("-y", "--yes"): o["yes"] = True
         elif a == "--force": o["force"] = True
         elif a == "--dry-run": o["dry"] = True
+        elif a == "--share": o["share"] = True
         elif a == "--port":
             v = next(it, None)
             if not (v and v.isdigit()): die("--port needs a number")
@@ -471,7 +484,9 @@ def main(argv):
     if cmd in ("up", "reset", "down"):
         if targets: die(f"{cmd} takes no target; it always acts on the baseline profile (down: on everything)")
         if "baseline" not in cfg["profiles"]: die("service.yaml has no baseline profile")
+        if o.get("share") and cmd == "down": die("--share goes with up or reset")
         cmd, targets = {"up": ("start", ["baseline"]), "reset": ("restart", ["baseline"]), "down": ("stop", list(cfg["services"]))}[cmd]
+        if o.get("share") and "share" in cfg["services"]: targets = targets + ["share"]
         if cmd == "stop":                                              # only what is running, so the heavy-service question is about real things
             ls0 = listeners(); targets = [e.name for e in expand(cfg, targets) if running(cfg, e, ls0)]
             if not targets: print("  nothing is running"); return 0
@@ -504,7 +519,8 @@ def main(argv):
         for e in entries: do_start(cfg, e, o)
     if not o["dry"]:
         print(); cmd_status(cfg, expand(cfg, list(cfg["services"])) if o.get("after_status") == "all" else entries)
-        print(f"\n  {C['d']}./service.sh help {cmd}  for more examples{C['z']}")
+        if o.get("after_status") == "all" and cmd in ("start", "restart"): access(cfg)
+        else: print(f"\n  {C['d']}./service.sh help {cmd}  for more examples{C['z']}")
     return 0
 
 
