@@ -502,6 +502,7 @@ class H(BaseHTTPRequestHandler):
             t = RU.sowhat_serve(); return self._send(200, {"set": os.path.basename(RU.R), **t})
         if self.path.startswith("/graph"):
             with LOCK: return self._send(200, S.graph_info())
+        if self.path.startswith("/reader"): return self._send(200, {"url": C.O.EP, "model": C.O.MODEL})   # never the key
         if self.path.startswith("/gpu"):
             with LOCK: return self._send(200, S.gpu_info())
         if self.path.startswith("/world"):
@@ -513,6 +514,10 @@ class H(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000)))
             with LOCK:
                 if self.path == "/request": t = str(req["text"]).strip(); assert 8 <= len(t) <= 1500 and req["mode"] in ("event", "offer", "auto"); return self._send(200, S.request(t, req["mode"]))
+                if self.path == "/reader":  # any TypeSafe /v1/systemone endpoint; the console sends the address, model alias and key
+                    url = str(req["url"]); assert url.startswith(("http://127.0.0.1:", "http://localhost:", "https://"))
+                    C.O.set_reader(url, str(req.get("model") or ""), str(req.get("key") or ""))
+                    return self._send(200, {"url": C.O.EP, "model": C.O.MODEL})
                 if self.path == "/drill": return self._send(200, S.drill(str(req["node"]), str(req["col"]), bool(req.get("series"))))
                 if self.path == "/commit": return self._send(200, S.commit())
                 if self.path == "/reset":
@@ -526,7 +531,7 @@ class H(BaseHTTPRequestHandler):
                     return self._send(200, live_status(1 << 60))
             self._send(404, {"error": "not found"})
         except (AssertionError, KeyError, ValueError, StopIteration): self._send(400, {"error": "bad request"})
-        except OSError as e: self._send(502, {"error": f"classifier not reachable: {e}"})
+        except OSError as e: self._send(502, {"error": f"reader not reachable at {C.O.EP}: {e}"})
     def log_message(self, *a): pass
 if __name__ == "__main__":
     threading.Thread(target=feeder_loop, daemon=True).start()

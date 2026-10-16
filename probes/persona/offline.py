@@ -22,7 +22,18 @@ except ImportError:
 from personas import gen, TRAITS, ASPIRATIONS, WORLDVIEWS, age_band
 
 OUT = Path("/workspace/data/persona-lab/offline.json")
-EP = "http://127.0.0.1:8091"
+# The reader: any TypeSafe /v1/systemone endpoint that answers noul and choice questions (Winnow, Clef, kev, SemIf,
+# hosted Jev...). Winnow is the default because the World Engine's rules were first tuned on its readings; the engine
+# (world_service2.py POST /reader) and the console's World engine page can switch it at run time.
+import os
+EP = os.environ.get("WORLD_READER_URL", "http://127.0.0.1:8091")
+MODEL = os.environ.get("WORLD_READER_MODEL", "Winnow-12B")   # sent as "model" (llama.cpp servers use it to pick the alias); empty = omit
+KEY = os.environ.get("WORLD_READER_KEY", "")
+
+
+def set_reader(url, model="", key=""):
+    global EP, MODEL, KEY
+    EP, MODEL, KEY = url.rstrip("/"), model or "", key or ""
 
 TRAIT_Q = {  # positive polarity: high P(yes) = high trait. two wordings each.
     "tech": ["This person is comfortable learning and using new phone apps.", "This person finds new phone apps easy to pick up."],
@@ -63,7 +74,9 @@ PRODUCTS2 = {f"t_{a}_{v}": BASE + "It is free. It works by text message: reply t
 
 
 def call(state, qs):
-    req = urllib.request.Request(EP + "/v1/systemone", json.dumps({"model": "Winnow-12B", "state": state, "questions": qs}).encode(), {"Content-Type": "application/json"})
+    body = {"state": state, "questions": qs, **({"model": MODEL} if MODEL else {})}
+    hdr = {"Content-Type": "application/json", "User-Agent": "jev-demo/0.1", **({"Authorization": f"Bearer {KEY}"} if KEY else {})}
+    req = urllib.request.Request(EP + "/v1/systemone", json.dumps(body).encode(), hdr)
     for attempt in range(2):
         try:
             with urllib.request.urlopen(req, timeout=300) as r: return json.load(r)["answers"]

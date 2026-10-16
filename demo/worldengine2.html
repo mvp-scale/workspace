@@ -108,11 +108,12 @@
   @media (max-width: 1000px) { .ins { grid-template-columns: 1fr; } }
   @media (max-width: 760px) { .lb { grid-template-columns: 1fr; } .rs { grid-template-columns: 1fr; } .swk { flex-wrap: wrap; } .mvw { height: auto; white-space: normal; } }
   @media (prefers-reduced-motion: reduce) { .mv.pulse, .rc::after, .cs, .ca, .cs .ci { animation: none !important; } .size .mb i, .hzb, .mv { transition: none; } }
+  .rdr { text-align: right; font-size: 13px; } .rdr select { max-width: 260px; } .rdr .small { display: inline-block; margin-top: 2px; }
 </style>
 </head>
 <body>
 <main class="page we2">
-  <header class="w2h"><div><h1>World engine</h1><p>What it means, who feels it, and why.</p></div><span><a href="/worldengine-how">How it works (live, GPU)</a> · <a href="/worldengine">World engine (original)</a></span></header>
+  <header class="w2h"><div><h1>World engine</h1><p>What it means, who feels it, and why.</p></div><span class="rdr"><label for="reader">Reader</label> <select id="reader" aria-describedby="readerNote"></select> <a href="/worldengine-how">How it works (live, GPU)</a><br><span class="small muted" id="readerNote"></span></span></header>
   <section class="ask2">
     <div class="askrow"><textarea id="ask" rows="1" aria-label="Ask the world engine" placeholder="Type an event, a product, or a message. For example: “Fuel prices jump 25% in Brazil”"></textarea><button class="btn primary go" id="go" type="button">Ask</button></div>
     <div class="eg" id="eg"></div>
@@ -577,6 +578,31 @@ paintChips(KINDS_FALLBACK); Jev.api("/api/idea-kinds").then(k => paintChips(k.ki
 $("out").replaceChildren(el("div", { class: "empty" }, el("h2", { text: "Ask about anything, large or small" }), el("p", { text: "Six steps run every time:" }),
   el("div", { class: "meth" }, [["Read", "What kind of thing is it, and how much does it count?"], ["Place", "Which of 14 topics is it about?"], ["Estimate", "What is reported, and what is expected?"], ["Spread", "Where does it enter, and who does it reach?"], ["React", "What do people decide?"], ["Tell", "So what, in one sentence."]].map(([a, b], k) => el("div", {}, el("i", { text: String(k + 1) }), el("b", { text: a }), b)))));
 swLoad(); api("state").then(s => { S.state = s; }).catch(e => $("out").append(el("div", { class: "panel", style: "color:var(--bad);margin-top:14px", text: "Could not reach the world engine: " + e.message })));
+
+// The reader: any TypeSafe model that answers yes/no and choice questions reads each story. The engine says which one it
+// uses; the list shows every model the console knows, loaded ones first. Changing it is local-only (it can cost money).
+async function readerUI() {
+  const sel = $("reader"), note = $("readerNote");
+  let cur = {}; try { cur = await Jev.api("/api/world-engine/reader"); } catch {}
+  const draw = () => {
+    const st = Jev.status() || {}, ids = Object.keys(st).filter(id => id !== "classifier"), on = (id) => st[id]?.up;
+    const lab = (id) => `${Jev.codeOf(id)} · ${Jev.nameOf(id)}` + (st[id]?.hosted ? " · hosted, paid" : on(id) ? "" : " (off)");
+    sel.replaceChildren(el("optgroup", { label: "Loaded" }, ids.filter(on).map(id => el("option", { value: id, text: lab(id) }))),
+      el("optgroup", { label: "Off" }, ids.filter(id => !on(id)).map(id => el("option", { value: id, text: lab(id), disabled: id !== cur.backend }))));
+    if (cur.backend) sel.value = cur.backend;
+    note.textContent = !cur.url ? "The World engine is not answering." : !cur.backend ? `Reading with ${cur.url}.` : on(cur.backend) ? "" :
+      `${Jev.nameOf(cur.backend)} is off: pick a loaded model, or turn it on under Services.`;
+  };
+  sel.addEventListener("change", async () => {
+    const id = sel.value, st = Jev.status() || {};
+    if (st[id]?.hosted && !confirm(`${Jev.nameOf(id)} is a paid hosted API: every story read costs money. Use it?`)) { draw(); return; }
+    try { cur = await Jev.api("/api/world-engine/reader", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backend: id }) }); Jev.toast(`Now reading with ${Jev.nameOf(id)}. Earlier readings came from the previous model, so numbers may shift.`); }
+    catch (e) { Jev.toast(e.message); }
+    draw();
+  });
+  Jev.onStatus(draw); Jev.ready.then(draw); draw();
+}
+readerUI();
 </script>
 </body>
 </html>
