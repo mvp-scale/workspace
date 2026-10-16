@@ -69,16 +69,6 @@ else:
 
     def encode(text): return _ENC.encode(["query: " + text], normalize_embeddings=True)[0].astype(np.float32)
 
-    def encode_batch(texts): return _ENC.encode(["query: " + t for t in texts], batch_size=64, normalize_embeddings=True).astype(np.float32)
-
-
-if RUNTIME == "onnx-int8":
-    def encode_batch(texts):
-        """Many texts (the lab encodes whole training sets), one at a time on purpose: the int8 model scales its numbers
-        over a whole batch, so batching shifted each vector slightly (cosine 0.997 vs the single-text vector the engine
-        serves). One at a time gives exactly the engine's vectors."""
-        return np.stack([encode(t) for t in texts]).astype(np.float32)
-
 
 def corpus_vectors():
     """The classifiers must be trained on vectors from the same runtime that serves (int8 moves 2-6% of answers otherwise)."""
@@ -199,15 +189,6 @@ def library():
                           {"gate": {"no_below": round(q["lo"], 3), "yes_above": round(q["hi"], 3)}} for q in LIB]}
 
 
-import star_lab
-_lab = []
-
-
-def LAB():
-    if not _lab: _lab.append(star_lab.Lab(encode_batch, "intfloat/e5-small-v2 (" + ("ONNX int8, the engine's own" if RUNTIME == "onnx-int8" else "PyTorch fp32") + ")"))
-    return _lab[0]
-
-
 class H(BaseHTTPRequestHandler):
     def _send(self, code, obj):
         raw = json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type", "application/json")
@@ -217,21 +198,9 @@ class H(BaseHTTPRequestHandler):
         p = self.path.split("?")[0]
         if p == "/health": return self._send(200, health())
         if p == "/library": return self._send(200, library())
-        if p == "/lab/sets": return self._send(200, LAB().sets())
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
-        if self.path.split("?")[0].startswith("/lab/"):   # the STAR framing lab (probes/star_lab.py), computed now from the raw files
-            try:
-                req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}"); s = req.get("set")
-                if s not in star_lab.SETS: return self._send(400, {"error": "unknown set"})
-                p = self.path.split("?")[0]; custom = req.get("frame") or None
-                if custom and not (str(custom.get("situation", "")).strip() or str(custom.get("task", "")).strip()): custom = None
-                if p == "/lab/item": return self._send(200, LAB().item(s, int(req.get("index", 0)), custom))
-                if p == "/lab/run": return self._send(200, LAB().run(s, req.get("n"), custom, "neighbours" if req.get("classifier") == "neighbours" else "line"))
-                if p == "/lab/try": return self._send(200, LAB().try_text(s, str(req.get("text", ""))[:2000], custom))
-                return self._send(404, {"error": "not found"})
-            except (ValueError, IndexError, KeyError) as e: return self._send(400, {"error": str(e)[:200]})
         if self.path.split("?")[0] != "/v1/systemone": return self._send(404, {"error": "not found"})
         n = int(self.headers.get("Content-Length", 0))
         if n > 200_000: return self._send(413, {"error": "too large"})
