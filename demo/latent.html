@@ -154,7 +154,7 @@
     <div class="tiers">
       <div class="tier"><span class="bn">1 · Hosted API</span><h3>Jev</h3><div class="big">281 ms · pay per call</div><div class="r"><span>Time per answer</span><b>281 ms</b></div><div class="r"><span>Memory on your side</span><b>none</b></div><div class="r"><span>Cost</span><b>$16 per million answers</b></div><div class="r"><span>Your text</span><b>leaves your network</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>86.5%</b></div></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="tier"><span class="bn">2 · Your GPU</span><h3>Clef Flash</h3><div class="big">46 ms · 9.7 GB VRAM</div><div class="r"><span>Time per answer</span><b>46 ms</b></div><div class="r"><span>Memory</span><b>9.7 GB of GPU memory</b></div><div class="r"><span>Cost</span><b>a GPU; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>84.4%</b></div></div>
+      <div class="tier"><span class="bn">2 · Your GPU</span><h3>Clef Flash Q4</h3><div class="big">46 ms · 9.7 GB VRAM</div><div class="r"><span>Time per answer</span><b>46 ms</b></div><div class="r"><span>Memory</span><b>9.7 GB of GPU memory</b></div><div class="r"><span>Cost</span><b>a GPU; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>84.4%</b></div></div>
       <div class="arrow" aria-hidden="true">→</div>
       <div class="tier win"><span class="bn">3 · Your CPU</span><h3>Local engine</h3><div class="big">4 ms · 233 MB RAM</div><div class="r"><span>Time per answer</span><b>4 ms</b></div><div class="r"><span>Memory</span><b>233 MB RAM, no GPU</b></div><div class="r"><span>Cost</span><b>any server; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>only ones it learned (1.5 KB each)</b></div><div class="r"><span>Tone, human labels</span><b>83.2%</b></div></div>
     </div>
@@ -625,7 +625,7 @@ async function boot() {
   for (const m of S.index.sets) (groups[m.group] ||= []).push(m);
   for (const g of ["Tone and text type", "Reading and judging", "Code security", "World knowledge"]) if (groups[g])
     sel.append(el("optgroup", { label: g }, groups[g].map(m => el("option", { value: m.set, text: `${m.name} · ${m.n} items` }))));
-  const [wantSet, wantModel] = decodeURIComponent((location.hash || "").slice(1)).split("@");
+  const [wantSet, wantModel] = decodeURIComponent((Jev.hash() || "").slice(1)).split("@");
   sel.value = S.index.sets.some(m => m.set === wantSet) ? wantSet : "emotion_anger";
   sel.addEventListener("change", () => load(sel.value));
   const ms = document.getElementById("model");

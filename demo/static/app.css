@@ -187,3 +187,4 @@ table.heat th.mcolh .mbase { display: block; font-size: 10px; font-weight: 400; 
 .svc-row { display: grid; grid-template-columns: 14px 90px minmax(0, 1fr) 80px auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); } .svc-row .dot { margin: 0; }
 .dot.busy { background: var(--warn); animation: dotpulse 1s ease-in-out infinite; } @keyframes dotpulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .dot.busy { animation: none; } }
+html.mask-pending body { visibility: hidden; }

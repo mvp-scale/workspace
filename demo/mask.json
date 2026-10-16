@@ -1,0 +1,43 @@
+{
+  "_about": "Code names for demo mode (the Names: masked switch in the console's top bar). models: id -> code name and short code. encoders: embedding model -> code name. terms: any other real text -> what to show instead (vendors, authors, base models, short forms). Longest text is replaced first; matching is case-sensitive and whole-word. Edit freely; the console reads this file on every page load.",
+  "brand": "Decision Console",
+  "models": {
+    "clef-flash-q4km": {"name": "Atlas", "code": "ATL-1"},
+    "clef-flash": {"name": "Atlas Pro", "code": "ATL-P"},
+    "clef-flash-q2k": {"name": "Atlas Lite", "code": "ATL-L"},
+    "jev": {"name": "Orbit", "code": "ORB-1"},
+    "semif": {"name": "Cedar", "code": "CED-1"},
+    "cygnet": {"name": "Delta", "code": "DEL-1"},
+    "winnow": {"name": "Ember", "code": "EMB-1"},
+    "so1": {"name": "Fjord", "code": "FJD-1"},
+    "kev-4b": {"name": "Granite", "code": "GRN-1"},
+    "kev-0.8b": {"name": "Granite Mini", "code": "GRN-2"},
+    "kev-0.5b": {"name": "Granite Nano", "code": "GRN-3"},
+    "jeff": {"name": "Harbor", "code": "HRB-1"},
+    "laya": {"name": "Iris", "code": "IRS-1"},
+    "verdict": {"name": "Juniper", "code": "JNP-1"}
+  },
+  "encoders": {
+    "Qwen3-Embedding-4B": "Encoder A", "Qwen3-Embedding-0.6B": "Encoder B", "multilingual-e5-large-instruct": "Encoder C",
+    "mxbai-embed-large-v1": "Encoder D", "bge-large-en-v1.5": "Encoder E", "gte-modernbert-base": "Encoder F",
+    "granite-embedding-english-r2": "Encoder G", "bge-base-en-v1.5": "Encoder H", "e5-base-v2": "Encoder I",
+    "granite-embedding-small-english-r2": "Encoder J", "e5-small-v2": "Encoder K", "bge-small-en-v1.5": "Encoder L",
+    "gte-small": "Encoder M", "snowflake-arctic-embed-s": "Encoder N", "all-MiniLM-L6-v2": "Encoder O",
+    "potion-base-32M": "Encoder P", "potion-retrieval-32M": "Encoder Q", "potion-base-8M": "Encoder R"
+  },
+  "terms": {
+    "Jev Bench Console": "Decision Console", "Jev Bench": "Decision", "JevBench": "DecisionBench", "jevbench": "decisionbench",
+    "Jev-class": "Orbit-class", "jev-latest": "orbit-latest", "Jev": "Orbit", "OpenJev": "Cedar", "openJev": "Juniper",
+    "Clef Flash": "Atlas", "clef-flash": "atlas", "Clef": "Atlas", "Winnow": "Ember", "SemIf": "Cedar", "Cygnet": "Delta", "Laya": "Iris",
+    "GLiFormer": "Harbor", "gliformer": "harbor", "GLiClass": "Juniper", "kev": "Granite", "jeff": "Harbor",
+    "e5-small": "Encoder K", "e5-base": "Encoder I", "Qwen3-Embedding": "Encoder A/B", "MiniLM": "Encoder O", "bge-small": "Encoder L", "bge-large": "Encoder E", "bge-base": "Encoder H", "Model2Vec": "static encoder", "model2vec": "static encoder", "potion": "Encoder P/Q/R",
+    "TypeSafe AI": "Provider O", "Cloudflare": "Partner A", "bartowski": "a third-party quantizer", "TurinTech": "a third-party quantizer",
+    "Theodore Lee": "an independent author", "TheoLeeCJ": "an independent author", "BlockBrain": "a third party", "blockbrain-ai": "a third party", "EldanRing": "a third party",
+    "IkerMoel": "an independent author", "ikermoel": "an independent author", "Jared Palmer": "an independent author", "jaredpalmer": "an independent author",
+    "Logan Markewich": "an independent author", "logan-markewich": "an independent author", "Convai Innovations": "a third party", "Hemant": "an independent author", "heman10x": "an independent author",
+    "knowledgator": "a third party", "fstandhartinger": "an independent author", "Heman10x-NGU": "an independent author", "TheoLeeCJ/openjev": "an open repository",
+    "Qwen3.5": "a base LLM", "Qwen2.5": "a base LLM", "Qwen3": "a base LLM", "Qwen": "a base LLM", "Gemma 4": "a base LLM", "gemma-4": "a base LLM", "Gemma": "a base LLM", "ModernBERT": "a base encoder",
+    "intfloat/": "", "BAAI/": "", "Qwen/": "", "minishlab/": "", "sentence-transformers/": "", "Snowflake/": "", "mixedbread-ai/": "", "ibm-granite/": "", "thenlper/": "", "Alibaba-NLP/": "", "google/": "", "nvidia/": "",
+    "Nemotron-3-Diarization": "Voice model D", "Nemotron": "Voice model D", "multitalker-parakeet-streaming-0.6b-v1": "Voice model A", "parakeet": "Voice model A", "NVIDIA": "Partner N", "NeMo": "the voice toolkit"
+  }
+}

@@ -169,7 +169,7 @@ const chanceText = (t) => { const c = [...new Set(t.items.map(i => pct0(chanceOf
 
 /* ---- state lives in the URL hash so a view can be shared ---- */
 function route() {
-  const h = new URLSearchParams(location.hash.slice(1));
+  const h = new URLSearchParams(Jev.hash().slice(1));
   return { task: h.get("task"), model: h.get("m"), f: h.get("f") || "all", area: h.get("area") };
 }
 function hashOf(r) {

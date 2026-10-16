@@ -384,7 +384,7 @@ function wilson(k, n) {
 const ST = { set: "all", model: null, t: 0.85, filter: "all", pairs: false, q: "", page: 0 };
 let PROBES = [], MMLU_PROBES = [], MODELS = [], INFO = {}, TOK = 0, CUSTOM_ABORT = null;
 function parseHash() {
-  const p = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const p = new URLSearchParams(Jev.hash().replace(/^#/, ""));
   const s = p.get("set");
   ST.set = STRUCTURE_IDS.has(s) || s === "world" || (s && (PROBES.some(x => x.id === s) || MMLU_PROBES.some(x => x.id === s))) ? s : "all";
   ST.model = p.get("model") || ST.model;

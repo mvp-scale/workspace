@@ -1,5 +1,63 @@
 /* Jev Bench Console — shared helpers. Every page loads this first: <script src="/static/app.js"></script> */
 (() => {
+  /* Demo mode ("Names: masked"): every real model, encoder, vendor and author name on the page is replaced by the code
+     names in demo/mask.json, including text drawn later and what the copy buttons copy. The page stays hidden until the
+     setting is known, so real names never flash up. It masks what is shown, not the raw API data in developer tools. */
+  let MASK = null, MASK_ON = false, MASK_CAN = false;
+  document.documentElement.classList.add("mask-pending");
+  const maskStr = (t) => (MASK && t ? t.replace(MASK.re, (m) => MASK.map.get(m) ?? m) : t);
+  const maskUrl = (u) => { const i = u.search(/[?#]/); return i < 0 ? u : u.slice(0, i) + maskStr(u.slice(i)); };   // only the state part of a URL
+  // pages read their state through Jev.hash(): code names in the address bar are turned back into real ids
+  const hashReal = () => { let h = location.hash; if (MASK && MASK.ids) for (const [fake, real] of MASK.ids) h = h.split(encodeURIComponent(fake)).join(real).split(fake).join(real); return h; };
+  const maskSkip = (n) => n && n.closest && n.closest("textarea, script, style, [contenteditable]");
+  const maskAttrs = (n) => {
+    for (const a of ["title", "placeholder", "aria-label", "alt"]) { const v = n.getAttribute(a); if (v) { const w = maskStr(v); if (w !== v) n.setAttribute(a, w); } }
+    if (n.tagName === "A" && n.hasAttribute("href")) { try { if (new URL(n.href, location.href).host !== location.host) { n.removeAttribute("href"); n.title = "Hidden in demo mode"; } } catch {} }
+  };
+  const maskNode = (root) => {
+    if (!MASK || !root) return;
+    if (root.nodeType === 3) { if (!maskSkip(root.parentElement)) { const v = maskStr(root.nodeValue); if (v !== root.nodeValue) root.nodeValue = v; } return; }
+    if (root.nodeType !== 1 || maskSkip(root)) return;
+    maskAttrs(root);
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (n.nodeType === 3) { if (!maskSkip(n.parentElement)) { const v = maskStr(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; } }
+      else maskAttrs(n);
+    }
+  };
+  const maskReady = fetch("/api/mask", { cache: "no-store" }).then(r => r.json()).then(d => {
+    MASK_ON = !!d.on; MASK_CAN = !!d.can_switch;
+    if (d.on && d.pairs && d.pairs.length) {
+      const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), alnum = /[A-Za-z0-9]/;
+      const alts = d.pairs.map(([real]) => (alnum.test(real[0]) ? "(?<![A-Za-z0-9])" : "") + esc(real) + (alnum.test(real.at(-1)) ? "(?![A-Za-z0-9])" : ""));
+      MASK = { re: new RegExp(alts.join("|"), "g"), map: new Map(d.pairs), ids: [...(d.ids || [])].sort((a, b) => b[0].length - a[0].length) };
+      // the address bar shows code names too: whatever a page writes, and after any hash navigation
+      const rs = history.replaceState.bind(history), ps = history.pushState.bind(history);
+      history.replaceState = (st, t, u) => rs(st, t, u == null ? u : maskUrl(String(u)));
+      history.pushState = (st, t, u) => ps(st, t, u == null ? u : maskUrl(String(u)));
+      const tidy = () => { const m = maskUrl(location.href); if (m !== location.href) rs(history.state, "", m); };
+      addEventListener("hashchange", () => setTimeout(tidy, 0)); tidy();
+      const start = () => { maskNode(document.documentElement); document.title = maskStr(document.title);
+        new MutationObserver((ms) => { for (const m of ms) {
+          if (m.type === "characterData") maskNode(m.target); else if (m.type === "attributes") maskAttrs(m.target); else m.addedNodes.forEach(maskNode); } })
+          .observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["title", "placeholder", "aria-label", "alt", "href"] }); };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+    }
+  }).catch(() => {}).finally(() => document.documentElement.classList.remove("mask-pending"));
+  setTimeout(() => document.documentElement.classList.remove("mask-pending"), 3000);   // never leave a page blank
+  function maskControl() {
+    const b = el("button", { class: "btn ghost", type: "button", text: "Names: …" });
+    maskReady.then(() => {
+      b.textContent = MASK_ON ? "Names: masked" : "Names: real"; b.disabled = !MASK_CAN;
+      b.title = (MASK_ON ? "Model names are hidden behind code names (demo mode)." : "Real model names are shown.") + (MASK_CAN ? " Click to switch (applies for every visitor)." : " Only switchable from this machine.");
+    });
+    b.addEventListener("click", async () => {
+      try { await api("/api/mask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: !MASK_ON }) }); location.reload(); }
+      catch (e) { toast(e.message); }
+    });
+    return b;
+  }
+
   const NAV = [["/", "Leaderboard"], ["/compare", "Baseline compare"], ["/scenarios", "Scenario lab"], ["/imagelab", "Image lab"], ["/worldengine", "World engine"], ["/worldengine-how", "How it works"], ["/flow", "Conversation flow"], ["/latent", "Latent lab"], ["/report", "Report"], ["/models", "How they work"]];
 
   const el = (tag, attrs, ...kids) => {
@@ -34,6 +92,7 @@
   }
   const csv = (rows) => rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
   const copy = async (text) => {
+    text = maskStr(text);   // demo mode: copied text carries code names too
     try { await navigator.clipboard.writeText(text); toast("Copied to clipboard"); return; } catch {}
     // plain-http pages (e.g. reached by IP address) have no clipboard API: fall back to a hidden textarea
     const ta = el("textarea", { style: "position:fixed;top:-1000px;opacity:0" }); ta.value = text; document.body.append(ta); ta.select();
@@ -178,7 +237,7 @@
       el("header", { class: "topbar" }, el("div", { class: "topbar-inner" },
         el("a", { class: "brand", href: "/" }, "Jev Bench ", el("span", { text: "Console" })),
         el("nav", { class: "nav", "aria-label": "Primary" }, NAV.map(([h, t]) => el("a", { href: h, "aria-current": h === path ? "page" : null, text: t }))),
-        ...servicesControl(), ...modelsControl(), theme())));
+        ...servicesControl(), ...modelsControl(), maskControl(), theme())));
     document.body.append(el("footer", { class: "footer" }, el("div", { class: "footer-inner" },
       el("span", { text: "Runs on this machine's RTX 5090 with the public JevBench tiers." }),
       el("span", {}, "Benchmark harness: ", el("a", { href: "https://github.com/fstandhartinger/jevbench", text: "JevBench" })))));
@@ -222,6 +281,6 @@
     const bodyEl = opts.compact ? el("div", { class: "json json-inline" }, ...jsonNodes(JSON.parse(JSON.stringify(v))).map(n => (n.nodeType === 3 ? document.createTextNode(n.textContent.replace(/\n\s*/g, " ")) : (n.textContent = n.textContent.replace(/\n\s*/g, " "), n)))) : el("div", { class: "json" }, ...jsonLines(v));
     return el("div", { class: "jsonview" + (opts.compact ? " compact" : "") }, el("div", { class: "jsonview-head" }, el("span", { text: label || "JSON" }), copyBtn), bodyEl);
   };
-  window.Jev = { jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();

@@ -441,6 +441,29 @@ def set_reader(backend):
     return 200, reader_info()
 
 
+MASK_FILE = HERE / "mask.json"                                   # code names (edit freely)
+MASK_STATE = HERE.parent / "data" / "demo-mask.json"             # {"on": true|false}, set from the top bar
+
+
+def mask_state():
+    """Demo mode: whether names are masked, and every real -> code-name pair (longest real text first)."""
+    try: on = bool(json.loads(MASK_STATE.read_text()).get("on"))
+    except (OSError, ValueError): on = False
+    out = {"on": on}
+    if not on: return out
+    m = json.loads(MASK_FILE.read_text()); facts = {x["id"]: x for x in json.loads((HERE / "models.json").read_text())["models"]}
+    pairs = {}
+    for mid, cn in m["models"].items():
+        f = facts.get(mid, {})
+        for real in (f.get("name"), mid): pairs[real] = cn["name"] if real == f.get("name") else cn["name"].lower().replace(" ", "-")
+        if f.get("code"): pairs[f["code"]] = cn["code"]
+    for real, fake in m["encoders"].items(): pairs[real] = fake
+    for real, fake in m["terms"].items(): pairs.setdefault(real, fake)
+    ids = [[cn["name"].lower().replace(" ", "-"), mid] for mid, cn in m["models"].items()] + [[fake, real] for real, fake in m["encoders"].items()]
+    out.update(brand=m.get("brand"), pairs=sorted(([k, v] for k, v in pairs.items() if k), key=lambda kv: -len(kv[0])), ids=ids)  # ids: code name -> real id, for URLs
+    return out
+
+
 CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8020")  # probes/cpu_engine.py: the local classifier (./service.sh start classifier)
 
 
@@ -538,6 +561,8 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 with urllib.request.urlopen(f"http://{VOICE}/api/status", timeout=5) as r: return self._send(r.status, r.read())
             except Exception: return self._send(503, {"error": "Voice is off"})
+        if path == "/api/mask":
+            return self._send(200, {**mask_state(), "can_switch": self._local()})
         if path == "/api/services":
             return self._send(200, {"services": services_state(), "can_switch": self._local()})
         if path == "/mockups" or path.startswith("/mockups/"):  # the static mock-ups (they had their own server on :8110)
@@ -719,6 +744,12 @@ class Handler(BaseHTTPRequestHandler):
         self._stream(events)
 
     def do_POST(self):
+        if self.path.split("?")[0] == "/api/mask":  # demo mode on/off: only from this machine; everyone (shared-link visitors too) sees the result
+            if not self._local(): return self._send(403, {"error": "Names can only be masked or shown from this machine."})
+            try: on = bool(json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200)))["on"])
+            except (ValueError, KeyError): return self._send(400, {"error": "send {\"on\": true|false}"})
+            MASK_STATE.parent.mkdir(parents=True, exist_ok=True); MASK_STATE.write_text(json.dumps({"on": on}))
+            return self._send(200, {"on": on})
         if self.path.startswith("/api/services/"):
             if not self._local(): return self._send(403, {"error": "Services can only be switched from this machine, not through a shared link."})
             parts = self.path.split("?")[0].strip("/").split("/")  # api/services/<name>/<action>
