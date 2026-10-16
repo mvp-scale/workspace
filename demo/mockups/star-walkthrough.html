@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STAR walkthrough · mock-up</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<style>
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; display: grid; gap: 22px; }
+  .step { display: grid; gap: 10px; }
+  .step > h2 { font-size: 18px; margin: 0; }
+  .what { color: var(--text-2); font-size: 14px; max-width: 80ch; margin: 0; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 12px; }
+  .pair > div { min-width: 0; }
+  pre, code { font-family: var(--mono, ui-monospace, monospace); }
+  pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; }
+  table { width: 100%; } td, th { vertical-align: top; font-size: 13px; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono, ui-monospace, monospace); white-space: nowrap; }
+  .yes { color: var(--good); font-weight: 700; } .no { color: var(--warn, #a16207); font-weight: 700; }
+  .inputs { display: grid; gap: 8px; }
+  .inputs .row2 { display: grid; grid-template-columns: 80px 1fr; gap: 8px; align-items: center; }
+  .inputs input[type=text] { width: 100%; }
+  .badge2 { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--surface-2, var(--surface)); color: var(--text-3); font-family: var(--mono, monospace); }
+  .hl { outline: 2px solid var(--accent); outline-offset: -2px; }
+</style>
+</head>
+<body>
+<main id="main">
+  <header style="display:grid;gap:6px">
+    <h1 style="margin:0">STAR walkthrough: one sentence, every input and output</h1>
+    <p class="what">A mock-up to check one thing: what adding a situation and a task to the text changes inside the CPU classifier. Seven real sentences, encoded live by the CPU engine's own encoder when you press Run. Every number below comes from that call or from arithmetic shown next to it. Nothing is stored or summarised.</p>
+  </header>
+
+  <section class="card step">
+    <h2>The inputs (edit any of them)</h2>
+    <div class="inputs">
+      <div class="row2"><label for="sit">Situation</label><input type="text" id="sit" value="A comment posted by one user in an online discussion thread on Reddit, replying to other users."></div>
+      <div class="row2"><label for="task">Task</label><input type="text" id="task" value="A community moderator is reading comments to understand how each writer feels about what they are replying to."></div>
+    </div>
+    <p class="what"><b>Training sentences</b> (label = what a person said: is the writer angry or annoyed?). Source: <code>data/embed-zs/pools/emotion_anger.jsonl</code>, line shown.</p>
+    <div class="inputs" id="trainIn"></div>
+    <p class="what"><b>New sentence to classify</b> (source: <code>probes/v2/emotion_anger.jsonl</code> line 14; a person labelled it <b>no</b>)</p>
+    <div class="inputs"><div class="row2"><select id="newLab" aria-label="Label people gave the new sentence"><option value="yes">yes</option><option value="no" selected>no</option></select><input type="text" id="newText" value="It’s been 2 hours, OP died for a noble cause."></div></div>
+    <div><button class="btn primary" type="button" id="run">Run: encode all 14 strings now</button> <span class="what" id="status"></span></div>
+  </section>
+
+  <div id="out" class="stack" style="display:grid;gap:22px"></div>
+</main>
+<script>
+const TRAIN = [
+  ["yes", "Indiana resident here: fuck this state.", 9],
+  ["yes", "This person is a god damn idiot", 21],
+  ["yes", "Dude, its **life** it's not **trauma**. Grow up", 26],
+  ["no", "Your uncle sounds fun. RIP indeed", 1008],
+  ["no", "Man hope he recovers fast. Looked really painful", 1014],
+  ["no", "Broad city is my favorite. I need a BFF like them", 1006],
+];
+const $ = (id) => document.getElementById(id);
+const E = (tag, attrs = {}, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === "text") n.textContent = v; else if (k === "class") n.className = v; else n.setAttribute(k, v); } for (const k of kids) if (k != null) n.append(k.nodeType ? k : document.createTextNode(k)); return n; };
+$("trainIn").append(...TRAIN.map(([lab, txt, line], i) => E("div", { class: "row2" },
+  (() => { const s = E("select", { id: "lab" + i, "aria-label": "label" }); for (const v of ["yes", "no"]) { const o = E("option", { value: v, text: v }); if (v === lab) o.selected = true; s.append(o); } return s; })(),
+  (() => { const d = E("div", { style: "display:grid;gap:2px" }); d.append(E("input", { type: "text", id: "tr" + i, value: txt }), E("span", { class: "badge2", text: "line " + line })); return d; })())));
+
+const fmt = (x, d = 4) => (x >= 0 ? " " : "") + x.toFixed(d);
+const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+const frame = (t) => `Situation: ${$("sit").value.trim()} Task: ${$("task").value.trim()} Text: ${t}`;
+
+$("run").addEventListener("click", async () => {
+  const train = TRAIN.map((_, i) => ({ text: $("tr" + i).value, label: $("lab" + i).value }));
+  const nw = { text: $("newText").value, label: $("newLab").value };
+  const all = [...train.map(t => t.text), nw.text];
+  const texts = [...all, ...all.map(frame)];                      // 7 bare strings, then the same 7 framed
+  $("status").textContent = "Encoding…"; const t0 = performance.now();
+  let res; try { res = await (await fetch("/api/cpu/embed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texts }) })).json(); }
+  catch (e) { $("status").textContent = "Error: " + e.message; return; }
+  if (!res.items) { $("status").textContent = "Error: " + (res.error || "no answer") + " (is the Classifier switched on under Services?)"; return; }
+  $("status").textContent = `Done: ${res.items.length} strings encoded by ${res.encoder} in ${Math.round(performance.now() - t0)} ms (this call).`;
+  const V = { bare: res.items.slice(0, 7), star: res.items.slice(7) };
+  const out = $("out"); out.replaceChildren();
+
+  // Step 1: the exact strings
+  out.append(E("section", { class: "card step" }, E("h2", { text: "Step 1 · The exact string sent to the encoder" }),
+    E("p", { class: "what", text: "The only difference between the two columns. The encoder (e5-small) expects the word “query: ” in front; the CPU engine always adds it." }),
+    E("div", { class: "pair" }, ...["bare", "star"].map(k => E("div", {}, E("h3", { text: k === "bare" ? "Bare" : "STAR frame" }),
+      E("div", { class: "table-wrap" }, E("table", { class: "data" }, E("tbody", {}, ...V[k].map((it, i) => E("tr", { class: i === 6 ? "hl" : "" }, E("td", { text: i === 6 ? "new" : String(i + 1) }), E("td", {}, E("pre", { text: it.string }))))))))))));
+
+  // Step 2: the vectors
+  out.append(E("section", { class: "card step" }, E("h2", { text: "Step 2 · What the encoder returned: 384 numbers per string" }),
+    E("p", { class: "what", text: "Each string becomes a point described by 384 numbers, scaled so the point sits on a sphere of radius 1 (the sum of the squares is 1). Shown: the first 6 numbers; open a row to see all 384." }),
+    E("div", { class: "pair" }, ...["bare", "star"].map(k => E("div", {}, E("h3", { text: k === "bare" ? "Bare" : "STAR frame" }),
+      ...V[k].map((it, i) => { const d = E("details", {}); d.append(E("summary", {}, E("span", { class: "badge2", text: i === 6 ? "new" : String(i + 1) }), " ",
+        E("code", { text: "[" + it.vector.slice(0, 6).map(x => fmt(x)).join(", ") + ", …]" }), E("span", { class: "what", text: `  length² = ${it.vector.reduce((s, x) => s + x * x, 0).toFixed(4)}` })),
+        E("pre", { text: it.vector.map(x => fmt(x, 6)).join(", ") })); return d; }))))));
+
+  // Step 3: similarity of the new sentence to each training sentence
+  const sims = {}; for (const k of ["bare", "star"]) sims[k] = train.map((t, i) => ({ i, label: t.label, text: t.text, s: dot(V[k][6].vector, V[k][i].vector) }));
+  out.append(E("section", { class: "card step" }, E("h2", { text: "Step 3 · How close the new sentence is to each training sentence" }),
+    E("p", { class: "what", text: "Similarity = multiply the two lists of 384 numbers position by position and add the 384 products (1 = same direction, 0 = unrelated). The first three products are written out; the total is all 384." }),
+    E("div", { class: "pair" }, ...["bare", "star"].map(k => E("div", {}, E("h3", { text: k === "bare" ? "Bare" : "STAR frame" }),
+      E("div", { class: "table-wrap" }, E("table", { class: "data" },
+        E("thead", {}, E("tr", {}, ...["#", "Training sentence", "Label", "First 3 products", "Similarity"].map(h => E("th", { text: h })))),
+        E("tbody", {}, ...[...sims[k]].sort((a, b) => b.s - a.s).map(r => E("tr", {},
+          E("td", { text: String(r.i + 1) }), E("td", { text: r.text }), E("td", { class: r.label, text: r.label }),
+          E("td", { class: "num", text: [0, 1, 2].map(j => `${fmt(V[k][6].vector[j], 3)}×${fmt(V[k][r.i].vector[j], 3)}`).join(" + ") + " + …" }),
+          E("td", { class: "num", text: r.s.toFixed(4) })))))))))));
+
+  // Step 4: two simple decisions from those similarities
+  const decide = (k) => {
+    const s = [...sims[k]].sort((a, b) => b.s - a.s), top3 = s.slice(0, 3), yesVotes = top3.filter(r => r.label === "yes").length;
+    const avg = (lab) => { const g = sims[k].filter(r => r.label === lab); return g.length ? g.reduce((a, r) => a + r.s, 0) / g.length : NaN; };
+    return { top3, vote: yesVotes >= 2 ? "yes" : "no", yesVotes, ay: avg("yes"), an: avg("no"), byAvg: avg("yes") > avg("no") ? "yes" : "no" };
+  };
+  const D = { bare: decide("bare"), star: decide("star") };
+  out.append(E("section", { class: "card step" }, E("h2", { text: "Step 4 · Two simple ways to decide, from Step 3's numbers" }),
+    E("p", { class: "what", text: "A: the 3 most similar training sentences vote. B: is the new sentence closer on average to the yes sentences or to the no sentences? The real CPU engine draws a learned line through hundreds of examples instead; with 6 examples these two rules are the honest way to show what the vectors say." }),
+    E("div", { class: "pair" }, ...["bare", "star"].map(k => { const d = D[k]; return E("div", {}, E("h3", { text: k === "bare" ? "Bare" : "STAR frame" }),
+      E("p", {}, "A · top 3: ", ...d.top3.map((r, j) => E("span", {}, j ? ", " : "", `#${r.i + 1} (`, E("span", { class: r.label, text: r.label }), `, ${r.s.toFixed(4)})`)),
+        ` → ${d.yesVotes} of 3 say yes → `, E("b", { class: d.vote, text: d.vote })),
+      E("p", {}, `B · average similarity to yes sentences ${d.ay.toFixed(4)}, to no sentences ${d.an.toFixed(4)} → `, E("b", { class: d.byAvg, text: d.byAvg }))); }))));
+
+  // Step 5: against the person's label
+  out.append(E("section", { class: "card step" }, E("h2", { text: "Step 5 · Compared with what a person said" }),
+    E("div", { class: "table-wrap" }, E("table", { class: "data" },
+      E("thead", {}, E("tr", {}, ...["", "A · top-3 vote", "B · closer on average", "Person's label"].map(h => E("th", { text: h })))),
+      E("tbody", {}, ...["bare", "star"].map(k => E("tr", {}, E("td", { text: k === "bare" ? "Bare" : "STAR frame" }),
+        ...[D[k].vote, D[k].byAvg].map(v => E("td", {}, E("b", { class: v, text: v }), v === nw.label ? "  ✓ matches" : "  ✗ differs")),
+        E("td", {}, E("b", { class: nw.label, text: nw.label }))))))),
+    E("p", { class: "what", text: "One sentence and six examples prove nothing about accuracy on their own. What this page proves is the mechanism: you can see exactly what the frame changes in the strings, the numbers, the similarities and the decision." })));
+});
+</script>
+</body>
+</html>

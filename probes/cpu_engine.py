@@ -201,6 +201,10 @@ class H(BaseHTTPRequestHandler):
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
+        if self.path.split("?")[0] == "/embed":   # the raw encoder step, for inspection: exact string in, 384 numbers out
+            try: texts = [str(t)[:2000] for t in json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")["texts"]][:50]
+            except (ValueError, KeyError, TypeError): return self._send(400, {"error": "send {\"texts\": [\"...\"]} (up to 50)"})
+            return self._send(200, {"encoder": "intfloat/e5-small-v2 (" + RUNTIME + ")", "items": [{"string": "query: " + t, "vector": [round(float(x), 6) for x in encode(t)]} for t in texts]})
         if self.path.split("?")[0] != "/v1/systemone": return self._send(404, {"error": "not found"})
         n = int(self.headers.get("Content-Length", 0))
         if n > 200_000: return self._send(413, {"error": "too large"})

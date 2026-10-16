@@ -509,7 +509,7 @@ CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8020")  # probes
 
 
 def cpu_engine_proxy(method, sub, body):
-    if sub.split("?")[0] not in ("/health", "/library", "/v1/systemone"):
+    if sub.split("?")[0] not in ("/health", "/library", "/v1/systemone", "/embed"):
         return 404, {"error": "not found"}
     try:
         req = urllib.request.Request(CPU_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)
