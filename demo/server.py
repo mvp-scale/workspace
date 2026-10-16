@@ -173,7 +173,8 @@ def memo(key, fn, ttl=60):
 def warm_memo():
     """Compute the remembered answers once at start, in the background, so the first visitor does not wait either."""
     try:
-        memo("leaderboard", leaderboard); sets = probe_sets(); memo("probes", lambda: sets)
+        memo("leaderboard", leaderboard); memo("agreement", probe_agreement); memo("probe-macro", probe_macro); memo("imagelab", imagelab_api.payload)
+        sets = probe_sets(); memo("probes", lambda: sets)
         for x in sets: memo("probe:" + x["id"], lambda i=x["id"]: probe_detail(i))
     except Exception as e: print("warm-up skipped:", e, flush=True)
 
@@ -619,7 +620,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/imagelab-img/"):
             return imagelab_api.serve_image(self, path[len("/imagelab-img/"):])
         if path == "/api/imagelab":
-            return self._send(200, imagelab_api.payload())
+            return self._send(200, memo("imagelab", imagelab_api.payload))
         if path.startswith("/api/persona-lab/"):
             r = persona_api.handle_get(path, self.path.partition("?")[2])
             return self._send(*r)
@@ -714,9 +715,9 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/decompose-examples":
             self._send(200, decompose_examples())
         elif path == "/api/probe-macro":
-            self._send(200, probe_macro())
+            self._send(200, memo("probe-macro", probe_macro))
         elif path == "/api/agreement":
-            self._send(200, probe_agreement())
+            self._send(200, memo("agreement", probe_agreement))
         elif path == "/api/scenes":
             self._send(200, scenes())
         elif path == "/api/dialogues":
