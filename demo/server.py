@@ -457,9 +457,9 @@ def mask_state():
         f = facts.get(mid, {})
         for real in (f.get("name"), mid): pairs[real] = cn["name"] if real == f.get("name") else cn["name"].lower().replace(" ", "-")
         if f.get("code"): pairs[f["code"]] = cn["code"]
-    for real, fake in m["encoders"].items(): pairs[real] = fake
+    for real in m["encoders"]: pairs[real] = m.get("encoder_label", "Encoder")   # withheld: every encoder looks the same
     for real, fake in m["terms"].items(): pairs.setdefault(real, fake)
-    ids = [[cn["name"].lower().replace(" ", "-"), mid] for mid, cn in m["models"].items()] + [[fake, real] for real, fake in m["encoders"].items()]
+    ids = [[cn["name"].lower().replace(" ", "-"), mid] for mid, cn in m["models"].items()]   # encoders are withheld, so a URL cannot name one
     out.update(brand=m.get("brand"), pairs=sorted(([k, v] for k, v in pairs.items() if k), key=lambda kv: -len(kv[0])), ids=ids)  # ids: code name -> real id, for URLs
     return out
 
