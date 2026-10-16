@@ -22,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import outside_api  # /v1/* for other systems: URL + API key (see its docstring)
 import backends  # the TypeSafe models (address, key, model label) and the classifier's teacher setting
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
@@ -597,8 +598,17 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def _api(self, fn, *a, checked=False):
+        rid = self.headers.get("X-Request-Id") or outside_api.secrets.token_hex(8)
+        bad = None if checked else outside_api.auth(self)
+        status, body = bad if bad else fn(*a)
+        raw = body if isinstance(body, bytes) else json.dumps(body).encode()
+        self.send_response(status); self.send_header("Content-Type", "application/json"); self.send_header("X-Request-Id", rid)
+        self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
+
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/") or "/"
+        if path == "/v1/models": return self._api(outside_api.get_models)
         if path == "/voice/ws" and self.headers.get("Upgrade", "").lower() == "websocket":
             return self._voice_ws()
         if path == "/voice/api/status":
@@ -788,6 +798,14 @@ class Handler(BaseHTTPRequestHandler):
         self._stream(events)
 
     def do_POST(self):
+        if self.path.split("?")[0] in ("/v1/systemone", "/v1/audio/transcriptions"):
+            bad = outside_api.auth(self)                       # before reading the body: a refused caller cannot make us read 100 MB
+            if bad: self.close_connection = True; return self._api(lambda: bad, checked=True)
+            n = int(self.headers.get("Content-Length", 0))
+            if n > outside_api.MAX_AUDIO: return self._send(413, {"error": "request too large"})
+            raw = self.rfile.read(n)
+            if self.path.split("?")[0] == "/v1/systemone": return self._api(outside_api.systemone, raw, checked=True)
+            return self._api(outside_api.transcriptions, raw, self.headers.get("Content-Type", ""), checked=True)
         if self.path.split("?")[0] == "/api/mask":  # demo mode on/off: only from this machine; everyone (shared-link visitors too) sees the result
             if not self._local(): return self._send(403, {"error": "Secure mode can only be changed from this machine."})
             try: on = bool(json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200)))["on"])

@@ -53,6 +53,30 @@ Also: `curl -s localhost:8100/api/status` (live state, real identity, GPU memory
 
 **Do not**: restart `demo/server.py` while an experiment runs through it (its cache lives in memory); run the Baseline compare "Run" or any script that calls the hosted model (`jev`) without asking; leave wait loops without a `timeout`.
 
+## Outside API (for other systems: a URL and an API key)
+
+The console on :8100 also serves standard endpoints (`demo/outside_api.py`). From this machine no key is needed; from
+anywhere else (the share link) every call needs `Authorization: Bearer <key>` (or `X-API-Key`). Keys: `OUTSIDE_API_KEYS`
+in `/workspace/.env` (comma-separated; one was generated 16 Oct 2026). With no keys, outside calls are refused.
+
+| Endpoint | What |
+|---|---|
+| `GET /v1/models` | the models callable right now, with every name each answers to |
+| `POST /v1/systemone` | a TypeSafe request. `"model"` may be the real id, the display name or the code name (`Atlas` = Clef Flash Q4, `Atlas CPU` = the CPU engine, also `cpu`, `classifier`); the response names the real id. No `"model"`: the first loaded local model |
+| `POST /v1/audio/transcriptions` | an audio file (multipart field `file`, OpenAI-compatible, or a raw `audio/*` body) -> `{"text", "segments": [{speaker, start, end, text}], "duration", "model"}`; needs voice on |
+
+```
+URL=https://<the share link>        # ./service.sh up --share prints it; or http://localhost:8100 on this machine
+curl -H "Authorization: Bearer $KEY" $URL/v1/models
+curl -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' $URL/v1/systemone \
+     -d '{"model":"Atlas","state":"That will cost two hundred dollars.","questions":{"price":{"type":"noul","instructions":"Does the speaker mention a price?"}}}'
+curl -H "Authorization: Bearer $KEY" -F file=@call.m4a $URL/v1/audio/transcriptions
+```
+Limits: 120 calls a minute per key (`OUTSIDE_API_PER_MINUTE`), ten wrong keys from one address lock it out for a minute,
+audio up to 100 MB, hosted (paid) models refused unless `OUTSIDE_API_ALLOW_HOSTED=1`. Secure mode does not apply to the
+API (real names). The quick-tunnel link changes each time the share restarts; a fixed address needs a named Cloudflare
+tunnel on your own domain.
+
 ## 2. Where the output is
 
 | Page | URL / file |
