@@ -5,6 +5,7 @@
 The TypeSafe key stays server-side. Binds to 127.0.0.1 by default; set DEMO_HOST to expose it
 (anyone who can reach the port can spend the key).
 """
+import gzip
 import hashlib
 import json
 import os
@@ -137,6 +138,44 @@ def probe_sets():
                     "questions": sorted(questions), "source": prov.get("source"), "url": prov.get("url"), "license": prov.get("license"),
                     "models_run": sorted(d.name[: -len(f.stem) - 1] for d in PROBE_RUNS.glob(f"*-{f.stem}") if (d / "results.jsonl").exists())})
     return out
+
+
+class _Memo(bytes):
+    """A remembered JSON answer; keeps its gzip copy so compressing is not repeated either."""
+    def gz(self):
+        if not hasattr(self, "_gz"): self._gz = gzip.compress(self, 5)
+        return self._gz
+
+
+_memo, _memo_locks, _memo_guard = {}, {}, threading.Lock()
+
+
+def _memo_compute(key, fn):
+    with _memo_guard: lock = _memo_locks.setdefault(key, threading.Lock())
+    with lock:
+        raw = _Memo(json.dumps(fn()).encode())           # an exception (unknown set) is not remembered
+        _memo[key] = (time.time(), raw)
+        return raw
+
+
+def memo(key, fn, ttl=60):
+    """Answers built from files on disk (leaderboard, probe sets) change only when a benchmark run writes new files, so
+    each is computed once and kept in memory. Once older than `ttl` seconds the kept answer is still served at once and a
+    fresh one is computed in the background, so nobody waits and new results appear within about a minute. Live state
+    (/api/status, /api/services) is never kept here. One lock per key, so ten pages asking at once compute once."""
+    hit = _memo.get(key)
+    if hit is None: return _memo_compute(key, fn)
+    if time.time() - hit[0] >= ttl and not _memo_locks.get(key, threading.Lock()).locked():
+        threading.Thread(target=lambda: _memo_compute(key, fn), daemon=True).start()
+    return hit[1]
+
+
+def warm_memo():
+    """Compute the remembered answers once at start, in the background, so the first visitor does not wait either."""
+    try:
+        memo("leaderboard", leaderboard); sets = probe_sets(); memo("probes", lambda: sets)
+        for x in sets: memo("probe:" + x["id"], lambda i=x["id"]: probe_detail(i))
+    except Exception as e: print("warm-up skipped:", e, flush=True)
 
 
 def probe_detail(set_id):
@@ -547,7 +586,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send(self, code, body, ctype="application/json"):
         raw = body if isinstance(body, bytes) else json.dumps(body).encode()
+        zipped = len(raw) > 2048 and "gzip" in self.headers.get("Accept-Encoding", "") and ctype.split(";")[0] in (
+            "application/json", "text/html", "text/javascript", "text/css", "text/plain", "image/svg+xml")
+        if zipped: raw = body.gz() if isinstance(body, _Memo) else gzip.compress(raw, 5)   # JSON shrinks to about a tenth
         self.send_response(code)
+        if zipped: self.send_header("Content-Encoding", "gzip"); self.send_header("Vary", "Accept-Encoding")
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
@@ -610,13 +653,13 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._send(404, {"error": "not found"})
         elif path == "/api/leaderboard":
-            self._send(200, leaderboard())
+            self._send(200, memo("leaderboard", leaderboard))
         elif path == "/api/models":
             self._send(200, json.loads((HERE / "models.json").read_text()))
         elif path == "/api/status":
             self._send(200, status())
         elif path == "/api/probes":
-            self._send(200, probe_sets())
+            self._send(200, memo("probes", probe_sets))
         elif path == "/api/probe":
             q = self.path.partition("?")[2]
             try:
@@ -630,7 +673,7 @@ class Handler(BaseHTTPRequestHandler):
             if set_id.endswith(".json"):
                 set_id = set_id[: -len(".json")]
             try:
-                self._send(200, probe_detail(set_id))
+                self._send(200, memo("probe:" + set_id, lambda: probe_detail(set_id)))
             except KeyError:
                 self._send(404, {"error": "unknown set"})
         elif path == "/api/vram":
@@ -822,4 +865,10 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     host, port = os.environ.get("DEMO_HOST", "127.0.0.1"), int(os.environ.get("DEMO_PORT", "8100"))
     print(f"demo on http://{host}:{port}  (typesafe key: {'set' if BACKENDS['jev']['key'] else 'MISSING'})")
-    ThreadingHTTPServer((host, port), Handler).serve_forever()
+    threading.Thread(target=warm_memo, daemon=True).start()
+    class Server(ThreadingHTTPServer):
+        # The standard queue holds 5 waiting connections; a page that opens 20+ requests at once (Scenario lab) then has
+        # the rest dropped, and the browser retries after 1 s, 3 s... which was the "sometimes it takes seconds" delay.
+        request_queue_size = 128
+        daemon_threads = True
+    Server((host, port), Handler).serve_forever()
