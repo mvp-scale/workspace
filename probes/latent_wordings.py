@@ -25,6 +25,7 @@ from sklearn.model_selection import StratifiedKFold
 
 sys.path.insert(0, str(Path(__file__).parent))
 from latent_intake import gate, f1, clef_label
+from backends import teacher
 from latent_depth import thr_from_oof, spec_of, LAB, BASE
 
 
@@ -63,6 +64,10 @@ def label():
     W = json.load(open(BASE / "corpus" / "windows.json")); tr, te = sample(); ids = tr + te
     for qid in WORDINGS:
         for k in range(1, 5):
+            meta = LAB / f"word-{qid}-{k}.meta.json"; tid = teacher()
+            if meta.exists() and json.loads(meta.read_text())["teacher"] != tid:  # never mix two teachers in one label file
+                raise SystemExit(f"word-{qid}-{k} was labelled by {json.loads(meta.read_text())['teacher']}, not {tid}")
+            meta.write_text(json.dumps({"teacher": tid}))
             have = labels(qid, k); todo = [i for i in ids if i not in have]; t0 = time.time()
             for c in range(0, len(todo), 250):
                 chunk = todo[c:c + 250]; ps = clef_label([W[i]["text"] for i in chunk], wording(qid, k), lambda m: None)

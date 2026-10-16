@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import backends  # the TypeSafe models (address, key, model label) and the classifier's teacher setting
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
 import intake_api  # Latent lab intake: local-vs-Clef verdict per question
@@ -38,22 +39,7 @@ except Exception as e:  # PyYAML missing, or a library-file problem -- fail soft
     _LCD_ERROR = str(e)
 _decompose_lock = threading.Lock()
 BENCH = Path(os.environ.get("BENCH_DIR", HERE.parent / "data" / "bench"))
-BACKENDS = {  # keyed by the same model ids as the leaderboard, best first; codes and names live in models.json
-    "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": os.environ.get("TYPESAFE_API_KEY", ""), "hosted": True},
-    "cygnet": {"url": os.environ.get("CYGNET_URL", "http://127.0.0.1:8016"), "key": ""},
-    "winnow": {"url": os.environ.get("WINNOW_URL", "http://127.0.0.1:8091"), "key": ""},
-    "semif": {"url": os.environ.get("SEMIF_URL", "http://127.0.0.1:8012"), "key": ""},
-    "kev-4b": {"url": os.environ.get("KEV4_URL", "http://127.0.0.1:8010"), "key": ""},
-    "so1": {"url": os.environ.get("SO1_URL", "http://127.0.0.1:8013"), "key": ""},
-    "laya": {"url": os.environ.get("LAYA_URL", "http://127.0.0.1:8014"), "key": ""},
-    "kev-0.8b": {"url": os.environ.get("KEV08_URL", "http://127.0.0.1:8011"), "key": ""},
-    "jeff": {"url": os.environ.get("JEFF_URL", "http://127.0.0.1:8000"), "key": os.environ.get("JEFF_API_KEYS", "devkey").split(",")[0]},
-    "kev-0.5b": {"url": os.environ.get("KEV05_URL", "http://127.0.0.1:8009"), "key": ""},
-    "verdict": {"url": os.environ.get("VERDICT_URL", "http://127.0.0.1:8015"), "key": ""},
-    "clef-flash-q4km": {"url": os.environ.get("CLEF_Q4KM_URL", "http://127.0.0.1:8018"), "key": ""},
-    "clef-flash-q2k": {"url": os.environ.get("CLEF_Q2K_URL", "http://127.0.0.1:8019"), "key": ""},
-    "clef-flash": {"url": os.environ.get("CLEF_FLASH_URL", "http://127.0.0.1:8017"), "key": ""},
-}
+BACKENDS = backends.BACKENDS  # the TypeSafe models, ids as on the leaderboard: one list for every process (demo/backends.py)
 
 
 def call(name, cfg, body, whole=False):
@@ -62,6 +48,7 @@ def call(name, cfg, body, whole=False):
     headers = {"Content-Type": "application/json", "User-Agent": "jev-demo/0.1"}
     if cfg["key"]:
         headers["Authorization"] = f"Bearer {cfg['key']}"
+    body = {**body, "model": cfg.get("model", "jev-latest")}  # each model's own label (demo/backends.py)
     req = urllib.request.Request(cfg["url"].rstrip("/") + "/v1/systemone", json.dumps(body).encode(), headers)
     t0 = time.perf_counter()
     try:
@@ -110,7 +97,7 @@ def one_item(name, cfg, item):
     key = hashlib.sha256(json.dumps([name, item], sort_keys=True).encode()).hexdigest()
     if key in _cache:
         return {**_cache[key], "cached": True}
-    r = call(name, cfg, {"state": item["state"], "model": "jev-latest", "questions": item["questions"]}, whole=True)
+    r = call(name, cfg, {"state": item["state"], "questions": item["questions"]}, whole=True)
     if "error" not in r:
         _cache[key] = r
     return r
@@ -439,7 +426,7 @@ def set_reader(backend):
     if backend not in BACKENDS: return 404, {"error": "unknown model"}
     cfg = BACKENDS[backend]
     if cfg.get("hosted") and not cfg["key"]: return 400, {"error": "TYPESAFE_API_KEY is not set, so the hosted model cannot read"}
-    body = json.dumps({"url": cfg["url"], "model": "Winnow-12B" if backend == "winnow" else "jev-latest", "key": cfg["key"]}).encode()
+    body = json.dumps({"url": cfg["url"], "model": cfg["model"], "key": cfg["key"]}).encode()
     try:
         with urllib.request.urlopen(urllib.request.Request(WORLD_ENGINE + "/reader", body, {"Content-Type": "application/json"}), timeout=10) as r: r.read()
     except Exception as e: return 503, {"error": f"The World engine did not accept the reader: {e}"}
@@ -615,6 +602,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"error": "unknown set"})
         elif path == "/api/vram":
             self._send(200, vram())
+        elif path == "/api/latent/teacher":  # the classifier's teacher: trains new questions, and backs up / compares answers
+            t = backends.teacher(); self._send(200, {"teacher": {"id": t, "name": backends.name(t), "hosted": BACKENDS[t]["hosted"]}, "can_switch": self._local()})
         elif path == "/api/latent/intake":  # Latent lab intake: measured local-vs-Clef verdict per question
             self._send(*intake_api.handle_get(self.path.partition("?")[2]))
         elif path == "/api/latent":  # Latent lab: probes/latent_export.py per model; ?model=<tag>&set=<id> for one set, else models + sweep
@@ -740,8 +729,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*cpu_engine_proxy("POST", self.path[len("/api/cpu"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200000))))
         if self.path.startswith("/api/persona-lab/"):
             return self._send(*persona_api.handle_post(self.path.split("?")[0], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), persona_api.MAX_BODY + 1))))
+        if self.path.split("?")[0] == "/api/latent/teacher":  # a setting that can spend money (a hosted teacher): local visitors only
+            if not self._local(): return self._send(403, {"error": "The teacher can only be changed from this machine, not through a shared link."})
+            try: bid = str(json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 2000)))["backend"])
+            except (ValueError, KeyError): return self._send(400, {"error": "send {\"backend\": \"<model id>\"}"})
+            if bid not in BACKENDS: return self._send(404, {"error": "unknown model"})
+            if BACKENDS[bid]["hosted"] and not BACKENDS[bid]["key"]: return self._send(400, {"error": "TYPESAFE_API_KEY is not set, so the hosted model cannot teach"})
+            backends.set_teacher(bid); return self._send(200, {"teacher": {"id": bid, "name": backends.name(bid), "hosted": BACKENDS[bid]["hosted"]}})
         if self.path.split("?")[0] == "/api/latent/intake":
-            return self._send(*intake_api.handle_post(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), intake_api.MAX_BODY + 1)), self.path.partition("?")[2]))
+            raw = self.rfile.read(min(int(self.headers.get("Content-Length", 0)), intake_api.MAX_BODY + 1))
+            if not self._local() and "cancel=1" not in self.path:  # a run through a shared link must not spend money or pick its own teacher
+                try: asked = (json.loads(raw or b"{}") or {}).get("teacher")
+                except ValueError: asked = None
+                if asked or BACKENDS[backends.teacher()]["hosted"]:
+                    return self._send(403, {"error": "Through a shared link, questions can only be trained with the local teacher already chosen on this machine."})
+            return self._send(*intake_api.handle_post(raw, self.path.partition("?")[2]))
         if self.path == "/api/decompose-live":
             return self._handle_decompose_live()
         if self.path == "/api/batch":
@@ -764,9 +766,9 @@ class Handler(BaseHTTPRequestHandler):
             qs = req.get("questions")
             if qs is not None:  # a battery: many questions about one state, answered together in one call per model
                 assert isinstance(qs, dict) and 0 < len(qs) <= 20 and all(isinstance(v, dict) and v.get("type") in ("choice", "score", "noul") for v in qs.values())
-                body, whole = {"state": req["state"], "model": "jev-latest", "questions": qs}, True
+                body, whole = {"state": req["state"], "questions": qs}, True
             else:
-                body, whole = {"state": req["state"], "model": "jev-latest", "questions": {"decision": req["question"]}}, False
+                body, whole = {"state": req["state"], "questions": {"decision": req["question"]}}, False
         except (ValueError, KeyError, AssertionError, TypeError):
             return self._send(400, {"error": "need JSON {state, question} or {state, questions:{id: question}}"})
         up = {n: v.get("up") for n, v in status().items()}

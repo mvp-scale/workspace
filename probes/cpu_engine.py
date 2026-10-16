@@ -3,12 +3,13 @@
 
 The GPU is hidden from this process (CUDA_VISIBLE_DEVICES is cleared before torch loads). The text is encoded once by
 e5-small (384 numbers): ONNX Runtime int8 on 8 threads by default (~4 ms; CPU_ENGINE_RUNTIME=torch for PyTorch fp32, ~12 ms); every question in the library is one logistic classifier on those numbers (1.5 KB each).
-The library is the 14 depth-test questions (probes/latent_depth.py), each trained on all of Clef's answers for its
+The library is the 14 depth-test questions (probes/latent_depth.py), each trained on all of its teacher's answers for its
 training stream. A question is matched by its exact instructions text, or by its library id as the question key.
 
 Each answer's noul is P(yes) re-centred so 0.5 is the yes/no cut chosen on the training stream (best F1, out of fold).
-"confident" says whether the answer lies outside the gate (the band where the cascade still agrees with Clef >= 97%).
-With ?compare=1 the trace also carries Clef's answer and time for every question (for side-by-side display). With ?backup=1, unsure answers and questions outside the library go to the local Clef server (:8018, GPU); without it
+"confident" says whether the answer lies outside the gate (the band where the cascade still agrees with the teacher >= 97%).
+With ?compare=1 the trace also carries the teacher's answer and time for every question (for side-by-side display). With ?backup=1, unsure answers and questions outside the library go to the teacher (any TypeSafe model, chosen in
+data/embed-zs/teacher.json via demo/backends.py; default Clef Flash Q4); without it
 the CPU answers everything it can and refuses questions outside its library.
 
     CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py      # 127.0.0.1:8020 (./service.sh start classifier)
@@ -28,9 +29,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 from latent_depth import QUESTIONS, spec_of, thr_from_oof, LAB, BASE
 from latent_intake import gate
 
-CLEF = "http://127.0.0.1:8018/v1/systemone"; PORT = int(os.environ.get("CPU_ENGINE_PORT", "8020"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "demo"))
+import backends  # the TypeSafe models and the teacher setting (data/embed-zs/teacher.json), read on every request
+PORT = int(os.environ.get("CPU_ENGINE_PORT", "8020"))
 LOCK = threading.Lock()  # one encode at a time: the CPU number we quote is for one request, not a contended one
-STATS = {"requests": 0, "cpu_answers": 0, "clef_answers": 0, "encode_ms": []}
+STATS = {"requests": 0, "cpu_answers": 0, "teacher_answers": 0, "encode_ms": []}
 
 
 def rss_mb(): return int(open("/proc/self/status").read().split("VmRSS:")[1].split()[0]) // 1024
@@ -78,12 +81,12 @@ def corpus_vectors():
 
 
 def build_library():
-    """The depth-test questions, plus every extra wording that has Clef labels (probes/latent_wordings.py): each wording is
+    """The depth-test questions, plus every extra wording that has teacher labels (probes/latent_wordings.py): each wording is
     its own question (id <question>_w2 .. _w5, same group), so a request can ask one question several ways."""
     E = corpus_vectors(); stream = set(json.load(open(BASE / "corpus" / "split.json"))["stream"])
     def train(P):
         idx = np.array([i for i in sorted(stream) if i in P]); y = np.array([P[i] > 0.5 for i in idx])
-        if y.sum() < 10: return None  # too few yes examples to learn this question: it stays with Clef
+        if y.sum() < 10: return None  # too few yes examples to learn this question: it stays with the teacher
         oof = np.zeros(len(idx))
         for tr, te in StratifiedKFold(5, shuffle=True, random_state=0).split(E[idx], y):
             oof[te] = LogisticRegression(C=1.0, max_iter=3000, class_weight="balanced").fit(E[idx][tr], y[tr]).predict_proba(E[idx][te])[:, 1]
@@ -91,16 +94,21 @@ def build_library():
         t = thr_from_oof(oof, y); _, lo, hi = gate(oof, y)
         return {"w": clf.coef_[0].astype(np.float32), "b": float(clf.intercept_[0]), "t": float(t), "lo": float(lo), "hi": float(hi), "trained_on": int(len(idx)), "positives": int(y.sum())}
     load = lambda f: {int(r["id"]): float(r["p"]) for r in map(json.loads, open(f))}
+    def taught_by(f):  # the model that produced a label file (its .meta.json), so every question says who taught it
+        try: return json.loads(Path(str(f)[:-6] + ".meta.json").read_text())["teacher"]
+        except (OSError, ValueError, KeyError): return None
     try: from latent_wordings import WORDINGS
     except Exception: WORDINGS = {}
     lib = []
     for qid, name, lvl, sp in QUESTIONS:
         sp = spec_of(qid, sp); h = train(load(LAB / f"depth-{qid}.jsonl"))
+        if h is not None: h["taught_by"] = taught_by(LAB / f"depth-{qid}.jsonl")
         if h is None: continue
         lib.append({"id": qid, "name": name, "group": qid, "wording": 1, "level": lvl, "instructions": sp["instructions"], "criteria": sp["criteria"], "what": sp.get("what"), **h})
         for k, wd in enumerate(WORDINGS.get(qid, [])):  # index k = file word-<qid>-<k>; index 0 is the library wording above
             f = LAB / f"word-{qid}-{k}.jsonl"
             if wd is None or not f.exists() or (h2 := train(load(f))) is None: continue
+            h2["taught_by"] = taught_by(f)
             lib.append({"id": f"{qid}_w{k + 1}", "name": f"{name} · wording {k + 1}", "group": qid, "wording": k + 1, "level": lvl, "instructions": wd["instructions"], "criteria": wd["criteria"], "what": None, **h2})
     return lib
 
@@ -113,11 +121,13 @@ BOOT = {"runtime": RUNTIME, "library_s": round(time.time() - t0, 1), "rss_mb_aft
 print(f"ready: {len(LIB)} questions, {BOOT}", flush=True)
 
 
-def clef(state, q):
-    body = json.dumps({"state": state, "questions": {"q": q}}).encode()
-    t = time.perf_counter()
-    with urllib.request.urlopen(urllib.request.Request(CLEF, body, {"Content-Type": "application/json"}), timeout=60) as r:
-        return float(json.loads(r.read())["answers"]["q"]["noul"]), (time.perf_counter() - t) * 1000
+def teacher_ask(state, q, tid):
+    """The teacher's answer and time for one question (the backup, and the side-by-side comparison)."""
+    t = time.perf_counter(); p = float(backends.ask(tid, state, {"q": q})["q"]["noul"])
+    return p, (time.perf_counter() - t) * 1000
+
+
+def teacher_info(tid): return {"id": tid, "name": backends.name(tid), "hosted": backends.BACKENDS[tid]["hosted"]}
 
 
 def answer(req, backup, compare=False):
@@ -128,39 +138,39 @@ def answer(req, backup, compare=False):
     with LOCK:
         t = time.perf_counter(); v = encode(state); enc_ms = (time.perf_counter() - t) * 1000
     t = time.perf_counter(); p_all = 1 / (1 + np.exp(-(W @ v + B))); heads_ms = (time.perf_counter() - t) * 1000
-    answers, trace, unanswered = {}, {}, {}
+    answers, trace, unanswered = {}, {}, {}; tid = backends.teacher(); tname = backends.name(tid)
     for key, q in qs.items():
         if not isinstance(q, dict) or q.get("type") != "noul":
             return 422, {"error": f"question {key!r}: this engine answers noul (yes/no) questions only; choice and score are not built yet"}
         lq = BY_INS.get(q.get("instructions")) or BY_ID.get(key)
-        if lq is None:  # outside the library: answer the rest, and say so for this one (or let Clef answer it)
+        if lq is None:  # outside the library: answer the rest, and say so for this one (or let the teacher answer it)
             if not backup:
-                unanswered[key] = f"not in the CPU library ({len(LIB)} trained questions): train it first, or turn the Clef backup on"; continue
-            p, ms = clef(state, q); answers[key] = {"type": "noul", "noul": round(p, 4)}
-            trace[key] = {"answered_by": "clef (GPU)", "why": "not in the CPU library", "clef_ms": round(ms, 1)}; STATS["clef_answers"] += 1; continue
+                unanswered[key] = f"not in the CPU library ({len(LIB)} trained questions): train it first, or turn the backup on ({tname} answers it)"; continue
+            p, ms = teacher_ask(state, q, tid); answers[key] = {"type": "noul", "noul": round(p, 4)}
+            trace[key] = {"answered_by": "teacher", "why": "not in the CPU library", "teacher_ms": round(ms, 1)}; STATS["teacher_answers"] += 1; continue
         i = LIB.index(lq); p = float(p_all[i]); conf = p < lq["lo"] or p > lq["hi"]
         noul = float(1 / (1 + np.exp(-(logit(p) - logit(lq["t"])))))
         if backup and not conf:
-            pc, ms = clef(state, {"type": "noul", "instructions": lq["instructions"], "criteria": lq["criteria"]})
+            pc, ms = teacher_ask(state, {"type": "noul", "instructions": lq["instructions"], "criteria": lq["criteria"]}, tid)
             answers[key] = {"type": "noul", "noul": round(pc, 4)}
-            trace[key] = {"answered_by": "clef (GPU)", "why": "the CPU was unsure", "cpu_noul": round(noul, 4), "clef_ms": round(ms, 1), "library_id": lq["id"]}
-            STATS["clef_answers"] += 1
+            trace[key] = {"answered_by": "teacher", "why": "the CPU was unsure", "cpu_noul": round(noul, 4), "teacher_ms": round(ms, 1), "library_id": lq["id"]}
+            STATS["teacher_answers"] += 1
         else:
             answers[key] = {"type": "noul", "noul": round(noul, 4)}
-            trace[key] = {"answered_by": "cpu", "confident": bool(conf), "library_id": lq["id"]}; STATS["cpu_answers"] += 1
-    if compare:  # ask Clef too, for every question, so the page can show both side by side (4 at a time, Clef's slot count)
+            trace[key] = {"answered_by": "cpu", "confident": bool(conf), "library_id": lq["id"], "taught_by": lq.get("taught_by")}; STATS["cpu_answers"] += 1
+    if compare:  # ask the teacher too, for every question, so the page can show both side by side (4 at a time, Clef's slot count)
         from concurrent.futures import ThreadPoolExecutor
         def ask(item):
             key, q = item; lq = BY_INS.get(q.get("instructions")) or BY_ID.get(key)
             qq = {"type": "noul", "instructions": lq["instructions"], "criteria": lq["criteria"]} if lq else q
-            try: return key, clef(state, qq)
+            try: return key, teacher_ask(state, qq, tid)
             except Exception: return key, (None, None)
         with ThreadPoolExecutor(4) as ex:
-            for key, (pc, ms) in ex.map(ask, qs.items()): trace.setdefault(key, {"answered_by": "none"}).update(clef_noul=None if pc is None else round(pc, 4), clef_compare_ms=None if ms is None else round(ms, 1))
+            for key, (pc, ms) in ex.map(ask, qs.items()): trace.setdefault(key, {"answered_by": "none"}).update(teacher_noul=None if pc is None else round(pc, 4), teacher_compare_ms=None if ms is None else round(ms, 1))
     STATS["requests"] += 1; STATS["encode_ms"] = (STATS["encode_ms"] + [enc_ms])[-200:]
     return 200, {"answers": answers, "engine": {"device": "cpu", "runtime": RUNTIME, "gpu_visible": GPU_VISIBLE, "encode_ms": round(enc_ms, 1),
                                                 "classifiers_ms": round(heads_ms, 3), "total_ms": round((time.perf_counter() - t_all) * 1000, 1),
-                                                "library_size": len(LIB), "memory_mb": rss_mb(), "trace": trace,
+                                                "library_size": len(LIB), "memory_mb": rss_mb(), "teacher": teacher_info(tid), "trace": trace,
                                                 **({"unanswered": unanswered} if unanswered else {})}}
 
 
@@ -170,11 +180,12 @@ def health():
             "encoder": "intfloat/e5-small-v2" + (" (ONNX, int8)" if RUNTIME == "onnx-int8" else " (PyTorch, fp32)"),
             "library_size": len(LIB), "memory_mb": rss_mb(), "peak_memory_mb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024,
             "classifier_bytes": int(W.nbytes + B.nbytes), "boot": BOOT, "requests": STATS["requests"], "cpu_answers": STATS["cpu_answers"],
-            "clef_answers": STATS["clef_answers"], "median_encode_ms": round(e[len(e) // 2], 1) if e else None}
+            "teacher_answers": STATS["teacher_answers"], "teacher": teacher_info(backends.teacher()),
+            "taught_by": {t: sum(q.get("taught_by") == t for q in LIB) for t in {q.get("taught_by") for q in LIB}}, "median_encode_ms": round(e[len(e) // 2], 1) if e else None}
 
 
 def library():
-    return {"questions": [{k: q[k] for k in ("id", "name", "group", "wording", "level", "instructions", "criteria", "what", "trained_on", "positives")} |
+    return {"questions": [{k: q.get(k) for k in ("id", "name", "group", "wording", "level", "instructions", "criteria", "what", "trained_on", "positives", "taught_by")} |
                           {"gate": {"no_below": round(q["lo"], 3), "yes_above": round(q["hi"], 3)}} for q in LIB]}
 
 

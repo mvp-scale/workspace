@@ -24,7 +24,10 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 
-BASE = Path("/workspace/data/embed-zs/intake"); CLEF = "http://127.0.0.1:8018/v1/systemone"
+import sys; sys.path.insert(0, "/workspace/demo")
+import backends  # the TypeSafe models and the teacher setting (data/embed-zs/teacher.json); never a hard-wired model
+
+BASE = Path("/workspace/data/embed-zs/intake")
 AGREE, F1MIN = 0.97, 0.90
 NS = [100, 200, 400, 800, None]
 
@@ -32,13 +35,14 @@ NS = [100, 200, 400, 800, None]
 def save(path, obj): tmp = path.with_suffix(".tmp"); tmp.write_text(json.dumps(obj)); tmp.replace(path)
 
 
-def clef_label(texts, q, status):
-    body = lambda t: json.dumps({"state": t, "questions": {"q": {"type": "noul", "instructions": q["instructions"], "criteria": q["criteria"]}}}).encode()
+def teach(texts, q, status, teacher=None):
+    """P(yes) from the teacher model for each text (None where it failed three times). The teacher is q["teacher"], the
+    argument, or the saved setting; one question per call, 4 at a time (batching changed Clef's answers)."""
+    tid = teacher or q.get("teacher") or backends.teacher()
+    qs = {"q": {"type": "noul", "instructions": q["instructions"], "criteria": q["criteria"]}}
     def one(t):
         for _ in range(3):
-            try:
-                with urllib.request.urlopen(urllib.request.Request(CLEF, body(t), {"Content-Type": "application/json"}), timeout=60) as r:
-                    return float(json.loads(r.read())["answers"]["q"]["noul"])
+            try: return float(backends.ask(tid, t, qs)["q"]["noul"])
             except Exception: time.sleep(1)
         return None
     out = []; t0 = time.time()
@@ -47,8 +51,11 @@ def clef_label(texts, q, status):
             out.append(p)
             if i % 10 == 0 or i == len(texts):
                 rate = i / max(time.time() - t0, 1e-6)
-                status(f"Clef labelling {i}/{len(texts)} · {rate:.0f}/s · about {max(0, (len(texts) - i) / rate):.0f} s left")
+                status(f"{backends.name(tid)} labelling {i}/{len(texts)} · {rate:.0f}/s · about {max(0, (len(texts) - i) / rate):.0f} s left")
     return out
+
+
+clef_label = teach  # older name, kept for the scripts that import it
 
 
 def f1(pred, y):
@@ -76,7 +83,8 @@ def gate(p, y):
 
 def run(spec, labels=None):
     out_path = BASE / "results" / f"{spec['id']}.json"
-    res = {"spec": spec, "status": "starting", "started": time.time()}
+    spec.setdefault("teacher", backends.teacher())  # recorded with the result: which model taught this question
+    res = {"spec": spec, "status": "starting", "started": time.time(), "teacher": spec["teacher"], "teacher_name": backends.name(spec["teacher"])}
     status = lambda m: (res.update(status=m), save(out_path, res))
     W = json.load(open(BASE / "corpus" / "windows.json")); E = np.load(BASE / "corpus" / "emb_e5.npy")
     split = json.load(open(BASE / "corpus" / "split.json"))

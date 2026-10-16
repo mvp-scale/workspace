@@ -182,14 +182,14 @@
     </div>
   </section>
   <section class="section" aria-labelledby="h-try" id="trySec">
-    <header><div><h2 id="h-try">Proof: send it a real request</h2><p class="takeaway"><span class="k">The point</span>It is real: type any text and the CPU engine answers every question it knows, live. Tick "ask Clef" to see the GPU answer next to it.</p><details class="more"><summary>How to read this</summary><p class="small muted">A TypeSafe <code>/v1/systemone</code> server running on this machine’s CPU, with the GPU hidden from it. The right-hand panel shows the exact request and response, and the engine’s receipt of what it received; copy it as curl to run it yourself.</p></details></div>
+    <header><div><h2 id="h-try">Proof: send it a real request</h2><p class="takeaway"><span class="k">The point</span>It is real: type any text and the CPU engine answers every question it knows, live. Tick "ask the teacher" to see the teacher's answer next to it.</p><details class="more"><summary>How to read this</summary><p class="small muted">A TypeSafe <code>/v1/systemone</code> server running on this machine’s CPU, with the GPU hidden from it. The right-hand panel shows the exact request and response, and the engine’s receipt of what it received; copy it as curl to run it yourself.</p></details></div>
       <div class="row" id="tryHealth"></div></header>
     <div class="try-grid">
       <div class="card stack">
         <div class="field"><label for="tryText">Text (the request's state)</label><textarea id="tryText" rows="3">Honestly that is way over our budget, the quote came in at forty thousand.</textarea></div>
         <div class="row" id="trySamples"></div>
-        <div class="row"><label class="small"><input type="checkbox" id="tryCompare" checked> Also ask Clef on the GPU, to compare</label>
-          <label class="small"><input type="checkbox" id="tryBackup"> Clef backup: send unsure answers to Clef</label><span class="spacer"></span><button class="btn primary" type="button" id="tryGo">Send to the CPU engine</button></div>
+        <div class="row"><label class="small"><input type="checkbox" id="tryCompare" checked> Also ask the teacher, to compare</label>
+          <label class="small"><input type="checkbox" id="tryBackup"> Backup: send unsure answers to the teacher</label><span class="spacer"></span><button class="btn primary" type="button" id="tryGo">Send to the CPU engine</button></div>
         <div id="tryOut" class="stack"></div>
       </div>
       <div class="card stack" id="tryJson"><p class="small muted">The request and the engine's response appear here.</p></div>
@@ -213,7 +213,7 @@
         <div class="field"><label for="jlWhat">The speaker… (what to detect)</label><input type="text" id="jlWhat" maxlength="300" value="the speaker mentions money, a price, a payment or a cost"></div>
         <div class="field"><label for="jlEx">Example</label><input type="text" id="jlEx" maxlength="300" value="That will cost you two hundred dollars."></div><div></div><div></div></div>
       <div class="field"><label for="jlTexts">Your texts <span class="subtle" id="jlCount"></span></label><textarea id="jlTexts" rows="7" placeholder="One conversation line or window per line"></textarea></div>
-      <div class="row"><input type="file" id="jlFile" accept=".txt,.csv,.jsonl,.json"><button class="btn" type="button" id="jlSample">Load sample: 200 film and TV dialogues</button><span class="spacer"></span><button class="btn primary" type="button" id="jlRun">Run live</button><button class="btn" type="button" id="jlCancel" hidden>Cancel</button></div>
+      <div class="row"><input type="file" id="jlFile" accept=".txt,.csv,.jsonl,.json"><button class="btn" type="button" id="jlSample">Load sample: 200 film and TV dialogues</button><span class="spacer"></span><span class="small muted teacher-now"></span><button class="btn primary" type="button" id="jlRun">Run live</button><button class="btn" type="button" id="jlCancel" hidden>Cancel</button></div>
       <p class="small" id="jlStatus"></p>
     </div>
     <div class="jr-steps" id="jrSteps"></div>
@@ -234,7 +234,7 @@
     <header><div><h2 id="h-intake">Check a new question in 20 seconds</h2><p class="takeaway"><span class="k">The point</span>Type a yes/no question; the page measures whether the CPU can take it over, and how much it would still send to Clef.</p><details class="more"><summary>How to read this</summary><p class="small muted">Clef (local GPU, no hosted calls) answers real conversation windows (half random, half the closest to the question); a sidecar learns from most of them; a confidence band set on those decides which new windows the CPU answers and which go to Clef; windows from other conversations measure the result. Quick check: 300 windows, about 20 seconds, provisional. Full: 1,300 windows, 1–3 minutes.</p></details></div></header>
     <div class="card stack">
       <div class="rules">
-        <div><b>Ready for the CPU when</b>CPU plus Clef backup gives Clef's answer at least 97% of the time and catches most yes cases (yes-F1 of 0.90 or more), on windows it never saw.</div>
+        <div><b>Ready for the CPU when</b>CPU plus the teacher as backup gives the teacher's answer at least 97% of the time and catches most yes cases (yes-F1 of 0.90 or more), on windows it never saw.</div>
         <div><b class="tier tier-Local">Local</b> Bar met and Clef answers at most 25% of windows.</div>
         <div><b class="tier tier-Hybrid">Hybrid</b> Bar met and Clef answers 25–50%.</div>
         <div><b class="tier tier-Clef">Clef</b> Bar missed, Clef needed for more than 50%, or fewer than 30 positive examples.</div>
@@ -244,7 +244,7 @@
         <div class="field"><label for="inWhat">The speaker… (what to detect)</label><input type="text" id="inWhat" maxlength="300" placeholder="the speaker asks for or mentions a refund"></div>
         <div class="field"><label for="inEx">Example (optional)</label><input type="text" id="inEx" maxlength="300" placeholder="I'd like my money back for this order."></div>
         <div class="field"><label for="inMode">Depth</label><select id="inMode"><option value="quick">Quick check · 300 calls · ~20 s</option><option value="full">Full · 1,300 calls · 1–3 min</option></select></div>
-        <div class="row" style="gap:6px"><button class="btn primary" type="submit" id="inGo">Measure</button><button class="btn" type="button" id="inCancel" hidden>Cancel</button></div>
+        <div class="row" style="gap:6px"><span class="small muted teacher-now"></span><button class="btn primary" type="submit" id="inGo">Measure</button><button class="btn" type="button" id="inCancel" hidden>Cancel</button></div>
       </form>
       <p class="small muted" id="inStatus"></p>
     </div>
@@ -486,7 +486,8 @@ async function tryHealth() {
   const box = document.getElementById("tryHealth");
   try { const h = await api("/api/cpu/health");
     box.replaceChildren(el("span", { class: "badge", text: "CPU engine running" }), el("span", { class: "badge", text: h.gpu_visible ? "GPU visible!" : "GPU: not visible to it" }),
-      el("span", { class: "badge", text: `${h.memory_mb} MB RAM` }), el("span", { class: "badge", text: `${h.library_size} questions · ${(h.classifier_bytes / 1024).toFixed(0)} KB of classifiers` }), el("span", { class: "badge", text: `${h.threads} CPU threads` }));
+      el("span", { class: "badge", text: `${h.memory_mb} MB RAM` }), el("span", { class: "badge", text: `${h.library_size} questions · ${(h.classifier_bytes / 1024).toFixed(0)} KB of classifiers` }),
+      el("span", { class: "badge", text: "taught by " + Object.entries(h.taught_by || {}).map(([t, n]) => `${Jev.nameOf(t === "null" ? "?" : t)} (${n})`).join(", ") }), el("span", { class: "badge", text: `${h.threads} CPU threads` }));
     return true;
   } catch (e) { box.replaceChildren(el("span", { class: "badge", text: "Classifier off" })); document.getElementById("tryOut").replaceChildren(el("p", { class: "small", text: "The local classifier is off. Turn it on with the Classifier switch in the top bar (about 20 seconds), then reload this section with Send." })); return false; }
 }
@@ -500,21 +501,22 @@ async function trySend() {
   let res; try { res = await api(`/api/cpu/v1/systemone${qstr ? "?" + qstr : ""}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr }); }
   catch (e) { btn.disabled = false; document.getElementById("tryOut").replaceChildren(el("p", { class: "small", text: "Error: " + e.message })); return; }
   btn.disabled = false; const wall = performance.now() - t0, g = res.engine, tr = g.trace;
-  const keys = Object.keys(res.answers), onCpu = keys.filter(k => tr[k].answered_by === "cpu").length;
-  const withClef = keys.filter(k => tr[k].clef_noul != null), agree = withClef.filter(k => (res.answers[k].noul > 0.5) === (tr[k].clef_noul > 0.5)).length;
-  const clefMs = withClef.length ? Math.max(...withClef.map(k => tr[k].clef_compare_ms)) : null;
+  const keys = Object.keys(res.answers), onCpu = keys.filter(k => tr[k].answered_by === "cpu").length, TN = g.teacher ? g.teacher.name : "the teacher";
+  const withClef = keys.filter(k => tr[k].teacher_noul != null), agree = withClef.filter(k => (res.answers[k].noul > 0.5) === (tr[k].teacher_noul > 0.5)).length;
+  const clefMs = withClef.length ? Math.max(...withClef.map(k => tr[k].teacher_compare_ms)) : null;
   const big = [["g", `${g.encode_ms} ms`, "reading the text on the CPU"], ["g", `${g.classifiers_ms < 0.1 ? "<0.1" : g.classifiers_ms} ms`, `answering all ${keys.length} questions`], ["g", g.gpu_visible ? "yes" : "none", "GPU used"],
     ["", `${g.memory_mb} MB`, "engine memory"], ["", `${onCpu} of ${keys.length}`, "answered on the CPU"]];
-  if (withClef.length) big.push(["", `${agree} of ${withClef.length}`, `same answer as Clef (Clef took ${Math.round(clefMs)} ms, 4 at a time)`]);
+  if (withClef.length) big.push(["", `${agree} of ${withClef.length}`, `same answer as the teacher, ${TN} (it took ${Math.round(clefMs)} ms, 4 at a time)`]);
   const yn = p => el("span", { class: "yn " + (p > 0.5 ? "y" : "n"), text: p > 0.5 ? "yes" : "no" });
   const pb = p => el("span", { class: "pbar" }, el("i", { style: `width:${Math.round(p * 100)}%` }));
-  const rows = keys.map(k => { const q = TRY.lib.find(x => x.id === k), a = res.answers[k].noul, t = tr[k], c = t.clef_noul;
+  const rows = keys.map(k => { const q = TRY.lib.find(x => x.id === k), a = res.answers[k].noul, t = tr[k], c = t.teacher_noul;
     return el("tr", {}, el("td", { text: q ? q.name : k }), el("td", { class: "num" }, yn(a), " ", a.toFixed(2), pb(a)),
-      el("td", { class: "small", text: t.answered_by === "cpu" ? (t.confident ? "CPU, confident" : "CPU, unsure") : `Clef (${t.why})` }),
+      el("td", { class: "small", text: t.answered_by === "cpu" ? (t.confident ? "CPU, confident" : "CPU, unsure") : `${TN} (${t.why})` }),
       el("td", { class: "num" }, c == null ? "–" : [yn(c), " ", c.toFixed(2)]), el("td", { text: c == null ? "" : (a > 0.5) === (c > 0.5) ? "✓" : "✗", style: c != null && (a > 0.5) !== (c > 0.5) ? "color:var(--bad)" : "" })); });
   document.getElementById("tryOut").replaceChildren(el("div", { class: "try-big" }, ...big.map(([c, b, sp]) => el("div", { class: c }, el("b", { text: b }), el("span", { text: sp })))),
-    el("div", { class: "table-wrap" }, el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, ...["Question", "CPU answer", "Who answered", "Clef (GPU)", ""].map(t => el("th", { text: t })))), el("tbody", {}, ...rows))),
-    el("p", { class: "small subtle", text: `Round trip in your browser: ${Math.round(wall)} ms${compare ? ", including the side-by-side Clef calls" : ""}. "Unsure" answers fall inside the band where the CPU cannot hold 97% agreement with Clef; tick Clef backup to send those to Clef.` }));
+    el("div", { class: "table-wrap" }, el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, ...["Question", "CPU answer", "Who answered", `Teacher: ${TN}`, ""].map(t => el("th", { text: t })))), el("tbody", {}, ...rows))),
+    ...(compare && !withClef.length ? [el("p", { class: "small", text: `${TN} (the teacher) is off, so there is nothing to compare with. Turn it on under Services, or pick a loaded teacher above.` })] : []),
+    el("p", { class: "small subtle", text: `Round trip in your browser: ${Math.round(wall)} ms${compare ? ", including the side-by-side teacher calls" : ""}. "Unsure" answers fall inside the band where the CPU cannot hold 97% agreement with Clef; tick Clef backup to send those to Clef.` }));
   tryProof(req, bodyStr, res, qstr);
   tryHealth();
 }
@@ -522,7 +524,7 @@ function tryInit() {
   document.getElementById("trySamples").replaceChildren(el("span", { class: "small subtle", text: "Samples:" }), ...TRY_SAMPLES.map(t => el("button", { class: "btn ghost", type: "button", text: t.length > 34 ? t.slice(0, 32) + "…" : t, title: t, onclick: () => { document.getElementById("tryText").value = t; trySend(); } })));
   document.getElementById("tryGo").addEventListener("click", trySend);
   document.getElementById("waysGo").addEventListener("click", waysSend);
-  tryHealth().then(ok => { if (ok) { trySend(); waysDraw().then(() => { waysSend(); waysMeasured(); }); } });
+  tryHealth().then(ok => { teacherUI(); Jev.onStatus(() => teacherUI()); if (ok) { trySend(); waysDraw().then(() => { waysSend(); waysMeasured(); }); } });
 }
 
 // Ask several ways: every wording of one question in one request to the CPU engine (library groups), next to Clef
@@ -544,15 +546,15 @@ async function waysSend() {
   catch (e) { btn.disabled = false; document.getElementById("waysOut").replaceChildren(el("p", { class: "small", text: "Error: " + e.message })); return; }
   btn.disabled = false; const g = res.engine, tr = g.trace, un = g.unanswered || {};
   const yn = p => p == null ? el("span", { class: "subtle", text: "–" }) : el("span", { class: "yn " + (p > 0.5 ? "y" : "n"), text: `${p > 0.5 ? "yes" : "no"} ${p.toFixed(2)}` });
-  const rows = Object.keys(questions).map(k => { const q = ws.find(x => x.id === k), a = res.answers[k] ? res.answers[k].noul : null, c = tr[k] ? tr[k].clef_noul : null;
+  const rows = Object.keys(questions).map(k => { const q = ws.find(x => x.id === k), a = res.answers[k] ? res.answers[k].noul : null, c = tr[k] ? tr[k].teacher_noul : null;
     return el("tr", {}, el("td", { class: "num", text: q ? String(q.wording) : "yours" }), el("td", { text: questions[k].instructions }), el("td", { class: "num" }, a == null ? el("span", { class: "small", style: "color:var(--bad)", text: "not answered: not trained" }) : yn(a)),
       el("td", { class: "num" }, yn(c)), el("td", { text: a == null || c == null ? "" : (a > 0.5) === (c > 0.5) ? "✓" : "✗" })); });
-  const ids = ws.map(q => q.id), cpuAvg = ids.reduce((t, k) => t + res.answers[k].noul, 0) / ids.length, clefAvg = ids.reduce((t, k) => t + (tr[k].clef_noul ?? 0), 0) / ids.length;
+  const ids = ws.map(q => q.id), cpuAvg = ids.reduce((t, k) => t + res.answers[k].noul, 0) / ids.length, clefAvg = ids.reduce((t, k) => t + (tr[k].teacher_noul ?? 0), 0) / ids.length;
   rows.push(el("tr", { style: "font-weight:700" }, el("td", {}), el("td", { text: `Average of the ${ids.length} trained wordings` }), el("td", { class: "num" }, yn(cpuAvg)), el("td", { class: "num" }, yn(clefAvg)), el("td", { text: (cpuAvg > 0.5) === (clefAvg > 0.5) ? "✓" : "✗" })));
   document.getElementById("waysOut").replaceChildren(
     el("div", { class: "try-big" }, el("div", { class: "g" }, el("b", { text: `${g.encode_ms} ms` }), el("span", { text: "reading the text once, on the CPU" })), el("div", { class: "g" }, el("b", { text: `${g.classifiers_ms < 0.1 ? "<0.1" : g.classifiers_ms} ms` }), el("span", { text: `answering all ${Object.keys(res.answers).length} wordings` })),
       el("div", {}, el("b", { text: `${Object.keys(questions).length}` }), el("span", { text: "questions in one request" }))),
-    el("div", { class: "table-wrap" }, el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, ...["#", "Wording sent", "CPU", "Clef (GPU)", ""].map(t => el("th", { text: t })))), el("tbody", {}, ...rows))),
+    el("div", { class: "table-wrap" }, el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, ...["#", "Wording sent", "CPU", `Teacher: ${g.teacher ? g.teacher.name : ""}`, ""].map(t => el("th", { text: t })))), el("tbody", {}, ...rows))),
     ...(Object.keys(un).length ? [el("p", { class: "small", text: "Not answered: " + Object.entries(un).map(([k, v]) => `${k} (${v})`).join("; ") + ". The other answers still came back." })] : []));
 }
 async function waysMeasured() {
@@ -587,6 +589,32 @@ async function tryProof(req, bodyStr, res, qstr) {
     el("div", { class: "stack qlist" }, ...keys.map(qRow)),
     el("details", {}, el("summary", { text: "Full request JSON" }), Jev.jsonView(req, "POST /v1/systemone · body")),
     el("details", {}, el("summary", { text: "Full response JSON (answers, timing, memory, per-question trace, receipt)" }), Jev.jsonView(res, "response")));
+}
+
+// The teacher: the model whose answers train each question (intake, live runs) and that backs up and is compared with
+// the CPU. One setting for every page and process (data/embed-zs/teacher.json); only a local visitor can change it.
+const TEACH = { cur: null, can: false };
+async function teacherUI() {
+  try { const r = await api("/api/latent/teacher"); TEACH.cur = r.teacher; TEACH.can = r.can_switch; } catch { return; }
+  document.querySelectorAll(".teacher-now").forEach(x => x.textContent = `Teacher: ${TEACH.cur.name}`);
+  let sel = document.getElementById("tryTeacher");
+  if (!sel) {
+    sel = el("select", { id: "tryTeacher", "aria-label": "Teacher model" });
+    sel.addEventListener("change", async () => {
+      const id = sel.value, st = Jev.status() || {};
+      if (st[id]?.hosted && !confirm(`${Jev.nameOf(id)} is a paid hosted API. Training one question costs about 300 calls (a quick check), roughly half a cent at the measured rate; a full check about 1,300 calls. Use it as the teacher?`)) { teacherUI(); return; }
+      try { const r = await api("/api/latent/teacher", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backend: id }) }); Jev.toast(`Teacher is now ${r.teacher.name}. Questions already trained keep the teacher that taught them.`); }
+      catch (e) { Jev.toast(e.message); }
+      teacherUI(); trySend();
+    });
+    const h = document.getElementById("tryHealth"); h.before(el("div", { class: "row", id: "tryTeacherBox" }, el("label", { class: "small", for: "tryTeacher", text: "Teacher" }), sel));
+  }
+  const st = Jev.status() || {}, ids = Object.keys(st), on = id => st[id]?.up;
+  const lab = id => `${Jev.codeOf(id)} · ${Jev.nameOf(id)}` + (st[id]?.hosted ? " · hosted, paid" : on(id) ? "" : " (off)");
+  sel.replaceChildren(el("optgroup", { label: "Loaded" }, ids.filter(on).map(id => el("option", { value: id, text: lab(id) }))),
+    el("optgroup", { label: "Off" }, ids.filter(id => !on(id)).map(id => el("option", { value: id, text: lab(id), disabled: id !== TEACH.cur.id }))));
+  sel.value = TEACH.cur.id; sel.disabled = !TEACH.can;
+  sel.title = TEACH.can ? "Trains new questions, and backs up and is compared with the CPU" : "The teacher can only be changed from this machine";
 }
 async function boot() {
   tryInit(); drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
@@ -944,12 +972,13 @@ async function drawIntake() {
   st.textContent = r.running ? `Measuring "${run ? run.name : r.running}": ${run && run.status ? run.status : "starting"}…` : "";
   const rows = [...r.results].sort((a, b) => (a.source === "intake") - (b.source === "intake") || (a.clef_share ?? 2) - (b.clef_share ?? 2));
   const t = document.getElementById("intakeTbl");
-  t.replaceChildren(el("thead", {}, el("tr", {}, ...["Question", "Tier", "Clef answers", "Agreement", "Yes-F1", "Positives", "Clef unsure", "Yes-rate", "Source"].map((h, i) => el("th", { class: i > 1 && i < 8 ? "num" : "", text: h })))),
+  t.replaceChildren(el("thead", {}, el("tr", {}, ...["Question", "Tier", "Teacher answers", "Agreement", "Yes-F1", "Positives", "Teacher unsure", "Yes-rate", "Taught by", "Source"].map((h, i) => el("th", { class: i > 1 && i < 8 ? "num" : "", text: h })))),
     el("tbody", {}, rows.map(x => el("tr", { class: x.id === INT.sel ? "cur" : "", onclick: () => { INT.sel = x.id; drawIntakeDetail(); drawIntake(); } },
       el("td", { text: x.name + (x.mode === "quick" ? " (quick)" : "") }), el("td", {}, x.tier ? el("span", { class: "tier tier-" + x.tier, text: x.tier }) : el("span", { class: "subtle", text: x.status || "" })),
       el("td", { class: "num", text: x.clef_share == null ? "–" : fmt.pct(x.clef_share, 0) }), el("td", { class: "num", text: x.agree == null ? "–" : fmt.pct(x.agree, 1) }),
       el("td", { class: "num", text: x.yes_f1 == null ? "–" : x.yes_f1.toFixed(2) }), el("td", { class: "num", text: x.positives ?? "–" }),
       el("td", { class: "num", text: x.teacher_entropy == null ? "–" : x.teacher_entropy.toFixed(2) }), el("td", { class: "num", text: x.base_rate == null ? "–" : fmt.pct(x.base_rate, 1) }),
+      el("td", { text: Jev.nameOf(x.teacher || "clef-flash-q4km") }),
       el("td", { class: "subtle", text: x.source === "intake" ? "your question" : "pack detector" })))));
   clearTimeout(INT.timer); if (r.running) INT.timer = setTimeout(async () => { await drawIntake(); if (INT.sel === r.running) drawIntakeDetail(); }, 2500);
   if (!INT.sel && rows.length) { INT.sel = rows[0].id; drawIntakeDetail(); }

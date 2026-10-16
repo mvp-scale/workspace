@@ -27,10 +27,9 @@ from latent_intake import gate, f1, AGREE, F1MIN
 BASE = Path("/workspace/data/embed-zs/intake"); NS = [0, 25, 50, 100, 200, 300, 400, 800]; SEEDS = [0, 1, 2]
 
 
-def clef(text, spec):
-    body = json.dumps({"state": text, "questions": {"q": {"type": "noul", "instructions": spec["instructions"], "criteria": spec["criteria"]}}}).encode()
-    with urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8018/v1/systemone", body, {"Content-Type": "application/json"}), timeout=60) as r:
-        return float(json.loads(r.read())["answers"]["q"]["noul"])
+def clef(text, spec):  # the teacher that labelled this question's corpus (Clef Flash Q4 for pack-price), so the check matches
+    sys.path.insert(0, "/workspace/demo"); import backends
+    return float(backends.ask(spec.get("teacher", "clef-flash-q4km"), text, {"q": {"type": "noul", "instructions": spec["instructions"], "criteria": spec["criteria"]}})["q"]["noul"])
 
 
 def main():

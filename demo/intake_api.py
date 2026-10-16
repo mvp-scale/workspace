@@ -6,9 +6,12 @@ POST /api/latent/intake          -> start a run for {"name", "what", "example"} 
                                     custom detectors) or {"name", "instructions", "criteria": {"true", "false"}}.
 Runs probes/latent_intake.py in the background, one at a time: a quick check (300 local Clef calls, ~10-30 s, provisional) by
 default, or mode "full" (1,300 calls, 1-3 minutes). POST ?cancel=1 stops the running one and deletes it; results land in
-data/embed-zs/intake/results/. Uses only the local Clef server, never a hosted model.
+data/embed-zs/intake/results/. The teacher is the saved setting (demo/backends.py, data/embed-zs/teacher.json) or the request's "teacher"; a hosted
+teacher costs money, so the page asks before choosing one, and only a local visitor can change the setting.
 """
 import json, os, re, subprocess, time
+
+import backends  # the TypeSafe models and the teacher setting
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -25,7 +28,8 @@ def _summary(r):
     return {"id": r["spec"]["id"], "name": r["spec"].get("name"), "source": r["spec"].get("source", "intake"), "status": r.get("status"),
             "tier": r.get("tier"), "clef_share": None if r.get("status") != "done" else round(1 - c.get("local_share", 0), 4),
             "agree": c.get("agree"), "yes_f1": c.get("yes_f1"), "base_rate": r.get("base_rate"), "positives": r.get("positives_stream"),
-            "teacher_entropy": r.get("teacher_entropy"), "started": r.get("started"), "mode": r["spec"].get("mode")}
+            "teacher_entropy": r.get("teacher_entropy"), "started": r.get("started"), "mode": r["spec"].get("mode"),
+            "teacher": r["spec"].get("teacher", "clef-flash-q4km")}  # runs before 16 Oct 2026 were all taught by Clef Flash Q4
 
 
 def running():
@@ -97,8 +101,10 @@ def handle_post(raw, query=""):
         if len(texts) < 60: return 400, {"error": f"Give at least 60 distinct texts of 8+ characters (got {len(texts)}). One conversation line or window per line."}
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "question"
     rid = f"{'live' if texts is not None else 'intake'}-{slug}-{int(time.time())}"
+    teacher = str(req.get("teacher") or backends.teacher())
+    if teacher not in backends.BACKENDS: return 400, {"error": "Unknown teacher model."}
     spec = {"id": rid, "name": name, "source": "intake", "what": what, "example": ex, "type": "noul", "instructions": instructions,
-            "criteria": criteria, "mode": "full" if req.get("mode") == "full" else "quick"}
+            "criteria": criteria, "mode": "full" if req.get("mode") == "full" else "quick", "teacher": teacher}  # who teaches, recorded with the result
     spec.update({"n_stream": 800, "n_test": 500} if spec["mode"] == "full" else {"n_stream": 200, "n_test": 100})
     (BASE / "specs").mkdir(parents=True, exist_ok=True); (BASE / "results").mkdir(parents=True, exist_ok=True)
     sp = BASE / "specs" / f"{rid}.json"; sp.write_text(json.dumps(spec))

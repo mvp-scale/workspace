@@ -28,7 +28,8 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--spec", required=True); ap.add_argument("--texts", required=True); a = ap.parse_args()
     spec = json.load(open(a.spec)); texts = json.load(open(a.texts))
     out_path = BASE / "results" / f"{spec['id']}.json"
-    res = {"spec": spec, "kind": "live", "status": "starting", "started": time.time(), "steps": [], "n_texts": len(texts)}
+    import backends; spec.setdefault("teacher", backends.teacher()); tn = backends.name(spec["teacher"])
+    res = {"spec": spec, "kind": "live", "status": "starting", "started": time.time(), "steps": [], "n_texts": len(texts), "teacher": spec["teacher"], "teacher_name": tn}
     status = lambda m: (res.update(status=m), save(out_path, res))
 
     status(f"encoding {len(texts)} texts with e5-small (CPU)")
@@ -43,13 +44,13 @@ def main():
 
     status("asking Clef about the question's own example")
     ex_p = clef_label([spec["example"]], spec, lambda m: None)[0] if spec.get("example") else None
-    pt_clef = np.array([p if p is not None else 0.0 for p in clef_label([texts[i] for i in test], spec, lambda m: status("Clef labelling held-out texts: " + m.split("labelling ")[-1]))])
+    pt_clef = np.array([p if p is not None else 0.0 for p in clef_label([texts[i] for i in test], spec, lambda m: status(f"{tn} labelling held-out texts: " + m.split("labelling ")[-1]))])
     yt = pt_clef > 0.5; pc = np.clip(pt_clef, 1e-6, 1 - 1e-6); ent = float(np.mean(-(pc * np.log2(pc) + (1 - pc) * np.log2(1 - pc))))
     res["validate"] = [
         {"check": "Typed yes/no question with true and false criteria", "ok": True, "value": "noul"},
-        {"check": "Clef says yes to the question's own example", "ok": ex_p is None or ex_p > 0.5, "value": "no example given" if ex_p is None else f'P(yes) = {ex_p:.2f} for "{spec["example"]}"'},
+        {"check": f"{tn} says yes to the question's own example", "ok": ex_p is None or ex_p > 0.5, "value": "no example given" if ex_p is None else f'P(yes) = {ex_p:.2f} for "{spec["example"]}"'},
         {"check": "Enough positives in your texts (held-out sample)", "ok": bool(yt.mean() >= 0.02 and yt.sum() >= 5), "value": f"{yt.mean():.1%} yes ({int(yt.sum())} of {len(yt)})"},
-        {"check": "Clef answers it consistently (mean entropy below 0.5)", "ok": ent < 0.5, "value": f"{ent:.2f}"},
+        {"check": f"{tn} answers it consistently (mean entropy below 0.5)", "ok": ent < 0.5, "value": f"{ent:.2f}"},
     ]
     show = np.arange(len(test)); Xs = E[test]; mu = Xs.mean(0); _, _, Vt = np.linalg.svd(Xs - mu, full_matrices=False)
     res.update(map_xy=np.round((Xs - mu) @ Vt[:2].T, 4).tolist(), map_clef=[round(float(v), 3) for v in pt_clef], n_test=int(len(test)),
@@ -64,7 +65,7 @@ def main():
     ys_all, done, probs = [], 0, {}
     for cp in [c for c in CHECKS if c <= len(stream)] + ([len(stream)] if len(stream) not in CHECKS and len(stream) > 25 else []):
         need = stream[done:cp]
-        got = clef_label([texts[i] for i in need], spec, lambda m: status(f"Clef labelling training texts: {done}+{m.split('labelling ')[-1]} (next step at {cp})"))
+        got = clef_label([texts[i] for i in need], spec, lambda m: status(f"{tn} labelling training texts: {done}+{m.split('labelling ')[-1]} (next step at {cp})"))
         ys_all += [(p or 0.0) > 0.5 for p in got]; done = cp
         idx = stream[:cp]; y = np.array(ys_all[:cp])
         status(f"training on {cp} labelled texts")

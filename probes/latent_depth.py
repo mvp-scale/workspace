@@ -27,6 +27,7 @@ from sklearn.model_selection import StratifiedKFold
 
 sys.path.insert(0, str(Path(__file__).parent))
 from latent_intake import gate, f1, clef_label
+from backends import teacher
 
 BASE = Path("/workspace/data/embed-zs/intake"); LAB = BASE / "labels"
 SEED_DIR = Path("/tmp/claude-0/-workspace/7b3ad9cf-3881-44ec-8786-beddd1fbd06d/scratchpad/intake_seed")  # earlier full labels
@@ -66,6 +67,10 @@ def label():
         if sp is None:  # copy the existing full labels once
             if not out.exists(): out.write_text(open(SEED_DIR / f"{qid}.labels.jsonl").read())
             continue
+        meta = out.with_suffix(".meta.json"); tid = sp.get("teacher") or teacher()
+        if meta.exists() and json.loads(meta.read_text())["teacher"] != tid:  # never mix two teachers in one label file
+            raise SystemExit(f"{out.name} was labelled by {json.loads(meta.read_text())['teacher']}, not {tid}; use a new file or that teacher")
+        meta.write_text(json.dumps({"teacher": tid})); sp = {**sp, "teacher": tid}
         have = {json.loads(l)["id"] for l in open(out)} if out.exists() else set()
         todo = [int(i) for i in ids if int(i) not in have]
         t0 = time.time(); print(qid, "labelling", len(todo), flush=True)
