@@ -745,7 +745,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path.split("?")[0] == "/api/mask":  # demo mode on/off: only from this machine; everyone (shared-link visitors too) sees the result
-            if not self._local(): return self._send(403, {"error": "Names can only be masked or shown from this machine."})
+            if not self._local(): return self._send(403, {"error": "Secure mode can only be changed from this machine."})
             try: on = bool(json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200)))["on"])
             except (ValueError, KeyError): return self._send(400, {"error": "send {\"on\": true|false}"})
             MASK_STATE.parent.mkdir(parents=True, exist_ok=True); MASK_STATE.write_text(json.dumps({"on": on}))

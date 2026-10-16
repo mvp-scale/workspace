@@ -1,6 +1,6 @@
 /* Jev Bench Console — shared helpers. Every page loads this first: <script src="/static/app.js"></script> */
 (() => {
-  /* Demo mode ("Names: masked"): every real model, encoder, vendor and author name on the page is replaced by the code
+  /* Secure mode (the top bar's neutral "Secure mode" flag; it never says what it does): every real model, encoder, vendor and author name on the page is replaced by the code
      names in demo/mask.json, including text drawn later and what the copy buttons copy. The page stays hidden until the
      setting is known, so real names never flash up. It masks what is shown, not the raw API data in developer tools. */
   let MASK = null, MASK_ON = false, MASK_CAN = false;
@@ -12,7 +12,7 @@
   const maskSkip = (n) => n && n.closest && n.closest("textarea, script, style, [contenteditable]");
   const maskAttrs = (n) => {
     for (const a of ["title", "placeholder", "aria-label", "alt"]) { const v = n.getAttribute(a); if (v) { const w = maskStr(v); if (w !== v) n.setAttribute(a, w); } }
-    if (n.tagName === "A" && n.hasAttribute("href")) { try { if (new URL(n.href, location.href).host !== location.host) { n.removeAttribute("href"); n.title = "Hidden in demo mode"; } } catch {} }
+    if (n.tagName === "A" && n.hasAttribute("href")) { try { if (new URL(n.href, location.href).host !== location.host) { n.removeAttribute("href"); n.title = "Not available in secure mode"; } } catch {} }
   };
   const maskNode = (root) => {
     if (!MASK || !root) return;
@@ -46,10 +46,10 @@
   }).catch(() => {}).finally(() => document.documentElement.classList.remove("mask-pending"));
   setTimeout(() => document.documentElement.classList.remove("mask-pending"), 3000);   // never leave a page blank
   function maskControl() {
-    const b = el("button", { class: "btn ghost", type: "button", text: "Names: …" });
+    const b = el("button", { class: "btn ghost", type: "button", text: "Secure mode" });
     maskReady.then(() => {
-      b.textContent = MASK_ON ? "Names: masked" : "Names: real"; b.disabled = !MASK_CAN;
-      b.title = (MASK_ON ? "Model names are hidden behind code names (demo mode)." : "Real model names are shown.") + (MASK_CAN ? " Click to switch (applies for every visitor)." : " Only switchable from this machine.");
+      b.textContent = MASK_ON ? "Secure mode: on" : "Secure mode: off"; b.disabled = !MASK_CAN;
+      b.title = (MASK_ON ? "Secure mode is on." : "Secure mode is off.") + (MASK_CAN ? " Click to switch (applies for every visitor)." : " Only switchable from this machine.");
     });
     b.addEventListener("click", async () => {
       try { await api("/api/mask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: !MASK_ON }) }); location.reload(); }
