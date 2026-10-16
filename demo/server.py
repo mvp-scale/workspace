@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import threading
@@ -400,24 +401,9 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldlab": "worldlab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/worldengine2-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html"}
-TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json"}
-
-
-WORLD_LAB = "http://127.0.0.1:8111"  # probes/world-engine/world_service.py (mock-up engine service, started by hand)
-
-
-def world_lab_proxy(method, sub, body):
-    if sub.split("?")[0] not in ("/state", "/ask", "/audience", "/inject", "/reset"):
-        return 404, {"error": "not found"}
-    try:
-        req = urllib.request.Request(WORLD_LAB + sub, body, {"Content-Type": "application/json"}, method=method)
-        with urllib.request.urlopen(req, timeout=180) as r:
-            return r.status, r.read()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read()
-    except (urllib.error.URLError, OSError):
-        return 503, {"error": "The world engine service is not running. Start it with: /workspace/kev/.venv/bin/python probes/world-engine/world_service.py"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/worldengine2-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html"}
+TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json",
+         ".html": "text/html; charset=utf-8", ".md": "text/plain; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".txt": "text/plain; charset=utf-8"}
 
 
 WORLD_ENGINE = os.environ.get("WORLD_ENGINE_URL", "http://127.0.0.1:8112")  # probes/world-engine/world_service2.py (five-stage world engine, started by hand)
@@ -436,7 +422,7 @@ def world_engine_proxy(method, sub, body):
         return 503, {"error": "The world engine service is not running. Start it with: /workspace/kev/.venv/bin/python probes/world-engine/world_service2.py"}
 
 
-CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8019")  # probes/cpu_engine.py (CPU-only TypeSafe engine, started by hand)
+CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8020")  # probes/cpu_engine.py: the local classifier (./service.sh start classifier)
 
 
 def cpu_engine_proxy(method, sub, body):
@@ -449,10 +435,73 @@ def cpu_engine_proxy(method, sub, body):
     except urllib.error.HTTPError as e:
         return e.code, e.read()
     except (urllib.error.URLError, OSError):
-        return 503, {"error": "The CPU engine is not running. Start it with: CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py"}
+        return 503, {"error": "The local classifier is off. Turn it on with the Classifier switch in the top bar, or ./service.sh start classifier"}
+
+
+VOICE = os.environ.get("VOICE_ADDR", "127.0.0.1:8200")  # voice/server.py; the browser reaches it only through /voice/* here
+
+# On-demand services the top bar can switch (names, ports and health paths as in /workspace/service.yaml). Switching runs
+# ./service.sh in its own session, so a console restart does not stop what it started.
+SWITCHES = {"voice": {"label": "Voice", "port": 8200, "health": "/api/status", "gpu": "about 4 GB GPU"},
+            "classifier": {"label": "Classifier", "port": 8020, "health": "/health", "gpu": "CPU only"},
+            "clef-flash-q4km": {"label": "Clef", "port": 8018, "health": "/health", "gpu": "about 11 GB GPU"}}
+_switching = {}  # name -> (action, Popen)
+
+
+def _answers(port, path):
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=1.5) as r: return r.status < 500
+    except urllib.error.HTTPError as e: return e.code < 500
+    except Exception: return False
+
+
+def services_state():
+    out = []
+    for name, sw in SWITCHES.items():
+        job = _switching.get(name); busy = job and job[1].poll() is None
+        out.append({"name": name, "label": sw["label"], "gpu": sw["gpu"], "up": _answers(sw["port"], sw["health"]), "busy": job[0] if busy else None})
+    return out
+
+
+def switch_service(name, action):
+    if name not in SWITCHES or action not in ("start", "stop"): return 404, {"error": "unknown service or action"}
+    job = _switching.get(name)
+    if job and job[1].poll() is None: return 409, {"error": f"{SWITCHES[name]['label']} is already {job[0]}ing"}
+    root = HERE.parent; log = open(root / "logs" / "service-switch.log", "ab")
+    log.write(f"\n== {time.strftime('%F %T')} {action} {name} (console switch)\n".encode()); log.flush()
+    p = subprocess.Popen(["python3", str(root / "tools" / "service.py"), action, name, "-y"], cwd=str(root), stdin=subprocess.DEVNULL,
+                         stdout=log, stderr=log, start_new_session=True)
+    _switching[name] = (action, p)
+    return 202, {"name": name, "action": action}
 
 
 class Handler(BaseHTTPRequestHandler):
+    def _local(self):
+        """Only someone on this machine (or a port forward to it) may switch services; never a visitor through a tunnel."""
+        h = {k.lower() for k in self.headers.keys()}
+        return self.client_address[0] in ("127.0.0.1", "::1") and not (h & {"cf-connecting-ip", "cf-ray", "x-forwarded-for", "forwarded"})
+
+    def _voice_ws(self):
+        """Relay a WebSocket to the voice service: hand the upgrade request on, then copy bytes both ways until either side closes."""
+        host, port = VOICE.rsplit(":", 1)
+        try: up = socket.create_connection((host, int(port)), timeout=5)
+        except OSError: return self._send(503, {"error": "Voice is off. Turn it on with the Voice switch in the top bar, or ./service.sh start voice"})
+        up.settimeout(None)
+        head = ["GET /ws HTTP/1.1", f"Host: {VOICE}"] + [f"{k}: {v}" for k, v in self.headers.items() if k.lower() != "host"]
+        up.sendall(("\r\n".join(head) + "\r\n\r\n").encode())
+        client = self.connection
+
+        def pump(src, dst):
+            try:
+                while (b := src.recv(65536)): dst.sendall(b)
+            except OSError: pass
+            for x in (src, dst):
+                try: x.shutdown(socket.SHUT_RDWR)
+                except OSError: pass
+        t = threading.Thread(target=pump, args=(up, client), daemon=True); t.start()
+        pump(client, up); t.join(5); up.close(); self.close_connection = True
+
+
     def _send(self, code, body, ctype="application/json"):
         raw = body if isinstance(body, bytes) else json.dumps(body).encode()
         self.send_response(code)
@@ -463,6 +512,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/") or "/"
+        if path == "/voice/ws" and self.headers.get("Upgrade", "").lower() == "websocket":
+            return self._voice_ws()
+        if path == "/voice/api/status":
+            try:
+                with urllib.request.urlopen(f"http://{VOICE}/api/status", timeout=5) as r: return self._send(r.status, r.read())
+            except Exception: return self._send(503, {"error": "Voice is off"})
+        if path == "/api/services":
+            return self._send(200, {"services": services_state(), "can_switch": self._local()})
+        if path == "/mockups" or path.startswith("/mockups/"):  # the static mock-ups (they had their own server on :8110)
+            f = (HERE / path.lstrip("/")).resolve()
+            if f.is_dir(): f = f / "index.html"
+            if f.is_file() and (HERE / "mockups") in f.parents:
+                return self._send(200, f.read_bytes(), TYPES.get(f.suffix, "application/octet-stream"))
+            return self._send(404, {"error": "not found"})
         if path.startswith("/audio/"):
             return audio_library.serve(self, path[len("/audio/"):])
         if path.startswith("/imagelab-img/"):
@@ -481,8 +544,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*world_engine_proxy("GET", self.path[len("/api/world-engine"):], None))      # self.path keeps the query string (?since=N)
         if path.startswith("/api/cpu/"):
             return self._send(*cpu_engine_proxy("GET", path[len("/api/cpu"):], None))
-        if path.startswith("/api/world-lab/"):
-            return self._send(*world_lab_proxy("GET", path[len("/api/world-lab"):], None))
         if path.startswith("/api/idea"):
             r = idea_api.handle_get(path, self.path.partition("?")[2])
             return self._send(*r) if r else self._send(404, {"error": "not found"})
@@ -632,6 +693,10 @@ class Handler(BaseHTTPRequestHandler):
         self._stream(events)
 
     def do_POST(self):
+        if self.path.startswith("/api/services/"):
+            if not self._local(): return self._send(403, {"error": "Services can only be switched from this machine, not through a shared link."})
+            parts = self.path.split("?")[0].strip("/").split("/")  # api/services/<name>/<action>
+            return self._send(*switch_service(parts[2], parts[3])) if len(parts) == 4 else self._send(404, {"error": "not found"})
         if self.path.startswith("/api/detector-"):
             r = detector_api.handle_post(self.path.split("?")[0], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), detector_api.MAX_BODY + 1)))
             return self._send(*r) if r else self._send(404, {"error": "not found"})
@@ -639,8 +704,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*world_engine_proxy("POST", self.path.split("?")[0][len("/api/world-engine"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
         if self.path.startswith("/api/cpu/"):
             return self._send(*cpu_engine_proxy("POST", self.path[len("/api/cpu"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200000))))
-        if self.path.startswith("/api/world-lab/"):
-            return self._send(*world_lab_proxy("POST", self.path.split("?")[0][len("/api/world-lab"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
         if self.path.startswith("/api/persona-lab/"):
             return self._send(*persona_api.handle_post(self.path.split("?")[0], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), persona_api.MAX_BODY + 1))))
         if self.path.split("?")[0] == "/api/latent/intake":

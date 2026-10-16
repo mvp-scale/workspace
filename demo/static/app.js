@@ -110,6 +110,30 @@
     fill(); subs.add(fill); ready.then(fill); return fill;
   }
   /* The "Models 5/9" button and its panel: which models are loaded right now, what each code means, memory in use. */
+  /* On-demand services (voice, the local classifier, Clef) with one switch each. Only a visitor on this machine may switch;
+     anyone else sees the state. The console runs ./service.sh, so the terminal and these switches stay in step. */
+  function servicesControl() {
+    const box = el("div", { class: "svc-switches", role: "group", "aria-label": "On-demand services" });
+    let timer = null;
+    const draw = (d) => {
+      box.replaceChildren(...d.services.map(sv => {
+        const state = sv.busy ? (sv.busy === "start" ? "starting…" : "stopping…") : sv.up ? "on" : "off";
+        return el("button", { class: "btn ghost svc-btn", type: "button", disabled: !d.can_switch || !!sv.busy,
+          title: `${sv.label}: ${state} (${sv.gpu}).` + (d.can_switch ? ` Click to turn ${sv.up ? "off" : "on"}.` : " Switching works only from this machine."),
+          onclick: async () => {
+            if (sv.up && !confirm(`Turn ${sv.label} off? Pages using it will say it is off until it is turned on again.`)) return;
+            try { await api(`/api/services/${sv.name}/${sv.up ? "stop" : "start"}`, { method: "POST" }); } catch (e) { toast(e.message); }
+            refresh(1500);
+          } }, el("span", { class: "dot " + (sv.busy ? "busy" : sv.up ? "up" : "down"), "aria-hidden": "true" }), sv.label);
+      }));
+      return d.services.some(sv => sv.busy);
+    };
+    const refresh = (ms) => { clearTimeout(timer); timer = setTimeout(async () => {
+      let busy = false; try { busy = draw(await api("/api/services")); } catch { box.replaceChildren(); }
+      refresh(busy ? 2000 : 20000); }, ms); };
+    refresh(0);
+    return box;
+  }
   function modelsControl() {
     const dot = el("span", { class: "dot", "aria-hidden": "true" }), count = el("span", { text: "Models" });
     const btn = el("button", { class: "btn ghost models-btn", type: "button", "aria-expanded": "false", "aria-controls": "models-panel" }, dot, count);
@@ -143,7 +167,7 @@
       el("header", { class: "topbar" }, el("div", { class: "topbar-inner" },
         el("a", { class: "brand", href: "/" }, "Jev Bench ", el("span", { text: "Console" })),
         el("nav", { class: "nav", "aria-label": "Primary" }, NAV.map(([h, t]) => el("a", { href: h, "aria-current": h === path ? "page" : null, text: t }))),
-        ...modelsControl(), theme())));
+        servicesControl(), ...modelsControl(), theme())));
     document.body.append(el("footer", { class: "footer" }, el("div", { class: "footer-inner" },
       el("span", { text: "Runs on this machine's RTX 5090 with the public JevBench tiers." }),
       el("span", {}, "Benchmark harness: ", el("a", { href: "https://github.com/fstandhartinger/jevbench", text: "JevBench" })))));

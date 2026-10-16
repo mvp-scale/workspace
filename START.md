@@ -7,10 +7,12 @@ Everything to bring the demo back up and look at the output. Run from `/workspac
 Run from `/workspace`. `service.yaml` says what exists and what is on; `./service.sh` acts on it (logic in `tools/service.py`). It replaces the old separate commands (`lineup.sh up`, hand-run demo, engine and Winnow launches).
 
 ```
+./service.sh up                     # THE IDEAL STATE: baseline (World Engine + console) up and healthy; leaves the rest alone
+./service.sh reset                  # restart the baseline cleanly;   ./service.sh down   stop everything
+./service.sh start voice classifier # turn on-demand services on (also from the console's top bar: Voice, Classifier, Clef)
 ./service.sh help                   # every command, target and example (./service.sh help restart for one command)
-./service.sh                        # status of everything: port, state, pid, uptime, extra test copies, GPU memory
-./service.sh start                  # start the default profile (core: winnow, world, demo); skips what is up
-./service.sh start full             # a profile: core + models + extras
+./service.sh                        # status: always on / on demand / other, port, state, pid, uptime, PUBLIC flag, GPU memory
+./service.sh start live             # a profile: baseline + voice + classifier + Clef
 ./service.sh restart demo           # after editing demo/ code (no prompt)
 ./service.sh restart world          # after editing probes/world-engine code (asks first: loaded state is lost)
 ./service.sh stop tag:model         # a tag: every service labelled model (asks first)
@@ -27,19 +29,26 @@ Run from `/workspace`. `service.yaml` says what exists and what is on; `./servic
 - `services:` holds how each runs: command, port, health path, boot wait, `after` (start order), `heavy` (asks before stop), `flex` (may take another port), `tags` (free labels for `tag:<label>`), optional `stop:` / `restart:` shell overrides.
 - Run `./service.sh check` after any edit.
 
+**One browser port: :8100.** The console serves every page (mock-ups at `/mockups/`) and relays to the services behind
+it, voice included (`/voice/ws`), so a port forward or a tunnel needs only :8100. The other ports are internal.
+
 | Service | Port | Profile | What |
 |---|---|---|---|
-| winnow | 8091 | core | Winnow-12B classifier (reads every story) |
-| world | 8112 | core | World Engine 2 service (after winnow) |
-| demo | 8100 | core | the console; http://127.0.0.1:8100 (reads `.env`) |
+| world | 8112 | baseline (always on) | World Engine 2 service |
+| demo | 8100 | baseline (always on) | the console and the only browser-facing port (reads `.env`) |
+| voice | 8200 | live (on demand) | live transcription, about 4 GB GPU; reached at `:8100/voice/ws` |
+| classifier | 8020 | live (on demand) | the local classifier (CPU engine, `probes/cpu_engine.py`), no GPU, about 20 s to start |
+| clef-flash-q4km | 8018 | live (on demand) | Clef Flash Q4, a TypeSafe endpoint, about 11 GB GPU; the classifier's teacher and backup |
 | kev-4b, semif, so1, laya, verdict | 8010, 8012-8015 | models | the five loaded models (systemd; kev-4b first, about 17.8 GiB while loading) |
-| voice | 8200 | extras | live transcription |
-| mockups | 8110 | extras | static mock-ups |
-| share | n/a | share | Cloudflare tunnels for demo and voice (`cf_start.sh`) |
+| winnow | 8091 | (by name) | Winnow-12B classifier (reads every story) |
+| share | n/a | share | one Cloudflare tunnel to the console (`cf_start.sh`); public, no login |
+
+The console's top-bar switches (Voice, Classifier, Clef) run `./service.sh start|stop` for local visitors only; a visitor
+through the share tunnel sees the state but cannot switch.
 
 Start order follows `after`; stop is the reverse. Stop or restart of a `heavy` service asks first (`-y` skips). It only kills a process whose command line matches the service (`--force` overrides). Logs are `logs/<name>.log` (world is `logs/world2.log`). Point a demo at a test engine: `WORLD_ENGINE_URL=http://127.0.0.1:8122 ./service.sh start demo --port 8130`.
 
-Also: `curl -s localhost:8100/api/status` (live state, real identity, GPU memory per model); `git status --short; git log --oneline -3` (local repo only, no remote). `demo/lineup.sh install` still writes the model unit files. The Cloudflare share link dies when the demo is down; run `./service.sh start share` after a restart.
+Also: `curl -s localhost:8100/api/status` (live state, real identity, GPU memory per model); `git status --short; git log --oneline -3` (local repo only, no remote). `demo/lineup.sh install` still writes the model unit files. The Cloudflare share link dies when the demo is down; run `./service.sh start share` after a restart. The retired World Engine v1 service (`world_service.py`, :8111) and its page are in `probes/world-engine/_retired/`.
 
 **Do not**: restart `demo/server.py` while an experiment runs through it (its cache lives in memory); run the Baseline compare "Run" or any script that calls the hosted model (`jev`) without asking; leave wait loops without a `timeout`.
 

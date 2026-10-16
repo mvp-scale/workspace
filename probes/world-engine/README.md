@@ -26,6 +26,8 @@ Rules come from `../persona/rules/*.csv` (dials, elements, grid, decisions, weig
 - No comparison with any real outcome yet.
 
 ## World lab mock-up (2026-10-04)
+**Retired 16 Oct 2026:** this v1 service and its page now live in `_retired/`; `/worldlab` redirects to `/worldengine`, which runs on `world_service2.py`. Historical notes follow.
+
 Page: http://127.0.0.1:8100/worldlab (nav: World lab). Files: `/workspace/demo/worldlab.html`, proxy routes in `/workspace/demo/server.py`, engine service `world_service.py`.
 Start the service by hand (port 8111; 8110 is used by a static mock-up server that is not ours):
   `cd /workspace/probes/world-engine && nohup /workspace/kev/.venv/bin/python world_service.py --n 50000 > /workspace/logs/world-service.log 2>&1 &`

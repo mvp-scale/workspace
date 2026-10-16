@@ -2,6 +2,8 @@
 # Used by ./service.sh (tools/service.py). Edit this file, then:  ./service.sh check   to validate it.
 #
 # SERVICES say how a thing runs. PROFILES say which things are on.
+#   ./service.sh up                 -> the ideal state: the baseline profile up and healthy (on-demand services left as they are)
+#   ./service.sh reset              -> restart the baseline cleanly;   ./service.sh down  -> stop everything
 #   ./service.sh start              -> starts default_profile
 #   ./service.sh start full         -> a profile name
 #   ./service.sh restart tag:gpu    -> every service with that tag (tags are free labels)
@@ -27,15 +29,18 @@
 #   stop / restart   optional shell command overrides (default: signal the process / stop then start)
 #   log         log file (default logs/<name>.log)
 
-default_profile: core
+default_profile: baseline
 
+# One browser port: the console (:8100) serves every page (mock-ups at /mockups/) and relays to the services behind it,
+# voice included (/voice/ws). The other ports are internal. Services tagged `demand` are switched on when needed, from
+# here or from the console's top bar (local visitors only).
 # Profile entries: a service name, another profile name, or a mapping {service: name, port: N, env: {K: V}}
 profiles:
-  core:   [world, demo, voice, clef-flash-q4km]   # the World Engine, the console, live voice, Clef Flash 4-bit (not the 19 GiB bf16 one); winnow is optional: ./service.sh start winnow
+  baseline: [world, demo]                           # always on: the World Engine and the console
+  live:   [baseline, voice, classifier, clef-flash-q4km]   # everything the demo pages can use; the last three are on-demand (tag:demand)
   models: [kev-4b, semif, so1, laya, verdict]       # the five loaded decision models (about 30 of 31.8 GiB together)
-  extras: [voice, mockups]
-  full:   [core, models, extras]
-  share:  [share]                                   # public Cloudflare links for demo and voice
+  full:   [live, models]
+  share:  [share]                                   # a public Cloudflare link for the console (no login: anyone with it can spend the TypeSafe key)
   test-world:                                       # a second engine beside the live one, for testing
     - {service: world, port: 8122}
   world-v2:                                         # the live engine on the expanded ontology (restart world-v2 to switch; restart world to go back to v1)
@@ -103,7 +108,7 @@ services:
     boot: 180
     heavy: true
     flex: true
-    tags: [gpu, classifier, core]
+    tags: [gpu, classifier]
     log: logs/winnow.log
 
   world:
@@ -118,7 +123,7 @@ services:
     boot: 120
     heavy: true
     flex: true
-    tags: [gpu, engine, core]
+    tags: [gpu, engine, baseline]
     log: logs/world2.log
 
   demo:
@@ -133,33 +138,33 @@ services:
     boot: 30
     after: [world]
     flex: true
-    tags: [web, core]
+    tags: [web, baseline]
     log: logs/demo.log
 
   voice:
     kind: proc
-    desc: Live speaker-attributed transcription
+    desc: Live speaker-attributed transcription (browser reaches it through the console at /voice/ws)
     port: 8200
     cwd: voice
     cmd: [.venv/bin/python, server.py]
     match: 'server\.py'
     health: /api/status
     boot: 90
-    tags: [gpu, voice]
+    tags: [gpu, voice, demand]
     log: logs/voice.log
 
-  mockups:
+  classifier:
     kind: proc
-    desc: Static mock-ups
-    port: 8110
-    cwd: demo/mockups
-    cmd: [python3, -m, http.server, -b, 127.0.0.1, -d, "${root}/demo", "${port}"]
-    match: http\.server
-    health: /
-    boot: 10
-    flex: true
-    tags: [web]
-    log: logs/mockups.log
+    desc: "Local classifier: the CPU engine (e5-small int8 + one sidecar per question, TypeSafe /v1/systemone, no GPU)"
+    port: 8020
+    cmd: [models/embed-zs/.venv/bin/python, probes/cpu_engine.py]
+    env: {CPU_ENGINE_PORT: "${port}", HF_HOME: "${root}/data/hf", CUDA_VISIBLE_DEVICES: ""}
+    match: cpu_engine\.py
+    health: /health
+    boot: 120                                       # about 20 s with cached vectors; the first start on a new runtime encodes the corpus (about 40 s)
+    after: [clef-flash-q4km]                        # Clef is its optional backup (?backup=1)
+    tags: [cpu, model, demand]
+    log: logs/cpu-engine.log
 
   kev-4b:
     kind: systemd
@@ -257,7 +262,7 @@ services:
     health: /health
     boot: 120
     flex: true
-    tags: [gpu, model]
+    tags: [gpu, model, demand]
     log: logs/clef-flash-q4km.log
 
   clef-flash-q2k:
@@ -296,7 +301,7 @@ services:
 
   share:
     kind: script
-    desc: Cloudflare quick tunnels for demo and voice (public links)
+    desc: Cloudflare quick tunnel for the console (a public link; voice goes through it too)
     script: ./cf_start.sh
-    after: [demo, voice]
+    after: [demo]
     tags: [public]

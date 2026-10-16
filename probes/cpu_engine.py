@@ -11,7 +11,7 @@ Each answer's noul is P(yes) re-centred so 0.5 is the yes/no cut chosen on the t
 With ?compare=1 the trace also carries Clef's answer and time for every question (for side-by-side display). With ?backup=1, unsure answers and questions outside the library go to the local Clef server (:8018, GPU); without it
 the CPU answers everything it can and refuses questions outside its library.
 
-    CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py      # 127.0.0.1:8019
+    CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py      # 127.0.0.1:8020 (./service.sh start classifier)
 GET /health (memory, device, timings), GET /library, POST /v1/systemone[?backup=1].
 """
 import os
@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from latent_depth import QUESTIONS, spec_of, thr_from_oof, LAB, BASE
 from latent_intake import gate
 
-CLEF = "http://127.0.0.1:8018/v1/systemone"; PORT = int(os.environ.get("CPU_ENGINE_PORT", "8019"))
+CLEF = "http://127.0.0.1:8018/v1/systemone"; PORT = int(os.environ.get("CPU_ENGINE_PORT", "8020"))
 LOCK = threading.Lock()  # one encode at a time: the CPU number we quote is for one request, not a contended one
 STATS = {"requests": 0, "cpu_answers": 0, "clef_answers": 0, "encode_ms": []}
 

@@ -488,7 +488,7 @@ async function tryHealth() {
     box.replaceChildren(el("span", { class: "badge", text: "CPU engine running" }), el("span", { class: "badge", text: h.gpu_visible ? "GPU visible!" : "GPU: not visible to it" }),
       el("span", { class: "badge", text: `${h.memory_mb} MB RAM` }), el("span", { class: "badge", text: `${h.library_size} questions · ${(h.classifier_bytes / 1024).toFixed(0)} KB of classifiers` }), el("span", { class: "badge", text: `${h.threads} CPU threads` }));
     return true;
-  } catch (e) { box.replaceChildren(el("span", { class: "badge", text: "CPU engine not running" })); document.getElementById("tryOut").replaceChildren(el("p", { class: "small", text: "Start it with: CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py" })); return false; }
+  } catch (e) { box.replaceChildren(el("span", { class: "badge", text: "Classifier off" })); document.getElementById("tryOut").replaceChildren(el("p", { class: "small", text: "The local classifier is off. Turn it on with the Classifier switch in the top bar (about 20 seconds), then reload this section with Send." })); return false; }
 }
 async function trySend() {
   const text = document.getElementById("tryText").value.trim(); if (!text) return;

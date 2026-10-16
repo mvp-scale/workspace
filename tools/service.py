@@ -23,6 +23,9 @@ def targets_text(cfg):
 
 
 DETAIL = {
+    "up": "up\n  The ideal state: starts whatever in the baseline profile is not running, leaves healthy services alone, then shows\n  everything. On-demand services (tag:demand: voice, classifier, Clef) are left as they are; turn them on with start.\n  ./service.sh up\n  ./service.sh up --dry-run",
+    "reset": "reset\n  Restarts the baseline profile cleanly, in dependency order (asks once for heavy services; -y skips).\n  On-demand services keep running; restart one by name: ./service.sh restart voice",
+    "down": "down\n  Stops every service that is running, on-demand ones and the public share included, in reverse dependency order.\n  ./service.sh down -y",
     "status": "status [target...]\n  Shows each service: port, up/down/loading, pid, uptime, plus extra copies on other ports and GPU memory.\n  ./service.sh                 everything\n  ./service.sh status world    one service\n  ./service.sh status models   one profile",
     "start": "start [target...]\n  Starts targets in dependency order and waits until each answers. Skips what is already up. No target = the default profile.\n  ./service.sh start                 the default profile\n  ./service.sh start demo            one service\n  ./service.sh start full            a profile\n  ./service.sh start test-world      a second engine on another port (a profile with a port)\n  ./service.sh start world --port 8130   same, ad hoc",
     "stop": "stop target...\n  Stops targets in reverse dependency order. A target is required. Asks first for heavy services (winnow, world, models); -y skips the question.\n  ./service.sh stop demo\n  ./service.sh stop models\n  ./service.sh stop tag:gpu -y",
@@ -42,6 +45,9 @@ def help_text(cfg, topic=None):
 {C['b']}USAGE{C['z']}   ./service.sh <command> [target...] [options]
 
 {C['b']}COMMANDS{C['z']}
+  up                  bring the machine to the ideal state (the baseline profile, healthy)
+  reset               restart the baseline cleanly
+  down                stop everything
   status   [target]   what is running (the default when you give no command)
   start    [target]   start things; no target = the default profile
   stop      target    stop things (a target is required)
@@ -62,7 +68,9 @@ def help_text(cfg, topic=None):
 
 {C['b']}COMMON TASKS{C['z']}
   ./service.sh                         see everything
-  ./service.sh start                   bring up the default set
+  ./service.sh up                      the ideal state: console + World Engine
+  ./service.sh start voice classifier  turn on live voice and the local classifier
+  ./service.sh stop voice              free its GPU memory again
   ./service.sh restart demo            reload the console after a code change
   ./service.sh restart world           reload the World Engine (asks first)
   ./service.sh stop models             free the GPU from the five models
@@ -352,13 +360,29 @@ def row(cfg, e, ls, extra=""):
             if not looks_right(svc, pid, False): st, col, h = "other", "r", f"pid {pid} is not {e.name}!"
     if pid: up = etime(pid)
     port = f":{e.port}" if e.port else "-"
-    print(f"  {e.name:<8} {port:<6} {C[col]}{st:<9}{C['z']} {str(pid or '-'):<8} {up:<10} {h or svc['desc']}{extra}")
+    if "public" in svc["tags"] and st == "up": extra = f" {C['r']}PUBLIC: no login{C['z']}" + extra
+    print(f"  {e.name:<15} {port:<6} {C[col]}{st:<9}{C['z']} {str(pid or '-'):<8} {up:<10} {h or svc['desc']}{extra}")
+
+
+def running(cfg, e, ls):
+    svc = cfg["services"][e.name]; k = svc["kind"]
+    if k == "systemd": return sh(["systemctl", "is-active", svc.get("unit", e.name)]).strip() == "active"
+    if k == "script":
+        out = sh([os.path.join(ROOT, svc["script"]), "status"]).strip(); return bool(out) and "not running" not in out.splitlines()[0]
+    pid = find_pid(cfg, e, ls); return bool(pid) and looks_right(svc, pid, False)     # a stranger on the port is not this service
 
 
 def cmd_status(cfg, entries):
     ls = listeners()
-    print(f"  {'SERVICE':<8} {'PORT':<6} {'STATE':<9} {'PID':<8} {'UPTIME':<10} WHAT")
-    for e in entries: row(cfg, e, ls)
+    print(f"  {'SERVICE':<15} {'PORT':<6} {'STATE':<9} {'PID':<8} {'UPTIME':<10} WHAT")
+    base = {e.name for e in expand(cfg, ["baseline"])} if "baseline" in cfg["profiles"] else set()
+    groups = [("always on (baseline)", [e for e in entries if e.name in base]),
+              ("on demand", [e for e in entries if e.name not in base and "demand" in cfg["services"][e.name]["tags"]]),
+              ("other", [e for e in entries if e.name not in base and "demand" not in cfg["services"][e.name]["tags"]])]
+    for title, es in groups:
+        if not es: continue
+        if base: print(f"  {C['d']}{title}{C['z']}")
+        for e in es: row(cfg, e, ls)
     known = {(e.name, e.port) for e in entries}
     for n, s in cfg["services"].items():                         # extra copies: same command, other port
         if s["kind"] != "proc" or not s.get("flex"): continue
@@ -444,12 +468,20 @@ def main(argv):
         if svc["kind"] == "systemd" and not os.path.exists(lf): lf = os.path.join(ROOT, "logs", f"{targets[0]}.log")
         if not os.path.exists(lf): die(f"no log yet: {lf}")
         os.execvp("tail", ["tail", "-n", "40"] + (["-f"] if follow else []) + [lf])
+    if cmd in ("up", "reset", "down"):
+        if targets: die(f"{cmd} takes no target; it always acts on the baseline profile (down: on everything)")
+        if "baseline" not in cfg["profiles"]: die("service.yaml has no baseline profile")
+        cmd, targets = {"up": ("start", ["baseline"]), "reset": ("restart", ["baseline"]), "down": ("stop", list(cfg["services"]))}[cmd]
+        if cmd == "stop":                                              # only what is running, so the heavy-service question is about real things
+            ls0 = listeners(); targets = [e.name for e in expand(cfg, targets) if running(cfg, e, ls0)]
+            if not targets: print("  nothing is running"); return 0
+        o["after_status"] = "all"
     if cmd not in ("status", "start", "stop", "restart"):
         print(f"{C['r']}unknown command '{cmd}'{C['z']}\n"); print(help_text(cfg)); return 1
     if cmd in ("stop", "restart") and not targets:
         print(f"{C['r']}{cmd} needs a target.{C['z']} Pick one:\n{targets_text(cfg)}\n\n  e.g. ./service.sh {cmd} demo      more: ./service.sh help {cmd}"); return 1
     if cmd == "start" and not targets: targets = [cfg.get("default_profile") or die("no default_profile in service.yaml")]
-    if cmd == "status" and not targets: targets = ["full", "share"] if "full" in cfg["profiles"] else list(cfg["services"])
+    if cmd == "status" and not targets: targets = list(cfg["services"])
     entries = expand(cfg, targets)
     if o["port"]:
         if len(entries) != 1 or not cfg["services"][entries[0].name].get("flex"): die("--port needs exactly one flexible service (flex: true)")
@@ -470,7 +502,9 @@ def main(argv):
         for e in reversed(pending): do_start(cfg, e, o)               # then start in dependency order
     elif cmd == "start":
         for e in entries: do_start(cfg, e, o)
-    if not o["dry"]: print(); cmd_status(cfg, entries); print(f"\n  {C['d']}./service.sh help {cmd}  for more examples{C['z']}")
+    if not o["dry"]:
+        print(); cmd_status(cfg, expand(cfg, list(cfg["services"])) if o.get("after_status") == "all" else entries)
+        print(f"\n  {C['d']}./service.sh help {cmd}  for more examples{C['z']}")
     return 0
 
 

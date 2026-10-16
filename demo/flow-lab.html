@@ -583,7 +583,7 @@
       let ws; try { ws = new WebSocket(wsUrl()); } catch (e) { return reject(e); }
       ws.binaryType = "arraybuffer"; V.ws = ws; let opened = false;
       ws.onopen = () => { opened = true; resolve(ws); };
-      ws.onerror = () => { if (!opened) reject(new Error(`Cannot reach the voice server at ${wsUrl()}. Is it running (port 8200), and is that port reachable from this browser?`)); };
+      ws.onerror = () => { if (!opened) reject(new Error(`Cannot reach the voice server at ${wsUrl()}. Is Voice switched on (top bar, or ./service.sh start voice), and is the console reachable from this browser?`)); };
       ws.onclose = () => { if (V.ws === ws) { V.ws = null; if (V.state === "running" || V.state === "starting") setState("idle", "voice server disconnected"); } };
       ws.onmessage = (e) => { if (typeof e.data !== "string") { playChunk(e.data); return; } let m; try { m = JSON.parse(e.data); } catch { return; }
         if (m.kind === "transcript") onSnapshot(m);
@@ -662,7 +662,7 @@
     ui.lib.onchange = () => { if (ui.lib.value) { ui.libAudio.src = "/audio/" + encodeURIComponent(ui.lib.value); ui.libAudio.hidden = false; ui.file.value = ""; } else { ui.libAudio.pause(); ui.libAudio.removeAttribute("src"); ui.libAudio.hidden = true; } };
     ui.file.onchange = () => { if (ui.file.files.length) { ui.lib.value = ""; ui.lib.onchange(); } };
     ui.libBox = $("div", { class: "field", title: "Files in data/audio on the server. Play one here, then press Start to transcribe it." }, $("label", { text: "Audio library" }), ui.lib, ui.libAudio);
-    ui.wsurl = $("input", { type: "text", value: `ws://${location.hostname || "127.0.0.1"}:8200/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
+    ui.wsurl = $("input", { type: "text", value: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host || "127.0.0.1:8100"}/voice/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
     ui.start = $("button", { class: "btn primary", type: "button", onclick: start, text: "Start" }); ui.stop = $("button", { class: "btn", type: "button", onclick: stop, text: "Stop", disabled: true });
     const inputs = $("div", { class: "field" }); const showSrc = () => { ui.yt.hidden = S.src !== "youtube"; ui.file.hidden = S.src !== "file"; ui.libBox.hidden = S.src !== "file"; };
     ui.srcSeg = seg([["youtube", "YouTube link"], ["file", "Audio file"], ["mic", "Microphone"], ["tab", "Tab / call audio"]], () => S.src, (v) => { S.src = v; showSrc(); paceRow(); });

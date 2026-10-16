@@ -1179,8 +1179,7 @@
     ui.lenIn = el("input", { type: "text", placeholder: "for … min", value: S.hashLn || "", style: "flex:0 0 78px", "aria-label": "Length", title: "Stop after this long (minutes, or m:ss). Empty = until the end or the 2 h limit. Handy for keeping a paid run short.", onchange: () => writeHash() });
     ui.yt.addEventListener("input", () => { try { const u = new URL(ui.yt.value.trim()), t = u.searchParams.get("t") || u.searchParams.get("start"); if (t && !ui.startIn.value.trim()) { const sec = parseHMS(t); if (Number.isFinite(sec) && sec > 0) { ui.startIn.value = fmtHMS(sec); writeHash(); } } } catch {} });
     ui.ytF = ui.yt; ui.fileF = ui.file; ui.libF = el("div", { class: "row1" }, ui.lib, ui.libPrev); ui.hint = el("span", { class: "small muted" });
-    ui.wsurl = el("input", { type: "text", value: new URLSearchParams(location.search).get("voice") || `ws://${location.hostname || "127.0.0.1"}:8200/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
-    if (location.protocol === "https:" && !new URLSearchParams(location.search).get("voice")) fetch("/static/voice-url.txt", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(t => { if (/^wss:\/\//.test(t.trim())) ui.wsurl.value = t.trim(); }).catch(() => {});
+    ui.wsurl = el("input", { type: "text", value: new URLSearchParams(location.search).get("voice") || `${location.protocol === "https:" ? "wss" : "ws"}://${location.host || "127.0.0.1:8100"}/voice/ws`, style: "min-width:210px", "aria-label": "Voice server WebSocket" });
     ui.liveStat = el("span"); ui.liveErr = el("div", { class: "liveerr", role: "alert" });
     ui.slot.append(ui.dlgField, ui.pasteField, ui.ytF, ui.fileF, ui.libF, ui.hint, ui.startIn, ui.lenIn);
     /* Settings > Playback: what applies to the current source */
@@ -1296,7 +1295,7 @@
       let ws; try { ws = new WebSocket(wsUrl()); } catch (e) { return reject(e); }
       ws.binaryType = "arraybuffer"; V.ws = ws; let opened = false;
       ws.onopen = () => { opened = true; resolve(ws); };
-      ws.onerror = () => { if (!opened) reject(new Error(`Cannot reach the voice server at ${wsUrl()}. Is it running (port 8200), and is that port reachable from this browser?`)); };
+      ws.onerror = () => { if (!opened) reject(new Error(`Cannot reach the voice server at ${wsUrl()}. Is Voice switched on (top bar, or ./service.sh start voice), and is the console reachable from this browser?`)); };
       ws.onclose = () => { if (V.ws === ws) { V.ws = null; if (V.state === "running" || V.state === "starting") setState("idle", "voice server disconnected"); } };
       ws.onmessage = (e) => { if (typeof e.data !== "string") { playChunk(e.data); return; } let m; try { m = JSON.parse(e.data); } catch { return; }
         if (m.kind === "transcript") onSnapshot(m);
