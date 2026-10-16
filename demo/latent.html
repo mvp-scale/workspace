@@ -100,6 +100,7 @@
   table.depth .q b { display: block; } table.depth .q span { font-size: 12px; color: var(--text-3); }
   .vd { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid; white-space: nowrap; }
   .vd.cpu { color: var(--good); border-color: var(--good); } .vd.mix { color: var(--warn); border-color: var(--warn); } .vd.clef { color: var(--bad); border-color: var(--bad); } .vd.rare { color: var(--text-3); border-color: var(--border-strong); }
+  .qlist details.qrow { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 8px; } .qlist summary { cursor: pointer; font-size: 13px; } .qlist .jsonview { margin-top: 6px; }
   .try-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 12px; align-items: start; }
   @media (max-width: 900px) { .try-grid { grid-template-columns: 1fr; } }
   .try-big { display: flex; flex-wrap: wrap; gap: 8px; } .try-big div { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; background: var(--surface); }
@@ -107,6 +108,20 @@
   table.tryt td { vertical-align: middle; } table.tryt .num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .yn { font-weight: 700; } .yn.y { color: var(--pos, var(--good)); } .yn.n { color: var(--text-3); }
   .pbar { display: inline-block; width: 70px; height: 6px; background: var(--border); border-radius: 3px; vertical-align: middle; margin-left: 6px; position: relative; } .pbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 3px; }
+  .takeaway { border-left: 4px solid var(--accent); background: var(--surface); padding: 8px 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 15px; font-weight: 600; color: var(--text); margin: 6px 0 8px; max-width: 980px; line-height: 1.4; }
+  .takeaway .k { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); margin-bottom: 1px; }
+  details.more { margin: 0 0 6px; } details.more summary { cursor: pointer; font-size: 12.5px; color: var(--text-3); } details.more p { margin-top: 4px; max-width: 980px; }
+  .wins { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+  .wins div { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; background: var(--surface); font-size: 13px; color: var(--text-2); } .wins b { display: block; font-size: 20px; color: var(--text); }
+  .wins .gap { border-color: var(--warn); } .wins .gap b { color: var(--warn); }
+  .flow { display: grid; grid-template-columns: minmax(0,.8fr) 22px minmax(0,1.2fr) 22px minmax(0,1.2fr) 22px minmax(0,1fr); gap: 6px; align-items: stretch; }
+  .flow .st { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface); font-size: 13px; color: var(--text-2); }
+  .flow .st b { display: block; color: var(--text); font-size: 15px; margin-bottom: 2px; } .flow .st .n { display: block; font-family: var(--mono); color: var(--good); font-weight: 700; margin-top: 4px; }
+  .flow .ar { display: flex; align-items: center; justify-content: center; color: var(--text-3); font-size: 20px; }
+  .flow .st.side { border-color: var(--accent); }
+  @media (max-width: 860px) { .flow { grid-template-columns: 1fr; } .flow .ar { transform: rotate(90deg); } }
+  .mini { border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; } .mini td, .mini th { padding: 3px 8px; text-align: right; border-bottom: 1px solid var(--border); } .mini th { color: var(--text-3); font-weight: 600; } .mini td:first-child, .mini th:first-child { text-align: left; font-family: var(--sans, inherit); }
+  .mini .win { color: var(--good); font-weight: 700; } .mini .lose { color: var(--bad); font-weight: 700; }
   .tiers { display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1fr); gap: 6px; align-items: stretch; }
   .tiers .arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-3); }
   .tier { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
@@ -131,8 +146,8 @@
 <main class="page" id="main">
   <div class="page-head">
     <div>
-      <h1>TypeSafe answers without a GPU</h1>
-      <p>The same TypeSafe question, three ways to answer it: a hosted API, your GPU, your CPU.</p>
+      <h1>TypeSafe answers on a CPU: 4 ms, 233 MB, no GPU</h1>
+      <p>Clef teaches each question once on a GPU. After that, a small encoder plus a trained sidecar answers on any CPU.</p>
     </div>
   </div>
   <div class="pitch card stack" style="margin-bottom:14px">
@@ -141,13 +156,33 @@
       <div class="arrow" aria-hidden="true">→</div>
       <div class="tier"><span class="bn">2 · Your GPU</span><h3>Clef Flash</h3><div class="big">46 ms · 9.7 GB VRAM</div><div class="r"><span>Time per answer</span><b>46 ms</b></div><div class="r"><span>Memory</span><b>9.7 GB of GPU memory</b></div><div class="r"><span>Cost</span><b>a GPU; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>84.4%</b></div></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="tier win"><span class="bn">3 · Your CPU</span><h3>Local engine</h3><div class="big">12 ms · 750 MB RAM</div><div class="r"><span>Time per answer</span><b>12 ms</b></div><div class="r"><span>Memory</span><b>750 MB RAM, no GPU</b></div><div class="r"><span>Cost</span><b>any server; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>only ones it learned (1.5 KB each)</b></div><div class="r"><span>Tone, human labels</span><b>83.2%</b></div></div>
+      <div class="tier win"><span class="bn">3 · Your CPU</span><h3>Local engine</h3><div class="big">4 ms · 233 MB RAM</div><div class="r"><span>Time per answer</span><b>4 ms</b></div><div class="r"><span>Memory</span><b>233 MB RAM, no GPU</b></div><div class="r"><span>Cost</span><b>any server; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>only ones it learned (1.5 KB each)</b></div><div class="r"><span>Tone, human labels</span><b>83.2%</b></div></div>
     </div>
-    <p class="small"><b>How we get from 2 to 3:</b> Clef teaches the CPU engine once per question (about a minute on the GPU), then steps aside. <b>Not there yet:</b> on the price question below, the CPU alone gives Clef's answer 89% of the time (always saying "no" would get 87%); with Clef as a backup for the unsure 11%, 96.4%.</p>
-    <p class="small muted">Measured here: Jev median of 15,479 hosted calls at the public tariff; Clef Flash Q4 on the RTX 5090; local engine = e5-small encoder plus one classifier per question on the i9 CPU. Tone accuracy: the same items from 5 published sets with human labels; the local engine was trained on about 2,000 examples per question.</p>
+    <div class="wins">
+      <div><b>70× faster</b>than the hosted API (4 ms against 281 ms)</div>
+      <div><b>40× less memory</b>than Clef on a GPU (233 MB of RAM against 9.7 GB of GPU memory)</div>
+      <div><b>1–3 points</b>below Clef and Jev on tone, judged by people (83% against 84% and 87%)</div>
+      <div class="gap"><b>Not there yet</b>On its own the CPU gives Clef's answer 89% of the time on a price question; with Clef as backup for the unsure 11%, 96%</div>
+    </div>
+    <details class="more"><summary>Where these numbers come from</summary><p class="small muted">Jev: median of 15,479 hosted calls at the public tariff. Clef Flash Q4 on the RTX 5090. Local engine: e5-small encoder (ONNX Runtime, int8, 8 threads) plus one classifier per question on the i9-10900K CPU. Tone accuracy: the same items from 5 published sets with human labels; the local engine was trained on about 2,000 examples per question.</p></details>
   </div>
+  <section class="section" aria-labelledby="h-flow" id="flowSec">
+    <header><div><h2 id="h-flow">How it works: an encoder that reads, a sidecar that decides</h2>
+      <p class="takeaway"><span class="k">The point</span>The encoder turns the text into 384 numbers once. Each question is a tiny classifier (the sidecar) that reads those numbers. One question or a thousand costs the same 4 ms.</p></div></header>
+    <div class="flow">
+      <div class="st"><b>Text</b>The request's state: a line or window of a conversation.</div><div class="ar">→</div>
+      <div class="st"><b>Encoder</b>e5-small reads the text once and turns it into 384 numbers that capture what it says.<span class="n">≈4 ms · 33 MB model</span></div><div class="ar">→</div>
+      <div class="st side"><b>Sidecar: one classifier per question</b>384 learned weights per question: which of the numbers matter, and which way. Multiply, add, done.<span class="n">1.5 KB each · &lt;0.1 ms for all</span></div><div class="ar">→</div>
+      <div class="st"><b>TypeSafe answer</b>P(yes) for every question in the request, in the <code>/v1/systemone</code> format.</div>
+    </div>
+    <div class="wins" style="margin-top:8px">
+      <div><b>Teacher, once</b>Clef on the GPU answers a few hundred example texts per question; the sidecar learns from its answers. About a minute.</div>
+      <div><b>Backup, optional</b>Answers the sidecar is unsure about can go to Clef. Everything else never touches the GPU.</div>
+      <div><b>Limits</b>Yes/no questions only, and only questions it has learned. It copies Clef, so it can match Clef but not beat it.</div>
+    </div>
+  </section>
   <section class="section" aria-labelledby="h-try" id="trySec">
-    <header><div><h2 id="h-try">Try it: the CPU engine, live</h2><p class="small">A real TypeSafe <code>/v1/systemone</code> server running on this machine's CPU, with the GPU hidden from it. Type any text; every question in its library answers.</p></div>
+    <header><div><h2 id="h-try">Proof: send it a real request</h2><p class="takeaway"><span class="k">The point</span>It is real: type any text and the CPU engine answers every question it knows, live. Tick "ask Clef" to see the GPU answer next to it.</p><details class="more"><summary>How to read this</summary><p class="small muted">A TypeSafe <code>/v1/systemone</code> server running on this machine’s CPU, with the GPU hidden from it. The right-hand panel shows the exact request and response, and the engine’s receipt of what it received; copy it as curl to run it yourself.</p></details></div>
       <div class="row" id="tryHealth"></div></header>
     <div class="try-grid">
       <div class="card stack">
@@ -159,9 +194,18 @@
       </div>
       <div class="card stack" id="tryJson"><p class="small muted">The request and the engine's response appear here.</p></div>
     </div>
+    <div class="card stack" id="waysCard" style="margin-top:12px">
+      <h3>Same question, five wordings, one request</h3>
+      <p class="takeaway"><span class="k">The point</span>Rewording does not make the CPU smarter: each wording is just another trained classifier. But wording changes what Clef answers, so the wording you train on matters.</p><details class="more"><summary>How to read this</summary><p class="small muted">The CPU engine does not read a question's wording: each wording is its own classifier, trained on Clef's answers to that wording. One request here carries 5 wordings (plus your own, which it refuses because it was never trained); the page averages the five.</p></details>
+      <div class="row"><div class="segmented" id="waysQ" role="group" aria-label="Question"></div>
+        <input type="text" id="waysOwn" maxlength="200" placeholder="Optional: your own wording (not trained, so the CPU cannot answer it)" style="flex:1;min-width:240px">
+        <button class="btn primary" type="button" id="waysGo">Send all wordings</button></div>
+      <div id="waysOut" class="stack"></div>
+      <div id="waysMeasured" class="stack"></div>
+    </div>
   </section>
   <section class="section" style="margin-top:12px" aria-labelledby="h-jr" id="jrSec">
-    <header><div><h2 id="h-jr">Walkthrough: moving a TypeSafe question off the GPU</h2><p class="small" id="jrIntro">A real run, precomputed so it is instant: one question ("the speaker mentions a price, cost or budget"), 4,322 conversation windows that Clef answered, the e5-small encoder and one small classifier. Step through it, or switch to Your data and watch it happen live on your own texts.</p></div>
+    <header><div><h2 id="h-jr">Learning one question: from 0 to 800 examples</h2><p class="takeaway"><span class="k">The point</span>After about 50 of Clef's answers the CPU handles most requests. By 800 it answers 89% itself, and with Clef as backup it matches Clef 96% of the time.</p><details class="more"><summary>How to read this</summary><p class="small muted" id="jrIntro">A real run, precomputed so it is instant: the question "the speaker mentions a price, cost or budget", 4,322 conversation windows that Clef answered, the e5-small encoder and one sidecar classifier. Step through it, or switch to Your data and watch it happen live on your own texts.</p></details></div>
       <div class="row"><div class="segmented" id="jrMode" role="group" aria-label="Source"><button type="button" data-v="example" aria-pressed="true">Worked example</button><button type="button" data-v="live">Your data (live)</button></div><button class="btn" type="button" id="jrPrev">Back</button><button class="btn primary" type="button" id="jrNext">Next</button></div></header>
     <div class="card stack" id="jrLive" hidden>
       <p class="small muted">Paste your own conversation lines (one per line), upload a .txt / .csv / .jsonl file, or load a sample. Clef (local GPU) labels them with your question while you watch; each step below appears as soon as it is measured. 60–2,000 lines; 30% are held out to measure the result.</p>
@@ -180,41 +224,17 @@
   </section>
 
   <section class="section" style="margin-top:18px" aria-labelledby="h-depth" id="depthSec" hidden>
-    <header><div><h2 id="h-depth">How deep can it go? 14 kinds of question</h2><p class="small" id="depthIntro"></p></div>
+    <header><div><h2 id="h-depth">Where it works, and where it does not</h2><p class="takeaway"><span class="k">The point</span>Strong on surface and relationship questions: price, rapport and blame are 83–91% handled on the CPU. Weak on subtle ones: vague answers stay with Clef. Hints, sarcasm and false facts were too rare here to judge.</p><details class="more"><summary>How to read this</summary><p class="small muted" id="depthIntro"></p></details></div>
       <div class="row"><div class="segmented" id="depthN" role="group" aria-label="Training examples"></div></div></header>
     <div class="card"><div class="table-wrap"><table class="data depth" id="depthTbl"></table></div>
       <p class="small muted" style="margin-top:8px" id="depthFoot"></p></div>
   </section>
 
-  <h2 style="margin-top:22px">Lab: inside the embeddings</h2><p class="small muted">The research behind the walkthrough. Pick an embedding model and a labelled set; every view below follows them.</p>
-  <div class="bar-ctl">
-    <div class="field"><label for="model">Embedding model</label><select id="model"></select></div>
-    <div class="field"><label for="set">Labelled set</label><select id="set"></select></div>
-    <div class="small muted setinfo" id="setinfo"></div>
-  </div>
-
-
-  <section class="section" style="margin-top:12px" aria-labelledby="h-model">
-    <div class="card stack">
-      <h2 id="h-model" style="font-size:16px">Selected model</h2>
-      <div class="row" id="modelBadges"></div>
-      <p class="small muted" id="modelText"></p>
-      <p class="small muted"><b>This page runs no model.</b> It reads vectors saved earlier and draws them. The readouts (cosine, bias correction, whitening, learned weights, angle combining) are plain arithmetic on the CPU in milliseconds. Only making the vectors needs a model, and the speeds below are what that costs.</p>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="h-holds" id="holdsSec">
-    <header><div><h2 id="h-holds">What holds up</h2><p class="small">The answer so far, by area: the best small recipe measured on the same test items as Clef Flash and Jev, what to run it on, and how fast. Detail and every idea tried are in the table below and in docs/latent-lab-playbook.md.</p></div></header>
-    <div class="areas" id="areas"></div>
-    <div class="table-wrap" style="margin-top:10px"><table class="data" id="ideasTbl"></table></div>
-    <p class="small subtle" id="verdictSrc" style="margin-top:6px"></p>
-  </section>
-
   <section class="section" aria-labelledby="h-intake" id="intakeSec">
-    <header><div><h2 id="h-intake">Intake: can this question run locally?</h2><p class="small">Enter a yes/no question the way you would send it to a TypeSafe model. Clef (local GPU, no hosted calls) labels real conversation windows with it (half random, half the closest to the question); a logistic head on the frozen e5-small vector learns from most of them; a confidence gate set on those decides which new windows the local model answers and which go to Clef; windows from separate dialogues measure the result. Quick check: 300 windows, about 20 seconds, provisional. Full: 1,300 windows, 1–3 minutes.</p></div></header>
+    <header><div><h2 id="h-intake">Check a new question in 20 seconds</h2><p class="takeaway"><span class="k">The point</span>Type a yes/no question; the page measures whether the CPU can take it over, and how much it would still send to Clef.</p><details class="more"><summary>How to read this</summary><p class="small muted">Clef (local GPU, no hosted calls) answers real conversation windows (half random, half the closest to the question); a sidecar learns from most of them; a confidence band set on those decides which new windows the CPU answers and which go to Clef; windows from other conversations measure the result. Quick check: 300 windows, about 20 seconds, provisional. Full: 1,300 windows, 1–3 minutes.</p></details></div></header>
     <div class="card stack">
       <div class="rules">
-        <div><b>Quality bar</b>The cascade (local + Clef for the rest) must keep at least 97% agreement with Clef and a yes-class F1 of at least 0.90 on held-out windows (a small tolerance for test noise).</div>
+        <div><b>Ready for the CPU when</b>CPU plus Clef backup gives Clef's answer at least 97% of the time and catches most yes cases (yes-F1 of 0.90 or more), on windows it never saw.</div>
         <div><b class="tier tier-Local">Local</b> Bar met and Clef answers at most 25% of windows.</div>
         <div><b class="tier tier-Hybrid">Hybrid</b> Bar met and Clef answers 25–50%.</div>
         <div><b class="tier tier-Clef">Clef</b> Bar missed, Clef needed for more than 50%, or fewer than 30 positive examples.</div>
@@ -231,9 +251,29 @@
     <div class="table-wrap" style="margin-top:10px"><table class="data" id="intakeTbl"></table></div>
     <div class="card stack" id="intakeDetail" style="margin-top:10px" hidden></div>
   </section>
-
   <section class="section" aria-labelledby="h-how">
-    <header><div><h2 id="h-how">Two ways to read the same request</h2><p class="small">Both end in the same arithmetic: one score per allowed answer, turned into probabilities. What differs is what goes in and how the scores are weighted.</p></div></header>
+    <header><div><h2 id="h-how">Why a sidecar? Similarity alone does not decide</h2><p class="takeaway"><span class="k">The point</span>Comparing the text with the words "yes" and "no" is close to a coin flip on most questions (about 53% on tone with e5-small). Learning which numbers matter for each question is what turns the same vectors into answers.</p>
+      <div class="two" style="margin-top:8px">
+        <div class="card stack"><h3>The arithmetic, with 4 made-up numbers</h3>
+          <p class="small muted">Real vectors have 384 numbers; the steps are the same. Each answer gets a score: multiply the text's numbers by another row, number by number, and add them up (a dot product).</p>
+          <table class="mini"><thead><tr><th></th><th>#1</th><th>#2</th><th>#3</th><th>#4</th><th>score</th></tr></thead><tbody>
+            <tr><td>Text: "over our budget, forty thousand"</td><td>0.8</td><td>0.1</td><td>-0.3</td><td>0.5</td><td></td></tr>
+            <tr><td><b>Cosine</b> · option "yes, mentions a price"</td><td>0.6</td><td>0.2</td><td>0.1</td><td>0.4</td><td>0.67</td></tr>
+            <tr><td><b>Cosine</b> · option "no, does not"</td><td>0.7</td><td>0.1</td><td>-0.1</td><td>0.3</td><td class="lose">0.75 · picks no ✗</td></tr>
+            <tr><td><b>Sidecar</b> · weights learned from Clef</td><td>2.1</td><td>-0.4</td><td>-1.5</td><td>0.2</td><td class="win">2.19 − 1.0 offset = 1.19 → P(yes) 0.77 ✓</td></tr>
+          </tbody></table>
+          <p class="small muted">"Yes, mentions a price" and "no, does not" share almost every word, so their vectors are nearly the same and the winner is decided by noise. The sidecar's weights are not words at all: they are learned from Clef's answers, so they point straight at what separates yes from no for this one question.</p>
+        </div>
+        <div class="card stack"><h3>What each readout below means</h3>
+          <div class="explain">
+            <div><b>Cosine</b> the text against each answer's wording, every number weighted equally. No training.</div>
+            <div><b>Bias-corrected</b> the same, minus each answer's score for an empty text, so a built-in lean cancels. No training.</div>
+            <div><b>Whitened</b> first evens out the space so no direction dominates, then cosine. No training.</div>
+            <div><b>Learned (the sidecar)</b> one weight per number, fitted on Clef's or people's answers. What the CPU engine uses.</div>
+          </div>
+        </div>
+      </div></div></header>
+    <details class="more" style="margin-top:8px"><summary>Under the hood: how a Jev-class model reads the same request</summary><p class="small muted">Both end in the same arithmetic: one score per allowed answer, turned into probabilities. What differs is what goes in and how the scores are weighted. A Jev-class model puts the text, the question and every option in one sequence, so each option is read with the text. Our engine reads the text once and lets the sidecar decide; the diagrams below show both.</p>
     <div class="lane">
       <div class="card">
         <h3>Jev-class model (kev's open code; Jev's own internals are not published)</h3>
@@ -253,7 +293,7 @@
         <div class="formula">score_k = (W_k · h_opt_k) · (W_q · h_decide) / 16      learned W, 256-dim pointer space</div>
       </div>
       <div class="card">
-        <h3>Embedding simulation (what this page measures)</h3>
+        <h3>Embedding readout (what the research below measures)</h3>
         <p>Question and text go in together; the vector q is the model's last hidden state at the final token (Qwen3-Embedding uses last-token pooling). Each option is embedded on its own, without seeing the text.</p>
         <svg class="dg" viewBox="0 0 460 150" role="img" aria-label="Embedding reading: options encoded separately">
           <rect class="tk" x="6" y="30" width="96" height="26" rx="4"/><text x="54" y="47" text-anchor="middle">question</text>
@@ -273,10 +313,36 @@
       <div class="card"><b>2 · What the readout sees</b><span>Both boil the input down to a few vectors. Jev-class: one per option plus a decide vector, all read with the text. Embedding: one for question + text, one per option read alone.</span></div>
       <div class="card"><b>3 · How dimensions are weighted</b><span>Jev-class: learned (kev projects both vectors into a 256-dimension space first). Cosine: every dimension equally. The readouts below change only this.</span></div>
     </div>
+    </details>
+  </section>
+  <h2 style="margin-top:26px">The research behind it</h2><p class="takeaway"><span class="k">The point</span>We tried 16 ideas on published, human-labelled sets. The big levers: a trained sidecar, more examples per question, and the right encoder. Pick an encoder and a set below; every view follows them.</p>
+  <div class="bar-ctl">
+    <div class="field"><label for="model">Embedding model</label><select id="model"></select></div>
+    <div class="field"><label for="set">Labelled set</label><select id="set"></select></div>
+    <div class="small muted setinfo" id="setinfo"></div>
+  </div>
+
+
+  <section class="section" style="margin-top:12px" aria-labelledby="h-model">
+    <div class="card stack">
+      <h2 id="h-model" style="font-size:16px">Selected model</h2>
+      <div class="row" id="modelBadges"></div>
+      <p class="small muted" id="modelText"></p>
+      <p class="small muted">The research views below read vectors saved earlier; the only live model on this page is the CPU engine above.</p>
+    </div>
   </section>
 
+  <section class="section" aria-labelledby="h-holds" id="holdsSec">
+    <header><div><h2 id="h-holds">Verdict by area</h2><p class="takeaway"><span class="k">The point</span>Tone and text type: the CPU ties Clef. Reading and judging: beats Clef in places, ties Jev. Code security and world knowledge: stay with Clef or Jev.</p><details class="more"><summary>How to read this</summary><p class="small muted">The answer so far, by area: the best small recipe measured on the same test items as Clef Flash and Jev, what to run it on, and how fast. Detail and every idea tried are in the table below and in docs/latent-lab-playbook.md.</p></details></div></header>
+    <div class="areas" id="areas"></div>
+    <div class="table-wrap" style="margin-top:10px"><table class="data" id="ideasTbl"></table></div>
+    <p class="small subtle" id="verdictSrc" style="margin-top:6px"></p>
+  </section>
+
+
+
   <section class="section" aria-labelledby="h-cmp">
-    <header><div><h2 id="h-cmp">Embedding models compared</h2><p class="small">Every model went through the same steps on the same items. Filled dot: a learned head (one logistic readout per question, 5-fold, every item scored by a fit that never saw it). Ring: the best readout that uses no labels (cosine, bias-corrected or whitened). Dashed lines: Clef Flash and Jev on the same sets. Speed: one call on this machine's CPU (i9-10900K, plain PyTorch, untuned), option vectors cached. Click a model (or use Embedding model at the top) to load it into every view on the page.</p></div>
+    <header><div><h2 id="h-cmp">Which encoder?</h2><p class="takeaway"><span class="k">The point</span>With few examples (about 80 per question), big encoders win by a lot: Qwen 4B 84% against e5-small 67% on tone. But the 4B is about 170× slower on a CPU. More examples close most of the gap (next chart).</p><details class="more"><summary>How to read this</summary><p class="small muted">Every model went through the same steps on the same items. Filled dot: a learned head (one logistic readout per question, 5-fold, every item scored by a fit that never saw it). Ring: the best readout that uses no labels (cosine, bias-corrected or whitened). Dashed lines: Clef Flash and Jev on the same sets. Speed: one call on this machine's CPU (i9-10900K, plain PyTorch, untuned; the live engine now runs e5-small in about 4 ms), option vectors cached. Click a model (or use Embedding model at the top) to load it into every view on the page.</p></details></div>
       <div class="segmented" id="grpSeg" role="group" aria-label="Group of sets"><button type="button" data-v="Tone and text type" aria-pressed="true">Tone and text type</button><button type="button" data-v="Reading and judging">Reading and judging</button><button type="button" data-v="Code security">Code security</button><button type="button" data-v="World knowledge">World knowledge</button></div>
     </header>
     <div class="card"><div id="cmpPlot"></div><div class="legend" id="cmpLegend"></div></div>
@@ -285,7 +351,7 @@
   </section>
 
   <section class="section" aria-labelledby="h-curve">
-    <header><div><h2 id="h-curve">More examples per question</h2><p class="small">The comparison above gives each head about 80 examples (a 5-fold split of each set). Here each tone/text-type question's head trains on 80, 250, 1,000 or about 2,000 extra examples, built from the same sources with the same labelling rule, and is tested on the probe items, which no head ever sees. Dashed: Clef Flash and Jev on the same items. Click a line to highlight it.</p></div>
+    <header><div><h2 id="h-curve">The biggest lever: more examples</h2><p class="takeaway"><span class="k">The point</span>Going from 80 to about 2,000 examples per question lifts the small encoder from 76% to 86% on tone, level with Clef and Jev.</p><details class="more"><summary>How to read this</summary><p class="small muted">The comparison above gives each head about 80 examples (a 5-fold split of each set). Here each tone/text-type question's head trains on 80, 250, 1,000 or about 2,000 extra examples, built from the same sources with the same labelling rule, and is tested on the probe items, which no head ever sees. Dashed: Clef Flash and Jev on the same items. Click a line to highlight it.</p></details></div>
       <div class="segmented" id="curveSeg" role="group" aria-label="Input"><button type="button" data-v="text" aria-pressed="true">Text only (one encode for every detector)</button><button type="button" data-v="ask">Question + text</button></div>
     </header>
     <div class="stack">
@@ -295,7 +361,7 @@
   </section>
 
   <section class="section" aria-labelledby="h-space">
-    <header><div><h2 id="h-space">The space</h2><p class="small">Each dot is one item's q vector, flattened from all its dimensions to the two directions where the items differ most. It is a shadow of the real space: separation here means separation there, but overlap here can hide separation in other directions. Click a dot to open it below. Ringed dots have their full vectors exported.</p></div>
+    <header><div><h2 id="h-space">What the encoder sees</h2><p class="takeaway"><span class="k">The point</span>Every text is a point. Flattened to two directions, yes and no texts mostly overlap; the sidecar finds the directions in all 384 (or 2,560) numbers that pull them apart.</p><details class="more"><summary>How to read this</summary><p class="small muted">Each dot is one item's q vector, flattened from all its dimensions to the two directions where the items differ most. It is a shadow of the real space: separation here means separation there, but overlap here can hide separation in other directions. Click a dot to open it below. Ringed dots have their full vectors exported.</p></details></div>
       <div class="row">
         <div class="segmented" id="spaceSeg" role="group" aria-label="Space"><button type="button" data-v="raw" aria-pressed="true">Raw</button><button type="button" data-v="white">Whitened</button></div>
         <div class="segmented" id="colourSeg" role="group" aria-label="Colour by"><button type="button" data-v="truth" aria-pressed="true">True answer</button><button type="button" data-v="right">Right or wrong (learned)</button></div>
@@ -305,19 +371,14 @@
   </section>
 
   <section class="section" aria-labelledby="h-strip">
-    <header><div><h2 id="h-strip">Every item, every readout</h2><p class="small">One dot per item. Position is how far the right answer is ahead of the best wrong answer: right of the dashed line means the readout got it right. Each row is scaled to its own spread, so compare where the dots fall against the line, not the widths. Colour is the true answer.</p></div></header>
+    <header><div><h2 id="h-strip">Every item, every readout</h2><p class="takeaway"><span class="k">The point</span>Dots right of the dashed line are right answers. Compare the learned row with the untrained ones above it.</p><details class="more"><summary>How to read this</summary><p class="small muted">One dot per item. Position is how far the right answer is ahead of the best wrong answer: right of the dashed line means the readout got it right. Each row is scaled to its own spread, so compare where the dots fall against the line, not the widths. Colour is the true answer.</p></details></div></header>
     <div class="card"><div id="strip"></div><div class="legend" id="stLegend"></div>
-      <div class="explain">
-        <div><b>Cosine</b> adds up q × o over every dimension with equal weight (the vectors are unit length). No labels, no training.</div>
-        <div><b>Whitened</b> first evens out the space so no direction dominates (from unlabelled vectors), then cosine.</div>
-        <div><b>Learned</b> gives each dimension its own weight, fitted on 80% of this set and scored on the other 20%. Every item is scored by a fit that never saw it.</div>
-        <div><b>Clef Flash, Jev</b> are the stored answers of the real models on the same items.</div>
-      </div>
     </div>
   </section>
 
   <section class="section" aria-labelledby="h-ang" id="angSec">
-    <header><div><h2 id="h-ang">Asking from several angles</h2><p class="small">One question is one line through the space. Here the same question is asked five ways, each written before any was scored: the original, its opposite, two rephrasings and one adjacent question. The scores are then corrected, combined and checked against each other. Yes/no sets only.</p></div></header>
+    <header><div><h2 id="h-ang">No training at all? Ask five ways</h2><p class="takeaway"><span class="k">The point</span>With no training, asking five ways lifts the big Qwen 4B encoder from 63% to 80% on tone, Clef's level. But it needs a GPU; the trained sidecar gets there on a CPU.</p><details class="more"><summary>How to read this</summary><p class="small muted">One question is one line through the space. Here the same question is asked five ways, each written before any was scored: the original, its opposite, two rephrasings and one adjacent question. The scores are then corrected, combined and checked against each other. Yes/no sets only.</p></details></div></header>
+    <details class="more"><summary>The terms, in plain words</summary>
     <div class="card stack">
       <div class="terms">
         <div><b>Calibration</b>Correcting a model's built-in lean so its scores and percentages mean what they say. The bias step here is <i>contextual calibration</i> (Zhao et al. 2021).</div>
@@ -326,6 +387,7 @@
         <div><b>Learned trust (stacking)</b>A tiny model that weighs each angle by how reliable it has been. Five weights, fitted on 80% of the items and scored on the rest.</div>
       </div>
     </div>
+    </details>
     <div class="two" style="margin-top:10px">
       <div class="card"><h3>Step by step</h3><div class="waterfall" id="wf" style="margin-top:8px"></div><p class="small muted" id="agreeNote" style="margin-top:8px"></p></div>
       <div class="card"><h3>The five angles</h3><div class="table-wrap" style="margin-top:6px"><table class="data" id="angTbl"></table></div></div>
@@ -338,7 +400,7 @@
   </section>
 
   <section class="section" aria-labelledby="h-item">
-    <header><div><h2 id="h-item">One item, dimension by dimension</h2><p class="small">Each grid is one vector, one cell per dimension. The option rows show q × o, cell by cell: the readout's score is the sum of that grid. Blue pushes towards the option, orange against it.</p></div>
+    <header><div><h2 id="h-item">One item, dimension by dimension</h2><p class="takeaway"><span class="k">The point</span>An answer is a sum over every number in the vector: blue cells push towards an option, orange away. Untrained, the right answer often wins by a hair, which is why it flips so easily.</p><details class="more"><summary>How to read this</summary><p class="small muted">Each grid is one vector, one cell per dimension. The option rows show q × o, cell by cell: the readout's score is the sum of that grid. Blue pushes towards the option, orange against it.</p></details></div>
       <div class="row">
         <div class="segmented" id="roSeg" role="group" aria-label="Readout"><button type="button" data-v="cosine" aria-pressed="true">Cosine</button><button type="button" data-v="whitened">Whitened</button><button type="button" data-v="learned">Learned</button></div>
         <div class="segmented" id="sortSeg" role="group" aria-label="Cell order"><button type="button" data-v="0" aria-pressed="true">Natural order</button><button type="button" data-v="1">Largest first</button></div>
@@ -351,7 +413,7 @@
   </section>
 
   <section class="section" aria-labelledby="h-all">
-    <header><div><h2 id="h-all">Across all sets</h2><p class="small">Share of items answered right. Universal is one readout fitted on the other sets only, never on the set it is tested on. Click a row to open that set.</p></div></header>
+    <header><div><h2 id="h-all">Across all sets</h2><p class="takeaway"><span class="k">The point</span>The trained sidecar wins on tone, judging and code. World knowledge is the exception: small vectors score 13–53% where Clef and Jev score 73–100%, so those questions stay with them.</p><details class="more"><summary>How to read this</summary><p class="small muted">Share of items answered right. Universal is one readout fitted on the other sets only, never on the set it is tested on. Click a row to open that set.</p></details></div></header>
     <div class="table-wrap"><table class="data" id="allTbl"></table></div>
   </section>
 </main>
@@ -403,7 +465,7 @@ async function drawDepth() {
     body.push(el("tr", { class: "lvl" }, el("td", { colspan: 7, text: `${li + 1} · ${L}` })));
     for (const r of qs) {
       const c = r.curve[Math.min(DEP.k, r.curve.length - 1)], [cls, label, why] = depthVerdict(r, c);
-      const acc = c.acc ? c.acc.mean : null, gain = acc == null ? "" : `${acc - r.always_no >= 0 ? "+" : ""}${Math.round((acc - r.always_no) * 100)} pts over always "no" (${pc(r.always_no)})`;
+      const acc = c.acc ? c.acc.mean : null, d0 = acc == null ? 0 : Math.round((acc - r.always_no) * 100), gain = acc == null ? "" : `${d0 === 0 ? "same as" : `${Math.abs(d0)} ${Math.abs(d0) === 1 ? "pt" : "pts"} ${d0 > 0 ? "above" : "below"}`} always "no" (${pc(r.always_no)})`;
       body.push(el("tr", {},
         el("td", { class: "q" }, el("b", { text: r.name }), el("span", { text: r.what })),
         el("td", { class: "num" }, pc(r.yes_rate), el("span", { class: "rng", text: `${r.test_yes} of ${r.n_test.toLocaleString()} test windows` })),
@@ -434,7 +496,8 @@ async function trySend() {
   const compare = document.getElementById("tryCompare").checked, backup = document.getElementById("tryBackup").checked;
   const req = { state: text, questions: Object.fromEntries(TRY.lib.map(q => [q.id, { type: "noul", instructions: q.instructions, criteria: q.criteria }])) };
   const btn = document.getElementById("tryGo"); btn.disabled = true; const t0 = performance.now();
-  let res; try { res = await api(`/api/cpu/v1/systemone?${[compare ? "compare=1" : "", backup ? "backup=1" : ""].filter(Boolean).join("&")}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) }); }
+  const bodyStr = JSON.stringify(req), qstr = [compare ? "compare=1" : "", backup ? "backup=1" : ""].filter(Boolean).join("&");
+  let res; try { res = await api(`/api/cpu/v1/systemone${qstr ? "?" + qstr : ""}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr }); }
   catch (e) { btn.disabled = false; document.getElementById("tryOut").replaceChildren(el("p", { class: "small", text: "Error: " + e.message })); return; }
   btn.disabled = false; const wall = performance.now() - t0, g = res.engine, tr = g.trace;
   const keys = Object.keys(res.answers), onCpu = keys.filter(k => tr[k].answered_by === "cpu").length;
@@ -452,14 +515,78 @@ async function trySend() {
   document.getElementById("tryOut").replaceChildren(el("div", { class: "try-big" }, ...big.map(([c, b, sp]) => el("div", { class: c }, el("b", { text: b }), el("span", { text: sp })))),
     el("div", { class: "table-wrap" }, el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, ...["Question", "CPU answer", "Who answered", "Clef (GPU)", ""].map(t => el("th", { text: t })))), el("tbody", {}, ...rows))),
     el("p", { class: "small subtle", text: `Round trip in your browser: ${Math.round(wall)} ms${compare ? ", including the side-by-side Clef calls" : ""}. "Unsure" answers fall inside the band where the CPU cannot hold 97% agreement with Clef; tick Clef backup to send those to Clef.` }));
-  const resp = { answers: res.answers }; const rest = { ...g }; delete rest.trace;
-  document.getElementById("tryJson").replaceChildren(Jev.jsonView({ state: req.state, questions: { [keys[0]]: req.questions[keys[0]], "…": `${keys.length - 1} more questions` } }, "POST /v1/systemone · request (shortened)"), Jev.jsonView(resp, "response · answers"), Jev.jsonView(rest, "engine · timing and memory", { compact: true }));
+  tryProof(req, bodyStr, res, qstr);
   tryHealth();
 }
 function tryInit() {
   document.getElementById("trySamples").replaceChildren(el("span", { class: "small subtle", text: "Samples:" }), ...TRY_SAMPLES.map(t => el("button", { class: "btn ghost", type: "button", text: t.length > 34 ? t.slice(0, 32) + "…" : t, title: t, onclick: () => { document.getElementById("tryText").value = t; trySend(); } })));
   document.getElementById("tryGo").addEventListener("click", trySend);
-  tryHealth().then(ok => ok && trySend());
+  document.getElementById("waysGo").addEventListener("click", waysSend);
+  tryHealth().then(ok => { if (ok) { trySend(); waysDraw().then(() => { waysSend(); waysMeasured(); }); } });
+}
+
+// Ask several ways: every wording of one question in one request to the CPU engine (library groups), next to Clef
+const WAYS = { q: "price", m: null };
+async function waysDraw() {
+  if (!TRY.lib) { try { TRY.lib = (await api("/api/cpu/library")).questions; } catch { return; } }
+  const groups = [...new Set(TRY.lib.filter(q => q.wording > 1).map(q => q.group))];
+  const card = document.getElementById("waysCard"); if (!groups.length) { card.hidden = true; return; } card.hidden = false;
+  if (!groups.includes(WAYS.q)) WAYS.q = groups[0];
+  document.getElementById("waysQ").replaceChildren(...groups.map(g => el("button", { type: "button", "aria-pressed": String(g === WAYS.q), text: TRY.lib.find(q => q.id === g).name, onclick: () => { WAYS.q = g; waysDraw(); waysMeasured(); } })));
+}
+async function waysSend() {
+  const text = document.getElementById("tryText").value.trim(); if (!text) return;
+  const ws = TRY.lib.filter(q => q.group === WAYS.q).sort((a, b) => a.wording - b.wording), own = document.getElementById("waysOwn").value.trim();
+  const questions = Object.fromEntries(ws.map(q => [q.id, { type: "noul", instructions: q.instructions, criteria: q.criteria }]));
+  if (own) questions.your_wording = { type: "noul", instructions: own, criteria: { true: "Yes: " + own, false: "No: " + own } };
+  const btn = document.getElementById("waysGo"); btn.disabled = true;
+  let res; try { res = await api("/api/cpu/v1/systemone?compare=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: text, questions }) }); }
+  catch (e) { btn.disabled = false; document.getElementById("waysOut").replaceChildren(el("p", { class: "small", text: "Error: " + e.message })); return; }
+  btn.disabled = false; const g = res.engine, tr = g.trace, un = g.unanswered || {};
+  const yn = p => p == null ? el("span", { class: "subtle", text: "–" }) : el("span", { class: "yn " + (p > 0.5 ? "y" : "n"), text: `${p > 0.5 ? "yes" : "no"} ${p.toFixed(2)}` });
+  const rows = Object.keys(questions).map(k => { const q = ws.find(x => x.id === k), a = res.answers[k] ? res.answers[k].noul : null, c = tr[k] ? tr[k].clef_noul : null;
+    return el("tr", {}, el("td", { class: "num", text: q ? String(q.wording) : "yours" }), el("td", { text: questions[k].instructions }), el("td", { class: "num" }, a == null ? el("span", { class: "small", style: "color:var(--bad)", text: "not answered: not trained" }) : yn(a)),
+      el("td", { class: "num" }, yn(c)), el("td", { text: a == null || c == null ? "" : (a > 0.5) === (c > 0.5) ? "✓" : "✗" })); });
+  const ids = ws.map(q => q.id), cpuAvg = ids.reduce((t, k) => t + res.answers[k].noul, 0) / ids.length, clefAvg = ids.reduce((t, k) => t + (tr[k].clef_noul ?? 0), 0) / ids.length;
+  rows.push(el("tr", { style: "font-weight:700" }, el("td", {}), el("td", { text: `Average of the ${ids.length} trained wordings` }), el("td", { class: "num" }, yn(cpuAvg)), el("td", { class: "num" }, yn(clefAvg)), el("td", { text: (cpuAvg > 0.5) === (clefAvg > 0.5) ? "✓" : "✗" })));
+  document.getElementById("waysOut").replaceChildren(
+    el("div", { class: "try-big" }, el("div", { class: "g" }, el("b", { text: `${g.encode_ms} ms` }), el("span", { text: "reading the text once, on the CPU" })), el("div", { class: "g" }, el("b", { text: `${g.classifiers_ms < 0.1 ? "<0.1" : g.classifiers_ms} ms` }), el("span", { text: `answering all ${Object.keys(res.answers).length} wordings` })),
+      el("div", {}, el("b", { text: `${Object.keys(questions).length}` }), el("span", { text: "questions in one request" }))),
+    el("div", { class: "table-wrap" }, el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, ...["#", "Wording sent", "CPU", "Clef (GPU)", ""].map(t => el("th", { text: t })))), el("tbody", {}, ...rows))),
+    ...(Object.keys(un).length ? [el("p", { class: "small", text: "Not answered: " + Object.entries(un).map(([k, v]) => `${k} (${v})`).join("; ") + ". The other answers still came back." })] : []));
+}
+async function waysMeasured() {
+  const box = document.getElementById("waysMeasured");
+  if (!WAYS.m) { try { WAYS.m = await api("/api/latent/intake?wordings=1"); } catch { box.replaceChildren(); return; } }
+  const q = WAYS.m.questions.find(x => x.id === WAYS.q); if (!q) { box.replaceChildren(); return; }
+  const pc = v => fmt.pct(v, 0), sys = ["one wording (library)", "best other single wording", "average of 5 wordings", "one classifier on Clef's 5-way consensus"];
+  const labels = { "one wording (library)": "One wording (the library one)", "best other single wording": "Best of the other 4 wordings, alone", "average of 5 wordings": "Average of 5 wordings", "one classifier on Clef's 5-way consensus": "One classifier taught Clef's 5-way consensus" };
+  const tbl = el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, el("th", { text: "Measured on " + q.n_test + " unseen windows" }), ...Object.keys(q.results).map(r => el("th", { text: "vs " + (r === "library wording" ? "Clef, library wording" : "Clef asked 5 ways") + ": yes-F1 · on CPU" })))),
+    el("tbody", {}, ...sys.map(sn => el("tr", {}, el("td", { text: labels[sn] }), ...Object.values(q.results).map(r => el("td", { class: "num", text: `${r[sn].yes_f1.toFixed(2)} · ${pc(r[sn].cpu_share)}` }))))));
+  box.replaceChildren(el("h3", { text: `Measured: does asking 5 ways help? (${q.name})` }), tbl,
+    el("p", { class: "small subtle", text: `Clef itself gives the same yes/no across two of these wordings ${pc(q.clef_wordings_agree)} of the time. Trained on ${q.n_train} windows per wording; yes-F1 is how well the CPU's yes answers line up with Clef's (1 = perfect); "on CPU" is the share it answers itself with Clef as backup while keeping 97% agreement.` }));
+}
+
+// The request and response exactly as sent and received, with the engine's receipt checked against what the page sent.
+async function tryProof(req, bodyStr, res, qstr) {
+  const sent = new TextEncoder().encode(bodyStr), rc = res.engine.received || {}, keys = Object.keys(req.questions);
+  let shaSent = null; try { if (crypto.subtle) shaSent = [...new Uint8Array(await crypto.subtle.digest("SHA-256", sent))].map(b => b.toString(16).padStart(2, "0")).join(""); } catch {}
+  const same = rc.bytes === sent.length && rc.questions === keys.length && JSON.stringify(rc.question_keys) === JSON.stringify(keys) && (!shaSent || shaSent === rc.sha256);
+  const url = `${location.origin}/api/cpu/v1/systemone${qstr ? "?" + qstr : ""}`;
+  const curl = `curl -s -X POST '${url}' -H 'Content-Type: application/json' --data-binary @- <<'JSON'\n${bodyStr}\nJSON`;
+  const qRow = (k) => { const q = req.questions[k], a = res.answers[k];
+    return el("details", { class: "qrow" }, el("summary", {}, el("code", { text: k }), " · ", q.type, " · ", el("span", { class: "subtle", text: q.instructions }), a ? el("b", { text: ` → ${a.noul.toFixed(2)}` }) : el("b", { style: "color:var(--bad)", text: " → not answered" })),
+      Jev.jsonView({ [k]: q }, "question as sent", { compact: true }), Jev.jsonView({ [k]: a ?? null }, "answer as received", { compact: true })); };
+  document.getElementById("tryJson").replaceChildren(
+    el("div", { class: "chk" }, el("span", { class: same ? "ok" : "bad", text: same ? "✓" : "✗" }),
+      el("span", {}, same ? `The engine received exactly what this page sent: ${rc.questions} questions, ${rc.bytes.toLocaleString()} bytes` : `Mismatch: page sent ${keys.length} questions, ${sent.length} bytes; engine received ${rc.questions}, ${rc.bytes}`,
+        el("br"), el("span", { class: "small subtle", text: `SHA-256 ${(rc.sha256 || "").slice(0, 16)}…${shaSent ? " (checked in your browser too)" : " (your browser cannot hash on plain http; bytes, count and keys checked)"} · request #${rc.request_no} to this engine` }))),
+    el("div", { class: "row" }, el("button", { class: "btn", type: "button", text: "Copy request JSON", onclick: () => Jev.copy(bodyStr) }), el("button", { class: "btn", type: "button", text: "Copy as curl", onclick: () => Jev.copy(curl) }),
+      el("span", { class: "small subtle", text: "run it yourself: same answers come back" })),
+    el("h3", { text: `Request · exactly as sent · ${keys.length} questions` }), el("div", { class: "small" }, el("b", { text: "state: " }), req.state),
+    el("div", { class: "stack qlist" }, ...keys.map(qRow)),
+    el("details", {}, el("summary", { text: "Full request JSON" }), Jev.jsonView(req, "POST /v1/systemone · body")),
+    el("details", {}, el("summary", { text: "Full response JSON (answers, timing, memory, per-question trace, receipt)" }), Jev.jsonView(res, "response")));
 }
 async function boot() {
   tryInit(); drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
@@ -855,7 +982,7 @@ async function drawIntakeDetail() {
     el("ul", { class: "small" }, r.reasons.map(x => el("li", { text: x }))),
     el("div", { class: "two" },
       el("div", {}, el("p", { class: "small muted", text: "Share of held-out windows Clef still answers, against the number of Clef-labelled windows used for training" }), svg, el("p", { class: "small subtle", text: "Filled dot: quality bar met at that size. Dashed line: 25% (Local tier)." })),
-      el("div", { class: "stack" }, el("h3", { text: "One request, as a TypeSafe client sends it" }), first ? Jev.jsonView(JSON.parse(reqFor(first)), "POST /v1/systemone · request") : null,
+      el("div", { class: "stack" }, el("h3", { text: "One request, as a TypeSafe client sends it" }), first ? reqView(JSON.parse(reqFor(first))) : null,
         first ? el("p", { class: "small", text: `Answered ${first.route === "asks Clef" ? "by Clef (the local model was not sure: " + first.local_p + ")" : "locally on CPU"}: {"noul": ${first.route === "asks Clef" ? first.clef_p : first.local_p}}. Clef's own answer: ${first.clef_p}. Gate: local "no" below ${r.gate.no_below?.toFixed(2)}, local "yes" above ${r.gate.yes_above?.toFixed(2)}, Clef in between.` }) : null)),
     el("h3", { text: "Held-out windows and who answered them" }),
     el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ...["Answered by", "Window", "Local P(yes)", "Clef P(yes)", "Matches Clef"].map((h, i) => el("th", { class: i > 1 ? "num" : "", text: h })))),
@@ -893,8 +1020,8 @@ const EXAMPLE_STORY = {
   300: "The hard case below is now passed to Clef instead of being answered wrongly.",
   800: "(With all 3,021 training texts, Clef answers only 9% of requests for this question.)" };
 // The step's numbers in plain terms: how right, how fast, where it runs, whether it is still moving, whether it is ready.
-// Speed is an estimate from measured parts: e5-small on this CPU about 12 ms per text, Clef on the GPU about 46 ms.
-const CPU_MS = 12, CLEF_MS = 46;
+// Speed is an estimate from measured parts: e5-small (ONNX int8) on this CPU about 4 ms per text, Clef on the GPU about 46 ms.
+const CPU_MS = 4, CLEF_MS = 46;
 function humanTiles(d, step, running) {
   const m = step.metrics, share = m.clef_share ?? 1, local = 1 - share, i = d.steps.indexOf(step), prev = i > 0 ? d.steps[i - 1].metrics : null;
   const allClef = share >= 0.999, bar = d.bar || { agree: 0.97, yes_f1: 0.9 };
@@ -910,6 +1037,15 @@ function humanTiles(d, step, running) {
       ready ? (moved > 0.05 ? `CPU share moved ${Math.round(moved * 100)} points since the last step` : "numbers have settled") :
       allClef ? "too few examples; Clef keeps answering" : `needs ${Math.round(bar.agree * 100)}% matching Clef and most yes cases caught`],
   ];
+}
+// A TypeSafe request in plain terms first (text, then each question), with the exact JSON one click away.
+function reqView(req) {
+  const qs = Object.entries(req.questions);
+  return el("div", { class: "stack" },
+    el("table", { class: "mini" }, el("tbody", {},
+      el("tr", {}, el("td", { text: "Text" }), el("td", { style: "text-align:left;font-family:inherit", text: "“" + req.state + "”" })),
+      ...qs.map(([k, q]) => el("tr", {}, el("td", {}, "Question ", el("code", { text: k })), el("td", { style: "text-align:left;font-family:inherit" }, el("b", { text: q.type === "noul" ? "yes/no · " : q.type + " · " }), q.instructions))))),
+    el("details", { class: "more" }, el("summary", { text: "The exact POST /v1/systemone JSON" }), Jev.jsonView(req, "request")));
 }
 async function drawJourney() {
   if (!JR.d) { try { JR.d = await api("/api/latent/intake?journey=pack-price"); } catch { document.getElementById("jrSec").hidden = true; return; } }
@@ -928,8 +1064,8 @@ async function drawJourney() {
   const firstText = (d.featured && d.featured.clear && d.featured.clear.text) || (d.spec.example) || "";
   const req = { state: firstText, questions: { [qid]: { type: "noul", instructions: d.spec.instructions, criteria: d.spec.criteria } } };
   const story = document.getElementById("jrStory");
-  if (cur === "ask") story.replaceChildren(el("p", {}, el("b", { text: "A client sends a TypeSafe request. " }), "One text, one typed yes/no question. Today Clef answers it on the GPU (about 46 ms). The goal: answer it on the CPU in about 12 ms, and ask Clef only when the local model is unsure."),
-    Jev.jsonView(req, "POST /v1/systemone · request"));
+  if (cur === "ask") story.replaceChildren(el("p", {}, el("b", { text: "A client sends a TypeSafe request. " }), "One text, one typed yes/no question. Today Clef answers it on the GPU (about 46 ms). The goal: answer it on the CPU in about 4 ms, and ask Clef only when the local model is unsure."),
+    reqView(req));
   else if (cur === "check") story.replaceChildren(el("p", {}, el("b", { text: "Check the question on the way in. " }), "Before any training, the question must be typed, recognised by the teacher, present in the texts, and answered consistently."),
     el("div", { class: "stack" }, d.validate.map(c => el("div", { class: "chk" }, el("span", { class: c.ok ? "ok" : "bad", text: c.ok ? "✓" : "✗" }), el("span", {}, c.check, el("br"), el("span", { class: "subtle small", text: c.value }))))));
   else {
@@ -971,7 +1107,7 @@ async function drawJourney() {
   document.getElementById("jrFeat").replaceChildren(el("h3", { text: "Requests, and the response at this step" }), ...(!feats.length ? [el("p", { class: "small subtle", text: running ? "Example requests are chosen when the run finishes." : "No examples available." })] :
     feats.map(([k, f]) => { const a = step && step.featured ? step.featured[k] : null, clefYes = f.clef_p > 0.5;
       const resp = !a ? { answers: { [qid]: { type: "noul", noul: f.clef_p } }, answered_by: "clef (GPU)" } : { answers: { [qid]: { type: "noul", noul: a.route === "clef" ? f.clef_p : a.local_p } }, answered_by: a.route === "clef" ? "clef (GPU backup)" : "local (CPU)" };
-      return el("div", { class: "feat" }, el("div", { class: "who", text: `${names[k][0]} · ${names[k][1]}` }), el("div", { class: "txt", text: "“" + f.text + "”" }), Jev.jsonView(resp, "response", { compact: true }),
+      return el("div", { class: "feat" }, el("div", { class: "who", text: `${names[k][0]} · ${names[k][1]}` }), el("div", { class: "txt", text: "“" + f.text + "”" }), el("details", { class: "more" }, el("summary", { text: "The response JSON" }), Jev.jsonView(resp, "response", { compact: true })),
         el("div", { class: "ans", style: a && a.route === "local" && !a.agrees ? "color:var(--bad)" : "", text: !a ? `No local model yet; Clef (GPU) answers: ${f.clef_p}` : a.route === "clef" ? `Passed to Clef on the GPU: the CPU model was unsure (${a.local_p}); Clef said ${f.clef_p}` : a.agrees ? `✓ Answered on the CPU, same answer as Clef (Clef said ${f.clef_p} when it labelled this text)` : `✗ Answered on the CPU, but Clef says ${clefYes ? "yes" : "no"} (${f.clef_p})` })); })));
 }
 document.getElementById("jrPrev").addEventListener("click", () => { JR.i = Math.max(0, JR.i - 1); drawJourney(); });

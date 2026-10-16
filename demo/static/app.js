@@ -33,7 +33,13 @@
     const a = el("a", { href: URL.createObjectURL(new Blob([text], { type })), download: name }); document.body.append(a); a.click(); a.remove();
   }
   const csv = (rows) => rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-  const copy = async (text) => { try { await navigator.clipboard.writeText(text); toast("Copied to clipboard"); } catch { toast("Copy failed. Select the text and copy manually."); } };
+  const copy = async (text) => {
+    try { await navigator.clipboard.writeText(text); toast("Copied to clipboard"); return; } catch {}
+    // plain-http pages (e.g. reached by IP address) have no clipboard API: fall back to a hidden textarea
+    const ta = el("textarea", { style: "position:fixed;top:-1000px;opacity:0" }); ta.value = text; document.body.append(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch {}
+    ta.remove(); toast(ok ? "Copied to clipboard" : "Copy failed. Select the text and copy manually.");
+  };
 
   /* Inline notices: loading skeleton, empty and error states with a retry. */
   const skeleton = (rows = 4) => el("div", { class: "stack", "aria-hidden": "true" }, Array.from({ length: rows }, () => el("div", { class: "skeleton", style: "height:40px" })));
