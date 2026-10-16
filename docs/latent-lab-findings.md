@@ -127,8 +127,9 @@ With few examples, bigger LLM-based embedders win clearly. With ~2,000 examples,
 
 - **Zero-shot cosine on small models**: near chance (50 to 55% on tone). Cosine measures "about the same thing",
   not "true for this text"; negation and question-answering are lost.
-- **World knowledge** (MMLU): no embedding model, no readout, gets close (best 39% vs Clef 94%). The knowledge is not
-  in a single pooled vector.
+- **World knowledge** (MMLU): no embedding readout gets close. Correction: the "best 39%" came from a per-set head that
+  learned option-text habits from ~80 items and scored below plain cosine; the fair numbers are cosine 47%, whitened 50%,
+  and a general probe on Qwen 4B layer 24 at 74.5% (Clef 94%).
 - **Reading-and-judging tasks** on small models: 38 to 52% with ~80 examples, versus Clef 66%. Only Qwen 4B (71%)
   reaches the decision models. Manipulation in dialogue stays near 55 to 66% for every model, Clef and Jev included.
 - **One general head for new questions** (trained on other sets, applied to an unseen one): worse than cosine with

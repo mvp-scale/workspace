@@ -66,6 +66,51 @@
   .terms div { font-size: 12.5px; color: var(--text-2); } .terms b { color: var(--text); display: block; font-size: 13px; }
   .corr td { text-align: center; font-family: var(--mono); font-size: 12px; padding: 4px 8px; }
   @media (max-width: 900px) { .wf { grid-template-columns: 1fr; gap: 3px; } }
+  .areas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+  .area { display: grid; gap: 8px; align-content: start; }
+  .area h3 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .abar { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; align-items: center; font-size: 12.5px; }
+  .abar .lab { color: var(--text-2); } .abar .tr { position: relative; height: 10px; background: var(--surface-2); border-radius: 0 3px 3px 0; margin-top: 3px; }
+  .abar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 3px 3px 0; background: var(--c1); } .abar .fill.ref { background: var(--text-3); } .abar .fill.alt { background: color-mix(in srgb, var(--c1) 45%, transparent); }
+  .abar .v { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  .area .use { font-size: 12.5px; } .area .use b { color: var(--text); } .area .note { font-size: 12px; color: var(--text-3); }
+  .chip-helps { color: var(--good); background: var(--good-soft); border-color: transparent; } .chip-modest { color: var(--warn); background: var(--warn-soft); border-color: transparent; } .chip-no { color: var(--bad); background: var(--bad-soft); border-color: transparent; }
+  .intake-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr) auto auto; gap: 10px; align-items: end; }
+  .tier { font-weight: 600; font-size: 12px; padding: 2px 8px; border-radius: 99px; display: inline-block; }
+  .tier-Local { color: var(--good); background: var(--good-soft); } .tier-Hybrid { color: var(--warn); background: var(--warn-soft); } .tier-Clef { color: var(--bad); background: var(--bad-soft); }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+  .rules div { font-size: 12.5px; color: var(--text-2); } .rules b { color: var(--text); }
+  pre.req { font-family: var(--mono); font-size: 12px; background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; overflow-x: auto; margin: 0; white-space: pre-wrap; }
+  @media (max-width: 900px) { .intake-form { grid-template-columns: 1fr; } }
+  .jr-steps { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .jr-steps button { font: inherit; font-size: 12.5px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); border-radius: 99px; padding: 3px 11px; cursor: pointer; }
+  .jr-steps button[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .jr-steps button.done { color: var(--text); border-color: var(--accent); }
+  .jr-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 14px; align-items: start; }
+  .jr-story { font-size: 15px; line-height: 1.55; } .jr-story b { color: var(--text); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+  .tiles .kpi { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; background: var(--surface); }
+  .feat { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; display: grid; gap: 4px; background: var(--surface); }
+  .feat .who { font-size: 12px; font-weight: 600; } .feat .txt { font-size: 13px; color: var(--text-2); }
+  .feat .ans { font-family: var(--mono); font-size: 13px; }
+  .feat .txt { font-size: 14px; }
+  .tiers { display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1fr); gap: 6px; align-items: stretch; }
+  .tiers .arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-3); }
+  .tier { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+  .tier .bn { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); } .tier h3 { margin: 0; font-size: 15px; }
+  .tier .big { font-size: 21px; font-weight: 700; margin: 2px 0 6px; }
+  .tier .r { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--text-2); border-top: 1px solid var(--border); padding-top: 4px; } .tier .r b { color: var(--text); font-weight: 600; text-align: right; }
+  .tier.win { border-color: var(--good); } .tier.win .big { color: var(--good); }
+  @media (max-width: 760px) { .tiers { grid-template-columns: 1fr; } .tiers .arrow { transform: rotate(90deg); } }
+  .story { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 8px; }
+  .beat { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 13px; color: var(--text-2); }
+  .beat .bn { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
+  .beat .big { font-size: 19px; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .beat.win { border-color: var(--good); } .beat.win .big { color: var(--good); }
+  .beat.gap { border-color: var(--warn, var(--bad)); } .beat.gap .big { color: var(--warn, var(--bad)); }
+  .pitch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; } .pitch-grid div { font-size: 13.5px; color: var(--text-2); border-left: 3px solid var(--accent); padding-left: 10px; } .pitch-grid b { display: block; color: var(--text); font-size: 14px; margin-bottom: 2px; }
+  .chk { display: grid; grid-template-columns: 22px 1fr; gap: 6px; font-size: 14px; } .chk .ok { color: var(--good); font-weight: 700; } .chk .bad { color: var(--bad); font-weight: 700; }
+  @media (max-width: 900px) { .jr-grid { grid-template-columns: 1fr; } }
   @media (max-width: 900px) { .lane, .two, .diffs { grid-template-columns: 1fr; } .grow { grid-template-columns: 1fr; gap: 4px; } }
 </style>
 </head>
@@ -73,16 +118,47 @@
 <main class="page" id="main">
   <div class="page-head">
     <div>
-      <h1>Latent lab</h1>
-      <p>Watch a typed question become a vector, then watch different readouts pull an answer out of it. Pick an embedding model and a labelled set at the top; every view below follows them. Every dot and every cell is a real measurement on our published labelled sets, next to Clef Flash and Jev on the same items.</p>
+      <h1>TypeSafe answers without a GPU</h1>
+      <p>The same TypeSafe question, three ways to answer it: a hosted API, your GPU, your CPU.</p>
     </div>
   </div>
+  <div class="pitch card stack" style="margin-bottom:14px">
+    <div class="tiers">
+      <div class="tier"><span class="bn">1 · Hosted API</span><h3>Jev</h3><div class="big">281 ms · pay per call</div><div class="r"><span>Time per answer</span><b>281 ms</b></div><div class="r"><span>Memory on your side</span><b>none</b></div><div class="r"><span>Cost</span><b>$16 per million answers</b></div><div class="r"><span>Your text</span><b>leaves your network</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>86.5%</b></div></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="tier"><span class="bn">2 · Your GPU</span><h3>Clef Flash</h3><div class="big">46 ms · 9.7 GB VRAM</div><div class="r"><span>Time per answer</span><b>46 ms</b></div><div class="r"><span>Memory</span><b>9.7 GB of GPU memory</b></div><div class="r"><span>Cost</span><b>a GPU; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>84.4%</b></div></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="tier win"><span class="bn">3 · Your CPU</span><h3>Local engine</h3><div class="big">12 ms · 750 MB RAM</div><div class="r"><span>Time per answer</span><b>12 ms</b></div><div class="r"><span>Memory</span><b>750 MB RAM, no GPU</b></div><div class="r"><span>Cost</span><b>any server; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>only ones it learned (1.5 KB each)</b></div><div class="r"><span>Tone, human labels</span><b>83.2%</b></div></div>
+    </div>
+    <p class="small"><b>How we get from 2 to 3:</b> Clef teaches the CPU engine once per question (about a minute on the GPU), then steps aside. <b>Not there yet:</b> on the price question below, the CPU alone gives Clef's answer 89% of the time (always saying "no" would get 87%); with Clef as a backup for the unsure 11%, 96.4%.</p>
+    <p class="small muted">Measured here: Jev median of 15,479 hosted calls at the public tariff; Clef Flash Q4 on the RTX 5090; local engine = e5-small encoder plus one classifier per question on the i9 CPU. Tone accuracy: the same items from 5 published sets with human labels; the local engine was trained on about 2,000 examples per question.</p>
+  </div>
+  <section class="section" style="margin-top:12px" aria-labelledby="h-jr" id="jrSec">
+    <header><div><h2 id="h-jr">Walkthrough: moving a TypeSafe question off the GPU</h2><p class="small" id="jrIntro">A real run, precomputed so it is instant: one question ("the speaker mentions a price, cost or budget"), 4,322 conversation windows that Clef answered, the e5-small encoder and one small classifier. Step through it, or switch to Your data and watch it happen live on your own texts.</p></div>
+      <div class="row"><div class="segmented" id="jrMode" role="group" aria-label="Source"><button type="button" data-v="example" aria-pressed="true">Worked example</button><button type="button" data-v="live">Your data (live)</button></div><button class="btn" type="button" id="jrPrev">Back</button><button class="btn primary" type="button" id="jrNext">Next</button></div></header>
+    <div class="card stack" id="jrLive" hidden>
+      <p class="small muted">Paste your own conversation lines (one per line), upload a .txt / .csv / .jsonl file, or load a sample. Clef (local GPU) labels them with your question while you watch; each step below appears as soon as it is measured. 60–2,000 lines; 30% are held out to measure the result.</p>
+      <div class="intake-form"><div class="field"><label for="jlName">Name</label><input type="text" id="jlName" maxlength="80" value="Mentions money"></div>
+        <div class="field"><label for="jlWhat">The speaker… (what to detect)</label><input type="text" id="jlWhat" maxlength="300" value="the speaker mentions money, a price, a payment or a cost"></div>
+        <div class="field"><label for="jlEx">Example</label><input type="text" id="jlEx" maxlength="300" value="That will cost you two hundred dollars."></div><div></div><div></div></div>
+      <div class="field"><label for="jlTexts">Your texts <span class="subtle" id="jlCount"></span></label><textarea id="jlTexts" rows="7" placeholder="One conversation line or window per line"></textarea></div>
+      <div class="row"><input type="file" id="jlFile" accept=".txt,.csv,.jsonl,.json"><button class="btn" type="button" id="jlSample">Load sample: 200 film and TV dialogues</button><span class="spacer"></span><button class="btn primary" type="button" id="jlRun">Run live</button><button class="btn" type="button" id="jlCancel" hidden>Cancel</button></div>
+      <p class="small" id="jlStatus"></p>
+    </div>
+    <div class="jr-steps" id="jrSteps"></div>
+    <div class="jr-grid" style="margin-top:10px">
+      <div class="card stack"><div class="jr-story" id="jrStory"></div><div class="tiles" id="jrTiles"></div><p class="small muted" id="jrScope" hidden><b>Stays in its lane.</b> The local model answers only the questions it was trained on, and only for texts like the ones it learned from (here: conversation lines). A new question needs its own short training run (Clef labels a few hundred texts, about a minute). If the texts change kind, it is re-checked against Clef first. Clef itself needs no training and answers any question.</p><div class="stack" id="jrFeat"></div></div>
+      <div class="card stack" style="position:sticky;top:76px"><div id="jrMap"></div><div class="legend" id="jrLegend"></div><div id="jrChart"></div></div>
+    </div>
+  </section>
 
+  <h2 style="margin-top:22px">Lab: inside the embeddings</h2><p class="small muted">The research behind the walkthrough. Pick an embedding model and a labelled set; every view below follows them.</p>
   <div class="bar-ctl">
     <div class="field"><label for="model">Embedding model</label><select id="model"></select></div>
     <div class="field"><label for="set">Labelled set</label><select id="set"></select></div>
     <div class="small muted setinfo" id="setinfo"></div>
   </div>
+
 
   <section class="section" style="margin-top:12px" aria-labelledby="h-model">
     <div class="card stack">
@@ -91,6 +167,35 @@
       <p class="small muted" id="modelText"></p>
       <p class="small muted"><b>This page runs no model.</b> It reads vectors saved earlier and draws them. The readouts (cosine, bias correction, whitening, learned weights, angle combining) are plain arithmetic on the CPU in milliseconds. Only making the vectors needs a model, and the speeds below are what that costs.</p>
     </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-holds" id="holdsSec">
+    <header><div><h2 id="h-holds">What holds up</h2><p class="small">The answer so far, by area: the best small recipe measured on the same test items as Clef Flash and Jev, what to run it on, and how fast. Detail and every idea tried are in the table below and in docs/latent-lab-playbook.md.</p></div></header>
+    <div class="areas" id="areas"></div>
+    <div class="table-wrap" style="margin-top:10px"><table class="data" id="ideasTbl"></table></div>
+    <p class="small subtle" id="verdictSrc" style="margin-top:6px"></p>
+  </section>
+
+  <section class="section" aria-labelledby="h-intake" id="intakeSec">
+    <header><div><h2 id="h-intake">Intake: can this question run locally?</h2><p class="small">Enter a yes/no question the way you would send it to a TypeSafe model. Clef (local GPU, no hosted calls) labels real conversation windows with it (half random, half the closest to the question); a logistic head on the frozen e5-small vector learns from most of them; a confidence gate set on those decides which new windows the local model answers and which go to Clef; windows from separate dialogues measure the result. Quick check: 300 windows, about 20 seconds, provisional. Full: 1,300 windows, 1–3 minutes.</p></div></header>
+    <div class="card stack">
+      <div class="rules">
+        <div><b>Quality bar</b>The cascade (local + Clef for the rest) must keep at least 97% agreement with Clef and a yes-class F1 of at least 0.90 on held-out windows (a small tolerance for test noise).</div>
+        <div><b class="tier tier-Local">Local</b> Bar met and Clef answers at most 25% of windows.</div>
+        <div><b class="tier tier-Hybrid">Hybrid</b> Bar met and Clef answers 25–50%.</div>
+        <div><b class="tier tier-Clef">Clef</b> Bar missed, Clef needed for more than 50%, or fewer than 30 positive examples.</div>
+      </div>
+      <form class="intake-form" id="intakeForm">
+        <div class="field"><label for="inName">Name</label><input type="text" id="inName" maxlength="80" placeholder="Mentions a refund"></div>
+        <div class="field"><label for="inWhat">The speaker… (what to detect)</label><input type="text" id="inWhat" maxlength="300" placeholder="the speaker asks for or mentions a refund"></div>
+        <div class="field"><label for="inEx">Example (optional)</label><input type="text" id="inEx" maxlength="300" placeholder="I'd like my money back for this order."></div>
+        <div class="field"><label for="inMode">Depth</label><select id="inMode"><option value="quick">Quick check · 300 calls · ~20 s</option><option value="full">Full · 1,300 calls · 1–3 min</option></select></div>
+        <div class="row" style="gap:6px"><button class="btn primary" type="submit" id="inGo">Measure</button><button class="btn" type="button" id="inCancel" hidden>Cancel</button></div>
+      </form>
+      <p class="small muted" id="inStatus"></p>
+    </div>
+    <div class="table-wrap" style="margin-top:10px"><table class="data" id="intakeTbl"></table></div>
+    <div class="card stack" id="intakeDetail" style="margin-top:10px" hidden></div>
   </section>
 
   <section class="section" aria-labelledby="h-how">
@@ -238,9 +343,10 @@ const shorten = (s) => s;
 const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 1000) / 1000; };
 
 async function boot() {
+  drawJourney();  // the story comes first; it does not wait for the lab data below
   let res; try { res = await api("/api/latent"); }
   catch (e) { document.getElementById("main").append(Jev.empty("No export yet", "Run probes/embed_readouts.py or probes/embed_sweep.py, then probes/latent_export.py, and reload.")); return; }
-  Object.assign(S, { index: res.index, models: res.models, model: res.model, sweep: res.sweep, curve: res.curve || [] });
+  Object.assign(S, { index: res.index, models: res.models, model: res.model, sweep: res.sweep, curve: res.curve || [], verdicts: res.verdicts });
   const sel = document.getElementById("set"), groups = {};
   for (const m of S.index.sets) (groups[m.group] ||= []).push(m);
   for (const g of ["Tone and text type", "Reading and judging", "Code security", "World knowledge"]) if (groups[g])
@@ -258,7 +364,7 @@ async function boot() {
   seg("grpSeg", v => { S.grp = v; drawCmp(); });
   seg("curveSeg", v => { S.curveMode = v; drawCurve(); });
   if (wantModel && S.models.includes(wantModel)) await setModel(wantModel, true); else { ms.value = S.model; drawAll(); drawModel(); await load(sel.value); }
-  drawCmp(); drawCurve();
+  drawCmp(); drawCurve(); drawHolds(); drawIntake();
   new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
 }
@@ -562,6 +668,228 @@ function drawCurve() {
     el("tbody", {}, sets.map(s => el("tr", {}, el("td", { text: nm[s] || s }), ...Object.values(c.sets[s][S.curveMode]).map(r => cell(r, refOf[s].clef)),
       el("td", { class: "num", text: fmt.pct(refOf[s].clef, 0) }), el("td", { class: "num", text: fmt.pct(refOf[s].jev, 0) })))));
 }
+
+/* --- what holds up --- */
+function drawHolds() {
+  const V = S.verdicts, sec = document.getElementById("holdsSec");
+  if (!V) { sec.hidden = true; return; }
+  const chip = v => el("span", { class: "badge " + (v === "no" ? "chip-no" : v.startsWith("beats") || v === "helps" ? "chip-helps" : "chip-modest"),
+    text: { beats: "beats Clef and Jev", helps: "helps", modest: "modest", no: "stays with Clef / Jev" }[v] || v });
+  const bar = (label, v, cls) => el("div", { class: "abar" }, el("div", {}, el("div", { class: "lab", text: label }), el("div", { class: "tr" }, el("div", { class: "fill " + (cls || ""), style: `width:${v * 100}%` }))), el("div", { class: "v", text: fmt.pct(v, 0) }));
+  document.getElementById("areas").replaceChildren(...V.areas.map(a => el("div", { class: "card area" },
+    el("h3", {}, a.area, chip(a.verdict)),
+    bar(a.best.label, a.best.acc), ...a.alt.map(x => bar(x.label, x.acc, "alt")),
+    bar("Clef Flash (zero-shot)", a.clef, "ref"), bar("Jev (zero-shot)", a.jev, "ref"),
+    el("div", { class: "use" }, el("b", { text: "Use: " }), a.use + (a.speed ? ` · ${a.speed}` : "")),
+    el("div", { class: "note", text: a.note }))));
+  document.getElementById("ideasTbl").replaceChildren(
+    el("thead", {}, el("tr", {}, el("th", { text: "Idea" }), el("th", { text: "Verdict" }), el("th", { text: "Measured" }))),
+    el("tbody", {}, V.ideas.map(([idea, v, m]) => el("tr", {}, el("td", { text: idea }), el("td", {}, el("span", { class: "badge " + ({ helps: "chip-helps", modest: "chip-modest", no: "chip-no" }[v]), text: v === "no" ? "no gain" : v })), el("td", { style: "white-space:normal", text: m })))));
+  document.getElementById("verdictSrc").textContent = `Updated ${V.updated}. Sources: ${V.source}.`;
+}
+
+/* --- intake --- */
+const INT = { sel: null, timer: null };
+async function drawIntake() {
+  let r; try { r = await api("/api/latent/intake"); } catch { document.getElementById("intakeSec").hidden = true; return; }
+  const st = document.getElementById("inStatus"), go = document.getElementById("inGo");
+  go.disabled = !!r.running; document.getElementById("inCancel").hidden = !r.running;
+  const run = r.results.find(x => x.id === r.running);
+  st.textContent = r.running ? `Measuring "${run ? run.name : r.running}": ${run && run.status ? run.status : "starting"}…` : "";
+  const rows = [...r.results].sort((a, b) => (a.source === "intake") - (b.source === "intake") || (a.clef_share ?? 2) - (b.clef_share ?? 2));
+  const t = document.getElementById("intakeTbl");
+  t.replaceChildren(el("thead", {}, el("tr", {}, ...["Question", "Tier", "Clef answers", "Agreement", "Yes-F1", "Positives", "Clef unsure", "Yes-rate", "Source"].map((h, i) => el("th", { class: i > 1 && i < 8 ? "num" : "", text: h })))),
+    el("tbody", {}, rows.map(x => el("tr", { class: x.id === INT.sel ? "cur" : "", onclick: () => { INT.sel = x.id; drawIntakeDetail(); drawIntake(); } },
+      el("td", { text: x.name + (x.mode === "quick" ? " (quick)" : "") }), el("td", {}, x.tier ? el("span", { class: "tier tier-" + x.tier, text: x.tier }) : el("span", { class: "subtle", text: x.status || "" })),
+      el("td", { class: "num", text: x.clef_share == null ? "–" : fmt.pct(x.clef_share, 0) }), el("td", { class: "num", text: x.agree == null ? "–" : fmt.pct(x.agree, 1) }),
+      el("td", { class: "num", text: x.yes_f1 == null ? "–" : x.yes_f1.toFixed(2) }), el("td", { class: "num", text: x.positives ?? "–" }),
+      el("td", { class: "num", text: x.teacher_entropy == null ? "–" : x.teacher_entropy.toFixed(2) }), el("td", { class: "num", text: x.base_rate == null ? "–" : fmt.pct(x.base_rate, 1) }),
+      el("td", { class: "subtle", text: x.source === "intake" ? "your question" : "pack detector" })))));
+  clearTimeout(INT.timer); if (r.running) INT.timer = setTimeout(async () => { await drawIntake(); if (INT.sel === r.running) drawIntakeDetail(); }, 2500);
+  if (!INT.sel && rows.length) { INT.sel = rows[0].id; drawIntakeDetail(); }
+}
+async function drawIntakeDetail() {
+  const box = document.getElementById("intakeDetail"); if (!INT.sel) { box.hidden = true; return; }
+  let r; try { r = await api("/api/latent/intake?id=" + encodeURIComponent(INT.sel)); } catch (e) { box.hidden = true; return; }
+  box.hidden = false;
+  if (r.status !== "done") { box.replaceChildren(el("h3", { text: r.spec.name }), el("p", { class: "muted", text: "Status: " + r.status })); return; }
+  const sp = r.spec, c = r.curve;
+  // curve: Clef share against labelled windows
+  const W = 560, H = 200, L = 46, R = 16, T = 12, B = 30, ns = c.map(x => x.n), maxN = Math.max(...ns);
+  const X = n => L + Math.log(n / 80) / Math.log(maxN / 80) * (W - L - R), Y = v => T + v * (H - T - B);
+  const svg = sv("svg", { class: "plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Clef share against labelled windows" });
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => svg.append(sv("line", { class: "grid", x1: L, x2: W - R, y1: Y(v), y2: Y(v) }), sv("text", { x: L - 6, y: Y(v) + 4, "text-anchor": "end" }, Math.round(v * 100) + "%")));
+  svg.append(sv("line", { class: "zero", x1: L, x2: W - R, y1: Y(0.25), y2: Y(0.25) }));
+  ns.forEach(n => svg.append(sv("text", { x: X(n), y: H - 10, "text-anchor": "middle" }, n.toLocaleString())));
+  const pts = c.filter(x => x.agree != null);
+  svg.append(sv("path", { d: pts.map((x, i) => `${i ? "L" : "M"}${X(x.n)},${Y(1 - x.local_share)}`).join(" "), fill: "none", style: "stroke:var(--c1);stroke-width:2" }));
+  pts.forEach(x => { const okb = x.agree >= 0.96 && x.yes_f1 >= 0.88; const d = sv("circle", { cx: X(x.n), cy: Y(1 - x.local_share), r: 5, style: `fill:${okb ? "var(--c1)" : "var(--surface)"};stroke:var(--c1);stroke-width:2` });
+    d.addEventListener("mousemove", ev => showTip(ev, `${x.n} labelled windows · ${x.positives} positives`, `Clef answers ${fmt.pct(1 - x.local_share, 0)} · agreement ${fmt.pct(x.agree, 1)} · yes-F1 ${x.yes_f1.toFixed(2)}${okb ? "" : " · below the bar"}`));
+    d.addEventListener("mouseleave", hideTip); svg.append(d); });
+  const ex = r.examples || [];
+  const reqFor = e => JSON.stringify({ state: e.text, questions: { [sp.id.replace(/^(pack|intake)-/, "").slice(0, 24)]: { type: "noul", instructions: sp.instructions, criteria: sp.criteria } } }, null, 1);
+  const agrees = e => (e.route === "asks Clef") || ((e.local_p > 0.5) === (e.clef_p > 0.5));
+  const first = ex.find(e => e.route !== "asks Clef" && agrees(e)) || ex[0];
+  box.replaceChildren(
+    el("div", { class: "row" }, el("h3", { text: sp.name }), el("span", { class: "tier tier-" + r.tier, text: r.tier }), el("span", { class: "badge", text: `yes-rate ${fmt.pct(r.base_rate, 1)}` }), el("span", { class: "badge", text: `${r.positives_stream} positives in training` }),
+      el("span", { class: "badge", text: `Clef unsure on ${fmt.pct(r.teacher_unsure, 0)} of windows` }), r.clef_calls ? el("span", { class: "badge", text: `${r.clef_calls} Clef calls` }) : null),
+    el("ul", { class: "small" }, r.reasons.map(x => el("li", { text: x }))),
+    el("div", { class: "two" },
+      el("div", {}, el("p", { class: "small muted", text: "Share of held-out windows Clef still answers, against the number of Clef-labelled windows used for training" }), svg, el("p", { class: "small subtle", text: "Filled dot: quality bar met at that size. Dashed line: 25% (Local tier)." })),
+      el("div", { class: "stack" }, el("h3", { text: "One request, as a TypeSafe client sends it" }), first ? Jev.jsonView(JSON.parse(reqFor(first)), "POST /v1/systemone · request") : null,
+        first ? el("p", { class: "small", text: `Answered ${first.route === "asks Clef" ? "by Clef (the local model was not sure: " + first.local_p + ")" : "locally on CPU"}: {"noul": ${first.route === "asks Clef" ? first.clef_p : first.local_p}}. Clef's own answer: ${first.clef_p}. Gate: local "no" below ${r.gate.no_below?.toFixed(2)}, local "yes" above ${r.gate.yes_above?.toFixed(2)}, Clef in between.` }) : null)),
+    el("h3", { text: "Held-out windows and who answered them" }),
+    el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ...["Answered by", "Window", "Local P(yes)", "Clef P(yes)", "Matches Clef"].map((h, i) => el("th", { class: i > 1 ? "num" : "", text: h })))),
+      el("tbody", {}, ex.map(e => el("tr", {}, el("td", {}, el("span", { class: "tier " + (e.route === "asks Clef" ? "tier-Clef" : "tier-Local"), text: e.route })), el("td", { style: "white-space:normal;min-width:320px", text: e.text }),
+        el("td", { class: "num", text: e.local_p.toFixed(3) }), el("td", { class: "num", text: e.clef_p.toFixed(3) }), el("td", { class: "num", style: agrees(e) ? "" : "color:var(--bad);font-weight:600", text: e.route === "asks Clef" ? "Clef answered" : agrees(e) ? "yes" : "no (local error)" })))))));
+}
+document.getElementById("inCancel").addEventListener("click", async () => {
+  try { await api("/api/latent/intake?cancel=1", { method: "POST" }); Jev.toast("Cancelled."); } catch (e) { Jev.toast(e.message); }
+  INT.sel = null; drawIntake(); drawIntakeDetail();
+});
+document.getElementById("intakeForm").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const body = { name: document.getElementById("inName").value.trim(), what: document.getElementById("inWhat").value.trim(), example: document.getElementById("inEx").value.trim(), mode: document.getElementById("inMode").value };
+  if (!body.name || !body.what) { Jev.toast("Give the question a name and say what to detect."); return; }
+  try { const r = await api("/api/latent/intake", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); INT.sel = r.id; Jev.toast(body.mode === "full" ? "Measuring: 1–3 minutes." : "Quick check: about 20 seconds."); }
+  catch (e) { Jev.toast(e.message); }
+  drawIntake(); drawIntakeDetail();
+});
+
+/* --- walkthrough (worked example, or live on your own texts) --- */
+const JR = { d: null, live: null, mode: "example", i: 0, liveId: null, timer: null };
+const jrData = () => JR.mode === "live" ? JR.live : JR.d;
+const JR_STEPS = () => { const d = jrData(); return d ? ["ask", ...(d.validate ? ["check"] : []), ...(d.steps || []).map(s => s.n)] : []; };
+function storyFor(d, step, last) {
+  const m = step.metrics, pc = v => v == null ? "–" : fmt.pct(v, 0), n = step.n, shut = step.gate.no_below < 0, yes = Math.round(m.positives || 0);
+  if (n === 0) return "No examples yet, so Clef answers every request. The local side can only compare each text with the wording of the question, which is not good enough to answer on its own.";
+  if (m.auc == null) return `Clef has answered ${n} texts; only ${yes} were yes, too few to learn from. Clef answers everything.`;
+  if (shut) return `Clef has answered ${n} texts, ${yes} of them yes. The local model has started learning, but with so few yes examples it is not allowed to answer: Clef still answers everything.`;
+  const ok = m.cascade_agree >= 0.96 && m.cascade_f1 >= 0.88;
+  const base = `Clef has answered ${n} texts (${yes} yes) and the local model learned from them. It now answers ${pc(1 - m.clef_share)} of requests on the CPU and passes the ones it is unsure about to Clef. Together they give Clef's answer ${fmt.pct(m.cascade_agree, 1)} of the time.`;
+  if (!ok) return base + " Not good enough yet: the bar is 97%, with most yes cases caught.";
+  return base + (last ? (m.clef_share <= 0.25 ? " Clef is now only the backup." : " Good enough, but Clef still answers more than a quarter of requests.") : " Good enough.");
+}
+const EXAMPLE_STORY = {
+  300: "The hard case below is now passed to Clef instead of being answered wrongly.",
+  800: "(With all 3,021 training texts, Clef answers only 9% of requests for this question.)" };
+// The step's numbers in plain terms: how right, how fast, where it runs, whether it is still moving, whether it is ready.
+// Speed is an estimate from measured parts: e5-small on this CPU about 12 ms per text, Clef on the GPU about 46 ms.
+const CPU_MS = 12, CLEF_MS = 46;
+function humanTiles(d, step, running) {
+  const m = step.metrics, share = m.clef_share ?? 1, local = 1 - share, i = d.steps.indexOf(step), prev = i > 0 ? d.steps[i - 1].metrics : null;
+  const allClef = share >= 0.999, bar = d.bar || { agree: 0.97, yes_f1: 0.9 };
+  const ready = !allClef && m.cascade_agree >= bar.agree - 0.01 && m.cascade_f1 >= bar.yes_f1 - 0.02 && m.positives >= 30;
+  const moved = prev ? Math.abs((prev.clef_share ?? 1) - share) : 1;
+  const ms = Math.round(CPU_MS + share * CLEF_MS), noRate = d.map_clef.filter(v => v <= 0.5).length / d.map_clef.length;
+  return [
+    ["Gives Clef's answer · CPU only", m.agree == null ? "–" : fmt.pct(m.agree, 1), `no GPU at all; answering "no" to everything would score ${fmt.pct(noRate, 0)}`],
+    ["Gives Clef's answer · with GPU backup", allClef ? "Same as Clef" : fmt.pct(m.cascade_agree, 1), allClef ? "Clef still answers every request" : `${fmt.pct(local, 0)} answered on the CPU, ${fmt.pct(share, 0)} passed to Clef`],
+    ["Time per request (with backup)", `about ${ms} ms`, allClef ? `Clef alone takes about ${CLEF_MS} ms; the local check adds ${CPU_MS} ms until it can answer` : `CPU only: ${CPU_MS} ms. Plus ${CLEF_MS} ms whenever Clef is asked (estimate from measured parts)`],
+    ["Yes examples it has learned from", String(Math.round(m.positives)), m.positives >= 30 ? "enough to trust (30 or more)" : `needs 30 or more before it answers alone`],
+    ["Ready to answer locally?", ready ? (moved > 0.05 ? "Yes, still settling" : "Yes") : running && JR.i === d.steps.length - 1 ? "Measuring…" : "Not yet",
+      ready ? (moved > 0.05 ? `CPU share moved ${Math.round(moved * 100)} points since the last step` : "numbers have settled") :
+      allClef ? "too few examples; Clef keeps answering" : `needs ${Math.round(bar.agree * 100)}% matching Clef and most yes cases caught`],
+  ];
+}
+async function drawJourney() {
+  if (!JR.d) { try { JR.d = await api("/api/latent/intake?journey=pack-price"); } catch { document.getElementById("jrSec").hidden = true; return; } }
+  const d = jrData(), body = document.querySelector("#jrSec .jr-grid");
+  if (!d) { body.hidden = true; document.getElementById("jrSteps").replaceChildren(); return; }
+  body.hidden = false;
+  const steps = JR_STEPS(); JR.i = Math.min(JR.i, steps.length - 1); const cur = steps[JR.i];
+  const running = JR.mode === "live" && d.status !== "done";
+  document.getElementById("jrSteps").replaceChildren(...steps.map((s, i) => el("button", { type: "button", "aria-current": i === JR.i ? "step" : null, class: i < JR.i ? "done" : "",
+    text: s === "ask" ? "1 · Ask" : s === "check" ? "2 · Check" : s === 0 ? "0 examples" : `${s}`, onclick: () => { JR.i = i; drawJourney(); } })),
+    ...(running ? [el("span", { class: "badge", text: "measuring the next step…" })] : []));
+  document.getElementById("jrPrev").disabled = JR.i === 0; document.getElementById("jrNext").disabled = JR.i === steps.length - 1;
+  const step = typeof cur === "number" ? d.steps.find(s => s.n === cur) : null, m = step ? step.metrics : null;
+  const pc = v => v == null ? "–" : fmt.pct(v, 0);
+  const qid = JR.mode === "live" ? (d.spec.name || "question").toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 24) : "price";
+  const firstText = (d.featured && d.featured.clear && d.featured.clear.text) || (d.spec.example) || "";
+  const req = { state: firstText, questions: { [qid]: { type: "noul", instructions: d.spec.instructions, criteria: d.spec.criteria } } };
+  const story = document.getElementById("jrStory");
+  if (cur === "ask") story.replaceChildren(el("p", {}, el("b", { text: "A client sends a TypeSafe request. " }), "One text, one typed yes/no question. Today Clef answers it on the GPU (about 46 ms). The goal: answer it on the CPU in about 12 ms, and ask Clef only when the local model is unsure."),
+    Jev.jsonView(req, "POST /v1/systemone · request"));
+  else if (cur === "check") story.replaceChildren(el("p", {}, el("b", { text: "Check the question on the way in. " }), "Before any training, the question must be typed, recognised by the teacher, present in the texts, and answered consistently."),
+    el("div", { class: "stack" }, d.validate.map(c => el("div", { class: "chk" }, el("span", { class: c.ok ? "ok" : "bad", text: c.ok ? "✓" : "✗" }), el("span", {}, c.check, el("br"), el("span", { class: "subtle small", text: c.value }))))));
+  else {
+    const isLast = JR.i === steps.length - 1 && !running;
+    let t = storyFor(d, step, isLast); if (JR.mode === "example" && EXAMPLE_STORY[cur]) t += " " + EXAMPLE_STORY[cur];
+    story.replaceChildren(el("p", {}, el("b", { text: cur === 0 ? "0 labelled texts. " : `${cur} labelled texts. ` }), t),
+      el("p", { class: "small subtle", text: `Measured on ${d.n_test.toLocaleString()} held-out texts${JR.mode === "example" ? " from other dialogues; mean of 3 stream orders" : " (30% of yours, never trained on)"}. Accuracy here means giving the same answer as Clef.` }));
+  }
+  document.getElementById("jrTiles").replaceChildren(...(m ? humanTiles(d, step, running) : []).map(([k, v, sub]) =>
+    el("div", { class: "kpi" }, el("div", { class: "label", text: k }), el("div", { class: "value", text: v }), el("div", { class: "small subtle", text: sub }))));
+  document.getElementById("jrScope").hidden = !m;
+  // progress chart
+  const S = d.steps, W = 520, H = 170, L = 40, R = 12, T = 10, B = 26;
+  const X = i => L + (S.length > 1 ? i / (S.length - 1) : 0.5) * (W - L - R), Y = v => T + (1 - v) * (H - T - B);
+  const svg = sv("svg", { class: "plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Progress by labelled texts" });
+  [0, 0.5, 1].forEach(v => svg.append(sv("line", { class: "grid", x1: L, x2: W - R, y1: Y(v), y2: Y(v) }), sv("text", { x: L - 5, y: Y(v) + 4, "text-anchor": "end" }, Math.round(v * 100) + "%")));
+  S.forEach((s, i) => svg.append(sv("text", { x: X(i), y: H - 8, "text-anchor": "middle" }, s.n)));
+  const line = (k, col) => svg.append(sv("path", { d: S.map((s, i) => `${i ? "L" : "M"}${X(i)},${Y(s.metrics[k] ?? (k === "clef_share" ? 1 : 0.5))}`).join(" "), fill: "none", style: `stroke:${col};stroke-width:2` }));
+  line("clef_share", "var(--c2)"); line("auc", "var(--c1)");
+  const ci = typeof cur === "number" ? S.findIndex(s => s.n === cur) : -1;
+  if (ci >= 0) svg.append(sv("line", { x1: X(ci), x2: X(ci), y1: T, y2: H - B, style: "stroke:var(--text);stroke-width:1.5" }));
+  document.getElementById("jrChart").replaceChildren(svg, el("div", { class: "legend" }, el("span", {}, el("i", { style: "background:var(--c1)" }), "ranking quality (AUC)"), el("span", {}, el("i", { style: "background:var(--c2)" }), "share Clef still answers"), el("span", { text: "x: Clef-labelled texts" })));
+  // the latent space: held-out texts on the two main directions of the e5 vectors, coloured by route
+  const MW = 520, MH = 300, P = 14, xy = d.map_xy || [];
+  const map = sv("svg", { class: "plot", viewBox: `0 0 ${MW} ${MH}`, role: "img", "aria-label": "Held-out texts in the e5 vector space, coloured by who answers them" });
+  if (xy.length) {
+    const xs2 = xy.map(p => p[0]), ys2 = xy.map(p => p[1]), [x0, x1, y0, y1] = [Math.min(...xs2), Math.max(...xs2), Math.min(...ys2), Math.max(...ys2)];
+    const MX = v => P + (v - x0) / ((x1 - x0) || 1) * (MW - 2 * P), MY = v => MH - P - (v - y0) / ((y1 - y0) || 1) * (MH - 2 * P);
+    const mp = step ? step.map_p : null, g = step ? step.gate : null, shut = !g || g.no_below < 0;
+    xy.forEach((p, k) => { const v = mp ? mp[k] : null, yes = d.map_clef[k] > 0.5; let fill = "var(--border-strong)", op = 0.6;
+      if (v != null) { if (shut) { fill = v > 0.5 ? "var(--pos)" : "var(--neg)"; op = 0.3; } else if (v > g.yes_above) { fill = "var(--pos)"; op = 0.95; } else if (v < g.no_below) { fill = "var(--neg)"; op = 0.75; } else { fill = "var(--text-3)"; op = 0.9; } }
+      map.append(sv("circle", { cx: MX(p[0]), cy: MY(p[1]), r: yes ? 4.4 : 2.8, style: `fill:${fill};stroke:${yes ? "var(--text)" : "none"};stroke-width:1.2;opacity:${op}` })); });
+  }
+  document.getElementById("jrMap").replaceChildren(el("h3", { text: "The latent space" }), el("p", { class: "small muted", text: `${xy.length} held-out texts placed by their e5 vectors (the two main directions of 384). Blue: answered yes locally. Orange: answered no locally. Grey: sent to Clef. Faint: the local model's guess while the gate is shut. Ringed: Clef says yes.` }), map);
+  document.getElementById("jrLegend").replaceChildren(el("span", { text: !step || !step.map_p ? "Grey: nothing to go on yet, Clef answers everything." : (step.gate.no_below < 0 ? "Gate shut: the local model guesses (faint); Clef still answers every text." : "Ringed points should turn blue and the rest orange; grey points are passed to Clef.") }));
+  // featured requests and their responses
+  const names = { clear: ["A clear yes", "learned quickly"], trap: ["A trap", "looks related, but the answer is no"], hard: ["A hard case", "the gate should send it to Clef"] };
+  const feats = Object.entries(d.featured || {});
+  document.getElementById("jrFeat").replaceChildren(el("h3", { text: "Requests, and the response at this step" }), ...(!feats.length ? [el("p", { class: "small subtle", text: running ? "Example requests are chosen when the run finishes." : "No examples available." })] :
+    feats.map(([k, f]) => { const a = step && step.featured ? step.featured[k] : null, clefYes = f.clef_p > 0.5;
+      const resp = !a ? { answers: { [qid]: { type: "noul", noul: f.clef_p } }, answered_by: "clef (GPU)" } : { answers: { [qid]: { type: "noul", noul: a.route === "clef" ? f.clef_p : a.local_p } }, answered_by: a.route === "clef" ? "clef (GPU backup)" : "local (CPU)" };
+      return el("div", { class: "feat" }, el("div", { class: "who", text: `${names[k][0]} · ${names[k][1]}` }), el("div", { class: "txt", text: "“" + f.text + "”" }), Jev.jsonView(resp, "response", { compact: true }),
+        el("div", { class: "ans", style: a && a.route === "local" && !a.agrees ? "color:var(--bad)" : "", text: !a ? `No local model yet; Clef (GPU) answers: ${f.clef_p}` : a.route === "clef" ? `Passed to Clef on the GPU: the CPU model was unsure (${a.local_p}); Clef said ${f.clef_p}` : a.agrees ? `✓ Answered on the CPU, same answer as Clef (Clef said ${f.clef_p} when it labelled this text)` : `✗ Answered on the CPU, but Clef says ${clefYes ? "yes" : "no"} (${f.clef_p})` })); })));
+}
+document.getElementById("jrPrev").addEventListener("click", () => { JR.i = Math.max(0, JR.i - 1); drawJourney(); });
+document.getElementById("jrNext").addEventListener("click", () => { JR.i = Math.min(JR_STEPS().length - 1, JR.i + 1); drawJourney(); });
+seg("jrMode", v => { JR.mode = v; JR.i = 0; document.getElementById("jrLive").hidden = v !== "live"; drawJourney(); });
+const jlLines = () => document.getElementById("jlTexts").value.split(/\n/).map(x => x.trim()).filter(x => x.length >= 8);
+const jlCount = () => { document.getElementById("jlCount").textContent = `· ${jlLines().length} lines`; };
+document.getElementById("jlTexts").addEventListener("input", jlCount);
+document.getElementById("jlFile").addEventListener("change", ev => { const f = ev.target.files[0]; if (!f) return; const rd = new FileReader();
+  rd.onload = () => { let t = String(rd.result), lines;
+    if (/\.jsonl$/i.test(f.name)) lines = t.split(/\n/).map(l => { try { const o = JSON.parse(l); return typeof o === "string" ? o : (o.text || o.state || ""); } catch { return ""; } });
+    else if (/\.json$/i.test(f.name)) { try { const o = JSON.parse(t); lines = (Array.isArray(o) ? o : (o.texts || o.lines || [])).map(x => typeof x === "string" ? x : (x.text || x.state || "")); } catch { lines = []; } }
+    else if (/\.csv$/i.test(f.name)) lines = t.split(/\n/).map(l => l.replace(/^"|"$/g, "").split(/","|,(?=(?:[^"]*"[^"]*")*[^"]*$)/)[0]);
+    else lines = t.split(/\n/);
+    document.getElementById("jlTexts").value = lines.map(x => String(x).trim()).filter(Boolean).slice(0, 2000).join("\n"); jlCount(); };
+  rd.readAsText(f); });
+document.getElementById("jlSample").addEventListener("click", async () => {
+  try { const r = await api("/api/dialogues"); const lines = r.dialogues.flatMap(d => d.turns.map(t => t.text)); document.getElementById("jlTexts").value = lines.join("\n"); jlCount(); }
+  catch (e) { Jev.toast(e.message); } });
+async function pollLive() {
+  clearTimeout(JR.timer); if (!JR.liveId) return;
+  try { JR.live = await api("/api/latent/intake?id=" + encodeURIComponent(JR.liveId)); } catch (e) { document.getElementById("jlStatus").textContent = e.message; return; }
+  const done = JR.live.status === "done";
+  document.getElementById("jlStatus").textContent = done ? `Done: ${JR.live.n_texts} texts, ${JR.live.steps.length} steps measured.` : `Running: ${JR.live.status}`;
+  document.getElementById("jlRun").disabled = !done; document.getElementById("jlCancel").hidden = done;
+  if (JR.mode === "live") { const wasLast = JR.i >= JR_STEPS().length - 2; drawJourney(); if (wasLast) { JR.i = JR_STEPS().length - 1; drawJourney(); } }
+  if (!done) JR.timer = setTimeout(pollLive, 1500);
+}
+document.getElementById("jlRun").addEventListener("click", async () => {
+  const body = { name: document.getElementById("jlName").value.trim(), what: document.getElementById("jlWhat").value.trim(), example: document.getElementById("jlEx").value.trim(), texts: jlLines() };
+  if (!body.name || !body.what) { Jev.toast("Give the question a name and say what to detect."); return; }
+  if (body.texts.length < 60) { Jev.toast(`Add at least 60 lines (you have ${body.texts.length}).`); return; }
+  try { const r = await api("/api/latent/intake", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); JR.liveId = r.id; JR.live = null; JR.i = 0; pollLive(); }
+  catch (e) { Jev.toast(e.message); } });
+document.getElementById("jlCancel").addEventListener("click", async () => {
+  try { await api("/api/latent/intake?cancel=1", { method: "POST" }); } catch (e) { Jev.toast(e.message); }
+  clearTimeout(JR.timer); JR.liveId = null; JR.live = null; document.getElementById("jlStatus").textContent = "Cancelled."; document.getElementById("jlRun").disabled = false; document.getElementById("jlCancel").hidden = true; drawJourney(); });
 boot();
 </script>
 </body>

@@ -35,7 +35,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for model in sys.argv[1:]:
         fq, _ = fmt(model); m = load(model, "cuda")
-        enc = lambda xs: np.asarray(m.encode(xs, batch_size=32, normalize_embeddings=True), dtype=np.float32)
+        enc = lambda xs: np.asarray(m.encode(xs, batch_size=8 if "4B" in model else 32, normalize_embeddings=True), dtype=np.float32)
         res = {}
         for s in SETS:
             items = [json.loads(l) for l in open(PROBES / f"{s}.jsonl")]; q = items[0]["question"]["instructions"]

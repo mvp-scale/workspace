@@ -22,6 +22,7 @@ from pathlib import Path
 
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
+import intake_api  # Latent lab intake: local-vs-Clef verdict per question
 import idea_api  # random example ideas (crazy tech, ridiculous products, local shocks...) for /worldengine2
 import imagelab_api  # image tasks and stored answers for /imagelab
 import persona_api  # seeded personas, extractors and audience scoring for /personalab
@@ -506,6 +507,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"error": "unknown set"})
         elif path == "/api/vram":
             self._send(200, vram())
+        elif path == "/api/latent/intake":  # Latent lab intake: measured local-vs-Clef verdict per question
+            self._send(*intake_api.handle_get(self.path.partition("?")[2]))
         elif path == "/api/latent":  # Latent lab: probes/latent_export.py per model; ?model=<tag>&set=<id> for one set, else models + sweep
             q = dict(urllib.parse.parse_qsl(self.path.partition("?")[2]))
             base = ROOT / "data" / "embed-zs"
@@ -518,7 +521,8 @@ class Handler(BaseHTTPRequestHandler):
                 idx = base / "latent" / model / "index.json"
                 if not models or not idx.is_file():
                     return self._send(404, {"error": "No latent export yet. Run probes/latent_export.py."})
-                return self._send(200, {"models": models, "model": model, "index": json.loads(idx.read_text()), "sweep": sweep, "curve": curve})
+                return self._send(200, {"models": models, "model": model, "index": json.loads(idx.read_text()), "sweep": sweep, "curve": curve,
+                                        "verdicts": json.loads((base / "verdicts.json").read_text()) if (base / "verdicts.json").is_file() else None})
             f = base / "latent" / model / f"{q['set']}.json"
             if not (ok(model) and ok(q["set"])) or model not in models or not f.is_file():
                 return self._send(404, {"error": "No latent export for that model and set."})
@@ -619,6 +623,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*world_lab_proxy("POST", self.path.split("?")[0][len("/api/world-lab"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
         if self.path.startswith("/api/persona-lab/"):
             return self._send(*persona_api.handle_post(self.path.split("?")[0], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), persona_api.MAX_BODY + 1))))
+        if self.path.split("?")[0] == "/api/latent/intake":
+            return self._send(*intake_api.handle_post(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), intake_api.MAX_BODY + 1)), self.path.partition("?")[2]))
         if self.path == "/api/decompose-live":
             return self._handle_decompose_live()
         if self.path == "/api/batch":

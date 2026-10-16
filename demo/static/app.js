@@ -155,6 +155,32 @@
   const heat = { STEPS: [-3, -2, -1, 0, 1, 2, 3],
     stepOf: (acc, chance) => Math.max(-3, Math.min(3, Math.round((acc >= chance ? (acc - chance) / (1 - chance) : -(chance - acc) / chance) * 4))),
     stepBg: (i) => i === 0 ? "var(--surface-2)" : `color-mix(in srgb, var(${i > 0 ? "--good" : "--bad"}) ${STEP_MIX[i]}%, var(--surface))` };
-  window.Jev = { heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  /* Highlighted, indented JSON as DOM nodes (no innerHTML): keys, strings, numbers, literals, punctuation. */
+  function jsonNodes(v, ind = 0) {
+    const sp = "  ".repeat(ind), out = [], T = (c, t) => el("span", { class: "j-" + c, text: t });
+    if (v === null) return [T("b", "null")]; if (typeof v === "string") return [T("s", JSON.stringify(v))]; if (typeof v === "number") return [T("n", String(v))]; if (typeof v === "boolean") return [T("b", String(v))];
+    if (Array.isArray(v)) { if (!v.length) return [T("p", "[]")]; out.push(T("p", "[\n")); v.forEach((x, i) => out.push(document.createTextNode(sp + "  "), ...jsonNodes(x, ind + 1), T("p", i < v.length - 1 ? ",\n" : "\n"))); out.push(document.createTextNode(sp), T("p", "]")); return out; }
+    const ks = Object.keys(v); if (!ks.length) return [T("p", "{}")]; out.push(T("p", "{\n")); ks.forEach((k, i) => out.push(document.createTextNode(sp + "  "), T("k", JSON.stringify(k)), T("p", ": "), ...jsonNodes(v[k], ind + 1), T("p", i < ks.length - 1 ? ",\n" : "\n"))); out.push(document.createTextNode(sp), T("p", "}")); return out;
+  }
+  /* Readable JSON: one line per key; long values wrap in their own column, aligned under where the value starts. */
+  function jsonLines(v, depth = 0, key = null, last = true) {
+    const T = (c, t) => el("span", { class: "j-" + c, text: t }), pad = { style: `padding-left:${depth * 1.4}em` };
+    const head = key == null ? [] : [T("k", JSON.stringify(key)), T("p", ": ")], comma = last ? null : T("p", ",");
+    if (v !== null && typeof v === "object") {
+      const arr = Array.isArray(v), ks = arr ? v.map((_, i) => i) : Object.keys(v), [o, c] = arr ? ["[", "]"] : ["{", "}"];
+      if (!ks.length) return [el("div", { class: "jl", ...pad }, el("span", { class: "jk" }, ...head), el("span", { class: "jv" }, T("p", o + c), comma))];
+      return [el("div", { class: "jl", ...pad }, el("span", { class: "jk" }, ...head), el("span", { class: "jv" }, T("p", o))),
+        ...ks.flatMap((k, i) => jsonLines(v[k], depth + 1, arr ? null : k, i === ks.length - 1)),
+        el("div", { class: "jl", ...pad }, el("span", { class: "jv" }, T("p", c), comma))];
+    }
+    const val = v === null ? T("b", "null") : typeof v === "string" ? T("s", JSON.stringify(v)) : typeof v === "number" ? T("n", String(v)) : T("b", String(v));
+    return [el("div", { class: "jl", ...pad }, el("span", { class: "jk" }, ...head), el("span", { class: "jv" }, val, comma))];
+  }
+  const jsonView = (v, label, opts = {}) => {
+    const copyBtn = el("button", { class: "btn ghost jcopy", type: "button", text: "Copy", onclick: () => copy(JSON.stringify(v, null, 2)) });
+    const bodyEl = opts.compact ? el("div", { class: "json json-inline" }, ...jsonNodes(JSON.parse(JSON.stringify(v))).map(n => (n.nodeType === 3 ? document.createTextNode(n.textContent.replace(/\n\s*/g, " ")) : (n.textContent = n.textContent.replace(/\n\s*/g, " "), n)))) : el("div", { class: "json" }, ...jsonLines(v));
+    return el("div", { class: "jsonview" + (opts.compact ? " compact" : "") }, el("div", { class: "jsonview-head" }, el("span", { text: label || "JSON" }), copyBtn), bodyEl);
+  };
+  window.Jev = { jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();

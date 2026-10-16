@@ -174,3 +174,12 @@ table.heat th.mcolh .mbase { display: block; font-size: 10px; font-weight: 400; 
 .scale i { width: 32px; height: 14px; display: block; border: 1px solid var(--surface); } .scale span { padding: 0 8px; } .scale .mid { margin-left: 12px; }
 @media (max-width: 860px) { .mrow { grid-template-columns: 1fr; gap: 4px; } }
 @media print { .mrow { break-inside: avoid; } }
+
+/* highlighted JSON (Jev.jsonView): one line per key, long values wrap aligned under their start */
+.jsonview { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); overflow: hidden; }
+.jsonview-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 600 11.5px var(--mono); padding: 4px 6px 4px 12px; border-bottom: 1px solid var(--border); color: var(--text-2); background: var(--surface); }
+.jsonview-head .jcopy { min-height: 24px; padding: 2px 8px; font-size: 12px; }
+.json { padding: 10px 14px; font: 13.5px/1.65 var(--mono); overflow-x: auto; }
+.json .jl { display: flex; align-items: baseline; } .json .jk { flex: none; white-space: pre; } .json .jv { flex: 1 1 auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.json .j-k { color: var(--accent); } .json .j-s { color: var(--good); } .json .j-n { color: var(--warn); font-weight: 600; } .json .j-b { color: var(--bad); } .json .j-p { color: var(--text-3); }
+.json.json-inline { white-space: normal; overflow-wrap: anywhere; padding: 8px 12px; }
