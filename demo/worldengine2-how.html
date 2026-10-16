@@ -365,6 +365,9 @@ async function poll() {
   try {
     const d = await Jev.api("/api/world-engine/live?since=" + S.since); if (d.seq < S.since) { S.since = 0; S.items = []; }
     S.since = Math.max(S.since, d.seq); S.on = d.on; S.fed = d.fed; $("live").classList.toggle("on", d.on); $("livet").textContent = d.on ? "LIVE" : "PAUSED";
+    let pz = $("livePause"); if (!pz) { pz = el("span", { id: "livePause", class: "small", role: "status", style: "color:var(--warn);margin-left:8px" }); $("live").after(pz); }
+    pz.textContent = d.on && d.err ? `Live feed paused: ${d.err}. It resumes by itself when a reader answers.` : "";
+    if (d.on && d.err) $("livet").textContent = "WAITING";
     const fresh = d.items.filter(i => i.seq > (S.seqSeen || 0)); const first = !S.seqSeen; if (d.items.length) S.seqSeen = d.items[d.items.length - 1].seq;
     if (!first) for (const it of fresh) { S.items.push(it); setTimeout(() => { lightUp(it); grFlow(it); }, 0); } else for (const it of d.items.slice(-4)) S.items.push(it);
     if (fresh.length || first) paintFeed();

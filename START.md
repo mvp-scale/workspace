@@ -41,7 +41,7 @@ it, voice included (`/voice/ws`), so a port forward or a tunnel needs only :8100
 | classifier | 8020 | live (on demand) | the local classifier (CPU engine, `probes/cpu_engine.py`), no GPU, about 20 s to start |
 | clef-flash-q4km | 8018 | live (on demand) | Clef Flash Q4, a TypeSafe endpoint, about 11 GB GPU; the classifier's teacher and backup |
 | kev-4b, semif, so1, laya, verdict | 8010, 8012-8015 | models | the five loaded models (systemd; kev-4b first, about 17.8 GiB while loading) |
-| winnow | 8091 | live (on demand) | Winnow-12B, about 15 GB GPU: the World engine's default reader. The engine is model-agnostic: the **Reader** picker on `/worldengine` (or `WORLD_READER_URL`) points it at any TypeSafe model that is loaded, e.g. Clef Q4 |
+| winnow | 8091 | live (on demand) | Winnow-12B, about 15 GB GPU: one of the World engine's readers. The engine is model-agnostic: its Reader is **Auto** by default (first loaded local model, Clef first), or pinned with the **Reader** picker on `/worldengine` (or `WORLD_READER_URL`) |
 | share | n/a | share | one Cloudflare tunnel to the console (`cf_start.sh`); public, no login |
 
 The console's top-bar **Services** panel (Voice, Classifier, Clef, Winnow) runs `./service.sh start|stop` for local visitors only; a visitor

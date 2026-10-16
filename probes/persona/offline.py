@@ -12,7 +12,7 @@ PRE-REGISTERED (written before the first run):
  E5 surrogate (extracted persona numbers x idea numbers, ridge): held-out personas r >= 0.80; held-out products (Nightfall, Gardenway) r >= 0.50;
     per-persona lever effect r >= 0.50
 """
-import itertools, json, sys, time, urllib.request
+import itertools, json, sys, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 try:
@@ -22,18 +22,36 @@ except ImportError:
 from personas import gen, TRAITS, ASPIRATIONS, WORLDVIEWS, age_band
 
 OUT = Path("/workspace/data/persona-lab/offline.json")
-# The reader: any TypeSafe /v1/systemone endpoint that answers noul and choice questions (Winnow, Clef, kev, SemIf,
-# hosted Jev...). Winnow is the default because the World Engine's rules were first tuned on its readings; the engine
-# (world_service2.py POST /reader) and the console's World engine page can switch it at run time.
+# The reader: any TypeSafe /v1/systemone endpoint that answers noul and choice questions (Clef, Winnow, kev, SemIf,
+# hosted Jev...). Default AUTO: the first local model that answers, in demo/backends.py order (Clef first), switching by
+# itself as models are turned on or off; never a hosted (paid) model. The engine (world_service2.py POST /reader) and the
+# World engine page's Reader picker can pin one model instead; WORLD_READER_URL pins one at start.
+# (The engine's rules were first tuned on Winnow's readings, so another reader can shift the numbers.)
 import os
+sys.path.insert(0, "/workspace/demo")
 EP = os.environ.get("WORLD_READER_URL", "http://127.0.0.1:8091")
-MODEL = os.environ.get("WORLD_READER_MODEL", "Winnow-12B")   # sent as "model" (llama.cpp servers use it to pick the alias); empty = omit
+MODEL = os.environ.get("WORLD_READER_MODEL", "Winnow-12B" if "WORLD_READER_URL" not in os.environ else "")   # sent as "model"; empty = omit
 KEY = os.environ.get("WORLD_READER_KEY", "")
+AUTO = "WORLD_READER_URL" not in os.environ
+CURRENT = None   # in AUTO, the backend id that answered last (tried first next time)
 
 
 def set_reader(url, model="", key=""):
-    global EP, MODEL, KEY
-    EP, MODEL, KEY = url.rstrip("/"), model or "", key or ""
+    """Pin one reader (the picker's choice)."""
+    global EP, MODEL, KEY, AUTO
+    EP, MODEL, KEY, AUTO = url.rstrip("/"), model or "", key or "", False
+
+
+def set_auto():
+    global AUTO
+    AUTO = True
+
+
+def _local_readers():
+    import backends
+    ids = [b for b, v in backends.BACKENDS.items() if not v["hosted"]]
+    if CURRENT in ids: ids.remove(CURRENT); ids.insert(0, CURRENT)
+    return [(b, backends.BACKENDS[b]) for b in ids]
 
 TRAIT_Q = {  # positive polarity: high P(yes) = high trait. two wordings each.
     "tech": ["This person is comfortable learning and using new phone apps.", "This person finds new phone apps easy to pick up."],
@@ -74,14 +92,28 @@ PRODUCTS2 = {f"t_{a}_{v}": BASE + "It is free. It works by text message: reply t
 
 
 def call(state, qs):
-    body = {"state": state, "questions": qs, **({"model": MODEL} if MODEL else {})}
-    hdr = {"Content-Type": "application/json", "User-Agent": "jev-demo/0.1", **({"Authorization": f"Bearer {KEY}"} if KEY else {})}
-    req = urllib.request.Request(EP + "/v1/systemone", json.dumps(body).encode(), hdr)
-    for attempt in range(2):
+    if AUTO:  # first local model that accepts the connection; a refused connection means "not loaded", so try the next
+        global EP, MODEL, KEY, CURRENT
+        for bid, b in _local_readers():
+            try:
+                out = _call(b["url"].rstrip("/"), b["model"], b["key"], state, qs, tries=1)
+                EP, MODEL, KEY, CURRENT = b["url"].rstrip("/"), b["model"], b["key"], bid
+                return out
+            except urllib.error.URLError as e:
+                if not isinstance(e.reason, ConnectionRefusedError): raise
+        raise ConnectionRefusedError("no local model is loaded to read with (Auto reader); turn on Clef or Winnow under Services")
+    return _call(EP, MODEL, KEY, state, qs)
+
+
+def _call(ep, model, key, state, qs, tries=2):
+    body = {"state": state, "questions": qs, **({"model": model} if model else {})}
+    hdr = {"Content-Type": "application/json", "User-Agent": "jev-demo/0.1", **({"Authorization": f"Bearer {key}"} if key else {})}
+    req = urllib.request.Request(ep + "/v1/systemone", json.dumps(body).encode(), hdr)
+    for attempt in range(tries):
         try:
             with urllib.request.urlopen(req, timeout=300) as r: return json.load(r)["answers"]
         except Exception:
-            if attempt: raise
+            if attempt == tries - 1: raise
 
 
 def persona_numbers(p):

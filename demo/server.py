@@ -405,8 +405,10 @@ def world_engine_proxy(method, sub, body):
             return r.status, r.read()
     except urllib.error.HTTPError as e:
         if e.code == 502:  # the engine's reader (any TypeSafe model) is not answering; say what to do instead of a bare 502
-            r = reader_info(); names = {m["id"]: m["name"] for m in json.loads((HERE / "models.json").read_text())["models"]}
-            return 503, {"error": f"The World engine's reader ({names.get(r.get('backend'), r.get('url'))}) is not answering, so it cannot read new stories. Pick another reader on this page (any loaded model works), or turn it on under Services."}
+            r = reader_info()
+            if r.get("auto"):
+                return 503, {"error": "No local model is loaded to read stories with. Turn on Clef Flash Q4 (or Winnow) under Services; the reader is on Auto, so it starts using it by itself."}
+            return 503, {"error": f"The World engine's reader ({backends.name(r.get('backend')) if r.get('backend') else r.get('url')}) is not answering, so it cannot read new stories. Set the Reader to Auto or pick a loaded model on this page, or turn it on under Services."}
         return e.code, e.read()
     except (urllib.error.URLError, OSError):
         return 503, {"error": "The World Engine is not running. ./service.sh up"}
@@ -417,14 +419,20 @@ def reader_info():
     try:
         with urllib.request.urlopen(WORLD_ENGINE + "/reader", timeout=5) as r: info = json.load(r)
     except Exception: return {}
-    info["backend"] = next((k for k, v in BACKENDS.items() if v["url"].rstrip("/") == info.get("url", "").rstrip("/")), None)
+    info["backend"] = info.get("current") if info.get("auto") else next((k for k, v in BACKENDS.items() if v["url"].rstrip("/") == info.get("url", "").rstrip("/")), None)
     return info
 
 
 def set_reader(backend):
     """Point the World engine at another TypeSafe model; the address and key stay on this machine (the browser sends a name)."""
-    if backend not in BACKENDS: return 404, {"error": "unknown model"}
-    cfg = BACKENDS[backend]
+    if backend == "auto": body = json.dumps({"auto": True}).encode()
+    elif backend not in BACKENDS: return 404, {"error": "unknown model"}
+    else: cfg = BACKENDS[backend]
+    if backend == "auto":
+        try:
+            with urllib.request.urlopen(urllib.request.Request(WORLD_ENGINE + "/reader", body, {"Content-Type": "application/json"}), timeout=10) as r: r.read()
+        except Exception as e: return 503, {"error": f"The World engine did not accept the reader: {e}"}
+        return 200, reader_info()
     if cfg.get("hosted") and not cfg["key"]: return 400, {"error": "TYPESAFE_API_KEY is not set, so the hosted model cannot read"}
     body = json.dumps({"url": cfg["url"], "model": cfg["model"], "key": cfg["key"]}).encode()
     try:

@@ -531,7 +531,8 @@ function tkFrame(now) {
 }
 function tkPaint() {
   $("live").classList.toggle("on", TK.on); $("livet").textContent = TK.on ? "LIVE" : "PAUSED";
-  $("tkc").textContent = TK.err ? `engine: ${TK.err}` : `world tick ${TK.tick} · ${TK.fed} headlines fed`;
+  $("tkc").textContent = TK.err ? `Live feed paused: ${TK.err}` : `world tick ${TK.tick} · ${TK.fed} headlines fed`;
+  $("tkc").style.color = TK.err ? "var(--warn)" : ""; if (TK.err && TK.on) $("livet").textContent = "WAITING";
 }
 async function tkPoll() {
   if (document.hidden) return;                                // no page watching means the engine stops feeding by itself after 25 s
@@ -587,16 +588,20 @@ async function readerUI() {
   const draw = () => {
     const st = Jev.status() || {}, ids = Object.keys(st).filter(id => id !== "classifier"), on = (id) => st[id]?.up;
     const lab = (id) => `${Jev.codeOf(id)} · ${Jev.nameOf(id)}` + (st[id]?.hosted ? " · hosted, paid" : on(id) ? "" : " (off)");
-    sel.replaceChildren(el("optgroup", { label: "Loaded" }, ids.filter(on).map(id => el("option", { value: id, text: lab(id) }))),
+    sel.replaceChildren(el("option", { value: "auto", text: "Auto: first loaded local model" }),
+      el("optgroup", { label: "Loaded" }, ids.filter(on).map(id => el("option", { value: id, text: lab(id) }))),
       el("optgroup", { label: "Off" }, ids.filter(id => !on(id)).map(id => el("option", { value: id, text: lab(id), disabled: id !== cur.backend }))));
-    if (cur.backend) sel.value = cur.backend;
-    note.textContent = !cur.url ? "The World engine is not answering." : !cur.backend ? `Reading with ${cur.url}.` : on(cur.backend) ? "" :
-      `${Jev.nameOf(cur.backend)} is off: pick a loaded model, or turn it on under Services.`;
+    sel.value = cur.auto ? "auto" : (cur.backend || "auto");
+    const anyLocal = ids.some(id => on(id) && !st[id]?.hosted);
+    note.textContent = !cur.url ? "The World engine is not answering." :
+      cur.auto ? (cur.backend && on(cur.backend) ? `Auto: reading with ${Jev.nameOf(cur.backend)}.` : anyLocal ? "Auto: picks the first loaded model on the next story." : "Auto: no local model is loaded. Turn on Clef Flash Q4 under Services.") :
+      !cur.backend ? `Reading with ${cur.url}.` : on(cur.backend) ? "" : `${Jev.nameOf(cur.backend)} is off: set the Reader to Auto, pick a loaded model, or turn it on under Services.`;
   };
   sel.addEventListener("change", async () => {
     const id = sel.value, st = Jev.status() || {};
+    if (id !== "auto" && !st[id]?.up && !st[id]?.hosted) { draw(); return; }
     if (st[id]?.hosted && !confirm(`${Jev.nameOf(id)} is a paid hosted API: every story read costs money. Use it?`)) { draw(); return; }
-    try { cur = await Jev.api("/api/world-engine/reader", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backend: id }) }); Jev.toast(`Now reading with ${Jev.nameOf(id)}. Earlier readings came from the previous model, so numbers may shift.`); }
+    try { cur = await Jev.api("/api/world-engine/reader", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backend: id }) }); Jev.toast(id === "auto" ? "Reader: Auto (the first loaded local model)." : `Now reading with ${Jev.nameOf(id)}. Earlier readings came from the previous model, so numbers may shift.`); }
     catch (e) { Jev.toast(e.message); }
     draw();
   });

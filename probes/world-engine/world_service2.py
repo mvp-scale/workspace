@@ -1,7 +1,7 @@
 """World engine service v2 (mock-up): multi-country world, five stages (collect, identify, propagate, decide, read), attractor/detractor ledgers.
 JSON over HTTP on 127.0.0.1:$WE2_PORT (default 8112); the console proxies /api/world-engine/*.   Run: /workspace/kev/.venv/bin/python world_service2.py
 Inputs are simulated at the start (data/*.csv, ledger/); everything else is derived by rules. Every strength is a guess or a fit until backtested."""
-import os, sys, json, time, copy, datetime, email.utils, hashlib, threading, csv, random, urllib.parse
+import os, sys, json, time, copy, datetime, email.utils, hashlib, threading, csv, random, urllib.parse, urllib.error
 import numpy as np
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, "/workspace/probes/persona"); sys.path.insert(0, "/workspace/probes/world-engine")
@@ -478,9 +478,10 @@ def feeder_loop():
             it = live_pick(rng, recent); t0 = time.time(); prep = S.prepare_feed(it); read_ms = round((time.time() - t0) * 1000)
             with LOCK: t1 = time.time(); S.apply_feed(prep); tick = S.w.tick; apply_ms = round((time.time() - t1) * 1000, 1)
             eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) > 0]
-            with LIVE_LOCK: LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms}); del LIVE["items"][:-60]; LIVE["err"] = None
+            with LIVE_LOCK: LIVE["err"] = None; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms}); del LIVE["items"][:-60]; LIVE["err"] = None
         except Exception as e:
-            with LIVE_LOCK: LIVE["err"] = f"{type(e).__name__}: {str(e)[:100]}"
+            with LIVE_LOCK: LIVE["err"] = ("no reader is answering: " + ("no local model is loaded (turn on Clef or Winnow under Services)" if C.O.AUTO else f"the pinned reader at {C.O.EP} is off")) \
+                if isinstance(e, (ConnectionRefusedError, urllib.error.URLError)) and "refused" in str(e).lower() else f"{type(e).__name__}: {str(e)[:100]}"
         with LIVE_LOCK: LIVE["next"] = time.time() + gap
 def live_status(since=0, watching=True):
     with LIVE_LOCK:
@@ -502,7 +503,7 @@ class H(BaseHTTPRequestHandler):
             t = RU.sowhat_serve(); return self._send(200, {"set": os.path.basename(RU.R), **t})
         if self.path.startswith("/graph"):
             with LOCK: return self._send(200, S.graph_info())
-        if self.path.startswith("/reader"): return self._send(200, {"url": C.O.EP, "model": C.O.MODEL})   # never the key
+        if self.path.startswith("/reader"): return self._send(200, {"auto": C.O.AUTO, "url": C.O.EP, "model": C.O.MODEL, "current": C.O.CURRENT})   # never the key
         if self.path.startswith("/gpu"):
             with LOCK: return self._send(200, S.gpu_info())
         if self.path.startswith("/world"):
@@ -514,10 +515,11 @@ class H(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000)))
             with LOCK:
                 if self.path == "/request": t = str(req["text"]).strip(); assert 8 <= len(t) <= 1500 and req["mode"] in ("event", "offer", "auto"); return self._send(200, S.request(t, req["mode"]))
-                if self.path == "/reader":  # any TypeSafe /v1/systemone endpoint; the console sends the address, model alias and key
+                if self.path == "/reader":  # {"auto": true}, or any TypeSafe /v1/systemone endpoint (the console sends address, model alias, key)
+                    if req.get("auto"): C.O.set_auto(); return self._send(200, {"auto": True, "url": C.O.EP, "model": C.O.MODEL, "current": C.O.CURRENT})
                     url = str(req["url"]); assert url.startswith(("http://127.0.0.1:", "http://localhost:", "https://"))
                     C.O.set_reader(url, str(req.get("model") or ""), str(req.get("key") or ""))
-                    return self._send(200, {"url": C.O.EP, "model": C.O.MODEL})
+                    return self._send(200, {"auto": False, "url": C.O.EP, "model": C.O.MODEL})
                 if self.path == "/drill": return self._send(200, S.drill(str(req["node"]), str(req["col"]), bool(req.get("series"))))
                 if self.path == "/commit": return self._send(200, S.commit())
                 if self.path == "/reset":
