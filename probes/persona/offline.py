@@ -36,10 +36,10 @@ AUTO = "WORLD_READER_URL" not in os.environ
 CURRENT = None   # in AUTO, the backend id that answered last (tried first next time)
 
 
-def set_reader(url, model="", key=""):
-    """Pin one reader (the picker's choice)."""
-    global EP, MODEL, KEY, AUTO
-    EP, MODEL, KEY, AUTO = url.rstrip("/"), model or "", key or "", False
+def set_reader(url, model="", key="", bid=None):
+    """Pin one reader (the picker's choice); bid is its model id, so pages can name it."""
+    global EP, MODEL, KEY, AUTO, CURRENT
+    EP, MODEL, KEY, AUTO, CURRENT = url.rstrip("/"), model or "", key or "", False, bid
 
 
 def set_auto():

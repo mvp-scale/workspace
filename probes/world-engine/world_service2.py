@@ -478,7 +478,7 @@ def feeder_loop():
             it = live_pick(rng, recent); t0 = time.time(); prep = S.prepare_feed(it); read_ms = round((time.time() - t0) * 1000)
             with LOCK: t1 = time.time(); S.apply_feed(prep); tick = S.w.tick; apply_ms = round((time.time() - t1) * 1000, 1)
             eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) > 0]
-            with LIVE_LOCK: LIVE["err"] = None; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms}); del LIVE["items"][:-60]; LIVE["err"] = None
+            with LIVE_LOCK: LIVE["err"] = None; LIVE["by"] = C.O.CURRENT; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "by": C.O.CURRENT, "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms}); del LIVE["items"][:-60]; LIVE["err"] = None
         except Exception as e:
             with LIVE_LOCK: LIVE["err"] = ("no reader is answering: " + ("no local model is loaded (turn on Clef or Winnow under Services)" if C.O.AUTO else f"the pinned reader at {C.O.EP} is off")) \
                 if isinstance(e, (ConnectionRefusedError, urllib.error.URLError)) and "refused" in str(e).lower() else f"{type(e).__name__}: {str(e)[:100]}"
@@ -487,7 +487,9 @@ def live_status(since=0, watching=True):
     with LIVE_LOCK:
         if watching: LIVE["seen"] = time.time()
         out = {"on": LIVE["on"], "interval": LIVE["interval"], "seq": LIVE["seq"], "fed": LIVE["fed"], "err": LIVE["err"], "items": [i for i in LIVE["items"] if i["seq"] > since]}
-    out["tick"] = S.w.tick; out["events"] = len(S.events); return out
+    out["tick"] = S.w.tick; out["events"] = len(S.events)
+    out["reader"] = {"auto": C.O.AUTO, "current": C.O.CURRENT, "last_read_by": LIVE.get("by")}   # which model reads the headlines
+    return out
 S = None
 class H(BaseHTTPRequestHandler):
     def _send(self, code, obj): b = json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type", "application/json"); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
@@ -518,7 +520,7 @@ class H(BaseHTTPRequestHandler):
                 if self.path == "/reader":  # {"auto": true}, or any TypeSafe /v1/systemone endpoint (the console sends address, model alias, key)
                     if req.get("auto"): C.O.set_auto(); return self._send(200, {"auto": True, "url": C.O.EP, "model": C.O.MODEL, "current": C.O.CURRENT})
                     url = str(req["url"]); assert url.startswith(("http://127.0.0.1:", "http://localhost:", "https://"))
-                    C.O.set_reader(url, str(req.get("model") or ""), str(req.get("key") or ""))
+                    C.O.set_reader(url, str(req.get("model") or ""), str(req.get("key") or ""), req.get("id"))
                     return self._send(200, {"auto": False, "url": C.O.EP, "model": C.O.MODEL})
                 if self.path == "/drill": return self._send(200, S.drill(str(req["node"]), str(req["col"]), bool(req.get("series"))))
                 if self.path == "/commit": return self._send(200, S.commit())

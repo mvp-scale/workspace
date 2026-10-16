@@ -434,7 +434,7 @@ def set_reader(backend):
         except Exception as e: return 503, {"error": f"The World engine did not accept the reader: {e}"}
         return 200, reader_info()
     if cfg.get("hosted") and not cfg["key"]: return 400, {"error": "TYPESAFE_API_KEY is not set, so the hosted model cannot read"}
-    body = json.dumps({"url": cfg["url"], "model": cfg["model"], "key": cfg["key"]}).encode()
+    body = json.dumps({"url": cfg["url"], "model": cfg["model"], "key": cfg["key"], "id": backend}).encode()
     try:
         with urllib.request.urlopen(urllib.request.Request(WORLD_ENGINE + "/reader", body, {"Content-Type": "application/json"}), timeout=10) as r: r.read()
     except Exception as e: return 503, {"error": f"The World engine did not accept the reader: {e}"}

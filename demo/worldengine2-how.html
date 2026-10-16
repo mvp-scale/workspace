@@ -53,7 +53,7 @@
 </head>
 <body>
 <main class="page hw">
-  <header class="hwh"><div><h1>How the World engine works</h1><p>The knowledge graph the engine runs on, layer by layer, with each headline lighting up its own path through it.</p></div><div style="display:flex;gap:12px;align-items:center"><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine">← World engine 2</a></div></header>
+  <header class="hwh"><div><h1>How the World engine works</h1><p>The knowledge graph the engine runs on, layer by layer, with each headline lighting up its own path through it.</p></div><div style="display:flex;gap:12px;align-items:center"><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine">← World engine</a></div></header>
   <section class="rail" id="rail"></section>
   <section class="def" id="def"></section>
   <section class="stage" id="stage"></section>
@@ -68,7 +68,7 @@ const dialShort = (id, name) => DIAL_SHORT[id] || capName(name || id, 26).toLowe
 const NUMW = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"], numW = (n, cap) => { const w = n >= 0 && n < NUMW.length ? NUMW[n] : String(n); return cap ? w[0].toUpperCase() + w.slice(1) : w; };
 const STAGES = [
   { k: "headline", n: "1 · Headline", t: "A story arrives", tag: "real text", def: "<b>A headline from the bank</b> of 518: real feeds (BBC, NPR, Guardian, Al Jazeera, tech and science), satire, and our own funny lines, rolled in a shuffled loop. The text is real; satire is read as if it happened." },
-  { k: "read", n: "2 · Read", t: "The model reads it", tag: "model read", def: "<b>Winnow-12B, running on this GPU, answers yes/no questions</b>: which of the {nc} conditions does it move, is it a fact, a forecast or an opinion, which country and topic. No prose, only probabilities. Time shown is the whole read." },
+  { k: "read", n: "2 · Read", t: "The model reads it", tag: "model read", def: "<b>The reader model ({reader}) answers yes/no questions</b>: which of the {nc} conditions does it move, is it a fact, a forecast or an opinion, which country and topic. No prose, only probabilities. Time shown is the whole read." },
   { k: "spread", n: "3 · Spread", t: "It spreads", tag: "rules, strengths guessed", def: "<b>The headline enters at its country</b> and travels world, country, then settlement type. Each channel has a gain and a delay. Conditions fade at their own rate. Each condition is a level of one resource. This step is plain arithmetic." },
   { k: "people", n: "4 · People", t: "100,000 people feel it", tag: "simulated people", def: "<b>Each modelled person</b> gets their place's change, scaled by what their audience is exposed to; their own traits turn that into a state. Some states depend on a resource. The GPU does all 100,000 at once. The people are simulated from stated country figures, not individuals." },
   { k: "decide", n: "5 · Decide", t: "Likelihoods move", tag: "hand-weighted rules", def: "<b>{ND} decisions</b> (spend, buy, switch, move and so on) are weighted sums of a person's states, squeezed to a 0 to 100% likelihood. Each decision also draws on or builds resources. Weights and resource links are set by hand: guesses until fitted." },
@@ -88,7 +88,7 @@ function buildRail() {
 }
 function paintDef() {
   const s = STAGES.find(x => x.k === S.stageSel); $("def").replaceChildren(); const d = $("def"), M = GR.data && GR.data.meaning, nd = M ? M.decisions.length : 8;
-  const parts = s.def.replace("{nc}", M ? M.conditions.length : 16).replace("{ND}", numW(nd, true)).split(/<\/?b>/); d.append(el("b", { text: s.n.replace(/^\d · /, "") }), el("span", { class: "tag", text: s.tag }), el("div", { style: "margin-top:3px" }, parts[0], el("b", { text: parts[1] || "" }), parts.slice(2).join("")));
+  const parts = s.def.replace("{reader}", S.readerName || "whichever model is set on the World engine page").replace("{nc}", M ? M.conditions.length : 16).replace("{ND}", numW(nd, true)).split(/<\/?b>/); d.append(el("b", { text: s.n.replace(/^\d · /, "") }), el("span", { class: "tag", text: s.tag }), el("div", { style: "margin-top:3px" }, parts[0], el("b", { text: parts[1] || "" }), parts.slice(2).join("")));
   for (const k in RAIL) RAIL[k].b.classList.toggle("sel", k === S.stageSel);
 }
 const fmtMs = (x) => x == null ? "" : x >= 100 ? Math.round(x) + " ms" : x.toFixed(1) + " ms";
@@ -366,6 +366,11 @@ async function poll() {
     const d = await Jev.api("/api/world-engine/live?since=" + S.since); if (d.seq < S.since) { S.since = 0; S.items = []; }
     S.since = Math.max(S.since, d.seq); S.on = d.on; S.fed = d.fed; $("live").classList.toggle("on", d.on); $("livet").textContent = d.on ? "LIVE" : "PAUSED";
     let pz = $("livePause"); if (!pz) { pz = el("span", { id: "livePause", class: "small", role: "status", style: "color:var(--warn);margin-left:8px" }); $("live").after(pz); }
+    let rd = $("liveReader"); if (!rd) { rd = el("span", { id: "liveReader", class: "small", style: "margin-left:8px;color:var(--text-2)" }); $("live").after(rd); }
+    const rid = d.reader && (d.reader.current || d.reader.last_read_by);
+    rd.textContent = !d.reader ? "" : `Reader: ${rid ? Jev.nameOf(rid) : "none answering"}${d.reader.auto ? " (Auto)" : " (pinned)"}`;
+    const rn = rid ? Jev.nameOf(rid) : null; if (rn && rn !== S.readerName) { S.readerName = rn; try { paintDef(); } catch (e) {} }
+    rd.title = "The model that reads each headline before it flows through the layers. Change it on the World engine page.";
     pz.textContent = d.on && d.err ? `Live feed paused: ${d.err}. It resumes by itself when a reader answers.` : "";
     if (d.on && d.err) $("livet").textContent = "WAITING";
     const fresh = d.items.filter(i => i.seq > (S.seqSeen || 0)); const first = !S.seqSeen; if (d.items.length) S.seqSeen = d.items[d.items.length - 1].seq;
