@@ -24,7 +24,7 @@ from pathlib import Path
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
 import intake_api  # Latent lab intake: local-vs-Clef verdict per question
-import idea_api  # random example ideas (crazy tech, ridiculous products, local shocks...) for /worldengine2
+import idea_api  # random example ideas (crazy tech, ridiculous products, local shocks...) for /worldengine
 import imagelab_api  # image tasks and stored answers for /imagelab
 import persona_api  # seeded personas, extractors and audience scoring for /personalab
 
@@ -401,7 +401,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldengine": "worldengine.html", "/worldengine2": "worldengine2.html", "/worldengine2-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldengine": "worldengine2.html", "/worldengine-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json",
          ".html": "text/html; charset=utf-8", ".md": "text/plain; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".txt": "text/plain; charset=utf-8"}
 
@@ -417,9 +417,11 @@ def world_engine_proxy(method, sub, body):
         with urllib.request.urlopen(req, timeout=240) as r:
             return r.status, r.read()
     except urllib.error.HTTPError as e:
+        if e.code == 502:  # the engine reads new stories with Winnow (:8091); say which switch to use instead of a bare 502
+            return 503, {"error": "Winnow (the story reader) is off, so the World Engine cannot read new stories. Turn on Winnow in the top bar (about 15 GB of GPU, up to 3 minutes to load), or ./service.sh start winnow"}
         return e.code, e.read()
     except (urllib.error.URLError, OSError):
-        return 503, {"error": "The world engine service is not running. Start it with: /workspace/kev/.venv/bin/python probes/world-engine/world_service2.py"}
+        return 503, {"error": "The World Engine is not running. ./service.sh up"}
 
 
 CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8020")  # probes/cpu_engine.py: the local classifier (./service.sh start classifier)
@@ -444,7 +446,8 @@ VOICE = os.environ.get("VOICE_ADDR", "127.0.0.1:8200")  # voice/server.py; the b
 # ./service.sh in its own session, so a console restart does not stop what it started.
 SWITCHES = {"voice": {"label": "Voice", "port": 8200, "health": "/api/status", "gpu": "about 4 GB GPU"},
             "classifier": {"label": "Classifier", "port": 8020, "health": "/health", "gpu": "CPU only"},
-            "clef-flash-q4km": {"label": "Clef", "port": 8018, "health": "/health", "gpu": "about 11 GB GPU"}}
+            "clef-flash-q4km": {"label": "Clef", "port": 8018, "health": "/health", "gpu": "about 11 GB GPU"},
+            "winnow": {"label": "Winnow", "port": 8091, "health": "/health", "gpu": "about 15 GB GPU; the World Engine reads new stories with it"}}
 _switching = {}  # name -> (action, Popen)
 
 
@@ -535,9 +538,11 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/persona-lab/"):
             r = persona_api.handle_get(path, self.path.partition("?")[2])
             return self._send(*r)
-        if path in ("/personalab", "/worldlab"):  # folded into the world engine
+        moved = {"/personalab": "/worldengine", "/worldlab": "/worldengine", "/worldengine2": "/worldengine", "/worldengine2-how": "/worldengine-how"}
+        if path in moved:  # older pages folded into the world engine; v2 is now the only world engine
+            q = self.path.partition("?")[2]
             self.send_response(302)
-            self.send_header("Location", "/worldengine")
+            self.send_header("Location", moved[path] + ("?" + q if q else ""))
             self.end_headers()
             return
         if path.startswith("/api/world-engine/"):

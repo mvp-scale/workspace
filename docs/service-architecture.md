@@ -2,8 +2,9 @@
 
 > **Status 16 Oct 2026: steps 1–4 below are done** (baseline profile with `up` / `reset` / `down`, classifier service on
 > :8020, mock-ups and voice served through the console on :8100, top-bar switches for local visitors, World Engine v1
-> retired to `probes/world-engine/_retired/`). Not done: voice on demand with an idle timeout; collapsing the World
-> Engine menu entries; the dev flow pages.
+> retired to `probes/world-engine/_retired/`). Later the same day: Winnow joined the on-demand services (the World engine reads new stories with it),
+> the switches moved into one top-bar Services panel, and the menu now has one World engine (v2) plus "How it works".
+> Not done: voice on demand with an idle timeout; the dev flow pages.
 
 Recon of 16 Oct 2026. Every figure was read from this machine (process list, `nvidia-smi`, `service.yaml`, the code), not
 estimated, except where marked.

@@ -37,7 +37,7 @@ default_profile: baseline
 # Profile entries: a service name, another profile name, or a mapping {service: name, port: N, env: {K: V}}
 profiles:
   baseline: [world, demo]                           # always on: the World Engine and the console
-  live:   [baseline, voice, classifier, clef-flash-q4km]   # everything the demo pages can use; the last three are on-demand (tag:demand)
+  live:   [baseline, voice, classifier, clef-flash-q4km, winnow]   # everything the demo pages can use; the rest are on-demand (tag:demand)
   models: [kev-4b, semif, so1, laya, verdict]       # the five loaded decision models (about 30 of 31.8 GiB together)
   full:   [live, models]
   share:  [share]                                   # a public Cloudflare link for the console (no login: anyone with it can spend the TypeSafe key)
@@ -51,7 +51,7 @@ profiles:
 services:
   winnow:
     kind: proc
-    desc: Winnow-12B classifier (llama.cpp), reads every story
+    desc: "Winnow-12B story reader (llama.cpp): the World Engine needs it to read new stories (about 15 GB GPU)"
     port: 8091
     cwd: models/winnow-inference
     env: {CUDA_VISIBLE_DEVICES: "0"}
@@ -108,7 +108,7 @@ services:
     boot: 180
     heavy: true
     flex: true
-    tags: [gpu, classifier]
+    tags: [gpu, classifier, demand]
     log: logs/winnow.log
 
   world:

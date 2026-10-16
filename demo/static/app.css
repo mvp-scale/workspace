@@ -183,6 +183,7 @@ table.heat th.mcolh .mbase { display: block; font-size: 10px; font-weight: 400; 
 .json .jl { display: flex; align-items: baseline; } .json .jk { flex: none; white-space: pre; } .json .jv { flex: 1 1 auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .json .j-k { color: var(--accent); } .json .j-s { color: var(--good); } .json .j-n { color: var(--warn); font-weight: 600; } .json .j-b { color: var(--bad); } .json .j-p { color: var(--text-3); }
 .json.json-inline { white-space: normal; overflow-wrap: anywhere; padding: 8px 12px; }
-.svc-switches { display: flex; gap: 4px; align-items: center; } .svc-btn { gap: 6px; padding-left: 8px; padding-right: 8px; } .svc-btn .dot { margin: 0; } .svc-btn:disabled { opacity: .75; cursor: default; }
+.svc-panel { width: min(520px, calc(100vw - 24px)); } .svc-rows { display: grid; gap: 6px; margin-top: 8px; }
+.svc-row { display: grid; grid-template-columns: 14px 90px minmax(0, 1fr) 80px auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); } .svc-row .dot { margin: 0; }
 .dot.busy { background: var(--warn); animation: dotpulse 1s ease-in-out infinite; } @keyframes dotpulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .dot.busy { animation: none; } }
