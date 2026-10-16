@@ -36,6 +36,9 @@ def running():
 
 def handle_get(query):
     q = dict(x.split("=", 1) for x in query.split("&") if "=" in x)
+    if "depth" in q:
+        f = BASE / "depth.json"
+        return (200, json.loads(f.read_text())) if f.is_file() else (404, {"error": "No depth test yet. Run probes/latent_depth.py eval."})
     if "journey" in q:
         if not re.fullmatch(r"[a-z0-9-]{1,80}", q["journey"]): return 400, {"error": "Bad id."}
         f = BASE / f"journey-{q['journey']}.json"

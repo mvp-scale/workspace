@@ -94,6 +94,12 @@
   .feat .who { font-size: 12px; font-weight: 600; } .feat .txt { font-size: 13px; color: var(--text-2); }
   .feat .ans { font-family: var(--mono); font-size: 13px; }
   .feat .txt { font-size: 14px; }
+  table.depth td, table.depth th { vertical-align: top; } table.depth .lvl td { background: var(--surface-2, var(--surface)); font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
+  table.depth .num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; } table.depth .rng { display: block; font-size: 11.5px; color: var(--text-3); }
+  table.depth td:last-child .rng { white-space: normal; max-width: 170px; } table.depth .q span { white-space: normal; }
+  table.depth .q b { display: block; } table.depth .q span { font-size: 12px; color: var(--text-3); }
+  .vd { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid; white-space: nowrap; }
+  .vd.cpu { color: var(--good); border-color: var(--good); } .vd.mix { color: var(--warn); border-color: var(--warn); } .vd.clef { color: var(--bad); border-color: var(--bad); } .vd.rare { color: var(--text-3); border-color: var(--border-strong); }
   .tiers { display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1fr); gap: 6px; align-items: stretch; }
   .tiers .arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-3); }
   .tier { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
@@ -150,6 +156,13 @@
       <div class="card stack"><div class="jr-story" id="jrStory"></div><div class="tiles" id="jrTiles"></div><p class="small muted" id="jrScope" hidden><b>Stays in its lane.</b> The local model answers only the questions it was trained on, and only for texts like the ones it learned from (here: conversation lines). A new question needs its own short training run (Clef labels a few hundred texts, about a minute). If the texts change kind, it is re-checked against Clef first. Clef itself needs no training and answers any question.</p><div class="stack" id="jrFeat"></div></div>
       <div class="card stack" style="position:sticky;top:76px"><div id="jrMap"></div><div class="legend" id="jrLegend"></div><div id="jrChart"></div></div>
     </div>
+  </section>
+
+  <section class="section" style="margin-top:18px" aria-labelledby="h-depth" id="depthSec" hidden>
+    <header><div><h2 id="h-depth">How deep can it go? 14 kinds of question</h2><p class="small" id="depthIntro"></p></div>
+      <div class="row"><div class="segmented" id="depthN" role="group" aria-label="Training examples"></div></div></header>
+    <div class="card"><div class="table-wrap"><table class="data depth" id="depthTbl"></table></div>
+      <p class="small muted" style="margin-top:8px" id="depthFoot"></p></div>
   </section>
 
   <h2 style="margin-top:22px">Lab: inside the embeddings</h2><p class="small muted">The research behind the walkthrough. Pick an embedding model and a labelled set; every view below follows them.</p>
@@ -342,8 +355,47 @@ const expIdx = (it) => it.options.findIndex(o => o.label === it.expected);
 const shorten = (s) => s;
 const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 1000) / 1000; };
 
+
+// Depth test: 14 kinds of question, measured the same way (probes/latent_depth.py -> /api/latent/intake?depth=1)
+const DEP = { d: null, k: -1 };
+function depthVerdict(r, c) {
+  if (r.test_yes < 30) return ["rare", "Too rare to tell", `only ${r.test_yes} yes windows in the test set`];
+  const share = c.cpu_share ? c.cpu_share.mean : 0, f = c.f1 ? c.f1.mean : 0;
+  if (f >= 0.85 && share >= 0.9) return ["cpu", "CPU alone", "the CPU gets most yes cases right on its own"];
+  if (share >= 0.75) return ["cpu", "CPU + Clef backup", "Clef answers 25% or less"];
+  if (share >= 0.5) return ["mix", "Split", "Clef answers 25–50%"];
+  return ["clef", "Stays with Clef", "the CPU cannot hold 97% agreement on most requests"];
+}
+async function drawDepth() {
+  if (!DEP.d) { try { DEP.d = await api("/api/latent/intake?depth=1"); } catch { return; } }
+  const d = DEP.d, sec = document.getElementById("depthSec"); sec.hidden = false;
+  const sizes = ["100", "300", "1,000", "all"];
+  if (DEP.k < 0) DEP.k = 3;
+  document.getElementById("depthN").replaceChildren(el("span", { class: "small subtle", text: "Clef answers learned from: " }), ...sizes.map((t, i) => el("button", { type: "button", "aria-pressed": String(i === DEP.k), text: t, onclick: () => { DEP.k = i; drawDepth(); } })));
+  document.getElementById("depthIntro").textContent = "The same test for every question: Clef answers some conversation windows, the CPU engine learns from those answers, and we score it on windows from other conversations it never saw. Ordered from words on the surface to facts about the world. Scored against Clef's answers; the small grey numbers are the lowest and highest of 3 shuffles.";
+  const pc = v => v == null ? "–" : fmt.pct(v, 0), rng = m => m && m.max - m.min >= 0.005 ? `${pc(m.min)}–${pc(m.max)}` : "";
+  const cell = (m, extra) => el("td", { class: "num" }, m ? pc(m.mean) : "–", el("span", { class: "rng", text: extra != null ? extra : rng(m) }));
+  const head = el("tr", {}, ...["Question", "How common", "CPU alone: right", "Yes cases caught", "Yes calls right", "Answered on CPU (with Clef backup)", "Verdict"].map(t => el("th", { text: t })));
+  const body = [];
+  d.levels.forEach((L, li) => {
+    const qs = d.questions.filter(r => r.level === li); if (!qs.length) return;
+    body.push(el("tr", { class: "lvl" }, el("td", { colspan: 7, text: `${li + 1} · ${L}` })));
+    for (const r of qs) {
+      const c = r.curve[Math.min(DEP.k, r.curve.length - 1)], [cls, label, why] = depthVerdict(r, c);
+      const acc = c.acc ? c.acc.mean : null, gain = acc == null ? "" : `${acc - r.always_no >= 0 ? "+" : ""}${Math.round((acc - r.always_no) * 100)} pts over always "no" (${pc(r.always_no)})`;
+      body.push(el("tr", {},
+        el("td", { class: "q" }, el("b", { text: r.name }), el("span", { text: r.what })),
+        el("td", { class: "num" }, pc(r.yes_rate), el("span", { class: "rng", text: `${r.test_yes} of ${r.n_test.toLocaleString()} test windows` })),
+        cell(c.acc, gain), cell(c.recall), cell(c.precision),
+        el("td", { class: "num" }, c.cpu_share ? pc(c.cpu_share.mean) : "0%", el("span", { class: "rng", text: c.cpu_share ? `${rng(c.cpu_share) || "same in all 3"} · matches Clef ${pc(c.casc_agree && c.casc_agree.mean)}` : "too few yes examples to train" })),
+        el("td", {}, el("span", { class: "vd " + cls, text: label }), el("span", { class: "rng", text: why }))));
+    }
+  });
+  document.getElementById("depthTbl").replaceChildren(el("thead", {}, head), el("tbody", {}, ...body));
+  document.getElementById("depthFoot").textContent = `Teacher: ${d.teacher}. Student: ${d.encoder} plus one small classifier per question. "Yes cases caught": of the windows Clef says yes to, the share the CPU also says yes to. "Yes calls right": of the CPU's yes answers, the share Clef agrees with. With backup, the CPU answers only when it is confident and Clef takes the rest, keeping at least ${Math.round(d.bar.agree * 100)}% agreement with Clef overall. Ten questions were labelled by Clef on all 4,322 windows; hints, sarcasm, persuasion and false facts on a random 1,500 (1,000 to learn from, 500 to test). Agreement with Clef is not the same as being right: the tone sets above measure against people.`;
+}
 async function boot() {
-  drawJourney();  // the story comes first; it does not wait for the lab data below
+  drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
   let res; try { res = await api("/api/latent"); }
   catch (e) { document.getElementById("main").append(Jev.empty("No export yet", "Run probes/embed_readouts.py or probes/embed_sweep.py, then probes/latent_export.py, and reload.")); return; }
   Object.assign(S, { index: res.index, models: res.models, model: res.model, sweep: res.sweep, curve: res.curve || [], verdicts: res.verdicts });
