@@ -122,6 +122,12 @@
   @media (max-width: 860px) { .flow { grid-template-columns: 1fr; } .flow .ar { transform: rotate(90deg); } }
   .mini { border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; } .mini td, .mini th { padding: 3px 8px; text-align: right; border-bottom: 1px solid var(--border); } .mini th { color: var(--text-3); font-weight: 600; } .mini td:first-child, .mini th:first-child { text-align: left; font-family: var(--sans, inherit); }
   .mini .win { color: var(--good); font-weight: 700; } .mini .lose { color: var(--bad); font-weight: 700; }
+  .slv { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+  .slv .card { min-width: 0; } .slv pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 12.5px/1.45 var(--mono); background: var(--surface-2, var(--surface)); padding: 6px 8px; border-radius: 4px; }
+  .sln { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12.5px; } .sln li span.src { color: var(--text-3); font-family: var(--mono); font-size: 11px; }
+  .lab-chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 7px; border-radius: 999px; border: 1px solid var(--border-strong); margin-right: 4px; }
+  .lab-chip.same { border-color: var(--good); color: var(--good); } .lab-chip.diff { border-color: var(--bad); color: var(--bad); }
+  .verdict { font-size: 18px; font-weight: 700; }
   .tiers { display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1fr); gap: 6px; align-items: stretch; }
   .tiers .arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-3); }
   .tier { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
@@ -314,6 +320,37 @@
       <div class="card"><b>3 · How dimensions are weighted</b><span>Jev-class: learned (kev projects both vectors into a 256-dimension space first). Cosine: every dimension equally. The readouts below change only this.</span></div>
     </div>
     </details>
+  </section>
+  <section class="section" aria-labelledby="h-star" id="starSec">
+    <header><div><h2 id="h-star">STAR framing lab: test it here, live</h2>
+      <p class="takeaway"><span class="k">What this tests</span>Whether framing a text with a situation and a task changes what the CPU classifier learns. Everything below is computed now, on this machine, from the raw set files, by the CPU engine's own encoder. Nothing is precomputed.</p></div></header>
+    <div class="card stack" id="slMethod"><p class="small muted">Loading the method from the CPU engine… (the local classifier must be on: Services in the top bar)</p></div>
+    <div class="card stack">
+      <div class="row" style="flex-wrap:wrap;gap:10px;align-items:end">
+        <div class="field"><label for="slSet">Set</label><select id="slSet"></select></div>
+        <div class="field"><label for="slN">Training examples</label><select id="slN"><option value="">all</option><option value="250">250</option><option value="80">80</option></select></div>
+        <div class="field"><label for="slClf">Classifier</label><select id="slClf"><option value="line">One dividing line (the engine's)</option><option value="neighbours">Vote of the 10 nearest texts</option></select></div>
+        <button class="btn primary" type="button" id="slRun">Run the test</button>
+        <span class="spacer"></span>
+        <div class="field"><label for="slIdx">Item</label><input type="number" id="slIdx" min="0" value="0" style="width:90px"></div>
+        <button class="btn" type="button" id="slPrev">Previous</button><button class="btn" type="button" id="slNext">Next</button><button class="btn" type="button" id="slLook">Look at this item</button>
+      </div>
+      <details class="more"><summary>Optional: your own frame (applied as a fourth version in runs, items and your text)</summary>
+        <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:6px">
+          <div class="field" style="flex:1;min-width:240px"><label for="slSit">Situation</label><input type="text" id="slSit" maxlength="300" placeholder="e.g. A customer is replying to a support agent about a late order."></div>
+          <div class="field" style="flex:1;min-width:240px"><label for="slTask">Task</label><input type="text" id="slTask" maxlength="300" placeholder="e.g. A team lead is checking how upset each customer is."></div>
+        </div></details>
+      <p class="small" id="slStatus"></p>
+    </div>
+    <div id="slRunOut" class="stack"></div>
+    <div id="slItemOut" class="stack"></div>
+    <div class="card stack">
+      <h3>Try your own text</h3>
+      <p class="small muted">Type any text: see where it lands among this set's training texts and what the classifier says, bare and framed (the set's STAR frame, or your own frame above).</p>
+      <div class="field"><label for="slText">Text</label><textarea id="slText" rows="2">Honestly that is way over our budget, and nobody told me the price had changed.</textarea></div>
+      <div class="row"><button class="btn" type="button" id="slTry">Place it</button></div>
+      <div id="slTryOut" class="stack"></div>
+    </div>
   </section>
   <h2 style="margin-top:26px">The research behind it</h2><p class="takeaway"><span class="k">The point</span>We tried 16 ideas on published, human-labelled sets. The big levers: a trained sidecar, more examples per question, and the right encoder. Pick an encoder and a set below; every view follows them.</p>
   <div class="bar-ctl">
@@ -616,8 +653,71 @@ async function teacherUI() {
   sel.value = TEACH.cur.id; sel.disabled = !TEACH.can;
   sel.title = TEACH.can ? "Trains new questions, and backs up and is compared with the CPU" : "The teacher can only be changed from this machine";
 }
+
+// STAR framing lab: every request runs in the CPU engine now (probes/star_lab.py), from the raw files.
+const SL = { sets: null };
+const slFrame = () => { const a = document.getElementById("slSit").value.trim(), b = document.getElementById("slTask").value.trim(); return a || b ? { situation: a, task: b } : null; };
+const slPost = (path, body) => api("/api/cpu/lab/" + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const SLV = { bare: "Bare text", star: "STAR frame", filler: "Generic frame (control)", custom: "Your frame" };
+function slNeighbours(list, label) {
+  return el("ol", { class: "sln" }, ...list.map(n => el("li", {}, el("span", { class: "lab-chip " + (label == null ? "" : n.label === label ? "same" : "diff"), text: n.label }),
+    n.text + (n.text.length >= 200 ? "…" : ""), " ", el("span", { class: "src", text: `${n.similarity.toFixed(3)} · ${n.source}` }))));
+}
+async function slInit() {
+  try { SL.sets = await api("/api/cpu/lab/sets"); } catch (e) { return; }
+  const d = SL.sets, sel = document.getElementById("slSet");
+  sel.replaceChildren(...d.sets.map(x => el("option", { value: x.id, text: `${x.name} · ${x.items} items${x.pool ? ` · ${x.pool} training texts` : ""}` })));
+  const cur = () => d.sets.find(x => x.id === sel.value);
+  const method = () => { const x = cur();
+    document.getElementById("slMethod").replaceChildren(el("h3", { text: "The method, fixed before any run" }),
+      el("ul", { class: "small", style: "margin:0;padding-left:18px;display:grid;gap:4px" },
+        el("li", {}, el("b", { text: "Data: " }), x.mode === "pool" ? `train on the ${x.pool} pool texts (data/embed-zs/pools/${x.id}.jsonl, published items excluded), test on the ${x.items} published items (probes/v2/${x.id}.jsonl). Labels are people's.` : `no training pool, so 5-fold cross-validation inside the ${x.items} published items, 3 shuffles. Labels are people's.`),
+        el("li", {}, el("b", { text: "What changes: " }), "only the string given to the encoder: bare text; STAR frame (", el("i", { text: `situation: ${x.star.situation} task: ${x.star.task}` }), "); a generic frame of similar length as the control; or your own frame."),
+        el("li", {}, el("b", { text: "Encoder and classifier: " }), `${d.encoder}, then either one logistic regression line (exactly as the CPU engine works) or a vote of the 10 most similar training texts (the "hits" view). Both see the same vectors.`),
+        el("li", {}, el("b", { text: "Decision rule: " }), `STAR helps if accuracy rises ${d.rule.min_points} points or more with the 95% range above zero and it beats the generic frame; hurts if it falls ${d.rule.min_points} or more with the range below zero; otherwise no measurable difference. Always read the count of items that changed: a few items can swing a percentage.`),
+        el("li", {}, el("b", { text: "Left out: " }), "contract clauses, because " + d.excluded.checklist_contractnli + ".")));
+    document.getElementById("slN").disabled = x.mode !== "pool"; };
+  sel.addEventListener("change", () => { method(); document.getElementById("slRunOut").replaceChildren(); document.getElementById("slItemOut").replaceChildren(); document.getElementById("slTryOut").replaceChildren(); });
+  method();
+  const status = (t) => { document.getElementById("slStatus").textContent = t; };
+  const busy = async (msg, fn) => { status(msg); const t0 = performance.now(); try { await fn(); status(`Done in ${((performance.now() - t0) / 1000).toFixed(1)} s, computed now by the CPU engine.`); } catch (e) { status("Error: " + e.message); } };
+  const look = (i) => busy("Encoding… (the first look at a set encodes its training texts, about 30 s; then it is instant)", async () => {
+    const r = await slPost("item", { set: sel.value, index: i, frame: slFrame() }), rec = r.record;
+    document.getElementById("slItemOut").replaceChildren(el("div", { class: "card stack" },
+      el("h3", { text: `Item ${i}` }), el("p", { class: "small" }, el("span", { class: "lab-chip", text: "human label: " + rec.label }), el("span", { class: "src", style: "font-family:var(--mono);font-size:11px", text: rec.source })),
+      el("blockquote", { style: "margin:0;border-left:3px solid var(--accent);padding-left:10px", text: rec.text }),
+      el("div", { class: "slv" }, ...Object.entries(r.variants).map(([k, v]) => el("div", { class: "card stack" },
+        el("b", { text: SLV[k] }), el("div", { class: "small muted", text: "Exactly what the encoder received" }), el("pre", { text: v.string }),
+        el("div", { class: "small muted", text: `Its 10 closest training texts: ${v.same_label_in_top10} of 10 share this item's label` }), slNeighbours(v.nearest, rec.label)))))); });
+  const idx = document.getElementById("slIdx");
+  document.getElementById("slLook").addEventListener("click", () => look(+idx.value || 0));
+  document.getElementById("slPrev").addEventListener("click", () => { idx.value = Math.max(0, (+idx.value || 0) - 1); look(+idx.value); });
+  document.getElementById("slNext").addEventListener("click", () => { idx.value = (+idx.value || 0) + 1; look(+idx.value); });
+  document.getElementById("slRun").addEventListener("click", () => busy("Training and testing… (the first run on a set encodes its texts, up to about 30 s)", async () => {
+    const r = await slPost("run", { set: sel.value, n: document.getElementById("slN").value ? +document.getElementById("slN").value : null, frame: slFrame(), classifier: document.getElementById("slClf").value });
+    const kinds = Object.keys(r.accuracy), changed = r.per_item.map((x, i) => ({ ...x, i })).filter(x => x.star !== x.bare || (x.custom !== undefined && x.custom !== x.bare));
+    const pct = v => (100 * v).toFixed(1) + "%";
+    document.getElementById("slRunOut").replaceChildren(el("div", { class: "card stack" },
+      el("div", { class: "verdict", text: r.verdict }), el("p", { class: "small muted", text: r.setup + `. Computed in ${r.seconds} s.` }),
+      el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ...["Version", "Accuracy vs people", "Change vs bare (95% range)", "Items better", "Items worse"].map(t => el("th", { text: t })))),
+        el("tbody", {}, ...kinds.map(k => { const v = r.vs_bare[k];
+          return el("tr", {}, el("td", { text: SLV[k] }), el("td", { class: "num", text: pct(r.accuracy[k]) }), el("td", { class: "num", text: v ? `${v.points > 0 ? "+" : ""}${v.points} (${v.ci95[0]} to ${v.ci95[1]})` : "–" }),
+            el("td", { class: "num", text: v ? v.better : "–" }), el("td", { class: "num", text: v ? v.worse : "–" })); })))),
+      el("h3", { text: `The ${changed.length} items whose result changed with a frame` }),
+      el("p", { class: "small muted", text: "Share of training draws in which each version got the item right (1 = always). Click an item to see its strings and neighbours." }),
+      el("div", { class: "table-wrap" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, ...["#", "Label", "Text", ...kinds.map(k => SLV[k]), "Source"].map(t => el("th", { text: t })))),
+        el("tbody", {}, ...changed.map(x => el("tr", { style: "cursor:pointer", onclick: () => { idx.value = x.i; look(x.i); document.getElementById("slItemOut").scrollIntoView({ behavior: "smooth" }); } },
+          el("td", { class: "num", text: x.i }), el("td", { text: x.label }), el("td", { text: x.text }), ...kinds.map(k => el("td", { class: "num", text: x[k].toFixed(2) })), el("td", { class: "small", style: "font-family:var(--mono)", text: x.source }))))))));
+  }));
+  document.getElementById("slTry").addEventListener("click", () => busy("Placing your text…", async () => {
+    const r = await slPost("try", { set: sel.value, text: document.getElementById("slText").value, frame: slFrame() });
+    document.getElementById("slTryOut").replaceChildren(el("div", { class: "slv" }, ...Object.entries(r.variants).map(([k, v]) => el("div", { class: "card stack" },
+      el("b", { text: `${SLV[k]}: the classifier says ${v.prediction}` }), el("div", { class: "small muted", text: Object.entries(v.probabilities).map(([c, p]) => `${c} ${p}`).join(" · ") }),
+      el("pre", { text: v.string }), el("div", { class: "small muted", text: "Its 10 closest training texts" }), slNeighbours(v.nearest, null)))));
+  }));
+}
 async function boot() {
-  tryInit(); drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
+  tryInit(); slInit(); drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
   let res; try { res = await api("/api/latent"); }
   catch (e) { document.getElementById("main").append(Jev.empty("No export yet", "Run probes/embed_readouts.py or probes/embed_sweep.py, then probes/latent_export.py, and reload.")); return; }
   Object.assign(S, { index: res.index, models: res.models, model: res.model, sweep: res.sweep, curve: res.curve || [], verdicts: res.verdicts });
