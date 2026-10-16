@@ -436,6 +436,22 @@ def world_engine_proxy(method, sub, body):
         return 503, {"error": "The world engine service is not running. Start it with: /workspace/kev/.venv/bin/python probes/world-engine/world_service2.py"}
 
 
+CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8019")  # probes/cpu_engine.py (CPU-only TypeSafe engine, started by hand)
+
+
+def cpu_engine_proxy(method, sub, body):
+    if sub.split("?")[0] not in ("/health", "/library", "/v1/systemone"):
+        return 404, {"error": "not found"}
+    try:
+        req = urllib.request.Request(CPU_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+    except (urllib.error.URLError, OSError):
+        return 503, {"error": "The CPU engine is not running. Start it with: CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py"}
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         raw = body if isinstance(body, bytes) else json.dumps(body).encode()
@@ -463,6 +479,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path.startswith("/api/world-engine/"):
             return self._send(*world_engine_proxy("GET", self.path[len("/api/world-engine"):], None))      # self.path keeps the query string (?since=N)
+        if path.startswith("/api/cpu/"):
+            return self._send(*cpu_engine_proxy("GET", path[len("/api/cpu"):], None))
         if path.startswith("/api/world-lab/"):
             return self._send(*world_lab_proxy("GET", path[len("/api/world-lab"):], None))
         if path.startswith("/api/idea"):
@@ -619,6 +637,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*r) if r else self._send(404, {"error": "not found"})
         if self.path.startswith("/api/world-engine/"):
             return self._send(*world_engine_proxy("POST", self.path.split("?")[0][len("/api/world-engine"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
+        if self.path.startswith("/api/cpu/"):
+            return self._send(*cpu_engine_proxy("POST", self.path[len("/api/cpu"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200000))))
         if self.path.startswith("/api/world-lab/"):
             return self._send(*world_lab_proxy("POST", self.path.split("?")[0][len("/api/world-lab"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
         if self.path.startswith("/api/persona-lab/"):

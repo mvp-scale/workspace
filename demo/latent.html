@@ -100,6 +100,13 @@
   table.depth .q b { display: block; } table.depth .q span { font-size: 12px; color: var(--text-3); }
   .vd { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid; white-space: nowrap; }
   .vd.cpu { color: var(--good); border-color: var(--good); } .vd.mix { color: var(--warn); border-color: var(--warn); } .vd.clef { color: var(--bad); border-color: var(--bad); } .vd.rare { color: var(--text-3); border-color: var(--border-strong); }
+  .try-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 900px) { .try-grid { grid-template-columns: 1fr; } }
+  .try-big { display: flex; flex-wrap: wrap; gap: 8px; } .try-big div { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; background: var(--surface); }
+  .try-big b { display: block; font-size: 20px; } .try-big span { font-size: 12px; color: var(--text-3); } .try-big .g b { color: var(--good); }
+  table.tryt td { vertical-align: middle; } table.tryt .num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .yn { font-weight: 700; } .yn.y { color: var(--pos, var(--good)); } .yn.n { color: var(--text-3); }
+  .pbar { display: inline-block; width: 70px; height: 6px; background: var(--border); border-radius: 3px; vertical-align: middle; margin-left: 6px; position: relative; } .pbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 3px; }
   .tiers { display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1fr); gap: 6px; align-items: stretch; }
   .tiers .arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-3); }
   .tier { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
@@ -139,6 +146,20 @@
     <p class="small"><b>How we get from 2 to 3:</b> Clef teaches the CPU engine once per question (about a minute on the GPU), then steps aside. <b>Not there yet:</b> on the price question below, the CPU alone gives Clef's answer 89% of the time (always saying "no" would get 87%); with Clef as a backup for the unsure 11%, 96.4%.</p>
     <p class="small muted">Measured here: Jev median of 15,479 hosted calls at the public tariff; Clef Flash Q4 on the RTX 5090; local engine = e5-small encoder plus one classifier per question on the i9 CPU. Tone accuracy: the same items from 5 published sets with human labels; the local engine was trained on about 2,000 examples per question.</p>
   </div>
+  <section class="section" aria-labelledby="h-try" id="trySec">
+    <header><div><h2 id="h-try">Try it: the CPU engine, live</h2><p class="small">A real TypeSafe <code>/v1/systemone</code> server running on this machine's CPU, with the GPU hidden from it. Type any text; every question in its library answers.</p></div>
+      <div class="row" id="tryHealth"></div></header>
+    <div class="try-grid">
+      <div class="card stack">
+        <div class="field"><label for="tryText">Text (the request's state)</label><textarea id="tryText" rows="3">Honestly that is way over our budget, the quote came in at forty thousand.</textarea></div>
+        <div class="row" id="trySamples"></div>
+        <div class="row"><label class="small"><input type="checkbox" id="tryCompare" checked> Also ask Clef on the GPU, to compare</label>
+          <label class="small"><input type="checkbox" id="tryBackup"> Clef backup: send unsure answers to Clef</label><span class="spacer"></span><button class="btn primary" type="button" id="tryGo">Send to the CPU engine</button></div>
+        <div id="tryOut" class="stack"></div>
+      </div>
+      <div class="card stack" id="tryJson"><p class="small muted">The request and the engine's response appear here.</p></div>
+    </div>
+  </section>
   <section class="section" style="margin-top:12px" aria-labelledby="h-jr" id="jrSec">
     <header><div><h2 id="h-jr">Walkthrough: moving a TypeSafe question off the GPU</h2><p class="small" id="jrIntro">A real run, precomputed so it is instant: one question ("the speaker mentions a price, cost or budget"), 4,322 conversation windows that Clef answered, the e5-small encoder and one small classifier. Step through it, or switch to Your data and watch it happen live on your own texts.</p></div>
       <div class="row"><div class="segmented" id="jrMode" role="group" aria-label="Source"><button type="button" data-v="example" aria-pressed="true">Worked example</button><button type="button" data-v="live">Your data (live)</button></div><button class="btn" type="button" id="jrPrev">Back</button><button class="btn primary" type="button" id="jrNext">Next</button></div></header>
@@ -394,8 +415,54 @@ async function drawDepth() {
   document.getElementById("depthTbl").replaceChildren(el("thead", {}, head), el("tbody", {}, ...body));
   document.getElementById("depthFoot").textContent = `Teacher: ${d.teacher}. Student: ${d.encoder} plus one small classifier per question. "Yes cases caught": of the windows Clef says yes to, the share the CPU also says yes to. "Yes calls right": of the CPU's yes answers, the share Clef agrees with. With backup, the CPU answers only when it is confident and Clef takes the rest, keeping at least ${Math.round(d.bar.agree * 100)}% agreement with Clef overall. Ten questions were labelled by Clef on all 4,322 windows; hints, sarcasm, persuasion and false facts on a random 1,500 (1,000 to learn from, 500 to test). Agreement with Clef is not the same as being right: the tone sets above measure against people.`;
 }
+
+// Try it: live requests to the CPU engine (probes/cpu_engine.py via /api/cpu/*)
+const TRY = { lib: null };
+const TRY_SAMPLES = ["Honestly that is way over our budget, the quote came in at forty thousand.", "I'm so sorry, I completely forgot to call you back.", "I promise I'll send the report by Friday.",
+  "This whole mess is your fault, you never listen.", "Well, things are kind of generally fine I guess.", "You really should donate today, even a dollar helps the children.", "Can you tell me where the nearest station is?"];
+async function tryHealth() {
+  const box = document.getElementById("tryHealth");
+  try { const h = await api("/api/cpu/health");
+    box.replaceChildren(el("span", { class: "badge", text: "CPU engine running" }), el("span", { class: "badge", text: h.gpu_visible ? "GPU visible!" : "GPU: not visible to it" }),
+      el("span", { class: "badge", text: `${h.memory_mb} MB RAM` }), el("span", { class: "badge", text: `${h.library_size} questions · ${(h.classifier_bytes / 1024).toFixed(0)} KB of classifiers` }), el("span", { class: "badge", text: `${h.threads} CPU threads` }));
+    return true;
+  } catch (e) { box.replaceChildren(el("span", { class: "badge", text: "CPU engine not running" })); document.getElementById("tryOut").replaceChildren(el("p", { class: "small", text: "Start it with: CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py" })); return false; }
+}
+async function trySend() {
+  const text = document.getElementById("tryText").value.trim(); if (!text) return;
+  if (!TRY.lib) TRY.lib = (await api("/api/cpu/library")).questions;
+  const compare = document.getElementById("tryCompare").checked, backup = document.getElementById("tryBackup").checked;
+  const req = { state: text, questions: Object.fromEntries(TRY.lib.map(q => [q.id, { type: "noul", instructions: q.instructions, criteria: q.criteria }])) };
+  const btn = document.getElementById("tryGo"); btn.disabled = true; const t0 = performance.now();
+  let res; try { res = await api(`/api/cpu/v1/systemone?${[compare ? "compare=1" : "", backup ? "backup=1" : ""].filter(Boolean).join("&")}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) }); }
+  catch (e) { btn.disabled = false; document.getElementById("tryOut").replaceChildren(el("p", { class: "small", text: "Error: " + e.message })); return; }
+  btn.disabled = false; const wall = performance.now() - t0, g = res.engine, tr = g.trace;
+  const keys = Object.keys(res.answers), onCpu = keys.filter(k => tr[k].answered_by === "cpu").length;
+  const withClef = keys.filter(k => tr[k].clef_noul != null), agree = withClef.filter(k => (res.answers[k].noul > 0.5) === (tr[k].clef_noul > 0.5)).length;
+  const clefMs = withClef.length ? Math.max(...withClef.map(k => tr[k].clef_compare_ms)) : null;
+  const big = [["g", `${g.encode_ms} ms`, "reading the text on the CPU"], ["g", `${g.classifiers_ms < 0.1 ? "<0.1" : g.classifiers_ms} ms`, `answering all ${keys.length} questions`], ["g", g.gpu_visible ? "yes" : "none", "GPU used"],
+    ["", `${g.memory_mb} MB`, "engine memory"], ["", `${onCpu} of ${keys.length}`, "answered on the CPU"]];
+  if (withClef.length) big.push(["", `${agree} of ${withClef.length}`, `same answer as Clef (Clef took ${Math.round(clefMs)} ms, 4 at a time)`]);
+  const yn = p => el("span", { class: "yn " + (p > 0.5 ? "y" : "n"), text: p > 0.5 ? "yes" : "no" });
+  const pb = p => el("span", { class: "pbar" }, el("i", { style: `width:${Math.round(p * 100)}%` }));
+  const rows = keys.map(k => { const q = TRY.lib.find(x => x.id === k), a = res.answers[k].noul, t = tr[k], c = t.clef_noul;
+    return el("tr", {}, el("td", { text: q ? q.name : k }), el("td", { class: "num" }, yn(a), " ", a.toFixed(2), pb(a)),
+      el("td", { class: "small", text: t.answered_by === "cpu" ? (t.confident ? "CPU, confident" : "CPU, unsure") : `Clef (${t.why})` }),
+      el("td", { class: "num" }, c == null ? "–" : [yn(c), " ", c.toFixed(2)]), el("td", { text: c == null ? "" : (a > 0.5) === (c > 0.5) ? "✓" : "✗", style: c != null && (a > 0.5) !== (c > 0.5) ? "color:var(--bad)" : "" })); });
+  document.getElementById("tryOut").replaceChildren(el("div", { class: "try-big" }, ...big.map(([c, b, sp]) => el("div", { class: c }, el("b", { text: b }), el("span", { text: sp })))),
+    el("div", { class: "table-wrap" }, el("table", { class: "data tryt" }, el("thead", {}, el("tr", {}, ...["Question", "CPU answer", "Who answered", "Clef (GPU)", ""].map(t => el("th", { text: t })))), el("tbody", {}, ...rows))),
+    el("p", { class: "small subtle", text: `Round trip in your browser: ${Math.round(wall)} ms${compare ? ", including the side-by-side Clef calls" : ""}. "Unsure" answers fall inside the band where the CPU cannot hold 97% agreement with Clef; tick Clef backup to send those to Clef.` }));
+  const resp = { answers: res.answers }; const rest = { ...g }; delete rest.trace;
+  document.getElementById("tryJson").replaceChildren(Jev.jsonView({ state: req.state, questions: { [keys[0]]: req.questions[keys[0]], "…": `${keys.length - 1} more questions` } }, "POST /v1/systemone · request (shortened)"), Jev.jsonView(resp, "response · answers"), Jev.jsonView(rest, "engine · timing and memory", { compact: true }));
+  tryHealth();
+}
+function tryInit() {
+  document.getElementById("trySamples").replaceChildren(el("span", { class: "small subtle", text: "Samples:" }), ...TRY_SAMPLES.map(t => el("button", { class: "btn ghost", type: "button", text: t.length > 34 ? t.slice(0, 32) + "…" : t, title: t, onclick: () => { document.getElementById("tryText").value = t; trySend(); } })));
+  document.getElementById("tryGo").addEventListener("click", trySend);
+  tryHealth().then(ok => ok && trySend());
+}
 async function boot() {
-  drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
+  tryInit(); drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
   let res; try { res = await api("/api/latent"); }
   catch (e) { document.getElementById("main").append(Jev.empty("No export yet", "Run probes/embed_readouts.py or probes/embed_sweep.py, then probes/latent_export.py, and reload.")); return; }
   Object.assign(S, { index: res.index, models: res.models, model: res.model, sweep: res.sweep, curve: res.curve || [], verdicts: res.verdicts });
