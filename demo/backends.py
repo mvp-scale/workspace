@@ -32,8 +32,12 @@ def _env(name, default=""):
 def _local(var, port): return os.environ.get(var, f"http://127.0.0.1:{port}")
 
 
-# keyed by the same model ids as the leaderboard (codes and names live in demo/models.json), best first
+# keyed by the same model ids as the leaderboard (codes and names live in demo/models.json). Order = how pickers and the
+# Models panel list them: the Clef Flash family first (our go-to model since Oct 2026), then the rest best first.
 BACKENDS = {
+    "clef-flash-q4km": {"url": _local("CLEF_Q4KM_URL", 8018), "key": ""},
+    "clef-flash": {"url": _local("CLEF_FLASH_URL", 8017), "key": ""},
+    "clef-flash-q2k": {"url": _local("CLEF_Q2K_URL", 8019), "key": ""},
     "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": _env("TYPESAFE_API_KEY"), "hosted": True},
     "cygnet": {"url": _local("CYGNET_URL", 8016), "key": ""},
     "winnow": {"url": _local("WINNOW_URL", 8091), "key": "", "model": "Winnow-12B"},
@@ -45,9 +49,6 @@ BACKENDS = {
     "jeff": {"url": _local("JEFF_URL", 8000), "key": _env("JEFF_API_KEYS", "devkey").split(",")[0]},
     "kev-0.5b": {"url": _local("KEV05_URL", 8009), "key": ""},
     "verdict": {"url": _local("VERDICT_URL", 8015), "key": ""},
-    "clef-flash-q4km": {"url": _local("CLEF_Q4KM_URL", 8018), "key": ""},
-    "clef-flash-q2k": {"url": _local("CLEF_Q2K_URL", 8019), "key": ""},
-    "clef-flash": {"url": _local("CLEF_FLASH_URL", 8017), "key": ""},
 }
 for _b in BACKENDS.values(): _b.setdefault("model", "jev-latest"); _b.setdefault("hosted", False)
 
