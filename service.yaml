@@ -40,8 +40,9 @@ default_profile: baseline
 profiles:
   baseline: [world, demo]                           # always on: the World Engine and the console
   live:   [baseline, voice, classifier, clef-flash-q4km]   # everything the demo pages can use; the rest are on-demand (tag:demand)
-  models: [kev-4b, semif, so1, laya, verdict]       # the five loaded decision models (about 30 of 31.8 GiB together)
+  models: [kev-4b, semif, so1]                     # the loaded decision models (laya and verdict are retired: still startable by name, never by profile)
   full:   [live, models]
+  cygnet-stack: [cygnet-vllm, cygnet]             # Cygnet = vLLM server + its TypeSafe front; takes ~90% of the GPU, so stop Clef first
   share:  [share]                                   # a public Cloudflare link for the console (no login: anyone with it can spend the TypeSafe key)
   test-world:                                       # a second engine beside the live one, for testing
     - {service: world, port: 8122}
@@ -305,6 +306,32 @@ services:
     flex: true
     tags: [gpu, model]
     log: logs/clef-flash-q2k.log
+
+  cygnet-vllm:
+    kind: proc
+    desc: "Cygnet's model server (vLLM, gemma-4-12B-it at a pinned revision); the cygnet service is its TypeSafe front (~90% of the GPU: runs alone)"
+    port: 8890
+    cwd: models/cygnet-recipe
+    env: {VLLM_USE_FLASHINFER_SAMPLER: "0"}
+    cmd: [models/cygnet-venv/bin/vllm, serve, google/gemma-4-12B-it, --revision, 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7,
+          --served-model-name, cygnet, --host, 127.0.0.1, --port, "${port}", --max-model-len, "16384", --gpu-memory-utilization, "0.90"]
+    match: vllm serve google/gemma-4-12B-it
+    health: /v1/models
+    boot: 600
+    heavy: true
+    tags: [gpu, solo]
+
+  cygnet:
+    kind: proc
+    desc: "Cygnet: TypeSafe /v1/systemone front over cygnet-vllm (./service.sh start cygnet-stack starts both)"
+    port: 8016
+    cwd: models/cygnet-recipe
+    env: {SHIM_VLLM: "http://127.0.0.1:8890/v1/chat/completions", SHIM_MODEL: cygnet, SHIM_TEMPERATURE: "3.4", CYGNET_PORT: "${port}"}
+    cmd: [python3, shim/decision_server.py]
+    match: decision_server\.py
+    health: /v1/models
+    after: [cygnet-vllm]
+    tags: [gpu, model, solo]
 
   share:
     kind: script
