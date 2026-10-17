@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS items (
 CREATE INDEX IF NOT EXISTS items_state ON items(state, published);
 CREATE INDEX IF NOT EXISTS items_found ON items(found_at);
 CREATE INDEX IF NOT EXISTS items_done ON items(done_at);
+CREATE TABLE IF NOT EXISTS served (kind TEXT, key TEXT, at REAL, PRIMARY KEY (kind, key));
 CREATE TABLE IF NOT EXISTS feeds (id TEXT PRIMARY KEY, etag TEXT, modified TEXT, last_poll REAL, last_status TEXT, items_seen INTEGER DEFAULT 0, errors INTEGER DEFAULT 0);
 """
 _local = threading.local()
@@ -68,15 +69,30 @@ def drop(id_, reason):
     db().execute("UPDATE items SET state='dropped', reason=?, ready_at=? WHERE id=?", (reason, time.time(), id_))
 
 
-def lease(n=1, seconds=180, order="newest"):
-    """Hand out ready stories (with their text) for reading; a lease that is not acked returns them to the queue."""
+def lease(n=1, seconds=180, order="fair"):
+    """Hand out ready stories (with their text) for reading; a lease that is not acked returns them to the queue.
+    order=fair (default): the region served longest ago, then its outlet served longest ago, then that outlet's newest story, so no one region
+    or outlet fills the feed. order=newest: newest first across everything. order=fifo: oldest found first."""
     c, now = db(), time.time()
     c.execute("BEGIN IMMEDIATE")
     try:
         c.execute("UPDATE items SET state='ready', leased_until=NULL WHERE state='leased' AND leased_until < ?", (now,))
-        o = "published DESC, found_at DESC" if order == "newest" else "found_at"
-        rows = [dict(r) for r in c.execute(f"SELECT * FROM items WHERE state='ready' ORDER BY {o} LIMIT ?", (int(n),)).fetchall()]
-        for r in rows: c.execute("UPDATE items SET state='leased', leased_until=? WHERE id=?", (now + seconds, r["id"]))
+        rows = []
+        if order == "fair":
+            for _ in range(int(n)):
+                last = {(k, key): at for k, key, at in c.execute("SELECT kind, key, at FROM served")}
+                pool = c.execute("SELECT DISTINCT region, source FROM items WHERE state='ready'").fetchall()
+                if not pool: break
+                region = min({r[0] for r in pool}, key=lambda g: (last.get(("region", g or ""), 0), g or ""))
+                source = min({r[1] for r in pool if r[0] == region}, key=lambda s_: (last.get(("source", s_), 0), s_))
+                r = c.execute("SELECT * FROM items WHERE state='ready' AND source=? ORDER BY published DESC, found_at DESC LIMIT 1", (source,)).fetchone()
+                c.execute("UPDATE items SET state='leased', leased_until=? WHERE id=?", (now + seconds, r["id"]))
+                for k, key in (("region", region or ""), ("source", source)): c.execute("INSERT INTO served VALUES (?,?,?) ON CONFLICT(kind, key) DO UPDATE SET at=excluded.at", (k, key, time.time()))
+                rows.append(dict(r))
+        else:
+            o = "published DESC, found_at DESC" if order == "newest" else "found_at"
+            rows = [dict(r) for r in c.execute(f"SELECT * FROM items WHERE state='ready' ORDER BY {o} LIMIT ?", (int(n),)).fetchall()]
+            for r in rows: c.execute("UPDATE items SET state='leased', leased_until=? WHERE id=?", (now + seconds, r["id"]))
         c.execute("COMMIT")
     except Exception:
         c.execute("ROLLBACK"); raise

@@ -1,7 +1,7 @@
 """The newsreader service: polls the catalogue, fetches and extracts in the background, and hands stories to a reader (the World engine) over HTTP.
   GET  /health                     {"ok": true}
   GET  /stats                      queue counts, rates (per second over the last 5 minutes), full-text share, extraction time, feed health
-  GET  /next?n=1&lease=180&order=newest|fifo   lease ready stories, with their Markdown
+  GET  /next?n=1&lease=180&order=fair|newest|fifo   lease ready stories, with their Markdown (fair: rotate regions, then outlets)
   POST /ack {"ids": [...]}         mark leased stories read
   GET  /items?limit=50             recent stories, metadata only
   POST /poll                       poll every feed now
@@ -44,7 +44,7 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/health": return self._send(200, {"ok": True})
         if u.path == "/stats": return self._send(200, {**store.stats(), "uptime_s": round(time.time() - STATE["started"]), "poll": {k: STATE.get(k) for k in ("last_poll", "polls", "last_poll_s", "last_new", "feeds")}, "workers": WORKERS})
         if u.path == "/next":
-            rows = store.lease(min(50, int(q.get("n", 1))), float(q.get("lease", 180)), q.get("order", "newest"))
+            rows = store.lease(min(50, int(q.get("n", 1))), float(q.get("lease", 180)), q.get("order", "fair"))
             return self._send(200, {"items": [{k: r[k] for k in ("id", "story", "url", "source", "country", "region", "lang", "category", "title", "published", "image", "teaser", "body", "depth", "reason", "words")} for r in rows]})
         if u.path == "/items":
             rows = store.db().execute("SELECT id, source, country, title, published, depth, reason, words, state FROM items ORDER BY found_at DESC LIMIT ?", (min(500, int(q.get("limit", 50))),)).fetchall()

@@ -14,7 +14,7 @@ FEED = {"id": "t", "name": "Test", "url": RSS, "kind": "rss", "country": "GB", "
 
 
 class T(unittest.TestCase):
-    def setUp(self): store.db().execute("DELETE FROM items"); store.db().execute("DELETE FROM feeds")
+    def setUp(self): [store.db().execute(f"DELETE FROM {t}") for t in ("items", "feeds", "served")]
 
     def test_story_id_normalises(self):
         a = store.story_id("Hello,  World!", "BBC", "2026-10-17T10:00:00Z"); b = store.story_id("hello world", "bbc", "2026-10-17")
@@ -32,6 +32,14 @@ class T(unittest.TestCase):
         self.assertEqual(len(got), 1); self.assertEqual(store.lease(5), [])
         time.sleep(0.02); again = store.lease(5); self.assertEqual(len(again), 1)    # an un-acked lease returns to the queue
         store.ack([again[0]["id"]]); self.assertEqual(store.stats()["by_state"].get("done"), 1)
+
+    def test_fair_rotation(self):
+        now = time.time()
+        for i, (src, reg) in enumerate([("A", "Asia")] * 5 + [("B", "Asia"), ("C", "Europe"), ("D", "US-MA")]):
+            store.add({"url": f"https://x.example/{i}", "feed": src, "source": src, "region": reg, "country": "", "lang": "en", "category": "", "title": f"story {i}", "published": f"2026-10-17T10:{i:02d}:00Z", "state": "ready", "depth": "full", "found_at": now})
+        got = store.lease(4)
+        self.assertEqual(sorted(r["region"] for r in got[:3]), ["Asia", "Europe", "US-MA"])        # every region before any repeats
+        self.assertEqual({r["source"] for r in got if r["region"] == "Asia"}, {"A", "B"})           # Asia's two turns go to its two outlets, not A twice
 
     def _one(self, **resp):
         sources.poll_rss(FEED); it = store.claim_new(1, set())[0]
