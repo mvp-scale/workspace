@@ -1,133 +1,241 @@
 # World engine as a service
 
-Written 2026-10-17. A thinking document, not a plan of record. Numbers marked **measured** were taken on this machine this week; everything else is a projection or an idea.
+Written 2026-10-17. A design proposal, not a plan of record. **Measured** means timed on this machine this week; prices are Cloudflare list prices checked 2026-10-17 (sources at the end); everything else is a projection, marked as such.
 
-## The idea in one paragraph
+## The product in one line
 
-Every story moves the world in ways a reader never sees. The World engine reads a story once, turns it into typed answers (which conditions it moves, which way, is it fact, forecast or opinion), pushes that change through a rules graph (conditions → how people feel → what they might do → what that draws on), and forecasts where each resource is heading. Every forecast is scored when it comes due. Read everything that is freely available, keep the world model current, and sell **the signal and its track record**, not the text.
+**Free insight, paid engagement.** Anyone can see what today's news is doing to the world and where it is heading, as small forecast cards with an honest track record. The product people pay for is using that output: their own feeds, their own topics, alerts, embeds, the API, and a private version that runs on their own data.
 
-## How it breaks up
+## What the engine does (and why it is cheap)
 
-| Layer | What it does | Today | At scale |
+Every story moves the world in ways a reader never sees. The engine reads a story once, turns it into typed answers (which conditions it moves, which way, fact or forecast or opinion), pushes that change through a rules graph (conditions → how people feel → what they might do → what that draws on), and forecasts where each resource is heading. Every forecast is scored when it comes due.
+
+| Layer | Today (measured) | At scale |
+|---|---|---|
+| Read: 328 yes/no questions per story | Clef, local: **4.2 s per story** | Small trained reader: **~2 ms per story on CPU, ~17,000 stories/s on one GPU** (speed measured; agreement with Clef not yet tested). Clef teaches it and handles what it is unsure of |
+| World change | **2–4 ms per story**, one at a time | Apply each tick's stories in one batch (not measured yet) |
+| Cascade to people, decisions, places | **~95–300 ms per update**, not blocking | Aggregate-level model in the cloud; full simulation on our GPU as an optional deep run |
+| Forecast and score | Running on the How it works page (in ticks, scored against the engine's own later state) | Real clock, scored against real-world evidence |
+
+Only reading needs a large model, and only to teach. Everything after it is arithmetic.
+
+## Tiers
+
+| Tier | Who | What they get | Price (hypothesis to test) |
 |---|---|---|---|
-| 1. Ingest | Pull stories from open feeds into a queue | A fixed file of 518 headlines | Any number of feeds; a queue, processed as stories land |
-| 2. Read | Answer a fixed battery of yes/no questions per story (328 today) | Clef, local, **4.2 s per story (measured)** | A small trained reader: **~2 ms per story on CPU, ~17,000 stories/s on one GPU (measured speed; agreement with Clef not yet tested)**. Clef only teaches it and handles what it is unsure of |
-| 3. World change | Apply the answers to the world model | **2–4 ms per story (measured)**, one at a time (~400/s) | Apply each tick's stories in one batch (not measured yet) |
-| 4. Cascade | Rules carry the change to 300,005 simulated people, 20 decisions, 409 places | **~95–300 ms per update (measured)**, independent of story count, not blocking | Same |
-| 5. Forecast and score | Forecast each resource for a day, week, month; score each when due | Running on the How it works page (in engine ticks, scored against the engine's own later state) | Scored against real-world data ("witnesses"), the track record published |
-| 6. Deliver | API, dashboards, alerts | The console pages | See "What is sold" |
+| **Free** | Anyone | Public-source cards: daily outlook per topic, the model's track record, make your own calls and see your score | $0 |
+| **Pro** | Individuals, analysts, writers | Own feeds (up to a cap), live updates, alerts, personal calibration history, shareable cards | ~$8/month (Ground News's top consumer plan is $99.99/year) |
+| **Team** | Newsrooms, risk, supply chain, comms teams | Shared topic sets, Slack/Teams/webhook alerts, embeddable card widgets, team leaderboards | Per seat or per workspace |
+| **API** | Builders | Story → world-change events, index values, forecasts and calibration as JSON | Pay as you go per 1,000 events |
+| **Private** | Companies with sensitive data | The whole engine in their own Cloudflare account, fed from their own bucket | Annual licence |
 
-The point of the split: only layer 2 needs a large model, and only for teaching. Everything after it is arithmetic.
+## Architecture
 
-## What it costs
+### Public deployment (Cloudflare, public data only)
 
-- **Reading:** at ~2 ms per story on one CPU core-set, a million stories is about 33 CPU-minutes. Even one million stories a day averages ~12 a second, far below the measured ceiling. Reading is no longer the cost.
-- **Teaching:** Clef labels a few thousand stories once per question set (hours on one local GPU, no hosted calls). Re-teach when the question set changes.
-- **World model and cascade:** one GPU holds it today (661 MB of tensors for 300,005 people).
-- **The real costs are elsewhere:** collecting and de-duplicating feeds, the licence terms of each source, and building the real-world witness data that scores forecasts.
+```mermaid
+flowchart LR
+  F[Open feeds and user-added feeds] -->|Cron Trigger| Q1[(Queue: stories)]
+  Q1 --> R[Reader Worker<br/>tiers 0-2]
+  R -->|story hash seen before| C[(D1: derived events)]
+  R -->|unsure| T[Clef on our GPU box<br/>tier 3, also writes teacher labels]
+  T --> R
+  R --> Q2[(Queue: world-change events)]
+  Q2 --> W[World Durable Object<br/>applies a tick's events in one batch]
+  W -->|each tick| S[(R2: world snapshots)]
+  W -->|each tick| K[(KV / R2: cards, forecasts, calibration)]
+  K --> CDN[CDN] --> U[Users, embeds, API]
+  U -->|calls on cards| D[(D1: calls and scores)]
+  D -->|when due| SC[Scorer Worker: model vs crowd vs each user]
+  SC --> K
+```
 
-## What is sold
+### Private deployment (customer's own account, bucket handoff)
 
-1. **Story → world-change events (API).** For each story: the typed answers and the conditions it moved, with direction and size. Structured data, no prose.
-2. **Indices with forecasts.** Every condition and resource as a live index, with a day / week / month forecast and its **calibration** (how often our forecasts of that index have been right). The calibration is the product: it says how far to trust each number.
-3. **Alerts.** "Food supply under strain, forecast holding for 3 weeks running."
-4. **What-if.** "If this story were true, what moves?" The engine already answers this (the ask on the World engine page).
-5. **Custom lenses.** A customer's own resources and decisions (their supply chain, their customers' likely moves) wired onto the shared world model.
+```mermaid
+flowchart LR
+  CT[Customer's own tool] -->|writes files| IN[(Their inbox bucket)]
+  IN -->|bucket event notification| Q[(Queue)]
+  Q --> R[Reader Worker, deployed in their account]
+  R --> W[Their World Durable Object]
+  W --> OUT[(Their processed bucket<br/>results + manifest)]
+  R -->|marks input done| IN
+  W --> V[Their dashboards, alerts, API]
+  OUT -.->|usage counts only, no content| B[Our billing]
+```
+
+No integration with the customer's tools: their tool writes to their bucket, ours reads from it. The manifest records input key, hash, time and model versions. The teacher runs on their hardware or not at all; heads are trained from their own labels.
+
+### Classifier tiers (cheapest first)
+
+```mermaid
+flowchart TD
+  S[Story: title, source, date, link] --> T0[Tier 0: rule NLP in the Worker<br/>compromise or wink-nlp]
+  T0 -->|not a story, duplicate| X[Drop]
+  T0 --> T1[Tier 1: static embeddings + learned heads<br/>pure JS, router and easy questions]
+  T1 -->|confident| A[Answers, tagged with tier]
+  T1 -->|unsure| T2[Tier 2: e5-small int8 or Workers AI bge-small<br/>+ one head per question]
+  T2 -->|confident| A
+  T2 -->|unsure| T3[Tier 3: Clef, the teacher]
+  T3 --> A
+  T3 -->|labels| L[(Training set for tiers 1-2)]
+```
+
+| Tier | Runs where | Job | Status |
+|---|---|---|---|
+| 0 Rule NLP (compromise or wink-nlp) | Inside the Worker | Clean, de-duplicate, extract places, people, organisations, dates; route to country and likely topics; drop non-stories | Not built |
+| 1 Static embeddings (like BitMob's router, potion-base-8M) + heads | Inside the Worker, pure JS | Router; the easy, repeated questions | Router under 1 ms on our box; not ported |
+| 2 e5-small int8 + heads (BitMob's CPU engine) | In the Worker via ONNX Runtime Web (33.8 MB model: under the 64 MiB script limit, tight against 128 MB memory, untested), or Workers AI bge-small with heads retrained | Most of the 328 questions | ~2 ms/story on our CPU; agreement untested |
+| 3 Clef Flash Q4 | Our GPU box (public) or theirs (private) | What the gate passes down; teacher labels | 4.2 s/story today |
+
+The gate after tiers 1 and 2 is tuned on held-out data (the Intake method: ≥97% agreement with Clef). **The pass-down share is the main cost lever** (see costs).
+
+## Story lifecycle and reuse
+
+```mermaid
+sequenceDiagram
+  participant Feed
+  participant Reader as Reader Worker
+  participant D1 as D1 (derived events)
+  participant Clef
+  participant World as World DO
+  Feed->>Reader: title, source, date, link (+ text in memory only)
+  Reader->>Reader: hash = sha256(normalise(title) | source | date)
+  Reader->>D1: seen this hash with current model version?
+  alt seen
+    D1-->>Reader: stored result (no re-read)
+  else new
+    Reader->>Reader: tiers 0-2
+    opt unsure
+      Reader->>Clef: questions
+      Clef-->>Reader: answers
+    end
+    Reader->>D1: store result (no article text)
+  end
+  Reader->>World: world-change event
+  Note over Reader: article text is dropped here, never written
+```
+
+**The hash rule.** `sha256(normalise(title) | source | date)`, where normalise means lowercase, trimmed, collapsed spaces, and date means the day only. Keep a second, title-only hash to link the same wire story across sources. A changed model or question set means a re-read (the version is part of the lookup).
+
+**Reuse the result, never the text.** When another user's feed brings in the same story, they get the stored result instead of a new read. Popular stories are read once, so the cost per user falls as users grow. Results from paywalled articles are reused only for users who requested that same article. Private data is never pooled.
+
+## Where data lives, and where it must not
+
+| Data | Lives in | Kept | Must not |
+|---|---|---|---|
+| Article text | Worker memory during the read | Seconds | Be written to any store, queue body or log |
+| Title, source, date, link | D1 (hot), R2 (archive) | Forever (calibration needs it) | Be shown without a link to the source |
+| Story hash + derived result (answers, conditions moved, tier, model version) | D1 hot 30 days, then R2 | Forever | Contain article text |
+| World state | Durable Object storage (live); hourly snapshot to R2 | Snapshots 1 year | Be the only copy (snapshots are the backup) |
+| Cards (index, forecast, calibration) | KV/R2, cached at the CDN | Latest + 1 year history | — |
+| Forecasts and outcomes | D1 | Forever (small; the track record) | Be edited after the fact |
+| User account | D1 | While active | Hold more than an email and settings |
+| User calls on cards | D1 | Forever, private per user; crowd totals public | Show one user's calls to others without opt-in |
+| User feed lists | D1 | While active | Be shared |
+| Teacher labels | Private R2 bucket + our box | Per question-set version | Come from private customer data |
+| Private inputs and outputs | Customer's own buckets | Their policy | Reach our account (we see usage counts only) |
+| Request logs | Workers logs | 7 days | Contain request bodies |
+
+## Costs (monthly, public deployment)
+
+Assumptions: a derived event is ~1 KB; ~3 queue operations a story; ~25 tokens a headline for Workers AI embeddings; ~300 card views a user a month, half served from CDN cache; ~2 ms Worker CPU per story and per uncached view; hot events kept 30 days in D1 (D1's limit is 10 GB per database), the rest archived to R2.
+
+| | Pilot | Growth | Scale |
+|---|---|---|---|
+| Stories a month (after de-duplication) | 100,000 | 1,000,000 | 10,000,000 |
+| Users | 1,000 | 50,000 | 1,000,000 |
+| Workers plan | $5 | $5 | $5 |
+| Requests (10M included, $0.30/M) | $0 | $0 | ~$45 |
+| CPU (30M ms included, $0.02/M ms) | $0 | $0 | ~$6 |
+| Workers AI bge-small ($0.020/M tokens) | ~$0.05 | ~$0.50 | ~$5 |
+| Queues (1M ops included, $0.40/M) | $0 | ~$0.80 | ~$12 |
+| D1 (50M rows written and 5 GB included) | $0 | $0 | ~$4 |
+| R2 storage ($0.015/GB-month, egress free) | $0 | ~$0.20 | ~$2 |
+| Durable Object (one always-on world, 400,000 GB-s included) | $0 | $0 | $0 |
+| **Cloud total** | **~$5** | **~$7** | **~$80** |
+
+**The teacher decides the margin at scale.** Clef reads 4.2 s a story, so one GPU handles about 620,000 stories a month. At 10M stories a month:
+
+| Share passed to Clef | GPU-hours a month | GPUs needed |
+|---|---|---|
+| 25% | ~2,900 | 4 |
+| 5% | ~580 | 1 |
+| 1% | ~120 | a fraction of one |
+
+So the reader gate must pass down **5% or less** at scale to run on one GPU. Reuse (read once) and batching Clef requests (not measured) both push this down.
+
+**Margin, illustrated (hypothesis):** at Scale, if 1% of 1M users pay ~$8/month, revenue is ~$80,000 against ~$80 cloud plus one GPU box: well over 90%.
+
+## The engagement product
+
+Free insight draws people in; using the output is what they pay for.
+
+```mermaid
+flowchart LR
+  A[Story lands] --> B[Card: Food supply ▼ 4 pts this week<br/>model record on this index: 71%]
+  B --> C[User makes a call: up, down, steady]
+  C --> D[Card comes due]
+  D --> E[Scored: model, crowd, you]
+  E --> F[Your record, streak, topic leaderboard]
+  F --> G[Weekly digest: you 7/10, model 6/10]
+  G --> B
+  E --> H[Crowd beats model on an index:<br/>flag the link for refitting]
+  H --> I[Better model, better cards]
+  I --> B
+```
+
+**Card:** one index, its forecast for the chosen horizon, the change so far against the target, days left, the model's track record on that index, and links to the stories that drove it.
+
+**Mechanics:** a call before the card is due; a personal calibration score (moves called right); streaks; topic leaderboards; "beat the model" marks; a weekly digest email; shareable card images served from the CDN. **Points only, never money.** Staking money would make it a regulated prediction market.
+
+**Using the output (the paid part):** alerts when an index you follow moves or a forecast holds for weeks; embeddable card widgets for newsletters and newsrooms; Slack, Teams and webhook delivery; the API; custom views of the resources and decisions a team cares about; the private deployment.
+
+**The crowd is also data.** Where users consistently beat the model on an index, a link in the rules graph is wrong or a resource is missing. That turns engagement into free labels.
+
+## Industry appetite
+
+| Comparable | What it shows | Our difference |
+|---|---|---|
+| Ground News: news aggregator with free and paid tiers (Pro $9.99/year, Vantage $99.99/year) | Consumers pay for a better view of how news is covered | We show what the news *does* (downstream impact) and forecast it, with a track record |
+| Dataminr: real-time alerts from public data; its customers page claims half of the Fortune 50 and the UN, and use in 1,500+ newsrooms | Enterprises pay a lot for early signals from public data | Forecasts with calibration, not only alerts; a private version on the customer's own data |
+| Metaculus: free forecasting community, scored by reputation, not money | People engage with forecasting through scoring alone | Every story becomes a forecast automatically; users compete with a model, not only each other |
+| Real-money prediction markets | Strong appetite to call outcomes | We stay points-only to avoid financial regulation |
+
+**First segments (proposal):** (1) newsletter writers, analysts and newsrooms, through embeds and the API; (2) supply chain, procurement and risk teams, through resource-strain alerts; (3) comms and marketing teams, through topic and sentiment indices; (4) education and civics, through the call-and-score game. Market sizes are not estimated here; none were checked.
+
+## Sources and rights
+
+- **Show:** a short title, the source name, the date, a link out, and our own output. **Never:** article bodies, long excerpts, images.
+- **"We processed it" is fine:** counts and source names ("Read 12,400 stories from 310 sources today").
+- **Bring-your-own feeds:** users add feeds and accept terms that they may use them. A directory they choose from is safer than a default bundle pushed to everyone.
+- **Consent for reuse:** "Results from articles you process may be reused for other users who request the same article." Only results, never text.
+- **Starter public sources, before any user adds one (terms to confirm one by one):** US government works, generally public domain (agency press releases and data such as the Fed, BLS, CDC, NOAA, SEC EDGAR); GDELT (open, dated, event-coded news metadata); Wikinews (Creative Commons); press release wires (made for redistribution; feed terms apply); official statistics (Eurostat, ECB, national offices), mainly as evidence for scoring forecasts. Outlet RSS feeds are "check terms before adding".
+- **The EU:** the press publishers' right (copyright directive, Article 15) can require a licence for more than very short extracts. Check EU sources individually.
+- **Training data licences:** MentalManip is non-commercial (not usable in a paid service as is); OWASP Benchmark GPL-2.0; dark patterns GPL-3.0; LOGIC undeclared.
+- This is the general picture, not legal advice. A media/IP lawyer should review the terms and the caching design before charging money.
+
+## Not just news
+
+The same break-up works for any stream: support tickets (friction → support capacity → churn), sales and service calls (intent → pipeline → buy or walk), filings and earnings calls (demand → cash → hire or cut), reviews (sentiment → brand trust → switch), operations logs (load → compute → scale). What changes is the ontology and the question battery. Internally, a company runs a world model of itself on its own meetings, tickets and CRM notes through the private deployment, so its data never reaches a hosted model provider.
 
 ## Honest limits
 
-- **News is free to read, not free to republish.** Sell derived signals, never the text; check each feed's terms.
-- **Link strengths are guesses until fitted.** The forecast-and-score loop is how they get fitted; until then the numbers show the mechanism, not the truth.
-- **The small reader's accuracy is untested** on the 328 questions. Some questions need world knowledge (does this raise prices?), which is where small encoders were weakest (BitMob: ~29% on facts). Test before claiming: the Intake bar (≥97% agreement with Clef) is the yardstick.
-- **Ticks are not days.** The demo assumes 1 tick = 1 day. A service needs a real clock and dated stories.
-- **Attribution is hard.** Many stories move the same index; a single hit proves little. Calibration needs many forecasts per link.
+- **Link strengths are guesses until fitted.** The forecast-and-score loop is how they get fitted.
+- **The small reader's accuracy is untested** on the 328 questions; some need world knowledge, where small encoders were weakest (BitMob: ~29% on facts).
+- **Ticks are not days.** The demo assumes 1 tick = 1 day; the service needs a real clock and dated stories.
+- **Attribution is hard.** Many stories move the same index; calibration needs many forecasts per link.
 
-## Not just news: any stream
+## Build order (each step has its pass bar set before running)
 
-The same break-up works for any stream of text or events. What changes is the ontology (the topics, conditions, states, decisions and resources) and the question battery.
+1. **Reader agreement:** small reader vs Clef on the 328 questions over a few thousand stories. Pass: ≥97% agreement with ≤5% passed to Clef (the bar the cost table needs at scale).
+2. **Reader in a Worker:** e5-small int8 under ONNX Runtime Web within 128 MB, or bge-small via Workers AI with retrained heads. Pass: fits, answers meet step 1's bar, cost per million within the table.
+3. **Batched world change:** a tick's stories in one step on a copy of the engine. Pass: ≥10,000 stories/s into the world, same end state as one at a time.
+4. **Real-clock backtest:** a dated month of news (GDELT); forecasts from week 1 checked against the following weeks. Pass: beats a "nothing changes" forecast on direction.
+5. **Free tier pilot:** public sources only, cards and calls, 1,000 users. Pass: users come back to see scored cards (return rate set before launch).
+6. **Private pilot:** one customer, bucket handoff in their account. Pass: no content leaves their account (checked from our side's logs and billing data).
 
-| Stream | Conditions it moves | Resources | Decisions forecast |
-|---|---|---|---|
-| Support tickets | product friction, outage risk | support capacity, goodwill | churn, upgrade, escalate |
-| Sales and service calls (the Conversation flow page) | buyer intent, objections, trust | pipeline, rep time | buy, delay, walk |
-| Company filings and earnings calls | demand, cost pressure, guidance | cash, capacity | hire, cut, invest |
-| Reviews and social posts | sentiment, quality issues | brand trust | switch, recommend |
-| Operations logs | load, error rates | compute, on-call time | scale, roll back |
+## Sources
 
-## Applying it internally with your own knowledge
-
-Build a world model of your own organisation: its conditions (customer health, team strain, delivery risk), its resources (cash, people's time, capacity) and the decisions you care about (hire, launch, cut, escalate). Feed it your own streams: meeting transcripts, tickets, CRM notes, chat. The forecast-and-score loop then tells you which of your own expectations hold.
-
-Run it locally. This is the internal-data case for the word-of-caution card on How they work: a local reader means your data never goes to a hosted provider, so nothing about it can be logged, derived or trained on elsewhere.
-
-## Two deployments, one engine
-
-The engine is the same in both: the classifier tiers, the world model, the forecast-and-score loop. What differs is where it runs and whose data it reads.
-
-### A. Public: news cards on Cloudflare (public data only)
-
-```
- open feeds ──cron──▶ Queue ──▶ Reader Worker (tiers 0–2) ──▶ Queue ──▶ World Durable Object ──cron──▶ cards in R2/KV ──CDN──▶ users
-                                     │ unsure (gate)                         (applies a tick's events             │
-                                     ▼                                        in one batch)                         ▼
-                              Clef on our GPU box (tier 3)                                                 predictions in D1
-                              also writes teacher labels                                               scored when due: model vs
-                                                                                                       crowd vs each user
-```
-
-- **Ingest:** a Cron Trigger pulls feeds; each story is hashed (de-duplicated) and put on a Queue.
-- **Read:** a Worker runs the classifier tiers below; only the stories it is unsure of go to Clef.
-- **World model:** one Durable Object (a single-writer, stateful Worker) holds the world state and applies each tick's events in one batch. In the cloud it runs at aggregate level (conditions per place, decisions per audience × place cell), not 300,005 individuals; the full GPU simulation stays an optional deep run on our box.
-- **Cards:** each tick, a cron writes the forecast cards (index, forecast, calibration) to R2/KV; the CDN serves them. A customer picks the topics and resources they want ("accept and pull back"), and gets a card feed, a stream or an embeddable flow filtered to that.
-- **Engagement loop:** users make their own call on a card (up, down, steady). Calls are stored in D1 and scored when the card comes due: the model, the crowd and each user. The score brings people back; the crowd's calls are free labels that show where the model is wrong. Points only, never money (staking money makes it a regulated prediction market).
-
-### B. Private: in-house through an object-storage handoff
-
-```
- customer tool ──writes──▶ inbox bucket ──event──▶ Queue ──▶ Reader + World (their account) ──writes──▶ processed bucket + manifest
-                            (theirs)                          nothing leaves their account              input marked done
-```
-
-- No integration with the customer's tools: their tool writes files to their own **inbox** bucket (R2 or any S3-compatible store). A bucket event notification puts each new object on a Queue.
-- The same Workers, deployed **in the customer's own Cloudflare account** (or a container in their cloud), read, classify and update *their* world model, then write results to a **processed** bucket with a manifest (input key, hash, time, model versions) and mark the input done.
-- Their data never reaches us or a hosted model provider. The teacher (Clef) runs on their hardware or is not used; heads are trained on their side from their own labels.
-
-## Breaking up the classifiers (cheapest first)
-
-Each story falls through the tiers until one is confident; every answer records which tier gave it (as BitMob does with "trained" / "guess").
-
-| Tier | What | Runs where | Job | Status |
-|---|---|---|---|---|
-| 0 | Rule NLP: compromise or wink-nlp (small JavaScript libraries) | Inside the Worker | Clean text, de-duplicate, pull out places, people, organisations, dates; route the story to its country and likely topics; drop non-stories | Not built; JS libraries that run in Workers |
-| 1 | Static embeddings (a lookup table, like BitMob's router, potion-base-8M) + learned heads | Inside the Worker, pure JS, no runtime needed | The router (which area a story is in) and the easy, repeated questions | Router measured on our box (under 1 ms); not ported to JS |
-| 2 | e5-small int8 + one learned head per question (BitMob's CPU engine) | Option 1: inside the Worker via ONNX Runtime Web (WebAssembly); the model file is 33.8 MB, under the 64 MiB script limit, but the 128 MB memory limit makes it tight (untested). Option 2: Workers AI's bge-small-en-v1.5 (same size class, 384 numbers per text) with heads retrained on its vectors | The 328-question battery for most stories | ~2 ms/story on our CPU (measured); agreement with Clef untested |
-| 3 | Clef Flash Q4 (teacher) | Our GPU box (public) or the customer's (private) | Stories the gate is unsure of; labels to train tiers 1–2 | Running today (4.2 s/story) |
-
-A gate after tiers 1 and 2 decides "answer here or pass down", tuned on held-out data (the Intake method: ≥97% agreement with Clef, ≤25% passed to Clef).
-
-**Training data we know of:** Clef-labelled news (any amount, from the bank and feeds); the published probe sets already in `probes/v2/` (note their licences: MentalManip is non-commercial, OWASP Benchmark GPL-2.0, dark patterns GPL-3.0, LOGIC undeclared); GDELT (an open, dated, event-coded news index) for backtests and as a witness source.
-
-## Cost model (Cloudflare list prices, checked 2026-10-17)
-
-Per month, at 1 million stories, public deployment, before the teacher:
-
-| Item | Price (source) | Estimate |
-|---|---|---|
-| Workers Paid plan | $5/month base, 10M requests and 30M CPU-ms included | $5 |
-| Workers AI bge-small (if used for tier 2) | $0.020 per million input tokens | ~25M tokens (assumes ~25 tokens a headline) ≈ $0.50 |
-| Queues | 1M operations included, then $0.40 per million | ~3 ops a story ≈ $0.80 |
-| R2, D1, KV | R2 egress free; D1 25B rows read included; KV 10M reads included | Small at this volume |
-| **Cloud total** | | **about $5–10 a month per million stories** |
-
-The margin question is therefore not the cloud bill. It is (1) the share of stories passed to Clef and what running the teacher costs, and (2) feed licensing. With tier 2 handling most stories, 90%+ margins look reachable on a monthly or pay-as-you-go price, but only the reader-agreement test can confirm the pass-down share.
-
-Limits that shape the design (Workers docs): 128 MB memory per isolate; 64 MiB script (uncompressed); up to 5 minutes CPU per request on the paid plan.
-
-Sources: [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Workers pricing (incl. Queues, R2, D1, KV)](https://developers.cloudflare.com/workers/platform/pricing/), [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/).
-
-## Smallest next steps (each with a pass bar set before running)
-
-1. **Reader agreement:** small reader vs Clef on the 328 questions over a few thousand stories. Pass: ≥97% agreement, or a gate that sends the rest to Clef with ≤25% routed.
-2. **Real-time backtest:** a dated news archive (one past month); forecasts from week 1 checked against the following weeks' stories as witnesses. Pass: beats a "nothing changes" baseline on direction.
-3. **Batched world change:** apply a tick's stories in one step on a copy of the engine. Pass: ≥10,000 stories/s into the world with the same end state as one at a time.
-4. **Reader in a Worker:** e5-small int8 under ONNX Runtime Web within the 128 MB limit, or bge-small via Workers AI with retrained heads. Pass: fits, answers match the local engine (or meet the agreement bar), cost per million within the table above.
+- Cloudflare: [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Workers pricing (incl. Queues, R2, D1, KV)](https://developers.cloudflare.com/workers/platform/pricing/), [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/), [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [Durable Objects pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/)
+- Comparables: [Ground News pricing (third-party summary)](https://www.readless.app/blog/ground-news-pricing-free-vs-paid-2026), [Dataminr customers](https://www.dataminr.com/company/customers), [Metaculus track record analysis (EA Forum)](https://forum.effectivealtruism.org/posts/e9htD7txe8RDdcehm/exploring-metaculus-s-ai-track-record)
