@@ -1,7 +1,7 @@
 """World engine service v2 (mock-up): multi-country world, five stages (collect, identify, propagate, decide, read), attractor/detractor ledgers.
 JSON over HTTP on 127.0.0.1:$WE2_PORT (default 8112); the console proxies /api/world-engine/*.   Run: /workspace/kev/.venv/bin/python world_service2.py
 Inputs are simulated at the start (data/*.csv, ledger/); everything else is derived by rules. Every strength is a guess or a fit until backtested."""
-import os, sys, json, time, copy, datetime, email.utils, hashlib, threading, csv, random, urllib.parse, urllib.error
+import os, sys, json, time, copy, datetime, email.utils, hashlib, threading, csv, random, urllib.parse, urllib.error, urllib.request, re
 import numpy as np
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, "/workspace/probes/persona"); sys.path.insert(0, "/workspace/probes/world-engine")
@@ -466,7 +466,9 @@ def newsreader_pick():
     """One story leased from the news reader (newest first), shaped like a bank item; None when its queue is empty. The lease is acked after the story is applied."""
     with urllib.request.urlopen(NEWSREADER + "/next?n=1&lease=300", timeout=10) as r: got = json.load(r)["items"]
     if not got: return None
-    x = got[0]; return {"c": x["country"] if x["country"] in TICKER_COUNTRY else "WORLD", "t": None, "x": x["title"], "src": x["source"], "kind": "news", "body": x.get("body") or x.get("teaser") or "",
+    x = got[0]; body = x.get("body") or x.get("teaser") or ""
+    dek = (x.get("teaser") or "").strip() or next((l.strip() for l in body.splitlines() if len(l.strip()) > 40 and not l.lstrip().startswith(("#", "-", "*", "|", "!["))), "")      # one line to show under the title
+    return {"c": x["country"] if x["country"] in TICKER_COUNTRY else "WORLD", "t": None, "x": x["title"], "src": x["source"], "kind": "news", "body": body, "dek": re.sub(r"[*_`#>\[\]]", "", dek)[:220],
                         "nr_id": x["id"], "depth": x["depth"], "words": x.get("words"), "url": x["url"]}
 def newsreader_ack(i):
     try: urllib.request.urlopen(urllib.request.Request(NEWSREADER + "/ack", data=json.dumps({"ids": [i]}).encode(), headers={"Content-Type": "application/json"}), timeout=10).read()
@@ -496,7 +498,7 @@ def feeder_loop():
             t0 = time.time(); prep = S.prepare_feed(it); read_ms = round((time.time() - t0) * 1000)
             with LOCK: t1 = time.time(); S.apply_feed(prep); tick = S.w.tick; apply_ms = round((time.time() - t1) * 1000, 1)
             eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) > 0]
-            with LIVE_LOCK: LIVE["err"] = None; LIVE["by"] = C.O.CURRENT; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "by": C.O.CURRENT, "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms, "depth": it.get("depth"), "words": it.get("words"), "url": it.get("url")}); del LIVE["items"][:-60]; LIVE["err"] = None
+            with LIVE_LOCK: LIVE["err"] = None; LIVE["by"] = C.O.CURRENT; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "by": C.O.CURRENT, "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms, "depth": it.get("depth"), "words": it.get("words"), "url": it.get("url"), "dek": it.get("dek")}); del LIVE["items"][:-60]; LIVE["err"] = None
             if it.get("nr_id"): newsreader_ack(it["nr_id"])
         except Exception as e:
             with LIVE_LOCK: LIVE["err"] = ("no reader is answering: " + ("no local model is loaded (turn on Clef or Winnow under Services)" if C.O.AUTO else f"the pinned reader at {C.O.EP} is off")) \
