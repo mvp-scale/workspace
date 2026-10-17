@@ -9,6 +9,7 @@
 <script src="/static/app.js"></script>
 <style>
   html { scrollbar-gutter: stable; }
+  .page.hw { max-width: none; }
   .hw { --for: #4f8ff7; --against: #e9843b; --glass: rgba(14, 18, 30, .62); --glass-line: rgba(255, 255, 255, .10); --ink: #e8ecf6; --ink2: #9aa6c0; --ink3: #66728f; }
   .hwh { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 10px; } .hwh h1 { margin: 0; } .hwh p { margin: 2px 0 0; color: var(--text-2); font-size: 13px; }
   /* stage rail */
@@ -19,36 +20,42 @@
   .stg::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: linear-gradient(90deg, transparent, var(--accent), transparent); transform: translateX(-100%); opacity: 0; }
   .stg.lit { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent), 0 6px 22px color-mix(in srgb, var(--accent) 22%, transparent); } .stg.lit::after { opacity: 1; transform: translateX(100%); transition: transform .7s ease-in; }
   .stg.sel { background: var(--accent-soft); }
-  .def { margin-top: 8px; height: 74px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; line-height: 1.45; color: var(--text-2); overflow: hidden; } .def b { color: var(--text); } .def .tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 99px; font-size: 10.5px; border: 1px solid var(--border); color: var(--text-3); }
+  .def { margin-top: 6px; min-height: 0; border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; font-size: 12.5px; line-height: 1.45; color: var(--text-2); overflow: hidden; } .def b { color: var(--text); } .def .tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 99px; font-size: 10.5px; border: 1px solid var(--border); color: var(--text-3); }
   /* stage */
-  .stage { position: relative; margin-top: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--glass-line); background: radial-gradient(120% 90% at 50% 0%, #121a30 0%, #090c16 70%); height: min(90vh, 1000px); min-height: 600px; }
+  .stage { position: relative; margin-top: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--glass-line); background: radial-gradient(120% 90% at 50% 0%, #121a30 0%, #090c16 70%); height: calc(100vh - 290px); min-height: 480px; }
   .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; } .stage canvas.drag { cursor: grabbing; }
   .gl { position: absolute; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 12px; color: var(--ink); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); }
-  .ctl { left: 12px; top: 12px; right: 330px; padding: 7px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .ctl { left: 296px; top: 12px; right: 12px; padding: 7px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .ctl .lb { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 4px 0 2px; }
   .chip { border: 1px solid transparent; background: transparent; color: var(--ink2); border-radius: 8px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; transition: background-color .2s, color .2s; } .chip:hover { background: rgba(255,255,255,.07); } .chip.on { background: rgba(255,255,255,.14); color: var(--ink); border-color: var(--glass-line); }
-  .side { right: 12px; top: 12px; bottom: 12px; width: 306px; padding: 12px 13px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
-  .side h3 { margin: 0 0 4px; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink3); font-weight: 600; }
-  .side p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--ink2); } .side p b { color: var(--ink); font-weight: 600; }
+  .feedcol { left: 12px; top: 12px; max-height: calc(100% - 24px); width: 272px; padding: 11px 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .feedcol h3, .below h3 { margin: 0; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink3); font-weight: 600; }
+  .feedcol .sub { font-size: 11px; color: var(--ink3); margin-top: -4px; }
+  .below { display: grid; gap: 10px; margin-top: 10px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .below > div { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 11px 13px; }
+  .below h3 { color: var(--text-3); margin-bottom: 6px; } .below p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text-2); } .below p b { color: var(--text); font-weight: 600; }
+  .below .lay { color: var(--text-2); } .below .lay b { color: var(--text); }
+  .below .gpu .row, .below .gpu .mem { color: var(--text-2); } .below .gpu .ms, .below .gpu .dev { color: var(--text); } .below .gpu .bar { background: var(--surface-2); }
+  @media (max-width: 1000px) { .below { grid-template-columns: 1fr; } }
   .gpu .row { display: grid; grid-template-columns: 54px 1fr 46px; gap: 7px; align-items: center; font-size: 11.5px; color: var(--ink2); height: 17px; } .gpu .bar { height: 5px; border-radius: 9px; background: rgba(255,255,255,.08); overflow: hidden; } .gpu .bar i { display: block; height: 100%; width: 0; border-radius: 9px; background: linear-gradient(90deg, #4f8ff7, #8fb8ff); transition: width .5s ease; }
   .gpu .ms { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); } .gpu .dev { font-size: 12px; color: var(--ink); height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .gpu .mem { font-size: 11.5px; color: var(--ink3); height: 16px; margin-bottom: 3px; }
-  .feedl { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 5px; } .fi { border-left: 2px solid var(--glass-line); padding: 1px 0 1px 8px; font-size: 11.5px; line-height: 1.35; color: var(--ink2); height: 47px; overflow: hidden; } .fi.new { border-left-color: #8fb8ff; }
-  .fi .h { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .fi .e { display: flex; gap: 8px; margin-top: 1px; white-space: nowrap; overflow: hidden; font-size: 11px; } .fi .u { color: var(--for); } .fi .d { color: var(--against); }
+  .feedl { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 6px; } .fi { border-left: 2px solid var(--glass-line); padding: 2px 0 2px 9px; font-size: 11.5px; line-height: 1.35; color: var(--ink2); overflow: hidden; flex: none; transition: opacity .4s; } .fi.new { border-left-color: #8fb8ff; background: linear-gradient(90deg, rgba(143,184,255,.10), transparent); animation: fin .6s ease-out; } @keyframes fin { from { transform: translateY(-10px); opacity: 0; } }
+  .fi .h { color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .fi .c { color: var(--ink3); font-size: 10.5px; letter-spacing: .04em; } .fi .e { display: flex; flex-wrap: wrap; gap: 0 8px; max-height: 15px; margin-top: 1px; white-space: nowrap; overflow: hidden; font-size: 11px; } .fi .u { color: var(--for); } .fi .d { color: var(--against); }
   .leg { left: 12px; bottom: 12px; padding: 8px 11px; font-size: 11.5px; color: var(--ink2); display: flex; align-items: center; gap: 9px; } .leg .ramp { width: 150px; height: 8px; border-radius: 9px; background: linear-gradient(90deg, var(--against), #4a5068 50%, var(--for)); }
   .hov { pointer-events: none; padding: 9px 11px; font-size: 12px; min-width: 200px; opacity: 0; transition: opacity .15s; z-index: 3; } .hov.on { opacity: 1; } .hov b { font-size: 13px; } .hov .r { display: flex; justify-content: space-between; gap: 14px; color: var(--ink2); font-variant-numeric: tabular-nums; } .hov .r.sel { color: var(--ink); }
   .hov .df { color: var(--ink2); margin: 3px 0 5px; line-height: 1.35; white-space: normal; max-width: 240px; } .hov .hh { margin: 6px 0 2px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); } .hov .note { font-size: 10.5px; color: var(--ink3); margin: -1px 0 2px; font-style: italic; }
   .hov .r.rdraw { color: rgb(255,150,172); } .hov .r.rbuild { color: rgb(140,225,155); } .hov .r.rlevel { color: rgb(150,215,250); } .hov .r.rstate { color: rgb(205,175,250); }
   .ico { vertical-align: -2px; margin-right: 4px; flex: none; } .views .chip { display: inline-flex; align-items: center; }
   .lay { display: flex; flex-direction: column; gap: 3px; margin-top: 7px; font-size: 11.5px; color: var(--ink2); } .lay div { display: flex; align-items: center; gap: 6px; line-height: 1.3; } .lay b { color: var(--ink); font-weight: 600; min-width: 74px; }
-  .key { left: 12px; bottom: 12px; padding: 7px 11px; font-size: 11px; color: var(--ink2); display: flex; gap: 12px; flex-wrap: wrap; max-width: calc(100% - 360px); } .key span { display: inline-flex; align-items: center; gap: 5px; } .key svg { width: 26px; height: 6px; } @media (max-width: 1000px) { .key { max-width: calc(100% - 24px); } }
+  .key { left: 296px; bottom: 12px; padding: 7px 11px; font-size: 11px; color: var(--ink2); display: flex; gap: 12px; flex-wrap: wrap; max-width: calc(100% - 308px); } .key span { display: inline-flex; align-items: center; gap: 5px; } .key svg { width: 26px; height: 6px; } @media (max-width: 1000px) { .key { left: 12px; max-width: calc(100% - 24px); } }
   .lbl { position: absolute; transform: translate(-50%, -50%); pointer-events: none; color: var(--ink); font-size: 12px; text-align: center; text-shadow: 0 1px 8px #000; white-space: nowrap; } .lbl small { display: block; color: var(--ink3); font-size: 10.5px; } .lbl.sm { font-size: 10px; color: var(--ink3); }
   .live { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; background: none; color: var(--text-2); font: inherit; font-size: 12px; cursor: pointer; } .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); } .live.on i { background: #e5484d; box-shadow: 0 0 0 0 rgba(229,72,77,.6); animation: pul 1.6s infinite; } @keyframes pul { 70% { box-shadow: 0 0 0 7px rgba(229,72,77,0); } 100% { box-shadow: 0 0 0 0 rgba(229,72,77,0); } }
-  .views { left: 12px; top: 12px; right: 330px; padding: 6px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; z-index: 2; } .views .sep { width: 1px; height: 18px; background: var(--glass-line); margin: 0 4px; }
+  .views { left: 296px; top: 12px; right: 12px; padding: 6px 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; z-index: 2; } .views .sep { width: 1px; height: 18px; background: var(--glass-line); margin: 0 4px; }
   .ctl { top: 58px !important; } .stage canvas.gcv { cursor: grab; }
   .views .lb { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 4px 0 2px; } .views .chip { min-width: 28px; }
-  @media (max-width: 1000px) { .views { right: 12px; } }
+  @media (max-width: 1000px) { .views, .ctl { left: 12px !important; } }
   .nogl { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink2); font-size: 14px; text-align: center; padding: 30px; }
-  @media (max-width: 1000px) { .rail { grid-template-columns: repeat(3, 1fr); } .ctl { right: 12px; top: 12px; } .side { display: none; } }
+  @media (max-width: 1000px) { .rail { grid-template-columns: repeat(3, 1fr); } .feedcol { display: none; } }
 </style>
 </head>
 <body>
@@ -57,6 +64,7 @@
   <section class="rail" id="rail"></section>
   <section class="def" id="def"></section>
   <section class="stage" id="stage"></section>
+  <section class="below" id="below"></section>
 </main>
 <script>
 const { el } = Jev, $ = (id) => document.getElementById(id), api = (p, b) => Jev.api("/api/world-engine/" + p, b ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) } : undefined);
@@ -111,10 +119,10 @@ function buildStage() {
   UI.gpu = el("div", { class: "gpu" }); UI.feed = el("div", { class: "feedl" });
   UI.what = el("p"); UI.lay = el("div", { class: "lay" }, ...Object.entries(LAYER_INFO).map(([k, label]) => el("div", {}, svgIcon(k), el("b", { text: label }), el("span", { text: LAYER_HINT[k].split(";")[0] }))));
   UI.key = el("div", { class: "gl key" }, ...Object.entries(RK).map(([k, r]) => { const NS = "http://www.w3.org/2000/svg", sv = document.createElementNS(NS, "svg"), ln = document.createElementNS(NS, "line"); sv.setAttribute("viewBox", "0 0 26 6"); ln.setAttribute("x1", 1); ln.setAttribute("x2", 25); ln.setAttribute("y1", 3); ln.setAttribute("y2", 3); ln.setAttribute("stroke", `rgb(${r.col})`); ln.setAttribute("stroke-width", 2); ln.setAttribute("stroke-linecap", "round"); if (r.dash.length) ln.setAttribute("stroke-dasharray", r.dash.map(d => d * 0.9).join(" ")); sv.append(ln); return el("span", { title: "Resource line: " + r.verb }, sv, r.key); }), UI.traitKey = el("span", { title: "A person state no condition moves: fixed for a person, or derived from others", style: "display:none" }, "\u25C6 fixed trait"));
-  UI.side = el("div", { class: "gl side" }, el("div", {}, el("h3", { text: "What you are looking at" }), UI.what, UI.lay),
-    el("div", {}, el("h3", { text: "The GPU" }), UI.gpu), el("div", { style: "flex:1;min-height:0;display:flex;flex-direction:column" }, el("h3", { text: "Latest headlines" }), UI.feed));
+  UI.side = el("div", { class: "gl feedcol" }, el("h3", { text: "Stories coming in" }), el("div", { class: "sub", text: "newest on top · each one flows right through the graph" }), UI.feed);
+  $("below").append(el("div", {}, el("h3", { text: "What you are looking at" }), UI.what, UI.lay), el("div", {}, el("h3", { text: "The GPU" }), UI.gpu), el("div", {}, el("h3", { text: "How to read it" }), el("p", { text: "Left to right is the order the engine works in: a story, what it is about, what it changes in the world, how people feel it, what they might do, and what that draws on. Click a stage above for its detail; hover any node for its links." })));
   UI.views = el("div", { class: "gl views" }); st.append(UI.views, UI.ctl, UI.side, UI.key, UI.hov);
-  for (let i = 0; i < 4; i++) UI.feed.append(el("div", { class: "fi" }, el("div", { class: "h", text: "—" }), el("div", { class: "e" })));
+  for (let i = 0; i < FEED_N; i++) UI.feed.append(el("div", { class: "fi", style: "display:none" }, el("div", { class: "c" }), el("div", { class: "h" }), el("div", { class: "e" })));
   UI.gpuRows = {}; for (const [k, lab] of [["state", "state"], ["effect", "effect"], ["decide", "decide"], ["group", "group"], ["spread", "spread"]]) { const bar = el("i"), ms = el("span", { class: "ms", text: "" }); UI.gpuRows[k] = { bar, ms }; UI.gpu.append(el("div", { class: "row" }, el("span", { text: lab }), el("div", { class: "bar" }, bar), ms)); }
   UI.dev = el("div", { class: "dev", text: "…" }); UI.mem = el("div", { class: "mem", text: "" }); UI.gpu.prepend(UI.dev, UI.mem);
 }
@@ -122,9 +130,10 @@ function paintGpu() {
   const g = S.gpu; if (!g) return; UI.dev.textContent = g.gpu ? g.device : "CPU (no GPU found)"; UI.mem.textContent = g.gpu ? `${g.engine_mb} MB of tensors held · ${(g.free_mb / 1000).toFixed(1)} of ${(g.total_mb / 1000).toFixed(1)} GB free` : `${g.people.toLocaleString()} people`;
   const mx = Math.max(...Object.values(g.ms), 0.1); for (const k in UI.gpuRows) { const v = g.ms[k]; UI.gpuRows[k].bar.style.width = Math.max(3, v / mx * 100) + "%"; UI.gpuRows[k].ms.textContent = fmtMs(v); }
 }
+const FEED_N = 40;      // as many as the column has room for; the rest are clipped
 function paintFeed() {
-  const rows = UI.feed.children, last = S.items.slice(-4).reverse();
-  for (let i = 0; i < rows.length; i++) { const it = last[i], r = rows[i]; if (!it) continue; r.classList.toggle("new", i === 0); r.children[0].textContent = `${it.c}:${it.t}  ${it.x}`; r.children[1].replaceChildren(...(it.effects || []).slice(0, 3).map(e => el("span", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${dialShort(e.dial, e.name)}` }))); }
+  const rows = UI.feed.children, last = S.items.slice(-FEED_N).reverse(), fresh = last[0] && last[0] !== UI.feedTop; UI.feedTop = last[0];
+  for (let i = 0; i < rows.length; i++) { const it = last[i], r = rows[i]; r.style.display = it ? "" : "none"; if (!it) continue; r.style.opacity = Math.max(0.4, 1 - i * 0.04); if (i === 0 && fresh) { r.classList.remove("new"); void r.offsetWidth; } r.classList.toggle("new", i === 0); r.children[0].textContent = `${it.c === "WORLD" ? "World" : it.c} · ${it.t}`; r.children[1].textContent = it.x; r.children[2].replaceChildren(...(it.effects || []).slice(0, 3).map(e => el("span", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${dialShort(e.dial, e.name)}` }))); }
 }
 
 
@@ -160,9 +169,11 @@ function traitOf(m, c) {
   if (m.states.length < 30) return false; if (!m._inc) m._inc = new Set(m.condition_state.map(e => e.b)); return !m._inc.has(c.id);
 }
 function grModel() {
+  GR.HL0 = null;      // grFit packs rows from these fresh positions
+  GR.feedOn = innerWidth > 1000;      // the headline feed column is shown (CSS hides it at 1000px and under); the story node then sits beside its newest row
   const m = GR.data.meaning, P = GR.data.places, cols = [], edges = [], L = GR.layers, add = (key, label, nodes, gap) => cols.push({ key, label, nodes, gap });
   const node = (id, name, def, kind, extra) => Object.assign({ id, name, def: def || "", kind, glow: 0, val: 0, heat: 0, hs: 0, vs: 0, flash: 0, fsign: 1, hold: 0 }, extra);
-  add("story", "Story", [node("story", "A story arrives", "A headline, read by the model. It enters the graph at the layer on its right.", "story")], 0.78);
+  add("story", "Story", [node("story", "A story arrives", "A headline, read by the model. It enters the graph at the layer on its right.", "story")], GR.feedOn ? 0.45 : 0.78);
   if (GR.view === "meaning") {
     if (L.topics) add("topics", `Topics (${m.topics.length})`, m.topics.map(t => node("t:" + t.id, t.name, t.definition, "topic", { status: t.status })), 1);
     if (L.conditions) add("conditions", `Conditions (${m.conditions.length})`, m.conditions.map(c => node("c:" + c.id, c.name, c.definition, "condition")), 1);
@@ -200,15 +211,20 @@ function grModel() {
   const frac = new Map(); const refresh = () => { for (const c of cols) c.nodes.forEach((n, i) => frac.set(n.id, (i + 0.5) / c.nodes.length)); }; refresh();
   if (GR.view === "meaning") for (let pass = 0; pass < 6; pass++) for (let k = (pass % 2 ? cols.length - 1 : 2); pass % 2 ? k >= 1 : k < cols.length; k += (pass % 2 ? -1 : 1)) { const bc = (n) => { const q = (nb.get(n.id) || []).filter(x => x !== "story" && frac.has(x) && (n.id.startsWith("r:") || !x.startsWith("r:"))).map(x => frac.get(x)); return q.length ? q.reduce((a, b) => a + b, 0) / q.length : 2; }; cols[k].nodes.sort((a, b) => bc(a) - bc(b)); refresh(); }
   const maxN = Math.max(...cols.map(c => c.nodes.length)); ROW = maxN > 24 ? ROW_DENSE : ROW_FULL; COLW = maxN > 24 ? COLW_DENSE : COLW_FULL; GR.dense = maxN > 24 || edges.length > 400; GR.cols = cols; GR.edges = edges; GR.nodes = new Map(); GR.adj = new Map(); GR.HL = Math.max(...cols.map(c => c.nodes.length)) * ROW; let x = 0;
-  cols.forEach((c, ci) => { if (ci) x += c.gap * COLW; c.x = x; c.nodes.forEach((n, i) => { n.col = ci; n.x = x; n.y = c.nodes.length === 1 ? GR.HL / 2 : (i + 0.5) / c.nodes.length * GR.HL; GR.nodes.set(n.id, n); }); });
+  cols.forEach((c, ci) => { if (ci) x += c.gap * COLW; c.x = x; c.nodes.forEach((n, i) => { n.col = ci; n.x = x; n.y = c.nodes.length === 1 ? (n.kind === "story" && GR.feedOn ? ROW * 0.5 : GR.HL / 2) : (i + 0.5) / c.nodes.length * GR.HL; GR.nodes.set(n.id, n); }); });
   for (const e of edges) { e.A = GR.nodes.get(e.a); e.B = GR.nodes.get(e.b); if (!e.A || !e.B) continue; for (const n of [e.A, e.B]) (GR.adj.get(n.id) || GR.adj.set(n.id, []).get(n.id)).push(e); }
   GR.edges = edges.filter(e => e.A && e.B); GR.tcache.clear();
   if (UI.traitKey) UI.traitKey.style.display = GR.view === "meaning" && [...GR.nodes.values()].some(n => n.trait) ? "" : "none";
 }
-function grFit() { GR.tcache.clear(); const W = GR.W, H = GR.H, panel = W > 1000 ? 345 : 0, lastX = GR.cols[GR.cols.length - 1].x, spanX = lastX + GR.pad + 30, spanY = GR.HL + 150;
-  const sW = (W - panel - 28) / spanX, want = Math.round(Math.min(2400, spanY * Math.min(sW, 1.6) + 64)), base = Math.round(Math.min(innerHeight * 0.9, 1000)), tgt = Math.max(want, base, 600), st = GR.cv.parentElement;
-  if (Math.abs(tgt - H) <= 6) GR.sizing = 0; else if (W && (GR.sizing = (GR.sizing || 0) + 1) <= 4) { st.style.height = tgt + "px"; GR.H = GR.cv.clientHeight; GR.cv.height = Math.round(GR.H * (GR.dpr || 1)); }     // grow the stage and re-measure at once (does not wait for a resize event); capped at 4 tries
-  GR.fit = Math.max(0.2, Math.min(sW, (GR.H - 64) / spanY, 1.6)); GR.cam = { s: GR.fit, cx: (lastX + GR.pad) / 2 - 10, cy: GR.HL / 2 + 22, ox: -panel / 2 }; GR.tcam = { ...GR.cam }; GR.dirty = true; }
+function grFit() { GR.tcache.clear(); const W = GR.W, H = GR.H, panel = GR.feedOn ? 290 : 0, lastX = GR.cols[GR.cols.length - 1].x, spanX = lastX + GR.pad + 30;
+  const st = GR.cv.parentElement, top = st.getBoundingClientRect().top + scrollY, tgt = Math.max(480, Math.round(innerHeight - top - 14));      // the stage fills the window below the rail; the graph fits into it, so nothing needs scrolling
+  if (Math.abs(tgt - H) <= 6) GR.sizing = 0; else if (W && (GR.sizing = (GR.sizing || 0) + 1) <= 4) { st.style.height = tgt + "px"; GR.H = GR.cv.clientHeight; GR.cv.height = Math.round(GR.H * (GR.dpr || 1)); }     // re-measure at once (does not wait for a resize event); capped at 4 tries
+  // width sets the scale; rows are then packed closer so every column fits the height (columns keep their full spread across the width)
+  if (GR.HL0 == null) { GR.HL0 = GR.HL; GR.ROW0 = ROW; for (const n of GR.nodes.values()) n.y0 = n.y; }
+  const sW = (W - panel - 28) / spanX, s0 = Math.min(sW, 1.6), k = Math.min(1, Math.max(0.3, ((GR.H - 64) / s0 - 110) / GR.HL0));
+  GR.HL = GR.HL0 * k; ROW = GR.ROW0 * k; for (const n of GR.nodes.values()) n.y = n.y0 * k;
+  const spanY = GR.HL + 110;      // 70 units above the rows for the column headings, 40 below
+  GR.fit = Math.max(0.2, Math.min(sW, (GR.H - 64) / spanY, 1.6)); GR.cam = { s: GR.fit, cx: (lastX + GR.pad) / 2 - 10, cy: GR.HL / 2 - 15, ox: panel / 2 }; GR.tcam = { ...GR.cam }; GR.dirty = true; }
 const grXY = (x, y) => [GR.W / 2 + GR.cam.ox + (x - GR.cam.cx) * GR.cam.s, GR.H / 2 + 24 + (y - GR.cam.cy) * GR.cam.s];
 const grWorld = (px, py) => [(px - GR.W / 2 - GR.cam.ox) / GR.cam.s + GR.cam.cx, (py - GR.H / 2 - 24) / GR.cam.s + GR.cam.cy];
 const UNIT = { place: 3, decision: 3, condition: 0.04, state: 0.15, resource: 1 }, EPS = { place: 0.02, decision: 0.02, condition: 0.0004, state: 0.002, resource: 0.01 };     // full colour at about one UNIT (smoothly, tanh); the same scale for every node, so size of impact is visible and grows as news lands
@@ -289,7 +305,7 @@ function grDraw(now) {
     if (Math.abs(h) > 0.02) { ctx.fillStyle = rgba(col, 0.2 * Math.abs(h) * al); ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 6.283); ctx.fill(); }
     ctx.fillStyle = Math.abs(h) < 0.01 ? rgba(NEU, 0.85 * al) : rgba(col, (0.5 + 0.5 * Math.abs(h)) * al); ctx.beginPath(); if (n.trait) { const q = r * 1.25; ctx.moveTo(x, y - q); ctx.lineTo(x + q, y); ctx.lineTo(x, y + q); ctx.lineTo(x - q, y); ctx.closePath(); } else ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.strokeStyle = `rgba(255,255,255,${(hv === n.id ? 0.95 : 0.22) * al})`; ctx.lineWidth = hv === n.id ? 1.6 : 0.8; ctx.stroke();
     const maxW = Math.max(40, room - r - 30), tx = x + r + 7; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = `rgba(8,11,21,${0.85 * al})`; ctx.fillStyle = `rgba(232,236,246,${(n.kind === "story" ? 0.95 : 0.84) * al})`;
-    if (n.kind === "story") { const lines = wrap(GR.story ? GR.story.x : n.name, maxW, 4), lh = fs * 1.25, y0 = y - (lines.length - 1) * lh / 2; lines.forEach((ln, i) => { ctx.strokeText(ln, tx, y0 + i * lh); ctx.fillText(ln, tx, y0 + i * lh); }); }
+    if (n.kind === "story") { const lines = wrap(GR.feedOn ? (GR.story ? "Reading now" : "Waiting for a story") : GR.story ? GR.story.x : n.name, maxW, 4), lh = fs * 1.25, y0 = y - (lines.length - 1) * lh / 2; lines.forEach((ln, i) => { ctx.strokeText(ln, tx, y0 + i * lh); ctx.fillText(ln, tx, y0 + i * lh); }); }
     else {
       const t = fitText(GR.dense ? capName(n.name, 44) : n.name, maxW), unit = UNIT[n.kind], showV = unit && n.kind !== "resource" && S.world && rowPx >= 27 && Math.abs(n.vs) >= unit * 0.0015, ty = showV ? y - fs * 0.5 : y; ctx.strokeText(t, tx, ty); ctx.fillText(t, tx, ty);
       if (showV) { const v = n.vs, txt = (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(n.kind === "condition" ? 3 : 2) + (n.kind === "state" ? " sd" : n.kind === "condition" ? "" : " pts"); ctx.font = `600 ${Math.max(9, fs - 1.5)}px system-ui, sans-serif`; ctx.fillStyle = rgba(mixc(v), 0.95 * al); ctx.strokeText(txt, tx, y + fs * 0.75); ctx.fillText(txt, tx, y + fs * 0.75); ctx.font = `${fs}px system-ui, sans-serif`; }
@@ -338,6 +354,7 @@ function grHover(px, py) {
 }
 function initGraph() {
   const st = $("stage"), cv = el("canvas", { class: "gcv" }); st.prepend(cv); GR.cv = cv; GR.ctx = cv.getContext("2d");
+  addEventListener("resize", () => { if (GR.cols.length) { GR.sizing = 0; grFit(); } });      // a taller or shorter window refits the stage
   const ro = new ResizeObserver(() => { if (!cv.clientWidth) return; GR.dpr = Math.min(2, window.devicePixelRatio || 1); GR.W = cv.clientWidth; GR.H = cv.clientHeight; cv.width = Math.round(GR.W * GR.dpr); cv.height = Math.round(GR.H * GR.dpr); if (GR.cols.length) grFit(); GR.dirty = true; }); ro.observe(cv);
   let drag = null; cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, cx: GR.tcam.cx, cy: GR.tcam.cy }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); if (drag) { GR.tcam.cx = drag.cx - (e.clientX - drag.x) / GR.tcam.s; GR.tcam.cy = drag.cy - (e.clientY - drag.y) / GR.tcam.s; GR.cam.cx = GR.tcam.cx; GR.cam.cy = GR.tcam.cy; GR.dirty = true; } grHover(e.clientX - r.left, e.clientY - r.top); });
@@ -374,7 +391,8 @@ async function poll() {
     pz.textContent = d.on && d.err ? `Live feed paused: ${d.err}. It resumes by itself when a reader answers.` : "";
     if (d.on && d.err) $("livet").textContent = "WAITING";
     const fresh = d.items.filter(i => i.seq > (S.seqSeen || 0)); const first = !S.seqSeen; if (d.items.length) S.seqSeen = d.items[d.items.length - 1].seq;
-    if (!first) for (const it of fresh) { S.items.push(it); setTimeout(() => { lightUp(it); grFlow(it); }, 0); } else for (const it of d.items.slice(-4)) S.items.push(it);
+    if (!first) for (const it of fresh) { S.items.push(it); setTimeout(() => { lightUp(it); grFlow(it); }, 0); } else for (const it of d.items.slice(-FEED_N)) S.items.push(it);
+    if (S.items.length > 200) S.items.splice(0, S.items.length - 200);
     if (fresh.length || first) paintFeed();
     if (d.tick !== S.tick) { S.tick = d.tick; api("world").then(w => { S.world = w; grRefresh(); }).catch(() => {}); api("gpu").then(g => { S.gpu = g; paintGpu(); paintGpuRail(); }).catch(() => {}); }
   } catch (e) { /* try again next beat */ }

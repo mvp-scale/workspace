@@ -45,10 +45,8 @@ profiles:
   share:  [share]                                   # a public Cloudflare link for the console (no login: anyone with it can spend the TypeSafe key)
   test-world:                                       # a second engine beside the live one, for testing
     - {service: world, port: 8122}
-  world-v2:                                         # the live engine on the expanded ontology (restart world-v2 to switch; restart world to go back to v1)
-    - {service: world, env: {WE_RULES: rules_v2}}
-  test-world-v2:                                    # a v2 engine on a test port beside the live one
-    - {service: world, port: 8132, env: {WE_RULES: rules_v2}}
+  world-v1:                                         # the live engine on the original, smaller ontology (restart world-v1 to switch; restart world to go back to v2)
+    - {service: world, env: {WE_RULES: rules}}
 
 services:
   winnow:
@@ -120,7 +118,7 @@ services:
     port: 8112
     cwd: probes/world-engine
     cmd: [/workspace/kev/.venv/bin/python, world_service2.py]
-    env: {WE2_PORT: "${port}"}
+    env: {WE2_PORT: "${port}", WE_RULES: rules_v2}   # expanded ontology (49 topics, 20 decisions); the world-v1 profile goes back to v1
     match: world_service2\.py
     health: /live?since=0
     boot: 120
