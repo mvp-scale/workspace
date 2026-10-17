@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State depth test · mock-up</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<style>
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; display: grid; gap: 22px; }
+  .step { display: grid; gap: 10px; }
+  .step > h2 { font-size: 18px; margin: 0; }
+  .what { color: var(--text-2); font-size: 14px; max-width: 85ch; margin: 0; }
+  pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; font-family: var(--mono, ui-monospace, monospace); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; background: var(--surface); color: var(--text-2); padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .grid line { stroke: var(--border); } .axis text, .lab { fill: var(--text-3); font-size: 11px; }
+  .rowlab { fill: var(--text-2); font-size: 12px; }
+  .zero { stroke: var(--text-3); stroke-dasharray: 3 3; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; display: none; z-index: 2; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-2); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; background: var(--c); }
+  .smalls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+  .smalls h3 { margin: 0 0 4px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; } td, th { font-size: 12.5px; padding: 3px 6px; border-bottom: 1px solid var(--border); text-align: left; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+  .verdict { font-weight: 700; }
+  .picks { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; }
+  .picks label { display: inline-flex; gap: 4px; align-items: center; color: var(--text-2); }
+  details > summary { cursor: pointer; color: var(--text-2); font-size: 13px; }
+</style>
+</head>
+<body>
+<main id="main">
+  <header style="display:grid;gap:6px">
+    <h1 style="margin:0">State depth test: does adding to the state, the instructions or the criteria help the CPU classifier?</h1>
+    <p class="what">One frozen encoder turns the text into a vector; one small trained head per question (logistic regression, the CPU engine's own settings) turns that vector into yes/no. We change only what text goes into the encoder, train on 12 to 248 examples, and score on the same 200 test sentences from chats the training never saw. Labels are human (Persuasion for Good, annotators saw the whole chat). Nothing on this page calls a model; every number is read from <code>data/state-depth/grid.json</code>, produced by <code>probes/state_depth.py grid</code>.</p>
+    <p class="what"><b>Score:</b> balanced accuracy = the average of "share of real yes caught" and "share of real no kept"; chance is 50%. <b>Baseline:</b> the sentence alone, same encoder. <b>Pass:</b> a cell beats the baseline at 248 by more than its 95% range, or reaches the baseline's 248 score with 100 examples or fewer.</p>
+  </header>
+
+  <section class="card step">
+    <div class="controls">
+      <span class="small muted">Encoder</span><span class="seg" id="encSeg"></span>
+      <span class="small muted" id="encNote"></span>
+    </div>
+  </section>
+
+  <section class="card step">
+    <h2>1 · Every input, compared with the sentence alone (trained on all 248)</h2>
+    <p class="what">Each dot is the difference in balanced accuracy from the baseline; the bar is its 95% range (paired bootstrap over the 200 test sentences). Right of the dashed line = better than the sentence alone. One panel per question.</p>
+    <div class="legend" id="legend1"></div>
+    <div class="smalls" id="forest"></div>
+  </section>
+
+  <section class="card step">
+    <h2>2 · Learning curves: does any input learn sooner?</h2>
+    <p class="what">Balanced accuracy against the number of training examples (mean over 20 random draws of that size; the 248 point is one fit on everything). Pick the inputs to draw.</p>
+    <div class="picks" id="picks"></div>
+    <div class="smalls" id="curves"></div>
+  </section>
+
+  <section class="card step">
+    <h2>3 · The exact inputs</h2>
+    <p class="what">The question wordings were written into the script before any scoring and are fixed. Below: each wording, and one training sentence as the encoder receives it in every cell (the engine adds <code>query: </code> in front for e5).</p>
+    <div id="wordings" class="smalls"></div>
+    <details><summary>One sentence in every cell</summary><div id="examples" style="display:grid;gap:8px;margin-top:8px"></div></details>
+  </section>
+
+  <section class="card step">
+    <h2>4 · All numbers</h2>
+    <div class="table-wrap" id="table"></div>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+<script>
+(async () => {
+  const { el } = Jev;
+  const D = await (await fetch("/mockups/state-depth.json")).json();
+  const Q = D.questions, SIZES = D.sizes;
+  const QN = { agree: "agree to donate", refuse: "pushes back on donating", askorg: "asks about the charity" };
+  const FAM = [["state only", "--s1"], ["state+instr", "--s2"], ["state+instr+criteria", "--s3"], ["split", "--s4"]];
+  const famOf = (cell) => FAM.find(([f]) => cell.split(" | ")[1].startsWith(f.split(":")[0]) && (f !== "state+instr" || !cell.includes("criteria"))) || FAM[0];
+  const cellsOf = (enc) => [...new Set(Object.keys(D.cells).filter(k => k.startsWith(enc + " | ")).map(k => k.split(" | ").slice(1, -1).join(" | ")))];
+  const nice = (c) => c.replace("split: sentence vector + context vector", "split (sentence vector + context vector)");
+  let enc = "e5";
+  const encs = [["static", "Static · potion-base-8M (~30 MB, ~0.2 ms)"], ["e5", "e5-small int8 (34 MB, ~4 ms, what the CPU engine runs)"]];
+  const seg = document.getElementById("encSeg");
+  for (const [k, lab] of encs) seg.append(el("button", { type: "button", "aria-pressed": String(k === enc), text: lab, onclick: () => { enc = k; for (const b of seg.children) b.setAttribute("aria-pressed", String(b === event.currentTarget)); draw(); } }));
+  document.getElementById("legend1").replaceChildren(...FAM.map(([f, c]) => el("span", { style: `--c: var(${c})`, text: f === "split" ? "split: sentence and context encoded separately" : f })));
+
+  const NS = "http://www.w3.org/2000/svg";
+  const S = (tag, a = {}, ...kids) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); for (const k of kids) n.append(k.nodeType ? k : document.createTextNode(k)); return n; };
+  const tip = document.getElementById("tip");
+  const showTip = (ev, lines) => { tip.replaceChildren(...lines.map((l, i) => el("div", { text: l, style: i ? "color:var(--text-2)" : "font-weight:600" }))); tip.style.display = "block";
+    const x = ev.pageX + 14, w = tip.offsetWidth; tip.style.left = Math.min(x, window.scrollX + document.documentElement.clientWidth - w - 8) + "px"; tip.style.top = (ev.pageY + 12) + "px"; };
+  const hideTip = () => tip.style.display = "none";
+  const pc = (v, d = 1) => (v * 100).toFixed(d) + "%", pp = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1);
+  const verdict = ([d, lo, hi]) => lo > 0 ? "better" : hi < 0 ? "worse" : "no clear difference";
+
+  function forest() {
+    const box = document.getElementById("forest"); box.replaceChildren();
+    const cells = cellsOf(enc).filter(c => c !== "S1 | state only");
+    const all = Q.flatMap(q => cells.map(c => D.vs_baseline[`${enc} | ${c} | ${q}`]));
+    const lo = Math.min(-0.05, ...all.map(v => v[1])), hi = Math.max(0.05, ...all.map(v => v[2]));
+    for (const q of Q) {
+      const W = 360, L = 150, R = 12, rowH = 18, H = cells.length * rowH + 34, x = (v) => L + (v - lo) / (hi - lo) * (W - L - R);
+      const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Difference from the sentence alone, ${QN[q]}` });
+      const g = S("g", { class: "grid axis" });
+      for (let t = Math.ceil(lo * 10) / 10; t <= hi + 1e-9; t += 0.1) { g.append(S("line", { x1: x(t), x2: x(t), y1: 4, y2: H - 22 }), S("text", { x: x(t), y: H - 8, "text-anchor": "middle" }, pp(t))); }
+      svg.append(g, S("line", { class: "zero", x1: x(0), x2: x(0), y1: 4, y2: H - 22 }));
+      cells.forEach((c, i) => {
+        const v = D.vs_baseline[`${enc} | ${c} | ${q}`], y = 12 + i * rowH, col = `var(${famOf(c)[1]})`;
+        const base = D.cells[`${enc} | S1 | state only | ${q}`].at(-1)[0], me = D.cells[`${enc} | ${c} | ${q}`].at(-1)[0];
+        svg.append(S("text", { class: "rowlab", x: L - 6, y: y + 4, "text-anchor": "end" }, c.replace(" | ", " · ").replace("state+instr+criteria", "+instr+crit").replace("state+instr", "+instr").replace("state only", "state").replace("split: sentence vector + context vector", "split").replace(" | ", " · ")));
+        svg.append(S("line", { x1: x(v[1]), x2: x(v[2]), y1: y, y2: y, stroke: col, "stroke-width": 2, "stroke-linecap": "round" }));
+        svg.append(S("circle", { cx: x(v[0]), cy: y, r: 4, fill: col, stroke: "var(--surface)", "stroke-width": 2 }));
+        const hit = S("rect", { x: 0, y: y - rowH / 2, width: W, height: rowH, fill: "transparent" });
+        hit.addEventListener("mousemove", (ev) => showTip(ev, [nice(c), `${pc(me)} vs sentence alone ${pc(base)}`, `difference ${pp(v[0])} points, 95% range ${pp(v[1])} to ${pp(v[2])}`, verdict(v)]));
+        hit.addEventListener("mouseleave", hideTip); svg.append(hit);
+      });
+      box.append(el("div", {}, el("h3", { text: `${QN[q]} · sentence alone ${pc(D.cells[`${enc} | S1 | state only | ${q}`].at(-1)[0])}` }), el("div", { class: "chart" }, svg)));
+    }
+  }
+
+  const picked = new Set(["S1 | state only", "S1 | state+instr+criteria | deep", "S2 | state only", "S2 | split: sentence vector + context vector", "S3 | state only"]);
+  function picks() {
+    const box = document.getElementById("picks"); box.replaceChildren();
+    for (const c of cellsOf(enc)) box.append(el("label", {}, el("input", { type: "checkbox", checked: picked.has(c), onchange: (e) => { e.target.checked ? picked.add(c) : picked.delete(c); curves(); } }), nice(c)));
+  }
+  function curves() {
+    const box = document.getElementById("curves"); box.replaceChildren();
+    const cells = cellsOf(enc).filter(c => picked.has(c));
+    // colour follows the cell (fixed order over every cell), never its rank among the picked ones
+    const order = cellsOf(enc), COLS = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7", "--s8"];
+    const colOf = (c) => `var(${COLS[order.indexOf(c) % COLS.length]})`, dash = (c) => order.indexOf(c) >= COLS.length ? "5 3" : "";
+    box.append(el("div", { class: "legend", style: "grid-column:1/-1" }, cells.map(c => el("span", { style: `--c:${colOf(c)}`, text: nice(c) + (dash(c) ? " (dashed)" : "") }))));
+    for (const q of Q) {
+      const W = 360, H = 230, L = 36, R = 10, T = 10, B = 28, xmax = 248;
+      const x = (n) => L + n / xmax * (W - L - R), y = (v) => T + (1 - (v - 0.5) / 0.5) * (H - T - B);
+      const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Learning curves, ${QN[q]}` });
+      const g = S("g", { class: "grid axis" });
+      for (const t of [0.5, 0.6, 0.7, 0.8, 0.9, 1]) g.append(S("line", { x1: L, x2: W - R, y1: y(t), y2: y(t) }), S("text", { x: L - 4, y: y(t) + 4, "text-anchor": "end" }, pc(t, 0)));
+      for (const n of [0, 50, 100, 150, 200, 248]) g.append(S("text", { x: x(n), y: H - 10, "text-anchor": "middle" }, String(n)));
+      svg.append(g);
+      for (const c of cells) {
+        const cv = D.cells[`${enc} | ${c} | ${q}`];
+        svg.append(S("polyline", { points: cv.map((v, i) => `${x(SIZES[i])},${y(v[0])}`).join(" "), fill: "none", stroke: colOf(c), "stroke-width": 2, "stroke-dasharray": dash(c), "stroke-linejoin": "round" }));
+        cv.forEach((v, i) => svg.append(S("circle", { cx: x(SIZES[i]), cy: y(v[0]), r: 3, fill: colOf(c), stroke: "var(--surface)", "stroke-width": 1.5 })));
+      }
+      const cross = S("line", { x1: 0, x2: 0, y1: T, y2: H - B, stroke: "var(--text-3)", "stroke-width": 1, visibility: "hidden" }); svg.append(cross);
+      const hit = S("rect", { x: L, y: T, width: W - L - R, height: H - T - B, fill: "transparent" });
+      hit.addEventListener("mousemove", (ev) => {
+        const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * W;
+        const i = SIZES.reduce((b, n, k) => Math.abs(x(n) - px) < Math.abs(x(SIZES[b]) - px) ? k : b, 0);
+        cross.setAttribute("x1", x(SIZES[i])); cross.setAttribute("x2", x(SIZES[i])); cross.setAttribute("visibility", "visible");
+        showTip(ev, [`${QN[q]} · ${SIZES[i]} training examples`, ...cells.map(c => { const v = D.cells[`${enc} | ${c} | ${q}`][i]; return `${nice(c)}: ${pc(v[0])}` + (SIZES[i] < 248 ? ` (draws ${pc(v[1], 0)}–${pc(v[2], 0)})` : ""); })]);
+      });
+      hit.addEventListener("mouseleave", () => { hideTip(); cross.setAttribute("visibility", "hidden"); }); svg.append(hit);
+      box.append(el("div", {}, el("h3", { text: QN[q] }), el("div", { class: "chart" }, svg)));
+    }
+  }
+  function table() {
+    const rows = [];
+    for (const c of cellsOf(enc)) for (const q of Q) {
+      const cv = D.cells[`${enc} | ${c} | ${q}`], v = D.vs_baseline[`${enc} | ${c} | ${q}`];
+      rows.push(el("tr", {}, el("td", { text: nice(c) }), el("td", { text: q }), cv.map(p => el("td", { class: "num", text: pc(p[0]) })),
+        el("td", { class: "num", text: c === "S1 | state only" ? "baseline" : `${pp(v[0])} [${pp(v[1])}, ${pp(v[2])}]` }), el("td", { class: "verdict", text: c === "S1 | state only" ? "" : verdict(v) })));
+    }
+    document.getElementById("table").replaceChildren(el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "input" }), el("th", { text: "question" }), SIZES.map(n => el("th", { class: "num", text: `n=${n}` })), el("th", { class: "num", text: "vs sentence alone at 248 (95% range)" }), el("th", { text: "" }))), el("tbody", {}, rows)));
+  }
+  function wordings() {
+    const box = document.getElementById("wordings"); box.replaceChildren();
+    for (const q of Q) for (const d of ["minimal", "deep"]) { const w = D.wordings[q][d];
+      box.append(el("div", {}, el("h3", { text: `${q} · ${d}` }), el("pre", { text: `Question: ${w.instructions}\nYes means: ${w.criteria.true}\nNo means: ${w.criteria.false}` }))); }
+    const ex = document.getElementById("examples"); ex.replaceChildren();
+    for (const [k, t] of Object.entries(D.examples)) { const [s, f, d] = k.split(" | "); if (f === "1" && d === "deep") continue;
+      ex.append(el("div", {}, el("div", { class: "small muted", text: `${s} · ${f === "1" ? "state only" : f === "2" ? "state + instructions" : "state + instructions + criteria"}${f === "1" ? "" : " · " + d} (question: agree)` }), el("pre", { text: t }))); }
+  }
+  function draw() { document.getElementById("encNote").textContent = D.encoder_note?.[enc] || ""; forest(); picks(); curves(); table(); }
+  wordings(); draw();
+})();
+</script>
+</body>
+</html>

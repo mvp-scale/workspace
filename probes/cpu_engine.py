@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """CPU decision engine: a TypeSafe POST /v1/systemone server that answers yes/no (noul) questions on the CPU only.
 
+Answers every yes/no (noul), choice and score question. Each answer's trace says its basis: "trained" (a head learned from
+labelled answers) or "untrained guess" (closeness of the text to each option, with how such guesses measured on our sets).
 The GPU is hidden from this process (CUDA_VISIBLE_DEVICES is cleared before torch loads). The text is encoded once by
 e5-small (384 numbers): ONNX Runtime int8 on 8 threads by default (~4 ms; CPU_ENGINE_RUNTIME=torch for PyTorch fp32, ~12 ms); every question in the library is one logistic classifier on those numbers (1.5 KB each).
 The library is the 14 depth-test questions (probes/latent_depth.py), each trained on all of its teacher's answers for its
@@ -13,6 +15,9 @@ data/embed-zs/teacher.json via demo/backends.py; default Clef Flash Q4); without
 the CPU answers everything it can and refuses questions outside its library.
 
     CUDA_VISIBLE_DEVICES= models/embed-zs/.venv/bin/python probes/cpu_engine.py      # 127.0.0.1:8020 (./service.sh start classifier)
+BitMob locations: a router (a small static mob, ~0.2 ms) reads each question's request and names its area (code, science,
+general); a question learned in several locations is answered by the routed location's head (data/bitmob/live/, built by
+probes/bitmob_build.py). Every answer's trace says the location, the member, and the router's choice and runner-up.
 GET /health (memory, device, timings), GET /library, POST /v1/systemone[?backup=1].
 """
 import os
@@ -33,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "demo"))
 import backends  # the TypeSafe models and the teacher setting (data/embed-zs/teacher.json), read on every request
 PORT = int(os.environ.get("CPU_ENGINE_PORT", "8020"))
 LOCK = threading.Lock()  # one encode at a time: the CPU number we quote is for one request, not a contended one
-STATS = {"requests": 0, "cpu_answers": 0, "teacher_answers": 0, "encode_ms": []}
+STATS = {"requests": 0, "cpu_answers": 0, "teacher_answers": 0, "guesses": 0, "encode_ms": []}
 
 
 def rss_mb(): return int(open("/proc/self/status").read().split("VmRSS:")[1].split()[0]) // 1024
@@ -121,57 +126,181 @@ BOOT = {"runtime": RUNTIME, "library_s": round(time.time() - t0, 1), "rss_mb_aft
 print(f"ready: {len(LIB)} questions, {BOOT}", flush=True)
 
 
+# ---- BitMob locations (probes/bitmob_build.py -> data/bitmob/live/): a router reads each question's request (instructions +
+# criteria + state) with a small static mob (~0.2 ms) and names its area; a question learned in several locations is answered
+# by the head in the routed location (or, if that location has not learned it, the location that measured best). The router
+# chooses on its own; callers never name a location. Library questions above live in the general location (e5-small).
+LIVE = BASE.parent.parent / "bitmob" / "live"
+MOBS, MULTI, ROUTER = {}, {}, None
+if (LIVE / "questions.json").exists():
+    from model2vec import StaticModel
+    _cfg = json.loads((LIVE / "questions.json").read_text()); _members = {m["id"]: m for m in json.loads((LIVE.parent / "members.json").read_text())["members"]}
+
+    def _static(mid):
+        if mid not in MOBS:
+            M = StaticModel.from_pretrained(_members[mid]["source"])
+            def enc(t, M=M):
+                v = np.asarray(M.encode([t])[0], np.float32); return v / max(float(np.linalg.norm(v)), 1e-9)
+            MOBS[mid] = enc
+        return MOBS[mid]
+    _r = np.load(LIVE / "router.npz")
+    ROUTER = {"reader": _cfg["router_reader"], "enc": _static(_cfg["router_reader"]), "W": _r["coef"], "b": _r["intercept"], "areas": [str(a) for a in _r["classes"]], "members": _cfg["areas"]}
+    for _q in _cfg["questions"]:
+        for _h in _q["heads"].values():
+            _h["w"] = np.array(_h["w"], np.float32)
+            if _h["member"] != "e5-small": _static(_h["member"])
+        MULTI[_q["instructions"]] = _q
+    MULTI_BY_ID = {q["id"]: q for q in MULTI.values()}
+    print(f"router: areas {ROUTER['areas']} read by {ROUTER['reader']}; {len(MULTI)} question(s) learned in several locations", flush=True)
+
+
+def route(state, q):
+    """Which location this question's request belongs to: the area, its probability, the runner-up and the time taken."""
+    t = time.perf_counter(); crit = q.get("criteria") or {}; opts = crit.values() if isinstance(crit, dict) else crit
+    text = f"{q.get('instructions', '')} | {' / '.join(str(v) for v in opts)[:400]}\n{state[:1500]}"
+    z = ROUTER["W"] @ ROUTER["enc"](text) + ROUTER["b"]; p = np.exp(z - z.max()); p /= p.sum(); o = np.argsort(-p)
+    return {"location": ROUTER["areas"][o[0]], "p": round(float(p[o[0]]), 3), "runner_up": ROUTER["areas"][o[1]], "runner_up_p": round(float(p[o[1]]), 3),
+            "ms": round((time.perf_counter() - t) * 1000, 2)}
+
+
+def teacher_answer(state, q, tid):
+    """The teacher's whole answer and time for one question of any type (the backup, and the side-by-side comparison)."""
+    t = time.perf_counter(); out = backends.ask(tid, state, {"q": q})["q"]
+    return out, (time.perf_counter() - t) * 1000
+
+
 def teacher_ask(state, q, tid):
-    """The teacher's answer and time for one question (the backup, and the side-by-side comparison)."""
-    t = time.perf_counter(); p = float(backends.ask(tid, state, {"q": q})["q"]["noul"])
-    return p, (time.perf_counter() - t) * 1000
+    out, ms = teacher_answer(state, q, tid); return float(out["noul"]), ms
 
 
 def teacher_info(tid): return {"id": tid, "name": backends.name(tid), "hosted": backends.BACKENDS[tid]["hosted"]}
 
 
+# ---- every question gets an answer --------------------------------------------------------------------------------------
+# yes/no, choice and score are one thing: a probability over options (TypeSafe, as in kev/kev/api.py: noul = [no, yes] from
+# criteria false/true, choice = its keys, score = its levels). A question with a trained head is answered by it (basis
+# "trained"). Any other question is answered by closeness: cosine between the state vector and each option's vector
+# (instructions + option text, same encoder), softmax with one global scale, labelled "untrained guess" together with how
+# such guesses did on our labelled sets (data/bitmob/live/guess_accuracy.json, from probes/bitmob_guess.py). Never refused.
+GUESS_SCALE = float(os.environ.get("BITMOB_GUESS_SCALE", "10"))
+GUESS_FILE = BASE.parent.parent / "bitmob" / "live" / "guess_accuracy.json"
+_OPTV = {}  # option text -> vector; the same questions come back again and again
+
+
+def render(v):
+    if v is None: return ""
+    if isinstance(v, (str, int, float, bool)): return str(v)
+    if isinstance(v, list): return "\n".join(f"- {render(x)}" for x in v)
+    return "\n".join(f"{k}: {render(x)}" for k, x in v.items())
+
+
+def options_of(q):
+    """(labels, option texts) for any TypeSafe question, the same way kev turns them into options."""
+    ot = lambda k, d: k if d is None or d == "" else f"{k}: {render(d)}"
+    c = q.get("criteria")
+    if q["type"] == "noul": c = c or {}; return ["no", "yes"], [ot("no", c.get("false")), ot("yes", c.get("true"))]
+    if q["type"] == "choice": return list(c), [ot(k, x) for k, x in c.items()]
+    return [str(i) for i in range(len(c))], [render(x) for x in c]
+
+
+def check(key, q):
+    if not isinstance(q, dict) or q.get("type") not in ("noul", "choice", "score"): return f"question {key!r}: type must be noul, choice or score"
+    c = q.get("criteria")
+    if q["type"] == "choice" and not (isinstance(c, dict) and c): return f"question {key!r}: a choice question needs criteria as an object of options"
+    if q["type"] == "score" and not (isinstance(c, list) and len(c) >= 2): return f"question {key!r}: a score question needs criteria as a list of at least 2 levels"
+    if q["type"] == "noul" and c is not None and not isinstance(c, dict): return f"question {key!r}: noul criteria must be an object with true/false"
+    return None
+
+
+def guess(v, q):
+    labels, texts = options_of(q); ins = render(q.get("instructions"))
+    for t in texts:
+        k = f"{ins}\n{t}"
+        if k not in _OPTV:
+            with LOCK: _OPTV[k] = encode(k)
+            if len(_OPTV) > 5000: _OPTV.pop(next(iter(_OPTV)))
+    cos = np.array([_OPTV[f"{ins}\n{t}"] @ v for t in texts]); z = cos * GUESS_SCALE; p = np.exp(z - z.max()); p /= p.sum()
+    return labels, p, cos
+
+
+def shaped(qtype, labels, p):
+    """A TypeSafe answer from a probability over options (the same shapes kev returns)."""
+    r = lambda x: round(float(x), 4); K = len(p)
+    if qtype == "noul": return {"type": "noul", "noul": r(p[1])}
+    if qtype == "choice":
+        return {"type": "choice", "choice": labels[int(np.argmax(p))], "confidence": r(1.0 if K == 1 else (max(p) - 1 / K) / (1 - 1 / K)),
+                "probabilities": {l: r(x) for l, x in zip(labels, p)}}
+    mode = int(np.argmax(p))
+    return {"type": "score", "score": r(sum(i * x for i, x in enumerate(p))), "probabilities": {l: r(x) for l, x in zip(labels, p)},
+            "confidence": r(1.0 - sum(x * abs(i - mode) for i, x in enumerate(p)) / (K - 1))}
+
+
+def guess_record(qtype):
+    try: return json.loads(GUESS_FILE.read_text()).get(qtype)
+    except (OSError, ValueError): return None
+
+
 def answer(req, backup, compare=False):
     state = req.get("state"); qs = req.get("questions") or {}
-    if not isinstance(state, str) or not state.strip(): return 400, {"error": "state must be a non-empty string (this engine reads text)"}
+    if not isinstance(state, str): state = render(state)
+    if not state.strip(): return 400, {"error": "state must not be empty"}
     if not isinstance(qs, dict) or not qs: return 400, {"error": "questions must be a non-empty object"}
+    for key, q in qs.items():
+        if (err := check(key, q)): return 422, {"error": err}
     t_all = time.perf_counter()
     with LOCK:
         t = time.perf_counter(); v = encode(state); enc_ms = (time.perf_counter() - t) * 1000
     t = time.perf_counter(); p_all = 1 / (1 + np.exp(-(W @ v + B))); heads_ms = (time.perf_counter() - t) * 1000
-    answers, trace, unanswered = {}, {}, {}; tid = backends.teacher(); tname = backends.name(tid)
+    answers, trace = {}, {}; tid = backends.teacher()
     for key, q in qs.items():
-        if not isinstance(q, dict) or q.get("type") != "noul":
-            return 422, {"error": f"question {key!r}: this engine answers noul (yes/no) questions only; choice and score are not built yet"}
-        lq = BY_INS.get(q.get("instructions")) or BY_ID.get(key)
-        if lq is None:  # outside the library: answer the rest, and say so for this one (or let the teacher answer it)
-            if not backup:
-                unanswered[key] = f"not in the CPU library ({len(LIB)} trained questions): train it first, or turn the backup on ({tname} answers it)"; continue
-            p, ms = teacher_ask(state, q, tid); answers[key] = {"type": "noul", "noul": round(p, 4)}
-            trace[key] = {"answered_by": "teacher", "why": "not in the CPU library", "teacher_ms": round(ms, 1)}; STATS["teacher_answers"] += 1; continue
-        i = LIB.index(lq); p = float(p_all[i]); conf = p < lq["lo"] or p > lq["hi"]
-        noul = float(1 / (1 + np.exp(-(logit(p) - logit(lq["t"])))))
+        rt = route(state, q) if ROUTER else None
+        mq = (MULTI.get(q.get("instructions")) or MULTI_BY_ID.get(key)) if MULTI and q["type"] == "noul" else None
+        lq = (BY_INS.get(q.get("instructions")) or BY_ID.get(key)) if q["type"] == "noul" and mq is None else None
+        if mq is not None:  # trained in several locations: the router's location answers
+            loc = rt["location"] if rt and rt["location"] in mq["heads"] else max(mq["heads"], key=lambda l: mq["heads"][l]["held_out_balanced_accuracy"])
+            h = mq["heads"][loc]; vv = v if h["member"] == "e5-small" else MOBS[h["member"]](state)
+            p = float(1 / (1 + np.exp(-(h["w"] @ vv + h["b"])))); conf = p < h["lo"] or p > h["hi"]; noul = p
+            info = {"basis": "trained", "location": loc, "member": h["member"], "route": rt, "library_id": mq["id"], "taught_by": mq["taught_by"],
+                    "trained_on": h["trained_on"], "held_out_balanced_accuracy": round(h["held_out_balanced_accuracy"], 3)}
+            ask_q = {"type": "noul", "instructions": mq["instructions"], "criteria": mq["criteria"]}
+        elif lq is not None:  # trained (the library, general location)
+            i = LIB.index(lq); p = float(p_all[i]); conf = p < lq["lo"] or p > lq["hi"]
+            noul = float(1 / (1 + np.exp(-(logit(p) - logit(lq["t"])))))
+            info = {"basis": "trained", "library_id": lq["id"], "taught_by": lq.get("taught_by"), "trained_on": lq["trained_on"],
+                    **({"location": "general", "member": "e5-small", "route": rt} if rt else {})}
+            ask_q = {"type": "noul", "instructions": lq["instructions"], "criteria": lq["criteria"]}
+        else:  # nobody taught this question: answer by closeness, and say so
+            labels, p, cos = guess(v, q)
+            info = {"basis": "untrained guess", "measured": guess_record(q["type"]), "cosines": {l: round(float(c), 4) for l, c in zip(labels, cos)}, "member": "e5-small",
+                    **({"route": rt} if rt else {})}
+            if backup:
+                out, ms = teacher_answer(state, q, tid); answers[key] = out
+                trace[key] = {"answered_by": "teacher", "why": "untrained question", "cpu_answer": shaped(q["type"], labels, p), "teacher_ms": round(ms, 1), **info}
+                STATS["teacher_answers"] += 1; continue
+            answers[key] = shaped(q["type"], labels, p); trace[key] = {"answered_by": "cpu", **info}; STATS["cpu_answers"] += 1; STATS["guesses"] = STATS.get("guesses", 0) + 1
+            continue
         if backup and not conf:
-            pc, ms = teacher_ask(state, {"type": "noul", "instructions": lq["instructions"], "criteria": lq["criteria"]}, tid)
-            answers[key] = {"type": "noul", "noul": round(pc, 4)}
-            trace[key] = {"answered_by": "teacher", "why": "the CPU was unsure", "cpu_noul": round(noul, 4), "teacher_ms": round(ms, 1), "library_id": lq["id"]}
+            pc, ms = teacher_ask(state, ask_q, tid); answers[key] = {"type": "noul", "noul": round(pc, 4)}
+            trace[key] = {"answered_by": "teacher", "why": "the CPU was unsure", "cpu_noul": round(noul, 4), "teacher_ms": round(ms, 1), **info}
             STATS["teacher_answers"] += 1
         else:
-            answers[key] = {"type": "noul", "noul": round(noul, 4)}
-            trace[key] = {"answered_by": "cpu", "confident": bool(conf), "library_id": lq["id"], "taught_by": lq.get("taught_by")}; STATS["cpu_answers"] += 1
+            answers[key] = {"type": "noul", "noul": round(noul, 4)}; trace[key] = {"answered_by": "cpu", "confident": bool(conf), **info}; STATS["cpu_answers"] += 1
     if compare:  # ask the teacher too, for every question, so the page can show both side by side (4 at a time, Clef's slot count)
         from concurrent.futures import ThreadPoolExecutor
         def ask(item):
-            key, q = item; lq = BY_INS.get(q.get("instructions")) or BY_ID.get(key)
-            qq = {"type": "noul", "instructions": lq["instructions"], "criteria": lq["criteria"]} if lq else q
-            try: return key, teacher_ask(state, qq, tid)
+            key, q = item
+            try: return key, teacher_answer(state, q, tid)
             except Exception: return key, (None, None)
         with ThreadPoolExecutor(4) as ex:
-            for key, (pc, ms) in ex.map(ask, qs.items()): trace.setdefault(key, {"answered_by": "none"}).update(teacher_noul=None if pc is None else round(pc, 4), teacher_compare_ms=None if ms is None else round(ms, 1))
+            for key, (out, ms) in ex.map(ask, qs.items()):
+                trace.setdefault(key, {"answered_by": "none"}).update(teacher_answer=out, teacher_compare_ms=None if ms is None else round(ms, 1),
+                                                                     teacher_noul=None if not out or out.get("type") != "noul" else round(float(out["noul"]), 4))
     STATS["requests"] += 1; STATS["encode_ms"] = (STATS["encode_ms"] + [enc_ms])[-200:]
+    basis = [t.get("basis") for t in trace.values()]
     return 200, {"answers": answers, "engine": {"device": "cpu", "runtime": RUNTIME, "gpu_visible": GPU_VISIBLE, "encode_ms": round(enc_ms, 1),
                                                 "classifiers_ms": round(heads_ms, 3), "total_ms": round((time.perf_counter() - t_all) * 1000, 1),
-                                                "library_size": len(LIB), "memory_mb": rss_mb(), "teacher": teacher_info(tid), "trace": trace,
-                                                **({"unanswered": unanswered} if unanswered else {})}}
+                                                "library_size": len(LIB) + len(MULTI), "memory_mb": rss_mb(), "teacher": teacher_info(tid), "trace": trace,
+                                                "basis": {"trained": basis.count("trained"), "untrained guess": basis.count("untrained guess")}}}
 
 
 def health():
@@ -186,7 +315,12 @@ def health():
 
 def library():
     return {"questions": [{k: q.get(k) for k in ("id", "name", "group", "wording", "level", "instructions", "criteria", "what", "trained_on", "positives", "taught_by")} |
-                          {"gate": {"no_below": round(q["lo"], 3), "yes_above": round(q["hi"], 3)}} for q in LIB]}
+                          {"gate": {"no_below": round(q["lo"], 3), "yes_above": round(q["hi"], 3)}, "location": "general"} for q in LIB] +
+                         [{"id": q["id"], "name": q["name"], "group": q["id"], "wording": 1, "instructions": q["instructions"], "criteria": q["criteria"],
+                           "taught_by": q["taught_by"], "example": q.get("example"),
+                           "locations": {l: {k: h[k] for k in ("member", "trained_on", "positives", "held_out_balanced_accuracy", "held_out_n")} for l, h in q["heads"].items()}}
+                          for q in MULTI.values()],
+            "router": {"reader": ROUTER["reader"], "areas": ROUTER["areas"], "members": ROUTER["members"]} if ROUTER else None}
 
 
 class H(BaseHTTPRequestHandler):
