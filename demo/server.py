@@ -518,6 +518,22 @@ def mask_state():
 CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8020")  # probes/cpu_engine.py: the local classifier (./service.sh start classifier)
 
 
+NEWSREADER = os.environ.get("NEWSREADER_URL", "http://127.0.0.1:8140").rstrip("/")
+
+
+def newsreader_proxy(sub):
+    """Read-only view of the news reader (queue counts, rates, recent stories). Leasing and acking stay between the reader and the World engine."""
+    if sub.split("?")[0] not in ("/health", "/stats", "/items"):
+        return 404, {"error": "not found"}
+    try:
+        with urllib.request.urlopen(NEWSREADER + sub, timeout=10) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+    except (urllib.error.URLError, OSError):
+        return 503, {"error": "The news reader is off. Turn it on under Services in the top bar, or ./service.sh start newsreader"}
+
+
 def cpu_engine_proxy(method, sub, body):
     if sub.split("?")[0] not in ("/health", "/library", "/v1/systemone", "/embed"):
         return 404, {"error": "not found"}
@@ -664,6 +680,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*world_engine_proxy("GET", self.path[len("/api/world-engine"):], None))      # self.path keeps the query string (?since=N)
         if path.startswith("/api/cpu/"):
             return self._send(*cpu_engine_proxy("GET", path[len("/api/cpu"):], None))
+        if path.startswith("/api/newsreader/"):
+            return self._send(*newsreader_proxy(self.path[len("/api/newsreader"):]))
         if path.startswith("/api/idea"):
             r = idea_api.handle_get(path, self.path.partition("?")[2])
             return self._send(*r) if r else self._send(404, {"error": "not found"})
@@ -842,7 +860,10 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, KeyError): return self._send(400, {"error": "send {\"backend\": \"<model id>\"}"})
             return self._send(*set_reader(backend))
         if self.path.startswith("/api/world-engine/"):
-            return self._send(*world_engine_proxy("POST", self.path.split("?")[0][len("/api/world-engine"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))))
+            body = self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 20000))
+            if self.path.split("?")[0] == "/api/world-engine/live" and b'"source"' in body and not self._local():      # switching the feed source is a config change: local visitors only
+                return self._send(403, {"error": "The feed source can only be changed from this machine, not through a shared link."})
+            return self._send(*world_engine_proxy("POST", self.path.split("?")[0][len("/api/world-engine"):], body))
         if self.path.startswith("/api/cpu/"):
             return self._send(*cpu_engine_proxy("POST", self.path[len("/api/cpu"):], self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200000))))
         if self.path.startswith("/api/persona-lab/"):

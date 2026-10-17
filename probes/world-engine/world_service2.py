@@ -424,7 +424,7 @@ class Session:
     def prepare_feed(self, it):
         """Read one ticker headline into readings, without touching the world (this calls the model, so it runs outside the engine lock). The headline's own country and topic are used,
         not guessed: the topic limits which conditions may be expected to move, the country decides where it enters. Amounts are scaled down (FEED_SCALE): a headline nudges the world, an ask is measured against it."""
-        ev = {"evidence_id": "feed", "published_at": datetime.date.today().isoformat(), "title": it["x"], "description": ""}
+        ev = {"evidence_id": "feed", "published_at": datetime.date.today().isoformat(), "title": it["x"], "description": " ".join((it.get("body") or "").split()[:FEED_BODY_WORDS])}      # the news reader's full text (bank headlines have none)
         P = C.ask(ev); r = C.read(P); sign = lambda x: 0.10 if x["direction"] == "up" else -0.10
         readings = [dict(x, amount=sign(x) * x["strength"], basis="reported") for x in r["readings"] if x["direction"] != "conflict"]
         dom = TICKER_TOPIC.get(it["t"]) or (None if RU.IS_V1 else it["t"])      # a bank classified under another ruleset carries its topic ids directly; v1 bank tags map through TICKER_TOPIC (v1 topics, which match nothing under v2)
@@ -460,7 +460,17 @@ TICKER_FILE = next((f for f in ([] if RU.IS_V1 else [f"/workspace/data/news/bank
 TICKER_COUNTRY = {c["iso2"]: c["id"] for c in load_countries() if c["iso2"]}; TICKER_COUNTRY["WORLD"] = None      # ISO2 code of a headline -> engine country
 TICKER_TOPIC = {"ECONOMY": "economy_housing", "WORK": "work_labour", "ENERGY": "energy_resources", "CLIMATE": "environment_climate", "HEALTH": "health", "CRIME": "safety_crime", "CONFLICT": "conflict_security",
                 "LAW": "government_law", "DIPLOMACY": "international_migration", "SOCIETY": "society_identity", "CULTURE": "culture_leisure", "TECH": "technology_science", "SCHOOL": "education", "BUSINESS": "business_corporate"}
-LIVE = {"on": False, "interval": 7.0, "seen": 0.0, "next": 0.0, "seq": 0, "fed": 0, "items": [], "err": None}; LIVE_LOCK = threading.Lock()
+LIVE = {"on": False, "interval": 7.0, "seen": 0.0, "next": 0.0, "seq": 0, "fed": 0, "items": [], "err": None, "source": os.environ.get("WE_FEED_SOURCE", "bank")}; LIVE_LOCK = threading.Lock()
+NEWSREADER, FEED_BODY_WORDS = os.environ.get("NEWSREADER_URL", "http://127.0.0.1:8140").rstrip("/"), 1200      # source "newsreader": real articles from the news reader service, full text up to 1,200 words
+def newsreader_pick():
+    """One story leased from the news reader (newest first), shaped like a bank item; None when its queue is empty. The lease is acked after the story is applied."""
+    with urllib.request.urlopen(NEWSREADER + "/next?n=1&lease=300", timeout=10) as r: got = json.load(r)["items"]
+    if not got: return None
+    x = got[0]; return {"c": x["country"] if x["country"] in TICKER_COUNTRY else "WORLD", "t": None, "x": x["title"], "src": x["source"], "kind": "news", "body": x.get("body") or x.get("teaser") or "",
+                        "nr_id": x["id"], "depth": x["depth"], "words": x.get("words"), "url": x["url"]}
+def newsreader_ack(i):
+    try: urllib.request.urlopen(urllib.request.Request(NEWSREADER + "/ack", data=json.dumps({"ids": [i]}).encode(), headers={"Content-Type": "application/json"}), timeout=10).read()
+    except OSError: pass                                                    # an un-acked lease simply returns to the queue
 ROLL = {"order": [], "pos": 0, "bank": None}
 def live_pick(rng, recent):
     """Rolls through the whole bank in a shuffled order and visits every headline once before any repeats (the bank mixes real feeds, tech, satire and our own funny lines)."""
@@ -472,13 +482,22 @@ def feeder_loop():
     rng, recent = random.Random(), []
     while True:
         time.sleep(0.4)
-        with LIVE_LOCK: go = LIVE["on"] and S is not None and time.time() - LIVE["seen"] < FEED_IDLE_S and time.time() >= LIVE["next"]; gap = LIVE["interval"]
+        with LIVE_LOCK: go = LIVE["on"] and S is not None and time.time() - LIVE["seen"] < FEED_IDLE_S and time.time() >= LIVE["next"]; gap = LIVE["interval"]; src = LIVE["source"]
         if not go: continue
         try:
-            it = live_pick(rng, recent); t0 = time.time(); prep = S.prepare_feed(it); read_ms = round((time.time() - t0) * 1000)
+            if src == "newsreader":
+                gap = 0.0                                                        # real articles: read as fast as the reader allows
+                try: it = newsreader_pick()
+                except OSError as e: raise RuntimeError(f"the news reader is not answering at {NEWSREADER} (turn it on under Services)") from e
+                if it is None:
+                    with LIVE_LOCK: LIVE["err"] = "the news reader's queue is empty; waiting for new stories"; LIVE["next"] = time.time() + 5
+                    continue
+            else: it = live_pick(rng, recent)
+            t0 = time.time(); prep = S.prepare_feed(it); read_ms = round((time.time() - t0) * 1000)
             with LOCK: t1 = time.time(); S.apply_feed(prep); tick = S.w.tick; apply_ms = round((time.time() - t1) * 1000, 1)
             eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) > 0]
-            with LIVE_LOCK: LIVE["err"] = None; LIVE["by"] = C.O.CURRENT; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "by": C.O.CURRENT, "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms}); del LIVE["items"][:-60]; LIVE["err"] = None
+            with LIVE_LOCK: LIVE["err"] = None; LIVE["by"] = C.O.CURRENT; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "by": C.O.CURRENT, "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms, "depth": it.get("depth"), "words": it.get("words"), "url": it.get("url")}); del LIVE["items"][:-60]; LIVE["err"] = None
+            if it.get("nr_id"): newsreader_ack(it["nr_id"])
         except Exception as e:
             with LIVE_LOCK: LIVE["err"] = ("no reader is answering: " + ("no local model is loaded (turn on Clef or Winnow under Services)" if C.O.AUTO else f"the pinned reader at {C.O.EP} is off")) \
                 if isinstance(e, (ConnectionRefusedError, urllib.error.URLError)) and "refused" in str(e).lower() else f"{type(e).__name__}: {str(e)[:100]}"
@@ -486,7 +505,7 @@ def feeder_loop():
 def live_status(since=0, watching=True):
     with LIVE_LOCK:
         if watching: LIVE["seen"] = time.time()
-        out = {"on": LIVE["on"], "interval": LIVE["interval"], "seq": LIVE["seq"], "fed": LIVE["fed"], "err": LIVE["err"], "items": [i for i in LIVE["items"] if i["seq"] > since]}
+        out = {"on": LIVE["on"], "interval": LIVE["interval"], "seq": LIVE["seq"], "fed": LIVE["fed"], "err": LIVE["err"], "source": LIVE["source"], "items": [i for i in LIVE["items"] if i["seq"] > since]}
     out["tick"] = S.w.tick; out["events"] = len(S.events)
     out["reader"] = {"auto": C.O.AUTO, "current": C.O.CURRENT, "last_read_by": LIVE.get("by")}   # which model reads the headlines
     return out
@@ -532,6 +551,7 @@ class H(BaseHTTPRequestHandler):
                     with LIVE_LOCK:
                         if "on" in req: LIVE["on"] = bool(req["on"]); LIVE["seen"] = time.time(); LIVE["next"] = 0.0
                         if "interval" in req: LIVE["interval"] = min(60.0, max(3.0, float(req["interval"])))
+                        if "source" in req: assert req["source"] in ("bank", "newsreader"); LIVE["source"] = req["source"]; LIVE["err"] = None; LIVE["next"] = 0.0
                     return self._send(200, live_status(1 << 60))
             self._send(404, {"error": "not found"})
         except (AssertionError, KeyError, ValueError, StopIteration): self._send(400, {"error": "bad request"})

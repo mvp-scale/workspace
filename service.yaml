@@ -170,6 +170,21 @@ services:
     tags: [cpu, model, demand]
     log: logs/cpu-engine.log
 
+  newsreader:
+    kind: proc
+    desc: "News reader: polls the curated feeds (newsreader/catalogue.csv), fetches and extracts articles to Markdown, queues them for the World engine"
+    panel: CPU and network only
+    port: 8140
+    cwd: newsreader
+    cmd: ["${root}/newsreader/.venv/bin/python", -m, nr.serve]
+    env: {NR_PORT: "${port}", NR_DB: "${root}/data/newsreader/queue.sqlite"}
+    match: nr\.serve
+    health: /health
+    boot: 30
+    tags: [news, demand]
+    label: News reader
+    log: logs/newsreader.log
+
   kev-4b:
     kind: systemd
     desc: kev-4b decision model (starts first; needs about 17 GiB while loading)

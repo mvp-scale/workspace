@@ -1,0 +1,17 @@
+services:
+  newsreader:
+    build: .
+    network_mode: host            # serve.py binds 127.0.0.1:8140; the World engine reaches it on the same host
+    environment:
+      NR_DB: /data/queue.sqlite
+      NR_RSSHUB: http://127.0.0.1:1200
+    volumes:
+      - newsreader-data:/data
+    restart: unless-stopped
+  rsshub:
+    image: diygod/rsshub:latest   # pin a dated tag before production use
+    ports:
+      - "127.0.0.1:1200:1200"
+    restart: unless-stopped
+volumes:
+  newsreader-data:

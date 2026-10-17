@@ -65,13 +65,15 @@
   .swc .sw { font-size: 13px; color: var(--text); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .swc .by { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @media (max-width: 1000px) { .sowhat.on { grid-template-columns: 1fr; height: auto; } }
   .fi.hit { border-left-color: #f0b450; background: linear-gradient(90deg, rgba(240,180,80,.13), transparent); opacity: 1 !important; }
+  .srcsel { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 99px; padding: 2px; } .srcsel button { border: 0; background: none; color: var(--text-2); font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 99px; cursor: pointer; } .srcsel button.on { background: var(--accent-soft); color: var(--text); }
+  .fi .c .dp { margin-left: 4px; padding: 0 5px; border-radius: 99px; border: 1px solid var(--glass-line); } .fi .c .dp.full { color: #8fd19e; border-color: rgba(143,209,158,.4); }
   .nogl { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink2); font-size: 14px; text-align: center; padding: 30px; }
   @media (max-width: 1000px) { .speed { grid-template-columns: repeat(2, 1fr); } .feedcol { display: none; } }
 </style>
 </head>
 <body>
 <main class="page hw">
-  <header class="hwh"><div><h1>How the World engine works</h1><p>Every headline moves the world in ways you never see. This is that hidden impact, worked out live on this machine, story by story, so the world model is always current and ready to forecast from.</p></div><div style="display:flex;gap:12px;align-items:center"><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine">← World engine</a></div></header>
+  <header class="hwh"><div><h1>How the World engine works</h1><p>Every headline moves the world in ways you never see. This is that hidden impact, worked out live on this machine, story by story, so the world model is always current and ready to forecast from.</p></div><div style="display:flex;gap:12px;align-items:center"><span class="srcsel" id="srcSel" title="Where stories come from: the fixed sample bank, or real articles from the news reader service"></span><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine">← World engine</a></div></header>
   <section class="speed" id="speed"></section>
   <section class="sowhat" id="sowhat"></section>
   <section class="stage" id="stage"></section>
@@ -124,7 +126,7 @@ const FEED_N = 40;      // as many as the column has room for; the rest are clip
 function paintFeed() {
   setTimeout(markFeed, 0);
   const rows = UI.feed.children, last = S.items.slice(-FEED_N).reverse(), fresh = last[0] && last[0] !== UI.feedTop; UI.feedTop = last[0];
-  for (let i = 0; i < rows.length; i++) { const it = last[i], r = rows[i]; r.style.display = it ? "" : "none"; r._it = it; if (!it) continue; r.style.opacity = Math.max(0.4, 1 - i * 0.04); if (i === 0 && fresh) { r.classList.remove("new"); void r.offsetWidth; } r.classList.toggle("new", i === 0); r.children[0].textContent = `${it.c === "WORLD" ? "World" : it.c} · ${it.t}`; r.children[1].textContent = it.x; r.children[2].replaceChildren(...(it.effects || []).slice(0, 3).map(e => el("span", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${dialShort(e.dial, e.name)}` }))); }
+  for (let i = 0; i < rows.length; i++) { const it = last[i], r = rows[i]; r.style.display = it ? "" : "none"; r._it = it; if (!it) continue; r.style.opacity = Math.max(0.4, 1 - i * 0.04); if (i === 0 && fresh) { r.classList.remove("new"); void r.offsetWidth; } r.classList.toggle("new", i === 0); r.children[0].replaceChildren(`${it.c === "WORLD" ? "World" : it.c} · ${it.t || it.src || ""}`, ...(it.depth ? [el("span", { class: "dp" + (it.depth === "full" ? " full" : ""), text: it.depth === "full" ? `${it.words} words` : "headline + teaser", title: it.depth === "full" ? "The whole article was read" : "Only the feed's headline and teaser could be read (the site refuses fetching, or the page had no article text)" })] : [])); r.children[1].textContent = it.x; r.children[2].replaceChildren(...(it.effects || []).slice(0, 3).map(e => el("span", { class: e.dir === "up" ? "u" : "d", text: `${e.dir === "up" ? "▲" : "▼"} ${dialShort(e.dial, e.name)}` }))); }
 }
 
 
@@ -436,11 +438,22 @@ function buildViews() {
 }
 
 /* ---------- data ---------- */
+function paintSource(src) {
+  const box = $("srcSel"); if (box.dataset.src === src) return; box.dataset.src = src;
+  box.replaceChildren(...[["bank", "Sample bank"], ["newsreader", "Live news"]].map(([k, label]) => el("button", { type: "button", class: k === src ? "on" : "", text: label, onclick: async () => {
+    try { await liveCall({ source: k, on: true }); S.items = []; S.since = 0; await poll(); paintReader(); } catch (e) { $("livePause") && ($("livePause").textContent = e.message); } } })));
+}
+async function paintReader() {       // measured rates from the news reader, shown under the optimised intake figure
+  if (!SP.limit) return; if (S.source !== "newsreader") { SP.limit.v.textContent = "a stream: stories queue up and are processed as they land"; return; }
+  try { const r = await Jev.api("/api/newsreader/stats"); SP.limit.v.textContent = `live now: ${r.found_per_s.toFixed(1)} found/s · ${r.extracted_per_s.toFixed(1)} extracted/s · ${r.read_per_s.toFixed(2)} read/s · ${r.backlog.toLocaleString()} waiting · ${Math.round(100 * (r.full_text_share || 0))}% full text`;
+    SP.limit.b.title = `Measured by the news reader over the last 5 minutes. Found: new stories in ${r.feeds.total} feeds. Extracted: articles turned into Markdown (median ${r.extract_ms_median} ms). Read: stories the reader model has finished. Waiting: extracted, not yet read. The optimised figure is the small reader's measured speed; today the large local model reads every story, so the queue grows.`; }
+  catch (e) { SP.limit.v.textContent = "news reader is off: turn it on under Services"; }
+}
 async function poll() {
   if (document.hidden) return;
   try {
     const d = await Jev.api("/api/world-engine/live?since=" + S.since); if (d.seq < S.since) { S.since = 0; S.items = []; }
-    S.since = Math.max(S.since, d.seq); S.on = d.on; S.fed = d.fed; $("live").classList.toggle("on", d.on); $("livet").textContent = d.on ? "LIVE" : "PAUSED";
+    S.since = Math.max(S.since, d.seq); S.on = d.on; if (d.source) { if (S.source !== d.source) { S.source = d.source; paintReader(); } paintSource(d.source); } S.fed = d.fed; $("live").classList.toggle("on", d.on); $("livet").textContent = d.on ? "LIVE" : "PAUSED";
     let pz = $("livePause"); if (!pz) { pz = el("span", { id: "livePause", class: "small", role: "status", style: "color:var(--warn);margin-left:8px" }); $("live").after(pz); }
     let rd = $("liveReader"); if (!rd) { rd = el("span", { id: "liveReader", class: "small", style: "margin-left:8px;color:var(--text-2)" }); $("live").after(rd); }
     const rid = d.reader && (d.reader.current || d.reader.last_read_by);
@@ -462,7 +475,7 @@ $("live").onclick = async () => { try { await liveCall({ on: !S.on }); try { loc
   buildSpeed();
   try { GR.data = await api("graph"); buildStage(); buildViews(); initGraph(); setView("meaning"); } catch (e) { $("stage").append(el("div", { class: "nogl", text: "Could not start the picture: " + e.message })); }
   let want = true; try { want = localStorage.getItem("we2.live") !== "0"; } catch (e) {} try { await liveCall({ on: want, interval: 4 }); } catch (e) {}
-  await poll(); setInterval(poll, 1500);
+  await poll(); setInterval(poll, 1500); setInterval(paintReader, 5000);
 })();
 </script>
 </body>
