@@ -48,6 +48,20 @@
   .facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; font-size: 12px; } .facts dt { color: var(--text-3); } .facts dd { margin: 0; overflow-wrap: anywhere; }
   .jump { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 8px 0 10px; font-size: 12.5px; }
   table.data.fam td, table.data.fam th { white-space: normal; vertical-align: top; }
+  details.caution { margin-bottom: 16px; border: 2px solid var(--bad); border-radius: var(--radius); background: var(--bad-soft); overflow: hidden; }
+  details.caution summary { cursor: pointer; list-style: none; display: grid; gap: 4px; padding: 14px 18px; }
+  details.caution summary::-webkit-details-marker { display: none; }
+  details.caution .c-tag { justify-self: start; background: var(--bad); color: var(--surface); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: var(--radius-sm); }
+  details.caution .c-head { font-size: 20px; font-weight: 750; line-height: 1.25; color: var(--text); }
+  details.caution .c-sub { font-size: 13px; color: var(--text-2); }
+  details.caution .c-sub::before { content: "▸ "; color: var(--bad); } details.caution[open] .c-sub::before { content: "▾ "; }
+  details.caution .c-body { padding: 0 18px 16px; display: grid; gap: 12px; }
+  details.caution .c-big { font-size: 17px; font-weight: 650; line-height: 1.35; color: var(--text); margin: 0; }
+  details.caution .c-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+  details.caution .c-grid > div { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
+  details.caution .c-grid h3 { font-size: 14px; font-weight: 700; color: var(--bad); margin: 0 0 4px; } details.caution .c-grid p { margin: 0; color: var(--text); font-size: 13.5px; line-height: 1.4; }
+  details.caution .c-rule { margin: 0; font-size: 15px; color: var(--text); padding: 10px 12px; border-left: 4px solid var(--bad); background: var(--surface); border-radius: var(--radius-sm); }
+  details.caution .c-note { margin: 0; font-size: 12px; color: var(--text-3); }
   @media (max-width: 860px) { .sauce { grid-template-columns: 1fr; } .flow { flex-wrap: wrap; } }
 </style>
 </head>
@@ -61,6 +75,23 @@
     <div class="actions"><button class="btn" id="print" type="button">Print</button></div>
   </div>
   <div class="callout" style="margin-bottom:14px">Diagram numbers are illustrative. Model facts come from each model's own repository or card; where something isn't published, we say so.</div>
+  <details class="caution">
+    <summary>
+      <span class="c-tag">Word of caution</span>
+      <span class="c-head">Anything you send to a hosted model, assume they keep it.</span>
+      <span class="c-sub">Open to see why "we don't train on your data" doesn't protect you.</span>
+    </summary>
+    <div class="c-body">
+      <p class="c-big">"We don't train on your data" is a promise about the words you send. It is not a promise about everything they learn <em>from</em> them.</p>
+      <div class="c-grid">
+        <div><h3>The loophole</h3><p>Every request creates telemetry: what you asked, how long, what topic, what answer came back. They can train on that and still say, truthfully, "we never trained on your data."</p></div>
+        <div><h3>You can't check</h3><p>No audit trail. No way to ask what was kept or used. Once it's sent, it's out of your hands.</p></div>
+        <div><h3>The incentive</h3><p>Your data is worth more to them than any penalty. As far as we know, no provider has been held to account for this. If one ever is, a fine years later is a cost of doing business.</p></div>
+      </div>
+      <p class="c-rule"><strong>Rule of thumb:</strong> sending it = giving it away. Keep anything sensitive on a local model (the Clef Flash family runs on this machine and sends nothing out).</p>
+      <p class="c-note">This applies to every hosted model API, not one vendor. Jev (TypeSafe System 1) is the hosted model on this console and a good one. We are not saying it does this. We are saying no provider gives you a way to prove it doesn't.</p>
+    </div>
+  </details>
 
   <section class="section" style="margin-top:0" aria-labelledby="codes-h">
     <header><div><h2 id="codes-h">Model codes</h2><p class="small" id="codes-rule">Every model has a code of at most six characters: family letters plus a size. B means billions of parameters and H means hundreds of millions, so KEV4B is a 4 billion parameter model and LAYA4H one of about 400 million. The table shows what is loaded in memory right now.</p></div></header>
