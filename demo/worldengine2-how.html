@@ -52,7 +52,7 @@
   .ctl { top: 58px !important; } .stage canvas.gcv { cursor: grab; }
   .views .lb { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 4px 0 2px; } .views .chip { min-width: 28px; }
   @media (max-width: 1000px) { .views, .ctl { left: 12px !important; } }
-  .sowhat { display: none; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; height: 92px; } .sowhat.on { display: grid; }
+  .sowhat { display: none; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 0; height: 92px; } .sowhat.on { display: grid; }
   .sowhat .lead { display: flex; flex-direction: column; justify-content: center; padding: 0 14px 0 4px; } .sowhat .lead b { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.01em; } .sowhat .lead span { font-size: 11px; color: var(--text-3); margin-top: 2px; }
   .swc { text-align: left; font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 8px 12px; overflow: hidden; display: flex; flex-direction: column; gap: 2px; transition: border-color .2s, opacity .2s, background-color .2s; }
   .swc:hover, .swc.sel { border-color: #f0b450; } .swc.sel { background: color-mix(in srgb, #f0b450 8%, var(--surface)); } .sowhat.focus .swc:not(.sel) { opacity: .45; }
@@ -306,7 +306,7 @@ function paintOutlook(sel) {
       el("div", { class: "pb" }, el("i", { style: `left:${a}%;width:${Math.max(1, b - a)}%` }), el("b", { style: `left:${pos(p.dp)}%` }), el("b", { style: "left:50%;opacity:.25" })),
       el("div", { class: "tk" }, el("span", { class: k.cls, text: k.word }), ` · ${k.da >= 0 ? "+" : "−"}${Math.abs(k.da).toFixed(1)} so far · ${left ? days(left) + " left" : "due now"}`)); };
   const list = sel && !GR.traces.some(t => t.start.id === sel.start.id) ? [sel, ...GR.traces.slice(0, 2)] : GR.traces;
-  box.replaceChildren(lead, ...(F ? list.map(card) : [el("div", { class: "swc", text: "Setting the first forecasts: a few ticks of history are needed." })]));
+  box.replaceChildren(lead, ...(F ? list.map(card) : [el("div", { class: "swc", style: "grid-column: span 3; justify-content: center", text: "Setting the first forecasts: a few ticks of the world model's history are needed (about a minute)." })]));
 }
 function markFeed() { const c = GR.view === "forecast" && GR.trace ? GR.trace.conds : null; if (!UI.feed) return; for (const r of UI.feed.children) r.classList.toggle("hit", !!(c && r._it && (r._it.effects || []).some(x => c.has(x.dial)))); }
 function grParticle(a, b) { const A = GR.nodes.get(a), B = GR.nodes.get(b); if (!A || !B) return; GR.particles.push({ A, B, t0: performance.now(), dur: 700 }); A.glow = Math.max(A.glow, 0.7); GR.dirty = true; }
@@ -437,7 +437,7 @@ function paintPicks(fresh) {          // the five decisions that have moved most
 }
 function setView(v) {
   GR.view = v; for (const c of UI.viewChips) c.b.classList.toggle("on", c.k === v);
-  UI.ctl.style.display = "none"; UI.dbox.style.display = v === "places" ? "" : "none"; if (v === "places") paintPicks(true); UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.key.style.display = v !== "places" && (GR.data.resource_links || GR.layers.states) ? "" : "none"; UI.lay.style.display = v !== "places" ? "" : "none"; $("sowhat").classList.toggle("on", v === "forecast"); UI.hz.style.display = v === "forecast" ? "" : "none"; GR.pinned = null; GR.focus = null; GR.trace = null; GR.traces = null; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
+  UI.ctl.style.display = "none"; UI.dbox.style.display = v === "places" ? "" : "none"; if (v === "places") paintPicks(true); UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.key.style.display = v !== "places" && (GR.data.resource_links || GR.layers.states) ? "" : "none"; UI.lay.style.display = v !== "places" ? "" : "none"; $("sowhat").classList.toggle("on", v === "forecast"); $("speed").style.display = v === "forecast" ? "none" : "";      // the forecast view uses the speed strip's space for its own cards UI.hz.style.display = v === "forecast" ? "" : "none"; GR.pinned = null; GR.focus = null; GR.trace = null; GR.traces = null; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
   grModel(); UI.key.querySelectorAll("span[title^='Resource']").forEach(x => x.style.display = GR.data.resource_links ? "" : "none"); GR.W = GR.cv.clientWidth; GR.H = GR.cv.clientHeight; GR.dpr = GR.dpr || Math.min(2, window.devicePixelRatio || 1); grFit(); grRefresh(); GR.dirty = true;
 }
 function buildViews() {
