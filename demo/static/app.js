@@ -141,27 +141,36 @@
   }
 
   /* ---- Models: one registry, one naming scheme (codes from models.json), live status from /api/status ---- */
-  let FACTS = {}, ORDER = [], STATUS = null, RULE = "";
+  /* STATUS / ORDER: the models that answer any question, for every picker. ALL / ALL_ORDER add library-only models (BitMob,
+     which is trained only on the questions it has learned), shown in the Models panel only. */
+  /* REG: the one model registry (demo/registry.py via /api/models), in order. Retired models are dropped here, once, so
+     no list anywhere shows them; Jev.models({ retired: true }) still returns them for pages that explain history. */
+  let FACTS = {}, REG = [], ORDER = [], STATUS = null, ALL = null, ALL_ORDER = [], RULE = "";
   const subs = new Set();
-  const refreshStatus = async () => { try { STATUS = await api("api/status"); ORDER = Object.keys(STATUS); subs.forEach(f => f(STATUS)); } catch { /* keep the last known status */ } };
+  const retired = (id) => !!FACTS[id]?.retired;
+  const refreshStatus = async () => { try { const raw = await api("api/status"); ALL = Object.fromEntries(Object.entries(raw).filter(([id]) => !retired(id))); ALL_ORDER = Object.keys(ALL);
+    STATUS = Object.fromEntries(Object.entries(ALL).filter(([, s]) => !s.library_only)); ORDER = Object.keys(STATUS); subs.forEach(f => f(STATUS)); } catch { /* keep the last known status */ } };
   const ready = (async () => {
-    try { const m = await api("api/models"); m.models.forEach(x => { FACTS[x.id] = x; }); RULE = m.code_rule || ""; } catch { /* ids are shown instead */ }
+    try { const m = await api("api/models"); REG = m.models; m.models.forEach(x => { FACTS[x.id] = x; }); RULE = m.code_rule || ""; } catch { /* ids are shown instead */ }
     await refreshStatus();
   })();
   setInterval(refreshStatus, 10000);
   const codeOf = (id) => FACTS[id]?.code || STATUS?.[id]?.code || id;
   const nameOf = (id) => FACTS[id]?.name || STATUS?.[id]?.name || id;
-  const isUp = (id) => !!STATUS?.[id]?.up;
+  const isUp = (id) => !!(ALL || STATUS)?.[id]?.up;
+  /* Every model, registry order, facts + abilities + live state. The one list pages use; never a page-local list. */
+  const models = (o = {}) => REG.filter(m => o.retired || !m.retired).map(m => ({ ...m, ...((ALL || {})[m.id] || {}), up: !!(ALL || {})[m.id]?.up }));
   /* Code chip plus full name. Use {name:false} where space is tight; the code alone is always enough because the panel maps it. */
   const tag = (id, o = {}) => el("span", { class: "mtag", title: `${codeOf(id)} = ${nameOf(id)}` }, el("span", { class: "mcode", text: codeOf(id) }), o.name === false ? null : el("span", { class: "mname", text: nameOf(id) }));
   const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
   /* Fills a <select> from live status: loaded models first (with memory), the rest listed disabled. Refreshes itself. */
   function modelSelect(sel, o = {}) {
     const fill = () => {
-      const st = STATUS || {}, ids = ORDER.length ? ORDER : Object.keys(FACTS), cur = sel.value || o.value;
+      const st = ALL || STATUS || {}, ids = ALL_ORDER.length ? ALL_ORDER : Object.keys(FACTS), cur = sel.value || o.value;
       const label = (id) => { const s = st[id] || {}, bits = [codeOf(id), nameOf(id)]; if (s.hosted) bits.push("hosted, paid"); else if (s.up) bits.push(s.gpu_mb ? gib(s.gpu_mb) : "CPU"); return bits.join(" · "); };
-      const up = ids.filter(id => st[id]?.up), down = ids.filter(id => !st[id]?.up);
+      const lib = ids.filter(id => st[id]?.library_only), up = ids.filter(id => st[id]?.up && !st[id]?.library_only), down = ids.filter(id => !st[id]?.up && !st[id]?.library_only);
       sel.replaceChildren(el("optgroup", { label: `Loaded now (${up.length})` }, up.map(id => el("option", { value: id, text: label(id) }))),
+        lib.length ? el("optgroup", { label: "Learned questions only" }, lib.map(id => el("option", { value: id, disabled: true, class: "opt-off", text: `${codeOf(id)} · ${nameOf(id)} (trained only on its learned questions)` }))) : null,
         down.length && !o.onlyLoaded ? el("optgroup", { label: "Not loaded" }, down.map(id => el("option", { value: id, disabled: true, class: "opt-off", text: `${label(id)} (not loaded)` }))) : null);
       const want = up.includes(cur) ? cur : up.includes(o.prefer) ? o.prefer : up[0];
       if (want) sel.value = want;
@@ -209,7 +218,7 @@
     const btn = el("button", { class: "btn ghost models-btn", type: "button", "aria-expanded": "false", "aria-controls": "models-panel" }, dot, count);
     const panel = el("div", { class: "models-panel", id: "models-panel", hidden: true, role: "region", "aria-label": "Models and codes" });
     const render = () => {
-      const st = STATUS || {}, ids = ORDER.length ? ORDER : Object.keys(FACTS), up = ids.filter(id => st[id]?.up);
+      const st = ALL || {}, ids = ALL_ORDER.length ? ALL_ORDER : Object.keys(FACTS), up = ids.filter(id => st[id]?.up);
       const used = up.reduce((n, id) => n + (st[id].gpu_mb || 0), 0);
       dot.className = "dot " + (up.length ? "up" : "down"); count.textContent = `Models ${up.length}/${ids.length || "–"}`;
       panel.replaceChildren(el("h3", { text: `Loaded now: ${up.length} of ${ids.length}` }),
@@ -219,7 +228,7 @@
             return el("tr", {}, el("td", {}, el("span", { class: "mcode", text: codeOf(id) })), el("td", { text: nameOf(id) }), el("td", { class: "dim", text: FACTS[id]?.params || "–" }),
               el("td", {}, el("span", { class: `dot ${s.up ? "up" : "down"}`, "aria-hidden": "true" }), s.up ? "Loaded" : (s.reason || "Not loaded")),
               el("td", { class: "dim", text: s.hosted ? "hosted" : s.up ? (s.gpu_mb ? gib(s.gpu_mb) : "CPU") : "–" }),
-              el("td", { class: "dim", text: s.up ? (s.identity || "") + (s.identity_ok === false ? "  (does not match its label)" : "") : "" })); })))),
+              el("td", { class: "dim", text: s.up ? (s.identity || "") + (s.identity_ok === false ? "  (does not match its label)" : "") : (s.library_only ? "answers only the questions it has learned" : "") })); })))),
         el("p", { class: "note", text: RULE }));
     };
     btn.addEventListener("click", () => { const open = panel.hidden; panel.hidden = !open; btn.setAttribute("aria-expanded", String(open)); if (open) refreshStatus(); });
@@ -247,7 +256,8 @@
   let cache;
   const load = () => cache ||= Promise.all([api("api/leaderboard"), api("api/models")]).then(([rows, meta]) => {
     const info = Object.fromEntries(meta.models.map(m => [m.id, m]));
-    return { rows: rows.map(r => ({ ...r, info: info[r.id] || { id: r.id, name: r.id } })), models: meta.models, tiers: meta.tiers };
+    return { rows: rows.filter(r => !info[r.id]?.retired).map(r => ({ ...r, info: info[r.id] || { id: r.id, name: r.id } })), models: meta.models.filter(m => !m.retired), tiers: meta.tiers,
+             retired: meta.models.filter(m => m.retired) };
   }).catch(e => { cache = null; throw e; });
 
   /* Heat-map colour: accuracy relative to chance, in seven steps. Shared by the Scenario lab and the Image lab. */
@@ -281,6 +291,6 @@
     const bodyEl = opts.compact ? el("div", { class: "json json-inline" }, ...jsonNodes(JSON.parse(JSON.stringify(v))).map(n => (n.nodeType === 3 ? document.createTextNode(n.textContent.replace(/\n\s*/g, " ")) : (n.textContent = n.textContent.replace(/\n\s*/g, " "), n)))) : el("div", { class: "json" }, ...jsonLines(v));
     return el("div", { class: "jsonview" + (opts.compact ? " compact" : "") }, el("div", { class: "jsonview-head" }, el("span", { text: label || "JSON" }), copyBtn), bodyEl);
   };
-  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, statusAll: () => ALL || STATUS, libOnly: (id) => !!FACTS[id]?.library_only, models, isRetired: retired, LIB_NOTE: "is trained only on the questions it has learned (others get an untrained guess)", onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();

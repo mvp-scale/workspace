@@ -1,5 +1,5 @@
 {
-  "note": "Facts only from each model's own repo/model card and jevbench adapter docs, read 2026-09-20. Fields set to null are unknown; do not invent them.",
+  "note": "Facts only from each model's own repo/model card and jevbench adapter docs, read 2026-09-20. Fields set to null are unknown; do not invent them. 'retired' (a reason) hides a model from every list; its stored results stay on disk. 'default_for' lists the pages that pre-select this model (scenario-live, flow, flow-classic) when it is loaded.",
   "models": [
     {
       "id": "clef-flash-q4km",
@@ -107,7 +107,10 @@
       "family": "hosted",
       "sauce": "Not published. Only the interface is known: state and typed questions go in, a probability for every option comes out.",
       "code": "JEV",
-      "verify": "jev-1.13"
+      "verify": "jev-1.13",
+      "default_for": [
+        "flow"
+      ]
     },
     {
       "id": "semif",
@@ -133,7 +136,10 @@
       "family": "logits",
       "sauce": "No training at all. Label the options A, B, C, run a frozen LLM once, and read how strongly it wants to write each letter next.",
       "code": "SEMIF4",
-      "verify": "semif"
+      "verify": "semif",
+      "default_for": [
+        "scenario-live"
+      ]
     },
     {
       "id": "cygnet",
@@ -211,7 +217,10 @@
       "family": "logits",
       "sauce": "The same letter-logit idea on a frozen LLM, scoring each question on its own. It is sensitive to the order of the options.",
       "code": "OAJEV4",
-      "verify": "so1"
+      "verify": "so1",
+      "default_for": [
+        "scenario-live"
+      ]
     },
     {
       "id": "kev-4b",
@@ -237,7 +246,11 @@
       "family": "pointer",
       "sauce": "A small learned pointer head, plus LoRA tuning of the LLM, teaches the model to point at the right option's boundary token.",
       "code": "KEV4B",
-      "verify": "qwen3.5-4b-base"
+      "verify": "qwen3.5-4b-base",
+      "default_for": [
+        "scenario-live",
+        "flow-classic"
+      ]
     },
     {
       "id": "kev-0.8b",
@@ -262,7 +275,8 @@
       "family": "pointer",
       "sauce": "The same pointer-head recipe on a smaller backbone; hybrid layers mean each question is read as its own row.",
       "code": "KEV8H",
-      "verify": "qwen3.5-0.8b"
+      "verify": "qwen3.5-0.8b",
+      "retired": "Retired from the live lineup: no longer fits on the GPU next to the top models (demo/lineup.sh install removed its service). Stored results are kept."
     },
     {
       "id": "kev-0.5b",
@@ -287,7 +301,8 @@
       "family": "pointer",
       "sauce": "The one attention-only kev, so several questions can share the state in one pass while a block-causal mask keeps them apart.",
       "code": "KEV5H",
-      "verify": "qwen2.5-0.5b"
+      "verify": "qwen2.5-0.5b",
+      "retired": "Retired from the live lineup: no longer fits on the GPU next to the top models (demo/lineup.sh install removed its service). Stored results are kept."
     },
     {
       "id": "jeff",
@@ -314,7 +329,8 @@
       "family": "encoder",
       "sauce": "An encoder reads the state, question and options together in both directions, then scores each option with a sigmoid, temperature-scaled by 3.2.",
       "code": "JEFF4H",
-      "verify": "gliformer"
+      "verify": "gliformer",
+      "retired": "Retired from the live lineup: no longer fits on the GPU next to the top models (demo/lineup.sh install removed its service). Stored results are kept."
     },
     {
       "id": "laya",
@@ -340,7 +356,8 @@
       "family": "encoder",
       "sauce": "A marker is placed before every option; a head reads the encoder's output at each marker and takes a softmax over them.",
       "code": "LAYA4H",
-      "verify": "laya"
+      "verify": "laya",
+      "retired": "Retired 16 Oct 2026: weakest on published sets (38.2% average across 72 sets). Stored results are kept."
     },
     {
       "id": "verdict",
@@ -366,7 +383,44 @@
       "family": "encoder",
       "sauce": "Adds an abstention slot, so the model can say the evidence is insufficient. The benchmark drops that slot and renormalises.",
       "code": "VERD2H",
-      "verify": "verdict"
+      "verify": "verdict",
+      "retired": "Retired 16 Oct 2026: weakest on published sets (34.3% average across 72 sets). Stored results are kept."
+    },
+    {
+      "id": "bitmob",
+      "name": "BitMob",
+      "vendor": "This workspace",
+      "kind": "Local, CPU classifier (library only)",
+      "open": true,
+      "licence": null,
+      "params": "33M",
+      "base": "intfloat/e5-small-v2 (ONNX, int8) + one learned head per question",
+      "architecture": "Frozen sentence encoder plus one logistic-regression head per learned yes/no question",
+      "how": [
+        "Encodes the state once on the CPU (about 4 ms), then each learned question is one dot product with its head: a weight per number plus a bias.",
+        "Each head is trained at startup from a teacher model's answers (Clef Flash Q4 by default); every question reports the teacher that taught it.",
+        "Answers only the yes/no questions it has learned; anything else comes back under engine.unanswered, or goes to the teacher with ?backup=1."
+      ],
+      "interface": "TypeSafe /v1/systemone (probes/cpu_engine.py)",
+      "served_as": "Local process, CPU only, GPU hidden (service 'classifier', :8020)",
+      "price": "Self-hosted",
+      "public_score": null,
+      "public_rank": null,
+      "repo": null,
+      "family": "library",
+      "sauce": "A mob of little brains sharing the workload: one tiny head per question on one cheap encoding, so a library of questions costs one encode and one multiplication.",
+      "code": "BITMOB",
+      "verify": "e5-small",
+      "unscored": {
+        "reason": "Not benchmarked: it answers every yes/no, choice and score question, but only the ones it has learned are trained; the rest are labelled untrained guesses (measured near chance), so benchmark scores would mostly measure guesses.",
+        "measured": "4.2 ms median encode per text, 310 MB RAM, no GPU (its own /health, 16 Oct 2026)"
+      },
+      "aliases": [
+        "cpu-engine",
+        "cpu",
+        "classifier",
+        "CPU engine"
+      ]
     }
   ],
   "tiers": [
@@ -386,5 +440,5 @@
       "note": "Reasoning-heavy decisions written and cross-reviewed by two frontier models before any system ran."
     }
   ],
-  "code_rule": "Family letters plus size. B = billions of parameters, H = hundreds of millions (KEV8H is 0.8B, VERD2H is 151M). Jev's size isn't publicly disclosed, so its code is just JEV -- no digits, since nothing else uses that prefix. Codes are at most six characters and appear in the same form on every page."
+  "code_rule": "Family letters plus size. B = billions of parameters, H = hundreds of millions (KEV8H is 0.8B, VERD2H is 151M). Jev's size isn't publicly disclosed, so its code is just JEV -- no digits, since nothing else uses that prefix. Codes are at most six characters and appear in the same form on every page. BitMob (33M, below the H scale) uses its name, BITMOB."
 }

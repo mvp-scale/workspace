@@ -758,7 +758,7 @@
 
   (async () => {
     await Jev.ready; build();
-    try { const models = await api("/api/models"), j = models.models.find(m => m.id === "jev"), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
+    try { const models = await api("/api/models"), j = models.models.find(m => m.hosted), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
     try {
       const ids = [...new Set(Object.values(QSETS))], sets = await Promise.all(ids.map(id => api("/api/probe?set=" + encodeURIComponent(id))));
       const bySet = Object.fromEntries(ids.map((id, i) => [id, sets[i]])); Object.entries(QSETS).forEach(([q, set]) => { QALL[q] = bySet[set].items[0].question; });

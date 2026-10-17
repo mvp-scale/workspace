@@ -224,9 +224,9 @@ const nameRe = () => { const ms = Object.entries(Jev.status() || {}).map(([id]) 
 const rich = (str) => { const { ms, re } = nameRe(); return String(str).split(re).map(p => { if (/^\{[\w.-]+\}$/.test(p)) return Jev.tag(p.slice(1, -1)); const m = ms.find(x => x[1] === p); return m ? Jev.tag(m[0]) : p; }); };
 const rtext = (str) => String(str).replace(/\{([\w.-]+)\}/g, (_, id) => `${Jev.codeOf(id)} ${Jev.nameOf(id)}`);
 const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
-const liveText = (id) => { const s = (Jev.status() || {})[id]; if (!s) return "Status unknown"; return s.up ? (s.hosted ? "Loaded now, hosted" : `Loaded now, ${s.gpu_mb ? gib(s.gpu_mb) : "CPU"}`) : "Not loaded"; };
+const liveText = (id) => { const s = (Jev.statusAll() || {})[id]; if (!s) return "Status unknown"; return s.up ? (s.hosted ? "Loaded now, hosted" : `Loaded now, ${s.gpu_mb ? gib(s.gpu_mb) : "CPU"}`) : "Not loaded"; };
 const liveChip = (id) => { const c = el("span", { class: "badge", "data-live": id }); const f = () => { const up = Jev.isUp(id); c.className = "badge" + (up ? " good" : ""); c.textContent = liveText(id); }; f(); Jev.onStatus(f); return c; };
-const identLine = (id) => { const p = el("p", { class: "small warn", "data-ident": id }); const f = () => { const s = (Jev.status() || {})[id]; const bad = s && s.up && s.identity && s.identity_ok === false; p.hidden = !bad; p.textContent = bad ? `Flagged: running as ${s.identity}, which does not match its label.` : ""; }; f(); Jev.onStatus(f); return p; };
+const identLine = (id) => { const p = el("p", { class: "small warn", "data-ident": id }); const f = () => { const s = (Jev.statusAll() || {})[id]; const bad = s && s.up && s.identity && s.identity_ok === false; p.hidden = !bad; p.textContent = bad ? `Flagged: running as ${s.identity}, which does not match its label.` : ""; }; f(); Jev.onStatus(f); return p; };
 
 /* ---------- Content ---------- */
 const short = (b) => (b || "").split(/ \+ | \(/)[0];
@@ -235,6 +235,7 @@ const FAM = {
   logits: { name: "Read the LLM's letter scores", short: "Letter logits", flow: m => [["State + options", "lettered A, B, C"], ["Frozen LLM", short(m.base)], ["Letter scores", "next-word logits"], ["Probabilities", "softmax", 1]] },
   pointer: { name: "Pointer head", short: "Pointer head", flow: m => [["State + options", "‹opt› marked"], ["LoRA-tuned LLM", short(m.base)], ["Pointer head", "learned"], ["Probabilities", "softmax", 1]] },
   joint: { name: "Joint schema head", short: "Joint head", flow: m => [["State + schema", "all questions at once"], ["Decoder backbone", short(m.base)], ["Joint schema head", "routes state to questions"], ["Probabilities", "softmax per question", 1]] },
+  library: { name: "Encoder + one learned head per question", short: "Learned heads", flow: m => [["State", "the text alone"], ["Encoder", short(m.base)], ["Learned head", "one per question, taught by a teacher model"], ["P(yes)", "per learned question", 1]] },
   encoder: { name: "Encoder with option head", short: "Encoder", flow: m => [["State + options", "with markers"], ["Encoder", short(m.base)], ["Option head", "one score each"], ["Probabilities", "per option", 1]] },
 };
 const PARTS = [
@@ -307,23 +308,26 @@ function card(r, rank) {
   return el("article", { class: "card model", id: m.id },
     el("h3", {}, Jev.tag(m.id), el("span", { class: "vendor", text: m.vendor })),
     el("div", { class: "tags" }, liveChip(m.id), el("span", { class: `badge ${m.open ? "good" : ""}`, text: m.open ? "Open" : "Closed" }), m.params ? el("span", { class: "badge", text: m.params }) : null,
-      el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: `Ranked #${rank} in our runs` })),
+      el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: m.unscored ? "Not benchmarked" : `Ranked #${rank} in our runs` })),
     identLine(m.id), el("p", { class: "sauce-line" }, rich(m.sauce)), flow(m),
     el("div", { class: "bench" }, tier("easy", "Easy"), tier("original", "Original"), tier("hard", "Hard")),
-    el("div", { class: "stats" }, el("span", {}, "Hard ECE ", el("b", { text: fmt.num(hard.ece) })), el("span", {}, "Median ", el("b", { text: fmt.ms(hard.p50_s) })), el("span", {}, "Mean ", el("b", { text: fmt.pct(r.mean_accuracy) }))),
+    m.unscored ? el("p", { class: "small muted", text: `${m.unscored.reason} Measured: ${m.unscored.measured}.` })
+      : el("div", { class: "stats" }, el("span", {}, "Hard ECE ", el("b", { text: fmt.num(hard.ece) })), el("span", {}, "Median ", el("b", { text: fmt.ms(hard.p50_s) })), el("span", {}, "Mean ", el("b", { text: fmt.pct(r.mean_accuracy) }))),
     el("details", { class: "more" }, el("summary", { text: "How it works, in detail" }), el("ul", {}, m.how.map(h => el("li", {}, rich(h)))),
       el("dl", { class: "facts" }, facts.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]), m.repo ? [el("dt", { text: "Source" }), el("dd", {}, el("a", { href: m.repo, target: "_blank", rel: "noopener", text: m.repo.replace(/^https?:\/\//, "") }))] : null)));
 }
 
 function cards(d) {
   const grid = document.getElementById("cards"), jump = document.getElementById("jump"), seg = document.getElementById("filter");
-  const cs = d.rows.map((r, i) => card(r, i + 1));
+  // benchmarked models in rank order, then models that cannot take the benchmark (BitMob), unscored
+  const rows = [...d.rows, ...d.models.filter(m => m.unscored).map(m => ({ id: m.id, info: m, tiers: {}, mean_accuracy: null }))];
+  const cs = rows.map((r, i) => card(r, i + 1));
   grid.replaceChildren(...cs);
-  jump.replaceChildren(...d.rows.map(r => el("a", { href: `#${r.id}`, title: `${Jev.codeOf(r.id)} = ${Jev.nameOf(r.id)}` }, Jev.tag(r.id))));
-  const fams = ["all", ...Object.keys(FAM)].filter(f => f === "all" || famRows(d.rows, f).length);
+  jump.replaceChildren(...rows.map(r => el("a", { href: `#${r.id}`, title: `${Jev.codeOf(r.id)} = ${Jev.nameOf(r.id)}` }, Jev.tag(r.id))));
+  const fams = ["all", ...Object.keys(FAM)].filter(f => f === "all" || famRows(rows, f).length);
   const set = (f) => { [...seg.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === f)));
-    d.rows.forEach((r, i) => { const on = f === "all" || r.info.family === f; cs[i].hidden = !on; jump.children[i].hidden = !on; }); };
-  seg.replaceChildren(...fams.map(f => el("button", { type: "button", "data-f": f, onclick: () => set(f), text: `${f === "all" ? "All" : FAM[f].short} (${f === "all" ? d.rows.length : famRows(d.rows, f).length})` })));
+    rows.forEach((r, i) => { const on = f === "all" || r.info.family === f; cs[i].hidden = !on; jump.children[i].hidden = !on; }); };
+  seg.replaceChildren(...fams.map(f => el("button", { type: "button", "data-f": f, onclick: () => set(f), text: `${f === "all" ? "All" : FAM[f].short} (${f === "all" ? rows.length : famRows(rows, f).length})` })));
   set("all");
   const reveal = () => { const t = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (!t) return; if (t.hidden) set("all"); t.scrollIntoView(); };
   window.addEventListener("hashchange", reveal); if (location.hash) reveal();

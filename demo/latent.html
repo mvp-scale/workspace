@@ -182,21 +182,21 @@
     </div>
   </section>
   <section class="section" aria-labelledby="h-try" id="trySec">
-    <header><div><h2 id="h-try">Proof: send it a real request</h2><p class="takeaway"><span class="k">The point</span>It is real: type any text and the CPU engine answers every question it knows, live. Tick "ask the teacher" to see the teacher's answer next to it.</p><details class="more"><summary>How to read this</summary><p class="small muted">A TypeSafe <code>/v1/systemone</code> server running on this machine’s CPU, with the GPU hidden from it. The right-hand panel shows the exact request and response, and the engine’s receipt of what it received; copy it as curl to run it yourself.</p></details></div>
+    <header><div><h2 id="h-try">Proof: send it a real request</h2><p class="takeaway"><span class="k">The point</span>It is real: type any text and BitMob answers every question it knows, live. Tick "ask the teacher" to see the teacher's answer next to it.</p><details class="more"><summary>How to read this</summary><p class="small muted">A TypeSafe <code>/v1/systemone</code> server running on this machine’s CPU, with the GPU hidden from it. The right-hand panel shows the exact request and response, and the engine’s receipt of what it received; copy it as curl to run it yourself.</p></details></div>
       <div class="row" id="tryHealth"></div></header>
     <div class="try-grid">
       <div class="card stack">
         <div class="field"><label for="tryText">Text (the request's state)</label><textarea id="tryText" rows="3">Honestly that is way over our budget, the quote came in at forty thousand.</textarea></div>
         <div class="row" id="trySamples"></div>
         <div class="row"><label class="small"><input type="checkbox" id="tryCompare" checked> Also ask the teacher, to compare</label>
-          <label class="small"><input type="checkbox" id="tryBackup"> Backup: send unsure answers to the teacher</label><span class="spacer"></span><button class="btn primary" type="button" id="tryGo">Send to the CPU engine</button></div>
+          <label class="small"><input type="checkbox" id="tryBackup"> Backup: send unsure answers to the teacher</label><span class="spacer"></span><button class="btn primary" type="button" id="tryGo">Send to BitMob</button></div>
         <div id="tryOut" class="stack"></div>
       </div>
       <div class="card stack" id="tryJson"><p class="small muted">The request and the engine's response appear here.</p></div>
     </div>
     <div class="card stack" id="waysCard" style="margin-top:12px">
       <h3>Same question, five wordings, one request</h3>
-      <p class="takeaway"><span class="k">The point</span>Rewording does not make the CPU smarter: each wording is just another trained classifier. But wording changes what Clef answers, so the wording you train on matters.</p><details class="more"><summary>How to read this</summary><p class="small muted">The CPU engine does not read a question's wording: each wording is its own classifier, trained on Clef's answers to that wording. One request here carries 5 wordings (plus your own, which it refuses because it was never trained); the page averages the five.</p></details>
+      <p class="takeaway"><span class="k">The point</span>Rewording does not make the CPU smarter: each wording is just another trained classifier. But wording changes what Clef answers, so the wording you train on matters.</p><details class="more"><summary>How to read this</summary><p class="small muted">BitMob does not read a question's wording: each wording is its own classifier, trained on Clef's answers to that wording. One request here carries 5 wordings (plus your own, which it refuses because it was never trained); the page averages the five.</p></details>
       <div class="row"><div class="segmented" id="waysQ" role="group" aria-label="Question"></div>
         <input type="text" id="waysOwn" maxlength="200" placeholder="Optional: your own wording (not trained, so the CPU cannot answer it)" style="flex:1;min-width:240px">
         <button class="btn primary" type="button" id="waysGo">Send all wordings</button></div>
@@ -269,7 +269,7 @@
             <div><b>Cosine</b> the text against each answer's wording, every number weighted equally. No training.</div>
             <div><b>Bias-corrected</b> the same, minus each answer's score for an empty text, so a built-in lean cancels. No training.</div>
             <div><b>Whitened</b> first evens out the space so no direction dominates, then cosine. No training.</div>
-            <div><b>Learned (the sidecar)</b> one weight per number, fitted on Clef's or people's answers. What the CPU engine uses.</div>
+            <div><b>Learned (the sidecar)</b> one weight per number, fitted on Clef's or people's answers. What BitMob uses.</div>
           </div>
         </div>
       </div></div></header>
@@ -328,7 +328,7 @@
       <h2 id="h-model" style="font-size:16px">Selected model</h2>
       <div class="row" id="modelBadges"></div>
       <p class="small muted" id="modelText"></p>
-      <p class="small muted">The research views below read vectors saved earlier; the only live model on this page is the CPU engine above.</p>
+      <p class="small muted">The research views below read vectors saved earlier; the only live model on this page is BitMob above.</p>
     </div>
   </section>
 
@@ -455,7 +455,7 @@ async function drawDepth() {
   const sizes = ["100", "300", "1,000", "all"];
   if (DEP.k < 0) DEP.k = 3;
   document.getElementById("depthN").replaceChildren(el("span", { class: "small subtle", text: "Clef answers learned from: " }), ...sizes.map((t, i) => el("button", { type: "button", "aria-pressed": String(i === DEP.k), text: t, onclick: () => { DEP.k = i; drawDepth(); } })));
-  document.getElementById("depthIntro").textContent = "The same test for every question: Clef answers some conversation windows, the CPU engine learns from those answers, and we score it on windows from other conversations it never saw. Ordered from words on the surface to facts about the world. Scored against Clef's answers; the small grey numbers are the lowest and highest of 3 shuffles.";
+  document.getElementById("depthIntro").textContent = "The same test for every question: Clef answers some conversation windows, BitMob learns from those answers, and we score it on windows from other conversations it never saw. Ordered from words on the surface to facts about the world. Scored against Clef's answers; the small grey numbers are the lowest and highest of 3 shuffles.";
   const pc = v => v == null ? "–" : fmt.pct(v, 0), rng = m => m && m.max - m.min >= 0.005 ? `${pc(m.min)}–${pc(m.max)}` : "";
   const cell = (m, extra) => el("td", { class: "num" }, m ? pc(m.mean) : "–", el("span", { class: "rng", text: extra != null ? extra : rng(m) }));
   const head = el("tr", {}, ...["Question", "How common", "CPU alone: right", "Yes cases caught", "Yes calls right", "Answered on CPU (with Clef backup)", "Verdict"].map(t => el("th", { text: t })));
@@ -478,14 +478,14 @@ async function drawDepth() {
   document.getElementById("depthFoot").textContent = `Teacher: ${d.teacher}. Student: ${d.encoder} plus one small classifier per question. "Yes cases caught": of the windows Clef says yes to, the share the CPU also says yes to. "Yes calls right": of the CPU's yes answers, the share Clef agrees with. With backup, the CPU answers only when it is confident and Clef takes the rest, keeping at least ${Math.round(d.bar.agree * 100)}% agreement with Clef overall. Ten questions were labelled by Clef on all 4,322 windows; hints, sarcasm, persuasion and false facts on a random 1,500 (1,000 to learn from, 500 to test). Agreement with Clef is not the same as being right: the tone sets above measure against people.`;
 }
 
-// Try it: live requests to the CPU engine (probes/cpu_engine.py via /api/cpu/*)
+// Try it: live requests to BitMob (probes/cpu_engine.py via /api/cpu/*)
 const TRY = { lib: null };
 const TRY_SAMPLES = ["Honestly that is way over our budget, the quote came in at forty thousand.", "I'm so sorry, I completely forgot to call you back.", "I promise I'll send the report by Friday.",
   "This whole mess is your fault, you never listen.", "Well, things are kind of generally fine I guess.", "You really should donate today, even a dollar helps the children.", "Can you tell me where the nearest station is?"];
 async function tryHealth() {
   const box = document.getElementById("tryHealth");
   try { const h = await api("/api/cpu/health");
-    box.replaceChildren(el("span", { class: "badge", text: "CPU engine running" }), el("span", { class: "badge", text: h.gpu_visible ? "GPU visible!" : "GPU: not visible to it" }),
+    box.replaceChildren(el("span", { class: "badge", text: "BitMob running" }), el("span", { class: "badge", text: h.gpu_visible ? "GPU visible!" : "GPU: not visible to it" }),
       el("span", { class: "badge", text: `${h.memory_mb} MB RAM` }), el("span", { class: "badge", text: `${h.library_size} questions · ${(h.classifier_bytes / 1024).toFixed(0)} KB of classifiers` }),
       el("span", { class: "badge", text: "taught by " + Object.entries(h.taught_by || {}).map(([t, n]) => `${Jev.nameOf(t === "null" ? "?" : t)} (${n})`).join(", ") }), el("span", { class: "badge", text: `${h.threads} CPU threads` }));
     return true;
@@ -527,7 +527,7 @@ function tryInit() {
   tryHealth().then(ok => { teacherUI(); Jev.onStatus(() => teacherUI()); if (ok) { trySend(); waysDraw().then(() => { waysSend(); waysMeasured(); }); } });
 }
 
-// Ask several ways: every wording of one question in one request to the CPU engine (library groups), next to Clef
+// Ask several ways: every wording of one question in one request to BitMob (library groups), next to Clef
 const WAYS = { q: "price", m: null };
 async function waysDraw() {
   if (!TRY.lib) { try { TRY.lib = (await api("/api/cpu/library")).questions; } catch { return; } }
@@ -547,7 +547,7 @@ async function waysSend() {
   btn.disabled = false; const g = res.engine, tr = g.trace, un = g.unanswered || {};
   const yn = p => p == null ? el("span", { class: "subtle", text: "–" }) : el("span", { class: "yn " + (p > 0.5 ? "y" : "n"), text: `${p > 0.5 ? "yes" : "no"} ${p.toFixed(2)}` });
   const rows = Object.keys(questions).map(k => { const q = ws.find(x => x.id === k), a = res.answers[k] ? res.answers[k].noul : null, c = tr[k] ? tr[k].teacher_noul : null;
-    return el("tr", {}, el("td", { class: "num", text: q ? String(q.wording) : "yours" }), el("td", { text: questions[k].instructions }), el("td", { class: "num" }, a == null ? el("span", { class: "small", style: "color:var(--bad)", text: "not answered: not trained" }) : yn(a)),
+    return el("tr", {}, el("td", { class: "num", text: q ? String(q.wording) : "yours" }), el("td", { text: questions[k].instructions }), el("td", { class: "num" }, a == null ? el("span", { class: "small", style: "color:var(--bad)", text: "not answered" }) : tr[k] && tr[k].basis === "untrained guess" ? el("span", {}, yn(a), el("span", { class: "small subtle", text: " guess" })) : yn(a)),
       el("td", { class: "num" }, yn(c)), el("td", { text: a == null || c == null ? "" : (a > 0.5) === (c > 0.5) ? "✓" : "✗" })); });
   const ids = ws.map(q => q.id), cpuAvg = ids.reduce((t, k) => t + res.answers[k].noul, 0) / ids.length, clefAvg = ids.reduce((t, k) => t + (tr[k].teacher_noul ?? 0), 0) / ids.length;
   rows.push(el("tr", { style: "font-weight:700" }, el("td", {}), el("td", { text: `Average of the ${ids.length} trained wordings` }), el("td", { class: "num" }, yn(cpuAvg)), el("td", { class: "num" }, yn(clefAvg)), el("td", { text: (cpuAvg > 0.5) === (clefAvg > 0.5) ? "✓" : "✗" })));
@@ -609,8 +609,8 @@ async function teacherUI() {
     });
     const h = document.getElementById("tryHealth"); h.before(el("div", { class: "row", id: "tryTeacherBox" }, el("label", { class: "small", for: "tryTeacher", text: "Teacher" }), sel));
   }
-  const st = Jev.status() || {}, ids = Object.keys(st), on = id => st[id]?.up;
-  const lab = id => `${Jev.codeOf(id)} · ${Jev.nameOf(id)}` + (st[id]?.hosted ? " · hosted, paid" : on(id) ? "" : " (off)");
+  const st = Jev.statusAll() || {}, ids = Object.keys(st), on = id => st[id]?.up && !st[id]?.library_only;
+  const lab = id => `${Jev.codeOf(id)} · ${Jev.nameOf(id)}` + (st[id]?.library_only ? " (the student; learns from the teacher)" : st[id]?.hosted ? " · hosted, paid" : on(id) ? "" : " (off)");
   sel.replaceChildren(el("optgroup", { label: "Loaded" }, ids.filter(on).map(id => el("option", { value: id, text: lab(id) }))),
     el("optgroup", { label: "Off" }, ids.filter(id => !on(id)).map(id => el("option", { value: id, text: lab(id), disabled: id !== TEACH.cur.id }))));
   sel.value = TEACH.cur.id; sel.disabled = !TEACH.can;
@@ -706,7 +706,7 @@ function drawCmp() {
   const body = [...rows].sort((a, b) => a.sw.params - b.sw.params).map(r => el("tr", { class: r.tag === S.model ? "cur" : "", onclick: S.models.includes(r.tag) ? () => setModel(r.tag) : null, style: S.models.includes(r.tag) ? "" : "cursor:default" },
     el("td", { text: `${r.tag} (${fmtParams(r.sw.params)})` }), el("td", { class: "num", text: r.ms < 10 ? r.ms.toFixed(1) : Math.round(r.ms) }),
     ...sets.map(m => cell(r.sw.sets[m.set].learned, clefOf[m.set].clef)), cell(r.learned, clef)));
-  const ref = (k, n) => el("tr", {}, el("td", { text: n }), el("td", { class: "num subtle", text: k === "jev" ? "API" : "GPU" }), ...sets.map(m => el("td", { class: "num", text: fmt.pct(clefOf[m.set][k], 0) })), el("td", { class: "num", text: fmt.pct(k === "jev" ? jev : clef, 0) }));
+  const ref = (k, n) => el("tr", {}, el("td", { text: n }), el("td", { class: "num subtle", text: k === "jev" ? "API" : "GPU" }), ...sets.map(m => el("td", { class: "num", text: fmt.pct(clefOf[m.set][k], 0) })), el("td", { class: "num", text: fmt.pct(k === "jev" ? jev : clef, 0) }));  // registry-ok: "jev"/"clef" are readout column keys in the stored Latent export, not a model list
   document.getElementById("cmpTbl").replaceChildren(el("thead", {}, head), el("tbody", {}, body, ref("clef", "Clef Flash 9B"), ref("jev", "Jev")));
 }
 function seg(id, f) { const g = document.getElementById(id); g.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
@@ -790,7 +790,7 @@ function select(i) { S.sel = i; drawScatter(); drawStrip(); drawItem(); document
 function drawItem() {
   const it = S.data.items[S.sel], e = expIdx(it), card = document.getElementById("itemCard");
   const ks = ROWS.filter(([k]) => it.scores[k]);
-  const val = (k, v) => k === "clef" || k === "jev" ? fmt.pct(v, 0) : (v >= 0 ? "+" : "") + v.toFixed(k === "learned" ? 2 : 3);
+  const val = (k, v) => k === "clef" || k === "jev" ? fmt.pct(v, 0) : (v >= 0 ? "+" : "") + v.toFixed(k === "learned" ? 2 : 3);  // registry-ok: "jev"/"clef" are readout column keys in the stored Latent export, not a model list
   const pTable = el("table", { class: "data" }, el("thead", {}, el("tr", {}, el("th", { text: "Option" }), ...ks.map(([, n]) => el("th", { class: "num", text: n })))),
     el("tbody", {}, it.options.map((o, j) => el("tr", {}, el("td", { text: (j === e ? "✓ " : "") + o.label }),
       ...ks.map(([k]) => { const s = it.scores[k], top = s.indexOf(Math.max(...s)) === j;
@@ -845,7 +845,7 @@ function drawAll() {
   t.replaceChildren(el("thead", {}, el("tr", {}, el("th", { text: "Set" }), el("th", { text: "Group" }), el("th", { class: "num", text: "Chance" }), ...cols.map(([, n]) => el("th", { class: "num", text: n })))),
     el("tbody", {}, S.index.sets.map(m => el("tr", { class: m.set === S.set ? "cur" : "", onclick: () => { document.getElementById("set").value = m.set; load(m.set); document.getElementById("h-space").scrollIntoView(); } },
       el("td", { text: m.name }), el("td", { class: "subtle", text: m.group }), el("td", { class: "num", text: fmt.pct(m.chance, 0) }),
-      ...cols.map(([k]) => el("td", { class: "num barcell" }, fmt.pct(m.acc[k], 0), el("div", { class: "minibar", style: `width:${(m.acc[k] || 0) * 100}%;${k === "clef" || k === "jev" ? "background:var(--text-3)" : ""}` })))))));
+      ...cols.map(([k]) => el("td", { class: "num barcell" }, fmt.pct(m.acc[k], 0), el("div", { class: "minibar", style: `width:${(m.acc[k] || 0) * 100}%;${k === "clef" || k === "jev" ? "background:var(--text-3)" : ""}` })))))));  // registry-ok: "jev"/"clef" are readout column keys in the stored Latent export, not a model list
 }
 
 /* --- asking from several angles --- */

@@ -364,15 +364,17 @@ function probEntries(a, q) {
 function normalise(r, q) {
   const base = { backend: r.backend, extras: r.extras || null };
   const down = status && status[r.backend] && !status[r.backend].up ? status[r.backend].reason : null;
-  if (r.error || !r.answer) return { ...base, ok: false, error: down ? `Unavailable: ${down}.` : plainError(r.error), detail: r.error || "The backend returned no answer." };
-  const a = r.answer, out = { ...base, ok: true, model: r.model || null, latency: r.latency_ms ?? null, confidence: typeof a.confidence === "number" ? a.confidence : null };
+  if (r.error || !r.answer) return { ...base, ok: false, error: down ? `Unavailable: ${down}.` : r.plain ? r.error : plainError(r.error), detail: r.error || "The backend returned no answer." };   // r.plain: the server already wrote a plain sentence
+  const ex = (r.extras && r.extras.response) || {}, basis = ex["engine.trace.decision.basis"] || null;   // BitMob says whether a trained head answered or it guessed
+  const a = r.answer, out = { ...base, ok: true, model: r.model || null, latency: r.latency_ms ?? null, confidence: typeof a.confidence === "number" ? a.confidence : null,
+    basis, basisNote: basis === "untrained guess" ? (ex["engine.trace.decision.measured.summary"] || "no trained head for this question") : basis === "trained" ? `trained on ${ex["engine.trace.decision.trained_on"] ?? "?"} labelled answers` : null };
   if (q.type === "noul") { const v = Number(a.noul); return { ...out, noul: v, top: v >= 0.5 ? "≥ 0.5" : "< 0.5", probs: [] }; }
   const probs = probEntries(a, q), best = probs.reduce((m, x) => (m == null || x.p > m.p ? x : m), null);
   return { ...out, top: (q.type === "choice" ? a.choice : null) ?? best?.label ?? "No answer", probs };
 }
 function normaliseBattery(r, b) {
   const dq = { type: "choice", criteria: Object.fromEntries(parseOptions(b.decision.o)) };
-  const dec = normalise({ backend: r.backend, extras: r.extras, model: r.model, latency_ms: r.latency_ms, error: r.error, answer: r.answers && r.answers.decision }, dq);
+  const dec = normalise({ backend: r.backend, extras: r.extras, model: r.model, latency_ms: r.latency_ms, error: r.error, plain: r.plain, answer: r.answers && r.answers.decision }, dq);
   if (!dec.ok) return dec;
   const checks = {}; b.checks.forEach(c => { const a = r.answers[c.id]; checks[c.id] = a && typeof a.noul === "number" ? a.noul : null; });
   return { ...dec, checks, flags: b.checks.filter(c => checks[c.id] != null && checks[c.id] >= 0.5).length };
@@ -412,7 +414,7 @@ function renderMatrix(phase) {
 
   body.push(el("tr", {}, el("th", { scope: "row", text: "Top answer" }), fill((r) => el("td", {}, phase === "running" ? skel() : !r ? PH() : !r.ok
     ? el("div", {}, el("span", { class: "badge bad", text: "No answer" }), el("div", { class: "small muted", style: "margin-top:4px", text: r.error }))
-    : el("div", {}, el("span", { class: "answer", text: r.top }), sum && sum.majority && sum.total > 1 ? el("div", { style: "margin-top:3px" }, el("span", { class: `badge ${r.top === sum.majority[0] ? "good" : "warn"}`, text: r.top === sum.majority[0] ? "Agrees" : "Differs" })) : null)))));
+    : el("div", {}, el("span", { class: "answer", text: r.top }), r.basis ? el("div", { style: "margin-top:3px" }, el("span", { class: `badge ${r.basis === "trained" ? "good" : "warn"}`, title: r.basisNote, text: r.basis === "trained" ? "trained" : "guess" })) : null, sum && sum.majority && sum.total > 1 ? el("div", { style: "margin-top:3px" }, el("span", { class: `badge ${r.top === sum.majority[0] ? "good" : "warn"}`, text: r.top === sum.majority[0] ? "Agrees" : "Differs" })) : null)))));
   if (q && q.type === "noul") body.push(row("Noul value (0 to 1)", r => failed(r, x => meter(x.noul, `Noul value ${fmt.num(x.noul, 2)}`))));
   else {
     body.push(row("Confidence", r => failed(r, x => x.confidence == null ? el("span", { class: "small subtle", text: "not reported" }) : meter(x.confidence, `Confidence ${fmt.pct(x.confidence)}`))));
@@ -474,6 +476,15 @@ async function run() {
 
 /* ---------- init ---------- */
 $("preset").replaceChildren(...PRESETS.map(p => el("option", { value: p.id, text: p.label })), el("option", { value: CUSTOM, text: "Custom" }));
+/* BitMob's learned yes/no questions, read live from BitMob (/api/cpu/library), so every model can be compared on a question
+   BitMob can answer. Each keeps BitMob's exact wording (it matches questions by wording) and its own example as the text. */
+api("api/cpu/library").then((lib) => {
+  const qs = (lib.questions || []).filter(q => q.instructions); if (!qs.length) return;
+  const ex = (q) => q.example || (String(q.criteria?.true || "").match(/Example: "([^"]+)"/) || [])[1] || "Honestly, that is way over our budget for this year.";
+  const items = qs.map(q => ({ id: "bitmob:" + q.id, label: q.wording > 1 ? `${q.name.split(" · ")[0]} (wording ${q.wording})` : q.name, t: "noul", s: ex(q), i: q.instructions, o: "" }));
+  PRESETS.push(...items);
+  $("preset").insertBefore(el("optgroup", { label: `BitMob's learned questions (yes/no, ${items.length})` }, items.map(p => el("option", { value: p.id, text: p.label }))), $("preset").lastElementChild);
+}).catch(() => { /* BitMob is off: no extra questions */ });
 $("preset").onchange = (e) => { if (e.target.value !== CUSTOM) applyPreset(e.target.value); };
 $("reset").onclick = () => { const p = PRESETS.find(x => x.id === $("preset").value) || PRESETS[0]; applyPreset(p.id); };
 [...$("type").children].forEach(b => b.onclick = () => { setType(b.dataset.type); onEdit(); });
@@ -489,7 +500,7 @@ $("clear-recent").onclick = () => { store.write([]); renderRecent(); };
 const initial = decodeHash();
 if (initial) { writeForm(initial); $("preset").value = CUSTOM; syncPreset(); } else applyPreset(PRESETS[0].id);
 setRunning(false); renderRecent(); renderMatrix("idle"); loadLeaderboard();
-Jev.ready.then(() => { status = Jev.status(); refreshUi(); Jev.onStatus((st) => { status = st; refreshUi(); }); });
+Jev.ready.then(() => { status = Jev.statusAll(); refreshUi(); Jev.onStatus(() => { status = Jev.statusAll(); refreshUi(); }); });
 </script>
 </body>
 </html>

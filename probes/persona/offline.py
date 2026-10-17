@@ -49,7 +49,7 @@ def set_auto():
 
 def _local_readers():
     import backends
-    ids = [b for b, v in backends.BACKENDS.items() if not v["hosted"]]
+    ids = [b for b, v in backends.BACKENDS.items() if not v["hosted"] and not v["library_only"]]  # never BitMob: it answers only its own library
     if CURRENT in ids: ids.remove(CURRENT); ids.insert(0, CURRENT)
     return [(b, backends.BACKENDS[b]) for b in ids]
 

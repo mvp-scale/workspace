@@ -634,7 +634,7 @@ let DATA = null;
 function paint() {
   const r = route(), D = DATA;
   ALL = [...D.models].sort((a, b) => (poolScore(D.tasks, b).acc ?? -1) - (poolScore(D.tasks, a).acc ?? -1) || a.localeCompare(b));
-  const model = r.model && D.models.includes(r.model) ? r.model : (D.models.includes("winnow") ? "winnow" : D.models[0]);
+  const model = r.model && D.models.includes(r.model) ? r.model : (ALL[0] || D.models[0])   /* default: the best-scoring model (ALL is sorted by accuracy above) */;
   const t = r.task && D.tasks.find(x => x.id === r.task);
   const openArea = (t && t.area) || (D.areas.includes(r.area) ? r.area : null);
   document.title = (t ? `${t.title} · ` : openArea ? `${openArea} · ` : "") + "Image lab · Jev Bench Console";

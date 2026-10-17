@@ -730,9 +730,9 @@
   /* ---------- model chips, settings ---------- */
   const p50 = (a) => { if (!a || !a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
   function renderModels() {
-    if (!ui.models) return; const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up);
-    ui.models.replaceChildren(...up.map(id => { const l = p50(LAGS[id]); return el("button", { type: "button", role: "radio", class: "mbig", "aria-checked": String(id === S.model), "aria-pressed": String(id === S.model), title: `${Jev.codeOf(id)} = ${Jev.nameOf(id)}${st[id].hosted ? " (hosted, paid)" : ""}${st[id].identity_ok === false ? " — does not match its label" : ""}`, onclick: () => setModel(id) },
-      el("b", { text: Jev.codeOf(id) }), st[id].hosted ? el("small", { class: "paid", text: "paid" }) : null, l ? el("small", { text: Math.round(l) + " ms" }) : null); }));
+    if (!ui.models) return; const st = Jev.statusAll() || {}, up = Object.keys(st).filter(k => st[k].up);
+    ui.models.replaceChildren(...up.map(id => { const l = p50(LAGS[id]), lib = !!st[id].library_only; return el("button", { type: "button", role: "radio", class: "mbig" + (lib ? " off" : ""), ...(lib ? { disabled: true } : {}), "aria-checked": String(id === S.model), "aria-pressed": String(id === S.model), title: `${Jev.codeOf(id)} = ${Jev.nameOf(id)}${st[id].hosted ? " (hosted, paid)" : ""}${lib ? " — " + Jev.LIB_NOTE + ", so it cannot run custom detectors" : ""}${st[id].identity_ok === false ? " — does not match its label" : ""}`, onclick: () => setModel(id) },
+      el("b", { text: Jev.codeOf(id) }), st[id].hosted ? el("small", { class: "paid", text: "paid" }) : null, lib ? el("small", { text: "learned only" }) : l ? el("small", { text: Math.round(l) + " ms" }) : null); }));
     const s = st[S.model] || {}; ui.mstate.replaceChildren(el("span", { class: "dot " + (s.up ? "up" : "down"), "aria-hidden": "true" }), s.up ? (s.hosted ? "Hosted, billed per token." : `Loaded · ${s.identity || ""}${s.gpu_mb ? ` · ${(s.gpu_mb / 1024).toFixed(1)} GiB` : ""}`) : `${Jev.codeOf(S.model)} is not loaded`, s.identity_ok === false ? " · identity does not match its label" : "");
   }
   function setModel(id) { if (id === S.model) return; S.model = id; S.armed = false; if (!S.winTouched) S.win = bestWindow(); resetRun(); renderModels(); renderDets(); renderDetTab(); refreshWinSeg(); writeHash(); updatePlay(); refreshEst(); }
@@ -757,7 +757,7 @@
   async function loadAll() {
     const ids = [...new Set(Object.values(QSETS))]; await Jev.ready;
     const [scenes, dlg, study, models, ...sets] = await Promise.all([api("/api/scenes"), api("/api/dialogues"), api("/api/window-study").catch(() => ({})), api("/api/models").catch(() => null), ...ids.map(id => api("/api/probe?set=" + encodeURIComponent(id)))]);
-    try { const j = models && models.models.find(m => m.id === "jev"), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
+    try { const j = models && models.models.find(m => m.hosted), m = j && String(j.price).match(/\$([\d.]+) per million input tokens/); if (m) TARIFF = Number(m[1]); } catch {}
     const topics = await fetch("/static/dialogue-topics.json").then(r => r.ok ? r.json() : null).catch(() => null);
     return { scenes, dialogues: dlg.dialogues || [], topics: (topics && topics.topics) || {}, study, sets: Object.fromEntries(ids.map((id, i) => [id, sets[i]])) };
   }
@@ -765,7 +765,8 @@
     D = data; D.lib = D.dialogues.filter(d => d.n_turns >= 6); Object.entries(QSETS).forEach(([q, set]) => { QS[q] = D.sets[set].items[0].question; QALL[q] = QS[q]; });
     const st = Jev.status() || {}, up = Object.keys(st).filter(k => st[k].up), h = readHash();
     if (!up.length) return el("div", { class: "stack" }, Jev.empty("No backend is up", "Every model backend is unreachable right now. Start one, then check again."));
-    S.model = up.includes(h.model) ? h.model : up.includes("kev-4b") ? "kev-4b" : up.find(k => !st[k].hosted) || up[0];
+    const pref = up.find(k => (Jev.models().find(m => m.id === k)?.default_for || []).includes("flow-classic"));   // models.json default_for
+    S.model = up.includes(h.model) ? h.model : pref || up.find(k => !st[k].hosted) || up[0];
     const srcs = [...D.scenes.map(s => s.slug), "dlg", "paste"]; S.src = srcs.includes(h.src) ? h.src : (D.scenes.find(s => s.slug.startsWith("apollo")) || D.scenes[0] || { slug: "dlg" }).slug;
     S.dlg = D.lib.some(d => d.id === h.dlg) ? h.dlg : D.lib[0] && D.lib[0].id; if (S.src === "dlg" && !S.dlg) S.src = "paste";
     if (WINS.includes(h.win)) { S.win = h.win; S.winTouched = true; } else S.win = bestWindow();

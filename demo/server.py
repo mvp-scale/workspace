@@ -24,6 +24,7 @@ from pathlib import Path
 
 import outside_api  # /v1/* for other systems: URL + API key (see its docstring)
 import backends  # the TypeSafe models (address, key, model label) and the classifier's teacher setting
+import registry  # the one list of models every page uses (demo/registry.py)
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
 import intake_api  # Latent lab intake: local-vs-Clef verdict per question
@@ -57,13 +58,19 @@ def call(name, cfg, body, whole=False):
         with urllib.request.urlopen(req, timeout=60) as r:
             data, status, resp_headers = json.load(r), r.status, dict(r.headers.items())
     except urllib.error.HTTPError as e:
+        if cfg.get("library_only") and e.code in (400, 422):   # BitMob: say why, instead of a generic "did not accept"
+            return {"backend": name, "plain": True, "error": "BitMob could not read this request: " + e.read()[:200].decode("utf-8", "replace")}
         return {"backend": name, "error": f"HTTP {e.code}: {e.read()[:200].decode('utf-8', 'replace')}"}
     except Exception as e:  # connection refused, timeout, bad JSON
         return {"backend": name, "error": f"{type(e).__name__}: {e}"}
+    if whole and cfg.get("library_only") and not (data.get("answers") or {}).get("decision"):   # BitMob: the decision is not one it has learned
+        return {"backend": name, "plain": True, "error": "Not in BitMob's library: it answers only the yes/no questions it has learned (Latent lab lists them)."}
     if whole:
         return {"backend": name, "status": status, "latency_ms": round((time.perf_counter() - t0) * 1000), "model": data.get("model"),
                 "answers": data.get("answers") or {}, "extras": extras(data, {}, resp_headers)}
     answer = (data.get("answers") or {}).get("decision") or {}
+    if cfg.get("library_only") and not answer:   # BitMob: the question is not one it has learned
+        return {"backend": name, "plain": True, "error": "Not in BitMob's library: it answers only the yes/no questions it has learned (Latent lab lists them)."}
     return {"backend": name, "status": status, "latency_ms": round((time.perf_counter() - t0) * 1000),
             "model": data.get("model"), "answer": answer, "extras": extras(data, answer, resp_headers)}
 
@@ -403,19 +410,21 @@ def status():
     def ping(item):
         name, cfg = item
         f = facts.get(name, {})
-        base = {"code": f.get("code"), "name": f.get("name", name), "hosted": bool(cfg.get("hosted")), "params": f.get("params")}
+        base = {"code": f.get("code"), "name": f.get("name", name), "hosted": bool(cfg.get("hosted")), "params": f.get("params"), "library_only": bool(cfg.get("library_only"))}
         if cfg.get("hosted"):
             if not cfg["key"]:
                 return name, {**base, "up": False, "reason": "No API key configured", "identity": None}
             return name, {**base, "up": True, "identity": "hosted API (api.typesafe.ai)", "identity_ok": True, "gpu_mb": 0}
         headers = {"Authorization": f"Bearer {cfg['key']}"} if cfg["key"] else {}
-        for path in ("/v1/models", "/healthz"):
+        for path in ((cfg["health"],) if cfg.get("health") else ("/v1/models", "/healthz")):
             try:
                 with urllib.request.urlopen(urllib.request.Request(cfg["url"].rstrip("/") + path, headers=headers), timeout=2) as r:
                     body = json.load(r)
             except Exception:
                 continue
             m = (body.get("models") or [{}])[0] if isinstance(body, dict) else {}
+            if cfg.get("health") and isinstance(body, dict):  # BitMob's /health: its encoder and how many questions it has learned
+                m = {"base": f"{body.get('encoder', '?')} + {body.get('library_size', '?')} learned questions (library only)"}
             said = " ".join(str(m.get(k, "")) for k in ("id", "base", "run")) or json.dumps(body)
             port = int(cfg["url"].rsplit(":", 1)[-1].strip("/")) if cfg["url"].rsplit(":", 1)[-1].strip("/").isdigit() else None
             pid = ports.get(port)
@@ -468,6 +477,7 @@ def set_reader(backend):
     """Point the World engine at another TypeSafe model; the address and key stay on this machine (the browser sends a name)."""
     if backend == "auto": body = json.dumps({"auto": True}).encode()
     elif backend not in BACKENDS: return 404, {"error": "unknown model"}
+    elif BACKENDS[backend]["library_only"]: return 400, {"error": "BitMob answers only the questions it has learned, so it cannot read stories"}
     else: cfg = BACKENDS[backend]
     if backend == "auto":
         try:
@@ -523,12 +533,18 @@ def cpu_engine_proxy(method, sub, body):
 
 VOICE = os.environ.get("VOICE_ADDR", "127.0.0.1:8200")  # voice/server.py; the browser reaches it only through /voice/* here
 
-# On-demand services the top bar can switch (names, ports and health paths as in /workspace/service.yaml). Switching runs
-# ./service.sh in its own session, so a console restart does not stop what it started.
-SWITCHES = {"voice": {"label": "Voice", "port": 8200, "health": "/api/status", "gpu": "about 4 GB GPU"},
-            "classifier": {"label": "Classifier", "port": 8020, "health": "/health", "gpu": "CPU only"},
-            "clef-flash-q4km": {"label": "Clef", "port": 8018, "health": "/health", "gpu": "about 11 GB GPU"},
-            "winnow": {"label": "Winnow", "port": 8091, "health": "/health", "gpu": "about 15 GB GPU; the World Engine reads new stories with it"}}
+# On-demand services the top bar can switch: every service tagged `demand` in /workspace/service.yaml (its port, health path
+# and `panel` note), named by the model registry when it serves a registered model (matched by port), else by its `label`.
+# Switching runs ./service.sh in its own session, so a console restart does not stop what it started.
+def switches():
+    import yaml  # PyYAML, already needed by tools/service.py, which the switches run
+    svcs = (yaml.safe_load((HERE.parent / "service.yaml").read_text()) or {}).get("services", {})
+    names = {urllib.parse.urlsplit(b["url"]).port: m["name"] for m in registry.models() if not m["retired"]
+             for b in [backends.BACKENDS.get(m["id"])] if b and not b["hosted"]}
+    return {n: {"label": names.get(sv.get("port")) or sv.get("label") or n, "port": sv.get("port"), "health": sv.get("health", "/"),
+                "gpu": sv.get("panel", "")} for n, sv in svcs.items() if "demand" in (sv.get("tags") or [])}
+
+
 _switching = {}  # name -> (action, Popen)
 
 
@@ -541,16 +557,17 @@ def _answers(port, path):
 
 def services_state():
     out = []
-    for name, sw in SWITCHES.items():
+    for name, sw in switches().items():
         job = _switching.get(name); busy = job and job[1].poll() is None
         out.append({"name": name, "label": sw["label"], "gpu": sw["gpu"], "up": _answers(sw["port"], sw["health"]), "busy": job[0] if busy else None})
     return out
 
 
 def switch_service(name, action):
-    if name not in SWITCHES or action not in ("start", "stop"): return 404, {"error": "unknown service or action"}
+    sws = switches()
+    if name not in sws or action not in ("start", "stop"): return 404, {"error": "unknown service or action"}
     job = _switching.get(name)
-    if job and job[1].poll() is None: return 409, {"error": f"{SWITCHES[name]['label']} is already {job[0]}ing"}
+    if job and job[1].poll() is None: return 409, {"error": f"{sws[name]['label']} is already {job[0]}ing"}
     root = HERE.parent; log = open(root / "logs" / "service-switch.log", "ab")
     log.write(f"\n== {time.strftime('%F %T')} {action} {name} (console switch)\n".encode()); log.flush()
     p = subprocess.Popen(["python3", str(root / "tools" / "service.py"), action, name, "-y"], cwd=str(root), stdin=subprocess.DEVNULL,
@@ -665,8 +682,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"error": "not found"})
         elif path == "/api/leaderboard":
             self._send(200, memo("leaderboard", leaderboard))
-        elif path == "/api/models":
-            self._send(200, json.loads((HERE / "models.json").read_text()))
+        elif path == "/api/models":   # the one model registry (demo/registry.py): every page's list of models
+            self._send(200, registry.payload())
         elif path == "/api/status":
             self._send(200, status())
         elif path == "/api/probes":
@@ -835,6 +852,7 @@ class Handler(BaseHTTPRequestHandler):
             try: bid = str(json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 2000)))["backend"])
             except (ValueError, KeyError): return self._send(400, {"error": "send {\"backend\": \"<model id>\"}"})
             if bid not in BACKENDS: return self._send(404, {"error": "unknown model"})
+            if BACKENDS[bid]["library_only"]: return self._send(400, {"error": "BitMob learns from a teacher; it cannot be one"})
             if BACKENDS[bid]["hosted"] and not BACKENDS[bid]["key"]: return self._send(400, {"error": "TYPESAFE_API_KEY is not set, so the hosted model cannot teach"})
             backends.set_teacher(bid); return self._send(200, {"teacher": {"id": bid, "name": backends.name(bid), "hosted": BACKENDS[bid]["hosted"]}})
         if self.path.split("?")[0] == "/api/latent/intake":
@@ -873,7 +891,7 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, KeyError, AssertionError, TypeError):
             return self._send(400, {"error": "need JSON {state, question} or {state, questions:{id: question}}"})
         up = {n: v.get("up") for n, v in status().items()}
-        with ThreadPoolExecutor(len(BACKENDS)) as ex:
+        with ThreadPoolExecutor(len(BACKENDS)) as ex:   # every model, BitMob included (it says so when a question is not in its library)
             futs = [ex.submit(call, n, c, body, whole) if up.get(n) else None for n, c in BACKENDS.items()]
             self._send(200, [f.result() if f else {"backend": n, "error": "Not loaded"} for f, n in zip(futs, BACKENDS)])
 

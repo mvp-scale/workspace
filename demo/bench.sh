@@ -6,11 +6,13 @@ cd "$(dirname "$0")/../jevbench" || exit 1
 B=${BENCH_OUT:-/workspace/data/bench}
 TIERS=${@:-original easy hard}
 MODELS=${MODELS:-jeff kev-0.5b kev-0.8b kev-4b jev}   # e.g. MODELS=kev-4b demo/bench.sh hard
-declare -A EP=( [jeff]=http://127.0.0.1:8000 [kev-0.5b]=http://127.0.0.1:8009 [kev-0.8b]=http://127.0.0.1:8011 [kev-4b]=http://127.0.0.1:8010 [clef-flash-q4km]=http://127.0.0.1:8018 [clef-flash-q2k]=http://127.0.0.1:8019 )
+declare -A EP=( [jeff]=http://127.0.0.1:8000 [kev-0.5b]=http://127.0.0.1:8009 [kev-0.8b]=http://127.0.0.1:8011 [kev-4b]=http://127.0.0.1:8010 [clef-flash-q4km]=http://127.0.0.1:8018 [clef-flash-q2k]=http://127.0.0.1:8019 [winnow]=http://127.0.0.1:8091 [cygnet]=http://127.0.0.1:8016 )
+# The "model" label each server expects (default jev-latest); matches the label in demo/backends.py and in earlier runs' manifests
+declare -A ML=( [winnow]=Winnow-12B [cygnet]=cygnet )
 # Tasks in flight for a server that batches across requests (llama.cpp slots, vLLM). Probe sets only: leaderboard tiers stay serial because
 # per-item latency under concurrency includes queue time. CONCURRENCY=N overrides.
-declare -A CONC=( [clef-flash-q4km]=8 [clef-flash-q2k]=8 )
-declare -A COST=( [clef-flash-q4km]=local_gpu_no_provider_tariff [clef-flash-q2k]=local_gpu_no_provider_tariff )
+declare -A CONC=( [clef-flash-q4km]=8 [clef-flash-q2k]=8 [winnow]=4 [cygnet]=8 )
+declare -A COST=( [clef-flash-q4km]=local_gpu_no_provider_tariff [clef-flash-q2k]=local_gpu_no_provider_tariff [winnow]=local_gpu_no_provider_tariff [cygnet]=local_gpu_no_provider_tariff )
 for tier in $TIERS; do
   for n in $MODELS; do
     out=$B/$n-$tier; [ -e "$out" ] && { echo "skip $n-$tier"; continue; }
@@ -26,7 +28,7 @@ for tier in $TIERS; do
     L=$out/ledger.jsonl; [ $n = jev ] && L=$B/ledger.jsonl
     case $tier in original|easy|hard) C=1;; *) C=${CONCURRENCY:-${CONC[$n]:-1}};; esac
     echo "== $n $tier"
-    python3 -m jevbench.cli run --tasks ${TASKS_DIR:-datasets/public}/$tier.jsonl --adapter typesafe --model jev-latest "${args[@]}" \
+    python3 -m jevbench.cli run --tasks ${TASKS_DIR:-datasets/public}/$tier.jsonl --adapter typesafe --model ${ML[$n]:-jev-latest} "${args[@]}" \
       --results $out/results.jsonl --raw-dir $out/raw --ledger $L --concurrency $C --manifest $out/manifest.json 2>&1 | tail -1
     python3 -m jevbench.cli summarize --tasks ${TASKS_DIR:-datasets/public}/$tier.jsonl --results $out/results.jsonl --public-export $out/summary.json >/dev/null 2>&1
   done

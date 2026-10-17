@@ -382,7 +382,7 @@ function wilson(k, n) {
 
 /* ---------- state and URL hash ---------- */
 const ST = { set: "all", model: null, t: 0.85, filter: "all", pairs: false, q: "", page: 0 };
-let PROBES = [], MMLU_PROBES = [], MODELS = [], INFO = {}, TOK = 0, CUSTOM_ABORT = null;
+let PROBES = [], MMLU_PROBES = [], MODELS = [], INFO = {}, MACRO = {}, TOK = 0, CUSTOM_ABORT = null;
 function parseHash() {
   const p = new URLSearchParams(Jev.hash().replace(/^#/, ""));
   const s = p.get("set");
@@ -406,8 +406,13 @@ const mtagShort = (id) => el("span", { class: "mtag", title: modelName(id) }, li
 /* ---------- data ---------- */
 const detailCache = new Map();
 const getDetail = (id) => { if (!detailCache.has(id)) detailCache.set(id, api("api/probe/" + encodeURIComponent(id) + ".json").catch(e => { detailCache.delete(id); throw e; })); return detailCache.get(id); };
-const modelsIn = (d) => Object.keys(d.results || {}).filter(m => d.results[m] && Object.keys(d.results[m]).length);
-const orderModels = (ids) => [...new Set(ids)].sort((a, b) => { const ia = MODELS.findIndex(m => m.id === a), ib = MODELS.findIndex(m => m.id === b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+const modelsIn = (d) => Object.keys(d.results || {}).filter(m => !Jev.isRetired(m) && d.results[m] && Object.keys(d.results[m]).length);   // retired models: hidden (registry)
+/* Model lists come from the one registry (Jev.models(): registry order, retired models already left out). Views show the
+   models that have results; every other registered model is named in one "not run yet" line, never silently dropped. */
+const registryIds = () => Jev.models().map(m => m.id);
+const notRunNote = (mids) => { const miss = registryIds().filter(id => !mids.includes(id));
+  return miss.length ? el("p", { class: "small muted", style: "margin:0 0 8px" }, "Not run here yet: ", miss.map((id, i) => [i ? ", " : null, Jev.tag(id)])) : null; };
+const orderModels = (ids) => [...new Set(ids)].filter(id => !Jev.isRetired(id)).sort((a, b) => { const ia = MODELS.findIndex(m => m.id === a), ib = MODELS.findIndex(m => m.id === b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
 
 /* Per-item rows for one model on one set. Confidence = highest probability the model gave. */
 function itemRows(d, mid) {
@@ -463,10 +468,10 @@ const mcBandFill = (ci) => `color-mix(in srgb, var(--bad) ${Math.round(clamp01(c
 /* ---------- boot ---------- */
 mount(document.getElementById("root"), async () => {
   await Jev.ready;
-  const [probes, models] = await Promise.all([api("api/probes"), api("api/models")]);
-  return { probes, models: models.models || [] };
-}, ({ probes, models }) => {
-  MODELS = models; INFO = Object.fromEntries(models.map(m => [m.id, m]));
+  const [probes, models, macro] = await Promise.all([api("api/probes"), api("api/models"), api("api/probe-macro").catch(() => ({}))]);
+  return { probes, models: models.models || [], macro };
+}, ({ probes, models, macro }) => {
+  MODELS = models.filter(m => !m.retired); INFO = Object.fromEntries(models.map(m => [m.id, m])); MACRO = macro || {};
   const isMmluId = (id) => id.startsWith("mmlu_");
   PROBES = probes.filter(p => !isMmluId(p.id)).sort((a, b) => GROUPS.indexOf(meta(a.id).group) - GROUPS.indexOf(meta(b.id).group));
   const MMLU_CAT_ORDER = ["STEM", "Humanities", "Social sciences", "Other"];
@@ -1491,8 +1496,12 @@ function renderCascade(details) {
     el("p", { class: "muted", text: "The cheap model answers every item; below the confidence threshold, the strong model re-answers instead of the cheap model's own answer being kept." }),
     flowHeader(cascadeFlow()),
     el("p", { class: "legend", text: "Computed entirely from each model's existing stored answers on every set — no new requests. Cost is the share of items that had to escalate." }));
-  const cheapSel = el("select", { "aria-label": "Cheap model" }, mids.map(m => el("option", { value: m, text: Jev.codeOf(m), selected: m === (mids.find(x => x === "verdict") || mids[mids.length - 1]) })));
-  const strongSel = el("select", { "aria-label": "Strong model" }, mids.map(m => el("option", { value: m, text: Jev.codeOf(m), selected: m === (mids.find(x => x === "kev-4b") || mids[0]) })));
+  // defaults, measured from the registry: cheap = fastest local model (hard-tier median), strong = best on published sets
+  const lat = (m) => INFO[m]?.hosted ? Infinity : (INFO[m]?.results?.hard_p50_s ?? Infinity);
+  const cheapDefault = [...mids].sort((a, b) => lat(a) - lat(b))[0] ?? mids[mids.length - 1];
+  const strongDefault = [...mids].sort((a, b) => (MACRO[b]?.macro ?? 0) - (MACRO[a]?.macro ?? 0))[0] ?? mids[0];
+  const cheapSel = el("select", { "aria-label": "Cheap model" }, mids.map(m => el("option", { value: m, text: Jev.codeOf(m), selected: m === cheapDefault })));
+  const strongSel = el("select", { "aria-label": "Strong model" }, mids.map(m => el("option", { value: m, text: Jev.codeOf(m), selected: m === strongDefault })));
   const t0 = 0.55; // most small/CPU models here rarely exceed ~0.6 confidence; 0.85 (the per-set reliability default) makes every item escalate
   const out2 = el("output", { text: t0.toFixed(2) });
   const slider = el("input", { type: "range", min: "0", max: "1", step: "0.01", value: t0, "aria-label": "Escalation threshold" });
@@ -2617,8 +2626,7 @@ function customReadout(runState, lib, end) {
 
 
 function estimateSeconds(models, budget, batchPerf) {
-  const p50 = { semif: 0.067, so1: 0.066, "kev-4b": 0.015, laya: 0.397, verdict: 0.258 };
-  const slowest = Math.max(...models.map((m) => p50[m] ?? 0.1));
+  const slowest = Math.max(...models.map((m) => INFO[m]?.results?.hard_p50_s ?? 0.1));   // measured hard-tier median, from the registry
   const firstTwo = 35, rest = Math.max(0, budget - 2) * 5;
   return Math.round(slowest * (firstTwo + rest));
 }
@@ -2659,17 +2667,18 @@ function renderCustom({ library: lib, examples }) {
     return btn;
   }));
 
-  const WEAK = { laya: "56.9% on published sets", verdict: "46.7% on published sets" };
-  const PAID = { jev: "hosted; billed per call, unlike the local models" };
+  const WEAK = Object.fromEntries(Object.entries(MACRO).filter(([, v]) => v.macro < 0.6).map(([id, v]) => [id, `${(v.macro * 100).toFixed(1)}% on published sets`]));   // measured, below 60%
+  const PAID = Object.fromEntries(MODELS.filter(m => m.hosted).map(m => [m.id, "hosted; billed per call, unlike the local models"]));
   let selectedModels = new Set();
   const modelsRow = el("div", { class: "pillrow" });
   const buildModelsRow = () => {
     modelsRow.replaceChildren();
     const up = Jev.status ? Jev.status() : {};
     const loaded = MODELS.filter((m) => Jev.isUp(m.id));
-    if (!selectedModels.size) selectedModels = new Set(loaded.filter((m) => ["semif", "kev-4b", "so1"].includes(m.id)).map((m) => m.id));
+    if (!selectedModels.size) selectedModels = new Set(loaded.filter((m) => (m.default_for || []).includes("scenario-live")).map((m) => m.id));   // models.json default_for
     if (!loaded.length) { modelsRow.append(empty("No models are loaded", "Start the local models with demo/lineup.sh up, or set TYPESAFE_API_KEY for the hosted model.")); return; }
     for (const m of loaded) {
+      if (Jev.libOnly(m.id)) { modelsRow.append(el("button", { type: "button", class: "pill", disabled: true, title: `${Jev.nameOf(m.id)} ${Jev.LIB_NOTE}, so it cannot run these sets live; its stored world-knowledge results are in the tables`, style: "opacity:.55" }, mtagShort(m.id), el("span", { class: "dbadge", text: "learned only" }))); continue; }
       const btn = el("button", { type: "button", class: "pill" + (selectedModels.has(m.id) ? " active" : "") }, mtagShort(m.id),
         WEAK[m.id] ? el("span", { class: "dbadge", title: `report_v2: ${WEAK[m.id]}`, text: "weak" }) : null,
         PAID[m.id] ? el("span", { class: "dbadge", title: PAID[m.id], text: "paid" }) : null);
@@ -2833,7 +2842,7 @@ function renderCustom({ library: lib, examples }) {
 }
 
 /* ---------- overview ---------- */
-function renderOverview(details) {
+function renderOverview(details) {  // models with results get a row; the rest are named in one "not run" line under the map
   const sets = PROBES.map((p, i) => ({ p, d: details[i] })).filter(x => x.d);
   const failed = PROBES.length - sets.length;
   const mids = orderModels(sets.flatMap(x => modelsIn(x.d)));
@@ -2879,6 +2888,7 @@ function renderOverview(details) {
       ordered.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any set."),
       el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
       el("p", { class: "legend", style: "margin-top:6px", text: `Intervals are Wilson 95% (approximate). Of ${above + below + within} model-by-set cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.${failed ? ` ${failed} set(s) failed to load.` : ""}` })));
+  { const nr = notRunNote(mids); if (nr) wrap.append(nr); }   // registry models with no results here
   return wrap;
 }
 
@@ -2910,7 +2920,7 @@ function renderWorldMap(details) {
   const head = el("tr", {}, el("th", { text: "Subject" }),
     orderedModels.map(m => { const base = shortBase(m);
       return el("th", { class: "mcolh", title: `${modelName(m)}, ${sizeLabel(m)}${base ? `, base ${base}` : ""}: average ${M[m] ? pc(M[m].acc, 1) : "not run"} across ${M[m] ? M[m].k : 0} of ${subs.length} subjects` },
-        mtagShort(m), el("span", { class: "msize" }, sizeLabel(m)), base ? el("span", { class: "mbase" }, base) : null); }));
+        mtagShort(m)); }));   // size, base and average are in the hover title, so the column stays narrow
   const bodyRows = [];
   for (const [cat, list] of groups) {
     bodyRows.push(el("tr", { class: "rowgroup" }, el("th", { colspan: orderedModels.length + 1, text: `${cat} (${list.length})` })));
@@ -2944,11 +2954,12 @@ function renderWorldMap(details) {
       el("header", {}, el("div", {}, el("h2", { id: "wm-h", text: "World knowledge: accuracy by subject" }),
         el("p", { class: "point" }, "14,042 questions across 57 subjects — the complete public MMLU test set, nothing sampled."),
         el("div", { class: "provenance" }, el("span", { class: "badge" }, "Published 2021 (Hendrycks et al.)"), el("span", { class: "badge" }, "Unrevised since"), el("span", { class: "badge accent" }, "The field's original general-knowledge benchmark")),
-        el("p", { class: "small", style: "margin-top:8px" }, "Rows are grouped into MMLU's own 4 categories; columns are models, strongest average first, code + size + base model shown per column. Click a cell to open that model on that subject.")),
+        el("p", { class: "small", style: "margin-top:8px" }, "Columns: models, strongest first. Hover a column for its size and base model, a cell for the exact score and range; click a cell to open it.")),
         el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: exportCsv, text: "Export CSV" }))),
       subs.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any MMLU subject yet."),
       el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),
       el("p", { class: "legend", style: "margin-top:6px", text: `Intervals are Wilson 95% (approximate). Of ${above + below + within} model-by-subject cells, ${above} have an interval fully above chance, ${within} straddle chance, ${below} sit fully below it.${failed ? ` ${failed} subject(s) failed to load.` : ""}` })));
+  { const nr = notRunNote(mids); if (nr) wrap.append(nr); }   // registry models with no results here
   return wrap;
 }
 
@@ -2961,6 +2972,7 @@ function renderSet(probe, d) {
   const multiQ = (probe.questions || []).length > 1;
   const hasPairs = d.items.some(i => i.group != null);
   const root = el("div", { class: "stack", style: "margin-top:0" });
+  const nr = notRunNote(mids); if (nr) root.append(nr);
   const url = safeUrl(probe.url);
 
   const qs = probe.questions || [];

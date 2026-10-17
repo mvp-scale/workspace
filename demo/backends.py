@@ -49,8 +49,17 @@ BACKENDS = {
     "jeff": {"url": _local("JEFF_URL", 8000), "key": _env("JEFF_API_KEYS", "devkey").split(",")[0]},
     "kev-0.5b": {"url": _local("KEV05_URL", 8009), "key": ""},
     "verdict": {"url": _local("VERDICT_URL", 8015), "key": ""},
+    # BitMob: our CPU classifier (probes/cpu_engine.py, the "classifier" service). It answers every question, but only learned
+    # ones are trained (the rest are labelled "untrained guess", near chance), so it is library_only: never a teacher, never a World engine reader, not offered where pages send
+    # arbitrary questions; it shows in the Models panel and on the outside API.
+    "bitmob": {"url": _local("CPU_ENGINE_URL", 8020), "key": "", "model": "bitmob", "library_only": True, "health": "/health"},
 }
-for _b in BACKENDS.values(): _b.setdefault("model", "jev-latest"); _b.setdefault("hosted", False)
+for _b in BACKENDS.values(): _b.setdefault("model", "jev-latest"); _b.setdefault("hosted", False); _b.setdefault("library_only", False)
+
+
+def full_models():
+    """Ids of the models that answer any TypeSafe question (every backend except library-only ones such as BitMob)."""
+    return [b for b, v in BACKENDS.items() if not v["library_only"]]
 
 
 def name(bid):
@@ -71,10 +80,10 @@ def ask(bid, state, questions, timeout=60):
 def teacher():
     try: t = json.loads(TEACHER_FILE.read_text()).get("teacher")
     except (OSError, ValueError): t = None
-    return t if t in BACKENDS else DEFAULT_TEACHER
+    return t if t in BACKENDS and not BACKENDS[t]["library_only"] else DEFAULT_TEACHER
 
 
 def set_teacher(bid):
-    if bid not in BACKENDS: raise KeyError(bid)
+    if bid not in BACKENDS or BACKENDS[bid]["library_only"]: raise KeyError(bid)
     TEACHER_FILE.parent.mkdir(parents=True, exist_ok=True)
     tmp = TEACHER_FILE.with_suffix(".tmp"); tmp.write_text(json.dumps({"teacher": bid})); tmp.replace(TEACHER_FILE)

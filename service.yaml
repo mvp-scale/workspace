@@ -25,7 +25,9 @@
 #   after       services that must start before this one (stop runs in reverse)
 #   heavy       true = stop/restart asks first (loaded state or slow reload is lost)
 #   flex        true = may run on another port (a profile entry or --port)
-#   tags        free labels, used as  tag:<label>
+#   tags        free labels, used as  tag:<label>  (tag demand = a switch in the console's top-bar Services panel)
+#   label       panel name when the service is not a registered model (models show their registry name, matched by port)
+#   panel       short note shown beside it in the Services panel (memory it takes)
 #   stop / restart   optional shell command overrides (default: signal the process / stop then start)
 #   log         log file (default logs/<name>.log)
 
@@ -37,7 +39,7 @@ default_profile: baseline
 # Profile entries: a service name, another profile name, or a mapping {service: name, port: N, env: {K: V}}
 profiles:
   baseline: [world, demo]                           # always on: the World Engine and the console
-  live:   [baseline, voice, classifier, clef-flash-q4km, winnow]   # everything the demo pages can use; the rest are on-demand (tag:demand)
+  live:   [baseline, voice, classifier, clef-flash-q4km]   # everything the demo pages can use; the rest are on-demand (tag:demand)
   models: [kev-4b, semif, so1, laya, verdict]       # the five loaded decision models (about 30 of 31.8 GiB together)
   full:   [live, models]
   share:  [share]                                   # a public Cloudflare link for the console (no login: anyone with it can spend the TypeSafe key)
@@ -51,7 +53,8 @@ profiles:
 services:
   winnow:
     kind: proc
-    desc: "Winnow-12B story reader (llama.cpp): the World Engine needs it to read new stories (about 15 GB GPU)"
+    desc: "Winnow-12B (llama.cpp): a TypeSafe model, one of the World Engine's possible readers (about 15 GB GPU)"
+    panel: about 15 GB GPU
     port: 8091
     cwd: models/winnow-inference
     env: {CUDA_VISIBLE_DEVICES: "0"}
@@ -108,7 +111,7 @@ services:
     boot: 180
     heavy: true
     flex: true
-    tags: [gpu, classifier, demand]
+    tags: [gpu, model]
     log: logs/winnow.log
 
   world:
@@ -144,6 +147,8 @@ services:
   voice:
     kind: proc
     desc: Live speaker-attributed transcription (browser reaches it through the console at /voice/ws)
+    label: Voice
+    panel: about 4 GB GPU
     port: 8200
     cwd: voice
     cmd: [.venv/bin/python, server.py]
@@ -155,7 +160,8 @@ services:
 
   classifier:
     kind: proc
-    desc: "Local classifier: the CPU engine (e5-small int8 + one sidecar per question, TypeSafe /v1/systemone, no GPU)"
+    desc: "BitMob, the local CPU classifier (e5-small int8 + one learned head per question, TypeSafe /v1/systemone, no GPU)"
+    panel: CPU only, no GPU
     port: 8020
     cmd: [models/embed-zs/.venv/bin/python, probes/cpu_engine.py]
     env: {CPU_ENGINE_PORT: "${port}", HF_HOME: "${root}/data/hf", CUDA_VISIBLE_DEVICES: ""}
@@ -234,6 +240,7 @@ services:
   clef-flash-q4km:
     kind: proc
     desc: Clef Flash Q4_K_M (bartowski GGUF, llama.cpp b11430, native /v1/systemone, text and images; about 10-11 GiB)
+    panel: about 11 GB GPU
     port: 8018
     cmd:
       - models/llama-cpp-b11430/llama-b11430/clef-flash-q4km

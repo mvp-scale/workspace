@@ -3,8 +3,9 @@
     GET  /v1/models                  the models callable right now (ids, names, every accepted alias)
     POST /v1/systemone               a TypeSafe request; "model" may be the real id, the display name or the code name
                                      (Atlas, Atlas CPU ...): it is always resolved to the real model, and the response
-                                     names the real id. "cpu-engine" (aliases cpu, classifier, Atlas CPU) is the CPU
-                                     classifier. No "model": the first loaded local model (Clef first).
+                                     names the real id. "bitmob" (aliases BitMob, BITMOB, cpu-engine, cpu, classifier,
+                                     Atlas CPU) is BitMob, the CPU classifier. No "model": the first loaded local model
+                                     that answers any question (Clef first; never BitMob).
     POST /v1/audio/transcriptions    an audio file (multipart field "file", OpenAI-compatible, or a raw audio body) ->
                                      {"text", "segments": [{speaker, start, end, text}], "duration", "model"}
 
@@ -19,7 +20,6 @@ from pathlib import Path
 import backends
 
 ROOT = Path(__file__).resolve().parent.parent
-CPU_ENGINE = os.environ.get("CPU_ENGINE_URL", "http://127.0.0.1:8020")
 VOICE_WS = "ws://" + os.environ.get("VOICE_ADDR", "127.0.0.1:8200") + "/ws"
 VOICE_MODEL = "nvidia/multitalker-parakeet-streaming-0.6b-v1 + nvidia/Nemotron-3-Diarization"
 MAX_AUDIO = 100 * 1024 * 1024
@@ -27,9 +27,8 @@ _lock = threading.Lock(); _misses = {}; _locked = {}; _buckets = {}
 
 
 def models():
-    """Every callable model: the backends plus the CPU classifier, each with the names it answers to."""
-    m = dict(backends.BACKENDS); m["cpu-engine"] = {"url": CPU_ENGINE, "key": "", "model": "cpu-engine", "hosted": False}
-    return m
+    """Every callable model: the backends, BitMob (the CPU classifier) included."""
+    return dict(backends.BACKENDS)
 
 
 def aliases():
@@ -37,8 +36,8 @@ def aliases():
     mask = json.loads((ROOT / "demo" / "mask.json").read_text())["models"]
     out = {}
     for mid in models():
-        names = {mid, facts.get(mid, {}).get("name"), facts.get(mid, {}).get("code"), mask.get(mid, {}).get("name"), mask.get(mid, {}).get("code")}
-        if mid == "cpu-engine": names |= {"cpu", "classifier", "CPU engine"}
+        names = {mid, facts.get(mid, {}).get("name"), facts.get(mid, {}).get("code"), mask.get(mid, {}).get("name"), mask.get(mid, {}).get("code"),
+                 *facts.get(mid, {}).get("aliases", [])}   # older names, kept in models.json (e.g. BitMob was "cpu-engine")
         out[mid] = sorted(n for n in names if n)
     return out
 
@@ -85,8 +84,8 @@ def get_models():
     al = aliases(); out = []
     for mid, cfg in models().items():
         if cfg["hosted"] and backends._env("OUTSIDE_API_ALLOW_HOSTED") != "1": continue
-        if _up(mid, cfg): out.append({"id": mid, "name": backends.name(mid) if mid != "cpu-engine" else "CPU engine (local classifier)", "aliases": al[mid],
-                                      "kind": "classifier: yes/no questions it has learned" if mid == "cpu-engine" else "TypeSafe decision model"})
+        if _up(mid, cfg): out.append({"id": mid, "name": backends.name(mid), "aliases": al[mid],
+                                      "kind": "classifier: yes/no questions it has learned" if cfg["library_only"] else "TypeSafe decision model"})
     return 200, {"object": "list", "data": out}
 
 
@@ -98,7 +97,7 @@ def systemone(raw):
         mid = resolve(asked)
         if mid is None: return 404, {"error": f"unknown model {asked!r}; GET /v1/models lists what is callable"}
     else:
-        mid = next((m for m, c in ms.items() if not c["hosted"] and m != "cpu-engine" and _up(m, c)), None)
+        mid = next((m for m, c in ms.items() if not c["hosted"] and not c["library_only"] and _up(m, c)), None)
         if mid is None: return 503, {"error": "no local model is loaded; name one in \"model\""}
     cfg = ms[mid]
     if cfg["hosted"] and backends._env("OUTSIDE_API_ALLOW_HOSTED") != "1": return 403, {"error": "hosted models are not offered on this API"}

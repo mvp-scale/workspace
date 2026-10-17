@@ -236,7 +236,7 @@ function resultsTable(a) {
 function liveCard(a) {
   const box = el("div", { class: "card prose", style: "margin-top:16px" });
   const draw = () => {
-    const st = Jev.status() || {}, ids = Object.keys(st), up = ids.filter(id => st[id].up), down = ids.filter(id => !st[id].up);
+    const st = Jev.statusAll() || {}, ids = Object.keys(st), up = ids.filter(id => st[id].up), down = ids.filter(id => !st[id].up);
     const used = up.reduce((n, id) => n + (st[id].gpu_mb || 0), 0);
     const tags = (l) => l.map((id, i) => [i ? " " : null, Jev.tag(id)]);
     box.replaceChildren(el("h3", { text: "Models loaded right now" }),
