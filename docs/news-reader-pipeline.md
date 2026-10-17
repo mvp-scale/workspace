@@ -56,3 +56,18 @@ Local only throughout; nothing sent to a hosted model without asking.
 ## Sources
 
 [Trafilatura docs](https://trafilatura.readthedocs.io/en/latest/) · [Crawl4AI docs](https://docs.crawl4ai.com/) · [Miniflux scraper rules](https://miniflux.app/docs/rules.html) · [GDELT DOC 2.0 API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) · [GDELT terms (About)](https://www.gdeltproject.org/about.html) · Jev 1.14 images and pricing (secondary sources, not TypeSafe's own page): [AlphaSignal](https://alphasignal.ai/news/typesafe-ai-s-jev-1-14-brings-vision-and-256k-context-to-typed-decisions), [aipricing.guru](https://www.aipricing.guru/typesafe-pricing/)
+
+## Results (2026-10-17)
+
+| Test | Result |
+|---|---|
+| Tool health (GitHub, PyPI, Context7) | feedparser 6.0.14 (Jul 2026), Trafilatura 2.3.1 (Oct 2026), RSSHub (daily releases), Miniflux 2.3.3, Crawl4AI active; Mozilla Readability last npm release Mar 2025; RSS-Bridge last release Aug 2025; Postlight/Mercury Parser dead (2022) |
+| Social feeds without login | YouTube, Reddit, Mastodon, Bluesky native RSS all answered; X, Instagram stories, Telegram need accounts (RSSHub docs) |
+| What RSS carries (63 of our feeds) | 5 full text, 14 partial (60–299 words), 44 title + teaser (<60 words; BBC ~18, NPR ~32); images on 49 |
+| Is a teaser enough? (40 stories, Clef) | **No.** Share of the full text's conditions found: title 32%, 30 words 29%, 100 words 24%, 300 words 51%. Full text costs 5.7 s vs 3.4 s a read |
+| Extraction (98 links, 14 mainstream feeds) | 6 sites refuse via robots.txt (honoured). Of 56 fetched: Trafilatura ≥300 words on 88% (median 714 words, 14 ms), Readability 88% (60 ms) |
+| Extraction quality (49 full pages) | Two extractors agree (median 98% / 93% word overlap; 42 of 49 agree both ways at ≥85%); no boilerplate in 47 of 49; headline words found (median 100%). No publisher ground truth on these sites |
+| Local (Boston, Quincy) | RSS + news sitemap: WBUR, Boston.com, Boston Herald, NBC Boston; Boston Globe (feed carries full text); WCVB sitemap only; Patriot Ledger (Quincy) paywalled (402), no feed |
+| End to end (`newsreader` service + World engine) | First poll: 1,716 stories from 66 feeds in 3.3 s. Engine reads full text through Clef at 5.5–9.6 s a story. Open: sports stories move unrelated conditions (needs a relevance filter); newest-first lets one outlet dominate (needs round-robin); fetching ~1 story/s (to optimise) |
+
+The news reader was GDELT-free by choice: its feed is broad but noisy.
