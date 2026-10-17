@@ -66,6 +66,8 @@
   @media (max-width: 1000px) { .sowhat.on { grid-template-columns: 1fr; height: auto; } }
   .fi.hit { border-left-color: #f0b450; background: linear-gradient(90deg, rgba(240,180,80,.13), transparent); opacity: 1 !important; }
   .srcsel { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 99px; padding: 2px; } .srcsel button { border: 0; background: none; color: var(--text-2); font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 99px; cursor: pointer; } .srcsel button.on { background: var(--accent-soft); color: var(--text); }
+  .dsel { width: auto; flex: none; max-width: 260px; font: inherit; font-size: 12px; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--glass-line); border-radius: 8px; padding: 3px 8px; } .dsel option { color: #111; }
+  .ctl .cap2 { margin-left: 8px; font-size: 12px; color: var(--ink2); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ctl { flex-wrap: nowrap !important; }
   .nogl { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink2); font-size: 14px; text-align: center; padding: 30px; }
   @media (max-width: 1000px) { .speed { grid-template-columns: repeat(2, 1fr); } .feedcol { display: none; } }
 </style>
@@ -112,7 +114,9 @@ const UI = {};
 function buildStage() {
   const st = $("stage"); UI.hov = el("div", { class: "gl hov", id: "hov" });
   UI.ctl = el("div", { class: "gl ctl" }, el("span", { class: "lb", text: "Colour by change in" }));
-  UI.cap = el("div", { class: "cap2" }); UI.chips = []; GR.data.meaning.decisions.forEach((d, j) => { const c = el("button", { type: "button", class: "chip" + (j === S.d ? " on" : ""), text: d.name.replace(/ \(.*/, ""), title: d.name, onclick: () => { S.d = j; UI.chips.forEach((x, i) => x.classList.toggle("on", i === j)); grRefresh(true); } }); UI.chips.push(c); UI.ctl.append(c); }); UI.ctl.append(UI.cap);
+  UI.cap = el("div", { class: "cap2" });
+  UI.dsel = el("select", { class: "dsel", "aria-label": "Decision to colour the places by", onchange: (e) => { S.d = +e.target.value; grRefresh(true); } }, ...GR.data.meaning.decisions.map((d, j) => el("option", { value: String(j), text: d.name.replace(/ \(.*/, ""), title: d.name })));
+  UI.dsel.value = String(S.d); UI.ctl.append(UI.dsel, UI.cap);      // one dropdown instead of a button per decision: the bar stays one line
   UI.feed = el("div", { class: "feedl" });
   UI.what = el("p"); UI.lay = el("div", { class: "lay" }, ...Object.entries(LAYER_INFO).map(([k, label]) => el("div", {}, svgIcon(k), el("b", { text: label }), el("span", { text: LAYER_HINT[k].split(";")[0] }))));
   UI.key = el("div", { class: "gl key" }, ...Object.entries(RK).map(([k, r]) => { const NS = "http://www.w3.org/2000/svg", sv = document.createElementNS(NS, "svg"), ln = document.createElementNS(NS, "line"); sv.setAttribute("viewBox", "0 0 26 6"); ln.setAttribute("x1", 1); ln.setAttribute("x2", 25); ln.setAttribute("y1", 3); ln.setAttribute("y2", 3); ln.setAttribute("stroke", `rgb(${r.col})`); ln.setAttribute("stroke-width", 2); ln.setAttribute("stroke-linecap", "round"); if (r.dash.length) ln.setAttribute("stroke-dasharray", r.dash.map(d => d * 0.9).join(" ")); sv.append(ln); return el("span", { title: "Resource line: " + r.verb }, sv, r.key); }), UI.traitKey = el("span", { title: "A person state no condition moves: fixed for a person, or derived from others", style: "display:none" }, "\u25C6 fixed trait"));
@@ -193,7 +197,7 @@ function grModel() {
     const byPop = [...P.countries].sort((a, b) => b.pop_m - a.pop_m); GR.top = new Set(byPop.map(c => c.id)); GR.restIds = [];
     add("world", "World", [node("w", "World", "The whole world. A story with no country of ours lands here first.", "place", { rows: ["WORLD:world"] })], 0.85);
     add("countries", `Countries (${P.countries.length})`, byPop.map(c => node("co:" + c.id, c.name, `${c.pop_m.toLocaleString()} M people in the real country.`, "place", { rows: ["COUNTRY:" + c.id] })), 1);
-    cols[cols.length - 1].grid = { per: 20 };            // every country, in sub-columns of 20 by population
+    cols[cols.length - 1].grid = { per: 34 };            // every country, in three sub-columns by population (as tall as the meaning chain)
     add("regions", "Parts of each country", P.settles.map(x => node("st:" + x.id, x.name, "The metro, town or rural part of every country. Each country has its own channel to each part; shown here pooled across countries.", "place", { rows: P.countries.map(c => `REGION:${c.id}-${x.id}`) })), 1);
     add("people", "People", [node("p", `${GR.data.people.toLocaleString()} modelled people`, "Each person has a place, an audience and their own traits. The GPU works out all of them at once.", "place", { rows: ["WORLD:world"] })], 0.95);
     add("audiences", "Audiences (8)", P.audiences.map(a => node("au:" + a.id, a.name, `${(a.share * 100).toFixed(0)}% of people. Audiences are groups found from traits and habits; they cut across countries and scale what each person feels.`, "place", { rows: ["AUDIENCE:" + a.id] })), 1);
@@ -208,7 +212,7 @@ function grModel() {
   if (MEAN) for (let pass = 0; pass < 6; pass++) for (let k = (pass % 2 ? cols.length - 1 : 2); pass % 2 ? k >= 1 : k < cols.length; k += (pass % 2 ? -1 : 1)) { const bc = (n) => { const q = (nb.get(n.id) || []).filter(x => x !== "story" && frac.has(x) && (n.id.startsWith("r:") || !x.startsWith("r:"))).map(x => frac.get(x)); return q.length ? q.reduce((a, b) => a + b, 0) / q.length : 2; }; cols[k].nodes.sort((a, b) => bc(a) - bc(b)); refresh(); }
   const rowsOf = (c) => c.grid ? Math.min(c.grid.per, c.nodes.length) : c.nodes.length, maxN = Math.max(...cols.map(rowsOf)); ROW = maxN > 24 ? ROW_DENSE : ROW_FULL; COLW = maxN > 24 ? COLW_DENSE : COLW_FULL; GR.dense = maxN > 24 || edges.length > 400; GR.cols = cols; GR.edges = edges; GR.nodes = new Map(); GR.adj = new Map(); GR.HL = maxN * ROW; let x = 0;
   cols.forEach((c, ci) => { if (ci) x += c.gap * COLW + (cols[ci - 1].gridW || 0); c.x = x;
-    if (c.grid) { const per = c.grid.per; c.subW = COLW * 0.72; c.gridW = (Math.ceil(c.nodes.length / per) - 1) * c.subW; c.nodes.forEach((n, i) => { n.col = ci; n.x = x + Math.floor(i / per) * c.subW; n.y = (i % per + 0.5) / per * GR.HL; GR.nodes.set(n.id, n); }); return; }
+    if (c.grid) { const per = c.grid.per; c.subW = COLW * 0.8; c.gridW = (Math.ceil(c.nodes.length / per) - 1) * c.subW; c.nodes.forEach((n, i) => { n.col = ci; n.x = x + Math.floor(i / per) * c.subW; n.y = (i % per + 0.5) / per * GR.HL; GR.nodes.set(n.id, n); }); return; }
     c.nodes.forEach((n, i) => { n.col = ci; n.x = x; n.y = c.nodes.length === 1 ? (n.kind === "story" && GR.feedOn ? ROW * 0.5 : GR.HL / 2) : (i + 0.5) / c.nodes.length * GR.HL; GR.nodes.set(n.id, n); }); });
   for (const e of edges) { e.A = GR.nodes.get(e.a); e.B = GR.nodes.get(e.b); if (!e.A || !e.B) continue; for (const n of [e.A, e.B]) (GR.adj.get(n.id) || GR.adj.set(n.id, []).get(n.id)).push(e); }
   GR.edges = edges.filter(e => e.A && e.B); GR.tcache.clear();
@@ -218,13 +222,14 @@ function grFit() { GR.tcache.clear(); const W = GR.W, H = GR.H, panel = GR.feedO
   const st = GR.cv.parentElement, top = st.getBoundingClientRect().top + scrollY, tgt = Math.max(480, Math.round(innerHeight - top - 14));      // the stage fills the window below the rail; the graph fits into it, so nothing needs scrolling
   if (Math.abs(tgt - H) <= 6) GR.sizing = 0; else if (W && (GR.sizing = (GR.sizing || 0) + 1) <= 4) { st.style.height = tgt + "px"; GR.H = GR.cv.clientHeight; GR.cv.height = Math.round(GR.H * (GR.dpr || 1)); }     // re-measure at once (does not wait for a resize event); capped at 4 tries
   // width sets the scale; rows are then packed closer so every column fits the height (columns keep their full spread across the width)
+  const bar = GR.view === "places" && UI.ctl ? UI.ctl.offsetHeight + 8 : 0; GR.yoff = 24 + bar / 2;      // the places view's colour bar is tall: keep the graph below it
   if (GR.HL0 == null) { GR.HL0 = GR.HL; GR.ROW0 = ROW; for (const n of GR.nodes.values()) n.y0 = n.y; }
-  const sW = (W - panel - 28) / spanX, s0 = Math.min(sW, 1.6), k = Math.min(1, Math.max(0.3, ((GR.H - 64) / s0 - 110) / GR.HL0));
+  const sW = (W - panel - 28) / spanX, s0 = Math.min(sW, 1.6), k = Math.min(1, Math.max(0.3, ((GR.H - 64 - bar) / s0 - 110) / GR.HL0));
   GR.HL = GR.HL0 * k; ROW = GR.ROW0 * k; for (const n of GR.nodes.values()) n.y = n.y0 * k;
   const spanY = GR.HL + 110;      // 70 units above the rows for the column headings, 40 below
-  GR.fit = Math.max(0.2, Math.min(sW, (GR.H - 64) / spanY, 1.6)); GR.cam = { s: GR.fit, cx: (lastX + GR.pad) / 2 - 10, cy: GR.HL / 2 - 15, ox: panel / 2 }; GR.tcam = { ...GR.cam }; GR.dirty = true; }
-const grXY = (x, y) => [GR.W / 2 + GR.cam.ox + (x - GR.cam.cx) * GR.cam.s, GR.H / 2 + 24 + (y - GR.cam.cy) * GR.cam.s];
-const grWorld = (px, py) => [(px - GR.W / 2 - GR.cam.ox) / GR.cam.s + GR.cam.cx, (py - GR.H / 2 - 24) / GR.cam.s + GR.cam.cy];
+  GR.fit = Math.max(0.2, Math.min(sW, (GR.H - 64 - bar) / spanY, 1.6)); GR.cam = { s: GR.fit, cx: (lastX + GR.pad) / 2 - 10, cy: GR.HL / 2 - 15, ox: panel / 2 }; GR.tcam = { ...GR.cam }; GR.dirty = true; }
+const grXY = (x, y) => [GR.W / 2 + GR.cam.ox + (x - GR.cam.cx) * GR.cam.s, GR.H / 2 + (GR.yoff || 24) + (y - GR.cam.cy) * GR.cam.s];
+const grWorld = (px, py) => [(px - GR.W / 2 - GR.cam.ox) / GR.cam.s + GR.cam.cx, (py - GR.H / 2 - (GR.yoff || 24)) / GR.cam.s + GR.cam.cy];
 const UNIT = { place: 3, decision: 3, condition: 0.04, state: 0.15, resource: 1 }, EPS = { place: 0.02, decision: 0.02, condition: 0.0004, state: 0.002, resource: 0.01 };     // full colour at about one UNIT (smoothly, tanh); the same scale for every node, so size of impact is visible and grows as news lands
 function grResHeat(rid) {      // resource strain or build, a rule over the live condition values: mean of (+1 build, -1 strain) x condition heat
   const RL = GR.data.resource_links; let sum = 0, n = 0, parts = []; if (!RL || !GR.condHeat) return { heat: 0, n: 0, parts };
@@ -419,7 +424,7 @@ function initGraph() {
   cv.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); if (drag) { GR.tcam.cx = drag.cx - (e.clientX - drag.x) / GR.tcam.s; GR.tcam.cy = drag.cy - (e.clientY - drag.y) / GR.tcam.s; GR.cam.cx = GR.tcam.cx; GR.cam.cy = GR.tcam.cy; GR.dirty = true; } grHover(e.clientX - r.left, e.clientY - r.top); });
   cv.addEventListener("pointerup", (e) => { const click = drag && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4; drag = null;
     if (click && GR.view === "forecast") { const h = GR.hover, n = h && GR.nodes.get(h); if (n && (n.kind === "resource" || n.kind === "outlook")) GR.pinned = "r:" + n.id.slice(2); else if (!h) GR.pinned = null; grForecast(); } }); cv.addEventListener("pointerleave", () => { GR.hover = null; GR.dirty = true; $("hov").classList.remove("on"); }); cv.addEventListener("dblclick", () => grFit());
-  cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = grWorld(px, py), ns = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * Math.exp(-e.deltaY * 0.0016))); GR.tcam.s = ns; GR.tcam.cx = wx - (px - GR.W / 2 - GR.tcam.ox) / ns; GR.tcam.cy = wy - (py - GR.H / 2 - 24) / ns; }, { passive: false });
+  cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = grWorld(px, py), ns = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * Math.exp(-e.deltaY * 0.0016))); GR.tcam.s = ns; GR.tcam.cx = wx - (px - GR.W / 2 - GR.tcam.ox) / ns; GR.tcam.cy = wy - (py - GR.H / 2 - (GR.yoff || 24)) / ns; }, { passive: false });
   requestAnimationFrame(grFrame);
 }
 function setView(v) {
