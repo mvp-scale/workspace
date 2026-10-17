@@ -52,7 +52,18 @@
   .ctl { top: 58px !important; } .stage canvas.gcv { cursor: grab; }
   .views .lb { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 4px 0 2px; } .views .chip { min-width: 28px; }
   @media (max-width: 1000px) { .views, .ctl { left: 12px !important; } }
-  .why { right: 12px; bottom: 12px; max-width: min(560px, calc(100% - 330px)); padding: 9px 12px; font-size: 12px; line-height: 1.45; color: var(--ink2); } .why b { color: var(--ink); } .why .fc { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 99px; font-size: 10.5px; border: 1px solid var(--glass-line); color: var(--ink3); }
+  .sowhat { display: none; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; height: 92px; } .sowhat.on { display: grid; }
+  .sowhat .lead { display: flex; flex-direction: column; justify-content: center; padding: 0 14px 0 4px; } .sowhat .lead b { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.01em; } .sowhat .lead span { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .swc { text-align: left; font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 8px 12px; overflow: hidden; display: flex; flex-direction: column; gap: 2px; transition: border-color .2s, opacity .2s, background-color .2s; }
+  .swc:hover, .swc.sel { border-color: #f0b450; } .swc.sel { background: color-mix(in srgb, #f0b450 8%, var(--surface)); } .sowhat.focus .swc:not(.sel) { opacity: .45; }
+  .swc .h { display: flex; gap: 8px; align-items: baseline; font-size: 13.5px; font-weight: 650; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .swc .k { flex: none; width: 18px; height: 18px; border-radius: 50%; background: #f0b450; color: #1a1206; font-size: 11px; font-weight: 800; display: grid; place-items: center; align-self: center; }
+  .swc .h .st { font-weight: 500; color: var(--warn); } .swc .h .st.good { color: var(--good); } .swc .h .st.flat { color: var(--text-3); }
+  .swc .pb { position: relative; height: 6px; border-radius: 9px; background: var(--surface-2); margin: 4px 0 2px; overflow: hidden; } .swc .pb i { position: absolute; top: 0; bottom: 0; border-radius: 9px; background: #f0b450; transition: left .5s, width .5s; } .swc .pb b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); }
+  .swc .h .pr { margin-left: auto; font-variant-numeric: tabular-nums; } .swc .tk { font-size: 12px; color: var(--text-2); } .swc .tk .ok { color: var(--good); font-weight: 600; } .swc .tk .no { color: var(--bad); font-weight: 600; } .swc .tk .lag { color: var(--warn); font-weight: 600; }
+  .sowhat .lead .cal { font-size: 13px; color: var(--text); margin-top: 3px; font-variant-numeric: tabular-nums; } .sowhat .lead .cal b { font-size: 13px; }
+  .hz { margin-left: auto; display: inline-flex; gap: 4px; align-items: center; }
+  .swc .sw { font-size: 13px; color: var(--text); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .swc .by { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 1000px) { .sowhat.on { grid-template-columns: 1fr; height: auto; } }
   .fi.hit { border-left-color: #f0b450; background: linear-gradient(90deg, rgba(240,180,80,.13), transparent); opacity: 1 !important; }
   .nogl { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink2); font-size: 14px; text-align: center; padding: 30px; }
   @media (max-width: 1000px) { .speed { grid-template-columns: repeat(2, 1fr); } .feedcol { display: none; } }
@@ -62,6 +73,7 @@
 <main class="page hw">
   <header class="hwh"><div><h1>How the World engine works</h1><p>Every headline moves the world in ways you never see. This is that hidden impact, worked out live on this machine, story by story, so the world model is always current and ready to forecast from.</p></div><div style="display:flex;gap:12px;align-items:center"><button type="button" class="live" id="live" title="Headlines flow into the world model while this page is open"><i></i><span id="livet">LIVE</span></button><a href="/worldengine">← World engine</a></div></header>
   <section class="speed" id="speed"></section>
+  <section class="sowhat" id="sowhat"></section>
   <section class="stage" id="stage"></section>
   <section class="below" id="below"></section>
 </main>
@@ -105,7 +117,7 @@ function buildStage() {
   UI.key = el("div", { class: "gl key" }, ...Object.entries(RK).map(([k, r]) => { const NS = "http://www.w3.org/2000/svg", sv = document.createElementNS(NS, "svg"), ln = document.createElementNS(NS, "line"); sv.setAttribute("viewBox", "0 0 26 6"); ln.setAttribute("x1", 1); ln.setAttribute("x2", 25); ln.setAttribute("y1", 3); ln.setAttribute("y2", 3); ln.setAttribute("stroke", `rgb(${r.col})`); ln.setAttribute("stroke-width", 2); ln.setAttribute("stroke-linecap", "round"); if (r.dash.length) ln.setAttribute("stroke-dasharray", r.dash.map(d => d * 0.9).join(" ")); sv.append(ln); return el("span", { title: "Resource line: " + r.verb }, sv, r.key); }), UI.traitKey = el("span", { title: "A person state no condition moves: fixed for a person, or derived from others", style: "display:none" }, "\u25C6 fixed trait"));
   UI.side = el("div", { class: "gl feedcol" }, el("h3", { text: "Stories coming in" }), el("div", { class: "sub", text: "newest on top · each one flows right through the graph" }), UI.feed);
   $("below").append(el("div", {}, el("h3", { text: "What you are looking at" }), UI.what, UI.lay), );
-  UI.views = el("div", { class: "gl views" }); UI.why = el("div", { class: "gl why", style: "display:none" }); st.append(UI.views, UI.ctl, UI.side, UI.key, UI.why, UI.hov);
+  UI.views = el("div", { class: "gl views" }); st.append(UI.views, UI.ctl, UI.side, UI.key, UI.hov);
   for (let i = 0; i < FEED_N; i++) UI.feed.append(el("div", { class: "fi", style: "display:none" }, el("div", { class: "c" }), el("div", { class: "h" }), el("div", { class: "e" })));
 }
 const FEED_N = 40;      // as many as the column has room for; the rest are clipped
@@ -234,34 +246,68 @@ function grRefresh(switching) {                 // live values from /world: cond
   if (UI.cap) { const dn = GR.data.meaning.decisions[d]; UI.cap.textContent = `${dn.name.replace(/ \(.*/, "")}: the world has moved ${(W0.move[d] >= 0 ? "+" : "−") + Math.abs(W0.move[d]).toFixed(2)} points since the feed started`; }
   GR.dirty = true;
 }
-/* ---------- forecast chain: each resource's outlook, and a trace of what pushed it, from the live values ---------- */
-function grForecast() {
-  GR.resHist = GR.resHist || new Map(); let top = null;
-  for (const n of GR.nodes.values()) if (n.kind === "resource") {
-    const h = GR.resHist.get(n.id) || []; h.push(n.heat); if (h.length > 8) h.shift(); GR.resHist.set(n.id, h);
-    const d = h.length > 2 ? n.heat - h[0] : 0, o = GR.nodes.get("o:" + n.id.slice(2)); if (!top || Math.abs(n.heat) > Math.abs(top.heat)) top = n;
-    if (o) { o.name = Math.abs(n.heat) < 0.03 ? "Steady" : n.heat < 0 ? (d < -0.01 ? "Under strain · getting worse" : d > 0.01 ? "Under strain · easing" : "Under strain") : (d > 0.01 ? "Building · gaining" : d < -0.01 ? "Building · slowing" : "Building"); o.heat = o.val = n.heat; o.hs = n.hs; }
-  }
-  if (!GR.pinned && top) GR.sel = top.id;
-  const start = GR.nodes.get(GR.sel); if (!start) { GR.trace = null; return; }
-  const nodes = new Set([start.id, "o:" + start.id.slice(2)]), edges = new Set(GR.edges.filter(e => e.a === start.id && e.kind === "outlook")), conds = new Set(), push = [];
+/* ---------- forecast chain: the top movers' outlook, a trace of what pushed each, and the so-what in plain words ---------- */
+function grTraceOf(start) {        // walk back from a resource: at each node its strongest live contributors (link weight x how far the source has moved)
+  const nodes = new Set([start.id, "o:" + start.id.slice(2)]), edges = new Set(GR.edges.filter(e => e.a === start.id && e.kind === "outlook")), conds = new Set(), decs = new Set();
   const walk = (n, depth) => {
-    if (depth > 4) return; if (n.kind === "condition") conds.add(n.id.slice(2));
+    if (depth > 4) return; if (n.kind === "condition") conds.add(n.id); if (n.kind === "decision") decs.add(n.id);
     const inc = (GR.adj.get(n.id) || []).filter(e => e.b === n.id && e.A.kind !== "story" && !(e.kind === "topic" && n.kind === "resource"));
     const sc = inc.map(e => ({ e, v: Math.abs(e.w) * (e.A.kind === "topic" ? 0.5 : Math.abs(e.A.heat)) })).filter(x => x.v > 1e-4).sort((a, b) => b.v - a.v).slice(0, n.kind === "condition" ? 2 : 3);
-    for (const { e } of sc) { edges.add(e); if (depth === 0) push.push(e.A); if (!nodes.has(e.A.id)) { nodes.add(e.A.id); walk(e.A, depth + 1); } }
+    for (const { e } of sc) { edges.add(e); if (!nodes.has(e.A.id)) { nodes.add(e.A.id); walk(e.A, depth + 1); } }
   };
-  walk(start, 0); GR.trace = { nodes, edges, conds };
-  for (const e of edges) if (e.kind !== "outlook") setTimeout(() => grParticle(e.a, e.b), 120 + Math.random() * 900);
-  if (UI.why) { const o = GR.nodes.get("o:" + start.id.slice(2)), hits = S.items.filter(it => (it.effects || []).some(x => conds.has(x.dial))).length;
-    UI.why.replaceChildren(el("b", { text: `${start.name}: ${o ? o.name.toLowerCase() : ""}` }), el("span", { class: "fc", text: "forecast, unchecked" }), el("div", { text: (push.length ? "Pushed mostly by " + push.map(x => x.name.replace(/ \(.*/, "")).join(", ") + ". " : "Nothing has pushed it yet. ") + (hits ? `${hits} stories in the feed moved the conditions behind it (amber).` : "") + (GR.pinned ? " Click empty space to follow the biggest mover again." : " Following the biggest mover; click a resource to trace it.") })); }
-  markFeed();
+  walk(start, 0); return { start, nodes, edges, conds: new Set([...conds].map(id => id.slice(2))), decs: [...decs].map(id => GR.nodes.get(id)) };
+}
+/* Forecasts: per resource, the recent rate of change continued over the horizon (1 tick = 1 day, a demo assumption). Every horizon runs all the time:
+   a forecast is set, tracked as ticks pass, scored when due (direction right? how far off?), then the next one is set. Scored against the engine's own later state. */
+const HZ = { day: 1, week: 7, month: 30 }, FLAT = 0.5; S.hz = "week";
+const dirOf = (v) => Math.abs(v) < FLAT ? 0 : Math.sign(v);
+function grForecast(repaint = true) {
+  const tk = S.world ? S.world.tick : 0, res = [...GR.nodes.values()].filter(n => n.kind === "resource"); GR.resHist = GR.resHist || new Map(); GR.fc = GR.fc || {}; GR.cal = GR.cal || {};
+  for (const n of res) { const h = GR.resHist.get(n.id) || []; if (!h.length || h[h.length - 1].t !== tk) h.push({ t: tk, v: n.heat * 100 }); else h[h.length - 1].v = n.heat * 100; if (h.length > 40) h.shift(); GR.resHist.set(n.id, h); }
+  const slope = (id) => { const h = GR.resHist.get(id) || [], a = h[0], b = h[h.length - 1]; return h.length < 3 || b.t - a.t < 3 ? null : (b.v - a.v) / (b.t - a.t); };      // average drift per tick over everything seen (up to 40 ticks): a straight line through noisy ticks overshoots
+  const now = (id) => GR.nodes.get(id).heat * 100;
+  for (const [hz, H] of Object.entries(HZ)) {
+    let F = GR.fc[hz];
+    if (F && tk >= F.due) { const c = GR.cal[hz] || (GR.cal[hz] = { n: 0, hit: 0, err: 0, mv: 0, mvhit: 0 }); for (const [id, p] of F.pred) { const da = now(id) - p.v0, ok = dirOf(da) === dirOf(p.dp); c.n++; c.hit += ok ? 1 : 0; c.err += Math.abs(da - p.dp); if (dirOf(p.dp)) { c.mv++; c.mvhit += ok ? 1 : 0; } } F = null; }
+    if (!F) { const pred = new Map(); for (const n of res) { const sl = slope(n.id); if (sl == null) { pred.clear(); break; } const v0 = now(n.id); pred.set(n.id, { id: n.id, v0, dp: Math.max(-100 - v0, Math.min(100 - v0, sl * H)) }); } if (pred.size) GR.fc[hz] = { t0: tk, due: tk + H, pred }; else delete GR.fc[hz]; }
+  }
+  const F = GR.fc[S.hz], H = HZ[S.hz];
+  for (const n of res) { const o = GR.nodes.get("o:" + n.id.slice(2)); if (!o) continue; const p = F && F.pred.get(n.id); if (!p) { o.name = "warming up"; continue; } const t = track(p, F, tk, H); o.name = `${p.dp >= 0 ? "▲" : "▼"} ${Math.abs(p.dp).toFixed(1)} pts · ${t.word}`; o.heat = o.val = Math.tanh(p.dp / 5); o.hs = o.heat; }
+  const top = F ? res.map(n => ({ n, p: F.pred.get(n.id) })).filter(x => x.p && Math.abs(x.p.dp) >= FLAT).sort((a, b) => Math.abs(b.p.dp) - Math.abs(a.p.dp)).slice(0, 3).map(x => x.n) : [];
+  GR.traces = top.map(grTraceOf); GR.rank = new Map(top.map((n, i) => [n.id, i + 1]));
+  const show = GR.focus || GR.pinned, sel = GR.traces.find(t => t.start.id === show) || (show && GR.nodes.get(show) ? grTraceOf(GR.nodes.get(show)) : null);
+  const U = { nodes: new Set(), edges: new Set(), conds: new Set() }; for (const t of sel ? [sel] : GR.traces) { t.nodes.forEach(x => U.nodes.add(x)); t.edges.forEach(x => U.edges.add(x)); t.conds.forEach(x => U.conds.add(x)); }
+  GR.trace = GR.traces.length || sel ? U : null;
+  if (repaint) for (const e of U.edges) if (e.kind !== "outlook") setTimeout(() => grParticle(e.a, e.b), 120 + Math.random() * 1400);
+  if (repaint) paintOutlook(sel); else for (const c of $("sowhat").querySelectorAll(".swc")) c.classList.toggle("sel", c.dataset.id === (GR.focus || GR.pinned));
+  $("sowhat").classList.toggle("focus", !!(GR.focus || GR.pinned)); markFeed(); GR.dirty = true;
+}
+function track(p, F, tk, H) {      // how the actual change so far compares with the forecast's path to its target
+  const da = GR.nodes.get(p.id).heat * 100 - p.v0, el_ = Math.max(0, tk - F.t0), exp = p.dp * Math.min(1, el_ / H), pd = dirOf(p.dp);
+  if (!el_) return { da, word: "just set", cls: "" };
+  if (!pd) return Math.abs(da) < FLAT ? { da, word: "holding steady, as forecast", cls: "ok" } : { da, word: "moving, forecast was steady", cls: "no" };
+  if (Math.sign(da) !== pd && Math.abs(da) >= 0.3) return { da, word: "going the other way", cls: "no" };
+  const r = exp ? da / exp : 0; return r >= 0.7 ? { da, word: r > 1.5 ? "ahead of forecast" : "on track", cls: "ok" } : { da, word: "behind forecast", cls: "lag" };
+}
+function paintOutlook(sel) {
+  const box = $("sowhat"); if (!box.classList.contains("on")) return; const F = GR.fc && GR.fc[S.hz], H = HZ[S.hz], tk = S.world ? S.world.tick : 0, c = GR.cal && GR.cal[S.hz], days = (n) => n === 1 ? "1 day" : n + " days";
+  const lead = el("div", { class: "lead" }, el("b", { text: "Outlook" }), el("div", { class: "cal" }, ...(c && c.n ? [el("b", { text: `${Math.round(100 * c.hit / c.n)}%` }), ` direction right · ${c.n} checked · off by ${(c.err / c.n).toFixed(1)} pts`, el("br"), c.mv ? `Moves called: ${c.mvhit} of ${c.mv} right (${Math.round(100 * c.mvhit / c.mv)}%)` : "No moves called yet"] : ["first forecasts not due yet"])),
+    el("span", { text: "1 tick = 1 day (demo) · scored against the engine's own later state" }));
+  const card = (t) => { const n = t.start, p = F.pred.get(n.id), k = track(p, F, tk, H), left = Math.max(0, F.due - tk), scale = Math.max(Math.abs(p.dp), Math.abs(k.da), 0.5) * 1.15, pos = (v) => 50 + 50 * v / scale;
+    const a = pos(Math.min(0, k.da)), b = pos(Math.max(0, k.da));
+    return el("button", { type: "button", "data-id": n.id, class: "swc" + ((GR.focus || GR.pinned) === n.id ? " sel" : ""), title: "Bar: change so far (amber) against the forecast (white line). Hover to trace only this one; click to keep it.",
+      onclick: () => { GR.pinned = GR.pinned === n.id ? null : n.id; GR.focus = null; grForecast(); }, onmouseenter: () => { GR.focus = n.id; grForecast(false); }, onmouseleave: () => { GR.focus = null; grForecast(false); } },
+      el("div", { class: "h" }, el("span", { class: "k", text: String(GR.rank.get(n.id) || "•") }), el("span", { text: n.name }), el("span", { class: "pr", text: `${p.dp >= 0 ? "▲" : "▼"} ${Math.abs(p.dp).toFixed(1)} pts by day ${H}` })),
+      el("div", { class: "pb" }, el("i", { style: `left:${a}%;width:${Math.max(1, b - a)}%` }), el("b", { style: `left:${pos(p.dp)}%` }), el("b", { style: "left:50%;opacity:.25" })),
+      el("div", { class: "tk" }, el("span", { class: k.cls, text: k.word }), ` · ${k.da >= 0 ? "+" : "−"}${Math.abs(k.da).toFixed(1)} so far · ${left ? days(left) + " left" : "due now"}`)); };
+  const list = sel && !GR.traces.some(t => t.start.id === sel.start.id) ? [sel, ...GR.traces.slice(0, 2)] : GR.traces;
+  box.replaceChildren(lead, ...(F ? list.map(card) : [el("div", { class: "swc", text: "Setting the first forecasts: a few ticks of history are needed." })]));
 }
 function markFeed() { const c = GR.view === "forecast" && GR.trace ? GR.trace.conds : null; if (!UI.feed) return; for (const r of UI.feed.children) r.classList.toggle("hit", !!(c && r._it && (r._it.effects || []).some(x => c.has(x.dial)))); }
 function grParticle(a, b) { const A = GR.nodes.get(a), B = GR.nodes.get(b); if (!A || !B) return; GR.particles.push({ A, B, t0: performance.now(), dur: 700 }); A.glow = Math.max(A.glow, 0.7); GR.dirty = true; }
 function grFlow(it) {
   if (!GR.cv || GR.view === "people" || !GR.data) return; GR.story = it; const steps = [], uniq = (a) => [...new Set(a.map(x => x.join(">")))].map(x => x.split(">")), vis = (k) => GR.cols.some(c => c.key === k);
-  if (GR.view === "meaning") {
+  if (GR.view !== "places") {
     const topic = GR.data.topic_of[it.t], T = topic && vis("topics") ? "t:" + topic : null, conds = (it.effects || []).map(e => "c:" + e.dial).filter(id => GR.nodes.has(id));
     if (T) { steps.push([["story", T]]); const out = [], has = new Set(GR.edges.filter(e => e.a === T).map(e => e.b)); for (const c of conds) out.push(has.has(c) ? [T, c] : ["story", c]); if (vis("resources") && !GR.edges.some(isRes)) for (const e of GR.edges.filter(e => e.a === T && e.b.startsWith("r:"))) out.push([T, e.b]); steps.push(uniq(out)); }
     else if (conds.length) steps.push(uniq(conds.map(c => ["story", c])));
@@ -312,7 +358,8 @@ function grDraw(now) {
     if (n.glow > 0.02) { const g = ctx.createRadialGradient(x, y, 0, x, y, r * 4.2); g.addColorStop(0, `rgba(255,236,190,${0.55 * n.glow * al})`); g.addColorStop(1, "rgba(255,236,190,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 4.2, 0, 6.283); ctx.fill(); n.glow = Math.max(0, n.glow - 0.016 / 1.7); }
     if (n.flash > 0.02) { ctx.strokeStyle = rgba(mixc(n.fsign), 0.85 * n.flash * al); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r * (1.5 + (1 - n.flash) * 3.4), 0, 6.283); ctx.stroke(); n.flash *= 0.93; }
     if (Math.abs(h) > 0.02) { ctx.fillStyle = rgba(col, 0.2 * Math.abs(h) * al); ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 6.283); ctx.fill(); }
-    ctx.fillStyle = Math.abs(h) < 0.01 ? rgba(NEU, 0.85 * al) : rgba(col, (0.5 + 0.5 * Math.abs(h)) * al); ctx.beginPath(); if (n.trait) { const q = r * 1.25; ctx.moveTo(x, y - q); ctx.lineTo(x + q, y); ctx.lineTo(x, y + q); ctx.lineTo(x - q, y); ctx.closePath(); } else ctx.arc(x, y, r, 0, 6.283); ctx.fill(); const ring = hv === n.id || (GR.view === "forecast" && GR.sel === n.id); ctx.strokeStyle = `rgba(255,255,255,${(ring ? 0.95 : 0.22) * al})`; ctx.lineWidth = ring ? 1.6 : 0.8; ctx.stroke();
+    ctx.fillStyle = Math.abs(h) < 0.01 ? rgba(NEU, 0.85 * al) : rgba(col, (0.5 + 0.5 * Math.abs(h)) * al); ctx.beginPath(); if (n.trait) { const q = r * 1.25; ctx.moveTo(x, y - q); ctx.lineTo(x + q, y); ctx.lineTo(x, y + q); ctx.lineTo(x - q, y); ctx.closePath(); } else ctx.arc(x, y, r, 0, 6.283); ctx.fill(); const ring = hv === n.id || (GR.view === "forecast" && GR.rank && GR.rank.has(n.id) && tr && tr.nodes.has(n.id)); ctx.strokeStyle = `rgba(255,255,255,${(ring ? 0.95 : 0.22) * al})`; ctx.lineWidth = ring ? 1.6 : 0.8; ctx.stroke();
+    if (GR.view === "forecast" && GR.rank && GR.rank.has(n.id) && !dim) { const bx = x - r - 11, br = 7.5; ctx.fillStyle = "#f0b450"; ctx.beginPath(); ctx.arc(bx, y, br, 0, 6.283); ctx.fill(); ctx.fillStyle = "#1a1206"; ctx.font = "800 10px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(String(GR.rank.get(n.id)), bx, y + 0.5); ctx.font = `${fs}px system-ui, sans-serif`; ctx.textAlign = "left"; }
     const maxW = Math.max(40, room - r - 30), tx = x + r + 7; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = `rgba(8,11,21,${0.85 * al})`; ctx.fillStyle = `rgba(232,236,246,${(n.kind === "story" ? 0.95 : 0.84) * al})`;
     if (n.kind === "story") { const lines = wrap(GR.feedOn ? (GR.story ? "Reading now" : "Waiting for a story") : GR.story ? GR.story.x : n.name, maxW, 4), lh = fs * 1.25, y0 = y - (lines.length - 1) * lh / 2; lines.forEach((ln, i) => { ctx.strokeText(ln, tx, y0 + i * lh); ctx.fillText(ln, tx, y0 + i * lh); }); }
     else {
@@ -368,22 +415,24 @@ function initGraph() {
   let drag = null; cv.addEventListener("pointerdown", (e) => { drag = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, cx: GR.tcam.cx, cy: GR.tcam.cy }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); if (drag) { GR.tcam.cx = drag.cx - (e.clientX - drag.x) / GR.tcam.s; GR.tcam.cy = drag.cy - (e.clientY - drag.y) / GR.tcam.s; GR.cam.cx = GR.tcam.cx; GR.cam.cy = GR.tcam.cy; GR.dirty = true; } grHover(e.clientX - r.left, e.clientY - r.top); });
   cv.addEventListener("pointerup", (e) => { const click = drag && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4; drag = null;
-    if (click && GR.view === "forecast") { const h = GR.hover, n = h && GR.nodes.get(h); if (n && (n.kind === "resource" || n.kind === "outlook")) { GR.sel = "r:" + n.id.slice(2); GR.pinned = true; } else if (!h) GR.pinned = false; grForecast(); GR.dirty = true; } }); cv.addEventListener("pointerleave", () => { GR.hover = null; GR.dirty = true; $("hov").classList.remove("on"); }); cv.addEventListener("dblclick", () => grFit());
+    if (click && GR.view === "forecast") { const h = GR.hover, n = h && GR.nodes.get(h); if (n && (n.kind === "resource" || n.kind === "outlook")) GR.pinned = "r:" + n.id.slice(2); else if (!h) GR.pinned = null; grForecast(); } }); cv.addEventListener("pointerleave", () => { GR.hover = null; GR.dirty = true; $("hov").classList.remove("on"); }); cv.addEventListener("dblclick", () => grFit());
   cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = grWorld(px, py), ns = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * Math.exp(-e.deltaY * 0.0016))); GR.tcam.s = ns; GR.tcam.cx = wx - (px - GR.W / 2 - GR.tcam.ox) / ns; GR.tcam.cy = wy - (py - GR.H / 2 - 24) / ns; }, { passive: false });
   requestAnimationFrame(grFrame);
 }
 function setView(v) {
   GR.view = v; for (const c of UI.viewChips) c.b.classList.toggle("on", c.k === v);
-  UI.ctl.style.display = v === "places" ? "" : "none"; UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.key.style.display = v !== "places" && (GR.data.resource_links || GR.layers.states) ? "" : "none"; UI.lay.style.display = v !== "places" ? "" : "none"; UI.why.style.display = v === "forecast" ? "" : "none"; GR.pinned = false; GR.trace = null; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
+  UI.ctl.style.display = v === "places" ? "" : "none"; UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.key.style.display = v !== "places" && (GR.data.resource_links || GR.layers.states) ? "" : "none"; UI.lay.style.display = v !== "places" ? "" : "none"; $("sowhat").classList.toggle("on", v === "forecast"); UI.hz.style.display = v === "forecast" ? "" : "none"; GR.pinned = null; GR.focus = null; GR.trace = null; GR.traces = null; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
   grModel(); UI.key.querySelectorAll("span[title^='Resource']").forEach(x => x.style.display = GR.data.resource_links ? "" : "none"); GR.W = GR.cv.clientWidth; GR.H = GR.cv.clientHeight; GR.dpr = GR.dpr || Math.min(2, window.devicePixelRatio || 1); grFit(); grRefresh(); GR.dirty = true;
 }
 function buildViews() {
   UI.viewChips = []; const mk = (k, label) => { const b = el("button", { type: "button", class: "chip", text: label, onclick: () => setView(k) }); UI.viewChips.push({ k, b }); UI.views.append(b); };
   mk("meaning", "Meaning chain"); mk("places", "Places chain"); mk("forecast", "Forecast chain");
+  api("sowhat").then(d => { S.lex = new Map(); for (const x of d.lexicon || []) if (x.kind === "decision" && !S.lex.has(x.id + "|" + x.sign)) S.lex.set(x.id + "|" + x.sign, x.text.replace(/\{degp?\}/g, "").replace(/\s+/g, " ").trim()); }).catch(() => {});
   UI.layerBox = el("span", { style: "display:contents" }, el("span", { class: "sep" }), el("span", { class: "lb", text: "Layers" }), ...Object.entries(LAYER_INFO).map(([k, label]) => el("button", { type: "button", class: "chip" + (GR.layers[k] ? " on" : ""), title: LAYER_HINT[k], "data-layer": k, onclick: (e) => { GR.layers[k] = !GR.layers[k]; e.currentTarget.classList.toggle("on", GR.layers[k]); grModel(); grFit(); grRefresh(); } }, svgIcon(k), label)));
   const zoom = (f) => { GR.tcam.s = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * f)); GR.dirty = true; };
   UI.views.append(UI.layerBox, el("span", { class: "sep" }), el("button", { type: "button", class: "chip", text: "−", title: "Zoom out", onclick: () => zoom(1 / 1.35) }), el("button", { type: "button", class: "chip", text: "+", title: "Zoom in", onclick: () => zoom(1.35) }),
     el("button", { type: "button", class: "chip", text: "Fit", title: "Fit the whole graph (or double-click the picture)", onclick: () => grFit() }), el("span", { class: "lb", text: "scroll to zoom · drag to move" }));
+  UI.hz = el("span", { class: "hz", style: "display:none" }, el("span", { class: "lb", text: "Forecast" }), ...Object.keys(HZ).map(k => el("button", { type: "button", class: "chip" + (k === S.hz ? " on" : ""), "data-hz": k, text: k[0].toUpperCase() + k.slice(1), onclick: () => { S.hz = k; UI.hz.querySelectorAll("[data-hz]").forEach(b => b.classList.toggle("on", b.dataset.hz === k)); GR.pinned = null; grForecast(); } }))); UI.views.append(UI.hz);
 }
 
 /* ---------- data ---------- */
