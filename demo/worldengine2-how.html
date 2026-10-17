@@ -114,9 +114,7 @@ const UI = {};
 function buildStage() {
   const st = $("stage"); UI.hov = el("div", { class: "gl hov", id: "hov" });
   UI.ctl = el("div", { class: "gl ctl" }, el("span", { class: "lb", text: "Colour by change in" }));
-  UI.cap = el("div", { class: "cap2" });
-  UI.dsel = el("select", { class: "dsel", "aria-label": "Decision to colour the places by", onchange: (e) => { S.d = +e.target.value; grRefresh(true); } }, ...GR.data.meaning.decisions.map((d, j) => el("option", { value: String(j), text: d.name.replace(/ \(.*/, ""), title: d.name })));
-  UI.dsel.value = String(S.d); UI.ctl.append(UI.dsel, UI.cap);      // one dropdown instead of a button per decision: the bar stays one line
+  UI.dbox = el("span", { class: "hz", style: "display:none" });      // places view: the decision picker lives in the top bar
   UI.feed = el("div", { class: "feedl" });
   UI.what = el("p"); UI.lay = el("div", { class: "lay" }, ...Object.entries(LAYER_INFO).map(([k, label]) => el("div", {}, svgIcon(k), el("b", { text: label }), el("span", { text: LAYER_HINT[k].split(";")[0] }))));
   UI.key = el("div", { class: "gl key" }, ...Object.entries(RK).map(([k, r]) => { const NS = "http://www.w3.org/2000/svg", sv = document.createElementNS(NS, "svg"), ln = document.createElementNS(NS, "line"); sv.setAttribute("viewBox", "0 0 26 6"); ln.setAttribute("x1", 1); ln.setAttribute("x2", 25); ln.setAttribute("y1", 3); ln.setAttribute("y2", 3); ln.setAttribute("stroke", `rgb(${r.col})`); ln.setAttribute("stroke-width", 2); ln.setAttribute("stroke-linecap", "round"); if (r.dash.length) ln.setAttribute("stroke-dasharray", r.dash.map(d => d * 0.9).join(" ")); sv.append(ln); return el("span", { title: "Resource line: " + r.verb }, sv, r.key); }), UI.traitKey = el("span", { title: "A person state no condition moves: fixed for a person, or derived from others", style: "display:none" }, "\u25C6 fixed trait"));
@@ -251,7 +249,6 @@ function grRefresh(switching) {                 // live values from /world: cond
     else if (wasSeen && Math.abs(v - old) > EPS[n.kind]) { n.flash = Math.min(1, 0.35 + Math.abs(v - old) / (UNIT[n.kind] * 0.15)); n.fsign = v >= old ? 1 : -1; }      // a headline just moved this node
   }
   if (GR.view === "forecast") grForecast();
-  if (UI.cap) { const dn = GR.data.meaning.decisions[d]; UI.cap.textContent = `${dn.name.replace(/ \(.*/, "")}: the world has moved ${(W0.move[d] >= 0 ? "+" : "−") + Math.abs(W0.move[d]).toFixed(2)} points since the feed started`; }
   GR.dirty = true;
 }
 /* ---------- forecast chain: the top movers' outlook, a trace of what pushed each, and the so-what in plain words ---------- */
@@ -427,9 +424,20 @@ function initGraph() {
   cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, [wx, wy] = grWorld(px, py), ns = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * Math.exp(-e.deltaY * 0.0016))); GR.tcam.s = ns; GR.tcam.cx = wx - (px - GR.W / 2 - GR.tcam.ox) / ns; GR.tcam.cy = wy - (py - GR.H / 2 - (GR.yoff || 24)) / ns; }, { passive: false });
   requestAnimationFrame(grFrame);
 }
+const dName = (d) => d.name.replace(/ \(.*/, "");
+function pickDecision(j, fromMore) {
+  S.d = j; if (fromMore && !S.picks.includes(j)) S.picks[S.picks.length - 1] = j; paintPicks(); grRefresh(true);
+}
+function paintPicks(fresh) {          // the five decisions that have moved most since the feed started (chosen when the view opens, so they do not jump), plus More
+  const D = GR.data.meaning.decisions, W0 = S.world && S.world.rows.find(r => r.id === "WORLD:world");
+  if (fresh || !S.picks) { S.picks = D.map((_, j) => j).sort((a, b) => (W0 ? Math.abs(W0.move[b]) - Math.abs(W0.move[a]) : 0) || a - b).slice(0, 5); if (!S.picks.includes(S.d)) S.d = S.picks[0]; }
+  const more = el("select", { class: "dsel", "aria-label": "More decisions", onchange: (e) => { if (e.target.value !== "") pickDecision(+e.target.value, true); } },
+    el("option", { value: "", text: "More…" }), ...D.map((d, j) => j).filter(j => !S.picks.includes(j)).map(j => el("option", { value: String(j), text: dName(D[j]), title: D[j].name })));
+  UI.dbox.replaceChildren(el("span", { class: "lb", text: "Colour by change in" }), ...S.picks.map(j => el("button", { type: "button", class: "chip" + (j === S.d ? " on" : ""), text: dName(D[j]), title: D[j].name, onclick: () => pickDecision(j) })), more);
+}
 function setView(v) {
   GR.view = v; for (const c of UI.viewChips) c.b.classList.toggle("on", c.k === v);
-  UI.ctl.style.display = v === "places" ? "" : "none"; UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.key.style.display = v !== "places" && (GR.data.resource_links || GR.layers.states) ? "" : "none"; UI.lay.style.display = v !== "places" ? "" : "none"; $("sowhat").classList.toggle("on", v === "forecast"); UI.hz.style.display = v === "forecast" ? "" : "none"; GR.pinned = null; GR.focus = null; GR.trace = null; GR.traces = null; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
+  UI.ctl.style.display = "none"; UI.dbox.style.display = v === "places" ? "" : "none"; if (v === "places") paintPicks(true); UI.layerBox.style.display = v === "meaning" ? "contents" : "none"; UI.key.style.display = v !== "places" && (GR.data.resource_links || GR.layers.states) ? "" : "none"; UI.lay.style.display = v !== "places" ? "" : "none"; $("sowhat").classList.toggle("on", v === "forecast"); UI.hz.style.display = v === "forecast" ? "" : "none"; GR.pinned = null; GR.focus = null; GR.trace = null; GR.traces = null; UI.what.replaceChildren(el("b", { text: VIEW_TEXT[v][0] }), VIEW_TEXT[v][1]); $("hov").classList.remove("on");
   grModel(); UI.key.querySelectorAll("span[title^='Resource']").forEach(x => x.style.display = GR.data.resource_links ? "" : "none"); GR.W = GR.cv.clientWidth; GR.H = GR.cv.clientHeight; GR.dpr = GR.dpr || Math.min(2, window.devicePixelRatio || 1); grFit(); grRefresh(); GR.dirty = true;
 }
 function buildViews() {
@@ -440,7 +448,7 @@ function buildViews() {
   const zoom = (f) => { GR.tcam.s = Math.min(GR.fit * 8, Math.max(GR.fit * 0.25, GR.tcam.s * f)); GR.dirty = true; };
   UI.views.append(UI.layerBox, el("span", { class: "sep" }), el("button", { type: "button", class: "chip", text: "−", title: "Zoom out", onclick: () => zoom(1 / 1.35) }), el("button", { type: "button", class: "chip", text: "+", title: "Zoom in", onclick: () => zoom(1.35) }),
     el("button", { type: "button", class: "chip", text: "Fit", title: "Fit the whole graph (or double-click the picture)", onclick: () => grFit() }), el("span", { class: "lb", text: "scroll to zoom · drag to move" }));
-  UI.hz = el("span", { class: "hz", style: "display:none" }, el("span", { class: "lb", text: "Forecast" }), ...Object.keys(HZ).map(k => el("button", { type: "button", class: "chip" + (k === S.hz ? " on" : ""), "data-hz": k, text: k[0].toUpperCase() + k.slice(1), onclick: () => { S.hz = k; UI.hz.querySelectorAll("[data-hz]").forEach(b => b.classList.toggle("on", b.dataset.hz === k)); GR.pinned = null; grForecast(); } }))); UI.views.append(UI.hz);
+  UI.hz = el("span", { class: "hz", style: "display:none" }, el("span", { class: "lb", text: "Forecast" }), ...Object.keys(HZ).map(k => el("button", { type: "button", class: "chip" + (k === S.hz ? " on" : ""), "data-hz": k, text: k[0].toUpperCase() + k.slice(1), onclick: () => { S.hz = k; UI.hz.querySelectorAll("[data-hz]").forEach(b => b.classList.toggle("on", b.dataset.hz === k)); GR.pinned = null; grForecast(); } }))); UI.views.append(UI.hz, UI.dbox);
 }
 
 /* ---------- data ---------- */
