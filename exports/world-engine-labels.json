@@ -191,10 +191,6 @@
   {
    "id": "culture_leisure",
    "name": "Culture, sport and leisure"
-  },
-  {
-   "id": "other",
-   "name": "Other"
   }
  ],
  "conditions": [
@@ -733,6 +729,12 @@
    "name": "Time and attention"
   }
  ],
+ "places": [
+  {
+   "id": "world",
+   "name": "World"
+  }
+ ],
  "countries": [
   {
    "id": "ind",
@@ -1149,6 +1151,7 @@
    "name": "rural areas"
   }
  ],
+ "regions": "each country x each settlement type (300), e.g. 'usa-metro'; no names of their own",
  "audiences": [
   {
    "id": 0,
@@ -1182,5 +1185,74 @@
    "id": 7,
    "name": "Sharing a home, young, early adopters"
   }
- ]
+ ],
+ "story_types": [
+  {
+   "id": "happened",
+   "name": "Happened"
+  },
+  {
+   "id": "announced",
+   "name": "Announced"
+  },
+  {
+   "id": "opinion",
+   "name": "Opinion"
+  },
+  {
+   "id": "forecast",
+   "name": "Forecast"
+  }
+ ],
+ "story_scope": [
+  {
+   "id": "national",
+   "name": "National"
+  },
+  {
+   "id": "local",
+   "name": "Local"
+  },
+  {
+   "id": "new",
+   "name": "New"
+  }
+ ],
+ "impact_levels": [
+  {
+   "id": "minor",
+   "name": "Minor"
+  },
+  {
+   "id": "notable",
+   "name": "Notable"
+  },
+  {
+   "id": "major",
+   "name": "Major"
+  },
+  {
+   "id": "severe",
+   "name": "Severe"
+  },
+  {
+   "id": "extreme",
+   "name": "Extreme"
+  }
+ ],
+ "impact_modes": [
+  {
+   "id": "reported",
+   "name": "reported"
+  },
+  {
+   "id": "expected_in_effect",
+   "name": "expected in effect"
+  },
+  {
+   "id": "expected_pending",
+   "name": "expected pending"
+  }
+ ],
+ "note": "Taken from the running engine (its graph and its reader), so every label here exists in the engine. The rules' catch-all topic 'other' is not used by the engine and is left out."
 }
