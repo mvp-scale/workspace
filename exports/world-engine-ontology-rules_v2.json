@@ -1,0 +1,5615 @@
+{
+ "meta": {
+  "name": "World engine ontology",
+  "ruleset": "rules_v2",
+  "git_commit": "dd333b2",
+  "generated": "2026-10-17T20:37:21",
+  "engine": "answered",
+  "chain": "topic -> condition -> person state -> decision; conditions, person states and decisions each link to resources; conditions can drive other conditions",
+  "status": "Draft. Every link strength and weight is a hand-set guess until it is fitted against outcomes (each row carries its own status).",
+  "sources": {
+   "countries": "UN World Population Prospects 2024 (CC BY 3.0 IGO) and World Bank World Development Indicators (CC BY 4.0); income_k = 0.6 x GDP per person PPP (our rule). Attribute both when sharing.",
+   "rules": "Written for this project (probes/persona/rules_v2)."
+  }
+ },
+ "counts": {
+  "topics": 49,
+  "conditions": 39,
+  "person_states": 47,
+  "decisions": 20,
+  "resources": 26,
+  "countries": 100,
+  "audiences": 8,
+  "settlement_types": 3,
+  "links.topic_condition": 101,
+  "links.condition_state": 53,
+  "links.state_decision": 109,
+  "links.condition_condition": 12,
+  "links.condition_resource": 39,
+  "links.state_resource": 46,
+  "links.decision_resource": 67
+ },
+ "topics": [
+  {
+   "id": "macro_growth_recession",
+   "name": "Growth and recession",
+   "definition": "The overall size and health of an economy: output, recession, recovery, national income, business cycle",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "inflation_prices",
+   "name": "Inflation and living costs",
+   "definition": "Prices of everyday goods and services rising or falling, cost of living, price controls",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "interest_credit_banking",
+   "name": "Interest rates, credit and banks",
+   "definition": "Central bank decisions, loan and mortgage rates, bank health, lending, household and business debt",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "markets_investment",
+   "name": "Markets and investing",
+   "definition": "Stock, bond, currency, commodity and crypto prices, investor behaviour, savings products",
+   "kind": "extension (ours)",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "public_budget_tax",
+   "name": "Taxes and public budgets",
+   "definition": "Taxation, government spending, deficits and debt, subsidies, public-sector pay",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "trade_tariffs",
+   "name": "Trade and supply chains",
+   "definition": "Imports, exports, tariffs, trade deals, shipping and supply disruptions of goods",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "housing_rents",
+   "name": "Housing and rents",
+   "definition": "Home prices, rents, construction of homes, evictions, homelessness, housing policy",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "work_labour",
+   "name": "Jobs and wages",
+   "definition": "Employment, unemployment, hiring, layoffs, pay, working hours and conditions",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "labour_disputes",
+   "name": "Unions and strikes",
+   "definition": "Trade unions, strikes, collective bargaining, labour law disputes",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "ai_automation",
+   "name": "AI and automation",
+   "definition": "Artificial intelligence, robots and software replacing or changing tasks and jobs, AI safety and rules",
+   "kind": "extension (ours)",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "retirement_pensions",
+   "name": "Retirement and pensions",
+   "definition": "Pension systems, retirement age, ageing populations' income, elder care funding",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "social_welfare_poverty",
+   "name": "Welfare, poverty and inequality",
+   "definition": "Benefits, poverty, hunger programmes, income inequality, social safety nets",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "energy_power",
+   "name": "Energy and fuel",
+   "definition": "Oil, gas, coal, electricity, power grids, fuel prices, renewable build-out",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "transport_infrastructure",
+   "name": "Transport and infrastructure",
+   "definition": "Roads, rail, aviation, ports, public transport, bridges, grid and network build and failure",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "food_agriculture",
+   "name": "Food and farming",
+   "definition": "Crops, livestock, fisheries, food supply and safety, famine, food prices",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "water_utilities",
+   "name": "Water and utilities",
+   "definition": "Drinking water, sanitation, droughts and floods affecting supply, utility services",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "climate_change",
+   "name": "Climate change",
+   "definition": "Global warming, emissions, climate policy and targets, adaptation",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "pollution_nature",
+   "name": "Pollution and nature",
+   "definition": "Air and water pollution, waste, wildlife, forests, conservation, land use",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "natural_disasters",
+   "name": "Disasters and extreme weather",
+   "definition": "Storms, floods, heatwaves, wildfires, earthquakes and the response",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "public_health",
+   "name": "Disease and public health",
+   "definition": "Epidemics, vaccination, outbreaks, health warnings, food and drug safety",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "health_care_system",
+   "name": "Health care services",
+   "definition": "Hospitals, doctors, insurance, waiting times, health costs and funding",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "medicines_science",
+   "name": "Medicines and treatments",
+   "definition": "New drugs, trials, approvals, medical devices and medical research",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "mental_health_substances",
+   "name": "Mental health and substance use",
+   "definition": "Mental illness, wellbeing, addiction, drugs, alcohol, tobacco policy",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "crime_policing",
+   "name": "Crime and policing",
+   "definition": "Violent and property crime, policing, gangs, organised crime, prisons",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "courts_rulings",
+   "name": "Courts and legal rulings",
+   "definition": "Court cases, judgments, legal rights decisions, investigations and trials of public interest",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "accidents_incidents",
+   "name": "Accidents and incidents",
+   "definition": "Transport crashes, industrial accidents, fires, product failures, rescues",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "cyber_privacy",
+   "name": "Cyber security and privacy",
+   "definition": "Hacks, data breaches, surveillance, online fraud, privacy law",
+   "kind": "extension (ours)",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "war_conflict",
+   "name": "War and armed conflict",
+   "definition": "Wars, invasions, ceasefires, attacks on civilians, conflict casualties",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "terrorism_violence",
+   "name": "Terrorism and political violence",
+   "definition": "Terror attacks, extremism, assassination attempts and other premeditated political violence",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "defence_weapons",
+   "name": "Defence and weapons",
+   "definition": "Military budgets, arms, alliances, conscription, nuclear and weapons programmes",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "diplomacy_treaties",
+   "name": "Diplomacy and treaties",
+   "definition": "Summits, treaties, alliances, global institutions, relations between states",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "sanctions_aid",
+   "name": "Sanctions and aid",
+   "definition": "Sanctions, embargoes, foreign aid, humanitarian relief, development finance",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "migration_refugees",
+   "name": "Migration and refugees",
+   "definition": "Immigration rules, border control, asylum, refugee flows, integration",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "elections_politics",
+   "name": "Elections and political parties",
+   "definition": "Elections, campaigns, polls, party politics, leaders' standing, coalitions",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "legislation_regulation",
+   "name": "Laws and regulation",
+   "definition": "New laws, rules, bans, licensing, regulation of industries",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "governance_corruption",
+   "name": "Government performance and corruption",
+   "definition": "Scandals, corruption, public services failing and institutional failure",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "civil_rights_discrimination",
+   "name": "Civil rights and discrimination",
+   "definition": "Equality, minority and gender rights, freedom of speech, discrimination",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "protest_movements",
+   "name": "Protests and social movements",
+   "definition": "Demonstrations, activism, petitions, boycotts, riots and civil unrest",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "family_demographics",
+   "name": "Family and demographics",
+   "definition": "Births, marriage, childcare, ageing, population change, family policy",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "religion_identity",
+   "name": "Religion and identity",
+   "definition": "Religion, culture clashes, nationalism, community identity, social values",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "education_schools",
+   "name": "Schools and universities",
+   "definition": "Schools, universities, fees, exams, teachers, training and skills programmes",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "research_space",
+   "name": "Science and space",
+   "definition": "Scientific discoveries, research funding, space missions, physics, biology (non-medical)",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "technology_consumer",
+   "name": "Digital technology and consumer tech",
+   "definition": "Gadgets, internet services, software, telecoms, platforms' products and rules",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "media_information",
+   "name": "Media and information",
+   "definition": "News media, misinformation, censorship, social media content, press freedom",
+   "kind": "extension (ours)",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "consumer_retail",
+   "name": "Consumer goods and retail",
+   "definition": "Shops, product launches, recalls, consumer protection, brand fortunes at household level",
+   "kind": "extension (ours)",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "business_corporate",
+   "name": "Business and companies",
+   "definition": "What one company does: deals, mergers, leadership, lawsuits, earnings",
+   "kind": "extension (ours)",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "mining_materials",
+   "name": "Minerals and materials",
+   "definition": "Metals, rare earths, mining and industrial raw materials",
+   "kind": "extension (ours)",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "culture_leisure",
+   "name": "Culture, sport and leisure",
+   "definition": "Film, music, art, celebrities, books, games, sport, tournaments, mass events, holidays, hospitality and the leisure industry",
+   "kind": "backbone",
+   "status": "guess (routing is our judgement; resources derived from conditions)"
+  },
+  {
+   "id": "other",
+   "name": "Other",
+   "definition": "None of the above fits at all (review bucket, never counted)",
+   "kind": "review (logged, never dropped)",
+   "status": "guess"
+  }
+ ],
+ "conditions": [
+  {
+   "id": "water_stress",
+   "name": "Water stress",
+   "definition": "How short or unsafe water supply is for a place.",
+   "resource_id": "water",
+   "up_means": "more shortage or contamination (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "water stress / safe drinking water access",
+   "half_life_ticks": 200.0
+  },
+  {
+   "id": "land_degradation",
+   "name": "Land degradation",
+   "definition": "Loss of usable farmland, forest and soil through erosion, fire, flooding or sprawl.",
+   "resource_id": "land_soil",
+   "up_means": "more land lost or degraded (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "land cover change, soil indicators",
+   "half_life_ticks": 400.0
+  },
+  {
+   "id": "biodiversity_loss",
+   "name": "Biodiversity loss",
+   "definition": "Decline of species, habitats and fish stocks.",
+   "resource_id": "biodiversity",
+   "up_means": "more decline (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "species and habitat indices",
+   "half_life_ticks": 500.0
+  },
+  {
+   "id": "climate_stress",
+   "name": "Climate stress",
+   "definition": "How severe heat, drought, flood and storm hazard is compared with normal.",
+   "resource_id": "atmosphere_climate",
+   "up_means": "more hazard (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "temperature anomaly, extreme weather counts",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "air_pollution",
+   "name": "Air pollution",
+   "definition": "Concentration of harmful particles and gases in the air.",
+   "resource_id": "atmosphere_climate",
+   "up_means": "dirtier air (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "air quality index, emissions inventories",
+   "half_life_ticks": 150.0
+  },
+  {
+   "id": "energy_fuel",
+   "name": "Energy cost and supply",
+   "definition": "How expensive and how available fuel, electricity and heating are.",
+   "resource_id": "primary_energy",
+   "up_means": "costlier or scarcer (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "energy price index, fuel price, supply margins",
+   "half_life_ticks": 100.0
+  },
+  {
+   "id": "mineral_scarcity",
+   "name": "Mineral and material scarcity",
+   "definition": "How hard it is to obtain metals and raw materials.",
+   "resource_id": "minerals_materials",
+   "up_means": "scarcer or costlier (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "commodity price indices, stock-to-use ratios",
+   "half_life_ticks": 250.0
+  },
+  {
+   "id": "food_insecurity",
+   "name": "Food insecurity",
+   "definition": "Share of people who cannot reliably get enough affordable food.",
+   "resource_id": "food_stock",
+   "up_means": "more people short of food (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "food price index, prevalence of undernourishment",
+   "half_life_ticks": 150.0
+  },
+  {
+   "id": "housing_cost",
+   "name": "Housing cost",
+   "definition": "Rent, house prices and mortgage cost relative to income.",
+   "resource_id": "housing_stock",
+   "up_means": "costlier (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "house price index, rent index",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "infrastructure_condition",
+   "name": "Infrastructure condition",
+   "definition": "How well roads, grids, pipes and public buildings are maintained.",
+   "resource_id": "built_infrastructure",
+   "up_means": "better repair (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "asset condition ratings, infrastructure investment",
+   "half_life_ticks": 500.0
+  },
+  {
+   "id": "disruption",
+   "name": "Disruption of services",
+   "definition": "Interruptions to travel, power, water and public services.",
+   "resource_id": "built_infrastructure",
+   "up_means": "more interruptions (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "outage minutes, delay and cancellation rates",
+   "half_life_ticks": 80.0
+  },
+  {
+   "id": "industrial_output",
+   "name": "Industrial output",
+   "definition": "How much goods production is running relative to capacity.",
+   "resource_id": "productive_capital",
+   "up_means": "more output (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "industrial production index, capacity utilisation",
+   "half_life_ticks": 150.0
+  },
+  {
+   "id": "supply_chain_strain",
+   "name": "Supply chain strain",
+   "definition": "Delays, shortages and trade barriers in moving goods.",
+   "resource_id": "supply_networks",
+   "up_means": "more strain (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "supply delivery times, tariff and freight indices",
+   "half_life_ticks": 100.0
+  },
+  {
+   "id": "tech_adoption",
+   "name": "Technology adoption",
+   "definition": "Share of daily life and work done with newer digital tools.",
+   "resource_id": "computing_capacity",
+   "up_means": "more adoption (neutral)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "technology adoption surveys",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "cyber_insecurity",
+   "name": "Cyber insecurity",
+   "definition": "How exposed digital systems are to breaches and outages.",
+   "resource_id": "computing_capacity",
+   "up_means": "more breaches (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "incident and breach counts",
+   "half_life_ticks": 100.0
+  },
+  {
+   "id": "prices",
+   "name": "Prices",
+   "definition": "How expensive everyday goods and services are, i.e. how little a unit of money buys.",
+   "resource_id": "monetary_credit",
+   "up_means": "higher prices (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "consumer price index",
+   "half_life_ticks": 150.0
+  },
+  {
+   "id": "borrowing_cost",
+   "name": "Borrowing cost and credit access",
+   "definition": "How costly and available loans are.",
+   "resource_id": "monetary_credit",
+   "up_means": "costlier or tighter credit (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "policy rate, lending rates, credit survey",
+   "half_life_ticks": 150.0
+  },
+  {
+   "id": "asset_values",
+   "name": "Asset values",
+   "definition": "Level of share, property and savings values.",
+   "resource_id": "asset_wealth",
+   "up_means": "higher values (good for holders)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "equity and property price indices",
+   "half_life_ticks": 200.0
+  },
+  {
+   "id": "market_volatility",
+   "name": "Market volatility",
+   "definition": "How violently asset prices are swinging.",
+   "resource_id": "asset_wealth",
+   "up_means": "more volatility (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "volatility index, credit spreads",
+   "half_life_ticks": 60.0
+  },
+  {
+   "id": "private_debt",
+   "name": "Private debt",
+   "definition": "Share of income that households and firms owe in repayments.",
+   "resource_id": "asset_wealth",
+   "up_means": "heavier burden (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "debt service ratio, arrears rates",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "inequality",
+   "name": "Economic inequality",
+   "definition": "Gap between richest and poorest in income and wealth (the Gini coefficient is the usual single number for it).",
+   "resource_id": "asset_wealth",
+   "up_means": "wider gap (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "Gini coefficient, income share",
+   "half_life_ticks": 500.0
+  },
+  {
+   "id": "fiscal_strain",
+   "name": "Fiscal strain",
+   "definition": "Pressure on government budgets from deficits, debt and spending needs.",
+   "resource_id": "public_finances",
+   "up_means": "more strain (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "deficit and debt to output, bond yields",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "health_risk",
+   "name": "Health risk",
+   "definition": "Exposure to illness, injury and disease outbreak.",
+   "resource_id": "population_health",
+   "up_means": "more risk (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "disease surveillance, mortality",
+   "half_life_ticks": 150.0
+  },
+  {
+   "id": "mental_distress",
+   "name": "Mental distress",
+   "definition": "Share of people with anxiety, depression or stress.",
+   "resource_id": "population_health",
+   "up_means": "more distress (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "mental health prevalence surveys",
+   "half_life_ticks": 250.0
+  },
+  {
+   "id": "care_strain",
+   "name": "Care strain",
+   "definition": "Pressure on hospitals, clinics, staff and medicine supply.",
+   "resource_id": "care_capacity",
+   "up_means": "more strain (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "waiting times, bed occupancy",
+   "half_life_ticks": 100.0
+  },
+  {
+   "id": "job_security",
+   "name": "Job security",
+   "definition": "How secure people's jobs and work availability are.",
+   "resource_id": "labour_force",
+   "up_means": "more secure (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "unemployment rate, vacancies, layoffs",
+   "half_life_ticks": 200.0
+  },
+  {
+   "id": "pay_growth",
+   "name": "Pay growth",
+   "definition": "How fast pay is rising, before any price rises are taken off.",
+   "resource_id": "labour_force",
+   "up_means": "faster pay growth (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "average earnings growth (nominal)",
+   "half_life_ticks": 250.0
+  },
+  {
+   "id": "social_division",
+   "name": "Social division",
+   "definition": "Polarisation and unfairness between groups.",
+   "resource_id": "social_trust",
+   "up_means": "more division (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "polarisation and discrimination surveys",
+   "half_life_ticks": 400.0
+  },
+  {
+   "id": "community",
+   "name": "Community strength",
+   "definition": "How connected and supportive local communities are.",
+   "resource_id": "community_ties",
+   "up_means": "stronger (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "volunteering, time-use, civic participation",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "trust_institutions",
+   "name": "Trust in institutions",
+   "definition": "How credibly government, business and media are seen to act.",
+   "resource_id": "legitimacy",
+   "up_means": "more trust (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "institutional confidence surveys",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "public_service_quality",
+   "name": "Public service quality",
+   "definition": "How well government delivers schools, courts, permits and benefits.",
+   "resource_id": "state_capacity",
+   "up_means": "better (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "government effectiveness, service satisfaction",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "civil_liberties",
+   "name": "Civil liberties",
+   "definition": "How freely people can speak, vote, assemble and get fair legal treatment.",
+   "resource_id": "legitimacy",
+   "up_means": "more freedom (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "freedom and rule of law indices",
+   "half_life_ticks": 400.0
+  },
+  {
+   "id": "crime",
+   "name": "Crime",
+   "definition": "Crime and violence around people's daily life.",
+   "resource_id": "state_capacity",
+   "up_means": "more crime (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "police-recorded crime, victimisation surveys",
+   "half_life_ticks": 100.0
+  },
+  {
+   "id": "war_terror",
+   "name": "War and terror",
+   "definition": "Armed conflict and terrorism affecting the audience's country or region.",
+   "resource_id": "state_capacity",
+   "up_means": "more conflict (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "conflict event data, fatalities",
+   "half_life_ticks": 150.0
+  },
+  {
+   "id": "civil_unrest",
+   "name": "Civil unrest",
+   "definition": "Level of riots, mass protest and disorder.",
+   "resource_id": "state_capacity",
+   "up_means": "more unrest (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "protest and riot event counts",
+   "half_life_ticks": 60.0
+  },
+  {
+   "id": "information_reliability",
+   "name": "Information reliability",
+   "definition": "How accurate and trustworthy public information is.",
+   "resource_id": "knowledge",
+   "up_means": "more reliable (good)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "media trust and misinformation surveys",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "news_overload",
+   "name": "News overload",
+   "definition": "Share of audience attention taken up by news volume.",
+   "resource_id": "attention",
+   "up_means": "more news competing (bad)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "news consumption time, report volume",
+   "half_life_ticks": 20.0
+  },
+  {
+   "id": "migration_flow",
+   "name": "Migration flow",
+   "definition": "How many people are arriving in or leaving a place, relative to its population.",
+   "resource_id": "population",
+   "up_means": "more net arrivals (neutral)",
+   "status": "draft v2 (half-life is a guess)",
+   "grounding_series": "net migration rate (UN WPP)",
+   "half_life_ticks": 300.0
+  },
+  {
+   "id": "skills_level",
+   "name": "Skills and education level",
+   "definition": "How far the people of a place have the education and skills they need for work and life.",
+   "resource_id": "skills",
+   "up_means": "more people with the skills they need (good)",
+   "status": "draft v2 (half-life is a guess: median of the human-resource conditions, 225)",
+   "grounding_series": "educational attainment and adult skills survey results",
+   "half_life_ticks": 225.0
+  }
+ ],
+ "person_states": [
+  {
+   "id": "tech_comfort",
+   "name": "Tech comfort",
+   "kind": "trait",
+   "definition": "Ease learning and using new apps and devices.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "price_attention",
+   "name": "Price attention",
+   "kind": "state",
+   "definition": "How closely the person watches costs and small fees.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "privacy_stance",
+   "name": "Privacy stance",
+   "kind": "trait",
+   "definition": "Reluctance to hand personal data to companies.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "social_ease",
+   "name": "Social ease",
+   "kind": "trait",
+   "definition": "Comfort dealing with people they do not know.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "novelty_seeking",
+   "name": "Novelty seeking",
+   "kind": "trait",
+   "definition": "Readiness to try new things early.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "habit_inertia",
+   "name": "Habit and inertia",
+   "kind": "trait",
+   "definition": "Tendency to stay with existing choices.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "loss_aversion",
+   "name": "Loss aversion",
+   "kind": "trait",
+   "definition": "How much losses weigh against gains.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "conscientiousness",
+   "name": "Conscientiousness and planning",
+   "kind": "trait",
+   "definition": "Tendency to plan ahead, follow through and control impulses.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "emotional_reactivity",
+   "name": "Emotional reactivity",
+   "kind": "trait",
+   "definition": "How strongly and how easily the person feels worry, fear or upset.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "risk_tolerance",
+   "name": "Risk tolerance",
+   "kind": "trait",
+   "definition": "Willingness to accept uncertain outcomes for a chance of gain.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "patience",
+   "name": "Patience",
+   "kind": "trait",
+   "definition": "How much the person values later rewards over sooner ones.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "fairness_concern",
+   "name": "Fairness concern",
+   "kind": "trait",
+   "definition": "How strongly the person reacts to unequal or unfair treatment of themselves or others.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "status_concern",
+   "name": "Status concern",
+   "kind": "trait",
+   "definition": "How much the person cares how their possessions and position compare with others'.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "conformity",
+   "name": "Social influence susceptibility",
+   "kind": "trait",
+   "definition": "How much the person follows what peers and crowds do or say.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "econ_orientation",
+   "name": "Economic orientation",
+   "kind": "trait",
+   "definition": "Position on how far government should manage the economy and redistribute (left to right).",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "cultural_orientation",
+   "name": "Cultural orientation",
+   "kind": "trait",
+   "definition": "Position on tradition, authority and social change (traditional to liberal).",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "group_identity",
+   "name": "Group identity strength",
+   "kind": "trait",
+   "definition": "How strongly the person identifies with a nation, community or group.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "religiosity",
+   "name": "Religiosity",
+   "kind": "trait",
+   "definition": "How central religious belief and practice are to the person's life.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "prosociality",
+   "name": "Prosociality (willingness to help others)",
+   "kind": "trait",
+   "definition": "Readiness to help others at a cost to oneself and to give them the benefit of the doubt.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "environmental_values",
+   "name": "Environmental values",
+   "kind": "trait",
+   "definition": "How much the person cares about nature and climate in everyday choices.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "health_orientation",
+   "name": "Health orientation",
+   "kind": "trait",
+   "definition": "How much the person believes their own actions protect their health and acts on it.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "financial_literacy",
+   "name": "Financial literacy",
+   "kind": "derived",
+   "definition": "How well the person understands interest, inflation and risk.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "financial_stress",
+   "name": "Financial stress",
+   "kind": "state",
+   "definition": "Felt strain on the household budget.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "liquidity",
+   "name": "Liquidity",
+   "kind": "state",
+   "definition": "Cash buffer and steadiness of income: can the person absorb a shock?",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "debt_burden",
+   "name": "Debt burden",
+   "kind": "state",
+   "definition": "Share of income going to repaying debt.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "job_worry",
+   "name": "Job insecurity worry",
+   "kind": "state",
+   "definition": "How likely the person thinks it is that they lose work or income soon.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "time_pressure",
+   "name": "Time pressure",
+   "kind": "state",
+   "definition": "How little spare time the person has.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "optimism",
+   "name": "Optimism",
+   "kind": "state",
+   "definition": "How hopeful the person feels about their own money and life over the next year, including whether now feels a good time for big purchases.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "safety_concern",
+   "name": "Safety concern",
+   "kind": "state",
+   "definition": "How threatened the person feels in daily life.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "wellbeing",
+   "name": "Well-being",
+   "kind": "state",
+   "definition": "Day-to-day mood and energy, including feeling rested rather than worn out.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "loneliness",
+   "name": "Loneliness",
+   "kind": "state",
+   "definition": "Felt lack of company and support.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "job_satisfaction",
+   "name": "Job satisfaction and autonomy",
+   "kind": "state",
+   "definition": "How fulfilling, fairly paid and self-directed the person finds their work.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "perceived_health_threat",
+   "name": "Perceived health threat",
+   "kind": "state",
+   "definition": "How likely and how serious the person thinks illness is for themselves.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "health_status",
+   "name": "Health status",
+   "kind": "derived",
+   "definition": "The person's own current health and any long-term condition.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "institutional_trust",
+   "name": "Institutional trust",
+   "kind": "state",
+   "definition": "How much the person believes institutions act honestly.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "interpersonal_trust",
+   "name": "Trust in other people",
+   "kind": "state",
+   "definition": "Belief that most people can be trusted.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "media_trust",
+   "name": "Trust in news media",
+   "kind": "state",
+   "definition": "How much the person believes the news they see is accurate.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "political_efficacy",
+   "name": "Political efficacy",
+   "kind": "state",
+   "definition": "Belief that one's own action can change what authorities do.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "grievance",
+   "name": "Felt grievance",
+   "kind": "state",
+   "definition": "Current sense of being treated unfairly or left behind.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "news_attention",
+   "name": "News attention",
+   "kind": "state",
+   "definition": "How much of the person's time and focus is spent following news.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "tenure",
+   "name": "Tenure (rent or own)",
+   "kind": "derived",
+   "definition": "Rents (0) or owns (1) the home. Read from demographics, not asked.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "housing_burden",
+   "name": "Housing burden",
+   "kind": "state",
+   "definition": "Share of income spent on rent or mortgage.",
+   "status": "draft v2 (guess); moving, linked to conditions in grid.csv"
+  },
+  {
+   "id": "life_stage",
+   "name": "Life stage and household",
+   "kind": "derived",
+   "definition": "Age band, children and caring duties; higher means older with more caring duties. Read from demographics, not asked.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "education_skills",
+   "name": "Education and skills",
+   "kind": "derived",
+   "definition": "Highest education and how in-demand the person's skills are.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "digital_access",
+   "name": "Digital access",
+   "kind": "derived",
+   "definition": "Quality of the person's connection and devices.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "hazard_exposure",
+   "name": "Local hazard exposure",
+   "kind": "derived",
+   "definition": "How exposed the person's home and work are to floods, fires, storms or quakes.",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  },
+  {
+   "id": "car_dependence",
+   "name": "Car dependence",
+   "kind": "derived",
+   "definition": "How much the person relies on a car for daily life (more likely in rural or spread-out places).",
+   "status": "draft v2 (guess); fixed, not moved by news"
+  }
+ ],
+ "decisions": [
+  {
+   "id": "spend",
+   "name": "Spend (vs save)",
+   "status": "guess",
+   "opportunity_rate": 0.2,
+   "bias": 0.0
+  },
+  {
+   "id": "buy_new",
+   "name": "Buy something new",
+   "status": "guess",
+   "opportunity_rate": 0.05,
+   "bias": -0.5
+  },
+  {
+   "id": "subscribe",
+   "name": "Subscribe or commit",
+   "status": "guess",
+   "opportunity_rate": 0.02,
+   "bias": -0.8
+  },
+  {
+   "id": "travel",
+   "name": "Travel",
+   "status": "guess",
+   "opportunity_rate": 0.01,
+   "bias": -0.3
+  },
+  {
+   "id": "change_work",
+   "name": "Change work",
+   "status": "guess",
+   "opportunity_rate": 0.002,
+   "bias": -1.5
+  },
+  {
+   "id": "move",
+   "name": "Move home",
+   "status": "guess",
+   "opportunity_rate": 0.001,
+   "bias": -2.2
+  },
+  {
+   "id": "switch_brand",
+   "name": "Switch brand or provider",
+   "status": "guess",
+   "opportunity_rate": 0.01,
+   "bias": -1.0
+  },
+  {
+   "id": "share",
+   "name": "Share or engage publicly",
+   "status": "guess",
+   "opportunity_rate": 0.1,
+   "bias": -0.5
+  },
+  {
+   "id": "vote",
+   "name": "Vote or take party action",
+   "status": "guess",
+   "opportunity_rate": 0.003,
+   "bias": -1.5
+  },
+  {
+   "id": "protest",
+   "name": "Protest or strike",
+   "status": "guess",
+   "opportunity_rate": 0.002,
+   "bias": -2.0
+  },
+  {
+   "id": "health_action",
+   "name": "Take a health action",
+   "status": "guess",
+   "opportunity_rate": 0.03,
+   "bias": -0.8
+  },
+  {
+   "id": "study_train",
+   "name": "Study or retrain",
+   "status": "guess",
+   "opportunity_rate": 0.005,
+   "bias": -1.5
+  },
+  {
+   "id": "family_change",
+   "name": "Change family situation",
+   "status": "guess",
+   "opportunity_rate": 0.001,
+   "bias": -2.5
+  },
+  {
+   "id": "stockpile_prepare",
+   "name": "Stockpile or prepare",
+   "status": "guess",
+   "opportunity_rate": 0.02,
+   "bias": -1.0
+  },
+  {
+   "id": "start_business",
+   "name": "Start or expand a business",
+   "status": "guess",
+   "opportunity_rate": 0.001,
+   "bias": -2.5
+  },
+  {
+   "id": "donate_volunteer",
+   "name": "Give, volunteer or join a group",
+   "status": "guess",
+   "opportunity_rate": 0.03,
+   "bias": -1.0
+  },
+  {
+   "id": "claim_support",
+   "name": "Claim support",
+   "status": "guess",
+   "opportunity_rate": 0.005,
+   "bias": -1.5
+  },
+  {
+   "id": "borrow",
+   "name": "Borrow (take on new debt)",
+   "status": "guess",
+   "opportunity_rate": 0.01,
+   "bias": -1.0
+  },
+  {
+   "id": "invest",
+   "name": "Invest",
+   "status": "guess",
+   "opportunity_rate": 0.05,
+   "bias": -0.5
+  },
+  {
+   "id": "break_rules",
+   "name": "Ignore official rules or guidance",
+   "status": "guess",
+   "opportunity_rate": 0.02,
+   "bias": -1.5
+  }
+ ],
+ "resources": [
+  {
+   "id": "water",
+   "name": "Freshwater",
+   "group": "natural",
+   "definition": "Usable fresh water in rivers, lakes, aquifers and supply systems.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "land_soil",
+   "name": "Land and soil",
+   "group": "natural",
+   "definition": "Farmland, grazing land, forest and the soil quality that supports them.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "biodiversity",
+   "name": "Ecosystems and wildlife",
+   "group": "natural",
+   "definition": "Living nature: species, habitats, oceans and fish stocks.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "atmosphere_climate",
+   "name": "Air and climate",
+   "group": "natural",
+   "definition": "The air we breathe and the stability of the climate system.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "primary_energy",
+   "name": "Energy sources (fuels, sun, wind, water)",
+   "group": "natural",
+   "definition": "Fuels and renewable energy sources that can be used to make power and heat.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "minerals_materials",
+   "name": "Minerals and materials",
+   "group": "natural",
+   "definition": "Metals, industrial minerals, sand and other raw materials in the ground or stockpiled.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "food_stock",
+   "name": "Food supply",
+   "group": "natural",
+   "definition": "Harvested crops, livestock products, catch and stored food available to eat.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "built_infrastructure",
+   "name": "Built infrastructure",
+   "group": "produced",
+   "definition": "Roads, rail, ports, power grids, pipes, and public buildings.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "housing_stock",
+   "name": "Housing stock",
+   "group": "produced",
+   "definition": "Homes available to live in.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "productive_capital",
+   "name": "Productive capital",
+   "group": "produced",
+   "definition": "Factories, machines, vehicles, farms equipment and business inventories.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "computing_capacity",
+   "name": "Computing and networks",
+   "group": "produced",
+   "definition": "Computers, data centres, communication networks and software systems.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "supply_networks",
+   "name": "Trade and supply links",
+   "group": "produced",
+   "definition": "Working shipping, logistics and trading relationships that move goods between makers and users.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "monetary_credit",
+   "name": "Money and credit",
+   "group": "financial",
+   "definition": "The money and lending capacity of the financial system.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "asset_wealth",
+   "name": "Wealth and assets",
+   "group": "financial",
+   "definition": "Savings, property and shares that households and firms hold, net of the debts they owe.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "public_finances",
+   "name": "Public finances",
+   "group": "financial",
+   "definition": "Government revenue, borrowing capacity and reserves.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "population",
+   "name": "Population",
+   "group": "human",
+   "definition": "The number, age mix and movement of people living in a place.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "population_health",
+   "name": "Population health",
+   "group": "human",
+   "definition": "Physical and mental health of the people in a place.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "care_capacity",
+   "name": "Care capacity",
+   "group": "human",
+   "definition": "Hospitals, clinics, health workers and medicines available to treat people.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "skills",
+   "name": "Skills and education",
+   "group": "human",
+   "definition": "Learned abilities of the population.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "labour_force",
+   "name": "Labour",
+   "group": "human",
+   "definition": "People able and available to work, and the work they hold.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "social_trust",
+   "name": "Social trust and cohesion",
+   "group": "social",
+   "definition": "Trust between people and groups.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "community_ties",
+   "name": "Community ties",
+   "group": "social",
+   "definition": "Local networks, clubs, volunteering and everyday help between people.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "legitimacy",
+   "name": "Legitimacy",
+   "group": "institutional",
+   "definition": "The public's acceptance of an authority's right to act.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "state_capacity",
+   "name": "State capacity and public safety",
+   "group": "institutional",
+   "definition": "Ability of government, police, courts and armed forces to deliver services, enforce rules, keep people safe and protect rights.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "knowledge",
+   "name": "Knowledge and information",
+   "group": "knowledge",
+   "definition": "Recorded knowledge: research, data, records and published information. What people carry in their heads is skills.",
+   "status": "draft v2 (guess)"
+  },
+  {
+   "id": "attention",
+   "name": "Time and attention",
+   "group": "knowledge",
+   "definition": "The limited daily time and focus people have, including the free time left after work and care. One budget, so free time is not a separate stock.",
+   "status": "draft v2 (guess)"
+  }
+ ],
+ "places": {
+  "countries": [
+   {
+    "id": "ind",
+    "iso2": "IN",
+    "iso3": "IND",
+    "region": "South Asia",
+    "name": "India",
+    "pop_m": 1450.9,
+    "median_age": 28.4,
+    "income_k": 7.02,
+    "urban": 0.357
+   },
+   {
+    "id": "chn",
+    "iso2": "CN",
+    "iso3": "CHN",
+    "region": "East Asia & Pacific",
+    "name": "China",
+    "pop_m": 1419.3,
+    "median_age": 39.6,
+    "income_k": 17.58,
+    "urban": 0.663
+   },
+   {
+    "id": "usa",
+    "iso2": "US",
+    "iso3": "USA",
+    "region": "North America",
+    "name": "United States",
+    "pop_m": 345.4,
+    "median_age": 38.3,
+    "income_k": 54.0,
+    "urban": 0.802
+   },
+   {
+    "id": "idn",
+    "iso2": "ID",
+    "iso3": "IDN",
+    "region": "East Asia & Pacific",
+    "name": "Indonesia",
+    "pop_m": 283.5,
+    "median_age": 30.1,
+    "income_k": 10.62,
+    "urban": 0.594
+   },
+   {
+    "id": "pak",
+    "iso2": "PK",
+    "iso3": "PAK",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Pakistan",
+    "pop_m": 251.3,
+    "median_age": 20.4,
+    "income_k": 3.96,
+    "urban": 0.395
+   },
+   {
+    "id": "nga",
+    "iso2": "NG",
+    "iso3": "NGA",
+    "region": "Sub-Saharan Africa ",
+    "name": "Nigeria",
+    "pop_m": 232.7,
+    "median_age": 17.9,
+    "income_k": 5.7,
+    "urban": 0.638
+   },
+   {
+    "id": "bra",
+    "iso2": "BR",
+    "iso3": "BRA",
+    "region": "Latin America & Caribbean ",
+    "name": "Brazil",
+    "pop_m": 212.0,
+    "median_age": 34.4,
+    "income_k": 14.04,
+    "urban": 0.882
+   },
+   {
+    "id": "bgd",
+    "iso2": "BD",
+    "iso3": "BGD",
+    "region": "South Asia",
+    "name": "Bangladesh",
+    "pop_m": 173.6,
+    "median_age": 25.7,
+    "income_k": 6.12,
+    "urban": 0.332
+   },
+   {
+    "id": "rus",
+    "iso2": "RU",
+    "iso3": "RUS",
+    "region": "Europe & Central Asia",
+    "name": "Russia",
+    "pop_m": 144.8,
+    "median_age": 39.9,
+    "income_k": 29.76,
+    "urban": 0.753
+   },
+   {
+    "id": "eth",
+    "iso2": "ET",
+    "iso3": "ETH",
+    "region": "Sub-Saharan Africa ",
+    "name": "Ethiopia",
+    "pop_m": 132.1,
+    "median_age": 18.9,
+    "income_k": 2.16,
+    "urban": 0.241
+   },
+   {
+    "id": "mex",
+    "iso2": "MX",
+    "iso3": "MEX",
+    "region": "Latin America & Caribbean ",
+    "name": "Mexico",
+    "pop_m": 130.9,
+    "median_age": 29.3,
+    "income_k": 15.54,
+    "urban": 0.8
+   },
+   {
+    "id": "jpn",
+    "iso2": "JP",
+    "iso3": "JPN",
+    "region": "East Asia & Pacific",
+    "name": "Japan",
+    "pop_m": 123.8,
+    "median_age": 49.4,
+    "income_k": 33.24,
+    "urban": 0.923
+   },
+   {
+    "id": "egy",
+    "iso2": "EG",
+    "iso3": "EGY",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Egypt",
+    "pop_m": 116.5,
+    "median_age": 24.3,
+    "income_k": 12.12,
+    "urban": 0.429
+   },
+   {
+    "id": "phl",
+    "iso2": "PH",
+    "iso3": "PHL",
+    "region": "East Asia & Pacific",
+    "name": "Philippines",
+    "pop_m": 115.8,
+    "median_age": 25.7,
+    "income_k": 7.56,
+    "urban": 0.558
+   },
+   {
+    "id": "cod",
+    "iso2": "CD",
+    "iso3": "COD",
+    "region": "Sub-Saharan Africa ",
+    "name": "Democratic Republic of the Congo",
+    "pop_m": 109.3,
+    "median_age": 15.8,
+    "income_k": 1.14,
+    "urban": 0.451
+   },
+   {
+    "id": "vnm",
+    "iso2": "VN",
+    "iso3": "VNM",
+    "region": "East Asia & Pacific",
+    "name": "Vietnam",
+    "pop_m": 101.0,
+    "median_age": 32.9,
+    "income_k": 10.86,
+    "urban": 0.388
+   },
+   {
+    "id": "irn",
+    "iso2": "IR",
+    "iso3": "IRN",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Iran",
+    "pop_m": 91.6,
+    "median_age": 33.4,
+    "income_k": 11.82,
+    "urban": 0.774
+   },
+   {
+    "id": "tur",
+    "iso2": "TR",
+    "iso3": "TUR",
+    "region": "Europe & Central Asia",
+    "name": "Türkiye",
+    "pop_m": 87.5,
+    "median_age": 33.0,
+    "income_k": 27.18,
+    "urban": 0.895
+   },
+   {
+    "id": "deu",
+    "iso2": "DE",
+    "iso3": "DEU",
+    "region": "Europe & Central Asia",
+    "name": "Germany",
+    "pop_m": 84.6,
+    "median_age": 45.3,
+    "income_k": 45.24,
+    "urban": 0.821
+   },
+   {
+    "id": "tha",
+    "iso2": "TH",
+    "iso3": "THA",
+    "region": "East Asia & Pacific",
+    "name": "Thailand",
+    "pop_m": 71.7,
+    "median_age": 40.1,
+    "income_k": 15.78,
+    "urban": 0.628
+   },
+   {
+    "id": "gbr",
+    "iso2": "GB",
+    "iso3": "GBR",
+    "region": "Europe & Central Asia",
+    "name": "United Kingdom",
+    "pop_m": 69.1,
+    "median_age": 40.0,
+    "income_k": 38.76,
+    "urban": 0.833
+   },
+   {
+    "id": "tza",
+    "iso2": "TZ",
+    "iso3": "TZA",
+    "region": "Sub-Saharan Africa ",
+    "name": "Tanzania",
+    "pop_m": 68.6,
+    "median_age": 17.4,
+    "income_k": 2.7,
+    "urban": 0.369
+   },
+   {
+    "id": "fra",
+    "iso2": "FR",
+    "iso3": "FRA",
+    "region": "Europe & Central Asia",
+    "name": "France",
+    "pop_m": 66.5,
+    "median_age": 42.1,
+    "income_k": 38.4,
+    "urban": 0.788
+   },
+   {
+    "id": "zaf",
+    "iso2": "ZA",
+    "iso3": "ZAF",
+    "region": "Sub-Saharan Africa ",
+    "name": "South Africa",
+    "pop_m": 64.0,
+    "median_age": 28.5,
+    "income_k": 9.54,
+    "urban": 0.638
+   },
+   {
+    "id": "ita",
+    "iso2": "IT",
+    "iso3": "ITA",
+    "region": "Europe & Central Asia",
+    "name": "Italy",
+    "pop_m": 59.3,
+    "median_age": 47.8,
+    "income_k": 37.68,
+    "urban": 0.697
+   },
+   {
+    "id": "ken",
+    "iso2": "KE",
+    "iso3": "KEN",
+    "region": "Sub-Saharan Africa ",
+    "name": "Kenya",
+    "pop_m": 56.4,
+    "median_age": 19.8,
+    "income_k": 4.2,
+    "urban": 0.322
+   },
+   {
+    "id": "mmr",
+    "iso2": "MM",
+    "iso3": "MMR",
+    "region": "East Asia & Pacific",
+    "name": "Myanmar",
+    "pop_m": 54.5,
+    "median_age": 29.8,
+    "income_k": 3.6,
+    "urban": 0.306
+   },
+   {
+    "id": "col",
+    "iso2": "CO",
+    "iso3": "COL",
+    "region": "Latin America & Caribbean ",
+    "name": "Colombia",
+    "pop_m": 52.9,
+    "median_age": 32.0,
+    "income_k": 13.56,
+    "urban": 0.788
+   },
+   {
+    "id": "kor",
+    "iso2": "KR",
+    "iso3": "KOR",
+    "region": "East Asia & Pacific",
+    "name": "South Korea",
+    "pop_m": 51.7,
+    "median_age": 45.0,
+    "income_k": 37.86,
+    "urban": 0.812
+   },
+   {
+    "id": "sdn",
+    "iso2": "SD",
+    "iso3": "SDN",
+    "region": "Sub-Saharan Africa ",
+    "name": "Sudan",
+    "pop_m": 50.4,
+    "median_age": 18.4,
+    "income_k": 1.32,
+    "urban": 0.349
+   },
+   {
+    "id": "uga",
+    "iso2": "UG",
+    "iso3": "UGA",
+    "region": "Sub-Saharan Africa ",
+    "name": "Uganda",
+    "pop_m": 50.0,
+    "median_age": 16.7,
+    "income_k": 2.1,
+    "urban": 0.319
+   },
+   {
+    "id": "esp",
+    "iso2": "ES",
+    "iso3": "ESP",
+    "region": "Europe & Central Asia",
+    "name": "Spain",
+    "pop_m": 47.9,
+    "median_age": 45.4,
+    "income_k": 35.94,
+    "urban": 0.805
+   },
+   {
+    "id": "dza",
+    "iso2": "DZ",
+    "iso3": "DZA",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Algeria",
+    "pop_m": 46.8,
+    "median_age": 28.4,
+    "income_k": 11.16,
+    "urban": 0.758
+   },
+   {
+    "id": "irq",
+    "iso2": "IQ",
+    "iso3": "IRQ",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Iraq",
+    "pop_m": 46.0,
+    "median_age": 20.6,
+    "income_k": 8.58,
+    "urban": 0.699
+   },
+   {
+    "id": "arg",
+    "iso2": "AR",
+    "iso3": "ARG",
+    "region": "Latin America & Caribbean ",
+    "name": "Argentina",
+    "pop_m": 45.7,
+    "median_age": 32.5,
+    "income_k": 19.56,
+    "urban": 0.924
+   },
+   {
+    "id": "afg",
+    "iso2": "AF",
+    "iso3": "AFG",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Afghanistan",
+    "pop_m": 42.6,
+    "median_age": 17.1,
+    "income_k": 1.32,
+    "urban": 0.259
+   },
+   {
+    "id": "yem",
+    "iso2": "YE",
+    "iso3": "YEM",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Yemen",
+    "pop_m": 40.6,
+    "median_age": 18.3,
+    "income_k": 1.92,
+    "urban": 0.37
+   },
+   {
+    "id": "can",
+    "iso2": "CA",
+    "iso3": "CAN",
+    "region": "North America",
+    "name": "Canada",
+    "pop_m": 39.7,
+    "median_age": 40.5,
+    "income_k": 40.02,
+    "urban": 0.829
+   },
+   {
+    "id": "pol",
+    "iso2": "PL",
+    "iso3": "POL",
+    "region": "Europe & Central Asia",
+    "name": "Poland",
+    "pop_m": 38.5,
+    "median_age": 41.8,
+    "income_k": 32.58,
+    "urban": 0.601
+   },
+   {
+    "id": "mar",
+    "iso2": "MA",
+    "iso3": "MAR",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Morocco",
+    "pop_m": 38.1,
+    "median_age": 29.5,
+    "income_k": 6.66,
+    "urban": 0.631
+   },
+   {
+    "id": "ago",
+    "iso2": "AO",
+    "iso3": "AGO",
+    "region": "Sub-Saharan Africa ",
+    "name": "Angola",
+    "pop_m": 37.9,
+    "median_age": 16.5,
+    "income_k": 6.18,
+    "urban": 0.715
+   },
+   {
+    "id": "ukr",
+    "iso2": "UA",
+    "iso3": "UKR",
+    "region": "Europe & Central Asia",
+    "name": "Ukraine",
+    "pop_m": 37.9,
+    "median_age": 42.1,
+    "income_k": 11.34,
+    "urban": 0.696
+   },
+   {
+    "id": "uzb",
+    "iso2": "UZ",
+    "iso3": "UZB",
+    "region": "Europe & Central Asia",
+    "name": "Uzbekistan",
+    "pop_m": 36.4,
+    "median_age": 27.0,
+    "income_k": 8.16,
+    "urban": 0.51
+   },
+   {
+    "id": "mys",
+    "iso2": "MY",
+    "iso3": "MYS",
+    "region": "East Asia & Pacific",
+    "name": "Malaysia",
+    "pop_m": 35.6,
+    "median_age": 30.5,
+    "income_k": 24.9,
+    "urban": 0.774
+   },
+   {
+    "id": "moz",
+    "iso2": "MZ",
+    "iso3": "MOZ",
+    "region": "Sub-Saharan Africa ",
+    "name": "Mozambique",
+    "pop_m": 34.6,
+    "median_age": 16.4,
+    "income_k": 1.02,
+    "urban": 0.372
+   },
+   {
+    "id": "gha",
+    "iso2": "GH",
+    "iso3": "GHA",
+    "region": "Sub-Saharan Africa ",
+    "name": "Ghana",
+    "pop_m": 34.4,
+    "median_age": 21.1,
+    "income_k": 5.16,
+    "urban": 0.589
+   },
+   {
+    "id": "per",
+    "iso2": "PE",
+    "iso3": "PER",
+    "region": "Latin America & Caribbean ",
+    "name": "Peru",
+    "pop_m": 34.2,
+    "median_age": 29.8,
+    "income_k": 11.28,
+    "urban": 0.856
+   },
+   {
+    "id": "sau",
+    "iso2": "SA",
+    "iso3": "SAU",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Saudi Arabia",
+    "pop_m": 34.0,
+    "median_age": 29.6,
+    "income_k": 44.28,
+    "urban": 0.846
+   },
+   {
+    "id": "mdg",
+    "iso2": "MG",
+    "iso3": "MDG",
+    "region": "Sub-Saharan Africa ",
+    "name": "Madagascar",
+    "pop_m": 32.0,
+    "median_age": 19.0,
+    "income_k": 1.2,
+    "urban": 0.329
+   },
+   {
+    "id": "civ",
+    "iso2": "CI",
+    "iso3": "CIV",
+    "region": "Sub-Saharan Africa ",
+    "name": "Ivory Coast",
+    "pop_m": 31.9,
+    "median_age": 18.2,
+    "income_k": 4.92,
+    "urban": 0.545
+   },
+   {
+    "id": "npl",
+    "iso2": "NP",
+    "iso3": "NPL",
+    "region": "South Asia",
+    "name": "Nepal",
+    "pop_m": 29.7,
+    "median_age": 25.0,
+    "income_k": 3.72,
+    "urban": 0.67
+   },
+   {
+    "id": "cmr",
+    "iso2": "CM",
+    "iso3": "CMR",
+    "region": "Sub-Saharan Africa ",
+    "name": "Cameroon",
+    "pop_m": 29.1,
+    "median_age": 17.9,
+    "income_k": 3.48,
+    "urban": 0.557
+   },
+   {
+    "id": "ven",
+    "iso2": "VE",
+    "iso3": "VEN",
+    "region": "Latin America & Caribbean ",
+    "name": "Venezuela",
+    "pop_m": 28.4,
+    "median_age": 29.2,
+    "income_k": 12.78,
+    "urban": 0.893
+   },
+   {
+    "id": "ner",
+    "iso2": "NE",
+    "iso3": "NER",
+    "region": "Sub-Saharan Africa ",
+    "name": "Niger",
+    "pop_m": 27.0,
+    "median_age": 15.4,
+    "income_k": 1.32,
+    "urban": 0.184
+   },
+   {
+    "id": "aus",
+    "iso2": "AU",
+    "iso3": "AUS",
+    "region": "East Asia & Pacific",
+    "name": "Australia",
+    "pop_m": 26.7,
+    "median_age": 38.0,
+    "income_k": 43.14,
+    "urban": 0.877
+   },
+   {
+    "id": "prk",
+    "iso2": "KP",
+    "iso3": "PRK",
+    "region": "East Asia & Pacific",
+    "name": "North Korea",
+    "pop_m": 26.5,
+    "median_age": 36.3,
+    "income_k": 9.12,
+    "urban": 0.642
+   },
+   {
+    "id": "syr",
+    "iso2": "SY",
+    "iso3": "SYR",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Syria",
+    "pop_m": 24.7,
+    "median_age": 22.8,
+    "income_k": 2.94,
+    "urban": 0.721
+   },
+   {
+    "id": "mli",
+    "iso2": "ML",
+    "iso3": "MLI",
+    "region": "Sub-Saharan Africa ",
+    "name": "Mali",
+    "pop_m": 24.5,
+    "median_age": 15.6,
+    "income_k": 2.1,
+    "urban": 0.322
+   },
+   {
+    "id": "bfa",
+    "iso2": "BF",
+    "iso3": "BFA",
+    "region": "Sub-Saharan Africa ",
+    "name": "Burkina Faso",
+    "pop_m": 23.5,
+    "median_age": 17.5,
+    "income_k": 1.86,
+    "urban": 0.289
+   },
+   {
+    "id": "twn",
+    "iso2": "TW",
+    "iso3": "TWN",
+    "region": "East Asia & Pacific",
+    "name": "Taiwan",
+    "pop_m": 23.2,
+    "median_age": 44.2,
+    "income_k": 9.12,
+    "urban": 0.628
+   },
+   {
+    "id": "lka",
+    "iso2": "LK",
+    "iso3": "LKA",
+    "region": "South Asia",
+    "name": "Sri Lanka",
+    "pop_m": 23.1,
+    "median_age": 33.1,
+    "income_k": 10.26,
+    "urban": 0.205
+   },
+   {
+    "id": "mwi",
+    "iso2": "MW",
+    "iso3": "MWI",
+    "region": "Sub-Saharan Africa ",
+    "name": "Malawi",
+    "pop_m": 21.7,
+    "median_age": 17.8,
+    "income_k": 1.14,
+    "urban": 0.176
+   },
+   {
+    "id": "zmb",
+    "iso2": "ZM",
+    "iso3": "ZMB",
+    "region": "Sub-Saharan Africa ",
+    "name": "Zambia",
+    "pop_m": 21.3,
+    "median_age": 17.7,
+    "income_k": 2.64,
+    "urban": 0.459
+   },
+   {
+    "id": "kaz",
+    "iso2": "KZ",
+    "iso3": "KAZ",
+    "region": "Europe & Central Asia",
+    "name": "Kazakhstan",
+    "pop_m": 20.6,
+    "median_age": 29.6,
+    "income_k": 26.58,
+    "urban": 0.624
+   },
+   {
+    "id": "tcd",
+    "iso2": "TD",
+    "iso3": "TCD",
+    "region": "Sub-Saharan Africa ",
+    "name": "Chad",
+    "pop_m": 20.3,
+    "median_age": 15.7,
+    "income_k": 1.74,
+    "urban": 0.276
+   },
+   {
+    "id": "chl",
+    "iso2": "CL",
+    "iso3": "CHL",
+    "region": "Latin America & Caribbean ",
+    "name": "Chile",
+    "pop_m": 19.8,
+    "median_age": 36.4,
+    "income_k": 22.68,
+    "urban": 0.892
+   },
+   {
+    "id": "rou",
+    "iso2": "RO",
+    "iso3": "ROU",
+    "region": "Europe & Central Asia",
+    "name": "Romania",
+    "pop_m": 19.0,
+    "median_age": 42.9,
+    "income_k": 30.54,
+    "urban": 0.522
+   },
+   {
+    "id": "som",
+    "iso2": "SO",
+    "iso3": "SOM",
+    "region": "Sub-Saharan Africa ",
+    "name": "Somalia",
+    "pop_m": 19.0,
+    "median_age": 15.5,
+    "income_k": 0.96,
+    "urban": 0.551
+   },
+   {
+    "id": "sen",
+    "iso2": "SN",
+    "iso3": "SEN",
+    "region": "Sub-Saharan Africa ",
+    "name": "Senegal",
+    "pop_m": 18.5,
+    "median_age": 19.4,
+    "income_k": 3.3,
+    "urban": 0.558
+   },
+   {
+    "id": "gtm",
+    "iso2": "GT",
+    "iso3": "GTM",
+    "region": "Latin America & Caribbean ",
+    "name": "Guatemala",
+    "pop_m": 18.4,
+    "median_age": 23.0,
+    "income_k": 9.12,
+    "urban": 0.563
+   },
+   {
+    "id": "nld",
+    "iso2": "NL",
+    "iso3": "NLD",
+    "region": "Europe & Central Asia",
+    "name": "Netherlands",
+    "pop_m": 18.2,
+    "median_age": 41.4,
+    "income_k": 52.38,
+    "urban": 0.959
+   },
+   {
+    "id": "ecu",
+    "iso2": "EC",
+    "iso3": "ECU",
+    "region": "Latin America & Caribbean ",
+    "name": "Ecuador",
+    "pop_m": 18.1,
+    "median_age": 28.8,
+    "income_k": 10.08,
+    "urban": 0.634
+   },
+   {
+    "id": "khm",
+    "iso2": "KH",
+    "iso3": "KHM",
+    "region": "East Asia & Pacific",
+    "name": "Cambodia",
+    "pop_m": 17.6,
+    "median_age": 26.0,
+    "income_k": 5.1,
+    "urban": 0.411
+   },
+   {
+    "id": "zwe",
+    "iso2": "ZW",
+    "iso3": "ZWE",
+    "region": "Sub-Saharan Africa ",
+    "name": "Zimbabwe",
+    "pop_m": 16.6,
+    "median_age": 18.0,
+    "income_k": 3.9,
+    "urban": 0.405
+   },
+   {
+    "id": "gin",
+    "iso2": "GN",
+    "iso3": "GIN",
+    "region": "Sub-Saharan Africa ",
+    "name": "Guinea",
+    "pop_m": 14.8,
+    "median_age": 18.1,
+    "income_k": 2.94,
+    "urban": 0.385
+   },
+   {
+    "id": "ben",
+    "iso2": "BJ",
+    "iso3": "BEN",
+    "region": "Sub-Saharan Africa ",
+    "name": "Benin",
+    "pop_m": 14.5,
+    "median_age": 17.9,
+    "income_k": 2.88,
+    "urban": 0.534
+   },
+   {
+    "id": "rwa",
+    "iso2": "RW",
+    "iso3": "RWA",
+    "region": "Sub-Saharan Africa ",
+    "name": "Rwanda",
+    "pop_m": 14.3,
+    "median_age": 19.7,
+    "income_k": 2.52,
+    "urban": 0.309
+   },
+   {
+    "id": "bdi",
+    "iso2": "BI",
+    "iso3": "BDI",
+    "region": "Sub-Saharan Africa ",
+    "name": "Burundi",
+    "pop_m": 14.0,
+    "median_age": 16.1,
+    "income_k": 0.72,
+    "urban": 0.257
+   },
+   {
+    "id": "bol",
+    "iso2": "BO",
+    "iso3": "BOL",
+    "region": "Latin America & Caribbean ",
+    "name": "Bolivia",
+    "pop_m": 12.4,
+    "median_age": 24.9,
+    "income_k": 7.74,
+    "urban": 0.716
+   },
+   {
+    "id": "tun",
+    "iso2": "TN",
+    "iso3": "TUN",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Tunisia",
+    "pop_m": 12.3,
+    "median_age": 32.5,
+    "income_k": 9.12,
+    "urban": 0.707
+   },
+   {
+    "id": "ssd",
+    "iso2": "SS",
+    "iso3": "SSD",
+    "region": "Sub-Saharan Africa ",
+    "name": "South Sudan",
+    "pop_m": 11.9,
+    "median_age": 18.3,
+    "income_k": 0.72,
+    "urban": 0.217
+   },
+   {
+    "id": "hti",
+    "iso2": "HT",
+    "iso3": "HTI",
+    "region": "Latin America & Caribbean ",
+    "name": "Haiti",
+    "pop_m": 11.8,
+    "median_age": 23.8,
+    "income_k": 1.86,
+    "urban": 0.556
+   },
+   {
+    "id": "bel",
+    "iso2": "BE",
+    "iso3": "BEL",
+    "region": "Europe & Central Asia",
+    "name": "Belgium",
+    "pop_m": 11.7,
+    "median_age": 41.7,
+    "income_k": 44.82,
+    "urban": 0.877
+   },
+   {
+    "id": "jor",
+    "iso2": "JO",
+    "iso3": "JOR",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Jordan",
+    "pop_m": 11.6,
+    "median_age": 24.5,
+    "income_k": 7.56,
+    "urban": 0.932
+   },
+   {
+    "id": "dom",
+    "iso2": "DO",
+    "iso3": "DOM",
+    "region": "Latin America & Caribbean ",
+    "name": "Dominican Republic",
+    "pop_m": 11.4,
+    "median_age": 28.0,
+    "income_k": 17.22,
+    "urban": 0.725
+   },
+   {
+    "id": "are",
+    "iso2": "AE",
+    "iso3": "ARE",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "United Arab Emirates",
+    "pop_m": 11.0,
+    "median_age": 31.6,
+    "income_k": 47.58,
+    "urban": 0.86
+   },
+   {
+    "id": "cub",
+    "iso2": "CU",
+    "iso3": "CUB",
+    "region": "Latin America & Caribbean ",
+    "name": "Cuba",
+    "pop_m": 11.0,
+    "median_age": 41.9,
+    "income_k": 9.12,
+    "urban": 0.772
+   },
+   {
+    "id": "hnd",
+    "iso2": "HN",
+    "iso3": "HND",
+    "region": "Latin America & Caribbean ",
+    "name": "Honduras",
+    "pop_m": 10.8,
+    "median_age": 23.9,
+    "income_k": 4.74,
+    "urban": 0.593
+   },
+   {
+    "id": "cze",
+    "iso2": "CZ",
+    "iso3": "CZE",
+    "region": "Europe & Central Asia",
+    "name": "Czechia",
+    "pop_m": 10.7,
+    "median_age": 43.2,
+    "income_k": 36.3,
+    "urban": 0.729
+   },
+   {
+    "id": "swe",
+    "iso2": "SE",
+    "iso3": "SWE",
+    "region": "Europe & Central Asia",
+    "name": "Sweden",
+    "pop_m": 10.6,
+    "median_age": 40.1,
+    "income_k": 43.5,
+    "urban": 0.891
+   },
+   {
+    "id": "tjk",
+    "iso2": "TJ",
+    "iso3": "TJK",
+    "region": "Europe & Central Asia",
+    "name": "Tajikistan",
+    "pop_m": 10.6,
+    "median_age": 22.1,
+    "income_k": 3.54,
+    "urban": 0.262
+   },
+   {
+    "id": "png",
+    "iso2": "PG",
+    "iso3": "PNG",
+    "region": "East Asia & Pacific",
+    "name": "Papua New Guinea",
+    "pop_m": 10.6,
+    "median_age": 22.6,
+    "income_k": 3.12,
+    "urban": 0.158
+   },
+   {
+    "id": "prt",
+    "iso2": "PT",
+    "iso3": "PRT",
+    "region": "Europe & Central Asia",
+    "name": "Portugal",
+    "pop_m": 10.4,
+    "median_age": 46.6,
+    "income_k": 31.86,
+    "urban": 0.615
+   },
+   {
+    "id": "aze",
+    "iso2": "AZ",
+    "iso3": "AZE",
+    "region": "Europe & Central Asia",
+    "name": "Azerbaijan",
+    "pop_m": 10.3,
+    "median_age": 33.1,
+    "income_k": 15.66,
+    "urban": 0.586
+   },
+   {
+    "id": "grc",
+    "iso2": "GR",
+    "iso3": "GRC",
+    "region": "Europe & Central Asia",
+    "name": "Greece",
+    "pop_m": 10.0,
+    "median_age": 46.3,
+    "income_k": 27.18,
+    "urban": 0.792
+   },
+   {
+    "id": "hun",
+    "iso2": "HU",
+    "iso3": "HUN",
+    "region": "Europe & Central Asia",
+    "name": "Hungary",
+    "pop_m": 9.7,
+    "median_age": 43.6,
+    "income_k": 29.88,
+    "urban": 0.707
+   },
+   {
+    "id": "tgo",
+    "iso2": "TG",
+    "iso3": "TGO",
+    "region": "Sub-Saharan Africa ",
+    "name": "Togo",
+    "pop_m": 9.5,
+    "median_age": 18.9,
+    "income_k": 2.46,
+    "urban": 0.444
+   },
+   {
+    "id": "isr",
+    "iso2": "IL",
+    "iso3": "ISR",
+    "region": "Middle East, North Africa, Afghanistan & Pakistan",
+    "name": "Israel",
+    "pop_m": 9.4,
+    "median_age": 29.2,
+    "income_k": 35.82,
+    "urban": 0.916
+   },
+   {
+    "id": "aut",
+    "iso2": "AT",
+    "iso3": "AUT",
+    "region": "Europe & Central Asia",
+    "name": "Austria",
+    "pop_m": 9.1,
+    "median_age": 43.4,
+    "income_k": 46.08,
+    "urban": 0.697
+   },
+   {
+    "id": "blr",
+    "iso2": "BY",
+    "iso3": "BLR",
+    "region": "Europe & Central Asia",
+    "name": "Belarus",
+    "pop_m": 9.1,
+    "median_age": 40.9,
+    "income_k": 20.82,
+    "urban": 0.795
+   }
+  ],
+  "settlement_types": [
+   {
+    "id": "metro",
+    "name": "cities"
+   },
+   {
+    "id": "town",
+    "name": "towns"
+   },
+   {
+    "id": "rural",
+    "name": "rural areas"
+   }
+  ],
+  "audiences": [
+   {
+    "id": 0,
+    "name": "Big-city, with kids, young",
+    "share": 0.156
+   },
+   {
+    "id": 1,
+    "name": "Young, rural, early adopters",
+    "share": 0.194
+   },
+   {
+    "id": 2,
+    "name": "Retired, older, tech-wary",
+    "share": 0.08
+   },
+   {
+    "id": 3,
+    "name": "Living alone, reserved, young",
+    "share": 0.121
+   },
+   {
+    "id": 4,
+    "name": "Higher-income, tech-comfortable, big-city",
+    "share": 0.05
+   },
+   {
+    "id": 5,
+    "name": "With kids, short of time, rural",
+    "share": 0.179
+   },
+   {
+    "id": 6,
+    "name": "Older, set in their ways, tech-wary",
+    "share": 0.107
+   },
+   {
+    "id": 7,
+    "name": "Sharing a home, young, early adopters",
+    "share": 0.114
+   }
+  ]
+ },
+ "links": {
+  "topic_condition": [
+   {
+    "from": "macro_growth_recession",
+    "to": "job_security"
+   },
+   {
+    "from": "macro_growth_recession",
+    "to": "industrial_output"
+   },
+   {
+    "from": "inflation_prices",
+    "to": "prices"
+   },
+   {
+    "from": "interest_credit_banking",
+    "to": "borrowing_cost"
+   },
+   {
+    "from": "interest_credit_banking",
+    "to": "private_debt"
+   },
+   {
+    "from": "interest_credit_banking",
+    "to": "housing_cost"
+   },
+   {
+    "from": "markets_investment",
+    "to": "asset_values"
+   },
+   {
+    "from": "markets_investment",
+    "to": "market_volatility"
+   },
+   {
+    "from": "public_budget_tax",
+    "to": "fiscal_strain"
+   },
+   {
+    "from": "public_budget_tax",
+    "to": "public_service_quality"
+   },
+   {
+    "from": "public_budget_tax",
+    "to": "inequality"
+   },
+   {
+    "from": "trade_tariffs",
+    "to": "supply_chain_strain"
+   },
+   {
+    "from": "trade_tariffs",
+    "to": "mineral_scarcity"
+   },
+   {
+    "from": "trade_tariffs",
+    "to": "industrial_output"
+   },
+   {
+    "from": "housing_rents",
+    "to": "housing_cost"
+   },
+   {
+    "from": "housing_rents",
+    "to": "asset_values"
+   },
+   {
+    "from": "work_labour",
+    "to": "job_security"
+   },
+   {
+    "from": "work_labour",
+    "to": "pay_growth"
+   },
+   {
+    "from": "work_labour",
+    "to": "skills_level"
+   },
+   {
+    "from": "labour_disputes",
+    "to": "pay_growth"
+   },
+   {
+    "from": "labour_disputes",
+    "to": "disruption"
+   },
+   {
+    "from": "labour_disputes",
+    "to": "civil_unrest"
+   },
+   {
+    "from": "ai_automation",
+    "to": "tech_adoption"
+   },
+   {
+    "from": "ai_automation",
+    "to": "job_security"
+   },
+   {
+    "from": "ai_automation",
+    "to": "information_reliability"
+   },
+   {
+    "from": "retirement_pensions",
+    "to": "fiscal_strain"
+   },
+   {
+    "from": "social_welfare_poverty",
+    "to": "inequality"
+   },
+   {
+    "from": "social_welfare_poverty",
+    "to": "food_insecurity"
+   },
+   {
+    "from": "social_welfare_poverty",
+    "to": "private_debt"
+   },
+   {
+    "from": "energy_power",
+    "to": "energy_fuel"
+   },
+   {
+    "from": "energy_power",
+    "to": "prices"
+   },
+   {
+    "from": "energy_power",
+    "to": "air_pollution"
+   },
+   {
+    "from": "transport_infrastructure",
+    "to": "infrastructure_condition"
+   },
+   {
+    "from": "transport_infrastructure",
+    "to": "disruption"
+   },
+   {
+    "from": "transport_infrastructure",
+    "to": "supply_chain_strain"
+   },
+   {
+    "from": "food_agriculture",
+    "to": "food_insecurity"
+   },
+   {
+    "from": "food_agriculture",
+    "to": "prices"
+   },
+   {
+    "from": "food_agriculture",
+    "to": "land_degradation"
+   },
+   {
+    "from": "water_utilities",
+    "to": "water_stress"
+   },
+   {
+    "from": "climate_change",
+    "to": "climate_stress"
+   },
+   {
+    "from": "climate_change",
+    "to": "water_stress"
+   },
+   {
+    "from": "climate_change",
+    "to": "health_risk"
+   },
+   {
+    "from": "pollution_nature",
+    "to": "air_pollution"
+   },
+   {
+    "from": "pollution_nature",
+    "to": "biodiversity_loss"
+   },
+   {
+    "from": "pollution_nature",
+    "to": "land_degradation"
+   },
+   {
+    "from": "natural_disasters",
+    "to": "climate_stress"
+   },
+   {
+    "from": "natural_disasters",
+    "to": "disruption"
+   },
+   {
+    "from": "natural_disasters",
+    "to": "infrastructure_condition"
+   },
+   {
+    "from": "public_health",
+    "to": "health_risk"
+   },
+   {
+    "from": "public_health",
+    "to": "care_strain"
+   },
+   {
+    "from": "health_care_system",
+    "to": "care_strain"
+   },
+   {
+    "from": "health_care_system",
+    "to": "public_service_quality"
+   },
+   {
+    "from": "medicines_science",
+    "to": "health_risk"
+   },
+   {
+    "from": "medicines_science",
+    "to": "care_strain"
+   },
+   {
+    "from": "mental_health_substances",
+    "to": "mental_distress"
+   },
+   {
+    "from": "crime_policing",
+    "to": "crime"
+   },
+   {
+    "from": "courts_rulings",
+    "to": "trust_institutions"
+   },
+   {
+    "from": "courts_rulings",
+    "to": "civil_liberties"
+   },
+   {
+    "from": "accidents_incidents",
+    "to": "health_risk"
+   },
+   {
+    "from": "accidents_incidents",
+    "to": "disruption"
+   },
+   {
+    "from": "cyber_privacy",
+    "to": "cyber_insecurity"
+   },
+   {
+    "from": "cyber_privacy",
+    "to": "civil_liberties"
+   },
+   {
+    "from": "cyber_privacy",
+    "to": "disruption"
+   },
+   {
+    "from": "war_conflict",
+    "to": "war_terror"
+   },
+   {
+    "from": "war_conflict",
+    "to": "energy_fuel"
+   },
+   {
+    "from": "war_conflict",
+    "to": "food_insecurity"
+   },
+   {
+    "from": "terrorism_violence",
+    "to": "war_terror"
+   },
+   {
+    "from": "defence_weapons",
+    "to": "war_terror"
+   },
+   {
+    "from": "defence_weapons",
+    "to": "fiscal_strain"
+   },
+   {
+    "from": "diplomacy_treaties",
+    "to": "war_terror"
+   },
+   {
+    "from": "sanctions_aid",
+    "to": "supply_chain_strain"
+   },
+   {
+    "from": "sanctions_aid",
+    "to": "energy_fuel"
+   },
+   {
+    "from": "sanctions_aid",
+    "to": "mineral_scarcity"
+   },
+   {
+    "from": "migration_refugees",
+    "to": "migration_flow"
+   },
+   {
+    "from": "migration_refugees",
+    "to": "social_division"
+   },
+   {
+    "from": "elections_politics",
+    "to": "trust_institutions"
+   },
+   {
+    "from": "elections_politics",
+    "to": "social_division"
+   },
+   {
+    "from": "elections_politics",
+    "to": "civil_unrest"
+   },
+   {
+    "from": "legislation_regulation",
+    "to": "civil_liberties"
+   },
+   {
+    "from": "governance_corruption",
+    "to": "trust_institutions"
+   },
+   {
+    "from": "governance_corruption",
+    "to": "public_service_quality"
+   },
+   {
+    "from": "civil_rights_discrimination",
+    "to": "civil_liberties"
+   },
+   {
+    "from": "civil_rights_discrimination",
+    "to": "social_division"
+   },
+   {
+    "from": "protest_movements",
+    "to": "civil_unrest"
+   },
+   {
+    "from": "family_demographics",
+    "to": "migration_flow"
+   },
+   {
+    "from": "family_demographics",
+    "to": "community"
+   },
+   {
+    "from": "religion_identity",
+    "to": "social_division"
+   },
+   {
+    "from": "religion_identity",
+    "to": "community"
+   },
+   {
+    "from": "education_schools",
+    "to": "public_service_quality"
+   },
+   {
+    "from": "education_schools",
+    "to": "skills_level"
+   },
+   {
+    "from": "research_space",
+    "to": "information_reliability"
+   },
+   {
+    "from": "research_space",
+    "to": "tech_adoption"
+   },
+   {
+    "from": "technology_consumer",
+    "to": "tech_adoption"
+   },
+   {
+    "from": "media_information",
+    "to": "information_reliability"
+   },
+   {
+    "from": "consumer_retail",
+    "to": "prices"
+   },
+   {
+    "from": "consumer_retail",
+    "to": "health_risk"
+   },
+   {
+    "from": "business_corporate",
+    "to": "industrial_output"
+   },
+   {
+    "from": "business_corporate",
+    "to": "cyber_insecurity"
+   },
+   {
+    "from": "mining_materials",
+    "to": "mineral_scarcity"
+   },
+   {
+    "from": "mining_materials",
+    "to": "supply_chain_strain"
+   },
+   {
+    "from": "culture_leisure",
+    "to": "community"
+   }
+  ],
+  "condition_state": [
+   {
+    "from": "prices",
+    "to": "financial_stress",
+    "strength": 0.5,
+    "why": "prices rise faster than the budget",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "pay_growth",
+    "to": "financial_stress",
+    "strength": -0.5,
+    "why": "faster pay eases the budget",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_security",
+    "to": "financial_stress",
+    "strength": -0.5,
+    "why": "secure work eases the budget",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "housing_cost",
+    "to": "financial_stress",
+    "strength": 0.5,
+    "why": "rent or mortgage is the largest bill (crosses housing into money)",
+    "moderated_by": "tenure",
+    "status": "guess"
+   },
+   {
+    "from": "prices",
+    "to": "liquidity",
+    "strength": -0.5,
+    "why": "higher prices eat savings",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "pay_growth",
+    "to": "liquidity",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_security",
+    "to": "liquidity",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "asset_values",
+    "to": "liquidity",
+    "strength": 0.5,
+    "why": "owners hold savings in assets",
+    "moderated_by": "tenure",
+    "status": "guess"
+   },
+   {
+    "from": "borrowing_cost",
+    "to": "debt_burden",
+    "strength": 0.5,
+    "why": "costlier loans raise repayments",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "private_debt",
+    "to": "debt_burden",
+    "strength": 0.8,
+    "why": "identity-like: the person-level version of the place debt level",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "housing_cost",
+    "to": "housing_burden",
+    "strength": 0.8,
+    "why": "identity-like: rent or price rise is this person's burden (renters most)",
+    "moderated_by": "tenure",
+    "status": "guess"
+   },
+   {
+    "from": "borrowing_cost",
+    "to": "housing_burden",
+    "strength": 0.5,
+    "why": "mortgage payments follow loan costs (mortgagors)",
+    "moderated_by": "tenure",
+    "status": "guess"
+   },
+   {
+    "from": "prices",
+    "to": "price_attention",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "energy_fuel",
+    "to": "price_attention",
+    "strength": 0.5,
+    "why": "fuel and bills are watched closely",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_security",
+    "to": "job_worry",
+    "strength": -0.8,
+    "why": "identity-like: secure jobs mean less worry",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "tech_adoption",
+    "to": "job_worry",
+    "strength": 0.2,
+    "why": "automation fear (crosses tech into work)",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "industrial_output",
+    "to": "job_worry",
+    "strength": -0.2,
+    "why": "more output means less layoff fear",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_security",
+    "to": "optimism",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "prices",
+    "to": "optimism",
+    "strength": -0.5,
+    "why": "rising prices dampen hope",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "asset_values",
+    "to": "optimism",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "war_terror",
+    "to": "optimism",
+    "strength": -0.5,
+    "why": "conflict dims outlook (crosses security into mood)",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "disruption",
+    "to": "time_pressure",
+    "strength": 0.5,
+    "why": "delays and outages eat spare time",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "care_strain",
+    "to": "time_pressure",
+    "strength": 0.5,
+    "why": "waiting for care costs time (crosses health into time)",
+    "moderated_by": "life_stage",
+    "status": "guess"
+   },
+   {
+    "from": "crime",
+    "to": "safety_concern",
+    "strength": 0.8,
+    "why": "identity-like: crime nearby raises felt threat",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "war_terror",
+    "to": "safety_concern",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "civil_unrest",
+    "to": "safety_concern",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "climate_stress",
+    "to": "safety_concern",
+    "strength": 0.2,
+    "why": "storm and heat hazard raises felt threat (crosses climate into safety)",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "mental_distress",
+    "to": "wellbeing",
+    "strength": -0.8,
+    "why": "identity-like: more distress means lower mood",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "disruption",
+    "to": "wellbeing",
+    "strength": -0.2,
+    "why": "upheaval wears people down",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "community",
+    "to": "wellbeing",
+    "strength": 0.2,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "community",
+    "to": "loneliness",
+    "strength": -0.5,
+    "why": "stronger community means less loneliness",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "health_risk",
+    "to": "loneliness",
+    "strength": 0.2,
+    "why": "illness risk keeps people home (crosses health into social)",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "pay_growth",
+    "to": "job_satisfaction",
+    "strength": 0.2,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_security",
+    "to": "job_satisfaction",
+    "strength": 0.2,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "health_risk",
+    "to": "perceived_health_threat",
+    "strength": 0.8,
+    "why": "identity-like: outbreak risk raises felt threat",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "care_strain",
+    "to": "perceived_health_threat",
+    "strength": 0.2,
+    "why": "strained care raises worry",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "air_pollution",
+    "to": "perceived_health_threat",
+    "strength": 0.2,
+    "why": "dirty air raises health worry (crosses environment into health)",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "trust_institutions",
+    "to": "institutional_trust",
+    "strength": 0.8,
+    "why": "identity-like: personal version of the place trust level",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "public_service_quality",
+    "to": "institutional_trust",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "social_division",
+    "to": "institutional_trust",
+    "strength": -0.2,
+    "why": "division erodes trust in shared institutions",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "social_division",
+    "to": "interpersonal_trust",
+    "strength": -0.5,
+    "why": "division lowers trust in others",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "crime",
+    "to": "interpersonal_trust",
+    "strength": -0.2,
+    "why": "crime lowers trust in strangers",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "community",
+    "to": "interpersonal_trust",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "information_reliability",
+    "to": "media_trust",
+    "strength": 0.8,
+    "why": "identity-like: reliable news earns trust",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "civil_liberties",
+    "to": "political_efficacy",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "trust_institutions",
+    "to": "political_efficacy",
+    "strength": 0.2,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "inequality",
+    "to": "grievance",
+    "strength": 0.5,
+    "why": "a wider gap breeds felt unfairness",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "social_division",
+    "to": "grievance",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "public_service_quality",
+    "to": "grievance",
+    "strength": -0.5,
+    "why": "better services reduce feeling left behind",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "migration_flow",
+    "to": "grievance",
+    "strength": 0.2,
+    "why": "contested: politically disputed link, depends on the person's views",
+    "moderated_by": "cultural_orientation",
+    "status": "guess (contested)"
+   },
+   {
+    "from": "news_overload",
+    "to": "news_attention",
+    "strength": 0.5,
+    "why": null,
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "war_terror",
+    "to": "news_attention",
+    "strength": 0.5,
+    "why": "crisis draws attention (crosses security into media habits)",
+    "moderated_by": null,
+    "status": "guess"
+   },
+   {
+    "from": "skills_level",
+    "to": "job_worry",
+    "strength": -0.5,
+    "why": "better skills mean more employable people and less job worry",
+    "moderated_by": null,
+    "status": "guess"
+   }
+  ],
+  "state_decision": [
+   {
+    "from": "financial_stress",
+    "to": "spend",
+    "weight": -0.8,
+    "why": "money strain forces cutbacks",
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "spend",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "liquidity",
+    "to": "spend",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "price_attention",
+    "to": "spend",
+    "weight": -0.5,
+    "why": "price watchers hold back",
+    "status": "guess"
+   },
+   {
+    "from": "patience",
+    "to": "spend",
+    "weight": -0.2,
+    "why": "patient people spend less now",
+    "status": "guess"
+   },
+   {
+    "from": "status_concern",
+    "to": "spend",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "buy_new",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "financial_stress",
+    "to": "buy_new",
+    "weight": -0.5,
+    "why": "money strain delays big buys",
+    "status": "guess"
+   },
+   {
+    "from": "novelty_seeking",
+    "to": "buy_new",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "car_dependence",
+    "to": "buy_new",
+    "weight": 0.2,
+    "why": "cars are the big new purchase",
+    "status": "guess"
+   },
+   {
+    "from": "status_concern",
+    "to": "buy_new",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "price_attention",
+    "to": "subscribe",
+    "weight": -0.5,
+    "why": "fee watchers avoid commitments",
+    "status": "guess"
+   },
+   {
+    "from": "habit_inertia",
+    "to": "subscribe",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "tech_comfort",
+    "to": "subscribe",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "privacy_stance",
+    "to": "subscribe",
+    "weight": -0.5,
+    "why": "data-wary people avoid sign-ups",
+    "status": "guess"
+   },
+   {
+    "from": "digital_access",
+    "to": "subscribe",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "safety_concern",
+    "to": "travel",
+    "weight": -0.8,
+    "why": "felt danger stops trips",
+    "status": "guess"
+   },
+   {
+    "from": "perceived_health_threat",
+    "to": "travel",
+    "weight": -0.5,
+    "why": "illness worry stops trips",
+    "status": "guess"
+   },
+   {
+    "from": "time_pressure",
+    "to": "travel",
+    "weight": -0.5,
+    "why": "no spare time",
+    "status": "guess"
+   },
+   {
+    "from": "environmental_values",
+    "to": "travel",
+    "weight": -0.2,
+    "why": "cares about flying and driving emissions",
+    "status": "guess"
+   },
+   {
+    "from": "wellbeing",
+    "to": "travel",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_satisfaction",
+    "to": "change_work",
+    "weight": -0.8,
+    "why": "unhappy workers leave",
+    "status": "guess"
+   },
+   {
+    "from": "risk_tolerance",
+    "to": "change_work",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "life_stage",
+    "to": "change_work",
+    "weight": -0.5,
+    "why": "older with more duties means fewer job moves",
+    "status": "guess"
+   },
+   {
+    "from": "novelty_seeking",
+    "to": "change_work",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_worry",
+    "to": "change_work",
+    "weight": 0.2,
+    "why": "insecure workers look elsewhere",
+    "status": "guess"
+   },
+   {
+    "from": "housing_burden",
+    "to": "move",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "tenure",
+    "to": "move",
+    "weight": -0.5,
+    "why": "owners move less than renters",
+    "status": "guess"
+   },
+   {
+    "from": "life_stage",
+    "to": "move",
+    "weight": -0.5,
+    "why": "older with more duties means fewer moves",
+    "status": "guess"
+   },
+   {
+    "from": "safety_concern",
+    "to": "move",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "hazard_exposure",
+    "to": "move",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "habit_inertia",
+    "to": "move",
+    "weight": -0.5,
+    "why": "settled habits keep people put",
+    "status": "guess"
+   },
+   {
+    "from": "price_attention",
+    "to": "switch_brand",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "habit_inertia",
+    "to": "switch_brand",
+    "weight": -0.8,
+    "why": "inertia blocks switching",
+    "status": "guess"
+   },
+   {
+    "from": "novelty_seeking",
+    "to": "switch_brand",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "tech_comfort",
+    "to": "switch_brand",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "news_attention",
+    "to": "share",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "social_ease",
+    "to": "share",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "grievance",
+    "to": "share",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "emotional_reactivity",
+    "to": "share",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "conformity",
+    "to": "share",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "privacy_stance",
+    "to": "share",
+    "weight": -0.5,
+    "why": "private people share less",
+    "status": "guess"
+   },
+   {
+    "from": "liquidity",
+    "to": "invest",
+    "weight": 0.8,
+    "why": "needs spare money to invest",
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "invest",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "risk_tolerance",
+    "to": "invest",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "financial_literacy",
+    "to": "invest",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "loss_aversion",
+    "to": "invest",
+    "weight": -0.5,
+    "why": "loss-averse people avoid investing",
+    "status": "guess"
+   },
+   {
+    "from": "patience",
+    "to": "invest",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "debt_burden",
+    "to": "borrow",
+    "weight": -0.5,
+    "why": "heavy debt blocks new borrowing",
+    "status": "guess"
+   },
+   {
+    "from": "financial_stress",
+    "to": "borrow",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "patience",
+    "to": "borrow",
+    "weight": -0.2,
+    "why": "impatient people borrow more",
+    "status": "guess"
+   },
+   {
+    "from": "housing_burden",
+    "to": "borrow",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "status_concern",
+    "to": "borrow",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "loss_aversion",
+    "to": "borrow",
+    "weight": -0.5,
+    "why": "loss-averse people avoid debt",
+    "status": "guess"
+   },
+   {
+    "from": "political_efficacy",
+    "to": "vote",
+    "weight": 0.8,
+    "why": "people who think it matters vote",
+    "status": "guess"
+   },
+   {
+    "from": "grievance",
+    "to": "vote",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "news_attention",
+    "to": "vote",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "group_identity",
+    "to": "vote",
+    "weight": 0.2,
+    "why": "strong group identity raises turnout",
+    "status": "guess"
+   },
+   {
+    "from": "econ_orientation",
+    "to": "vote",
+    "weight": 0.2,
+    "why": "contested: direction depends on the party mix, weak guess",
+    "status": "guess (contested)"
+   },
+   {
+    "from": "grievance",
+    "to": "protest",
+    "weight": 0.8,
+    "why": "felt unfairness drives protest",
+    "status": "guess"
+   },
+   {
+    "from": "political_efficacy",
+    "to": "protest",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "institutional_trust",
+    "to": "protest",
+    "weight": -0.5,
+    "why": "distrust pushes people to the streets",
+    "status": "guess"
+   },
+   {
+    "from": "fairness_concern",
+    "to": "protest",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "social_ease",
+    "to": "protest",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "emotional_reactivity",
+    "to": "protest",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "perceived_health_threat",
+    "to": "health_action",
+    "weight": 0.8,
+    "why": "felt threat triggers action",
+    "status": "guess"
+   },
+   {
+    "from": "health_orientation",
+    "to": "health_action",
+    "weight": 0.8,
+    "why": "people who believe in prevention act",
+    "status": "guess"
+   },
+   {
+    "from": "health_status",
+    "to": "health_action",
+    "weight": -0.5,
+    "why": "worse health means more care sought",
+    "status": "guess"
+   },
+   {
+    "from": "conscientiousness",
+    "to": "health_action",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "media_trust",
+    "to": "health_action",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "institutional_trust",
+    "to": "health_action",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_worry",
+    "to": "study_train",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "education_skills",
+    "to": "study_train",
+    "weight": -0.5,
+    "why": "lower skills gain more from training",
+    "status": "guess"
+   },
+   {
+    "from": "patience",
+    "to": "study_train",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "conscientiousness",
+    "to": "study_train",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "life_stage",
+    "to": "study_train",
+    "weight": -0.5,
+    "why": "younger people study more",
+    "status": "guess"
+   },
+   {
+    "from": "time_pressure",
+    "to": "study_train",
+    "weight": -0.2,
+    "why": "no spare time",
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "family_change",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "life_stage",
+    "to": "family_change",
+    "weight": 0.2,
+    "why": "guess: mid-life stage most likely to marry or have children",
+    "status": "guess"
+   },
+   {
+    "from": "housing_burden",
+    "to": "family_change",
+    "weight": -0.5,
+    "why": "housing strain delays family change",
+    "status": "guess"
+   },
+   {
+    "from": "religiosity",
+    "to": "family_change",
+    "weight": 0.5,
+    "why": "religious people marry and have children more often",
+    "status": "guess"
+   },
+   {
+    "from": "wellbeing",
+    "to": "family_change",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "safety_concern",
+    "to": "stockpile_prepare",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "perceived_health_threat",
+    "to": "stockpile_prepare",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "hazard_exposure",
+    "to": "stockpile_prepare",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "emotional_reactivity",
+    "to": "stockpile_prepare",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "loss_aversion",
+    "to": "stockpile_prepare",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "risk_tolerance",
+    "to": "start_business",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "liquidity",
+    "to": "start_business",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "education_skills",
+    "to": "start_business",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "novelty_seeking",
+    "to": "start_business",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "job_worry",
+    "to": "start_business",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "prosociality",
+    "to": "donate_volunteer",
+    "weight": 0.8,
+    "why": "helping others is the trait itself",
+    "status": "guess"
+   },
+   {
+    "from": "religiosity",
+    "to": "donate_volunteer",
+    "weight": 0.5,
+    "why": "religious communities give and volunteer more",
+    "status": "guess"
+   },
+   {
+    "from": "time_pressure",
+    "to": "donate_volunteer",
+    "weight": -0.5,
+    "why": "no spare time",
+    "status": "guess"
+   },
+   {
+    "from": "loneliness",
+    "to": "donate_volunteer",
+    "weight": 0.2,
+    "why": "contested: lonely people may seek a group or withdraw",
+    "status": "guess (contested)"
+   },
+   {
+    "from": "interpersonal_trust",
+    "to": "donate_volunteer",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "social_ease",
+    "to": "donate_volunteer",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "financial_stress",
+    "to": "claim_support",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "liquidity",
+    "to": "claim_support",
+    "weight": -0.5,
+    "why": "no buffer means asking for help",
+    "status": "guess"
+   },
+   {
+    "from": "job_worry",
+    "to": "claim_support",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "institutional_trust",
+    "to": "claim_support",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "health_status",
+    "to": "claim_support",
+    "weight": -0.2,
+    "why": "poor health raises need",
+    "status": "guess"
+   },
+   {
+    "from": "digital_access",
+    "to": "claim_support",
+    "weight": 0.2,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "institutional_trust",
+    "to": "break_rules",
+    "weight": -0.5,
+    "why": "distrust weakens the duty to comply",
+    "status": "guess"
+   },
+   {
+    "from": "media_trust",
+    "to": "break_rules",
+    "weight": -0.5,
+    "why": "distrusted official messaging is ignored",
+    "status": "guess"
+   },
+   {
+    "from": "grievance",
+    "to": "break_rules",
+    "weight": 0.5,
+    "why": null,
+    "status": "guess"
+   },
+   {
+    "from": "cultural_orientation",
+    "to": "break_rules",
+    "weight": -0.2,
+    "why": "contested: authority-respecting pole of the trait lowers it",
+    "status": "guess (contested)"
+   },
+   {
+    "from": "conscientiousness",
+    "to": "break_rules",
+    "weight": -0.5,
+    "why": "rule-followers comply",
+    "status": "guess"
+   }
+  ],
+  "condition_condition": [
+   {
+    "from": "energy_fuel",
+    "to": "prices",
+    "strength": 0.5,
+    "why": "fuel and power costs pass into everyday prices",
+    "status": "guess"
+   },
+   {
+    "from": "supply_chain_strain",
+    "to": "prices",
+    "strength": 0.5,
+    "why": "shortages and delays raise shelf prices",
+    "status": "guess"
+   },
+   {
+    "from": "mineral_scarcity",
+    "to": "supply_chain_strain",
+    "strength": 0.5,
+    "why": "scarce raw materials strain supply",
+    "status": "guess"
+   },
+   {
+    "from": "land_degradation",
+    "to": "food_insecurity",
+    "strength": 0.2,
+    "why": "less usable land means less food",
+    "status": "guess"
+   },
+   {
+    "from": "biodiversity_loss",
+    "to": "food_insecurity",
+    "strength": 0.2,
+    "why": "lost fish stocks and pollinators cut food",
+    "status": "guess"
+   },
+   {
+    "from": "food_insecurity",
+    "to": "prices",
+    "strength": 0.2,
+    "why": "food shortage lifts food prices",
+    "status": "guess"
+   },
+   {
+    "from": "water_stress",
+    "to": "health_risk",
+    "strength": 0.2,
+    "why": "unsafe water raises illness",
+    "status": "guess"
+   },
+   {
+    "from": "infrastructure_condition",
+    "to": "disruption",
+    "strength": -0.5,
+    "why": "better repair means fewer outages and delays",
+    "status": "guess"
+   },
+   {
+    "from": "industrial_output",
+    "to": "job_security",
+    "strength": 0.5,
+    "why": "more production means steadier jobs",
+    "status": "guess"
+   },
+   {
+    "from": "fiscal_strain",
+    "to": "public_service_quality",
+    "strength": -0.5,
+    "why": "budget pressure cuts services",
+    "status": "guess"
+   },
+   {
+    "from": "market_volatility",
+    "to": "asset_values",
+    "strength": -0.5,
+    "why": "wild swings tend to drag values down",
+    "status": "guess"
+   },
+   {
+    "from": "cyber_insecurity",
+    "to": "disruption",
+    "strength": 0.5,
+    "why": "breaches and outages interrupt services",
+    "status": "guess"
+   }
+  ],
+  "condition_resource": [
+   {
+    "from": "water_stress",
+    "to": "water",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "water stress is a level of freshwater; up means more shortage or contamination (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "land_degradation",
+    "to": "land_soil",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "land degradation is a level of land and soil; up means more land lost or degraded (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "biodiversity_loss",
+    "to": "biodiversity",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "biodiversity loss is a level of ecosystems and wildlife; up means more decline (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "climate_stress",
+    "to": "atmosphere_climate",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "climate stress is a level of air and climate; up means more hazard (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "air_pollution",
+    "to": "atmosphere_climate",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "air pollution is a level of air and climate; up means dirtier air (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "energy_fuel",
+    "to": "primary_energy",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "energy cost and supply is a level of energy sources (fuels, sun, wind, water); up means costlier or scarcer (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "mineral_scarcity",
+    "to": "minerals_materials",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "mineral and material scarcity is a level of minerals and materials; up means scarcer or costlier (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "food_insecurity",
+    "to": "food_stock",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "food insecurity is a level of food supply; up means more people short of food (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "housing_cost",
+    "to": "housing_stock",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "housing cost is a level of housing stock; up means costlier (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "infrastructure_condition",
+    "to": "built_infrastructure",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "infrastructure condition is a level of built infrastructure; up means better repair (good)",
+    "status": "guess"
+   },
+   {
+    "from": "disruption",
+    "to": "built_infrastructure",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "disruption of services is a level of built infrastructure; up means more interruptions (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "industrial_output",
+    "to": "productive_capital",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "industrial output is a level of productive capital; up means more output (good)",
+    "status": "guess"
+   },
+   {
+    "from": "supply_chain_strain",
+    "to": "supply_networks",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "supply chain strain is a level of trade and supply links; up means more strain (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "tech_adoption",
+    "to": "computing_capacity",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "technology adoption is a level of computing and networks; up means more adoption (neutral)",
+    "status": "guess"
+   },
+   {
+    "from": "cyber_insecurity",
+    "to": "computing_capacity",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "cyber insecurity is a level of computing and networks; up means more breaches (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "prices",
+    "to": "monetary_credit",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "prices is a level of money and credit; up means higher prices (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "borrowing_cost",
+    "to": "monetary_credit",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "borrowing cost and credit access is a level of money and credit; up means costlier or tighter credit (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "asset_values",
+    "to": "asset_wealth",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "asset values is a level of wealth and assets; up means higher values (good for holders)",
+    "status": "guess"
+   },
+   {
+    "from": "market_volatility",
+    "to": "asset_wealth",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "market volatility is a level of wealth and assets; up means more volatility (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "private_debt",
+    "to": "asset_wealth",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "private debt is a level of wealth and assets; up means heavier burden (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "inequality",
+    "to": "asset_wealth",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "economic inequality is a level of wealth and assets; up means wider gap (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "fiscal_strain",
+    "to": "public_finances",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "fiscal strain is a level of public finances; up means more strain (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "health_risk",
+    "to": "population_health",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "health risk is a level of population health; up means more risk (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "mental_distress",
+    "to": "population_health",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "mental distress is a level of population health; up means more distress (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "care_strain",
+    "to": "care_capacity",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "care strain is a level of care capacity; up means more strain (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "job_security",
+    "to": "labour_force",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "job security is a level of labour; up means more secure (good)",
+    "status": "guess"
+   },
+   {
+    "from": "pay_growth",
+    "to": "labour_force",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "pay growth is a level of labour; up means faster pay growth (good)",
+    "status": "guess"
+   },
+   {
+    "from": "social_division",
+    "to": "social_trust",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "social division is a level of social trust and cohesion; up means more division (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "community",
+    "to": "community_ties",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "community strength is a level of community ties; up means stronger (good)",
+    "status": "guess"
+   },
+   {
+    "from": "trust_institutions",
+    "to": "legitimacy",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "trust in institutions is a level of legitimacy; up means more trust (good)",
+    "status": "guess"
+   },
+   {
+    "from": "public_service_quality",
+    "to": "state_capacity",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "public service quality is a level of state capacity and public safety; up means better (good)",
+    "status": "guess"
+   },
+   {
+    "from": "civil_liberties",
+    "to": "legitimacy",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "civil liberties is a level of legitimacy; up means more freedom (good)",
+    "status": "guess"
+   },
+   {
+    "from": "crime",
+    "to": "state_capacity",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "crime is a level of state capacity and public safety; up means more crime (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "war_terror",
+    "to": "state_capacity",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "war and terror is a level of state capacity and public safety; up means more conflict (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "civil_unrest",
+    "to": "state_capacity",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "civil unrest is a level of state capacity and public safety; up means more unrest (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "information_reliability",
+    "to": "knowledge",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "information reliability is a level of knowledge and information; up means more reliable (good)",
+    "status": "guess"
+   },
+   {
+    "from": "news_overload",
+    "to": "attention",
+    "role": "level_of",
+    "up_means": "strain",
+    "why": "news overload is a level of time and attention; up means more news competing (bad)",
+    "status": "guess"
+   },
+   {
+    "from": "migration_flow",
+    "to": "population",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "migration flow is a level of population; up means more net arrivals (neutral)",
+    "status": "guess"
+   },
+   {
+    "from": "skills_level",
+    "to": "skills",
+    "role": "level_of",
+    "up_means": "build",
+    "why": "skills level is a level of learned ability; up means more people with needed skills (good)",
+    "status": "guess"
+   }
+  ],
+  "state_resource": [
+   {
+    "from": "financial_stress",
+    "to": "monetary_credit",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "money and credit moves with prices",
+    "status": "guess"
+   },
+   {
+    "from": "financial_stress",
+    "to": "labour_force",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "labour moves with pay growth",
+    "status": "guess"
+   },
+   {
+    "from": "financial_stress",
+    "to": "housing_stock",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "housing stock moves with housing cost",
+    "status": "guess"
+   },
+   {
+    "from": "liquidity",
+    "to": "monetary_credit",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "money and credit moves with prices",
+    "status": "guess"
+   },
+   {
+    "from": "liquidity",
+    "to": "labour_force",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "labour moves with pay growth",
+    "status": "guess"
+   },
+   {
+    "from": "liquidity",
+    "to": "asset_wealth",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "wealth and assets moves with asset values",
+    "status": "guess"
+   },
+   {
+    "from": "debt_burden",
+    "to": "monetary_credit",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "money and credit moves with borrowing cost and credit access",
+    "status": "guess"
+   },
+   {
+    "from": "debt_burden",
+    "to": "asset_wealth",
+    "weight": 0.8,
+    "up_means": "strain",
+    "why": "wealth and assets moves with private debt",
+    "status": "guess"
+   },
+   {
+    "from": "housing_burden",
+    "to": "housing_stock",
+    "weight": 0.8,
+    "up_means": "strain",
+    "why": "housing stock moves with housing cost",
+    "status": "guess"
+   },
+   {
+    "from": "housing_burden",
+    "to": "monetary_credit",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "money and credit moves with borrowing cost and credit access",
+    "status": "guess"
+   },
+   {
+    "from": "price_attention",
+    "to": "monetary_credit",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "money and credit moves with prices",
+    "status": "guess"
+   },
+   {
+    "from": "price_attention",
+    "to": "primary_energy",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "energy sources (fuels, sun, wind, water) moves with energy cost and supply",
+    "status": "guess"
+   },
+   {
+    "from": "job_worry",
+    "to": "labour_force",
+    "weight": 0.8,
+    "up_means": "strain",
+    "why": "labour moves with job security",
+    "status": "guess"
+   },
+   {
+    "from": "job_worry",
+    "to": "computing_capacity",
+    "weight": 0.2,
+    "up_means": "build",
+    "why": "computing and networks moves with technology adoption",
+    "status": "guess"
+   },
+   {
+    "from": "job_worry",
+    "to": "productive_capital",
+    "weight": 0.2,
+    "up_means": "strain",
+    "why": "productive capital moves with industrial output",
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "labour_force",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "labour moves with job security",
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "monetary_credit",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "money and credit moves with prices",
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "asset_wealth",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "wealth and assets moves with asset values",
+    "status": "guess"
+   },
+   {
+    "from": "optimism",
+    "to": "state_capacity",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "state capacity and public safety moves with war and terror",
+    "status": "guess"
+   },
+   {
+    "from": "time_pressure",
+    "to": "built_infrastructure",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "built infrastructure moves with disruption of services",
+    "status": "guess"
+   },
+   {
+    "from": "time_pressure",
+    "to": "care_capacity",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "care capacity moves with care strain",
+    "status": "guess"
+   },
+   {
+    "from": "safety_concern",
+    "to": "state_capacity",
+    "weight": 0.8,
+    "up_means": "strain",
+    "why": "state capacity and public safety moves with crime",
+    "status": "guess"
+   },
+   {
+    "from": "safety_concern",
+    "to": "atmosphere_climate",
+    "weight": 0.2,
+    "up_means": "strain",
+    "why": "air and climate moves with climate stress",
+    "status": "guess"
+   },
+   {
+    "from": "wellbeing",
+    "to": "population_health",
+    "weight": 0.8,
+    "up_means": "build",
+    "why": "population health moves with mental distress",
+    "status": "guess"
+   },
+   {
+    "from": "wellbeing",
+    "to": "built_infrastructure",
+    "weight": 0.2,
+    "up_means": "build",
+    "why": "built infrastructure moves with disruption of services",
+    "status": "guess"
+   },
+   {
+    "from": "wellbeing",
+    "to": "community_ties",
+    "weight": 0.2,
+    "up_means": "build",
+    "why": "community ties moves with community strength",
+    "status": "guess"
+   },
+   {
+    "from": "loneliness",
+    "to": "community_ties",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "community ties moves with community strength",
+    "status": "guess"
+   },
+   {
+    "from": "loneliness",
+    "to": "population_health",
+    "weight": 0.2,
+    "up_means": "strain",
+    "why": "population health moves with health risk",
+    "status": "guess"
+   },
+   {
+    "from": "job_satisfaction",
+    "to": "labour_force",
+    "weight": 0.2,
+    "up_means": "build",
+    "why": "labour moves with pay growth",
+    "status": "guess"
+   },
+   {
+    "from": "perceived_health_threat",
+    "to": "population_health",
+    "weight": 0.8,
+    "up_means": "strain",
+    "why": "population health moves with health risk",
+    "status": "guess"
+   },
+   {
+    "from": "perceived_health_threat",
+    "to": "care_capacity",
+    "weight": 0.2,
+    "up_means": "strain",
+    "why": "care capacity moves with care strain",
+    "status": "guess"
+   },
+   {
+    "from": "perceived_health_threat",
+    "to": "atmosphere_climate",
+    "weight": 0.2,
+    "up_means": "strain",
+    "why": "air and climate moves with air pollution",
+    "status": "guess"
+   },
+   {
+    "from": "institutional_trust",
+    "to": "legitimacy",
+    "weight": 0.8,
+    "up_means": "build",
+    "why": "legitimacy moves with trust in institutions",
+    "status": "guess"
+   },
+   {
+    "from": "institutional_trust",
+    "to": "state_capacity",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "state capacity and public safety moves with public service quality",
+    "status": "guess"
+   },
+   {
+    "from": "institutional_trust",
+    "to": "social_trust",
+    "weight": 0.2,
+    "up_means": "build",
+    "why": "social trust and cohesion moves with social division",
+    "status": "guess"
+   },
+   {
+    "from": "interpersonal_trust",
+    "to": "social_trust",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "social trust and cohesion moves with social division",
+    "status": "guess"
+   },
+   {
+    "from": "interpersonal_trust",
+    "to": "state_capacity",
+    "weight": 0.2,
+    "up_means": "build",
+    "why": "state capacity and public safety moves with crime",
+    "status": "guess"
+   },
+   {
+    "from": "interpersonal_trust",
+    "to": "community_ties",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "community ties moves with community strength",
+    "status": "guess"
+   },
+   {
+    "from": "media_trust",
+    "to": "knowledge",
+    "weight": 0.8,
+    "up_means": "build",
+    "why": "knowledge and information moves with information reliability",
+    "status": "guess"
+   },
+   {
+    "from": "political_efficacy",
+    "to": "legitimacy",
+    "weight": 0.5,
+    "up_means": "build",
+    "why": "legitimacy moves with civil liberties",
+    "status": "guess"
+   },
+   {
+    "from": "grievance",
+    "to": "asset_wealth",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "wealth and assets moves with economic inequality",
+    "status": "guess"
+   },
+   {
+    "from": "grievance",
+    "to": "social_trust",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "social trust and cohesion moves with social division",
+    "status": "guess"
+   },
+   {
+    "from": "grievance",
+    "to": "state_capacity",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "state capacity and public safety moves with public service quality",
+    "status": "guess"
+   },
+   {
+    "from": "grievance",
+    "to": "population",
+    "weight": 0.2,
+    "up_means": "build",
+    "why": "population moves with migration flow",
+    "status": "guess"
+   },
+   {
+    "from": "news_attention",
+    "to": "attention",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "time and attention moves with news overload",
+    "status": "guess"
+   },
+   {
+    "from": "news_attention",
+    "to": "state_capacity",
+    "weight": 0.5,
+    "up_means": "strain",
+    "why": "state capacity and public safety moves with war and terror",
+    "status": "guess"
+   }
+  ],
+  "decision_resource": [
+   {
+    "from": "spend",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.8,
+    "why": "spending uses up money held",
+    "status": "guess"
+   },
+   {
+    "from": "spend",
+    "to": "food_stock",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "food is the biggest everyday spend",
+    "status": "guess"
+   },
+   {
+    "from": "spend",
+    "to": "productive_capital",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "demand supports firms",
+    "status": "guess"
+   },
+   {
+    "from": "buy_new",
+    "to": "productive_capital",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "orders keep factories working",
+    "status": "guess"
+   },
+   {
+    "from": "buy_new",
+    "to": "minerals_materials",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "goods embed metals and materials",
+    "status": "guess"
+   },
+   {
+    "from": "buy_new",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "paying for it",
+    "status": "guess"
+   },
+   {
+    "from": "buy_new",
+    "to": "primary_energy",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "making goods uses energy",
+    "status": "guess"
+   },
+   {
+    "from": "subscribe",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "recurring payment",
+    "status": "guess"
+   },
+   {
+    "from": "subscribe",
+    "to": "attention",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "a commitment takes ongoing attention",
+    "status": "guess"
+   },
+   {
+    "from": "subscribe",
+    "to": "computing_capacity",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "many are digital services",
+    "status": "guess"
+   },
+   {
+    "from": "travel",
+    "to": "primary_energy",
+    "direction": "draw",
+    "weight": 0.8,
+    "why": "trips burn fuel",
+    "status": "guess"
+   },
+   {
+    "from": "travel",
+    "to": "atmosphere_climate",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "travel adds emissions",
+    "status": "guess"
+   },
+   {
+    "from": "travel",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "tickets and stays cost money",
+    "status": "guess"
+   },
+   {
+    "from": "travel",
+    "to": "built_infrastructure",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "wears roads and terminals",
+    "status": "guess"
+   },
+   {
+    "from": "change_work",
+    "to": "skills",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "a new job builds skills",
+    "status": "guess"
+   },
+   {
+    "from": "change_work",
+    "to": "labour_force",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "matches people to work",
+    "status": "guess"
+   },
+   {
+    "from": "change_work",
+    "to": "community_ties",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "leaving a workplace loosens ties",
+    "status": "guess"
+   },
+   {
+    "from": "move",
+    "to": "housing_stock",
+    "direction": "draw",
+    "weight": 0.8,
+    "why": "moving uses housing stock",
+    "status": "guess"
+   },
+   {
+    "from": "move",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "moving costs money",
+    "status": "guess"
+   },
+   {
+    "from": "move",
+    "to": "population",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "moves shift where people live",
+    "status": "guess"
+   },
+   {
+    "from": "move",
+    "to": "community_ties",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "leaves local ties behind",
+    "status": "guess"
+   },
+   {
+    "from": "switch_brand",
+    "to": "attention",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "comparing providers takes attention",
+    "status": "guess"
+   },
+   {
+    "from": "switch_brand",
+    "to": "knowledge",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "comparing spreads price information",
+    "status": "guess"
+   },
+   {
+    "from": "switch_brand",
+    "to": "supply_networks",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "shifts which supply links are used",
+    "status": "guess"
+   },
+   {
+    "from": "share",
+    "to": "attention",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "sharing earns audience attention",
+    "status": "guess"
+   },
+   {
+    "from": "share",
+    "to": "knowledge",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "sharing spreads information",
+    "status": "guess"
+   },
+   {
+    "from": "share",
+    "to": "social_trust",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "heated sharing can spend trust",
+    "status": "guess"
+   },
+   {
+    "from": "share",
+    "to": "legitimacy",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "public voice can back or challenge authority",
+    "status": "guess"
+   },
+   {
+    "from": "vote",
+    "to": "legitimacy",
+    "direction": "build",
+    "weight": 0.8,
+    "why": "voting is how authority is accepted or withdrawn",
+    "status": "guess"
+   },
+   {
+    "from": "vote",
+    "to": "state_capacity",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "a mandate lets government act",
+    "status": "guess"
+   },
+   {
+    "from": "vote",
+    "to": "attention",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "following politics takes attention",
+    "status": "guess"
+   },
+   {
+    "from": "protest",
+    "to": "legitimacy",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "protest challenges authority",
+    "status": "guess"
+   },
+   {
+    "from": "protest",
+    "to": "state_capacity",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "policing protests uses state capacity",
+    "status": "guess"
+   },
+   {
+    "from": "protest",
+    "to": "community_ties",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "joining builds networks",
+    "status": "guess"
+   },
+   {
+    "from": "protest",
+    "to": "attention",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "protest draws attention",
+    "status": "guess"
+   },
+   {
+    "from": "health_action",
+    "to": "population_health",
+    "direction": "build",
+    "weight": 0.8,
+    "why": "acting on health improves health",
+    "status": "guess"
+   },
+   {
+    "from": "health_action",
+    "to": "care_capacity",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "care visits use clinics and staff",
+    "status": "guess"
+   },
+   {
+    "from": "health_action",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "care and products cost money",
+    "status": "guess"
+   },
+   {
+    "from": "study_train",
+    "to": "skills",
+    "direction": "build",
+    "weight": 0.8,
+    "why": "study adds skills",
+    "status": "guess"
+   },
+   {
+    "from": "study_train",
+    "to": "attention",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "study takes time and focus",
+    "status": "guess"
+   },
+   {
+    "from": "study_train",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "fees and lost earnings",
+    "status": "guess"
+   },
+   {
+    "from": "family_change",
+    "to": "population",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "births and household changes shape population",
+    "status": "guess"
+   },
+   {
+    "from": "family_change",
+    "to": "housing_stock",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "a new household needs a home",
+    "status": "guess"
+   },
+   {
+    "from": "family_change",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "costs money",
+    "status": "guess"
+   },
+   {
+    "from": "family_change",
+    "to": "community_ties",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "family changes link or loosen ties",
+    "status": "guess"
+   },
+   {
+    "from": "stockpile_prepare",
+    "to": "food_stock",
+    "direction": "draw",
+    "weight": 0.8,
+    "why": "stocking up uses food supply",
+    "status": "guess"
+   },
+   {
+    "from": "stockpile_prepare",
+    "to": "supply_networks",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "panic buying strains deliveries",
+    "status": "guess"
+   },
+   {
+    "from": "stockpile_prepare",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "paying for supplies or cover",
+    "status": "guess"
+   },
+   {
+    "from": "stockpile_prepare",
+    "to": "water",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "bottled and stored water",
+    "status": "guess"
+   },
+   {
+    "from": "start_business",
+    "to": "productive_capital",
+    "direction": "build",
+    "weight": 0.8,
+    "why": "a business adds equipment and stock",
+    "status": "guess"
+   },
+   {
+    "from": "start_business",
+    "to": "labour_force",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "creates work",
+    "status": "guess"
+   },
+   {
+    "from": "start_business",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "savings go into it",
+    "status": "guess"
+   },
+   {
+    "from": "start_business",
+    "to": "monetary_credit",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "often needs a loan",
+    "status": "guess"
+   },
+   {
+    "from": "donate_volunteer",
+    "to": "community_ties",
+    "direction": "build",
+    "weight": 0.8,
+    "why": "giving and joining build local networks",
+    "status": "guess"
+   },
+   {
+    "from": "donate_volunteer",
+    "to": "social_trust",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "helping others builds trust",
+    "status": "guess"
+   },
+   {
+    "from": "donate_volunteer",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "gifts cost money",
+    "status": "guess"
+   },
+   {
+    "from": "claim_support",
+    "to": "public_finances",
+    "direction": "draw",
+    "weight": 0.8,
+    "why": "benefits are paid from government funds",
+    "status": "guess"
+   },
+   {
+    "from": "claim_support",
+    "to": "state_capacity",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "claims use public service staff",
+    "status": "guess"
+   },
+   {
+    "from": "claim_support",
+    "to": "attention",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "forms take time",
+    "status": "guess"
+   },
+   {
+    "from": "borrow",
+    "to": "monetary_credit",
+    "direction": "draw",
+    "weight": 0.8,
+    "why": "a loan uses lending capacity",
+    "status": "guess"
+   },
+   {
+    "from": "borrow",
+    "to": "asset_wealth",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "debt reduces net wealth",
+    "status": "guess"
+   },
+   {
+    "from": "invest",
+    "to": "asset_wealth",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "invested savings aim to grow",
+    "status": "guess"
+   },
+   {
+    "from": "invest",
+    "to": "monetary_credit",
+    "direction": "build",
+    "weight": 0.5,
+    "why": "funds flow into the financial system",
+    "status": "guess"
+   },
+   {
+    "from": "invest",
+    "to": "productive_capital",
+    "direction": "build",
+    "weight": 0.2,
+    "why": "some money reaches firms",
+    "status": "guess"
+   },
+   {
+    "from": "break_rules",
+    "to": "legitimacy",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "ignoring rules weakens authority",
+    "status": "guess"
+   },
+   {
+    "from": "break_rules",
+    "to": "state_capacity",
+    "direction": "draw",
+    "weight": 0.5,
+    "why": "enforcement uses state capacity",
+    "status": "guess"
+   },
+   {
+    "from": "break_rules",
+    "to": "social_trust",
+    "direction": "draw",
+    "weight": 0.2,
+    "why": "rule breaking erodes trust",
+    "status": "guess"
+   }
+  ]
+ },
+ "decision_stakes": [
+  {
+   "decision": "spend",
+   "stakes": 1.0,
+   "why": "one purchase is small and easy to reverse",
+   "status": "guess"
+  },
+  {
+   "decision": "buy_new",
+   "stakes": 2.0,
+   "why": "a modest purchase",
+   "status": "guess"
+  },
+  {
+   "decision": "subscribe",
+   "stakes": 2.0,
+   "why": "small recurring commitment",
+   "status": "guess"
+  },
+  {
+   "decision": "travel",
+   "stakes": 3.0,
+   "why": "costs real money and time and uses fuel",
+   "status": "guess"
+  },
+  {
+   "decision": "change_work",
+   "stakes": 4.0,
+   "why": "changes income and daily life",
+   "status": "guess"
+  },
+  {
+   "decision": "move",
+   "stakes": 5.0,
+   "why": "biggest and hardest to reverse",
+   "status": "guess"
+  },
+  {
+   "decision": "switch_brand",
+   "stakes": 2.0,
+   "why": "easy to undo",
+   "status": "guess"
+  },
+  {
+   "decision": "share",
+   "stakes": 2.0,
+   "why": "a post is cheap but can spread",
+   "status": "guess"
+  },
+  {
+   "decision": "vote",
+   "stakes": 2.0,
+   "why": "one act, little cost, lasting effect",
+   "status": "guess"
+  },
+  {
+   "decision": "protest",
+   "stakes": 3.0,
+   "why": "some risk and time, public record",
+   "status": "guess"
+  },
+  {
+   "decision": "health_action",
+   "stakes": 3.0,
+   "why": "affects body and money, partly reversible",
+   "status": "guess"
+  },
+  {
+   "decision": "study_train",
+   "stakes": 4.0,
+   "why": "months of time and money",
+   "status": "guess"
+  },
+  {
+   "decision": "family_change",
+   "stakes": 5.0,
+   "why": "life-changing and hard to reverse",
+   "status": "guess"
+  },
+  {
+   "decision": "stockpile_prepare",
+   "stakes": 2.0,
+   "why": "cheap, can be undone by using the supplies",
+   "status": "guess"
+  },
+  {
+   "decision": "start_business",
+   "stakes": 5.0,
+   "why": "savings at risk, big life change",
+   "status": "guess"
+  },
+  {
+   "decision": "donate_volunteer",
+   "stakes": 2.0,
+   "why": "small and voluntary",
+   "status": "guess"
+  },
+  {
+   "decision": "claim_support",
+   "stakes": 3.0,
+   "why": "paperwork and effort; can change income",
+   "status": "guess"
+  },
+  {
+   "decision": "borrow",
+   "stakes": 4.0,
+   "why": "creates a debt that lasts",
+   "status": "guess"
+  },
+  {
+   "decision": "invest",
+   "stakes": 3.0,
+   "why": "real money at risk but often reversible",
+   "status": "guess"
+  },
+  {
+   "decision": "break_rules",
+   "stakes": 3.0,
+   "why": "possible penalty or harm",
+   "status": "guess"
+  }
+ ]
+}
