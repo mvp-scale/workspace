@@ -1,0 +1,881 @@
+# World engine ontology: what each element is, and what it moves next.
+# Read it left to right:  story -> topic -> condition -> person state -> decision -> resource
+#   topic:        what a story is about
+#   condition:    a level of the world that stories push up or down (each is the level of one resource)
+#   person state: how a person feels or is placed; conditions move it
+#   decision:     what a person might do; person states make it more or less likely
+#   resource:     what the world runs on; conditions and states depend on it, decisions draw on or build it
+# Signs: + raises, - lowers. Numbers are link strengths, hand-set guesses until fitted against outcomes.
+# Places: a story enters the world or a country, then spreads to that country's cities, towns and rural areas.
+# Generated from probes/persona/rules_v2 by tools/export_ontology_yaml.py; labels match the running engine.
+
+flow: [topics, conditions, person_states, decisions, resources]
+
+topics:            # topic -> conditions it can move
+  macro_growth_recession:
+    name: Growth and recession
+    moves: [job_security, industrial_output]
+  inflation_prices:
+    name: Inflation and living costs
+    moves: [prices]
+  interest_credit_banking:
+    name: "Interest rates, credit and banks"
+    moves: [borrowing_cost, private_debt, housing_cost]
+  markets_investment:
+    name: Markets and investing
+    moves: [asset_values, market_volatility]
+  public_budget_tax:
+    name: Taxes and public budgets
+    moves: [fiscal_strain, public_service_quality, inequality]
+  trade_tariffs:
+    name: Trade and supply chains
+    moves: [supply_chain_strain, mineral_scarcity, industrial_output]
+  housing_rents:
+    name: Housing and rents
+    moves: [housing_cost, asset_values]
+  work_labour:
+    name: Jobs and wages
+    moves: [job_security, pay_growth, skills_level]
+  labour_disputes:
+    name: Unions and strikes
+    moves: [pay_growth, disruption, civil_unrest]
+  ai_automation:
+    name: AI and automation
+    moves: [tech_adoption, job_security, information_reliability]
+  retirement_pensions:
+    name: Retirement and pensions
+    moves: [fiscal_strain]
+  social_welfare_poverty:
+    name: "Welfare, poverty and inequality"
+    moves: [inequality, food_insecurity, private_debt]
+  energy_power:
+    name: Energy and fuel
+    moves: [energy_fuel, prices, air_pollution]
+  transport_infrastructure:
+    name: Transport and infrastructure
+    moves: [infrastructure_condition, disruption, supply_chain_strain]
+  food_agriculture:
+    name: Food and farming
+    moves: [food_insecurity, prices, land_degradation]
+  water_utilities:
+    name: Water and utilities
+    moves: [water_stress]
+  climate_change:
+    name: Climate change
+    moves: [climate_stress, water_stress, health_risk]
+  pollution_nature:
+    name: Pollution and nature
+    moves: [air_pollution, biodiversity_loss, land_degradation]
+  natural_disasters:
+    name: Disasters and extreme weather
+    moves: [climate_stress, disruption, infrastructure_condition]
+  public_health:
+    name: Disease and public health
+    moves: [health_risk, care_strain]
+  health_care_system:
+    name: Health care services
+    moves: [care_strain, public_service_quality]
+  medicines_science:
+    name: Medicines and treatments
+    moves: [health_risk, care_strain]
+  mental_health_substances:
+    name: Mental health and substance use
+    moves: [mental_distress]
+  crime_policing:
+    name: Crime and policing
+    moves: [crime]
+  courts_rulings:
+    name: Courts and legal rulings
+    moves: [trust_institutions, civil_liberties]
+  accidents_incidents:
+    name: Accidents and incidents
+    moves: [health_risk, disruption]
+  cyber_privacy:
+    name: Cyber security and privacy
+    moves: [cyber_insecurity, civil_liberties, disruption]
+  war_conflict:
+    name: War and armed conflict
+    moves: [war_terror, energy_fuel, food_insecurity]
+  terrorism_violence:
+    name: Terrorism and political violence
+    moves: [war_terror]
+  defence_weapons:
+    name: Defence and weapons
+    moves: [war_terror, fiscal_strain]
+  diplomacy_treaties:
+    name: Diplomacy and treaties
+    moves: [war_terror]
+  sanctions_aid:
+    name: Sanctions and aid
+    moves: [supply_chain_strain, energy_fuel, mineral_scarcity]
+  migration_refugees:
+    name: Migration and refugees
+    moves: [migration_flow, social_division]
+  elections_politics:
+    name: Elections and political parties
+    moves: [trust_institutions, social_division, civil_unrest]
+  legislation_regulation:
+    name: Laws and regulation
+    moves: [civil_liberties]
+  governance_corruption:
+    name: Government performance and corruption
+    moves: [trust_institutions, public_service_quality]
+  civil_rights_discrimination:
+    name: Civil rights and discrimination
+    moves: [civil_liberties, social_division]
+  protest_movements:
+    name: Protests and social movements
+    moves: [civil_unrest]
+  family_demographics:
+    name: Family and demographics
+    moves: [migration_flow, community]
+  religion_identity:
+    name: Religion and identity
+    moves: [social_division, community]
+  education_schools:
+    name: Schools and universities
+    moves: [public_service_quality, skills_level]
+  research_space:
+    name: Science and space
+    moves: [information_reliability, tech_adoption]
+  technology_consumer:
+    name: Digital technology and consumer tech
+    moves: [tech_adoption]
+  media_information:
+    name: Media and information
+    moves: [information_reliability]
+  consumer_retail:
+    name: Consumer goods and retail
+    moves: [prices, health_risk]
+  business_corporate:
+    name: Business and companies
+    moves: [industrial_output, cyber_insecurity]
+  mining_materials:
+    name: Minerals and materials
+    moves: [mineral_scarcity, supply_chain_strain]
+  culture_leisure:
+    name: "Culture, sport and leisure"
+    moves: [community]
+
+conditions:        # condition -> person states it moves; other conditions it pushes; the resource it is a level of
+  water_stress:
+    name: Water stress
+    pushes:
+      health_risk: +0.2
+    level_of: water        # higher = strain
+  land_degradation:
+    name: Land degradation
+    pushes:
+      food_insecurity: +0.2
+    level_of: land_soil        # higher = strain
+  biodiversity_loss:
+    name: Biodiversity loss
+    pushes:
+      food_insecurity: +0.2
+    level_of: biodiversity        # higher = strain
+  climate_stress:
+    name: Climate stress
+    moves:
+      safety_concern: +0.2
+    level_of: atmosphere_climate        # higher = strain
+  air_pollution:
+    name: Air pollution
+    moves:
+      perceived_health_threat: +0.2
+    level_of: atmosphere_climate        # higher = strain
+  energy_fuel:
+    name: Energy cost and supply
+    moves:
+      price_attention: +0.5
+    pushes:
+      prices: +0.5
+    level_of: primary_energy        # higher = strain
+  mineral_scarcity:
+    name: Mineral and material scarcity
+    pushes:
+      supply_chain_strain: +0.5
+    level_of: minerals_materials        # higher = strain
+  food_insecurity:
+    name: Food insecurity
+    pushes:
+      prices: +0.2
+    level_of: food_stock        # higher = strain
+  housing_cost:
+    name: Housing cost
+    moves:
+      financial_stress: +0.5
+      housing_burden: +0.8
+    level_of: housing_stock        # higher = strain
+  infrastructure_condition:
+    name: Infrastructure condition
+    pushes:
+      disruption: -0.5
+    level_of: built_infrastructure        # higher = build
+  disruption:
+    name: Disruption of services
+    moves:
+      time_pressure: +0.5
+      wellbeing: -0.2
+    level_of: built_infrastructure        # higher = strain
+  industrial_output:
+    name: Industrial output
+    moves:
+      job_worry: -0.2
+    pushes:
+      job_security: +0.5
+    level_of: productive_capital        # higher = build
+  supply_chain_strain:
+    name: Supply chain strain
+    pushes:
+      prices: +0.5
+    level_of: supply_networks        # higher = strain
+  tech_adoption:
+    name: Technology adoption
+    moves:
+      job_worry: +0.2
+    level_of: computing_capacity        # higher = build
+  cyber_insecurity:
+    name: Cyber insecurity
+    pushes:
+      disruption: +0.5
+    level_of: computing_capacity        # higher = strain
+  prices:
+    name: Prices
+    moves:
+      financial_stress: +0.5
+      liquidity: -0.5
+      price_attention: +0.5
+      optimism: -0.5
+    level_of: monetary_credit        # higher = strain
+  borrowing_cost:
+    name: Borrowing cost and credit access
+    moves:
+      debt_burden: +0.5
+      housing_burden: +0.5
+    level_of: monetary_credit        # higher = strain
+  asset_values:
+    name: Asset values
+    moves:
+      liquidity: +0.5
+      optimism: +0.5
+    level_of: asset_wealth        # higher = build
+  market_volatility:
+    name: Market volatility
+    pushes:
+      asset_values: -0.5
+    level_of: asset_wealth        # higher = strain
+  private_debt:
+    name: Private debt
+    moves:
+      debt_burden: +0.8
+    level_of: asset_wealth        # higher = strain
+  inequality:
+    name: Economic inequality
+    moves:
+      grievance: +0.5
+    level_of: asset_wealth        # higher = strain
+  fiscal_strain:
+    name: Fiscal strain
+    pushes:
+      public_service_quality: -0.5
+    level_of: public_finances        # higher = strain
+  health_risk:
+    name: Health risk
+    moves:
+      loneliness: +0.2
+      perceived_health_threat: +0.8
+    level_of: population_health        # higher = strain
+  mental_distress:
+    name: Mental distress
+    moves:
+      wellbeing: -0.8
+    level_of: population_health        # higher = strain
+  care_strain:
+    name: Care strain
+    moves:
+      time_pressure: +0.5
+      perceived_health_threat: +0.2
+    level_of: care_capacity        # higher = strain
+  job_security:
+    name: Job security
+    moves:
+      financial_stress: -0.5
+      liquidity: +0.5
+      job_worry: -0.8
+      optimism: +0.5
+      job_satisfaction: +0.2
+    level_of: labour_force        # higher = build
+  pay_growth:
+    name: Pay growth
+    moves:
+      financial_stress: -0.5
+      liquidity: +0.5
+      job_satisfaction: +0.2
+    level_of: labour_force        # higher = build
+  social_division:
+    name: Social division
+    moves:
+      institutional_trust: -0.2
+      interpersonal_trust: -0.5
+      grievance: +0.5
+    level_of: social_trust        # higher = strain
+  community:
+    name: Community strength
+    moves:
+      wellbeing: +0.2
+      loneliness: -0.5
+      interpersonal_trust: +0.5
+    level_of: community_ties        # higher = build
+  trust_institutions:
+    name: Trust in institutions
+    moves:
+      institutional_trust: +0.8
+      political_efficacy: +0.2
+    level_of: legitimacy        # higher = build
+  public_service_quality:
+    name: Public service quality
+    moves:
+      institutional_trust: +0.5
+      grievance: -0.5
+    level_of: state_capacity        # higher = build
+  civil_liberties:
+    name: Civil liberties
+    moves:
+      political_efficacy: +0.5
+    level_of: legitimacy        # higher = build
+  crime:
+    name: Crime
+    moves:
+      safety_concern: +0.8
+      interpersonal_trust: -0.2
+    level_of: state_capacity        # higher = strain
+  war_terror:
+    name: War and terror
+    moves:
+      optimism: -0.5
+      safety_concern: +0.5
+      news_attention: +0.5
+    level_of: state_capacity        # higher = strain
+  civil_unrest:
+    name: Civil unrest
+    moves:
+      safety_concern: +0.5
+    level_of: state_capacity        # higher = strain
+  information_reliability:
+    name: Information reliability
+    moves:
+      media_trust: +0.8
+    level_of: knowledge        # higher = build
+  news_overload:
+    name: News overload
+    moves:
+      news_attention: +0.5
+    level_of: attention        # higher = strain
+  migration_flow:
+    name: Migration flow
+    moves:
+      grievance: +0.2
+    level_of: population        # higher = build
+  skills_level:
+    name: Skills and education level
+    moves:
+      job_worry: -0.5
+    level_of: skills        # higher = build
+
+person_states:     # person state -> decisions it makes more (+) or less (-) likely; resources it depends on
+  tech_comfort:
+    name: Tech comfort
+    drives:
+      subscribe: +0.5
+      switch_brand: +0.5
+  price_attention:
+    name: Price attention
+    drives:
+      spend: -0.5
+      subscribe: -0.5
+      switch_brand: +0.5
+    depends_on: [monetary_credit, primary_energy]
+  privacy_stance:
+    name: Privacy stance
+    drives:
+      subscribe: -0.5
+      share: -0.5
+  social_ease:
+    name: Social ease
+    drives:
+      share: +0.5
+      protest: +0.2
+      donate_volunteer: +0.2
+  novelty_seeking:
+    name: Novelty seeking
+    drives:
+      buy_new: +0.5
+      change_work: +0.5
+      switch_brand: +0.5
+      start_business: +0.5
+  habit_inertia:
+    name: Habit and inertia
+    drives:
+      subscribe: +0.5
+      move: -0.5
+      switch_brand: -0.8
+  loss_aversion:
+    name: Loss aversion
+    drives:
+      invest: -0.5
+      borrow: -0.5
+      stockpile_prepare: +0.5
+  conscientiousness:
+    name: Conscientiousness and planning
+    drives:
+      health_action: +0.2
+      study_train: +0.5
+      break_rules: -0.5
+  emotional_reactivity:
+    name: Emotional reactivity
+    drives:
+      share: +0.5
+      protest: +0.2
+      stockpile_prepare: +0.5
+  risk_tolerance:
+    name: Risk tolerance
+    drives:
+      change_work: +0.5
+      invest: +0.5
+      start_business: +0.5
+  patience:
+    name: Patience
+    drives:
+      spend: -0.2
+      invest: +0.5
+      borrow: -0.2
+      study_train: +0.5
+  fairness_concern:
+    name: Fairness concern
+    drives:
+      protest: +0.5
+  status_concern:
+    name: Status concern
+    drives:
+      spend: +0.2
+      buy_new: +0.2
+      borrow: +0.2
+  conformity:
+    name: Social influence susceptibility
+    drives:
+      share: +0.2
+  econ_orientation:
+    name: Economic orientation
+    drives:
+      vote: +0.2
+  cultural_orientation:
+    name: Cultural orientation
+    drives:
+      break_rules: -0.2
+  group_identity:
+    name: Group identity strength
+    drives:
+      vote: +0.2
+  religiosity:
+    name: Religiosity
+    drives:
+      family_change: +0.5
+      donate_volunteer: +0.5
+  prosociality:
+    name: Prosociality (willingness to help others)
+    drives:
+      donate_volunteer: +0.8
+  environmental_values:
+    name: Environmental values
+    drives:
+      travel: -0.2
+  health_orientation:
+    name: Health orientation
+    drives:
+      health_action: +0.8
+  financial_literacy:
+    name: Financial literacy
+    drives:
+      invest: +0.5
+  financial_stress:
+    name: Financial stress
+    drives:
+      spend: -0.8
+      buy_new: -0.5
+      borrow: +0.5
+      claim_support: +0.5
+    depends_on: [monetary_credit, labour_force, housing_stock]
+  liquidity:
+    name: Liquidity
+    drives:
+      spend: +0.5
+      invest: +0.8
+      start_business: +0.5
+      claim_support: -0.5
+    depends_on: [monetary_credit, labour_force, asset_wealth]
+  debt_burden:
+    name: Debt burden
+    drives:
+      borrow: -0.5
+    depends_on: [monetary_credit, asset_wealth]
+  job_worry:
+    name: Job insecurity worry
+    drives:
+      change_work: +0.2
+      study_train: +0.5
+      start_business: +0.2
+      claim_support: +0.2
+    depends_on: [labour_force, computing_capacity, productive_capital]
+  time_pressure:
+    name: Time pressure
+    drives:
+      travel: -0.5
+      study_train: -0.2
+      donate_volunteer: -0.5
+    depends_on: [built_infrastructure, care_capacity]
+  optimism:
+    name: Optimism
+    drives:
+      spend: +0.5
+      buy_new: +0.5
+      invest: +0.5
+      family_change: +0.5
+    depends_on: [labour_force, monetary_credit, asset_wealth, state_capacity]
+  safety_concern:
+    name: Safety concern
+    drives:
+      travel: -0.8
+      move: +0.5
+      stockpile_prepare: +0.5
+    depends_on: [state_capacity, atmosphere_climate]
+  wellbeing:
+    name: Well-being
+    drives:
+      travel: +0.2
+      family_change: +0.2
+    depends_on: [population_health, built_infrastructure, community_ties]
+  loneliness:
+    name: Loneliness
+    drives:
+      donate_volunteer: +0.2
+    depends_on: [community_ties, population_health]
+  job_satisfaction:
+    name: Job satisfaction and autonomy
+    drives:
+      change_work: -0.8
+    depends_on: [labour_force]
+  perceived_health_threat:
+    name: Perceived health threat
+    drives:
+      travel: -0.5
+      health_action: +0.8
+      stockpile_prepare: +0.5
+    depends_on: [population_health, care_capacity, atmosphere_climate]
+  health_status:
+    name: Health status
+    drives:
+      health_action: -0.5
+      claim_support: -0.2
+  institutional_trust:
+    name: Institutional trust
+    drives:
+      protest: -0.5
+      health_action: +0.2
+      claim_support: +0.2
+      break_rules: -0.5
+    depends_on: [legitimacy, state_capacity, social_trust]
+  interpersonal_trust:
+    name: Trust in other people
+    drives:
+      donate_volunteer: +0.5
+    depends_on: [social_trust, state_capacity, community_ties]
+  media_trust:
+    name: Trust in news media
+    drives:
+      health_action: +0.2
+      break_rules: -0.5
+    depends_on: [knowledge]
+  political_efficacy:
+    name: Political efficacy
+    drives:
+      vote: +0.8
+      protest: +0.5
+    depends_on: [legitimacy]
+  grievance:
+    name: Felt grievance
+    drives:
+      share: +0.5
+      vote: +0.5
+      protest: +0.8
+      break_rules: +0.5
+    depends_on: [asset_wealth, social_trust, state_capacity, population]
+  news_attention:
+    name: News attention
+    drives:
+      share: +0.5
+      vote: +0.5
+    depends_on: [attention, state_capacity]
+  tenure:
+    name: Tenure (rent or own)
+    drives:
+      move: -0.5
+  housing_burden:
+    name: Housing burden
+    drives:
+      move: +0.5
+      borrow: +0.2
+      family_change: -0.5
+    depends_on: [housing_stock, monetary_credit]
+  life_stage:
+    name: Life stage and household
+    drives:
+      change_work: -0.5
+      move: -0.5
+      study_train: -0.5
+      family_change: +0.2
+  education_skills:
+    name: Education and skills
+    drives:
+      study_train: -0.5
+      start_business: +0.5
+  digital_access:
+    name: Digital access
+    drives:
+      subscribe: +0.5
+      claim_support: +0.2
+  hazard_exposure:
+    name: Local hazard exposure
+    drives:
+      move: +0.5
+      stockpile_prepare: +0.5
+  car_dependence:
+    name: Car dependence
+    drives:
+      buy_new: +0.2
+
+decisions:         # decision -> resources it draws on (uses up) or builds
+  spend:
+    name: Spend (vs save)
+    draws_on: [asset_wealth, food_stock]
+    builds: [productive_capital]
+  buy_new:
+    name: Buy something new
+    draws_on: [minerals_materials, asset_wealth, primary_energy]
+    builds: [productive_capital]
+  subscribe:
+    name: Subscribe or commit
+    draws_on: [asset_wealth, attention]
+    builds: [computing_capacity]
+  travel:
+    name: Travel
+    draws_on: [primary_energy, atmosphere_climate, asset_wealth, built_infrastructure]
+  change_work:
+    name: Change work
+    draws_on: [community_ties]
+    builds: [skills, labour_force]
+  move:
+    name: Move home
+    draws_on: [housing_stock, asset_wealth, community_ties]
+    builds: [population]
+  switch_brand:
+    name: Switch brand or provider
+    draws_on: [attention]
+    builds: [knowledge, supply_networks]
+  share:
+    name: Share or engage publicly
+    draws_on: [social_trust]
+    builds: [attention, knowledge, legitimacy]
+  vote:
+    name: Vote or take party action
+    draws_on: [attention]
+    builds: [legitimacy, state_capacity]
+  protest:
+    name: Protest or strike
+    draws_on: [legitimacy, state_capacity]
+    builds: [community_ties, attention]
+  health_action:
+    name: Take a health action
+    draws_on: [care_capacity, asset_wealth]
+    builds: [population_health]
+  study_train:
+    name: Study or retrain
+    draws_on: [attention, asset_wealth]
+    builds: [skills]
+  family_change:
+    name: Change family situation
+    draws_on: [housing_stock, asset_wealth]
+    builds: [population, community_ties]
+  stockpile_prepare:
+    name: Stockpile or prepare
+    draws_on: [food_stock, supply_networks, asset_wealth, water]
+  start_business:
+    name: Start or expand a business
+    draws_on: [asset_wealth, monetary_credit]
+    builds: [productive_capital, labour_force]
+  donate_volunteer:
+    name: "Give, volunteer or join a group"
+    draws_on: [asset_wealth]
+    builds: [community_ties, social_trust]
+  claim_support:
+    name: Claim support
+    draws_on: [public_finances, state_capacity, attention]
+  borrow:
+    name: Borrow (take on new debt)
+    draws_on: [monetary_credit, asset_wealth]
+  invest:
+    name: Invest
+    builds: [asset_wealth, monetary_credit, productive_capital]
+  break_rules:
+    name: Ignore official rules or guidance
+    draws_on: [legitimacy, state_capacity, social_trust]
+
+resources:         # end of the chain: what the world runs on
+  water: Freshwater
+  land_soil: Land and soil
+  biodiversity: Ecosystems and wildlife
+  atmosphere_climate: Air and climate
+  primary_energy: "Energy sources (fuels, sun, wind, water)"
+  minerals_materials: Minerals and materials
+  food_stock: Food supply
+  built_infrastructure: Built infrastructure
+  housing_stock: Housing stock
+  productive_capital: Productive capital
+  computing_capacity: Computing and networks
+  supply_networks: Trade and supply links
+  monetary_credit: Money and credit
+  asset_wealth: Wealth and assets
+  public_finances: Public finances
+  population: Population
+  population_health: Population health
+  care_capacity: Care capacity
+  skills: Skills and education
+  labour_force: Labour
+  social_trust: Social trust and cohesion
+  community_ties: Community ties
+  legitimacy: Legitimacy
+  state_capacity: State capacity and public safety
+  knowledge: Knowledge and information
+  attention: Time and attention
+
+places:            # where a story lands and spreads
+  world: World
+  countries:        # 100, by id
+    ind: India
+    chn: China
+    usa: United States
+    idn: Indonesia
+    pak: Pakistan
+    nga: Nigeria
+    bra: Brazil
+    bgd: Bangladesh
+    rus: Russia
+    eth: Ethiopia
+    mex: Mexico
+    jpn: Japan
+    egy: Egypt
+    phl: Philippines
+    cod: Democratic Republic of the Congo
+    vnm: Vietnam
+    irn: Iran
+    tur: Türkiye
+    deu: Germany
+    tha: Thailand
+    gbr: United Kingdom
+    tza: Tanzania
+    fra: France
+    zaf: South Africa
+    ita: Italy
+    ken: Kenya
+    mmr: Myanmar
+    col: Colombia
+    kor: South Korea
+    sdn: Sudan
+    uga: Uganda
+    esp: Spain
+    dza: Algeria
+    irq: Iraq
+    arg: Argentina
+    afg: Afghanistan
+    yem: Yemen
+    can: Canada
+    pol: Poland
+    mar: Morocco
+    ago: Angola
+    ukr: Ukraine
+    uzb: Uzbekistan
+    mys: Malaysia
+    moz: Mozambique
+    gha: Ghana
+    per: Peru
+    sau: Saudi Arabia
+    mdg: Madagascar
+    civ: Ivory Coast
+    npl: Nepal
+    cmr: Cameroon
+    ven: Venezuela
+    ner: Niger
+    aus: Australia
+    prk: North Korea
+    syr: Syria
+    mli: Mali
+    bfa: Burkina Faso
+    twn: Taiwan
+    lka: Sri Lanka
+    mwi: Malawi
+    zmb: Zambia
+    kaz: Kazakhstan
+    tcd: Chad
+    chl: Chile
+    rou: Romania
+    som: Somalia
+    sen: Senegal
+    gtm: Guatemala
+    nld: Netherlands
+    ecu: Ecuador
+    khm: Cambodia
+    zwe: Zimbabwe
+    gin: Guinea
+    ben: Benin
+    rwa: Rwanda
+    bdi: Burundi
+    bol: Bolivia
+    tun: Tunisia
+    ssd: South Sudan
+    hti: Haiti
+    bel: Belgium
+    jor: Jordan
+    dom: Dominican Republic
+    are: United Arab Emirates
+    cub: Cuba
+    hnd: Honduras
+    cze: Czechia
+    swe: Sweden
+    tjk: Tajikistan
+    png: Papua New Guinea
+    prt: Portugal
+    aze: Azerbaijan
+    grc: Greece
+    hun: Hungary
+    tgo: Togo
+    isr: Israel
+    aut: Austria
+    blr: Belarus
+  settlement_types:  # each country splits into these
+    metro: cities
+    town: towns
+    rural: rural areas
+  audiences:        # groups of people with similar traits; they cut across countries and scale how much a story is felt
+    a0: "Big-city, with kids, young"
+    a1: "Young, rural, early adopters"
+    a2: "Retired, older, tech-wary"
+    a3: "Living alone, reserved, young"
+    a4: "Higher-income, tech-comfortable, big-city"
+    a5: "With kids, short of time, rural"
+    a6: "Older, set in their ways, tech-wary"
+    a7: "Sharing a home, young, early adopters"
+
+story_labels:      # what the reader decides about each story before it moves anything
+  types: [happened, announced, opinion, forecast]
+  scope: [national, local, new]
+  impact_levels: [minor, notable, major, severe, extreme]
+  impact_modes: [reported, expected_in_effect, expected_pending]
