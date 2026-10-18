@@ -1,6 +1,7 @@
-"""Export the World engine's full ontology as one shareable JSON file.
-Reads the ruleset CSVs (probes/persona/rules_v2 by default, or WE_RULES) and the country table; adds settlement types and audiences from the
-running engine's /graph when it answers (they are built at start-up). Writes exports/world-engine-ontology-<ruleset>.json.
+"""Export the World engine's complete ontology as one shareable JSON file: every rule table in full (all rows, all columns), the place and people
+tables, the full question battery word for word, the rules that live in code (thresholds, spread through places, decay), and a derived graph view.
+Reads probes/persona/<WE_RULES, default rules_v2> and probes/world-engine/data; settlement types and audiences come from the running engine's
+/graph when it answers (they are built at start-up). Writes exports/world-engine-ontology-<ruleset>.json.
 Run: python3 tools/export_ontology.py [--no-engine]"""
 import csv, json, os, sys, subprocess, datetime, urllib.request
 
@@ -60,6 +61,31 @@ doc = {
     },
     "decision_stakes": [{"decision": r["decision_id"], "stakes": num(r["stakes"]), "why": r["why"], "status": r["status"]} for r in rows("decision_stakes")],
 }
+# ---- complete: every table in full, the question battery, the rules in code
+def table(path): return [{k: num(v) if v not in ("", None) else None for k, v in r.items()} for r in csv.DictReader(open(path, encoding="utf-8"))]
+rule_tables = {f[:-4]: table(os.path.join(R, f)) for f in sorted(os.listdir(R)) if f.endswith(".csv")}
+v1 = os.path.join(ROOT, "probes/persona/rules")
+for f in ("type_weights.csv",):                      # tables the ruleset does not have; the engine falls back to v1's copy
+    if f[:-4] not in rule_tables and os.path.exists(os.path.join(v1, f)): rule_tables[f[:-4]] = table(os.path.join(v1, f)); rule_tables[f[:-4] + "__note"] = "from probes/persona/rules (v1): " + RULESET + " has no copy, so the engine uses this one"
+DATA = os.path.join(ROOT, "probes/world-engine/data")
+place_tables = {f[:-4]: table(os.path.join(DATA, f)) for f in ("countries_world100.csv", "factors.csv", "segment_exposure.csv")}
+questions, constants = None, {}
+try:
+    os.environ.setdefault("WE_RULES", RULESET); sys.path.insert(0, os.path.join(ROOT, "probes/world-engine")); import classify as C
+    questions = {k: C.QS[k] for k in sorted(C.QS)}
+    constants["reading"] = {"attribute_min": C.ATTR_MIN, "yes": C.YES, "expected_min": C.EXPECT_MIN, "expected_top": C.EXPECT_TOP,
+                            "rule": "a condition moves when, for one direction only, an attribute's two wordings average >= attribute_min; both directions = conflict (no move)"}
+except Exception as e: questions = f"not exported: {type(e).__name__}: {e}"
+constants["places"] = {"chain": "world -> each country -> its metro, town and rural parts", "world_to_country_gain": 0.6, "world_to_country_gate": 0.003,
+                       "country_to_settlement_gain": "1 + 0.1 x noise per condition, clipped to 0.7..1.3 (fixed seed 1234)", "lag_ticks": 1, "gate": 0.002, "noise_sigma": 0.05,
+                       "anchor": "each country starts at its d_<condition> columns; the world is the population-weighted mean", "settlement_types": ["metro", "town", "rural"]}
+constants["time"] = {"decay_per_tick": "0.5 ** (1 / half_life_ticks) per condition (conditions table)", "condition_ties": "a tie adds strength x amount to the target condition at the same place one tick later; at most 3 tie hops in a row"}
+constants["feed"] = {"feed_scale": 0.5, "feed_cap": 0.4, "article_words_read": 1200, "people": 300000}
+doc["complete"] = {"rule_tables": rule_tables, "place_and_people_tables": place_tables, "questions": questions, "rules_in_code": constants,
+                   "where": {"rules": f"probes/persona/{RULESET}/*.csv", "places": "probes/world-engine/data/*.csv", "questions": "probes/world-engine/classify.py (from dial_attributes.csv + probes/persona/world_model.py GENRE, SCOPE + classify.EXTRA)",
+                             "code": "probes/world-engine/engine.py, engine2.py (spread, decay), world_pop.py (people), world_service2.py (feed)"}}
+doc["meta"]["sections"] = "graph view (topics ... links) is derived for reading; 'complete' holds every table in full and the rules in code"
 doc["counts"] = {k: len(doc[k]) for k in ("topics", "conditions", "person_states", "decisions", "resources")} | {"countries": len(countries), "audiences": len(audiences or []), "settlement_types": len(settles or [])} | {f"links.{k}": len(v) for k, v in doc["links"].items()}
+doc["counts"]["rule_tables"] = len([k for k in doc["complete"]["rule_tables"] if not k.endswith("__note")]); doc["counts"]["questions"] = len(questions) if isinstance(questions, dict) else 0
 os.makedirs(os.path.dirname(OUT), exist_ok=True); json.dump(doc, open(OUT, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
 print(OUT, f"{os.path.getsize(OUT) / 1024:.0f} KB"); print(json.dumps(doc["counts"], indent=0))
