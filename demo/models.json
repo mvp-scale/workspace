@@ -412,8 +412,12 @@
       "code": "BITMOB",
       "verify": "e5-small",
       "unscored": {
-        "reason": "Not benchmarked: it answers every yes/no, choice and score question, but only the ones it has learned are trained; the rest are labelled untrained guesses (measured near chance), so benchmark scores would mostly measure guesses.",
-        "measured": "4.2 ms median encode per text, 310 MB RAM, no GPU (its own /health, 16 Oct 2026)"
+        "tier": "Own tier: its instruction set only",
+        "accuracy": 0.915,
+        "accuracy_note": "Mean over its 13 trained questions vs Clef Q4 labels (data/embed-zs/intake/depth.json); answering no to all scores 89.7%",
+        "latency_ms": 3.2,
+        "latency_note": "Median encode, its own /health, 19 Oct 2026 (4.1 ms full request)",
+        "memory_mb": 380
       },
       "aliases": [
         "cpu-engine",

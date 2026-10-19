@@ -342,7 +342,7 @@ function card(r, rank) {
       el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: m.unscored ? "Not benchmarked" : `Ranked #${rank} in our runs` })),
     identLine(m.id), el("p", { class: "sauce-line" }, rich(m.sauce)), flow(m),
     el("div", { class: "bench" }, tier("easy", "Easy"), tier("original", "Original"), tier("hard", "Hard")),
-    m.unscored ? el("p", { class: "small muted", text: `${m.unscored.reason} Measured: ${m.unscored.measured}.` })
+    m.unscored ? el("p", { class: "small muted", text: `${m.unscored.tier} · ${Jev.fmt.pct(m.unscored.accuracy)} · ${m.unscored.latency_ms} ms · CPU · ${m.unscored.memory_mb} MB` })
       : el("div", { class: "stats" }, el("span", {}, "Hard ECE ", el("b", { text: fmt.num(hard.ece) })), el("span", {}, "Median ", el("b", { text: fmt.ms(hard.p50_s) })), el("span", {}, "Mean ", el("b", { text: fmt.pct(r.mean_accuracy) }))),
     el("details", { class: "more" }, el("summary", { text: "How it works, in detail" }), el("ul", {}, m.how.map(h => el("li", {}, rich(h)))),
       el("dl", { class: "facts" }, facts.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]), m.repo ? [el("dt", { text: "Source" }), el("dd", {}, el("a", { href: m.repo, target: "_blank", rel: "noopener", text: m.repo.replace(/^https?:\/\//, "") }))] : null)));

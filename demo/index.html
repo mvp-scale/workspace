@@ -118,7 +118,10 @@ function table(rows, x, unscored = []) {
         el("td", { "data-value": m.name },
           el("span", { class: `dot ${Jev.isUp(m.id) ? "up" : ""}`, title: Jev.isUp(m.id) ? "Loaded now" : "Not loaded now", "aria-label": Jev.isUp(m.id) ? "Loaded now" : "Not loaded now" }),
           el("span", { class: "model-name" }, el("a", { href: `/models#${m.id}` }, Jev.tag(m.id)))),
-        el("td", { colspan: 7, class: "subtle", "data-value": -1, text: `${m.unscored.reason} Measured: ${m.unscored.measured}.` }),
+        el("td", { "data-value": m.unscored.accuracy, title: m.unscored.accuracy_note, style: "min-width:200px" }, Jev.meter(m.unscored.accuracy)),
+        el("td", { colspan: 4, class: "subtle", "data-value": -1, text: m.unscored.tier }),
+        el("td", { class: "num", "data-value": m.unscored.latency_ms / 1000, title: m.unscored.latency_note, text: `${m.unscored.latency_ms} ms` }),
+        el("td", { class: "num", "data-value": 0, title: `${m.unscored.memory_mb} MB RAM, no GPU`, text: `CPU · ${m.unscored.memory_mb} MB` }),
         el("td", { class: "num", "data-value": "", text: "–" }),
         el("td", { "data-value": "CPU", title: m.served_as || "", text: "CPU" })))));
   const wrap = el("div", { class: "table-wrap" }, t); sortable(t);

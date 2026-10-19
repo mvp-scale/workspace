@@ -561,6 +561,18 @@ def switches():
                 "gpu": sv.get("panel", "")} for n, sv in svcs.items() if "demand" in (sv.get("tags") or [])}
 
 
+SHARE_RUN = Path("/tmp/claude-0/cf")  # where cf_start.sh keeps the tunnel's pid and log
+
+
+def share_url():
+    """The public Cloudflare link while the share tunnel runs (a new one each start), else None."""
+    try:
+        os.kill(int((SHARE_RUN / "demo.pid").read_text()), 0)
+        m = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", (SHARE_RUN / "demo.log").read_text())
+        return m.group(0) if m else None
+    except (OSError, ValueError): return None
+
+
 _switching = {}  # name -> (action, Popen)
 
 
@@ -655,6 +667,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {**mask_state(), "can_switch": self._local()})
         if path == "/api/services":
             return self._send(200, {"services": services_state(), "can_switch": self._local()})
+        if path == "/api/share":
+            return self._send(200, {"url": share_url()})
         if path == "/api/handcheck":  # the user's hand check (decision 2a): article text, so this machine only, never through the tunnel
             if not self._local(): return self._send(403, {"error": "The hand check opens only on this machine."})
             d = json.loads(HANDCHECK_ITEMS.read_text()) if HANDCHECK_ITEMS.exists() else {"items": []}; ans = {}

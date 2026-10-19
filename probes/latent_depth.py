@@ -30,7 +30,7 @@ from latent_intake import gate, f1, clef_label
 from backends import teacher
 
 BASE = Path("/workspace/data/embed-zs/intake"); LAB = BASE / "labels"
-SEED_DIR = Path("/tmp/claude-0/-workspace/7b3ad9cf-3881-44ec-8786-beddd1fbd06d/scratchpad/intake_seed")  # earlier full labels
+SEED_DIR = BASE / "seed"  # question specs, copied from results/pack-<id>.json (were in a temp folder lost on reboot)
 LEVELS = ["Words on the surface", "What the speaker is doing", "Feelings and relationships", "Reading between the lines", "Facts about the world"]
 
 

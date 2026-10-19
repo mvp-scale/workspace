@@ -97,7 +97,6 @@
       <div class="toolbar">
         <h2 id="res-h">Results</h2>
         <div class="actions">
-          <button class="btn" id="share" type="button">Copy share link</button>
           <button class="btn" id="copy-json" type="button" disabled>Copy JSON</button>
           <button class="btn" id="download-json" type="button" disabled>Download JSON</button>
           <button class="btn ghost" id="recheck" type="button">Recheck status</button>
@@ -491,7 +490,7 @@ $("reset").onclick = () => { const p = PRESETS.find(x => x.id === $("preset").va
 ["state", "instructions", "options"].forEach(id => $(id).addEventListener("input", onEdit));
 $("form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
 $("form").addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); } });
-$("share").onclick = () => { pushHash(); copy(location.href); };
+for (const ev of ["input", "change", "click"]) $("form").addEventListener(ev, () => setTimeout(pushHash));   // the address bar always holds the question, so the top bar's Share copies it
 $("copy-json").onclick = () => last && last.raw && copy(exportJson());
 $("download-json").onclick = () => last && last.raw && download("jev-compare.json", exportJson(), "application/json");
 $("recheck").onclick = async () => { $("recheck").disabled = true; await loadStatus(); $("recheck").disabled = false; toast("Status updated"); };

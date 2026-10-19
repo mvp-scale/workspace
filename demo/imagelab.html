@@ -111,7 +111,7 @@
       <h1>Image lab</h1>
       <p>Can a vision model do real business tasks on images? Every model below answers the same images, each with a known answer, and is scored the same way as the Scenario lab.</p>
     </div>
-    <div class="actions"><button class="btn" id="share" type="button">Copy link</button><button class="btn" id="print" type="button">Print</button></div>
+    <div class="actions"><button class="btn" id="print" type="button">Print</button></div>
   </div>
   <div class="callout warn" style="margin-bottom:14px">Caveat: each task has only 25 images, so the interval is wide (about plus or minus 15 points at 80%). Answers come from a dataset's own annotations or from a generator that drew the image, never from a person or model looking at it. Several sources are licensed for local use only, so these images stay on this machine. Read the interval, not just the point value.</div>
   <div id="root" aria-live="polite"></div>
@@ -650,7 +650,6 @@ function paint() {
   catch (e) { root.replaceChildren(Jev.failure(e, init)); }
 })();
 window.addEventListener("hashchange", () => DATA && paint());
-document.getElementById("share").addEventListener("click", () => Jev.copy(location.href));
 document.getElementById("print").addEventListener("click", () => print());
 document.getElementById("lb-x").addEventListener("click", () => document.getElementById("lb").close());
 document.getElementById("lb").addEventListener("click", (e) => { if (e.target.id === "lb") e.target.close(); });

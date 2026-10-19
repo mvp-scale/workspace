@@ -1416,7 +1416,7 @@
     const menuItem = (t, fn) => el("button", { type: "button", role: "menuitem", onclick: () => { closeMenu(); fn(); }, text: t });
     ui.menuBtn = el("button", { class: "btn", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", title: "More actions", "aria-label": "More actions", text: "⋯", onclick: (e) => { e.stopPropagation(); ui.menu.hidden = !ui.menu.hidden; ui.menuBtn.setAttribute("aria-expanded", String(!ui.menu.hidden)); } });
     ui.menu = el("div", { class: "menu", role: "menu", hidden: true }, menuItem("Start over", () => { if (S.mode === "live") { stopLive(); liveReset(); } else resetRun(); updatePlay(); }),
-      menuItem("Export session (JSON)", () => download(`conversation-flow-${Date.now()}.json`, JSON.stringify(S.mode === "live" ? liveStats() : exportData(), null, 1), "application/json")), menuItem("Copy link to this view", () => copy(location.href)),
+      menuItem("Export session (JSON)", () => download(`conversation-flow-${Date.now()}.json`, JSON.stringify(S.mode === "live" ? liveStats() : exportData(), null, 1), "application/json")),
       el("div", { class: "mh", text: "Detectors" }), menuItem("Import detectors (JSON)…", () => ui.detIO.importFile()), menuItem("Download detectors (JSON)", () => ui.detIO.download()), menuItem("Save detectors as a preset…", () => ui.detIO.save()), menuItem("Clear all detectors", () => ui.detIO.clear()));
     document.addEventListener("click", closeMenu); document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
     const top = el("div", { class: "hdr" }, el("div", { class: "hl" }, el("h1", { text: "Conversation flow", title: "Detectors have a colour and an icon. Signals rise, hold and fade so there is time to react." })),

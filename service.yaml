@@ -38,10 +38,9 @@ default_profile: baseline
 # here or from the console's top bar (local visitors only).
 # Profile entries: a service name, another profile name, or a mapping {service: name, port: N, env: {K: V}}
 profiles:
-  baseline: [world, demo]                           # always on: the World Engine and the console
-  live:   [baseline, voice, classifier, clef-flash-q4km]   # everything the demo pages can use; the rest are on-demand (tag:demand)
-  models: [kev-4b, semif, so1]                     # the loaded decision models (laya and verdict are retired: still startable by name, never by profile)
-  full:   [live, models]
+  baseline: [world, demo, voice, classifier, clef-flash-q4km]   # the default: World Engine, console, voice, CPU classifier, Clef Q4
+  models: [kev-4b, semif, so1]                     # old decision models: off by default, never at boot (laya and verdict are retired: startable by name only)
+  full:   [baseline, models]
   share:  [share]                                   # a public Cloudflare link for the console (no login: anyone with it can spend the TypeSafe key)
   test-world:                                       # a second engine beside the live one, for testing
     - {service: world, port: 8122}

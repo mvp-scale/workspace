@@ -91,6 +91,11 @@
     const a = el("a", { href: URL.createObjectURL(new Blob([text], { type })), download: name }); document.body.append(a); a.click(); a.remove();
   }
   const csv = (rows) => rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const shareLink = async () => {   // the public Cloudflare link for this page while the share runs, else this page's own address
+    try { const r = await fetch("/api/share"); const u = (await r.json()).url; if (u) return u + location.pathname + location.search + location.hash; } catch {}
+    return location.href;
+  };
+  const copyLink = async () => copy(await shareLink());
   const copy = async (text) => {
     text = maskStr(text);   // demo mode: copied text carries code names too
     try { await navigator.clipboard.writeText(text); toast("Copied to clipboard"); return; } catch {}
@@ -246,7 +251,8 @@
       el("header", { class: "topbar" }, el("div", { class: "topbar-inner" },
         el("a", { class: "brand", href: "/" }, "Jev Bench ", el("span", { text: "Console" })),
         el("nav", { class: "nav", "aria-label": "Primary" }, NAV.map(([h, t]) => el("a", { href: h, "aria-current": h === path ? "page" : null, text: t }))),
-        ...servicesControl(), ...modelsControl(), maskControl(), theme())));
+        ...servicesControl(), ...modelsControl(), maskControl(),
+        el("button", { class: "btn ghost", type: "button", title: "Copy the public link to this page", onclick: () => copyLink(), text: "Share" }), theme())));
     document.body.append(el("footer", { class: "footer" }, el("div", { class: "footer-inner" },
       el("span", { text: "Runs on this machine's RTX 5090 with the public JevBench tiers." }),
       el("span", {}, "Benchmark harness: ", el("a", { href: "https://github.com/fstandhartinger/jevbench", text: "JevBench" })))));
@@ -291,6 +297,6 @@
     const bodyEl = opts.compact ? el("div", { class: "json json-inline" }, ...jsonNodes(JSON.parse(JSON.stringify(v))).map(n => (n.nodeType === 3 ? document.createTextNode(n.textContent.replace(/\n\s*/g, " ")) : (n.textContent = n.textContent.replace(/\n\s*/g, " "), n)))) : el("div", { class: "json" }, ...jsonLines(v));
     return el("div", { class: "jsonview" + (opts.compact ? " compact" : "") }, el("div", { class: "jsonview-head" }, el("span", { text: label || "JSON" }), copyBtn), bodyEl);
   };
-  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, statusAll: () => ALL || STATUS, libOnly: (id) => !!FACTS[id]?.library_only, models, isRetired: retired, LIB_NOTE: "is trained only on the questions it has learned (others get an untrained guess)", onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, shareLink, copyLink, statusAll: () => ALL || STATUS, libOnly: (id) => !!FACTS[id]?.library_only, models, isRetired: retired, LIB_NOTE: "is trained only on the questions it has learned (others get an untrained guess)", onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();
