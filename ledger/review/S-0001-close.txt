@@ -1,0 +1,13 @@
+STEP 1 CLOSING DOSSIER (Fable method step 1: decide what "good enough" means in the simulation's units)
+Pass bar (fixed before running): the noise band and drift limit stated first; an error budget per key; keys ranked by how much they matter.
+Method: 880 Clef-read stories replayed through the World engine's feed arithmetic on CPU; errors injected per key on a TPR x FPR grid (78 keys x 24 cells x 3 seeds), all keys together (independent and clustered), shuffled order and 2 ticks per story, 20 bootstrap resamples, Morris screening (SALib, 790 runs).
+Delivered:
+1. Noise band fixed first: 0.022 points median (F-0008). As a limit it is unreachable even by Clef (159-231x; F-0013), recorded as disproven (H-0001).
+2. Tolerance (d) fixed before its data (D-0004): Clef's own wording-to-wording drift, median over 3 wordings per output, floored at the noise band. Clef's three wordings differ by 40-53% of the clean move (F-0018). Earlier tolerances (b) one pair and (c) pooled were set after seeing results and are kept on record (D-0002, D-0003).
+3. Budget per key under (d) (F-0019): 65 of 68 occurring keys tolerate TPR .4/FPR .01 alone; misses are tolerated far more than false alarms (56 keys hold at TPR .2; most only to FPR .01-.05). Knees per key in data/step1/budget.json.
+4. All-keys target under (d) (F-0020): pass at TPR .95 with FPR up to .0025, and at TPR .9 with FPR .001; TPR .9/FPR .0025 is on the line; TPR .8/FPR .005 fails 1.7x (clustered 2.3x).
+5. Ranking (F-0021): not settled under the rule fixed before data (Spearman 0.76 < 0.8; top-5 intervals reach 22-62). Per that rule, Step 1 closes with the ranking marked unsettled and the robust findings only.
+Robust under every tolerance tested (a, b, c, d): all keys wrong together at the old plateau level fails; false alarms hurt more than misses; feed order and pace change drift by at most 2.2x.
+Open limits (recorded, not solved): country-level outputs unmeasured (records have no country; C-0003); expected-impact readings omitted (need model calls; C-0006); tolerance (d) still rests on Clef's wording variation, not on a user-facing decision threshold.
+Predictions: 22 made, 21 scored: 14 right, 6 wrong, 1 partial.
+What Step 2 receives: the all-keys target (TPR >= .9-.95, FPR <= .001-.0025), the per-key budgets, and the finding that Clef's own wordings disagree by 40-53% of the effect.

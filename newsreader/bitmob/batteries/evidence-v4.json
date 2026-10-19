@@ -1,0 +1,132 @@
+{
+ "name": "evidence-v4",
+ "goal": "Each story gives concrete, observable evidence for at least one world condition",
+ "problem": "Evidence atoms for work, care and society: is each one clear to Clef and learnable on CPU",
+ "note": "Two paraphrases (a, b) and one reversed question per atom. Written before any answers were seen.",
+ "concerns": [
+  {
+   "atom": "inequality.wider",
+   "cat": "inequality",
+   "condition": "inequality|up",
+   "probes": {
+    "a": "Does {file} report the gap between rich and poor widening?",
+    "b": "Does {file} describe the wealthy gaining while poorer people fall behind?",
+    "reversed": "Does {file} report the gap between rich and poor narrowing?"
+   }
+  },
+  {
+   "atom": "mental.distress",
+   "cat": "mental",
+   "condition": "mental_distress|up",
+   "probes": {
+    "a": "Does {file} report people suffering more anxiety, depression or stress?",
+    "b": "Does {file} describe mental health problems, burnout or suicide rising?",
+    "reversed": "Does {file} report mental health improving or distress easing?"
+   }
+  },
+  {
+   "atom": "care.strain",
+   "cat": "care",
+   "condition": "care_strain|up",
+   "probes": {
+    "a": "Does {file} report hospitals, clinics or care services under strain or short of staff or medicine?",
+    "b": "Does {file} describe long waits, overcrowded wards, staff shortages or drug shortages?",
+    "reversed": "Does {file} report waiting lists falling or care services being expanded?"
+   }
+  },
+  {
+   "atom": "jobs.lost",
+   "cat": "jobs",
+   "condition": "job_security|down",
+   "probes": {
+    "a": "Does {file} report job cuts, layoffs or rising unemployment?",
+    "b": "Does {file} describe workers losing their jobs or facing redundancy?",
+    "reversed": "Does {file} report jobs being created or unemployment falling?"
+   }
+  },
+  {
+   "atom": "pay.rising",
+   "cat": "pay",
+   "condition": "pay_growth|up",
+   "probes": {
+    "a": "Does {file} report wages or pay rising?",
+    "b": "Does {file} describe workers winning a pay rise or minimum wage increase?",
+    "reversed": "Does {file} report wages being cut or frozen?"
+   }
+  },
+  {
+   "atom": "community.help",
+   "cat": "community",
+   "condition": "community|up",
+   "probes": {
+    "a": "Does {file} report neighbours or local groups coming together to help each other?",
+    "b": "Does {file} describe volunteers, donations or a community rallying to support people?",
+    "reversed": "Does {file} report a local community breaking apart or neighbours turning on each other?"
+   }
+  },
+  {
+   "atom": "services.failing",
+   "cat": "public-service",
+   "condition": "public_service_quality|down",
+   "probes": {
+    "a": "Does {file} report schools, courts, permits or benefits being delivered badly?",
+    "b": "Does {file} describe public services failing, backlogs or people let down by a government service?",
+    "reversed": "Does {file} report a public service improving?"
+   }
+  },
+  {
+   "atom": "liberties.cut",
+   "cat": "liberties",
+   "condition": "civil_liberties|down",
+   "probes": {
+    "a": "Does {file} report free speech, voting, assembly or fair trials being restricted?",
+    "b": "Does {file} describe arrests of journalists or protesters, bans, censorship or unfair trials?",
+    "reversed": "Does {file} report rights being restored or restrictions lifted?"
+   }
+  },
+  {
+   "atom": "migration.arrivals",
+   "cat": "migration",
+   "condition": "migration_flow|up",
+   "probes": {
+    "a": "Does {file} report more migrants or refugees arriving in a place?",
+    "b": "Does {file} describe people crossing borders, seeking asylum or fleeing to another country?",
+    "reversed": "Does {file} report fewer migrants arriving or people returning home?"
+   }
+  }
+ ],
+ "decisions": [
+  [
+   "scope",
+   "choice",
+   "Where does the story in {file} mainly take place or matter?",
+   [
+    "whole_world",
+    "one_country",
+    "one_city_or_region",
+    "none_fits"
+   ]
+  ],
+  [
+   "size",
+   "scale",
+   "How much does the story in {file} change ordinary people's lives?",
+   [
+    "no_effect",
+    "a_few_people",
+    "many_people_in_one_country",
+    "many_countries"
+   ]
+  ],
+  [
+   "visible",
+   "choice",
+   "Can this be answered from the story text shown?",
+   [
+    "enough",
+    "partial",
+    "missing"
+   ]
+  ]
+ ]
+}

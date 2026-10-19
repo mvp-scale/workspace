@@ -1,0 +1,15 @@
+STEP 1 DECISION 2: tolerance (b) is noisy. What should Step 1 do?
+Tolerance (b) (ledger D-0002): per output, a reader may drift from Clef no more than Clef's wording-0-only replay differs from its wording-1-only replay, floored at the engine's noise band.
+Facts (measured, files pinned in the ledger):
+- F-0015: per-output tolerance from that one wording pair ranges 0.087-5.4 points (5th-95th pct), about 60x. One output (audience 2, decision 7) has tolerance 0.077 points against a clean move of 7.6 points (1%); it sets the max-over-outputs ratio in 702 of 790 Morris runs. Morris top 10 overlaps the single-key top 10 by only 5.
+- F-0014: the single-key ranking under (b) is partly sample-dependent (median 90% bootstrap rank interval spans 26 of 78 places).
+- F-0011: all keys wrong together fail under every tolerance tested (23-58x tolerance (b); 109-290x the noise band); clustered errors and feed order change this by at most 2.2x.
+- F-0009: false positives matter more than misses for 59 of 68 occurring keys.
+- No GPU is used unless the user approves the minutes. Only two engine wordings per attribute exist; battery atoms are narrower concepts, not alternative wordings.
+Options:
+(1) Keep (b) as defined and close Step 1 with the caveat that one coincidentally tight output dominates.
+(2) Pool (b) across outputs: relative tolerance r = median over outputs of |w0 - w1| / |clean move|; tol_o = r x |clean move_o|, floored at the noise band. Same measurement, less noise; set after seeing results.
+(3) Keep per-output (b) but summarise drift with the 90th percentile over outputs instead of the max.
+(4) Measure Clef's self-variation properly: write a third wording per attribute and have Clef answer it (GPU minutes need the user's yes; about 45-90 minutes estimated).
+(5) None of these.
+Robust regardless of option: joint errors fail; false positives dominate; a few keys (public_service_quality, social_division, inequality, housing_cost, fiscal_strain) lead every ranking computed.

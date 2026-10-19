@@ -1,0 +1,132 @@
+{
+ "name": "evidence-v6",
+ "goal": "Each story gives concrete, observable evidence for at least one world condition",
+ "problem": "Atoms for uncovered conditions (information reliability, skills) and third rewords of unclear ones",
+ "note": "Written before any v6 answers were seen. News overload is left to a feed-volume rule: it is not visible in one story.",
+ "concerns": [
+  {
+   "atom": "info.misleading",
+   "cat": "misinformation",
+   "condition": "information_reliability|down",
+   "probes": {
+    "a": "Does {file} report false or misleading information spreading?",
+    "b": "Does {file} describe misinformation, a hoax, fake news or a deepfake reaching people?",
+    "reversed": "Does {file} report false information being corrected or debunked?"
+   }
+  },
+  {
+   "atom": "info.withheld",
+   "cat": "info-withheld",
+   "condition": "information_reliability|down",
+   "probes": {
+    "a": "Does {file} report officials or companies hiding, censoring or withholding information from the public?",
+    "b": "Does {file} describe information being suppressed, covered up or kept secret from people?",
+    "reversed": "Does {file} report information being made public or released?"
+   }
+  },
+  {
+   "atom": "skills.training",
+   "cat": "skills-up",
+   "condition": "skills_level|up",
+   "probes": {
+    "a": "Does {file} report more people gaining education, training or new skills?",
+    "b": "Does {file} describe schools, courses or training schemes helping people learn?",
+    "reversed": "Does {file} report people losing access to education or training?"
+   }
+  },
+  {
+   "atom": "skills.gap",
+   "cat": "skills-gap",
+   "condition": "skills_level|down",
+   "probes": {
+    "a": "Does {file} report a shortage of skilled workers or falling school results?",
+    "b": "Does {file} describe employers unable to find people with the right skills, or pupils falling behind?",
+    "reversed": "Does {file} report a skills shortage easing or school results improving?"
+   }
+  },
+  {
+   "atom": "community.support3",
+   "cat": "community",
+   "condition": "community|up",
+   "probes": {
+    "a": "Does {file} report people in a town, city or neighbourhood supporting each other?",
+    "b": "Does {file} describe local people coming together to help others in their area?",
+    "reversed": "Does {file} report people in a town, city or neighbourhood turning against each other?"
+   }
+  },
+  {
+   "atom": "jobs.lost2",
+   "cat": "jobs",
+   "condition": "job_security|down",
+   "probes": {
+    "a": "Does {file} report people losing their jobs?",
+    "b": "Does {file} describe job losses, layoffs or redundancies?",
+    "reversed": "Does {file} report people gaining jobs or being hired?"
+   }
+  },
+  {
+   "atom": "care.strain2",
+   "cat": "care",
+   "condition": "care_strain|up",
+   "probes": {
+    "a": "Does {file} report health or care services struggling to cope with demand?",
+    "b": "Does {file} describe patients waiting too long or health workers, beds or medicines in short supply?",
+    "reversed": "Does {file} report health or care services coping better or expanding?"
+   }
+  },
+  {
+   "atom": "tech.rollout",
+   "cat": "tech",
+   "condition": "tech_adoption|up",
+   "probes": {
+    "a": "Does {file} report a new technology such as AI being put into use by people, firms or governments?",
+    "b": "Does {file} describe a new digital tool, app or AI system being launched or adopted?",
+    "reversed": "Does {file} report a technology being banned, withdrawn or abandoned?"
+   }
+  },
+  {
+   "atom": "trust.confidence3",
+   "cat": "trust",
+   "condition": "trust_institutions|down",
+   "probes": {
+    "a": "Does {file} report people distrusting a government, court, police force or official?",
+    "b": "Does {file} describe the public losing faith in a public institution or its leaders?",
+    "reversed": "Does {file} report the public trusting a public institution more?"
+   }
+  }
+ ],
+ "decisions": [
+  [
+   "scope",
+   "choice",
+   "Where does the story in {file} mainly take place or matter?",
+   [
+    "whole_world",
+    "one_country",
+    "one_city_or_region",
+    "none_fits"
+   ]
+  ],
+  [
+   "size",
+   "scale",
+   "How much does the story in {file} change ordinary people's lives?",
+   [
+    "no_effect",
+    "a_few_people",
+    "many_people_in_one_country",
+    "many_countries"
+   ]
+  ],
+  [
+   "visible",
+   "choice",
+   "Can this be answered from the story text shown?",
+   [
+    "enough",
+    "partial",
+    "missing"
+   ]
+  ]
+ ]
+}

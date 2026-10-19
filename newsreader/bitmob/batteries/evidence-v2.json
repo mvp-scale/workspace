@@ -1,0 +1,132 @@
+{
+ "name": "evidence-v2",
+ "goal": "Each story gives concrete, observable evidence for at least one world condition",
+ "problem": "Evidence atoms for environment, resources and housing: is each one clear to Clef and learnable on CPU",
+ "note": "Two paraphrases (a, b) and one reversed question per atom. Written before any answers were seen.",
+ "concerns": [
+  {
+   "atom": "water.shortage",
+   "cat": "water",
+   "condition": "water_stress|up",
+   "probes": {
+    "a": "Does {file} report a water shortage, drought restriction or contaminated water supply?",
+    "b": "Does {file} say people lack safe or enough water, or that water is rationed or polluted?",
+    "reversed": "Does {file} report a water shortage ending or a water supply being made safe again?"
+   }
+  },
+  {
+   "atom": "land.loss",
+   "cat": "land",
+   "condition": "land_degradation|up",
+   "probes": {
+    "a": "Does {file} report farmland, forest or soil being lost to erosion, fire, flooding or building?",
+    "b": "Does {file} describe land being degraded, deforested or swallowed by development?",
+    "reversed": "Does {file} report land, forest or soil being restored or protected?"
+   }
+  },
+  {
+   "atom": "nature.decline",
+   "cat": "nature",
+   "condition": "biodiversity_loss|up",
+   "probes": {
+    "a": "Does {file} report a decline in wildlife, species, habitats or fish stocks?",
+    "b": "Does {file} describe animals, plants or fish disappearing or their habitats being destroyed?",
+    "reversed": "Does {file} report wildlife, species or habitats recovering?"
+   }
+  },
+  {
+   "atom": "climate.hazard",
+   "cat": "climate",
+   "condition": "climate_stress|up",
+   "probes": {
+    "a": "Does {file} report extreme heat, drought, flooding, wildfire or a severe storm?",
+    "b": "Does {file} describe a weather disaster or record temperatures hitting a place?",
+    "reversed": "Does {file} report a weather threat passing or easing?"
+   }
+  },
+  {
+   "atom": "air.pollution",
+   "cat": "air",
+   "condition": "air_pollution|up",
+   "probes": {
+    "a": "Does {file} report air pollution, smog or harmful emissions getting worse?",
+    "b": "Does {file} describe dirty air, smoke or toxic gases affecting people?",
+    "reversed": "Does {file} report air quality improving or emissions falling?"
+   }
+  },
+  {
+   "atom": "minerals.scarce",
+   "cat": "minerals",
+   "condition": "mineral_scarcity|up",
+   "probes": {
+    "a": "Does {file} report metals, minerals or raw materials becoming scarcer or more expensive?",
+    "b": "Does {file} describe shortages or export limits on materials such as chips, rare earths, copper or lithium?",
+    "reversed": "Does {file} report metals or raw materials becoming cheaper or easier to get?"
+   }
+  },
+  {
+   "atom": "food.shortage",
+   "cat": "food",
+   "condition": "food_insecurity|up",
+   "probes": {
+    "a": "Does {file} report people going hungry or unable to afford enough food?",
+    "b": "Does {file} describe a famine, food shortage, food bank demand or food prices people cannot meet?",
+    "reversed": "Does {file} report hunger easing or food becoming easier to get?"
+   }
+  },
+  {
+   "atom": "housing.cost_up",
+   "cat": "housing",
+   "condition": "housing_cost|up",
+   "probes": {
+    "a": "Does {file} report rents, house prices or mortgage costs going up?",
+    "b": "Does {file} say homes are becoming less affordable for people to rent or buy?",
+    "reversed": "Does {file} report rents, house prices or mortgage costs going down?"
+   }
+  },
+  {
+   "atom": "infra.damage",
+   "cat": "infrastructure",
+   "condition": "infrastructure_condition|down",
+   "probes": {
+    "a": "Does {file} report roads, bridges, power grids, pipes or public buildings damaged, failing or decaying?",
+    "b": "Does {file} describe infrastructure breaking down, collapsing or in need of urgent repair?",
+    "reversed": "Does {file} report infrastructure being built, repaired or upgraded?"
+   }
+  }
+ ],
+ "decisions": [
+  [
+   "scope",
+   "choice",
+   "Where does the story in {file} mainly take place or matter?",
+   [
+    "whole_world",
+    "one_country",
+    "one_city_or_region",
+    "none_fits"
+   ]
+  ],
+  [
+   "size",
+   "scale",
+   "How much does the story in {file} change ordinary people's lives?",
+   [
+    "no_effect",
+    "a_few_people",
+    "many_people_in_one_country",
+    "many_countries"
+   ]
+  ],
+  [
+   "visible",
+   "choice",
+   "Can this be answered from the story text shown?",
+   [
+    "enough",
+    "partial",
+    "missing"
+   ]
+  ]
+ ]
+}

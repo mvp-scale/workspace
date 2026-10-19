@@ -1,0 +1,15 @@
+STEP 1 DECISION: which tolerance should define "good enough" for a CPU reader of the World engine?
+Method of record, step 1: decide what "good enough" means in the simulation's units; the simulation's tolerance for rate error is a property of the problem.
+Facts (measured, files pinned in the ledger):
+- F-0008: the engine's replicate noise band (10 seeds, 95th pct of pairwise differences) is 0.022 points median, 0.088 max, against clean moves of 2.4 points median, 11 max.
+- F-0009: under that band, 72 of 78 keys fail at TPR .4/FPR .01; 43 of 68 occurring keys fail even at TPR .8; 72 fail at FPR .005 alone.
+- F-0012: under that band the median key tolerates 0.46 missed and 0.52 false stories out of 880.
+- F-0013: Clef, the production reader, against itself: one wording instead of the mean of two drifts 159-189x the band; wording 0 vs wording 1 drifts 231x (up to 7.6 points).
+- F-0011: joint errors drift 109-290x the band; clustered errors 0.85-1.08x the independent ones; order and pace change drift by up to 2.2x.
+Options:
+(a) Keep the noise band. Step 1 then ends with a budget no reader can meet, including the production teacher; nothing downstream can pass.
+(b) Add a second tolerance, recorded separately: drift no larger than Clef's own wording-to-wording drift per output. The production system already accepts this much variation. It is measured independently of the injection grid. The noise-band result stays on record as a fail.
+(c) A fixed number of points chosen by us. No evidence supports any number: 0.5 points in the code is a per-person reach threshold, not an aggregate one.
+(d) Set a target per condition instead of a global tolerance. Not in the method of record.
+Proposed: (b), with the original limit's fail kept on record, the grid re-scored under (b) and labelled as the second limit.
+Risk: (b) is set after seeing results; it is not tuned to make anything pass because it comes from a separate measurement (Clef's two wordings), not from the grid.

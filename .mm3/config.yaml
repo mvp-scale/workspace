@@ -1,0 +1,10 @@
+# Local only: MM3 asks our own Clef Flash Q4 (:8018), never the hosted API. Free.
+baseURL: http://127.0.0.1:8018
+model: clef-flash-q4km
+pricing:
+  clef-flash-q4km:
+    perCall: 0.000000001   # local, effectively free (MM3 needs a number above 0)
+sweep:
+  maxQuestionsPerCall: 32     # one story per call: Clef takes at most ~16k tokens per request
+evidence:
+  totalChars: 400000

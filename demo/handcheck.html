@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hand check · Jev Bench Console</title>
+<meta name="description" content="Your yes / no on 60 news stories: the reference that is not Clef, for the CPU news reader.">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js"></script>
+<style>
+  .hc { max-width: 760px; }
+  .hc .story h2 { margin: 0 0 4px; font-size: 20px; }
+  .hc .story .src { color: var(--text-3); font-size: 13px; margin-bottom: 12px; }
+  .hc .story .txt { line-height: 1.55; white-space: pre-wrap; }
+  .hc .q { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .hc .q .qt { flex: 1 1 320px; font-weight: 600; }
+  .hc .q .btn.on { outline: 2px solid var(--accent); }
+  .hc .nav { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+  .hc .prog { color: var(--text-3); margin-left: auto; }
+</style>
+</head>
+<body>
+<main class="page hc">
+  <div class="page-head"><h1>Hand check</h1></div>
+  <p class="muted" id="intro">For each story, answer each question from the text shown: Yes, No or Not sure. Answers save as you click; you can stop and come back.</p>
+  <section class="card" id="card"></section>
+  <div class="nav"><button class="btn" id="back" type="button">Back</button><button class="btn" id="next" type="button">Next story</button><span class="prog" id="prog"></span></div>
+</main>
+<script>
+(async () => {
+  const { el } = window.Jev; const card = document.getElementById("card"); const prog = document.getElementById("prog");
+  const r = await fetch("/api/handcheck"); if (!r.ok) { card.replaceChildren(el("p", { text: "The hand check opens only on this machine (it shows news article text)." })); return; }
+  const data = await r.json(); const items = data.items; const ans = data.answers || {};
+  let i = Math.max(0, items.findIndex(it => it.atoms.some(a => !ans[it.id + "|" + a.atom]))); if (i < 0) i = 0;
+  const done = () => items.reduce((n, it) => n + it.atoms.filter(a => ans[it.id + "|" + a.atom]).length, 0), total = items.reduce((n, it) => n + it.atoms.length, 0);
+  async function save(it, a, v) {
+    ans[it.id + "|" + a.atom] = v; draw();
+    await fetch("/api/handcheck", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: it.id, atom: a.atom, answer: v }) });
+  }
+  function draw() {
+    const it = items[i];
+    const qs = it.atoms.map(a => { const cur = ans[it.id + "|" + a.atom];
+      return el("div", { class: "q" }, el("span", { class: "qt", text: a.question }),
+        ...[["yes", "Yes"], ["no", "No"], ["unsure", "Not sure"]].map(([v, t]) => el("button", { class: "btn" + (cur === v ? " on" : ""), type: "button", text: t, onclick: () => save(it, a, v) }))); });
+    card.replaceChildren(el("div", { class: "story" }, el("h2", { text: it.title }), el("div", { class: "src", text: it.source }), el("div", { class: "txt", text: it.text + " …" })), ...qs);
+    prog.textContent = `Story ${i + 1} of ${items.length} · ${done()} of ${total} answered`;
+  }
+  document.getElementById("back").onclick = () => { if (i > 0) { i--; draw(); window.scrollTo(0, 0); } };
+  document.getElementById("next").onclick = () => { if (i < items.length - 1) { i++; draw(); window.scrollTo(0, 0); } };
+  draw();
+})();
+</script>
+</body>
+</html>

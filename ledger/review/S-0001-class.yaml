@@ -1,0 +1,66 @@
+mak:
+  goal: The Step 1 plan in the file measures how much reader error the World engine tolerates, and can be run as written
+  verb: class
+  depth: standard
+  where: [ledger/review/S-0001-plan.txt]
+  ask:
+    concerns:
+      method-fit:
+        family: correctness
+        pass: yes
+        1: Does the plan inject errors for each key on a grid of error rates?            # input
+        2: Does the plan compare injected runs with the clean run against the engine's own replicate noise?         # rule
+        3: Does the plan end in a written error budget per key with keys ranked by how much they matter?             # result
+      drift-limit:
+        family: correctness
+        pass: yes
+        4: Is the noise band fixed before any injection run, as the plan's first step?                              # input
+        5: Is the drift limit defined in the engine's output units rather than in agreement with a labeller?        # rule
+        6: Would a reader who meets the budget leave every protected output within its noise band?                  # result
+      pass-bar:
+        family: done
+        pass: yes
+        7: Is the pass bar stated as concrete outputs (noise band, budget per key, ranking)?                         # concrete
+        8: Can someone check the pass bar from recorded numbers alone, without judgment calls?                       # testable
+        9: Does the plan say what happens if the engine reacts to every key or to none?                             # owned
+      assumption-risk:
+        family: design-risk
+        pass: no
+        10: Could the 880 stories over- or under-represent conditions enough to change the key ranking?              # data
+        11: Could topic-clustered reader errors cause more drift than the independent errors the plan injects?     # failure
+        12: Could leaving out expected-impact readings change which keys matter?                                   # abuse
+      scope-gaps:
+        family: design-risk
+        pass: no
+        13: Does the plan leave country-level outputs unmeasured?                 # data
+        14: Could replaying in file order at one tick per story misstate drift for a live feed with another pace?   # failure
+        15: Could a drift limit equal to replicate noise be too loose if the engine's noise is large?               # abuse
+      options:
+        family: design
+        pass: yes
+        16: Does the plan include a global method for interactions when single-key results are not enough?          # responsibility
+        17: Does the plan test more than one injection seed per grid cell?                                          # testability
+        18: Does the plan use the engine's own reading keys, so results transfer to any CPU reader?                 # dependency
+    decisions:
+      readiness:
+        pass: [run-as-written, run-with-minor-fixes]
+        19:
+          choice: What should happen to this plan next?
+          options: [run-as-written, run-with-minor-fixes, rework-before-running, none-fits]
+      biggest-risk:
+        pass: [none, low]
+        20:
+          scale: How serious is the plan's largest unbacked assumption?
+          levels: [none, low, medium, high, critical]
+      scope:
+        pass: [enough]
+        21:
+          choice: Can this be answered from the text shown?
+          options: [enough, partial, missing]
+mdl:
+  why: validate
+  area: data
+  stage: design
+  risk: medium
+  problem: Step 1 of the Fable method (ledger S-0001) before any run; assumptions A-0001..A-0008
+  touches: [S-0001, world-engine, sensitivity]

@@ -1,0 +1,67 @@
+mak:
+  goal: Step 1 has met its pass bar as written and can close with its recorded limits
+  verb: class
+  depth: standard
+  where: [ledger/review/S-0001-close.txt]
+  ask:
+    concerns:
+      pass-bar:
+        family: done
+        pass: yes
+        1: Was a noise band and drift limit stated before any injection run?                                  # concrete
+        2: Is there an error budget for each key?                                                              # testable
+        3: Are keys ranked, with the ranking's stability reported?                                            # owned
+      method:
+        family: correctness
+        pass: yes
+        4: Were errors injected on a grid of rates for each key?                                               # input
+        5: Was drift judged against a tolerance fixed before that tolerance's data existed?                    # rule
+        6: Does the all-keys target come from measured runs rather than extrapolation?                         # result
+      honesty:
+        family: done
+        pass: yes
+        7: Are the tolerances set after seeing results kept on record and labelled as such?                    # concrete
+        8: Is the unsettled ranking reported as unsettled?                                                     # testable
+        9: Are the open limits named with their ledger entries?                                                # owned
+      risk-tolerance:
+        family: design-risk
+        pass: no
+        10: Could a tolerance based on Clef's own wording variation be too loose for users of the engine?      # failure
+        11: Could the all-keys target change if more wordings or another model were measured?                  # data
+        12: Was the tolerance changed more than once in a way that could favour a passing result?              # abuse
+      risk-scope:
+        family: design-risk
+        pass: no
+        13: Could unmeasured country-level outputs be more sensitive than world and audience outputs?          # data
+        14: Could omitting expected-impact readings change the all-keys target?                                # failure
+        15: Could the 880-story sample make the all-keys target optimistic for the live feed?                  # abuse
+      handoff:
+        family: design
+        pass: yes
+        16: Does the dossier say what the next step receives?                                                  # responsibility
+        17: Can the next step use the all-keys target without rerunning Step 1?                                # dependency
+        18: Can each delivered number be traced to a ledger entry?                                             # testability
+    decisions:
+      close:
+        pass: [close, close-with-limits]
+        19:
+          choice: What should happen to Step 1?
+          options: [close, close-with-limits, rework-before-closing, none-fits]
+      risk-level:
+        pass: [none, low, medium]
+        20:
+          scale: How risky is closing Step 1 now?
+          levels: [none, low, medium, high, critical]
+      scope:
+        pass: [enough]
+        21:
+          choice: Can this be answered from the text shown?
+          options: [enough, partial, missing]
+mdl:
+  why: validate
+  area: data
+  stage: review
+  risk: medium
+  parent: MM3-0024
+  problem: Step 1 closing review before the user's approval
+  touches: [S-0001, tolerance, world-engine]

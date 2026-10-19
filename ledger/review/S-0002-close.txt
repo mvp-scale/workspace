@@ -1,0 +1,9 @@
+STEP 2 CLOSING DOSSIER (Fable method step 2: aggregate the 2-4 wordings per atom by majority vote; reversed wording as a consistency flag, not a rater; keep every per-prompt vote and probability; plain MV, no label model unless dependencies are declared)
+Pass bar (fixed before building): store complete for 880 stories x 78 keys with all votes kept; conflicts flagged; agreement reported per key; the drift between MV labels and the engine's current rule reported against Step 1's tolerance (d).
+Delivered:
+- data/step2/labels.jsonl: per story, for each of 159 attributes, Clef's probability and vote for 3 wordings (two engine wordings and the attribute's definition), the attribute's majority vote, key labels (78 keys), agreement (3/3 or 2/3) and conflict flags. Vote threshold 0.65 = the engine's own presence threshold. No label model was fitted (method 2.3: MV wins or ties at low label density; 2.5: wordings of one model are not independent).
+- Conflict flags: 57 stories carry a conflict on 59 conditions (both directions present). The engine has no reversed wording per attribute; its up/down conflict rule is the consistency check.
+- Agreement: median per-key Jaccard between wordings' yes-sets 0.33; median share of MV positives that are unanimous 40% (F-0023).
+- MV vs the engine's current mean-of-2 rule: key positives 812 -> 1,203 (+48%); 529 labels change (F-0022). Cause measured: the definition wording says yes 1.7x as often as the engine's wordings.
+- Drift: switching the engine to MV labels moves outputs 3.7x tolerance (d) (F-0024).
+Open: which rule is closer to the truth is unknown (C-0009); the method assigns that to the human reference (step 3), which must include stories where the rules disagree.

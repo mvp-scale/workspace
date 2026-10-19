@@ -438,7 +438,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldengine": "worldengine2.html", "/worldengine-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldengine": "worldengine2.html", "/worldengine-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html", "/handcheck": "handcheck.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json",
          ".html": "text/html; charset=utf-8", ".md": "text/plain; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".txt": "text/plain; charset=utf-8"}
 
@@ -592,6 +592,9 @@ def switch_service(name, action):
     return 202, {"name": name, "action": action}
 
 
+HANDCHECK_ITEMS = ROOT / "data" / "mm3-train" / "handcheck" / "items.json"; HANDCHECK_ANSWERS = ROOT / "data" / "mm3-train" / "handcheck" / "answers.jsonl"
+
+
 class Handler(BaseHTTPRequestHandler):
     def _local(self):
         """Only someone on this machine (or a port forward to it) may switch services; never a visitor through a tunnel."""
@@ -652,6 +655,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {**mask_state(), "can_switch": self._local()})
         if path == "/api/services":
             return self._send(200, {"services": services_state(), "can_switch": self._local()})
+        if path == "/api/handcheck":  # the user's hand check (decision 2a): article text, so this machine only, never through the tunnel
+            if not self._local(): return self._send(403, {"error": "The hand check opens only on this machine."})
+            d = json.loads(HANDCHECK_ITEMS.read_text()) if HANDCHECK_ITEMS.exists() else {"items": []}; ans = {}
+            if HANDCHECK_ANSWERS.exists():
+                for l in HANDCHECK_ANSWERS.read_text().splitlines():
+                    a = json.loads(l); ans[a["id"] + "|" + a["atom"]] = a["answer"]
+            items = [{**{k: it[k] for k in ("id", "title", "source", "text")}, "atoms": [{"atom": a["atom"], "question": a["question"]} for a in it["atoms"]]} for it in d["items"]]   # never which side said what
+            return self._send(200, {"items": items, "answers": ans})
         if path == "/mockups" or path.startswith("/mockups/"):  # the static mock-ups (they had their own server on :8110)
             f = (HERE / path.lstrip("/")).resolve()
             if f.is_dir(): f = f / "index.html"
@@ -841,6 +852,16 @@ class Handler(BaseHTTPRequestHandler):
             raw = self.rfile.read(n)
             if self.path.split("?")[0] == "/v1/systemone": return self._api(outside_api.systemone, raw, checked=True)
             return self._api(outside_api.transcriptions, raw, self.headers.get("Content-Type", ""), checked=True)
+        if self.path.split("?")[0] == "/api/handcheck":
+            if not self._local(): return self._send(403, {"error": "The hand check opens only on this machine."})
+            try:
+                a = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 2000)))
+                rec = {"id": str(a["id"]), "atom": str(a["atom"]), "answer": a["answer"], "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+                if rec["answer"] not in ("yes", "no", "unsure"): raise ValueError
+            except (ValueError, KeyError): return self._send(400, {"error": "send {id, atom, answer: yes|no|unsure}"})
+            HANDCHECK_ANSWERS.parent.mkdir(parents=True, exist_ok=True)
+            with open(HANDCHECK_ANSWERS, "a") as f: f.write(json.dumps(rec) + "\n")
+            return self._send(200, {"saved": True})
         if self.path.split("?")[0] == "/api/mask":  # demo mode on/off: only from this machine; everyone (shared-link visitors too) sees the result
             if not self._local(): return self._send(403, {"error": "Secure mode can only be changed from this machine."})
             try: on = bool(json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200)))["on"])

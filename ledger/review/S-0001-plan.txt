@@ -1,0 +1,21 @@
+STEP 1 PLAN (fixed before running; CPU only, no model calls).
+Unit ("atom"): each of the engine's 78 condition|direction reading keys (the output a CPU reader must produce; covers the 39 BitMob battery keys).
+Data: the 880 stories with Clef's full 328 answers (data/newsreader/labels/clef-q4km.jsonl), replayed in file order, one tick per story, at WORLD:world (records carry no country), via a new script probes/world-engine/sensitivity.py that copies prepare_feed without the model call (expected-impact readings omitted).
+Outputs protected: world-level likelihood of each of the 20 decisions (points) and the same for the 8 audiences, read at the end of the replay (prop_at).
+1. Replicate noise first: 10 engine seeds, noise on, clean readings. Noise band per output = 95th percentile of |seed_i - seed_j| over all pairs. Written to the ledger before any injection run.
+2. Drift limit: an injected run passes if every protected output stays within its noise band of the clean run (drift <= the engine's own noise).
+3. Injection (noise off, so drift is paired and deterministic): per key, one at a time, TPR in {1, .8, .6, .4, .2} x FPR in {0, .005, .01, .02, .05}; false negative = drop that reading; false positive = add it with the key's median true strength and the story's own P(recent) and type weight; engine conflict rule applied. 3 injection seeds per cell; drift = mean.
+4. Budget per key: the error region (TPR, FPR) inside the drift limit; the knee = the lowest TPR and highest FPR still inside.
+5. Ranking: keys ranked by drift at TPR .4, FPR .01 (near the old plateau).
+6. Global check: all keys injected together at 3 error levels; if joint drift differs from the sum of single-key drifts by more than 20%, run Morris screening (SALib) over all keys.
+Pass bar: noise band and drift limit written first; a budget per key; keys ranked. If it fails (engine reacts to every key or to none): set the target per condition and record why.
+
+ASSUMPTIONS
+A-0001: The 880 Clef-read stories are a fair sample of the live feed's mix of conditions. How the 880 were chosen is not recorded; if they over- or under-represent conditions, the ranking is biased.
+A-0002: Clef's readings are a valid error-free baseline for a sensitivity study. Sensitivity measures how the engine reacts to error relative to the reader's labels; Clef's own errors do not change that reaction (method of record, step 1).
+A-0003: Reader error can be modelled as independent drops and additions per story and key. Real errors may cluster by topic or story length; independence may understate drift.
+A-0004: Entering every story at WORLD:world is acceptable for world and audience outputs. Records carry no country; country-level outputs are not measured in this step.
+A-0005: World and audience decision likelihoods are the outputs that must be protected. Users read decisions per world and audience on the World engine page; country and region rows are secondary here.
+A-0006: The engine's own replicate noise is a defensible drift limit. An error smaller than the engine's seed-to-seed noise cannot be told apart from noise; a stricter or looser limit would need the user's say.
+A-0007: One tick per story in file order represents the live feed. The feed applies one tick per story (F-0002) but its order and pace differ; decay (half-lives) makes order matter.
+A-0008: Omitting expected-impact readings does not change which keys matter. The feed adds model-asked expected readings (not recorded for the 880); a CPU reader replaces the attribute readings only.

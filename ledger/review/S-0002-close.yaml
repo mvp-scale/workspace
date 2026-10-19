@@ -1,0 +1,49 @@
+mak:
+  goal: Step 2 has met its pass bar as written and can close
+  verb: class
+  depth: quick
+  where: [ledger/review/S-0002-close.txt]
+  ask:
+    concerns:
+      pass-bar:
+        family: done
+        pass: yes
+        1: Does the store keep every wording's vote for every attribute?                     # concrete
+        2: Are conflicts flagged per story?                                                   # testable
+        3: Is the drift between label rules reported against Step 1's tolerance?             # owned
+      method:
+        family: correctness
+        pass: yes
+        4: Is the aggregation a plain majority vote?                                          # input
+        5: Was a label model avoided?                                                         # rule
+        6: Is the cause of the label change measured?                                         # result
+      risk:
+        family: design-risk
+        pass: no
+        7: Could the vote threshold of 0.65 bias which rule looks better?                     # abuse
+        8: Could the definition wording be measuring a broader concept than the attribute?    # data
+        9: Could Step 3 fail to settle which label rule is closer to the truth?               # failure
+    decisions:
+      close:
+        pass: [close, close-with-limits]
+        10:
+          choice: What should happen to Step 2?
+          options: [close, close-with-limits, rework-before-closing, none-fits]
+      risk-level:
+        pass: [none, low, medium]
+        11:
+          scale: How risky is closing Step 2 now?
+          levels: [none, low, medium, high, critical]
+      scope:
+        pass: [enough]
+        12:
+          choice: Can this be answered from the text shown?
+          options: [enough, partial, missing]
+mdl:
+  why: validate
+  area: data
+  stage: review
+  risk: medium
+  parent: MM3-0026
+  problem: Step 2 closing review
+  touches: [S-0002, labels, majority-vote]

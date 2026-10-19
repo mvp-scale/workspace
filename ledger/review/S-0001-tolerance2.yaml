@@ -1,0 +1,49 @@
+mak:
+  goal: The file supports a clear next action for Step 1's tolerance among the options listed
+  verb: class
+  depth: quick
+  where: [ledger/review/S-0001-tolerance2.txt]
+  ask:
+    concerns:
+      evidence:
+        family: correctness
+        pass: yes
+        1: Does the file show measured evidence that tolerance (b) is noisy?                                   # input
+        2: Does option (2) use the same measurement as (b) rather than a new one?                             # rule
+        3: Would option (4) address why (b) is noisy rather than smoothing it?                                 # result
+      robustness:
+        family: done
+        pass: yes
+        4: Do the file's robust findings hold under every option listed?                                       # concrete
+        5: Could Step 1's pass bar (budget per key, ranking) be met under option (2) from data already run?    # testable
+        6: Does the file say which options need the user's approval?                                           # owned
+      risk:
+        family: design-risk
+        pass: no
+        7: Is option (2) a further change made after seeing results?                                           # abuse
+        8: Could closing Step 1 under option (1) mislead later steps about which keys matter?                  # failure
+        9: Could option (3) hide a real failure on a single important output?                                  # data
+    decisions:
+      choose:
+        pass: ["2", "4"]
+        10:
+          choice: Which option should Step 1 take next?
+          options: ["1", "2", "3", "4", "5"]
+      second:
+        pass: ["2", "4"]
+        11:
+          choice: If the first choice is blocked, which option comes next?
+          options: ["1", "2", "3", "4", "5"]
+      risk-level:
+        pass: [none, low]
+        12:
+          scale: How risky is closing Step 1 now under the option chosen?
+          levels: [none, low, medium, high, critical]
+mdl:
+  why: validate
+  area: data
+  stage: design
+  risk: medium
+  parent: MM3-0022
+  problem: Tolerance (b) from one wording pair is noisy; choose how Step 1 proceeds
+  touches: [S-0001, tolerance, morris]

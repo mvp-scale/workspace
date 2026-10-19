@@ -1,0 +1,132 @@
+{
+ "name": "evidence-v5",
+ "goal": "Each story gives concrete, observable evidence for at least one world condition",
+ "problem": "Reworded atoms whose two paraphrases did not mean the same thing in v1-v4",
+ "note": "Rewrites of the 9 atoms with teacher self-agreement < 0.5; a and b now ask the same thing at the same breadth. Written before any v5 answers were seen.",
+ "concerns": [
+  {
+   "atom": "credit.tighter2",
+   "cat": "credit",
+   "condition": "borrowing_cost|up",
+   "probes": {
+    "a": "Does {file} report interest rates or borrowing costs going up?",
+    "b": "Does {file} say that loans, mortgages or credit are becoming more expensive or harder to get?",
+    "reversed": "Does {file} report interest rates or borrowing costs going down?"
+   }
+  },
+  {
+   "atom": "minerals.scarce2",
+   "cat": "minerals",
+   "condition": "mineral_scarcity|up",
+   "probes": {
+    "a": "Does {file} report a shortage, export ban or price rise for metals, minerals or raw materials?",
+    "b": "Does {file} say that metals, minerals or raw materials are becoming harder or costlier to get?",
+    "reversed": "Does {file} report metals, minerals or raw materials becoming cheaper or easier to get?"
+   }
+  },
+  {
+   "atom": "pay.rising2",
+   "cat": "pay",
+   "condition": "pay_growth|up",
+   "probes": {
+    "a": "Does {file} report wages, salaries or pay going up?",
+    "b": "Does {file} say that workers are being paid more than before?",
+    "reversed": "Does {file} report wages, salaries or pay going down or being frozen?"
+   }
+  },
+  {
+   "atom": "migration.arrivals2",
+   "cat": "migration",
+   "condition": "migration_flow|up",
+   "probes": {
+    "a": "Does {file} report migrants, refugees or asylum seekers arriving in a country?",
+    "b": "Does {file} describe people moving into a country from abroad to live, work or seek safety?",
+    "reversed": "Does {file} report migrants or refugees leaving a country or being sent back?"
+   }
+  },
+  {
+   "atom": "mental.distress2",
+   "cat": "mental",
+   "condition": "mental_distress|up",
+   "probes": {
+    "a": "Does {file} report people suffering anxiety, depression, trauma or severe stress?",
+    "b": "Does {file} describe people's mental health being harmed or getting worse?",
+    "reversed": "Does {file} report people's mental health improving?"
+   }
+  },
+  {
+   "atom": "debt.burden2",
+   "cat": "private-debt",
+   "condition": "private_debt|up",
+   "probes": {
+    "a": "Does {file} report households or companies struggling to repay what they owe?",
+    "b": "Does {file} describe people or firms in debt trouble, such as missed payments, defaults or bankruptcy?",
+    "reversed": "Does {file} report households or companies paying off what they owe?"
+   }
+  },
+  {
+   "atom": "community.help2",
+   "cat": "community",
+   "condition": "community|up",
+   "probes": {
+    "a": "Does {file} report people in a local community helping or supporting each other?",
+    "b": "Does {file} describe neighbours, volunteers or local groups working together for their area?",
+    "reversed": "Does {file} report a local community falling apart or neighbours in conflict?"
+   }
+  },
+  {
+   "atom": "liberties.cut2",
+   "cat": "liberties",
+   "condition": "civil_liberties|down",
+   "probes": {
+    "a": "Does {file} report people's freedom to speak, protest, vote or get a fair trial being restricted?",
+    "b": "Does {file} describe a government or authority limiting people's rights or freedoms?",
+    "reversed": "Does {file} report people's rights or freedoms being restored or protected?"
+   }
+  },
+  {
+   "atom": "trust.confidence2",
+   "cat": "trust",
+   "condition": "trust_institutions|down",
+   "probes": {
+    "a": "Does {file} report the public losing confidence in a government, court, police force or official?",
+    "b": "Does {file} describe people doubting, distrusting or turning against a public institution?",
+    "reversed": "Does {file} report the public's confidence in a public institution growing?"
+   }
+  }
+ ],
+ "decisions": [
+  [
+   "scope",
+   "choice",
+   "Where does the story in {file} mainly take place or matter?",
+   [
+    "whole_world",
+    "one_country",
+    "one_city_or_region",
+    "none_fits"
+   ]
+  ],
+  [
+   "size",
+   "scale",
+   "How much does the story in {file} change ordinary people's lives?",
+   [
+    "no_effect",
+    "a_few_people",
+    "many_people_in_one_country",
+    "many_countries"
+   ]
+  ],
+  [
+   "visible",
+   "choice",
+   "Can this be answered from the story text shown?",
+   [
+    "enough",
+    "partial",
+    "missing"
+   ]
+  ]
+ ]
+}

@@ -1,0 +1,49 @@
+mak:
+  goal: Option (b) in the file is the best-supported tolerance for Step 1 among the options listed
+  verb: class
+  depth: quick
+  where: [ledger/review/S-0001-limit.txt]
+  ask:
+    concerns:
+      grounding:
+        family: correctness
+        pass: yes
+        1: Is option (b)'s tolerance taken from a measurement separate from the injection grid?             # input
+        2: Does option (b) follow the method's rule that tolerance is a property of the problem?            # rule
+        3: Would option (b) let a reader as good as the production teacher meet the budget?                 # result
+      integrity:
+        family: done
+        pass: yes
+        4: Does the proposal keep the noise-band result on record as a fail?                                 # concrete
+        5: Can option (b) be checked from recorded numbers alone?                                            # testable
+        6: Is option (b) labelled as set after seeing results?                                               # owned
+      risk:
+        family: design-risk
+        pass: no
+        7: Could option (b) be tuned to make results pass?                                                   # abuse
+        8: Could option (b) accept a reader much worse than the teacher?                                     # failure
+        9: Does option (b) depend on Clef's wording pair being typical of its errors?                        # data
+    decisions:
+      choose:
+        pass: [b]
+        10:
+          choice: Which option should Step 1 adopt?
+          options: [a, b, c, d, none-fits]
+      risk-level:
+        pass: [none, low]
+        11:
+          scale: How risky is adopting the proposed option after seeing results?
+          levels: [none, low, medium, high, critical]
+      scope:
+        pass: [enough]
+        12:
+          choice: Can this be answered from the text shown?
+          options: [enough, partial, missing]
+mdl:
+  why: validate
+  area: data
+  stage: design
+  risk: medium
+  parent: MM3-0020
+  problem: Step 1's pre-fixed noise-band limit is unreachable even by the teacher; choose the tolerance
+  touches: [S-0001, tolerance, world-engine]

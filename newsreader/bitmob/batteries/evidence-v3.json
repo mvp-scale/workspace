@@ -1,0 +1,132 @@
+{
+ "name": "evidence-v3",
+ "goal": "Each story gives concrete, observable evidence for at least one world condition",
+ "problem": "Evidence atoms for economy and markets: is each one clear to Clef and learnable on CPU",
+ "note": "Two paraphrases (a, b) and one reversed question per atom. Written before any answers were seen.",
+ "concerns": [
+  {
+   "atom": "services.disrupted",
+   "cat": "disruption",
+   "condition": "disruption|up",
+   "probes": {
+    "a": "Does {file} report travel, power, water or public services being interrupted?",
+    "b": "Does {file} describe flights, trains, power or services cancelled, cut off or shut down?",
+    "reversed": "Does {file} report disrupted services being restored?"
+   }
+  },
+  {
+   "atom": "industry.down",
+   "cat": "industry",
+   "condition": "industrial_output|down",
+   "probes": {
+    "a": "Does {file} report factories cutting production, closing or standing idle?",
+    "b": "Does {file} describe manufacturing or industrial output falling?",
+    "reversed": "Does {file} report factories increasing production or opening?"
+   }
+  },
+  {
+   "atom": "supply.strain",
+   "cat": "supply-chain",
+   "condition": "supply_chain_strain|up",
+   "probes": {
+    "a": "Does {file} report shipping delays, shortages of goods or new trade barriers?",
+    "b": "Does {file} describe goods being held up, ports blocked or tariffs and sanctions hitting trade?",
+    "reversed": "Does {file} report trade barriers being lifted or supply chains easing?"
+   }
+  },
+  {
+   "atom": "tech.adoption",
+   "cat": "tech",
+   "condition": "tech_adoption|up",
+   "probes": {
+    "a": "Does {file} report people or businesses taking up a new digital technology such as AI?",
+    "b": "Does {file} describe a new app, AI tool or digital service being rolled out or widely used?",
+    "reversed": "Does {file} report people or businesses abandoning or banning a digital technology?"
+   }
+  },
+  {
+   "atom": "credit.tighter",
+   "cat": "credit",
+   "condition": "borrowing_cost|up",
+   "probes": {
+    "a": "Does {file} report interest rates or borrowing costs going up, or loans getting harder to get?",
+    "b": "Does {file} say a central bank raised rates or banks are tightening lending?",
+    "reversed": "Does {file} report interest rates being cut or loans becoming easier to get?"
+   }
+  },
+  {
+   "atom": "assets.down",
+   "cat": "assets",
+   "condition": "asset_values|down",
+   "probes": {
+    "a": "Does {file} report share prices, house values or savings falling in value?",
+    "b": "Does {file} describe a stock market fall, property slump or losses for investors?",
+    "reversed": "Does {file} report share prices, house values or savings rising?"
+   }
+  },
+  {
+   "atom": "markets.swing",
+   "cat": "volatility",
+   "condition": "market_volatility|up",
+   "probes": {
+    "a": "Does {file} report markets swinging sharply or investors panicking?",
+    "b": "Does {file} describe a sudden market crash, surge or turmoil?",
+    "reversed": "Does {file} report markets calming or steadying?"
+   }
+  },
+  {
+   "atom": "debt.burden",
+   "cat": "private-debt",
+   "condition": "private_debt|up",
+   "probes": {
+    "a": "Does {file} report households or firms struggling with debt repayments?",
+    "b": "Does {file} describe people or companies falling behind on loans, defaulting or going bankrupt?",
+    "reversed": "Does {file} report households or firms paying down debt?"
+   }
+  },
+  {
+   "atom": "budget.strain",
+   "cat": "fiscal",
+   "condition": "fiscal_strain|up",
+   "probes": {
+    "a": "Does {file} report a government facing a budget deficit, rising debt or spending cuts?",
+    "b": "Does {file} describe public finances under pressure, a budget shortfall or austerity?",
+    "reversed": "Does {file} report a government budget improving or debt falling?"
+   }
+  }
+ ],
+ "decisions": [
+  [
+   "scope",
+   "choice",
+   "Where does the story in {file} mainly take place or matter?",
+   [
+    "whole_world",
+    "one_country",
+    "one_city_or_region",
+    "none_fits"
+   ]
+  ],
+  [
+   "size",
+   "scale",
+   "How much does the story in {file} change ordinary people's lives?",
+   [
+    "no_effect",
+    "a_few_people",
+    "many_people_in_one_country",
+    "many_countries"
+   ]
+  ],
+  [
+   "visible",
+   "choice",
+   "Can this be answered from the story text shown?",
+   [
+    "enough",
+    "partial",
+    "missing"
+   ]
+  ]
+ ]
+}

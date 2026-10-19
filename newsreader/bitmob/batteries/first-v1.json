@@ -1,0 +1,159 @@
+{
+ "name": "first-v1",
+ "goal": "Each story gives clear evidence that moves at least one world condition",
+ "problem": "The first battery (states, concrete, reversed per condition) as a battery file, so a second teacher can answer it",
+ "note": "Same wordings as mm3_label.py CONDS / DECISIONS (labelled by Clef into queue.jsonl).",
+ "concerns": [
+  {
+   "atom": "prices|up",
+   "cat": "prices-up",
+   "condition": "prices|up",
+   "probes": {
+    "states": "Does the story in {file} report that prices people pay are rising?",
+    "concrete": "Does {file} describe a concrete price increase, such as a fare, bill, tariff or inflation figure going up?",
+    "reversed": "Does the story in {file} report prices falling, easing or holding steady?"
+   }
+  },
+  {
+   "atom": "energy_fuel|up",
+   "cat": "energyfuel-up",
+   "condition": "energy_fuel|up",
+   "probes": {
+    "states": "Does the story in {file} report that energy or fuel is getting more expensive or scarcer?",
+    "concrete": "Does {file} describe a concrete energy event, such as a fuel price rise, supply cut or power shortage?",
+    "reversed": "Does the story in {file} report energy or fuel getting cheaper or more plentiful?"
+   }
+  },
+  {
+   "atom": "war_terror|up",
+   "cat": "warterror-up",
+   "condition": "war_terror|up",
+   "probes": {
+    "states": "Does the story in {file} report armed conflict or terrorism getting worse?",
+    "concrete": "Does {file} describe a concrete attack, battle, strike, threat or escalation between armed groups or states?",
+    "reversed": "Does the story in {file} report a ceasefire, peace deal or a conflict calming down?"
+   }
+  },
+  {
+   "atom": "civil_unrest|up",
+   "cat": "civilunrest-up",
+   "condition": "civil_unrest|up",
+   "probes": {
+    "states": "Does the story in {file} report protests, riots or civil unrest?",
+    "concrete": "Does {file} describe people gathering, marching or striking against a government or employer?",
+    "reversed": "Does the story in {file} report protests ending or tensions on the streets calming?"
+   }
+  },
+  {
+   "atom": "social_division|up",
+   "cat": "socialdivision-up",
+   "condition": "social_division|up",
+   "probes": {
+    "states": "Does the story in {file} report society becoming more divided or polarised?",
+    "concrete": "Does {file} describe a concrete clash between groups, parties or communities?",
+    "reversed": "Does the story in {file} report groups coming together or finding common ground?"
+   }
+  },
+  {
+   "atom": "trust_institutions|down",
+   "cat": "trustinstituti-down",
+   "condition": "trust_institutions|down",
+   "probes": {
+    "states": "Does the story in {file} report people losing trust in government, courts, police or institutions?",
+    "concrete": "Does {file} describe a concrete scandal, cover-up, failure or broken promise by an institution?",
+    "reversed": "Does the story in {file} report an institution earning trust back or being cleared?"
+   }
+  },
+  {
+   "atom": "crime|up",
+   "cat": "crime-up",
+   "condition": "crime|up",
+   "probes": {
+    "states": "Does the story in {file} report a crime or rising crime?",
+    "concrete": "Does {file} describe a concrete criminal act, arrest, charge or police investigation?",
+    "reversed": "Does the story in {file} report crime falling or a place becoming safer?"
+   }
+  },
+  {
+   "atom": "health_risk|up",
+   "cat": "healthrisk-up",
+   "condition": "health_risk|up",
+   "probes": {
+    "states": "Does the story in {file} report a rising risk to people's health?",
+    "concrete": "Does {file} describe a concrete health threat, such as an outbreak, injuries, deaths or a harmful product?",
+    "reversed": "Does the story in {file} report a health threat easing, or a cure or treatment helping people?"
+   }
+  },
+  {
+   "atom": "cyber_insecurity|up",
+   "cat": "cyberinsecurit-up",
+   "condition": "cyber_insecurity|up",
+   "probes": {
+    "states": "Does the story in {file} report a rising cyber or digital security risk?",
+    "concrete": "Does {file} describe a concrete hack, data breach, flaw or online scam?",
+    "reversed": "Does the story in {file} report a security flaw being fixed or a hacking threat shrinking?"
+   }
+  }
+ ],
+ "decisions": [
+  [
+   "topic",
+   "choice",
+   "Which area is the story in {file} mainly about?",
+   [
+    "economy",
+    "politics_or_conflict",
+    "crime_justice",
+    "health",
+    "environment",
+    "technology",
+    "culture_or_sport",
+    "none_fits"
+   ]
+  ],
+  [
+   "scope",
+   "choice",
+   "Where does the story in {file} mainly take place or matter?",
+   [
+    "whole_world",
+    "one_country",
+    "one_city_or_region",
+    "none_fits"
+   ]
+  ],
+  [
+   "size",
+   "scale",
+   "How much does the story in {file} change ordinary people's lives?",
+   [
+    "no_effect",
+    "a_few_people",
+    "many_people_in_one_country",
+    "many_countries"
+   ]
+  ],
+  [
+   "kind",
+   "choice",
+   "What kind of story is {file}?",
+   [
+    "news_report",
+    "opinion",
+    "analysis_explainer",
+    "feature_or_human_interest",
+    "none_fits"
+   ]
+  ],
+  [
+   "visible",
+   "choice",
+   "Can this be answered from the story text shown?",
+   [
+    "enough",
+    "partial",
+    "missing"
+   ]
+  ]
+ ]
+}

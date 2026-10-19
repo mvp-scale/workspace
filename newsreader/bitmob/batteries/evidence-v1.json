@@ -1,0 +1,49 @@
+{
+ "name": "evidence-v1",
+ "goal": "Each story gives concrete, observable evidence for at least one world condition",
+ "problem": "Rewrite abstract conditions (prices, energy, trust, division, health) as concrete evidence atoms and test whether Clef agrees with itself",
+ "note": "Each atom is asked twice in different words (a, b) plus once reversed. Self-agreement a vs b says whether the atom is learnable. Written before any answers were seen.",
+ "concerns": [
+  {"atom": "prices.consumer_up", "cat": "price-consumer", "condition": "prices|up", "probes": {
+    "a": "Does {file} report a price that consumers pay going up, such as food, rent, fares or household bills?",
+    "b": "Does {file} say that shoppers, tenants or households now pay more for something than before?",
+    "reversed": "Does {file} report a price that consumers pay going down?"}},
+  {"atom": "prices.rate_up", "cat": "price-rate", "condition": "prices|up", "probes": {
+    "a": "Does {file} report an inflation rate, a tariff or a tax going up?",
+    "b": "Does {file} give a number showing inflation, a tariff or a tax getting higher?",
+    "reversed": "Does {file} report an inflation rate, a tariff or a tax going down?"}},
+  {"atom": "energy.price_up", "cat": "energy-price", "condition": "energy_fuel|up", "probes": {
+    "a": "Does {file} report fuel, gas or electricity prices going up?",
+    "b": "Does {file} say petrol, gas or power bills are getting more expensive?",
+    "reversed": "Does {file} report fuel, gas or electricity prices going down?"}},
+  {"atom": "energy.supply_cut", "cat": "energy-supply", "condition": "energy_fuel|up", "probes": {
+    "a": "Does {file} report an energy supply cut, fuel shortage, blackout or attack on an energy site?",
+    "b": "Does {file} describe fuel or power not reaching people, or a power plant, pipeline or refinery being shut or damaged?",
+    "reversed": "Does {file} report energy supply being restored or increased?"}},
+  {"atom": "trust.wrongdoing", "cat": "trust-wrongdoing", "condition": "trust_institutions|down", "probes": {
+    "a": "Does {file} report a government body, court, police force or public official accused of wrongdoing or a cover-up?",
+    "b": "Does {file} describe officials or a public institution facing a scandal, inquiry or misconduct claims?",
+    "reversed": "Does {file} report a public official or institution being cleared of wrongdoing?"}},
+  {"atom": "trust.confidence_down", "cat": "trust-confidence", "condition": "trust_institutions|down", "probes": {
+    "a": "Does {file} report people saying they no longer trust a government, court, police force or official?",
+    "b": "Does {file} cite a poll, protest or public statement showing falling confidence in a public institution?",
+    "reversed": "Does {file} report confidence in a public institution rising?"}},
+  {"atom": "division.group_clash", "cat": "division-clash", "condition": "social_division|up", "probes": {
+    "a": "Does {file} report open hostility, clashes or hate between ethnic, religious or social groups?",
+    "b": "Does {file} describe one community or group of people attacking, abusing or rallying against another?",
+    "reversed": "Does {file} report two groups or communities reconciling or working together?"}},
+  {"atom": "division.political_split", "cat": "division-politics", "condition": "social_division|up", "probes": {
+    "a": "Does {file} report political parties or voters becoming more bitterly split?",
+    "b": "Does {file} describe a deep, angry divide between political camps or their supporters?",
+    "reversed": "Does {file} report rival political camps agreeing or cooperating?"}},
+  {"atom": "health.harm", "cat": "health-harm", "condition": "health_risk|up", "probes": {
+    "a": "Does {file} report people falling ill, being injured or dying from a disease, accident, disaster or harmful product?",
+    "b": "Does {file} describe illness, injuries or deaths affecting people?",
+    "reversed": "Does {file} report people recovering, or a health threat being brought under control?"}}
+ ],
+ "decisions": [
+  ["scope", "choice", "Where does the story in {file} mainly take place or matter?", ["whole_world", "one_country", "one_city_or_region", "none_fits"]],
+  ["size", "scale", "How much does the story in {file} change ordinary people's lives?", ["no_effect", "a_few_people", "many_people_in_one_country", "many_countries"]],
+  ["visible", "choice", "Can this be answered from the story text shown?", ["enough", "partial", "missing"]]
+ ]
+}
