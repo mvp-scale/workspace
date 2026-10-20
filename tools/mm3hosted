@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# MM3 on hosted TypeSafe Jev, pinned version (D-0011). Key from /workspace/.env, never printed. Approved: own write-ups; article text per D-0008.
+set -a; . /workspace/.env; set +a
+exec env TYPESAFE_BASE_URL=https://api.typesafe.ai JEV_MODEL="${JEV_MODEL:-jev-1.14.0}" node "$(ls -d /root/.claude/plugins/cache/mvp-scale/mm3/*/bin/mm3.mjs | tail -1)" "$@"

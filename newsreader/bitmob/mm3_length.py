@@ -2,14 +2,12 @@
 Stories: the first N articles of data/trainset/length-long.jsonl whose 3,000-word Jev reading has a condition key; one key per story (the first).
 For each story and each length (250, 500, 750, 1,000 words): a story file + an MM3 class request (9 yes/no on that key: present, main point, fact), run by the mm3 CLI.
 Writes data/world-engine/mm3/len/results.jsonl (story, key, length, run id, gates, p per question). Resumable.
-Usage: python3 newsreader/bitmob/mm3_length.py [N] [CONC] [--prepare-only]   (needs TYPESAFE_API_KEY in the environment for the direct route)"""
+Usage: python3 newsreader/bitmob/mm3_length.py [N] [CONC] [--prepare-only]   (runs through tools/mm3local: local Clef)"""
 import sys, os, re, json, glob, subprocess, concurrent.futures as cf
 import pyarrow.parquet as pq, pyarrow as pa
 N = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 100; CONC = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 3
 PREP = "--prepare-only" in sys.argv
 MM3 = "/root/.claude/plugins/cache/mvp-scale/mm3/035c10697964/bin/mm3.mjs"
-if not os.environ.get("TYPESAFE_API_KEY"):      # the same TypeSafe key the console uses (registry), never printed
-    sys.path.insert(0, "/workspace/demo"); import backends; os.environ["TYPESAFE_API_KEY"] = backends.BACKENDS["jev"]["key"]
 D = "/workspace/data/world-engine/mm3/len"; os.makedirs(D, exist_ok=True); OUT = f"{D}/results.jsonl"
 NAMES = {c["id"]: c["name"] for c in json.load(open("/workspace/exports/world-engine-labels.json"))["conditions"]}
 LONG = [json.loads(l) for l in open("/workspace/data/trainset/length-long.jsonl")]
@@ -87,7 +85,7 @@ def parse(out):
 def run(job):
     i, url, key, L, req = job
     if (i, L) in done: return None
-    p = subprocess.run(["node", MM3, "class", req[len('/workspace/'):]], cwd="/workspace", capture_output=True, text=True, timeout=600)
+    p = subprocess.run(["/workspace/tools/mm3local", "class", req[len('/workspace/'):]], cwd="/workspace", capture_output=True, text=True, timeout=600)
     rec = {"story": i, "url": url, "key": key, "length": L, **parse(p.stdout + p.stderr)}
     if not rec.get("id"): rec["error"] = (p.stdout + p.stderr)[-300:]
     return rec

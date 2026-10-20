@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# MM3 on local Clef Flash Q4 (:8018), free. .mm3/config.yaml points here; the env below keeps a hosted key in the shell from re-routing it.
+exec env TYPESAFE_BASE_URL=http://127.0.0.1:8018 JEV_MODEL=clef-flash-q4km TYPESAFE_API_KEY=local node "$(ls -d /root/.claude/plugins/cache/mvp-scale/mm3/*/bin/mm3.mjs | tail -1)" "$@"
