@@ -23,6 +23,7 @@ def call(state, qs):
     for attempt in range(3):
         try:
             with urllib.request.urlopen(urllib.request.Request(B["url"].rstrip("/") + "/v1/systemone", json.dumps(body).encode(), hdr), timeout=300) as r: d = json.load(r)
+            tls.model = d.get("model") or tls.__dict__.get("model")      # the version that actually answered (jev-latest resolves server-side)
             u = d.get("usage") or {}; tls.tin = getattr(tls, "tin", 0) + u.get("input_tokens", 0); tls.tout = getattr(tls, "tout", 0) + u.get("output_tokens", 0); tls.calls = getattr(tls, "calls", 0) + 1
             return d["answers"]
         except Exception:
@@ -105,7 +106,7 @@ def one(idx, kind, r):
            "target_rule": "mv3>=0.65 any-attribute (S-0002)", "target_keys": keys, "conflicts": conflicts, "near_cut": near_cut(P),
            "topic": tp["choice"], "topic_p": {k: round(float(v), 3) for k, v in tp["probabilities"].items()}, "topic_source": "reader",
            "country": country, "country_p": cprob, "country_source": "reader",
-           "teacher": TEACHER, "teacher_model": B["model"], "rules": os.environ["WE_RULES"], "prompt_version": PROMPT_VERSION, "labelled_at": time.strftime("%FT%T"),
+           "teacher": TEACHER, "teacher_model": getattr(tls, "model", None) or B["model"], "rules": os.environ["WE_RULES"], "prompt_version": PROMPT_VERSION, "labelled_at": time.strftime("%FT%T"),
            "inclusion_prob": round((NC / pool_c) if kind == "ccnews" else (NF / pool_f), 6), "split": "train"}
     if idx % 50 == 0:      # R17: replicate read of the engine questions
         rec["replicate"] = True; R = C.ask(ev, today=day); rec["P_rep"] = R

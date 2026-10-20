@@ -38,7 +38,8 @@ BACKENDS = {
     "clef-flash-q4km": {"url": _local("CLEF_Q4KM_URL", 8018), "key": ""},
     "clef-flash": {"url": _local("CLEF_FLASH_URL", 8017), "key": ""},
     "clef-flash-q2k": {"url": _local("CLEF_Q2K_URL", 8019), "key": ""},
-    "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": _env("TYPESAFE_API_KEY"), "hosted": True},
+    "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": _env("TYPESAFE_API_KEY"), "hosted": True,
+            "model": os.environ.get("JEV_MODEL", "jev-1.14.0")},      # pinned: jev-latest still resolves to 1.13.0 (checked 2026-10-19); labels record the version used
     "cygnet": {"url": _local("CYGNET_URL", 8016), "key": ""},
     "winnow": {"url": _local("WINNOW_URL", 8091), "key": "", "model": "Winnow-12B"},
     "semif": {"url": _local("SEMIF_URL", 8012), "key": ""},
