@@ -10,6 +10,15 @@ import rules as RU
 from world_pop import WorldPopulation, load_countries, D as DATA
 from sklearn.cluster import KMeans
 L = "/workspace/probes/world-engine/ledger"; LOCK = threading.RLock()      # re-entrant: the request handler holds it and log_unplaced takes it again
+READS = "/workspace/data/world-engine/reads.jsonl"      # every story the engine reads: the reader's 328 answers and what it made of them (training labels, and the record to check later)
+def log_read(source, ev, P, r, entry=None):
+    rec = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "source": source, "reader": C.O.CURRENT or C.O.MODEL or C.O.EP, "rules": os.environ.get("WE_RULES", ""),
+           "title": ev["title"], "text": ev.get("description", ""), "published": ev.get("published_at"), "entry": entry, "P": P,
+           "readings": r["readings"], "gate": r["gate"], "gate_ok": r["gate_ok"]}
+    try:
+        os.makedirs(os.path.dirname(READS), exist_ok=True)
+        with LOCK, open(READS, "a") as f: f.write(json.dumps(rec) + "\n")
+    except OSError: pass      # the record must never stop the engine
 IQ = list(E.O.IDEA_Q); DIALS = E.DIALS; DIAL_NAME = {r["id"]: r["name"] for r in E.D_ROWS}; EL_NAME = {r["id"]: r["name"] for r in E.E_ROWS}; DEC_NAME = {r["id"]: r["name"] for r in E.DEC_ROWS}
 FEATS = ["tech", "price", "privacy", "social", "time", "novelty", "young", "older", "city", "rural", "retired", "income", "caregiver", "alone", "kids", "housemates"]
 FEAT_LABEL = {"tech": "tech comfort", "price": "price attention", "privacy": "privacy stance", "social": "ease with strangers", "time": "time pressure", "novelty": "novelty appetite", "young": "under 30", "older": "60 or over", "city": "big city", "rural": "rural or small town",
@@ -155,6 +164,7 @@ class Session:
     def request_event(self, text):
         ev = {"evidence_id": "req", "published_at": datetime.date.today().isoformat(), "title": text, "description": ""}
         P = C.ask(ev); r = C.read(P); country, cp, pdet = C.ask_country_detailed(ev); entry = f"COUNTRY:{country}" if country in self.cid else "WORLD:world"
+        log_read("request", ev, P, r, entry)
         readings = [dict(x, amount=(0.10 if x["direction"] == "up" else -0.10) * x["strength"]) for x in r["readings"] if x["direction"] != "conflict"]
         for x in readings: x["basis"] = "reported"
         pl = C.place(ev); self.log_unplaced(text, pl)
@@ -432,7 +442,8 @@ class Session:
         for x in C.expected(ev, {x["dial"] for x in readings}, allowed, min_p=0.0, min_net=0.0): readings.append(dict(x, amount=sign(x) * x["strength"] * x["mode_weight"]))
         w_, wtype, _ = C.type_weight(r["gate"]["happened"], r["gate"]["announced"], r["gate"]["opinion"], P["g|forecast"])
         for x in readings: x["amount"] *= w_ * FEED_SCALE
-        cid = TICKER_COUNTRY.get(it["c"]); return {"it": it, "readings": readings, "entry": f"COUNTRY:{cid}" if cid in self.cid else "WORLD:world", "cid": cid}
+        cid = TICKER_COUNTRY.get(it["c"]); entry = f"COUNTRY:{cid}" if cid in self.cid else "WORLD:world"; log_read("feed", ev, P, r, entry)
+        return {"it": it, "readings": readings, "entry": entry, "cid": cid}
     def apply_feed(self, prep):
         """Put a prepared headline into the world: one tick, then clip every node so a long run of headlines cannot push the world to extremes (FEED_CAP)."""
         self.apply({"event": f"feed{LIVE['seq'] + 1}", "entry": prep["entry"], "count": 1, "readings": prep["readings"], "title": prep["it"]["x"], "country": prep["cid"], "source": "ticker"}, 1)
