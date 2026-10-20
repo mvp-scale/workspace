@@ -14,6 +14,16 @@ When a result looks wrong, ask in this order. Most problems are found by questio
 
 ## Principles
 
+### 0. Start with a good source
+Everything downstream inherits the source's flaws. A good source for training data:
+- **matches the domain and the input you will serve** (same kind of text, same length available: full article versus headline);
+- **is filtered for quality** before any labelling: trusted publishers, the right language, enough text per item, no adverts, roundups or live blogs, duplicates removed (syndicated copies are common);
+- **is large enough for the rare elements**, not just the common ones;
+- **is close in time to the data you will see live**, or the gap is measured and flagged;
+- **has a known licence and provenance** (where each item came from, when, which filter it passed).
+Check it with automatic rules on every build, and keep a slice of your own live data to compare against.
+*Bad looked like:* a live news feed where 12 of 29 stories had little or no text, a shopping post and a sports item were read as economic news, one story was Japanese, and one was a multi-story roundup. A large archive fixed the volume but was from 2017-19: "prices rising" appeared in 3 of 397 archive stories against 123 of 1,736 in the 2026 feed, so archive-only training would under-learn it. The archive's licence was listed as unknown, so it was kept to research use.
+
 ### 1. Define before you measure
 A label is only as good as the question that produced it. Write a short codebook entry for each element: definition, what counts, what does not, one example of each from real items. Test it on ~50 items with independent judges, measure agreement per element (Krippendorff's alpha; 0.8 reliable, below 0.667 reject), and rewrite until it passes. Then label at scale.
 *Bad looked like:* three models agreed on topic (84-90%) and country (92-94%) but overlapped only 34-41% on which conditions a story reports. The questions said "Does the story report any of these: ..." without saying whether a passing mention counts.
@@ -71,11 +81,12 @@ When judges cannot place an item, the ontology may be missing something.
 
 ## A good breakdown for a new ontology
 
-1. Split the ontology into areas read from text versus areas computed from others.
-2. For each element, write the codebook entry and test it for agreement (principles 1-3).
-3. Pilot every judge on ~50 items with a strict format (4-5); keep one vote per family.
-4. Check the input holds the signal (7); choose the input length on evidence.
-5. Build a frozen, jury-labelled test set with a human spot check (6).
-6. Write ~10 acceptance criteria per area, pre-registered (10).
-7. Train in capped, hour-long rounds aimed at failing criteria, with regression checks (8, 12).
-8. Report per-item examples and a criteria scorecard (9).
+1. Choose and filter a good source (principle 0); keep a slice of live data beside it.
+2. Split the ontology into areas read from text versus areas computed from others.
+3. For each element, write the codebook entry and test it for agreement (principles 1-3).
+4. Pilot every judge on ~50 items with a strict format (4-5); keep one vote per family.
+5. Check the input holds the signal (7); choose the input length on evidence.
+6. Build a frozen, jury-labelled test set with a human spot check (6).
+7. Write ~10 acceptance criteria per area, pre-registered (10).
+8. Train in capped, hour-long rounds aimed at failing criteria, with regression checks (8, 12).
+9. Report per-item examples and a criteria scorecard (9).
