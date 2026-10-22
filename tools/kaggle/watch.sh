@@ -25,6 +25,24 @@ RECORD() {  # status
     ${U0:+--gpu-used-before $U0} ${u1:+${U0:+--gpu-used-after $u1}} >/dev/null \
     && echo "run ledger: recorded $K" || echo "run ledger: could not record $K"
 }
+# Login check (read only: account name and expiry, never the token). OAuth logins (credentials.json) last about 3 hours;
+# a classic API key (kaggle.json) does not expire. The job's owner is the part of the slug before "/".
+LOGIN(){ python3 - "$1" <<'PY'
+import json, os, sys, datetime as dt
+d = os.path.expanduser("~/.kaggle"); c, k = os.path.join(d, "credentials.json"), os.path.join(d, "kaggle.json")
+if os.path.exists(k): u, exp = json.load(open(k)).get("username"), None
+elif os.path.exists(c): j = json.load(open(c)); u, exp = j.get("username"), j.get("access_token_expiration")
+else: print("none 0"); sys.exit()
+left = int((dt.datetime.fromisoformat(exp) - dt.datetime.now(dt.timezone.utc)).total_seconds() // 60) if exp else 99999
+print(u, left)
+PY
+}
+OWNER=${K%%/*}; read -r ACCT LEFT <<< "$(LOGIN)"
+FIX="kaggle auth login --force  (sign in as $OWNER), or place a classic API key in ~/.kaggle/kaggle.json"
+if [ -n "$PUSH" ]; then
+  [ "$ACCT" = "$OWNER" ] || { EV failed "logged in to Kaggle as '$ACCT', but the job belongs to '$OWNER'. Fix: $FIX"; exit 1; }
+  [ "$LEFT" -ge $(( MAX + 10 )) ] || { EV failed "Kaggle login expires in ${LEFT} min, before this job (max ${MAX} min) can finish and be fetched. Fix: $FIX"; exit 1; }
+fi
 U0=$(USED); PUSHED=""; RUNNING=""
 if [ -n "$PUSH" ]; then
   PUSHED=$(date +%s)
@@ -33,7 +51,11 @@ fi
 end=$(( $(date +%s) + MAX * 60 ))
 EV running "watching $K (poll ${POLL}s, max ${MAX} min)"
 while [ "$(date +%s)" -lt "$end" ]; do
-  s=$(kaggle kernels status "$K" 2>&1 | grep -oE 'KernelWorkerStatus\.[A-Z_]+' | cut -d. -f2)
+  raw=$(kaggle kernels status "$K" 2>&1); s=$(echo "$raw" | grep -oE 'KernelWorkerStatus\.[A-Z_]+' | cut -d. -f2)
+  if [ -z "$s" ] && echo "$raw" | grep -qiE "authentication required|permission .* denied|unauthori"; then
+    # a login gap is not a job failure: the run continues on Kaggle; keep waiting and say how to fix it
+    EV running "Kaggle login needed (the run continues on Kaggle). Fix: $FIX"; sleep "$POLL"; continue
+  fi
   if [ "$s" = RUNNING ] && [ -z "$RUNNING" ]; then RUNNING=$(date +%s); fi
   case "$s" in
     COMPLETE)
@@ -51,5 +73,5 @@ while [ "$(date +%s)" -lt "$end" ]; do
   esac
   if [ -z "$RUNNING" ]; then sleep 10; else sleep "$POLL"; fi
 done
-EV failed "watcher stopped after ${MAX} min; the run may still be going on Kaggle (check: kaggle kernels status $K)"
+EV failed "watcher stopped after ${MAX} min; the run may still be going on Kaggle (check: kaggle kernels status $K; fetch: kaggle kernels output $K -p $OUT)"
 exit 2

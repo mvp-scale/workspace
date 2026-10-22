@@ -96,3 +96,9 @@ Try it: `KAGGLE_RUNS_LEDGER=examples/kaggle-runs.example.jsonl ./runs.py summary
  "max_min": 20, "idle_min": 5, "machine_up_s": 61.3, "process_up_s": 3.8, "source": "guard events",
  "log": "out/train-example/train-example.log"}
 ```
+
+## Login gaps (learned 2026-10-22)
+- A browser login (`kaggle auth login`, stored in `~/.kaggle/credentials.json`) gives an access token that lasts about **3 hours**; it is meant to renew itself but can fail. A classic API key (`~/.kaggle/kaggle.json`, from Kaggle Settings > API) does not expire this way and is the recommended setup for unattended jobs.
+- A lapsed login does **not** stop a job: it keeps running on Kaggle. Only launching, status checks and downloads from your machine stop.
+- `watch.sh` now: refuses to launch if the logged-in account is not the job's owner (the part of the slug before `/`) or if the login would expire before the job's cap plus 10 minutes; treats "authentication required" while watching as a pause, not a failure, and prints the fix (`kaggle auth login --force`, signed in as the owner).
+- If the watcher gives up, the results are still on Kaggle: `kaggle kernels output <owner/slug> -p <dir>`.
