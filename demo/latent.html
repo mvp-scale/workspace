@@ -148,7 +148,7 @@
   .decide { display: grid; grid-template-columns: minmax(0,.8fr) 22px minmax(0,1fr) 22px minmax(0,1.1fr) 22px minmax(0,1.3fr); gap: 6px; align-items: stretch; } .decide .st { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface); font-size: 13px; color: var(--text-2); } .decide .st b { display: block; color: var(--text); font-size: 15px; margin-bottom: 2px; } .decide .ar { display: flex; align-items: center; justify-content: center; color: var(--text-3); font-size: 20px; }
   .decide .fork div { border-radius: var(--radius-sm); padding: 5px 8px; margin-top: 4px; border: 1px solid var(--border); } .decide .fork .c { border-color: var(--good); color: var(--text); } .decide .fork .g { border-color: var(--warn, var(--bad)); color: var(--text); }
   @media (max-width: 860px) { .decide { grid-template-columns: 1fr; } .decide .ar { transform: rotate(90deg); } }
-  .cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; } .cols2 > div { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; background: var(--surface); font-size: 13.5px; color: var(--text-2); } .cols2 b.cpu { color: var(--good); } .cols2 b.clef { color: var(--warn, var(--bad)); }
+  .cols2 { align-items: start; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; } .cols2 > div { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; background: var(--surface); font-size: 13.5px; color: var(--text-2); } .cols2 b.cpu { color: var(--good); } .cols2 b.clef { color: var(--warn, var(--bad)); }
   .ladder { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 8px; } .ladder .beat .big { font-size: 22px; }
   .timebar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); margin: 6px 0; font-size: 12px; } .timebar span { display: flex; align-items: center; justify-content: center; color: #fff; white-space: nowrap; } .timebar .lab { background: var(--accent); } .timebar .trn { background: var(--text-3); }
   .badge.proposed { border-color: var(--warn, var(--bad)); color: var(--warn, var(--bad)); font-weight: 700; } .badge.feas { border-color: var(--accent); color: var(--accent); font-weight: 700; }
@@ -158,7 +158,6 @@
 </style>
 </head>
 <body>
-<div style="padding:8px 16px;background:#fff3cd;color:#533f03;border-bottom:1px solid #e0c36a;font:14px sans-serif">Earlier version (before 22 Oct 2026 rework). Current: <a href="/latent">/latent</a></div>
 <main class="page" id="main">
   <div class="page-head">
     <div>
