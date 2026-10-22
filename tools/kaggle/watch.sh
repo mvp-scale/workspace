@@ -30,6 +30,7 @@ RECORD() {  # status
 LOGIN(){ python3 - "$1" <<'PY'
 import json, os, sys, datetime as dt
 d = os.path.expanduser("~/.kaggle"); c, k = os.path.join(d, "credentials.json"), os.path.join(d, "kaggle.json")
+if os.environ.get("KAGGLE_API_TOKEN") or os.path.exists(os.path.join(d, "access_token.txt")): print("api-token 99999"); sys.exit()   # settings-page token: no expiry; account not stored locally
 if os.path.exists(k): u, exp = json.load(open(k)).get("username"), None
 elif os.path.exists(c): j = json.load(open(c)); u, exp = j.get("username"), j.get("access_token_expiration")
 else: print("none 0"); sys.exit()
@@ -40,7 +41,7 @@ PY
 OWNER=${K%%/*}; read -r ACCT LEFT <<< "$(LOGIN)"
 FIX="kaggle auth login --force  (sign in as $OWNER), or place a classic API key in ~/.kaggle/kaggle.json"
 if [ -n "$PUSH" ]; then
-  [ "$ACCT" = "$OWNER" ] || { EV failed "logged in to Kaggle as '$ACCT', but the job belongs to '$OWNER'. Fix: $FIX"; exit 1; }
+  [ "$ACCT" = "$OWNER" ] || [ "$ACCT" = api-token ] || { EV failed "logged in to Kaggle as '$ACCT', but the job belongs to '$OWNER'. Fix: $FIX"; exit 1; }
   [ "$LEFT" -ge $(( MAX + 10 )) ] || { EV failed "Kaggle login expires in ${LEFT} min, before this job (max ${MAX} min) can finish and be fetched. Fix: $FIX"; exit 1; }
 fi
 U0=$(USED); PUSHED=""; RUNNING=""
