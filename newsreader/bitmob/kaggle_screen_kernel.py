@@ -30,11 +30,11 @@ for g in range(ng):
             if i % 5 == 0: beat("waiting for server")
     else: print(open(f"/kaggle/working/server{g}.log").read()[-3000:]); raise SystemExit("server did not start")
 phase("servers up"); sh("nvidia-smi --query-gpu=name,memory.used --format=csv,noheader")
-inp = glob.glob("/kaggle/input/**/stories.jsonl", recursive=True)[0]; rows = open(inp).read().splitlines()
+inp = glob.glob("/kaggle/input/**/__STORIES__", recursive=True)[0]; rows = open(inp).read().splitlines()
 procs = []; t = time.time()
 for g in range(ng):
     part = f"/tmp/part{g}.jsonl"; open(part, "w").write("\n".join(rows[g::ng]) + "\n"); out = f"/kaggle/working/screen_{NAME}_g{g}.jsonl"
-    procs.append((g, out, subprocess.Popen(f"cd /workspace && CLEF_PORT={8018 + g} WE_RULES=rules_v2 WORLD_GPU=0 python3 newsreader/bitmob/screen_real_run.py {part} {out} --minutes {LABEL_MIN}", shell=True)))
+    procs.append((g, out, subprocess.Popen(f"cd /workspace && CLEF_PORT={8018 + g} WE_RULES=rules_v2 WORLD_GPU=0 python3 newsreader/bitmob/__RUNNER__ {part} {out} --minutes {LABEL_MIN}", shell=True)))
 cnt = lambda: sum(sum(1 for _ in open(o)) for _, o, _ in procs if os.path.exists(o))
 while any(p.poll() is None for _, _, p in procs): time.sleep(15); beat(f"running: {cnt()} stories done")
 el = time.time() - t; k = cnt(); print(f"[rate] gpus={ng} stories={k} wall={el:.0f}s", flush=True)

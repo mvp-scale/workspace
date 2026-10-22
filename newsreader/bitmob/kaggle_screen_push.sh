@@ -4,7 +4,7 @@
 # offset: row index into the input; a NEGATIVE offset -K counts from the END (rows[len-K-n : len-K]), so the captain can work downward from the end.
 # Skips ids already labelled (any data/clef-labels/*.jsonl that is not an *_in file). kind=train refuses any frozen-test id; kind=test accepts only test_in ids.
 # Output convention (copy from the kernel output dir): data/clef-labels/kaggle_<name>.jsonl
-# Does NOT launch. Launch (check data/progress/STOP absent first!):
+# Env: RUNNER (default screen_real_run.py), STORIES (dataset file name, default stories.jsonl). Does NOT launch. Launch (check data/progress/STOP absent first!):
 #   kaggle datasets create -p $B/ds ; source tools/kaggle.env ; tools/kaggle/watch.sh coreygorman/bitmob-screenk-<name> $B/out 50 60 $B/src
 set -e; IN=$1; OFF=$2; N=$3; NAME=$4; DS=$5; KIND=${6:-train}; WK=${7:-4}; LM=${8:-33}; GM=${9:-45}; W=/workspace; B=$W/data/kaggle/screen_$NAME
 [ -e $W/data/progress/STOP ] && { echo "STOP file present: not building"; exit 3; }
@@ -13,7 +13,7 @@ python3 - <<P
 import json
 rows=[l for l in open("$IN") if l.strip()]; test={json.loads(l)["id"] for l in open("$W/data/clef-labels/test_in.jsonl")}
 ids=[json.loads(r)["id"] for r in rows]; assert ids and set(ids)<=test and len(set(ids))==len(ids), "non-test id in the test dataset"
-open("$B/ds/stories.jsonl","w").write("".join(r if r.endswith("\\n") else r+"\\n" for r in rows)); json.dump(ids,open("$B/ids.json","w")); print("ok:",len(rows),"frozen-test stories")
+open("$B/ds/${STORIES:-stories.jsonl}","w").write("".join(r if r.endswith("\\n") else r+"\\n" for r in rows)); json.dump(ids,open("$B/ids.json","w")); print("ok:",len(rows),"frozen-test stories")
 P
 P=$W/probes/persona; cp -r $P/rules $P/rules_v2 $B/pkg/probes/persona/; cp $P/personas.py $P/offline.py $P/rules.py $P/world_model.py $B/pkg/probes/persona/
 cp $W/probes/world-engine/classify.py $B/pkg/probes/world-engine/; cp $W/probes/world-engine/data/countries_world100.csv $B/pkg/probes/world-engine/data/
@@ -25,12 +25,12 @@ S
 cat > $B/pkg/newsreader/bitmob/progress.py <<'S'
 def event(job, state, msg, pid=None, win=False, **kw): print("[event]", job, state, msg, flush=True)
 S
-cp $W/newsreader/bitmob/screen_real_run.py $B/pkg/newsreader/bitmob/
+RUNNER=${RUNNER:-screen_real_run.py}; STORIES=${STORIES:-stories.jsonl}; cp $W/newsreader/bitmob/$RUNNER $B/pkg/newsreader/bitmob/
 tar czf $B/ds/pkg.tar.gz -C $B/pkg . ; mv $B/pkg /tmp/pkg_$$_old 2>/dev/null || true
 cat > $B/ds/dataset-metadata.json <<J
 {"title": "$DS", "id": "coreygorman/$DS", "licenses": [{"name": "other"}], "isPrivate": true}
 J
-( cat $W/tools/kaggle/guard.py; sed -e "s/__NAME__/$NAME/" -e "s/__WORKERS__/$WK/" -e "s/__LABELMIN__/$LM/" -e "s/__MAXMIN__/$GM/" $W/newsreader/bitmob/kaggle_screen_kernel.py ) > $B/src/bitmob-screenk-$NAME.py
+( cat $W/tools/kaggle/guard.py; sed -e "s/__NAME__/$NAME/" -e "s/__WORKERS__/$WK/" -e "s/__LABELMIN__/$LM/" -e "s/__MAXMIN__/$GM/" -e "s/__RUNNER__/$RUNNER/" -e "s/__STORIES__/$STORIES/" $W/newsreader/bitmob/kaggle_screen_kernel.py ) > $B/src/bitmob-screenk-$NAME.py
 cat > $B/src/kernel-metadata.json <<J
 {"id": "coreygorman/bitmob-screenk-$NAME", "title": "bitmob-screenk-$NAME", "code_file": "bitmob-screenk-$NAME.py", "language": "python", "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_tpu": false,
  "enable_internet": true, "keywords": ["gpu"], "dataset_sources": ["coreygorman/$DS"], "kernel_sources": [], "competition_sources": [], "model_sources": [],
