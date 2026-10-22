@@ -79,14 +79,34 @@ Status screens and logs can be wrong.
 When judges cannot place an item, the ontology may be missing something.
 *Bad looked like:* stories about Ireland, Switzerland, Singapore and Denmark could only be labelled "global" because the 100-country list did not include them.
 
+### 15. Smart extraction: use what you know about how the item got here
+Some labels are facts a script can read, and some can be filled from the item's context: who sent it, through which channel, and sometimes where it is going. Read named facts with a script first (place lists, entity recognition, cue words). Where the text says nothing, fall back to a stated default from the context instead of guessing from clues or saying nothing. What the text states always overrides the default; never record both. Keep judges and trained models for what is left.
+*Bad looked like:* in 13 of 50 stories no place was named, yet every judge gave a country by inference ("RCMP" means Canada, "the Fed" means the US), and the judges split on some (Wimbledon: France or UK). A place-name script (11 ms per story, no model) plus the outlet's home country (news agencies count as "world") gave every story a country by a rule anyone can check. It also showed that a country label might not need a trained model at all.
+
+### 16. Extract openly, map with a judge, not with raw similarity
+For a closed list (topics, conditions), let a model describe the item in its own words first, then map those words onto the list. The mapping is the hard part: use a judge or a learned map, and treat words that map to nothing as possible gaps in the ontology. Test every stage on its own; a failure in one stage can look like a failure of the whole idea.
+*Bad looked like:* open topic phrases from a model that never saw the list were good ("Asian shares rally"), but mapping them by embedding similarity to the topic definitions matched the reference on 21 of 42 stories ("Asian shares rally" went to energy, rugby previews to climate change). The same phrases mapped by a judge from the phrase alone matched 39 of 42, as well as asking the topic question directly (38 of 42). Noun phrases pulled by a parser were not topic phrases at all (9 of 42). The lowest-matching phrases were all sport, which showed the ontology had no sport topic: one in five stories was being filed under culture.
+
+### 17. Know what each detection is for
+A detection that only restates words already in the text adds nothing as an input to a text classifier. Its value lies elsewhere: as a check on outputs, a search key for rare cases, a label the text model cannot compute on its own, or a fallback from context. Also check the downstream rules before "fixing" a labeller: a contradiction in raw answers may already be resolved by the system that consumes them.
+*Bad looked like:* adding significance and rise/fall word counts to a text classifier lowered condition quality (mean AP 0.485 to 0.437, or 0.475 rescaled), while simply combining two text representations raised it from 0.447 to 0.485 and doubled the keys above 0.70 (6 to 10). One judge marked the same condition both up and down on 6 of 50 stories, but the engine's own net rule left 0 such cases in 10,000 labels.
+
+### 18. Score against the system you are replacing
+When the goal is to copy an existing system on cheaper hardware, its outputs are the target, flaws included. Use richer internal labels only if they map back to its labels. Log the system's flaws for a separate fix instead of training around them.
+*Bad looked like:* the engine's size question ("for ordinary people worldwide") rated 87 of 112 answers minor, so a better size scale looked tempting; but a reader built on it would no longer match the engine it is meant to replace.
+
+### 19. Size the test set before reading a round
+A round's gain is only visible if the test set can see it. Per element, the noise in a score shrinks with the number of positive examples in the test set (for average precision, roughly 0.44 divided by the square root of the positives). Check that number before reading any change, and grow the test set first if the expected gain is smaller than the noise. Never fill the test set with stories the classifier itself picked; draw it at random.
+*Bad looked like:* after a second round of 1,000 stories the mean score stayed at 0.499, one element "regressed" from 0.718 to 0.682, and 16 of 33 elements changed direction between rounds. The median element had only 12 positives in the 2,000-story test set, so each score carried a noise of about +-0.13: the rounds' per-element changes were invisible. Coverage gains (elements going from too rare to scorable: 44 to 30) were real.
+
 ## A good breakdown for a new ontology
 
 1. Choose and filter a good source (principle 0); keep a slice of live data beside it.
-2. Split the ontology into areas read from text versus areas computed from others.
+2. Split the ontology into areas read from text versus areas computed from others. For each area, ask what a script or the item's context can supply before any model (15).
 3. For each element, write the codebook entry and test it for agreement (principles 1-3).
 4. Pilot every judge on ~50 items with a strict format (4-5); keep one vote per family.
 5. Check the input holds the signal (7); choose the input length on evidence.
 6. Build a frozen, jury-labelled test set with a human spot check (6).
 7. Write ~10 acceptance criteria per area, pre-registered (10).
-8. Train in capped, hour-long rounds aimed at failing criteria, with regression checks (8, 12).
+8. Train in rounds of a fixed number of new items (1,000 here), half random and half aimed at failing criteria; score every candidate model on every criterion each round, with regression checks; time caps are only a safety stop (8, 12).
 9. Report per-item examples and a criteria scorecard (9).

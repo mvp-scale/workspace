@@ -12,13 +12,15 @@ from sklearn.cluster import KMeans
 L = "/workspace/probes/world-engine/ledger"; LOCK = threading.RLock()      # re-entrant: the request handler holds it and log_unplaced takes it again
 READS = "/workspace/data/world-engine/reads.jsonl"      # every story the engine reads: the reader's 328 answers and what it made of them (training labels, and the record to check later)
 def log_read(source, ev, P, r, entry=None):
-    rec = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "source": source, "reader": C.O.CURRENT or C.O.MODEL or C.O.EP, "rules": os.environ.get("WE_RULES", ""),
+    rec = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "source": source, "reader": C.O.CURRENT or C.O.MODEL or C.O.EP, "reader_label": C.O.reader_label() if C.O.CURRENT else None,
+           "reader_kind": ("bitmob-cpu-only" if C.O.cpu_only() else "bitmob+clef" if C.O.is_bitmob() else "llm"), "rules": os.environ.get("WE_RULES", ""),
            "title": ev["title"], "text": ev.get("description", ""), "published": ev.get("published_at"), "entry": entry, "P": P,
            "readings": r["readings"], "gate": r["gate"], "gate_ok": r["gate_ok"]}
     try:
         os.makedirs(os.path.dirname(READS), exist_ok=True)
         with LOCK, open(READS, "a") as f: f.write(json.dumps(rec) + "\n")
     except OSError: pass      # the record must never stop the engine
+    shadow_maybe(ev, r, entry)
 IQ = list(E.O.IDEA_Q); DIALS = E.DIALS; DIAL_NAME = {r["id"]: r["name"] for r in E.D_ROWS}; EL_NAME = {r["id"]: r["name"] for r in E.E_ROWS}; DEC_NAME = {r["id"]: r["name"] for r in E.DEC_ROWS}
 FEATS = ["tech", "price", "privacy", "social", "time", "novelty", "young", "older", "city", "rural", "retired", "income", "caregiver", "alone", "kids", "housemates"]
 FEAT_LABEL = {"tech": "tech comfort", "price": "price attention", "privacy": "privacy stance", "social": "ease with strangers", "time": "time pressure", "novelty": "novelty appetite", "young": "under 30", "older": "60 or over", "city": "big city", "rural": "rural or small town",
@@ -149,6 +151,7 @@ class Session:
             with LOCK, open(L + ("/unplaced.jsonl" if RU.IS_V1 else f"/unplaced_{os.path.basename(RU.R)}.jsonl"), "a") as f: f.write(json.dumps({"at": datetime.datetime.now().isoformat(), "text": text}) + "\n")
     def request(self, text, mode):
         auto = None
+        if mode == "auto" and C.O.cpu_only(): mode = "event"      # the pure-CPU reader has no LLM to ask what kind of thing this is: read it as news
         if mode == "auto":
             kind, p = self.classify_kind(text); mode = "offer" if kind == "offer" else "event"; auto = {"kind": mode, "p": p}
         r = self.request_event(text) if mode == "event" else self.request_offer(text)
@@ -180,7 +183,7 @@ class Session:
             if x.get("basis") == "expected": continue
             for i, a in enumerate(C.ATTRS.get((x["dial"], x["direction"]), [])):
                 m = (P[f"a|{x['dial']}|{x['direction']}|{i}|0"] + P[f"a|{x['dial']}|{x['direction']}|{i}|1"]) / 2
-                if m >= .65: evid.append({"dial": x["dial"], "attribute": a["attribute"], "q1": a["question_1"], "q2": a["question_2"], "p": round(m, 3)})
+                if m >= .65: evid.append({"dial": x["dial"], "attribute": C.attr_label(a), "q1": "(BitMob reads the condition, not this question)" if C.O.is_bitmob() else a["question_1"], "q2": "" if C.O.is_bitmob() else a["question_2"], "p": round(m, 3)})
         ident = {"mode": "event", "counted": ok, "status": "moved" if ok else "no_impact_expected", "weight": {"value": w_, "type": wtype, "why": wwhy}, "placement": pl, "exposure": self.exposure(pl), "misses": [dict(m, dial_name=DIAL_NAME[m["dial"]]) for m in C.misses(P)] if not readings else [], "gate": dict(r["gate"], forecast=round(P["g|forecast"], 2)), "country": country, "country_p": cp.get(country), "entry": entry, "readings": [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "direction": x["direction"], "strength": x["strength"], "amount": round(x["amount"], 4), "basis": x.get("basis", "reported"), "mode": x.get("mode", "reported"), "mode_weight": x.get("mode_weight", 1.0), "p_up": x.get("p_up"), "p_down": x.get("p_down"), "p_done": x.get("p_done"), "severity": x.get("severity"), "size_mult": x.get("size_mult", 1.0)} for x in readings], "evidence": evid}
         t0 = self.w.tick; w0 = self.branch([], entry); w2 = self.branch(readings if ok else [], entry)      # control run (no event) and event run: same 3 ticks, noise off, so only the event differs
         eff0, d0 = self.eff_prop(w0); eff1, d1 = self.eff_prop(w2); p0, p1 = E.Population.propensity(None, eff0), E.Population.propensity(None, eff1)
@@ -443,7 +446,19 @@ class Session:
         w_, wtype, _ = C.type_weight(r["gate"]["happened"], r["gate"]["announced"], r["gate"]["opinion"], P["g|forecast"])
         for x in readings: x["amount"] *= w_ * FEED_SCALE
         cid = TICKER_COUNTRY.get(it["c"]); entry = f"COUNTRY:{cid}" if cid in self.cid else "WORLD:world"; log_read("feed", ev, P, r, entry)
-        return {"it": it, "readings": readings, "entry": entry, "cid": cid}
+        flow = None
+        try:      # what this story went through, for the page: the story, what the reader answered (its own placement and country too), what the engine made of it. Skipped for a hosted (paid) reader.
+            hosted = bool((C.O._backend() or {}).get("hosted")) if C.O.CURRENT else False
+            if not hosted:
+                rc, _, _ = C.ask_country_detailed(ev); rp = [t for t in C.place(ev) if t["tagged"]]
+                flow = {"reader": C.O.reader_label() if C.O.CURRENT else None, "reader_id": C.O.CURRENT, "kind": "bitmob-cpu-only" if C.O.cpu_only() else "bitmob+clef" if C.O.is_bitmob() else "llm",
+                        "story": {"title": ev["title"], "text": " ".join(ev["description"].split()[:60])},
+                        "answers": {"gate_ok": r["gate_ok"], "type": {k: round(P[f"g|{k}"], 2) for k in ("happened", "announced", "opinion", "forecast")}, "recent": round(P["x|recent"], 2), "scope": {k: round(P[f"s|{k}"], 2) for k in ("national", "local", "new")},
+                                    "topic": [t["name"] for t in rp][:3], "country": rc, "conditions": [{"dial": x["dial"], "direction": x["direction"], "strength": x["strength"]} for x in r["readings"] if x["direction"] != "conflict"]},
+                        "expected_by": ("not asked (CPU-only reader)" if C.O.cpu_only() else "Clef (GPU)" if C.O.is_bitmob() else "the reader"), "expected": [{"dial": x["dial"], "direction": x["direction"], "strength": x["strength"]} for x in readings if x.get("basis") == "expected"],
+                        "engine": {"entry": entry, "readings": [{"dial": x["dial"], "direction": "up" if x["amount"] > 0 else "down", "basis": x.get("basis"), "amount": round(x["amount"], 4)} for x in readings]}}
+        except Exception as e: flow = {"error": f"{type(e).__name__}: {str(e)[:120]}"}
+        return {"it": it, "readings": readings, "entry": entry, "cid": cid, "flow": flow}
     def apply_feed(self, prep):
         """Put a prepared headline into the world: one tick, then clip every node so a long run of headlines cannot push the world to extremes (FEED_CAP)."""
         self.apply({"event": f"feed{LIVE['seq'] + 1}", "entry": prep["entry"], "count": 1, "readings": prep["readings"], "title": prep["it"]["x"], "country": prep["cid"], "source": "ticker"}, 1)
@@ -509,7 +524,7 @@ def feeder_loop():
             t0 = time.time(); prep = S.prepare_feed(it); read_ms = round((time.time() - t0) * 1000)
             with LOCK: t1 = time.time(); S.apply_feed(prep); tick = S.w.tick; apply_ms = round((time.time() - t1) * 1000, 1)
             eff = [{"dial": x["dial"], "name": DIAL_NAME[x["dial"]], "dir": "up" if x["amount"] > 0 else "down", "basis": x["basis"]} for x in sorted(prep["readings"], key=lambda x: -abs(x["amount"]))[:3] if abs(x["amount"]) > 0]
-            with LIVE_LOCK: LIVE["err"] = None; LIVE["by"] = C.O.CURRENT; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "by": C.O.CURRENT, "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms, "depth": it.get("depth"), "words": it.get("words"), "url": it.get("url"), "dek": it.get("dek")}); del LIVE["items"][:-60]; LIVE["err"] = None
+            with LIVE_LOCK: LIVE["err"] = None; LIVE["by"] = C.O.CURRENT; LIVE["seq"] += 1; LIVE["fed"] += 1; LIVE["items"].append({"seq": LIVE["seq"], "by": C.O.CURRENT, "c": it["c"], "t": it["t"], "x": it["x"], "src": it.get("src"), "kind": it.get("kind"), "effects": eff, "flow": prep.get("flow"), "tick": tick, "read_ms": read_ms, "apply_ms": apply_ms, "depth": it.get("depth"), "words": it.get("words"), "url": it.get("url"), "dek": it.get("dek")}); del LIVE["items"][:-60]; LIVE["err"] = None
             if it.get("nr_id"): newsreader_ack(it["nr_id"])
         except Exception as e:
             with LIVE_LOCK: LIVE["err"] = ("no reader is answering: " + ("no local model is loaded (turn on Clef or Winnow under Services)" if C.O.AUTO else f"the pinned reader at {C.O.EP} is off")) \
@@ -520,7 +535,41 @@ def live_status(since=0, watching=True):
         if watching: LIVE["seen"] = time.time()
         out = {"on": LIVE["on"], "interval": LIVE["interval"], "seq": LIVE["seq"], "fed": LIVE["fed"], "err": LIVE["err"], "source": LIVE["source"], "items": [i for i in LIVE["items"] if i["seq"] > since]}
     out["tick"] = S.w.tick; out["events"] = len(S.events)
-    out["reader"] = {"auto": C.O.AUTO, "current": C.O.CURRENT, "last_read_by": LIVE.get("by")}   # which model reads the headlines
+    out["reader"] = {"auto": C.O.AUTO, "current": C.O.CURRENT, "last_read_by": LIVE.get("by"), "label": C.O.reader_label() if C.O.CURRENT else None, "kind": ("bitmob-cpu-only" if C.O.cpu_only() else "bitmob+clef" if C.O.is_bitmob() else "llm")}   # which model reads the headlines
+    return out
+# ---- reader identity and the Clef shadow check (D-0037): while BitMob reads, every Nth story is also read by local Clef alone, off the request path, and the two are compared.
+SHADOW = {"every": int(os.environ.get("WE_SHADOW_EVERY", "0")), "n_reads": 0, "done": 0, "err": None, "busy": False, "recent": [], "since": None}
+SHADOW_FILE = "/workspace/data/world-engine/shadow.jsonl"
+def shadow_maybe(ev, r, entry):
+    if not C.O.is_bitmob() or not SHADOW["every"]: return
+    SHADOW["n_reads"] += 1
+    if SHADOW["n_reads"] % SHADOW["every"] or SHADOW["busy"]: return
+    SHADOW["busy"] = True; threading.Thread(target=shadow_run, args=(dict(ev), r, entry, C.O.CURRENT), daemon=True).start()
+def shadow_run(ev, r, entry, bid):
+    try:
+        cl = lambda st, qs: C.O.call_on("clef-flash-q4km", st, qs)
+        P = C.ask(ev, call=cl); rc = C.read(P); country, _, _ = C.ask_country_detailed(ev, call=cl); pl = C.place(ev, call=cl)
+        kb = {(x["dial"], x["direction"]) for x in r["readings"] if x["direction"] != "conflict"}; kc = {(x["dial"], x["direction"]) for x in rc["readings"] if x["direction"] != "conflict"}
+        bm = C.O.call_on(bid, f"News item:\n{ev['title']}. {ev['description']}", {"c": {"type": "choice", "instructions": "area", "criteria": {d["id"]: d["definition"] for d in C.DOMAINS}}})["c"]["choice"]
+        rec = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "title": ev["title"], "gate_bitmob": r["gate_ok"], "gate_clef": rc["gate_ok"], "keys_bitmob": sorted("|".join(k) for k in kb), "keys_clef": sorted("|".join(k) for k in kc),
+               "topic_bitmob": bm, "topic_clef": next((t["id"] for t in pl if t["tagged"]), None), "entry_bitmob": entry, "entry_clef": f"COUNTRY:{country}"}
+        rec["agree"] = {"gate": rec["gate_bitmob"] == rec["gate_clef"], "topic": rec["topic_bitmob"] == rec["topic_clef"], "entry": rec["entry_bitmob"] == rec["entry_clef"], "keys_jaccard": (len(kb & kc) / len(kb | kc)) if (kb | kc) else 1.0, "keys_same": kb == kc}
+        with LOCK, open(SHADOW_FILE, "a") as f: f.write(json.dumps(rec) + "\n")
+        SHADOW["recent"] = (SHADOW["recent"] + [rec["agree"]])[-50:]; SHADOW["done"] += 1; SHADOW["err"] = None
+        if not SHADOW["since"]: SHADOW["since"] = rec["at"]
+    except Exception as e: SHADOW["err"] = f"{type(e).__name__}: {str(e)[:150]}"
+    finally: SHADOW["busy"] = False
+def shadow_summary():
+    rc = SHADOW["recent"]; m = lambda k: round(sum(1 for a in rc if a[k]) / len(rc), 3) if rc else None
+    return {"every": SHADOW["every"], "checked": SHADOW["done"], "window": len(rc), "gate": m("gate"), "topic": m("topic"), "entry": m("entry"), "keys_same": m("keys_same"), "keys_jaccard": round(sum(a["keys_jaccard"] for a in rc) / len(rc), 3) if rc else None, "err": SHADOW["err"], "busy": SHADOW["busy"]}
+def reader_state():
+    kind = "bitmob-cpu-only" if C.O.cpu_only() else "bitmob+clef" if C.O.is_bitmob() else "llm"
+    out = {"auto": C.O.AUTO, "url": C.O.EP, "model": C.O.MODEL, "current": C.O.CURRENT, "label": C.O.reader_label() if C.O.CURRENT else None, "kind": kind}
+    if C.O.is_bitmob():
+        out["shadow"] = shadow_summary()
+        try:
+            with urllib.request.urlopen(C.O.EP + "/stats", timeout=2) as r: out["stats"] = json.load(r)
+        except Exception: out["stats"] = None
     return out
 S = None
 class H(BaseHTTPRequestHandler):
@@ -537,7 +586,7 @@ class H(BaseHTTPRequestHandler):
             t = RU.sowhat_serve(); return self._send(200, {"set": os.path.basename(RU.R), **t})
         if self.path.startswith("/graph"):
             with LOCK: return self._send(200, S.graph_info())
-        if self.path.startswith("/reader"): return self._send(200, {"auto": C.O.AUTO, "url": C.O.EP, "model": C.O.MODEL, "current": C.O.CURRENT})   # never the key
+        if self.path.startswith("/reader"): return self._send(200, reader_state())   # never the key
         if self.path.startswith("/gpu"):
             with LOCK: return self._send(200, S.gpu_info())
         if self.path.startswith("/world"):
@@ -550,10 +599,11 @@ class H(BaseHTTPRequestHandler):
             with LOCK:
                 if self.path == "/request": t = str(req["text"]).strip(); assert 8 <= len(t) <= 1500 and req["mode"] in ("event", "offer", "auto"); return self._send(200, S.request(t, req["mode"]))
                 if self.path == "/reader":  # {"auto": true}, or any TypeSafe /v1/systemone endpoint (the console sends address, model alias, key)
-                    if req.get("auto"): C.O.set_auto(); return self._send(200, {"auto": True, "url": C.O.EP, "model": C.O.MODEL, "current": C.O.CURRENT})
+                    if req.get("auto"): C.O.set_auto(); return self._send(200, reader_state())
                     url = str(req["url"]); assert url.startswith(("http://127.0.0.1:", "http://localhost:", "https://"))
                     C.O.set_reader(url, str(req.get("model") or ""), str(req.get("key") or ""), req.get("id"))
-                    return self._send(200, {"auto": False, "url": C.O.EP, "model": C.O.MODEL})
+                    SHADOW["n_reads"] = 0; return self._send(200, reader_state())
+                if self.path == "/shadow": SHADOW["every"] = max(0, int(req.get("every", 0))); return self._send(200, reader_state())
                 if self.path == "/drill": return self._send(200, S.drill(str(req["node"]), str(req["col"]), bool(req.get("series"))))
                 if self.path == "/commit": return self._send(200, S.commit())
                 if self.path == "/reset":

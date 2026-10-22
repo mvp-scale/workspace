@@ -169,6 +169,19 @@ services:
     tags: [cpu, model, demand]
     log: logs/cpu-engine.log
 
+  bitmob-reader:
+    kind: proc
+    desc: "BitMob as a World-engine reader (D-0037): fine-tuned CPU readers answer the engine's gate, type, scope, condition, topic and country questions; local Clef answers only expected impact and severity (or nothing, in the CPU-only mode)"
+    panel: CPU only, no GPU
+    port: 8021
+    cmd: [models/embed-zs/.venv/bin/python, newsreader/bitmob/reader/engine_reader.py]
+    env: {BITMOB_READER_PORT: "${port}", THREADS: "8", HF_HOME: "${root}/data/hf", CUDA_VISIBLE_DEVICES: ""}
+    match: engine_reader\.py
+    health: /health
+    boot: 120
+    tags: [cpu, model, demand]
+    log: logs/bitmob-reader.log
+
   newsreader:
     kind: proc
     desc: "News reader: polls the curated feeds (newsreader/catalogue.csv), fetches and extracts articles to Markdown, queues them for the World engine"
@@ -244,6 +257,17 @@ services:
     desc: Clef Flash (Cloudflare, 9B bf16; about 19 GiB, so it runs alone, not in the models profile)
     port: 8017
     match: serve_inproc
+    health: /healthz
+    boot: 300
+    heavy: true
+    tags: [gpu, model, solo]
+
+  clef-flash-nvfp4:
+    kind: systemd
+    desc: Clef Flash Fast (alpha-x-ai NVFP4/FP8, unofficial, vLLM 0.30.0 in-process via serve_inproc; Blackwell only; the card's backbone is 7.6 GiB, plan about 16 GiB with CLEF_KV_GIB=4, so it runs beside Clef Q4 only when that much is free, never in a profile)
+    panel: about 16 GB GPU (to be measured)
+    port: 8038
+    match: --model clef-flash-nvfp4
     health: /healthz
     boot: 300
     heavy: true

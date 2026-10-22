@@ -26,7 +26,8 @@
         "The quantizer's card says the decision head is stored at Q8_0 in every quantized file, and that no importance matrix was used.",
         "Images work through a separate 0.92 GB vision projector (--mmproj); the Image Lab results use it. Video is not tested.",
         "Run to find how far the model can be shrunk before accuracy drops; compare it with the full-precision Clef Flash."
-      ]
+      ],
+      "vision": true
     },
     {
       "id": "clef-flash",
@@ -54,7 +55,8 @@
         "A softmax per question gives the probabilities; there is no generation and no output parsing.",
         "The card says it was tested on a single H200; the larger sibling is Clef (not yet added).",
         "Takes images as well as text; the card also documents video, which we have not tested. Questions in one request are decided jointly."
-      ]
+      ],
+      "vision": true
     },
     {
       "id": "clef-flash-q2k",
@@ -81,7 +83,36 @@
         "Q2_K is a mixed quantization: 4.19 GB for 9.08B parameters is about 3.7 bits per weight on average, not 2. Our Q4_K_M is about 5.3.",
         "The quantizer's card says the decision head is stored at Q8_0 in every quantized file, and that no importance matrix was used.",
         "Images work through the same separate 0.92 GB vision projector as the Q4 (kept at 16-bit); the Image Lab results use it. Video is not tested. Measured here: on world-knowledge text it lost about 7 points against 16-bit, on images about 3."
-      ]
+      ],
+      "vision": true
+    },
+    {
+      "id": "clef-flash-nvfp4",
+      "name": "Clef Flash Fast",
+      "code": "CLF9F4",
+      "vendor": "Cloudflare (quantized by alpha-x-ai, unofficial)",
+      "kind": "Open, decoder, quantized",
+      "open": true,
+      "licence": "Apache-2.0",
+      "params": "9B (NVFP4 + FP8)",
+      "price": "Self-hosted",
+      "public_rank": null,
+      "public_score": null,
+      "base": "Cloudflare/clef-flash, NVFP4/FP8 compressed-tensors",
+      "architecture": "Decoder backbone with a joint schema head",
+      "family": "joint",
+      "interface": "TypeSafe-compatible /v1/systemone; in-process vLLM 0.30.0 through the bundled ClefVLLM (clef_vllm.py), served by demo/serve_inproc.py",
+      "repo": "https://huggingface.co/alpha-x-ai/clef-flash-NVFP4",
+      "verify": "clef-flash-nvfp4",
+      "served_as": "In-process vLLM 0.30.0, local GPU (Blackwell only: NVFP4 kernels); on demand, not at boot",
+      "sauce": "The same Clef Flash model with weights and activations compressed to NVFP4 (4-bit) and FP8 by a third party, for Blackwell GPUs. The quantizer's card says it takes 53% of the BF16 release's latency on an RTX 5090 and agrees with BF16 on the top option for 98.9% of 1,358 held-out questions (the quantizer's own test). Not made or tested by Cloudflare.",
+      "how": [
+        "Same mechanism as Clef Flash: the backbone reads the state once and the joint schema head scores every option of every question.",
+        "Per the card: MLP, linear-attention and full-attention layers are NVFP4 or FP8 (chosen per layer by measured damage); the vision encoder, lm_head and the joint head stay BF16.",
+        "Loaded in vLLM through the card's own clef_vllm.py (not a chat model). The card says images work (image-text-to-text) and video was not evaluated.",
+        "Status: under acceptance test against Clef Flash Q4 and BF16 (Scenario Lab: 57 MMLU sets + 15 probe sets; Image Lab)."
+      ],
+      "vision": true
     },
     {
       "id": "jev",
@@ -191,7 +222,8 @@
       "family": "logits",
       "sauce": "A Gemma 4 12B fine-tune served by a purpose-built llama.cpp build: label the options with letters, read the label logits once, softmax over them.",
       "code": "WINN12",
-      "verify": "winnow"
+      "verify": "winnow",
+      "vision": true
     },
     {
       "id": "so1",
@@ -425,6 +457,33 @@
         "classifier",
         "CPU engine"
       ]
+    },
+    {
+      "id": "bitmob-cpu",
+      "name": "BitMob (CPU)",
+      "vendor": "This workspace",
+      "kind": "Local, CPU reader, no GPU at all",
+      "open": true,
+      "licence": null,
+      "params": "5 x e5-base (110M each) + e5-small + tf-idf",
+      "base": "intfloat/e5-base-v2 fine-tuned per area (Kaggle runs 2, 4, 7, 8) blended with e5-small + tf-idf logistic regression",
+      "architecture": "Fine-tuned sentence encoders with one head each: type, scope and recent, topic, country, conditions",
+      "how": [
+        "Reads the story on the CPU with five fine-tuned encoders and answers the engine's gate, type, recent, scope, condition, topic and country questions itself, trained on Jev's labels.",
+        "Expected impact, severity and the So-what story are skipped, not guessed: the engine counts only what the story reports.",
+        "The engine's per-attribute answers do not exist for it: a condition reading is the encoder's own output (52 condition keys), shown as such."
+      ],
+      "interface": "TypeSafe /v1/systemone shape (newsreader/bitmob/reader/engine_reader.py)",
+      "served_as": "Local process, CPU only, GPU hidden (:8021)",
+      "price": "Self-hosted",
+      "public_score": null,
+      "public_rank": null,
+      "repo": null,
+      "family": "library",
+      "sauce": "A mob of little brains sharing the workload: one tiny head per question on one cheap encoding, so a library of questions costs one encode and one multiplication.",
+      "code": "BMOBCP",
+      "verify": "e5-small",
+      "aliases": []
     }
   ],
   "tiers": [

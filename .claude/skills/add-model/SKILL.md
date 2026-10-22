@@ -5,6 +5,33 @@ description: Onboard a new Jev-class decision model (a Hugging Face repo, GitHub
 
 # Add a model
 
+## Done means: every surface shows it (the user's definition of "registered")
+
+"Registered", "added" or "onboarded" means ALL of these, checked on the live console, not just a registry line. Until every row is ticked, say "registry entry only (N of 10 surfaces)" and list what is missing. Report this table at the end of every onboarding.
+
+| # | Surface | Shows it when | Step |
+|---|---|---|---|
+| 1 | Model card (`/models`) | fact sheet in `demo/models.json` with code + valid `family`; page loads | 2, 6 |
+| 2 | Registry and pickers | `BACKENDS` in `demo/backends.py` (+ `demo/server.py`, `LOCAL` in `demo/index.html`); `tools/check_models.py` passes | 4, 6 |
+| 3 | Service | `service.yaml` entry, health check answers, named process | 5 |
+| 4 | Leaderboard | `data/bench/<id>-{original,easy,hard}` complete, no failed items | 7 |
+| 5 | Baseline compare (`/compare`) | same runs, model selectable | 7, 8 |
+| 6 | Scenario lab, including World knowledge (all 57 MMLU sets, 14,042 questions) | every set in `probes/v2` run to `data/probe-runs-v2/<id>-<set>`, no failed items | 7 |
+| 7 | Image lab (if the card says it takes images) | `data/image-lab/runs/<id>/` complete | 7b |
+| 8 | Speed and memory | `demo/vram.json` entry, batched-vs-serial proof recorded | 7 |
+| 9 | Demo mode (masked names) | entry in `demo/mask.json` (code name + short code in the family's style, e.g. Atlas Fast / ATL-F) | 6 |
+| 10 | Published site (`docs/`) | `python3 demo/build_static.py` rerun after the runs finish; committing `docs/` is the user's call | 8 |
+
+**Visible from the moment it's registered.** Every page lists every non-retired registry model at once, with "not run yet" (never 0% or fake numbers) until its data lands: the shared helper `Jev.pending()` in `demo/static/app.js` (used by Leaderboard, Compare, Models, Image lab, World engine reader list, How-it-works; Scenario lab has its own "Not run here yet" line). Image lab lists only models with `"vision": true` in `demo/models.json`; set it from the card in step 6. So a fresh entry already shows on surfaces 1, 4–7 as "not run yet"; the row is ticked only when real results show.
+
+Optional, only when the user wants the model in them: lab studies with their own model lists (`probes/lab_decompose.py`, `lab_custom_decompose.py`, `lab_batch.py`, `lab_hierarchy.py`, `lab_time.py` take `--model(s)`; `foundry/funnel.py` `MODEL_RANK`/`MODEL_META` and `foundry/sort_and_rank.py` `ALL_MODELS` are hard-coded). Say which were run.
+
+### Every file that names models (MM3-0502 sweep, 2026-10-22, verified by reading)
+
+Hand-written per-model entries: `demo/models.json`, `demo/backends.py`, `demo/mask.json`, `service.yaml`, `demo/lineup.sh`, `demo/serve_inproc.py`, `demo/bench-batch.sh`, `demo/bench.sh` (HTTP models), `demo/vram.py`, `dev-bench-setup.sh`, `jevbench/jevbench/adapters/__init__.py`, `jevbench/jevbench/cli.py`, `demo/models.html` (`FAM`, only for a new family), `colab/jevgw/data/models.json` (step 8b). Discovered from data (no edit, but needs the runs): Leaderboard, Baseline compare, Scenario lab, Image lab. Regenerated: `demo/build_static.py` → `docs/`. Fixed single model, no edit: `demo/build_dialogue_topics.py`. If a new file starts listing models, add it here and rerun the sweep (request `.mm3/requests/onboarding-touchpoints.yaml`).
+
+A quantized variant of a model we have is accepted only by comparison with its parent on rows 4, 6 and 7 (see below); state the bars before running.
+
 Adding a model touches about a dozen files in five places. Do them in this order, from a checklist, and verify each step. Do not improvise file by file: that is how Clef Flash first shipped with a `family` value that crashed `/models`, a unit that waited forever for another service, and a benchmark that ran out of GPU memory against its own server.
 
 ## 0. Read the primary source first
@@ -90,9 +117,11 @@ Every new in-process model should ship a batching path if its author's code can 
 
 **Load once.** Each set is a new process that reloads the model (about 8 s each). Acceptable at 72 sets; a single process that loops over sets is the next improvement.
 
-**Gate every run on a healthy server and a free GPU.** Before measuring or benchmarking, check `curl :<port>/health` (or `/healthz`) answers and `nvidia-smi` shows room for the model: `demo/vram.py` refuses unless the GPU is idle, and a llama.cpp server with `-ub 16384` needs about 9 GiB beyond its weights. A chain that does not check this runs the whole benchmark against nothing: every item fails (the runner stops after 3 straight errors, so each set holds only a few rows) and it leaves result directories that make a rerun skip. After any failed run, delete that model's `data/bench/<id>-*` and `data/probe-runs-v2/<id>-*` before rerunning, and read the `done: N/M attempted, F failed` lines, not just whether the chain finished. Another service may have been started meanwhile; look at `nvidia-smi` first.
+**Gate every run on a healthy server and a free GPU.** Before measuring or benchmarking, check `curl :<port>/health` (or `/healthz`) answers and `nvidia-smi` shows room for the model: `demo/vram.py` refuses unless the GPU is idle, and a llama.cpp server with `-ub 16384` needs about 9 GiB beyond its weights. A chain that does not check this runs the whole benchmark against nothing: every item fails (the runner stops after 3 straight errors, so each set holds only a few rows) and it leaves result directories that make a rerun skip. After any failed run, move that model's failed `data/bench/<id>-*` and `data/probe-runs-v2/<id>-*` folders aside (into `data/run-versions/_displaced/`, never `rm`: user rule) before rerunning, and read the `done: N/M attempted, F failed` lines, not just whether the chain finished. Another service may have been started meanwhile; look at `nvidia-smi` first.
 
-Probe runs go to `data/probe-runs-v2/`, never `data/bench/` (the leaderboard averages everything in `data/bench/`). After each run check `results.jsonl` for failed items; a failure is an error, not 0% accuracy. Existing complete runs are skipped, so a failed run's directory must be removed before a rerun.
+Probe runs go to `data/probe-runs-v2/`, never `data/bench/` (the leaderboard averages everything in `data/bench/`). After each run check `results.jsonl` for failed items; a failure is an error, not 0% accuracy. Existing complete runs are skipped, so a failed run's directory must be moved aside (not deleted) before a rerun.
+
+**Versions.** Plain folders (`data/probe-runs-v2/<id>-<set>`, `data/bench/<id>-<tier>`, `data/image-lab/runs/<id>`) always hold the CURRENT version and are what the pages read. The archive is `data/run-versions/<kind>/<id>/<version>/<set-or-tier>/` (outside every page's discovery folder; `bench.sh` and `bench-batch.sh` snapshot a model before its runs). Before re-running a model whose version changed, run `tools/run_versions.py prepare <id> <new-version>` (archives, verifies, moves the plain folders aside so the runner re-runs; it never deletes), then run, then `tools/run_versions.py diff <id> <old-version> <new-version>` (accuracy change per set with paired exact McNemar and Wilson intervals; writes `data/run-versions/changes/<id>.json`). Do not delete result folders by hand to force a re-run. See `data/run-versions/README.md`.
 
 ## 7b. Vision, if the model takes images
 
@@ -100,7 +129,7 @@ Check the card for `images`/`videos` and test it; do not assume text-only from a
 
 ## 8. Show it in the demo
 
-The Scenario lab and Image lab share their heat map, model strip and colour scale (`table.heat`, `.strip`/`.mrow`, `.scale` in `static/app.css`; `Jev.heat` in `static/app.js`). Keep the two labs' structure aligned: an overview heat map (rows grouped, a column per model in one fixed order, an Average row, the chance-centred scale), and a per-item "Model comparison" strip with the 95% interval bar. A new model must show in those views without clicking into a task; check the overview, a domain and a task page after onboarding. The Image Lab discovers models from `data/image-lab/runs/<id>/` and reads fact sheets from `/api/models`.
+The Scenario lab and Image lab share their heat map, model strip and colour scale (`table.heat`, `.strip`/`.mrow`, `.scale` in `static/app.css`; `Jev.heat` in `static/app.js`). Keep the two labs' structure aligned: an overview heat map (rows grouped, columns and rows sorted by accuracy by the shared helper (`Jev.heat.sortModels`/`sortGroups`: best model on the left, best row on top, models not run last), so a new model or run re-sorts itself, an Average row, the chance-centred scale), and a per-item "Model comparison" strip with the 95% interval bar. A new model must show in those views without clicking into a task; check the overview, a domain and a task page after onboarding. The Image Lab discovers models from `data/image-lab/runs/<id>/` and reads fact sheets from `/api/models`.
 
 The Leaderboard, Scenario lab and Baseline compare discover models from `data/` directories and `BACKENDS`, so they pick the model up once the data and the `server.py` entry exist. The **demo server must be restarted** (`./service.sh restart demo`) to load `BACKENDS`; check first that no window study is running (`probes/window_study.py`). Optional hand-typed reference maps in `demo/scenarios.html` (p50 latency, WEAK accuracy) are not required.
 

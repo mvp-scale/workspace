@@ -47,6 +47,37 @@ def set_auto():
     AUTO = True
 
 
+def _backend():
+    try:
+        import backends
+        return backends.BACKENDS.get(CURRENT or "") or {}
+    except Exception: return {}
+
+
+def is_bitmob():
+    """True when the pinned reader is BitMob as a World-engine reader (D-0037): its answers to the 318 attribute questions are synthesised from its condition readings, not asked one by one."""
+    return not AUTO and bool(_backend().get("engine_reader"))
+
+
+def cpu_only():
+    """True for the pure-CPU BitMob mode: no LLM at all, so expected impact, severity and the So-what story are skipped (not guessed)."""
+    return is_bitmob() and bool(_backend().get("cpu_only"))
+
+
+def reader_label():
+    """Display name of the reader that answers now (from the model registry), for reads and badges."""
+    try:
+        import backends
+        return backends.name(CURRENT) if CURRENT else None
+    except Exception: return CURRENT
+
+
+def call_on(bid, state, qs):
+    """One call to a named backend (registry id), whatever the engine's reader is: used for the Clef shadow check."""
+    import backends
+    b = backends.BACKENDS[bid]; return _call(b["url"].rstrip("/"), b["model"], b["key"], state, qs, tries=1)
+
+
 def _local_readers():
     import backends
     ids = [b for b, v in backends.BACKENDS.items() if not v["hosted"] and not v["library_only"]]  # never BitMob: it answers only its own library

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vector walkthrough · mock-up</title>
+<title>How BitMob works · walkthrough</title>
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
 <style>
@@ -14,215 +14,227 @@
   .point { font-size: 14px; margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; max-width: 95ch; }
   pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; font-family: var(--mono, ui-monospace, monospace); }
   .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 12px; }
-  .four { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; }
-  .two > div, .four > div { min-width: 0; }
+  .two > div { min-width: 0; }
   h3 { margin: 0 0 4px; font-size: 14px; }
-  .seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex-wrap: wrap; }
-  .seg button { border: 0; background: var(--surface); color: var(--text-2); padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
-  .sticky { position: sticky; top: 0; z-index: 3; background: var(--bg); padding: 8px 0; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; border-bottom: 1px solid var(--border); }
   .toks { display: flex; flex-wrap: wrap; gap: 4px; }
   .tok { font-family: var(--mono, monospace); font-size: 12px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--text-2); }
-  .tok.s { border-color: var(--accent); color: var(--text); font-weight: 700; }
   canvas.hm { width: 100%; image-rendering: pixelated; display: block; border: 1px solid var(--border); border-radius: 4px; }
   .rowlab { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--text-2); }
-  .rowlab > span { font-family: var(--mono, monospace); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rowlab > span { font-family: var(--mono, monospace); text-align: right; }
   .big { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .stat { display: grid; gap: 2px; } .stat .small { color: var(--text-2); }
   .stats { display: flex; flex-wrap: wrap; gap: 10px 26px; }
-  table { width: 100%; border-collapse: collapse; } td, th { font-size: 13px; padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  table { width: 100%; border-collapse: collapse; } td, th { font-size: 13px; padding: 5px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .ok { color: var(--good); font-weight: 700; } .bad { color: var(--bad); font-weight: 700; }
   .scale { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
   .scale i { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, rgb(37,99,235), var(--surface), rgb(234,88,12)); border: 1px solid var(--border); }
   svg { display: block; width: 100%; height: auto; overflow: visible; }
-  .axis line { stroke: var(--border); } .axis text { fill: var(--text-3); font-size: 10px; }
+  svg text { fill: var(--text-2); font-size: 11px; }
   .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; display: none; z-index: 5; }
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-2); }
-  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; background: var(--c); }
-  .eq { font-family: var(--mono, monospace); font-size: 13px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .flow > div { border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px 10px; font-size: 13px; background: var(--surface); }
+  .flow > b { align-self: center; color: var(--text-3); }
+  .nav { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+  ul.plain { margin: 0; padding-left: 20px; font-size: 14px; max-width: 95ch; display: grid; gap: 4px; }
+  .def { color: var(--text-2); }
 </style>
 </head>
 <body>
 <main id="main">
   <header style="display:grid;gap:6px">
-    <h1 style="margin:0">Vector walkthrough: from text to a yes/no answer, every step</h1>
-    <p class="what">Two real test sentences that are both exactly <b>"Yes."</b>. People labelled one as agreeing to donate and the other as answering a small-talk question. Same words, opposite answers, so only the context can separate them. We follow both through the CPU classifier: tokens → numbers → one averaged vector → a map of all 248 training vectors → the trained head → a probability. Every number is real, read from <code>demo/mockups/vector-walkthrough.json</code> (built by <code>probes/vector_walkthrough.py</code> from the same vectors the state-depth test used). Nothing on this page calls a model.</p>
+    <div class="nav"><a href="/mockups/trainer/index.html">&larr; Back to the Trainer page</a><a href="/mockups/vector-walkthrough-2026-10-16.html">Earlier version of this page (16 Oct 2026)</a></div>
+    <h1 style="margin:0">How BitMob works: from a news story to every answer the engine needs</h1>
+    <p class="what"><b>BitMob</b> is our small, fast reader. The World engine needs a reader to answer questions about each news story (is it worth reading, what is changing, where, how serious). Today that reader is <b>Clef</b>, a large model that runs on a graphics card (a GPU) and takes several seconds per story. BitMob's job is to give the same answers on an ordinary computer chip (a CPU) in a fraction of a second. This page follows one real story through BitMob, then explains how it was taught and how close it is. Every number is read from a file; the sources are listed at the bottom.</p>
   </header>
-  <div class="sticky"><span class="small muted">Encoder</span><span class="seg" id="encSeg"></span><span class="small subtle" id="encNote"></span></div>
 
   <section class="card step">
-    <h2>0 · The two sentences and their context</h2>
-    <p class="what">This is the S2 state (Situation + Task + the sentence) for each. The question is the 'agree' question: does the speaker agree to donate?</p>
-    <div class="two" id="s0"></div>
+    <h2>0 · One real story</h2>
+    <p class="what">This is the second story in our <b>answer key</b>: 2,000 news stories that Clef has already answered and that BitMob has never been trained on, so they work as an exam. It was not chosen for how well BitMob did on it. BitMob sees only the headline and the opening of the article.</p>
+    <pre id="story"></pre>
   </section>
 
   <section class="card step">
     <h2>1 · Words become tokens, tokens become numbers</h2>
-    <p class="what">The encoder splits text into tokens and gives each token a list of numbers (one row below, one coloured cell per number; blue = negative, orange = positive). Hover a cell for its value.</p>
+    <p class="what">A <b>token</b> is a small piece of a word (often a whole word). The reader's first part, the <b>encoder</b>, splits the story into tokens and turns each token into a list of numbers. Below, each row is one token and each coloured cell is one of its numbers (blue = negative, orange = positive). Hover a cell for its value. The numbers for a token depend on the words around it, so "bill" next to "labour" gets different numbers than "bill" next to "electricity".</p>
+    <div class="stats" id="s1stats"></div>
     <div class="scale"><span>negative</span><i></i><span>positive</span></div>
-    <div class="two" id="s1"></div>
+    <div id="s1"></div>
     <p class="point" id="s1pt"></p>
   </section>
 
   <section class="card step">
-    <h2>2 · The whole input becomes ONE vector: the average of every token row</h2>
-    <p class="what">Below is the full S3 input for the first "Yes." (Situation + Task + Action + sentence): one row per token, the sentence's own rows marked in the left margin. The encoder adds every row up, divides by the number of rows, and scales the result to length 1. That single row is all the classifier ever sees.</p>
-    <div id="s2"></div>
+    <h2>2 · The whole story becomes ONE list of numbers</h2>
+    <p class="what">The encoder averages all the token rows into a single row. A list of numbers like this is called a <b>vector</b>. This one row is everything the rest of BitMob ever sees of the story. The old BitMob (the 16 Oct version) used a smaller encoder (384 numbers per token) that was <b>frozen</b>, meaning it was never changed by our training. The current one is the e5-base encoder (768 numbers per token), and it is <b>fine-tuned end to end</b>: during training every one of its internal settings is adjusted, not just the answer layer on top. That is why it reads our kind of news better.</p>
+    <div class="rowlab"><span>average</span><div id="s2"></div></div>
     <p class="point" id="s2pt"></p>
   </section>
 
   <section class="card step">
-    <h2>3 · Where every training example lands</h2>
-    <p class="what">All 248 training vectors, flattened from <span id="dimtxt"></span> numbers to 2 (PCA: the two directions along which these vectors differ most). Orange = people said "agrees to donate", grey = everything else. The two "Yes." sentences are the ringed dots. All four panels use the same scale, so if the cloud shrinks, the vectors really did get closer together.</p>
-    <div class="legend"><span style="--c: rgb(234,88,12)">agrees to donate (62)</span><span style="--c: var(--text-3)">not agree (186)</span><span style="--c: transparent; box-shadow: inset 0 0 0 2px var(--text)">open ring: Yes. (agree)</span><span style="--c: var(--text)">filled: Yes. (small talk). In the first two panels they sit on the exact same spot, so the filled dot covers the ring.</span></div>
-    <div class="four" id="s3"></div>
+    <h2>3 · One shared reader, eleven groups of answers (one per engine step)</h2>
+    <p class="what">From that one row of numbers, a small answer layer called a <b>head</b> works out each kind of answer. A head is the simplest possible layer: for each answer it multiplies the 768 numbers by 768 learned weights, adds them up, and turns the total into a probability (a number between 0 and 1, where 0.9 means "90% sure yes"). BitMob has one head group for each thing the engine needs, all sharing the same encoder. Before, there was one separate small classifier per yes/no question; now one pass answers everything.</p>
+    <div id="s3"></div>
     <p class="point" id="s3pt"></p>
   </section>
 
   <section class="card step">
-    <h2>4 · The head: one weight per number, add up, squash to a probability</h2>
-    <p class="what">The trained head for 'agree' is a weight for each of the numbers plus a bias. Score = Σ weightᵢ × numberᵢ + bias; probability = 1 / (1 + e<sup>−score</sup>); above 50% means "yes, agrees". Rows: the head's weights, then for each "Yes." its vector and the products weight × number (what each number contributes). Pick which input the head was trained on.</p>
-    <div class="seg" id="headSeg"></div>
+    <h2>4 · One story, all the engine's answers in one pass: Clef vs BitMob</h2>
+    <p class="what">After the heads, the engine's own rules (the same ones used with Clef) turn the probabilities into its usual answers: read or skip, which conditions are changing, topics, country, severity. Here is what Clef answered for this story and what BitMob answers, using the base model (first column of results in step 6).</p>
+    <div class="flow" id="flow"></div>
     <div id="s4"></div>
     <p class="point" id="s4pt"></p>
   </section>
 
   <section class="card step">
-    <h2>5 · The scorecard: this pair vs all 200 test sentences</h2>
-    <p class="what">What happened to the two "Yes." sentences, and what happened on all 200 test sentences (balanced accuracy: average of yes caught and no kept; chance 50%), for each input.</p>
-    <div id="s5"></div>
+    <h2>5 · How it was trained</h2>
+    <p class="what">In plain words, in the order it happens:</p>
+    <ul class="plain" id="s5"></ul>
+    <p class="what" style="margin-top:8px"><b>The rounds so far.</b> Each round tried one idea, was scored on the answer key, and then we decided the next idea from the result. The chart shows the hardest step, conditions: the share of the real condition readings in the answer key that BitMob caught (the pass mark is 90%).</p>
+    <div id="chart"></div>
+    <div id="rounds"></div>
     <p class="point" id="s5pt"></p>
+  </section>
+
+  <section class="card step">
+    <h2>6 · The scorecard: each step against its pass mark, on the 2,000-story answer key</h2>
+    <p class="what">Each step has a pass mark fixed before training, and the same mark is used in every round. "Agrees with Clef" means BitMob gave the same answer Clef gave. Two models are shown: the <b>base model</b> (e5-base encoder, after cycle 1) and the <b>larger model</b> (e5-large encoder, 3.4 times the size, after cycle 2).</p>
+    <div id="s6"></div>
+    <p class="point" id="s6pt"></p>
+  </section>
+
+  <section class="card step">
+    <h2>Sources</h2>
+    <p class="what" id="src"></p>
   </section>
 </main>
 <div class="tip" id="tip"></div>
 <script>
 (async () => {
   const { el } = Jev;
-  const D = await (await fetch("/mockups/vector-walkthrough.json")).json();
-  const F = D.featured;
-  let enc = "e5", head = "S1";
-  const ENC = { static: "Static (potion-base-8M): one fixed list of 256 numbers per word", e5: "e5-small int8 (what the CPU engine runs): 384 numbers per token, rewritten by the words around it" };
-  const LBL = ["Yes. (agree)", "Yes. (small talk)"];
+  const D = await (await fetch("/mockups/vector-walkthrough-2026-10-22.json")).json();
+  const X = D.example, S6 = D.s6, S7 = D.s7;
   const tip = document.getElementById("tip");
   const showTip = (ev, lines) => { tip.replaceChildren(...lines.map((l, i) => el("div", { text: l, style: i ? "color:var(--text-2)" : "font-weight:600" }))); tip.style.display = "block";
     const w = tip.offsetWidth; tip.style.left = Math.min(ev.pageX + 14, window.scrollX + document.documentElement.clientWidth - w - 8) + "px"; tip.style.top = (ev.pageY + 12) + "px"; };
   const hideTip = () => tip.style.display = "none";
   const pc = (v, d = 1) => (v * 100).toFixed(d) + "%";
+  const $ = (id) => document.getElementById(id);
   const NS = "http://www.w3.org/2000/svg";
   const S = (tag, a = {}, ...kids) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); for (const k of kids) n.append(k.nodeType ? k : document.createTextNode(k)); return n; };
 
-  // heat map: rows of numbers -> canvas; diverging blue / surface / orange, scaled to the 98th percentile of |value|
-  function heat(rows, { cell = 3, rowH = 6, scaleMax, labels, mark, title } = {}) {
+  function heat(rows, { rowH = 6, labels, title } = {}) {
     const n = rows[0].length, c = el("canvas", { class: "hm" }); c.width = n; c.height = rows.length;
     c.style.height = Math.max(rowH * rows.length, 6) + "px";
     const ctx = c.getContext("2d"), img = ctx.createImageData(n, rows.length);
     const bg = getComputedStyle(document.body).getPropertyValue("--surface").trim() || "#fff";
     const hex = (h) => { const m = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(m.slice(i, i + 2), 16)); };
     const B = /^#[0-9a-f]{6}$/i.test(bg) ? hex(bg) : [255, 255, 255];
-    const all = rows.flat().map(Math.abs).sort((a, b) => a - b); const mx = scaleMax || all[Math.floor(all.length * 0.98)] || 1;
+    const all = rows.flat().map(Math.abs).sort((a, b) => a - b); const mx = all[Math.floor(all.length * 0.98)] || 1;
     rows.forEach((r, y) => r.forEach((v, x) => {
       const t = Math.min(1, Math.abs(v) / mx), C = v < 0 ? [37, 99, 235] : [234, 88, 12], k = (y * n + x) * 4;
       for (let j = 0; j < 3; j++) img.data[k + j] = Math.round(B[j] + (C[j] - B[j]) * t); img.data[k + 3] = 255;
     }));
     ctx.putImageData(img, 0, 0);
     c.addEventListener("mousemove", (ev) => { const r = c.getBoundingClientRect(); const x = Math.floor((ev.clientX - r.left) / r.width * n), y = Math.floor((ev.clientY - r.top) / r.height * rows.length);
-      if (rows[y]) showTip(ev, [`${labels ? "token " + JSON.stringify(labels[y]) : title || ""}`, `number ${x + 1} of ${n} = ${rows[y][x]}`]); });
+      if (rows[y]) showTip(ev, [labels ? "token " + JSON.stringify(labels[y]) : title || "", `number ${x + 1} of ${n} = ${rows[y][x]}`]); });
     c.addEventListener("mouseleave", hideTip);
     return c;
   }
-  const cos = (a, b) => { let s = 0, na = 0, nb = 0; for (let i = 0; i < a.length; i++) { s += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; } return s / Math.sqrt(na * nb); };
+  const stat = (big, small) => el("div", { class: "stat" }, el("span", { class: "big", text: big }), el("span", { class: "small", text: small }));
 
-  function s0() {
-    document.getElementById("s0").replaceChildren(...F.map((f, k) => el("div", {}, el("h3", { text: `${LBL[k]} · human label: ${f.label} → agree = ${f.truth ? "yes" : "no"}` }), el("pre", { text: f.S2 }))));
-  }
-  function s1() {
-    const E = D.enc[enc], box = document.getElementById("s1"); box.replaceChildren();
-    F.forEach((f, k) => {
-      const t = E.tokens[`${k}|S1`];
-      box.append(el("div", {}, el("h3", { text: `${LBL[k]} alone (S1): ${t.tok.length} tokens × ${E.dim} numbers` }),
-        el("div", { class: "toks" }, t.tok.map((x, j) => el("span", { class: "tok" + (t.is_sent[j] ? " s" : ""), text: x }))),
-        heat(t.vec, { labels: t.tok, rowH: 14 })));
-    });
-    const y = E.yes_token_cos;
-    document.getElementById("s1pt").textContent = enc === "static"
-      ? `Static: the token "yes" is the same 256 numbers everywhere. Its row inside the long S3 input is identical to its row on its own (cosine ${y["0|S3"]} and ${y["1|S3"]}; 1 = identical). The context can only add other rows; it never changes what "yes" means.`
-      : `e5-small: each token's numbers are rewritten by the words around it (12 layers of attention). The "yes" row inside the full S3 input has cosine ${y["0|S3"]} (first "Yes.") and ${y["1|S3"]} (second) with "yes" on its own, so the context really did change it. That is why e5 beats static. The two S1 inputs are byte-identical, so their rows are identical.`;
-  }
-  function s2() {
-    const E = D.enc[enc], t = E.tokens["0|S3"], s1 = E.tokens["0|S1"], box = document.getElementById("s2");
-    const ns = t.is_sent.reduce((a, b) => a + b, 0), N = t.tok.length;
-    const marks = el("div", { style: `display:grid;grid-template-rows:repeat(${N},1fr);height:${N * 3}px;width:6px` }, t.is_sent.map(f => el("div", { style: `background:${f ? "var(--accent)" : "transparent"}` })));
-    box.replaceChildren(
-      el("div", { class: "stats" },
-        el("div", { class: "stat" }, el("span", { class: "big", text: `${N}` }), el("span", { class: "small", text: "token rows in the S3 input" })),
-        el("div", { class: "stat" }, el("span", { class: "big", text: `${ns}` }), el("span", { class: "small", text: `rows are the sentence "Yes." (marked)` })),
-        el("div", { class: "stat" }, el("span", { class: "big", text: pc(ns / N) }), el("span", { class: "small", text: "the sentence's share of the average" }))),
-      el("div", { style: "display:grid;grid-template-columns:6px 1fr;gap:4px;align-items:stretch" }, marks, heat(t.vec, { labels: t.tok, rowH: 3 })),
-      el("div", { class: "rowlab" }, el("span", { text: "average, S3" }), heat([t.unit], { rowH: 18, title: "S3 average (length 1)" })),
-      el("div", { class: "rowlab" }, el("span", { text: "average, S1" }), heat([s1.unit], { rowH: 18, title: "S1 average (length 1)" })));
-    const sc = E.self_cos, pcs = E.pair_cos;
-    document.getElementById("s2pt").textContent = `"Yes." is ${ns} of ${N} rows, ${pc(ns / N)} of the average. The S3 average and the S1 average are not the same vector: cosine ${sc.S3[0]} (1 = same direction). `
-      + `Now the two sentences: alone (S1) the two "Yes." vectors are identical (cosine ${pcs.S1}), so no head can ever tell them apart; with S2 they differ a little (${pcs.S2}), with S3 (${pcs.S3}). The context is what separates them, and it is also what drowns the sentence.`;
-  }
-  function s3() {
-    const E = D.enc[enc], box = document.getElementById("s3"); box.replaceChildren();
-    document.getElementById("dimtxt").textContent = E.dim;
-    const names = { "S1": "S1 · sentence alone", "S1+instr+crit": "S1 + instructions + criteria", "S2": "S2 · + Situation, Task", "S3": "S3 · + Action" };
-    const all = Object.values(E.map).flatMap(m => m.pts.flatMap(p => [Math.abs(p[0]), Math.abs(p[1])])); const R = Math.max(...all) * 1.05;
-    for (const [s, m] of Object.entries(E.map)) {
-      const W = 260, x = (v) => W / 2 + v / R * (W / 2 - 6), y = (v) => W / 2 - v / R * (W / 2 - 6);
-      const svg = S("svg", { viewBox: `0 0 ${W} ${W}`, role: "img", "aria-label": `Map of 248 training vectors, ${names[s]}` });
-      svg.append(S("g", { class: "axis" }, S("line", { x1: 0, x2: W, y1: W / 2, y2: W / 2 }), S("line", { y1: 0, y2: W, x1: W / 2, x2: W / 2 })));
-      for (const [a, b, t] of [...m.pts].sort((p, q) => p[2] - q[2])) svg.append(S("circle", { cx: x(a), cy: y(b), r: 3, fill: t ? "rgb(234,88,12)" : "var(--text-3)", "fill-opacity": t ? 0.9 : 0.45 }));
-      m.feat.forEach(([a, b], k) => { const c = S("circle", { cx: x(a), cy: y(b), r: 6, fill: k ? "var(--text)" : "none", stroke: "var(--text)", "stroke-width": 2 });
-        c.addEventListener("mousemove", (ev) => showTip(ev, [LBL[k], `position ${a.toFixed(3)}, ${b.toFixed(3)}`])); c.addEventListener("mouseleave", hideTip); svg.append(c); });
-      box.append(el("div", {}, el("h3", { text: names[s] }), svg,
-        el("div", { class: "small muted", text: `avg cosine between two different items ${m.avg_cos} · distance between the agree-centre and the rest ${m.gap} · typical spread ${m.spread} · ratio ${(m.gap / m.spread).toFixed(2)}` })));
-    }
-    const M = E.map;
-    document.getElementById("s3pt").textContent = `Sentence alone: items are spread out (average cosine between two different items ${M.S1.avg_cos}) and the agree group sits ${(M.S1.gap / M.S1.spread).toFixed(2)} spreads away from the rest. `
-      + `Add the same instructions and criteria to every item and the whole cloud shrinks to a dot (average cosine ${M["S1+instr+crit"].avg_cos}): every vector now contains the same long shared text. Add the per-item context (S2, S3) and the cloud is still squeezed (${M.S2.avg_cos}, ${M.S3.avg_cos}) and the agree group is relatively closer to the rest (${(M.S3.gap / M.S3.spread).toFixed(2)} in S3): the context, different for every item, adds spread that has nothing to do with agreeing.`;
-  }
-  function s4() {
-    const E = D.enc[enc], H = E.head[head], box = document.getElementById("s4");
-    const n = H.w.length, isSplit = head === "split";
-    const row = (lab, v, o = {}) => el("div", { class: "rowlab" }, el("span", { text: lab }), heat([v], { rowH: 16, title: lab, ...o }));
-    const parts = H.items.map((it, k) => {
-      const half = (a, b) => it.contrib.slice(a, b).reduce((s, v) => s + v, 0);
-      return el("div", { style: "display:grid;gap:4px;margin-top:6px" },
-        el("h3", { text: `${LBL[k]} → truth: ${F[k].truth ? "agree" : "not agree"}` }),
-        row("numbers x", it.x), row("weight × x", it.contrib),
-        el("div", { class: "eq" }, isSplit
-          ? `score = sentence part ${half(0, n / 2).toFixed(3)} + context part ${half(n / 2, n).toFixed(3)} + bias ${H.b} = ${it.score}`
-          : `score = Σ weight×x ${(it.score - H.b).toFixed(3)} + bias ${H.b} = ${it.score}`,
-          el("br"), `probability = 1/(1+e^−score) = `, el("b", { text: pc(it.p) }), ` → `,
-          el("span", { class: ((it.p > 0.5) === !!F[k].truth) ? "ok" : "bad", text: `${it.p > 0.5 ? "agree" : "not agree"} (${((it.p > 0.5) === !!F[k].truth) ? "right" : "wrong"})` })));
-    });
-    box.replaceChildren(el("div", { class: "small muted", text: isSplit ? `Input: the sentence's vector and the context's vector side by side (${n} numbers: first half sentence, second half context).` : `Input: one vector of ${n} numbers.` }),
-      row("head weights", H.w), el("div", { class: "small subtle", text: `size of the weights (length of the weight list) = ${H.w_norm}` }), ...parts);
-    const sc = { S1: `Alone, the two "Yes." vectors are identical, so they get the identical score (${pc(H.items[0].p)}): one of them has to be wrong. The head can only move the line; it cannot split one point in two.`,
-      "S1+instr+crit": `Same story with the question attached: the two inputs are still identical. And because every item now shares that long text, the numbers that differ between items are small, so the head needs bigger weights to read them. Its training penalty (C=1) holds the weights down (size ${H.w_norm} vs ${E.head.S1.w_norm} for the sentence alone), so it reads them less well. That is a tuning effect: rescaling the numbers first won most of it back in the follow-up check.`,
-      S2: `With the context the two vectors differ, and the head does pull them apart: ${pc(H.items[0].p)} vs ${pc(H.items[1].p)}. On this pair, context helps, which is your idea working. The question is what it costs on the other 198 sentences (step 5).`,
-      S3: `More context: ${pc(H.items[0].p)} vs ${pc(H.items[1].p)}. The pair is still separated, but the weights are smaller (${H.w_norm}) because everything is squeezed together (step 3).`,
-      split: `Sentence and context as separate vectors: the score is just the sentence part plus the context part. Both "Yes." have the same sentence part, so only the context part differs; here it is not enough to cross 50% for the agree one. A head that adds can shift the score by context but cannot express "yes means agree only after a donation ask".` };
-    document.getElementById("s4pt").textContent = sc[head];
-  }
-  function s5() {
-    const E = D.enc[enc], rows = ["S1", "S1+instr+crit", "S2", "S3", "split"];
-    const name = { S1: "S1 sentence alone", "S1+instr+crit": "S1 + instructions + criteria", S2: "S2 + Situation, Task", S3: "S3 + Action", split: "split: sentence vector + context vector" };
-    document.getElementById("s5").replaceChildren(el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "input" }), el("th", { class: "num", text: "p(agree) · Yes. (agree)" }), el("th", { class: "num", text: "p(agree) · Yes. (small talk)" }), el("th", { text: "pair" }), el("th", { class: "num", text: "agree · all 200" }), el("th", { class: "num", text: "refuse · all 200" }), el("th", { class: "num", text: "askorg · all 200" }))),
-      el("tbody", {}, rows.map(s => { const it = E.head[s].items, okk = (it[0].p > 0.5) && (it[1].p <= 0.5);
-        return el("tr", {}, el("td", { text: name[s] }), el("td", { class: "num", text: pc(it[0].p) }), el("td", { class: "num", text: pc(it[1].p) }), el("td", { class: okk ? "ok" : "bad", text: okk ? "both right" : "one wrong" }),
-          ...["agree", "refuse", "askorg"].map(q => el("td", { class: "num", text: pc(E.acc[s][q]) }))); }))));
-    document.getElementById("s5pt").textContent = `The trade-off in one table: adding the state fixes this pair (S2, S3 get both right), because these two sentences differ only in context. But across all 200 test sentences accuracy drops, because for most sentences the words alone decide the answer, and the averaged-in context is mostly noise that blurs them. Separate vectors keep the sentence intact (no loss) but an adding head gets little out of the context. To get the gain without the loss, the encoder itself would have to learn to read the sentence in light of the context, which a frozen encoder plus one averaged vector cannot.`;
-  }
-  const seg = document.getElementById("encSeg");
-  for (const k of ["static", "e5"]) seg.append(el("button", { type: "button", "aria-pressed": String(k === enc), text: k === "e5" ? "e5-small int8" : "Static potion-base-8M", onclick: (ev) => { enc = k; for (const b of seg.children) b.setAttribute("aria-pressed", String(b === ev.currentTarget)); draw(); } }));
-  const hs = document.getElementById("headSeg");
-  for (const k of ["S1", "S1+instr+crit", "S2", "S3", "split"]) hs.append(el("button", { type: "button", "aria-pressed": String(k === head), text: k, onclick: (ev) => { head = k; for (const b of hs.children) b.setAttribute("aria-pressed", String(b === ev.currentTarget)); s4(); } }));
-  function draw() { document.getElementById("encNote").textContent = ENC[enc]; s1(); s2(); s3(); s4(); s5(); }
-  s0(); draw();
+  // 0
+  $("story").textContent = X.text;
+
+  // 1
+  const nTok = D.tokens.length, dim = D.vec.length;
+  $("s1stats").replaceChildren(stat(String(nTok), "tokens in this story (the reader accepts at most 96)"), stat(String(dim), "numbers per token"), stat(String(nTok * dim), "numbers for the whole story"));
+  $("s1").replaceChildren(
+    el("div", { class: "toks", style: "margin-bottom:6px" }, D.tokens.map(t => el("span", { class: "tok", text: t }))),
+    heat(D.tokrows, { labels: D.tokens, rowH: 5 }));
+  $("s1pt").textContent = `The grey chips are the ${nTok} tokens, including two markers the encoder adds at the start and end ([CLS] and [SEP]). Words it does not know whole are cut into pieces (a piece starting with ## continues the previous one).`;
+
+  // 2
+  $("s2").replaceChildren(heat([D.vec], { rowH: 22, title: "the story's single vector" }));
+  $("s2pt").textContent = `${nTok} rows of ${dim} numbers became one row of ${dim}. Every later answer is computed from this row alone. Because the encoder is trained together with the heads, the training can reshape this row so that stories with the same answers end up with similar rows.`;
+
+  // 3 heads: all facts from mh_common.HEADS (loss weight), keys.json / training log (answer counts)
+  const heads = [
+    ["gate", "Read or skip", "5 yes/no questions: did it happen, was it announced, is it opinion, is it a forecast, is it recent. The engine uses them to decide whether the story is worth reading at all.", 5, 1.0],
+    ["scope", "Scope and recency", "5 yes/no questions: national, local, new, US focus, foreign focus.", 5, 0.5],
+    ["cond", "Conditions", "159 yes/no questions: what the story says is changing in the world, e.g. a measure going up or down for a given reason. This is what moves the engine.", 159, 2.0],
+    ["reading", "Conditions, direct reading", "78 answers, one per measure and direction (e.g. job security down). Added in round 5 to catch rare conditions; it raises the matching condition answer, never lowers it.", 78, 2.0],
+    ["topic_c", "Main topic", "Picks the one best-fitting subject out of 49.", 49, 1.0],
+    ["topic_y", "Topics (yes/no each)", "48 yes/no answers, one per subject, so a story can have several topics.", 48, 1.0],
+    ["region", "World region", "Picks one of 8 regions (including 'global').", 8, 0.5],
+    ["country", "Country", "Picks one of 102 answers (100 countries plus two catch-alls). Region first, then country inside it.", 102, 1.0],
+    ["expected", "Expected impact", "78 answers, one per measure and direction: which further changes the engine should expect next.", 78, 2.0],
+    ["done", "Already happened", "One yes/no used with expected impact.", 1, 0.5],
+    ["severity", "Severity", "195 answers: 39 measures times 5 levels (minor up to extreme). The engine reads the level for each change.", 195, 0.5],
+  ];
+  $("s3").replaceChildren(el("table", {}, el("thead", {}, el("tr", {}, ["Answer group", "What it answers", "Answers", "Training weight"].map((h, i) => el("th", { class: i > 1 ? "num" : "", text: h })))),
+    el("tbody", {}, heads.map(h => el("tr", {}, el("td", {}, el("b", { text: h[1] }), el("div", { class: "def", text: h[0] })), el("td", { text: h[2] }), el("td", { class: "num", text: String(h[3]) }), el("td", { class: "num", text: String(h[4]) }))))));
+  $("s3pt").textContent = "Training weight says how much a mistake in that group counts while learning (higher = the model is pushed harder to get it right). Conditions, the direct condition reading and expected impact are weighted 2.0, the highest, because they are the hardest and the most important to the engine. The engine used to ask Clef 328 yes/no questions per story; the heads cover all of them in one pass.";
+
+  // 4 example
+  const C = X.clef, B = X.bit;
+  $("flow").replaceChildren(el("div", { text: "Story" }), el("b", { text: "→" }), el("div", { text: "Encoder (fine-tuned e5-base)" }), el("b", { text: "→" }), el("div", { text: `One vector of ${dim} numbers` }), el("b", { text: "→" }), el("div", { text: "11 answer groups" }), el("b", { text: "→" }), el("div", { text: "Engine's own rules" }), el("b", { text: "→" }), el("div", { text: "Engine answers" }));
+  const g = (o, k) => o[k].toFixed(2);
+  const NAMES = { labour_disputes: "Unions and strikes", work_labour: "Jobs and wages", legislation_regulation: "Laws and regulation", business_corporate: "Business and companies" };
+  const rd = (r) => r.length ? r.map(x => `${x.dial.replace(/_/g, " ")} ${x.direction} (strength ${x.strength.toFixed(2)}, via ${x.attributes.join(", ")})`).join("; ") : "none";
+  const rows4 = [
+    ["Read or skip", `Read. Happened ${g(C.gate, "happened")}, announced ${g(C.gate, "announced")}, opinion ${g(C.gate, "opinion")}, recent ${g(C.gate, "recent")}`, `Read. Happened ${B.gate["g|happened"].toFixed(2)}, announced ${B.gate["g|announced"].toFixed(2)}, opinion ${B.gate["g|opinion"].toFixed(2)}, recent ${B.gate["x|recent"].toFixed(2)}`],
+    ["What is changing (conditions)", rd(C.readings), rd(B.readings)],
+    ["Topics", C.topics.map(t => NAMES[t] || t).join(", "), "Top four by score: " + B.topics_top.map(([t, p]) => `${NAMES[t] || t} ${p.toFixed(2)}`).join(", ")],
+    ["Country", C.country.toUpperCase(), `${B.country_top.toUpperCase()} (region: ${B.region})`],
+    ["Severity", Object.entries(C.severity).map(([d, l]) => `${d.replace(/_/g, " ")}: ${l}`).join("; "), Object.entries(B.severity).map(([d, l]) => `${d.replace(/_/g, " ")}: ${l}`).join("; ")],
+    ["Time for this story", `${X.clef_secs.toFixed(2)} seconds on a GPU`, `${(S6.meta.read_s_per_story_cpu * 1000).toFixed(1)} milliseconds on a CPU (average over the 2,000 stories)`],
+  ];
+  $("s4").replaceChildren(el("table", {}, el("thead", {}, el("tr", {}, ["", "Clef (the answer key)", "BitMob (base model)"].map(h => el("th", { text: h })))),
+    el("tbody", {}, rows4.map(r => el("tr", {}, el("td", {}, el("b", { text: r[0] })), el("td", { text: r[1] }), el("td", { text: r[2] }))))));
+  $("s4pt").textContent = "On this story BitMob agrees with Clef on read-or-skip, the condition found, the country and the severity. Its topics list holds the same three subjects Clef chose in its top four plus one more (Business and companies, which Clef did not choose). This is one story: the scorecard in step 6 is the evidence for the whole answer key, and there BitMob does not agree this often on conditions.";
+
+  // 5 training
+  const L = [
+    ["Teachers.", "A model learns from examples that already have answers. Clef is the engine's own reader, so its answers are the gold standard and the answer key. Jev is a fast hosted model that answers in bulk; each of its answers is translated onto Clef's scale, question by question, because the two models do not answer the same way. Jev gave most of the examples (12,237 stories in round 2). Clef labels the hard steps (conditions and borderline read-or-skip), and its answers count 4 times as much as Jev's during training."],
+    ["Free pickers.", "Clef's answers are slow to get, so we choose which stories are worth labelling. A free picker ranks stories using keywords, word-statistics models and BitMob's own guesses, at no cost. It finds condition-rich stories about 70% of the time, against 29% for stories picked at random."],
+    ["Training on free GPUs.", "Training runs on Kaggle, which gives free graphics cards. The base model's cycle 1 was a warm-start retrain: instead of starting over, it continued from the previous model and took under 2 minutes on 6,566 stories (3 passes over the data). The larger model took 37.6 minutes on both GPUs, 10 passes over all 19,192 stories."],
+    ["The answer key.", "2,000 stories answered by Clef are never used for training, ever; the data-building script refuses them by id. They are the exam."],
+    ["Pass marks first.", "The pass mark for each step is set before training and does not move between rounds."],
+    ["Rounds and a gate.", "Work goes in rounds of about an hour. Each round has one idea and a prediction written down in advance. The gate: an idea should gain at least 3 points on the weakest step; if it does not, we stop that idea and switch."],
+  ];
+  $("s5").replaceChildren(...L.map(([a, b]) => el("li", {}, el("b", { text: a + " " }), document.createTextNode(b))));
+  const R = D.rounds.map(r => ({ r: r.round, v: r.vals["P-0017"] }));
+  const W = 700, H = 200, x0 = 40, x1 = W - 10, y0 = 14, y1 = H - 28, yv = (v) => y1 - (y1 - y0) * v / 0.9;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of condition readings caught, by round, against the 90% pass mark" });
+  svg.append(S("line", { x1: x0, x2: x1, y1: y0, y2: y0, stroke: "var(--good)", "stroke-dasharray": "4 3" }), S("text", { x: x1, y: y0 - 3, "text-anchor": "end" }, "pass mark 90%"), S("line", { x1: x0, x2: x1, y1: y1, y2: y1, stroke: "var(--border-strong)" }));
+  const bw = (x1 - x0) / R.length;
+  R.forEach((d, i) => { const x = x0 + i * bw + bw * 0.2, w = bw * 0.6, h = Math.max(1, y1 - yv(d.v));
+    const rect = S("rect", { x, y: y1 - h, width: w, height: h, fill: "var(--accent)", "fill-opacity": 0.85 });
+    rect.addEventListener("mousemove", (ev) => showTip(ev, [`Round ${d.r}: ${pc(d.v)} of condition readings caught`])); rect.addEventListener("mouseleave", hideTip);
+    svg.append(rect, S("text", { x: x + w / 2, y: y1 - h - 4, "text-anchor": "middle" }, pc(d.v, 0)), S("text", { x: x + w / 2, y: y1 + 14, "text-anchor": "middle" }, "Round " + d.r)); });
+  $("chart").replaceChildren(svg);
+  $("rounds").replaceChildren(el("table", {}, el("thead", {}, el("tr", {}, ["Round", "What was tried", "What we learned"].map(h => el("th", { text: h })))),
+    el("tbody", {}, D.rounds.map(r => el("tr", {}, el("td", { class: "num", text: String(r.round) }), el("td", { text: r.tried }), el("td", { text: r.lesson }))))));
+  $("s5pt").textContent = "The honest lesson: conditions caught 19% of true readings, then 31%, then 31%, then 24% with a bigger reader. More labels moved it a little, a bigger encoder did not help, and the pass mark is 90%. Labels alone will not get this step there; it needs a different design (for example, BitMob flags the stories and Clef double-checks only those).";
+
+  // 6 scorecard
+  const hd = ["Engine step", "Pass mark", "Base model", "Larger model"];
+  const cond = (s) => `${pc(s["P-0017"].value.TPR)} caught, ${pc(s["P-0017"].value.FPR, 2)} false alarms`;
+  const sc = [
+    ["Read or skip (gate)", "Same call as Clef on 90% of stories", pc(S6["P-0016"].value), pc(S7["P-0016"].value), S6["P-0016"].pass, S7["P-0016"].pass],
+    ["Conditions", "Catch at least 90% of true readings with at most 0.1% false alarms", cond(S6), cond(S7), S6["P-0017"].pass, S7["P-0017"].pass],
+    ["Topics", "At least 80% of the 44 subjects well ranked; topics per story within 20% of Clef", `${pc(S6["P-0018"].value["share_AP>=.7"])} well ranked; ${S6["P-0018"].value.mean_topics_model.toFixed(2)} topics per story (Clef ${S6["P-0018"].value.mean_topics_clef.toFixed(2)})`, `${pc(S7["P-0018"].value["share_AP>=.7"])} well ranked; ${S7["P-0018"].value.mean_topics_model.toFixed(2)} topics per story (Clef ${S7["P-0018"].value.mean_topics_clef.toFixed(2)})`, S6["P-0018"].pass, S7["P-0018"].pass],
+    ["Country", "Same country as Clef on 90% of stories (100 countries or global)", pc(S6["P-0019"].value), pc(S7["P-0019"].value), S6["P-0019"].pass, S7["P-0019"].pass],
+    ["Expected impact", "Same expected set as Clef on 75% of stories", pc(S6["P-0020"].value), pc(S7["P-0020"].value), S6["P-0020"].pass, S7["P-0020"].pass],
+    ["Severity", "Same level as Clef on 75% of changes", pc(S6["P-0021"].value), pc(S7["P-0021"].value), S6["P-0021"].pass, S7["P-0021"].pass],
+  ];
+  const cell = (t, ok) => el("td", {}, el("span", { text: t }), el("br"), el("span", { class: ok ? "ok" : "bad", text: ok ? "pass" : "not yet" }));
+  const speed = el("tr", {}, el("td", {}, el("b", { text: "Speed on a CPU" })), el("td", { text: "Faster than Clef's several seconds per story" }), el("td", { text: `${(S6.meta.read_s_per_story_cpu * 1000).toFixed(1)} ms per story` }), el("td", { text: `${(S7.meta.read_s_per_story_cpu * 1000).toFixed(1)} ms per story` }));
+  $("s6").replaceChildren(el("table", {}, el("thead", {}, el("tr", {}, hd.map(h => el("th", { text: h })))),
+    el("tbody", {}, sc.map(r => el("tr", {}, el("td", {}, el("b", { text: r[0] })), el("td", { text: r[1] }), cell(r[2], r[4]), cell(r[3], r[5]))), speed)));
+  $("s6pt").textContent = `Passing: topics and severity on both models, and country on the larger one (${pc(S7["P-0019"].value)}). Not passing: read-or-skip (about 81%), conditions, and expected impact (about 60%). Conditions are the weakest step by far (${pc(S6["P-0017"].value.TPR, 0)} caught against 90% needed), and the larger model did not fix them while costing about ${(S7.meta.read_s_per_story_cpu / S6.meta.read_s_per_story_cpu).toFixed(1)} times the time on a CPU.`;
+
+  $("src").textContent = "Sources: newsreader/bitmob/mh/mh_common.py (answer groups, weights), train_mh.py (training settings), build_mh_data2_r6c1.py (teachers and weights); data/kaggle/mh_r6c1/score_r6c1.json and data/kaggle/mh_r7/score_r7.json (scores and speed); data/progress/contract.json (rounds); data/clef-labels/test.jsonl (the example story and Clef's answers); docs/research/2026-10-22 Free NLP picker tricks (Context7 recon).md (pickers). The example's BitMob answers and the token numbers were computed on a CPU from data/kaggle/mh_r6c1/out/mh.";
 })();
 </script>
 </body>

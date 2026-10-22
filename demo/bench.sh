@@ -6,26 +6,29 @@ cd "$(dirname "$0")/../jevbench" || exit 1
 B=${BENCH_OUT:-/workspace/data/bench}
 TIERS=${@:-original easy hard}
 MODELS=${MODELS:-jeff kev-0.5b kev-0.8b kev-4b jev}   # e.g. MODELS=kev-4b demo/bench.sh hard
-declare -A EP=( [jeff]=http://127.0.0.1:8000 [kev-0.5b]=http://127.0.0.1:8009 [kev-0.8b]=http://127.0.0.1:8011 [kev-4b]=http://127.0.0.1:8010 [clef-flash-q4km]=http://127.0.0.1:8018 [clef-flash-q2k]=http://127.0.0.1:8019 [winnow]=http://127.0.0.1:8091 [cygnet]=http://127.0.0.1:8016 )
+declare -A EP=( [jeff]=http://127.0.0.1:8000 [kev-0.5b]=http://127.0.0.1:8009 [kev-0.8b]=http://127.0.0.1:8011 [kev-4b]=http://127.0.0.1:8010 [clef-flash-q4km]=http://127.0.0.1:8018 [clef-flash-q2k]=http://127.0.0.1:8019 [clef-flash-nvfp4]=http://127.0.0.1:8038 [winnow]=http://127.0.0.1:8091 [cygnet]=http://127.0.0.1:8016 )
 # The "model" label each server expects (default jev-latest); matches the label in demo/backends.py and in earlier runs' manifests
-declare -A ML=( [winnow]=Winnow-12B [cygnet]=cygnet )
+declare -A ML=( [winnow]=Winnow-12B [cygnet]=cygnet [jev]=${JEV_MODEL:-jev-1.14.0} )
 # Tasks in flight for a server that batches across requests (llama.cpp slots, vLLM). Probe sets only: leaderboard tiers stay serial because
 # per-item latency under concurrency includes queue time. CONCURRENCY=N overrides.
-declare -A CONC=( [clef-flash-q4km]=8 [clef-flash-q2k]=8 [winnow]=4 [cygnet]=8 )
-declare -A COST=( [clef-flash-q4km]=local_gpu_no_provider_tariff [clef-flash-q2k]=local_gpu_no_provider_tariff [winnow]=local_gpu_no_provider_tariff [cygnet]=local_gpu_no_provider_tariff )
+declare -A CONC=( [clef-flash-q4km]=8 [clef-flash-q2k]=8 [clef-flash-nvfp4]=64 [winnow]=4 [cygnet]=8 [jev]=12 )
+declare -A COST=( [clef-flash-q4km]=local_gpu_no_provider_tariff [clef-flash-q2k]=local_gpu_no_provider_tariff [clef-flash-nvfp4]=local_gpu_no_provider_tariff [winnow]=local_gpu_no_provider_tariff [cygnet]=local_gpu_no_provider_tariff )
+RV=/workspace/tools/run_versions.py; declare -A SNAPPED
 for tier in $TIERS; do
   for n in $MODELS; do
+    # version archive: copy the current results of this model into data/run-versions (idempotent, never blocks the run)
+    [ -z "${SNAPPED[$n]}" ] && { SNAPPED[$n]=1; python3 $RV snapshot $n >/dev/null 2>&1 || true; }
     out=$B/$n-$tier; [ -e "$out" ] && { echo "skip $n-$tier"; continue; }
     if [ $n = jev ]; then
       [ -n "$TYPESAFE_API_KEY" ] || { echo "skip jev: no key"; continue; }
-      args=(--endpoint https://api.typesafe.ai --key-env TYPESAFE_API_KEY --price-in-per-m 0.042 --price-out-per-m 0 --cap-usd 1)
+      args=(--endpoint https://api.typesafe.ai --key-env TYPESAFE_API_KEY --price-in-per-m 0.042 --price-out-per-m 0 --cap-usd ${CAP_USD:-1})
     else
       [ $n = jeff ] && export JEFF_KEY=devkey
       k=''; [ $n = jeff ] && k=JEFF_KEY
-      args=(--endpoint ${EP[$n]} --key-env "$k" --cost-basis ${COST[$n]:-local_cpu_no_provider_tariff} --reserve-usd 0 --cap-usd 1)
+      args=(--endpoint ${EP[$n]} --key-env "$k" --cost-basis ${COST[$n]:-local_cpu_no_provider_tariff} --reserve-usd 0 --cap-usd ${CAP_USD:-1})
     fi
-    # Local models cost $0: a private ledger per run. The shared one (180k+ lines) is re-read on every item and cost 1.5 s each. Paid jev keeps it.
-    L=$out/ledger.jsonl; [ $n = jev ] && L=$B/ledger.jsonl
+    # Local models cost $0: a private ledger per run. The shared one (180k+ lines) is re-read on every item and cost 1.5 s each. Jev too: the shared ledgers pin cap=$1 in their first row and already hold ~$1 of charges, so they would refuse every call; a per-run ledger gives a fresh CAP_USD per run (flock-locked, safe at concurrency).
+    L=$out/ledger.jsonl
     case $tier in original|easy|hard) C=1;; *) C=${CONCURRENCY:-${CONC[$n]:-1}};; esac
     echo "== $n $tier"
     python3 -m jevbench.cli run --tasks ${TASKS_DIR:-datasets/public}/$tier.jsonl --adapter typesafe --model ${ML[$n]:-jev-latest} "${args[@]}" \

@@ -1,0 +1,1052 @@
+{
+ "kw_lemma": {
+  "keep11": {
+   "share": 0.636,
+   "catch": 0.241,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.537,
+   "catch": 0.371,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.427,
+   "catch": 0.545,
+   "dials_covered": 38
+  },
+  "auc": 0.689
+ },
+ "kw_lemma+wordnet": {
+  "keep11": {
+   "share": 0.618,
+   "catch": 0.234,
+   "dials_covered": 32
+  },
+  "keep20": {
+   "share": 0.562,
+   "catch": 0.388,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.428,
+   "catch": 0.547,
+   "dials_covered": 38
+  },
+  "auc": 0.694
+ },
+ "change_language": {
+  "keep11": {
+   "share": 0.509,
+   "catch": 0.193,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.435,
+   "catch": 0.3,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.373,
+   "catch": 0.476,
+   "dials_covered": 38
+  },
+  "auc": 0.593
+ },
+ "concreteness": {
+  "keep11": {
+   "share": 0.291,
+   "catch": 0.11,
+   "dials_covered": 22
+  },
+  "keep20": {
+   "share": 0.268,
+   "catch": 0.184,
+   "dials_covered": 31
+  },
+  "keep37": {
+   "share": 0.293,
+   "catch": 0.374,
+   "dials_covered": 34
+  },
+  "auc": 0.513
+ },
+ "entity_density": {
+  "keep11": {
+   "share": 0.323,
+   "catch": 0.122,
+   "dials_covered": 28
+  },
+  "keep20": {
+   "share": 0.338,
+   "catch": 0.233,
+   "dials_covered": 33
+  },
+  "keep37": {
+   "share": 0.311,
+   "catch": 0.397,
+   "dials_covered": 35
+  },
+  "auc": 0.527
+ },
+ "bow_logreg": {
+  "keep11": {
+   "share": 0.682,
+   "catch": 0.259,
+   "dials_covered": 35
+  },
+  "keep20": {
+   "share": 0.585,
+   "catch": 0.403,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.488,
+   "catch": 0.622,
+   "dials_covered": 37
+  },
+  "auc": 0.75
+ },
+ "BASE kw_raw (kw.json)": {
+  "keep11": {
+   "share": 0.636,
+   "catch": 0.241,
+   "dials_covered": 31
+  },
+  "keep20": {
+   "share": 0.52,
+   "catch": 0.359,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.418,
+   "catch": 0.533,
+   "dials_covered": 37
+  },
+  "auc": 0.674
+ },
+ "bitmob": {
+  "keep11": {
+   "share": 0.682,
+   "catch": 0.259,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.625,
+   "catch": 0.431,
+   "dials_covered": 34
+  },
+  "keep37": {
+   "share": 0.466,
+   "catch": 0.595,
+   "dials_covered": 35
+  },
+  "auc": 0.705
+ },
+ "COMBINED free (LR on train-OOF)": {
+  "keep11": {
+   "share": 0.677,
+   "catch": 0.257,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.598,
+   "catch": 0.412,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.491,
+   "catch": 0.626,
+   "dials_covered": 37
+  },
+  "auc": 0.757
+ },
+ "combined no-keyword (non-obvious)": {
+  "keep11": {
+   "share": 0.673,
+   "catch": 0.255,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.588,
+   "catch": 0.405,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.491,
+   "catch": 0.626,
+   "dials_covered": 37
+  },
+  "auc": 0.75
+ },
+ "COMBINED free+BitMob (LR; BitMob train scores may be leaky)": {
+  "keep11": {
+   "share": 0.8,
+   "catch": 0.303,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.68,
+   "catch": 0.469,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.538,
+   "catch": 0.686,
+   "dials_covered": 37
+  },
+  "auc": 0.792
+ },
+ "rank-avg free + BitMob (no fitting)": {
+  "keep11": {
+   "share": 0.777,
+   "catch": 0.295,
+   "dials_covered": 32
+  },
+  "keep20": {
+   "share": 0.67,
+   "catch": 0.462,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.52,
+   "catch": 0.664,
+   "dials_covered": 36
+  },
+  "auc": 0.785
+ },
+ "T1 tfidf word sublinear+balanced LR": {
+  "keep11": {
+   "share": 0.686,
+   "catch": 0.26,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.555,
+   "catch": 0.383,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.48,
+   "catch": 0.612,
+   "dials_covered": 37
+  },
+  "auc": 0.741
+ },
+ "T1b tfidf word+char_wb LR balanced": {
+  "keep11": {
+   "share": 0.691,
+   "catch": 0.262,
+   "dials_covered": 36
+  },
+  "keep20": {
+   "share": 0.59,
+   "catch": 0.407,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.488,
+   "catch": 0.622,
+   "dials_covered": 37
+  },
+  "auc": 0.755
+ },
+ "T2 chi2(2000)+ComplementNB": {
+  "keep11": {
+   "share": 0.65,
+   "catch": 0.247,
+   "dials_covered": 35
+  },
+  "keep20": {
+   "share": 0.583,
+   "catch": 0.402,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.474,
+   "catch": 0.605,
+   "dials_covered": 37
+  },
+  "auc": 0.738
+ },
+ "T3 per-dial LR (noisy-or of 1-vs-rest)": {
+  "keep11": {
+   "share": 0.709,
+   "catch": 0.269,
+   "dials_covered": 32
+  },
+  "keep20": {
+   "share": 0.623,
+   "catch": 0.429,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.512,
+   "catch": 0.653,
+   "dials_covered": 37
+  },
+  "auc": 0.762
+ },
+ "T3b per-dial LR (max)": {
+  "keep11": {
+   "share": 0.691,
+   "catch": 0.262,
+   "dials_covered": 32
+  },
+  "keep20": {
+   "share": 0.58,
+   "catch": 0.4,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.473,
+   "catch": 0.603,
+   "dials_covered": 37
+  },
+  "auc": 0.717
+ },
+ "T4 BM25 to per-dial centroid docs (max share - 'none' share)": {
+  "keep11": {
+   "share": 0.609,
+   "catch": 0.231,
+   "dials_covered": 29
+  },
+  "keep20": {
+   "share": 0.55,
+   "catch": 0.379,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.477,
+   "catch": 0.609,
+   "dials_covered": 37
+  },
+  "auc": 0.728
+ },
+ "T5a compromise change patterns": {
+  "keep11": {
+   "share": 0.305,
+   "catch": 0.116,
+   "dials_covered": 26
+  },
+  "keep20": {
+   "share": 0.29,
+   "catch": 0.2,
+   "dials_covered": 32
+  },
+  "keep37": {
+   "share": 0.295,
+   "catch": 0.376,
+   "dials_covered": 38
+  },
+  "auc": 0.518
+ },
+ "T5b wink sentiment+negation, verb tense": {
+  "keep11": {
+   "share": 0.336,
+   "catch": 0.128,
+   "dials_covered": 24
+  },
+  "keep20": {
+   "share": 0.357,
+   "catch": 0.247,
+   "dials_covered": 31
+  },
+  "keep37": {
+   "share": 0.351,
+   "catch": 0.448,
+   "dials_covered": 38
+  },
+  "auc": 0.589
+ },
+ "T5c both": {
+  "keep11": {
+   "share": 0.373,
+   "catch": 0.141,
+   "dials_covered": 27
+  },
+  "keep20": {
+   "share": 0.37,
+   "catch": 0.255,
+   "dials_covered": 32
+  },
+  "keep37": {
+   "share": 0.362,
+   "catch": 0.462,
+   "dials_covered": 38
+  },
+  "auc": 0.595
+ },
+ "T6 WordNet hyponym+derived expansion (train-lift filtered)": {
+  "keep11": {
+   "share": 0.6,
+   "catch": 0.228,
+   "dials_covered": 32
+  },
+  "keep20": {
+   "share": 0.525,
+   "catch": 0.362,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.42,
+   "catch": 0.536,
+   "dials_covered": 38
+  },
+  "auc": 0.69
+ },
+ "T6b WordNet hyponym+derived expansion (unfiltered)": {
+  "keep11": {
+   "share": 0.5,
+   "catch": 0.19,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.435,
+   "catch": 0.3,
+   "dials_covered": 34
+  },
+  "keep37": {
+   "share": 0.388,
+   "catch": 0.495,
+   "dials_covered": 38
+  },
+  "auc": 0.639
+ },
+ "S0 old free (re-stacked, nested CV)": {
+  "keep11": {
+   "share": 0.677,
+   "catch": 0.257,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.598,
+   "catch": 0.412,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.491,
+   "catch": 0.626,
+   "dials_covered": 37
+  },
+  "auc": 0.757
+ },
+ "S1 free + all new": {
+  "keep11": {
+   "share": 0.723,
+   "catch": 0.274,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.642,
+   "catch": 0.443,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.531,
+   "catch": 0.678,
+   "dials_covered": 37
+  },
+  "auc": 0.782
+ },
+ "S+ free + T1": {
+  "keep11": {
+   "share": 0.709,
+   "catch": 0.269,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.575,
+   "catch": 0.397,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.493,
+   "catch": 0.629,
+   "dials_covered": 37
+  },
+  "auc": 0.755
+ },
+ "S+ free + T1b": {
+  "keep11": {
+   "share": 0.682,
+   "catch": 0.259,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.595,
+   "catch": 0.41,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.496,
+   "catch": 0.633,
+   "dials_covered": 37
+  },
+  "auc": 0.762
+ },
+ "S+ free + T2": {
+  "keep11": {
+   "share": 0.709,
+   "catch": 0.269,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.593,
+   "catch": 0.409,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.505,
+   "catch": 0.645,
+   "dials_covered": 37
+  },
+  "auc": 0.762
+ },
+ "S+ free + T3": {
+  "keep11": {
+   "share": 0.736,
+   "catch": 0.279,
+   "dials_covered": 35
+  },
+  "keep20": {
+   "share": 0.623,
+   "catch": 0.429,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.52,
+   "catch": 0.664,
+   "dials_covered": 37
+  },
+  "auc": 0.773
+ },
+ "S+ free + T3b": {
+  "keep11": {
+   "share": 0.727,
+   "catch": 0.276,
+   "dials_covered": 35
+  },
+  "keep20": {
+   "share": 0.627,
+   "catch": 0.433,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.503,
+   "catch": 0.641,
+   "dials_covered": 37
+  },
+  "auc": 0.768
+ },
+ "S+ free + T4": {
+  "keep11": {
+   "share": 0.718,
+   "catch": 0.272,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.613,
+   "catch": 0.422,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.508,
+   "catch": 0.648,
+   "dials_covered": 37
+  },
+  "auc": 0.77
+ },
+ "S+ free + T5a": {
+  "keep11": {
+   "share": 0.682,
+   "catch": 0.259,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.6,
+   "catch": 0.414,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.492,
+   "catch": 0.628,
+   "dials_covered": 37
+  },
+  "auc": 0.759
+ },
+ "S+ free + T5b": {
+  "keep11": {
+   "share": 0.682,
+   "catch": 0.259,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.585,
+   "catch": 0.403,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.489,
+   "catch": 0.624,
+   "dials_covered": 37
+  },
+  "auc": 0.758
+ },
+ "S+ free + T5c": {
+  "keep11": {
+   "share": 0.682,
+   "catch": 0.259,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.585,
+   "catch": 0.403,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.488,
+   "catch": 0.622,
+   "dials_covered": 37
+  },
+  "auc": 0.759
+ },
+ "S+ free + T6": {
+  "keep11": {
+   "share": 0.682,
+   "catch": 0.259,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.603,
+   "catch": 0.416,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.493,
+   "catch": 0.629,
+   "dials_covered": 37
+  },
+  "auc": 0.757
+ },
+ "S+ free + T6b": {
+  "keep11": {
+   "share": 0.664,
+   "catch": 0.252,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.6,
+   "catch": 0.414,
+   "dials_covered": 37
+  },
+  "keep37": {
+   "share": 0.488,
+   "catch": 0.622,
+   "dials_covered": 37
+  },
+  "auc": 0.757
+ },
+ "S2 new only (no old signals)": {
+  "keep11": {
+   "share": 0.732,
+   "catch": 0.278,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.635,
+   "catch": 0.438,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.528,
+   "catch": 0.674,
+   "dials_covered": 37
+  },
+  "auc": 0.783
+ },
+ "S3 free + T1b+T3+T4+T5c+T6": {
+  "keep11": {
+   "share": 0.718,
+   "catch": 0.272,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.635,
+   "catch": 0.438,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.523,
+   "catch": 0.667,
+   "dials_covered": 37
+  },
+  "auc": 0.777
+ },
+ "S1 free + all new + BitMob": {
+  "keep11": {
+   "share": 0.777,
+   "catch": 0.295,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.7,
+   "catch": 0.483,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.554,
+   "catch": 0.707,
+   "dials_covered": 37
+  },
+  "auc": 0.805
+ },
+ "S+ free + T1 + BitMob": {
+  "keep11": {
+   "share": 0.782,
+   "catch": 0.297,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.675,
+   "catch": 0.466,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.534,
+   "catch": 0.681,
+   "dials_covered": 37
+  },
+  "auc": 0.791
+ },
+ "S+ free + T1b + BitMob": {
+  "keep11": {
+   "share": 0.795,
+   "catch": 0.302,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.685,
+   "catch": 0.472,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.538,
+   "catch": 0.686,
+   "dials_covered": 37
+  },
+  "auc": 0.792
+ },
+ "S+ free + T2 + BitMob": {
+  "keep11": {
+   "share": 0.786,
+   "catch": 0.298,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.68,
+   "catch": 0.469,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.543,
+   "catch": 0.693,
+   "dials_covered": 37
+  },
+  "auc": 0.796
+ },
+ "S+ free + T3 + BitMob": {
+  "keep11": {
+   "share": 0.795,
+   "catch": 0.302,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.685,
+   "catch": 0.472,
+   "dials_covered": 34
+  },
+  "keep37": {
+   "share": 0.542,
+   "catch": 0.691,
+   "dials_covered": 37
+  },
+  "auc": 0.8
+ },
+ "S+ free + T3b + BitMob": {
+  "keep11": {
+   "share": 0.795,
+   "catch": 0.302,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.682,
+   "catch": 0.471,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.532,
+   "catch": 0.679,
+   "dials_covered": 37
+  },
+  "auc": 0.795
+ },
+ "S+ free + T4 + BitMob": {
+  "keep11": {
+   "share": 0.786,
+   "catch": 0.298,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.695,
+   "catch": 0.479,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.546,
+   "catch": 0.697,
+   "dials_covered": 37
+  },
+  "auc": 0.797
+ },
+ "S+ free + T5a + BitMob": {
+  "keep11": {
+   "share": 0.8,
+   "catch": 0.303,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.68,
+   "catch": 0.469,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.538,
+   "catch": 0.686,
+   "dials_covered": 37
+  },
+  "auc": 0.793
+ },
+ "S+ free + T5b + BitMob": {
+  "keep11": {
+   "share": 0.8,
+   "catch": 0.303,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.675,
+   "catch": 0.466,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.536,
+   "catch": 0.684,
+   "dials_covered": 37
+  },
+  "auc": 0.792
+ },
+ "S+ free + T5c + BitMob": {
+  "keep11": {
+   "share": 0.805,
+   "catch": 0.305,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.677,
+   "catch": 0.467,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.539,
+   "catch": 0.688,
+   "dials_covered": 37
+  },
+  "auc": 0.792
+ },
+ "S+ free + T6 + BitMob": {
+  "keep11": {
+   "share": 0.795,
+   "catch": 0.302,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.68,
+   "catch": 0.469,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.538,
+   "catch": 0.686,
+   "dials_covered": 37
+  },
+  "auc": 0.791
+ },
+ "S+ free + T6b + BitMob": {
+  "keep11": {
+   "share": 0.8,
+   "catch": 0.303,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.677,
+   "catch": 0.467,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.542,
+   "catch": 0.691,
+   "dials_covered": 37
+  },
+  "auc": 0.791
+ },
+ "S2 new only (no old signals) + BitMob": {
+  "keep11": {
+   "share": 0.773,
+   "catch": 0.293,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.695,
+   "catch": 0.479,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.555,
+   "catch": 0.709,
+   "dials_covered": 37
+  },
+  "auc": 0.806
+ },
+ "S3 free + T1b+T3+T4+T5c+T6 + BitMob": {
+  "keep11": {
+   "share": 0.777,
+   "catch": 0.295,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.695,
+   "catch": 0.479,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.546,
+   "catch": 0.697,
+   "dials_covered": 37
+  },
+  "auc": 0.8
+ },
+ "S0 old free + BitMob (re-stacked)": {
+  "keep11": {
+   "share": 0.8,
+   "catch": 0.303,
+   "dials_covered": 34
+  },
+  "keep20": {
+   "share": 0.68,
+   "catch": 0.469,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.538,
+   "catch": 0.686,
+   "dials_covered": 37
+  },
+  "auc": 0.792
+ },
+ "S2 new only (no old signals) | diversity-picked 30%": {
+  "keep11": {
+   "share": 0.732,
+   "catch": 0.278,
+   "dials_covered": 33
+  },
+  "keep20": {
+   "share": 0.645,
+   "catch": 0.445,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.524,
+   "catch": 0.669,
+   "dials_covered": 37
+  },
+  "auc": 0.783
+ },
+ "S2 new only (no old signals) | diversity-picked 60%": {
+  "keep11": {
+   "share": 0.718,
+   "catch": 0.272,
+   "dials_covered": 32
+  },
+  "keep20": {
+   "share": 0.637,
+   "catch": 0.44,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.523,
+   "catch": 0.667,
+   "dials_covered": 37
+  },
+  "auc": 0.783
+ },
+ "S2 new only (no old signals) + BitMob | diversity-picked 30%": {
+  "keep11": {
+   "share": 0.773,
+   "catch": 0.293,
+   "dials_covered": 35
+  },
+  "keep20": {
+   "share": 0.69,
+   "catch": 0.476,
+   "dials_covered": 35
+  },
+  "keep37": {
+   "share": 0.557,
+   "catch": 0.71,
+   "dials_covered": 37
+  },
+  "auc": 0.806
+ },
+ "S2 new only (no old signals) + BitMob | diversity-picked 60%": {
+  "keep11": {
+   "share": 0.773,
+   "catch": 0.293,
+   "dials_covered": 35
+  },
+  "keep20": {
+   "share": 0.688,
+   "catch": 0.474,
+   "dials_covered": 36
+  },
+  "keep37": {
+   "share": 0.551,
+   "catch": 0.703,
+   "dials_covered": 37
+  },
+  "auc": 0.806
+ },
+ "_meta": {
+  "chosen_free": "S2 new only (no old signals)",
+  "C_tfidf_word": 0.5,
+  "C_tfidf_wordchar": 0.5,
+  "train_cv_auc": {
+   "S1 free + all new": 0.7913,
+   "S+ free + T1": 0.7659,
+   "S+ free + T1b": 0.7766,
+   "S+ free + T2": 0.7692,
+   "S+ free + T3": 0.7795,
+   "S+ free + T3b": 0.774,
+   "S+ free + T4": 0.7757,
+   "S+ free + T5a": 0.7617,
+   "S+ free + T5b": 0.761,
+   "S+ free + T5c": 0.762,
+   "S+ free + T6": 0.7602,
+   "S+ free + T6b": 0.7598,
+   "S2 new only (no old signals)": 0.792,
+   "S3 free + T1b+T3+T4+T5c+T6": 0.7901
+  },
+  "n_train": 2997,
+  "n_test": 2000,
+  "note": "bitmob train scores may be leaky as in results.json; all new signals fit on TRAIN only"
+ }
+}

@@ -21,11 +21,11 @@ def questions():
             q[f"a|{d}|{dirn}|{ai}|0"] = r["question_1"]; q[f"a|{d}|{dirn}|{ai}|1"] = r["question_2"]
     q.update({f"g|{k}": v for k, v in GENRE.items()}); q.update({f"s|{k}": v for k, v in SCOPE.items()}); q.update({f"x|{k}": v for k, v in EXTRA.items()}); return q
 QS = questions()
-def ask(ev, today=None):
-    today = today or datetime.date.today().isoformat(); names = list(QS); P = {}
+def ask(ev, today=None, call=None):
+    call = call or O.call; today = today or datetime.date.today().isoformat(); names = list(QS); P = {}
     state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"
     for j in range(0, len(names), 20):
-        a = O.call(state, {k: {"type": "noul", "instructions": QS[k]} for k in names[j:j + 20]}); P.update({k: a[k]["noul"] for k in a})
+        a = call(state, {k: {"type": "noul", "instructions": QS[k]} for k in names[j:j + 20]}); P.update({k: a[k]["noul"] for k in a})
     return P
 def _country_rows():
     import csv, os
@@ -40,23 +40,26 @@ def region_text(region, rows, max_chars=300, top=12):
 def ask_country(ev, today=None):
     """Which country is the story mainly about? Returns (country id or 'global', probabilities). Same return as ever; ask_country_detailed adds the numbers behind it."""
     r = ask_country_detailed(ev, today); return r[0], r[1]
-def ask_country_detailed(ev, today=None):
+def ask_country_detailed(ev, today=None, call=None):
     """The server allows 2 to 64 options per question, so with many countries it asks which part of the world first, then which country in it.
     Returns (country id or 'global', probabilities, detail). detail: path 'flat' or 'region'; region_choice; global_p = the region step's GLOBAL probability (None on the flat path, where it is the 'global' option);
     other_here_p = the country step's own 'other_here' probability (None unless the country step ran); chose_global, chose_other_here."""
-    today = today or datetime.date.today().isoformat(); st = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"; rows = _country_rows()
+    call = call or O.call; today = today or datetime.date.today().isoformat(); st = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"; rows = _country_rows()
     if len(rows) <= 63 or "region" not in rows[0]:
         crit = {r["id"]: r["name"] for r in rows}; crit["global"] = "No single country in this list, or the whole world"
-        a = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": crit}})["c"]; pr = {k: round(float(v), 3) for k, v in a["probabilities"].items()}
+        a = call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": crit}})["c"]; pr = {k: round(float(v), 3) for k, v in a["probabilities"].items()}
         return a["choice"], pr, {"path": "flat", "region_choice": None, "global_p": pr.get("global"), "other_here_p": None, "chose_global": a["choice"] == "global", "chose_other_here": False}
     regions = sorted({r["region"] for r in rows}); crit = {g: region_text(g, rows) for g in regions}; crit["GLOBAL"] = "The whole world, or no single part of it"
-    g = O.call(st, {"g": {"type": "choice", "instructions": "Which part of the world is this story mainly about?", "criteria": crit}})["g"]; pg = {k: float(v) for k, v in g["probabilities"].items()}
+    g = call(st, {"g": {"type": "choice", "instructions": "Which part of the world is this story mainly about?", "criteria": crit}})["g"]; pg = {k: float(v) for k, v in g["probabilities"].items()}
     det = {"path": "region", "region_choice": g["choice"], "global_p": round(pg["GLOBAL"], 3), "other_here_p": None, "chose_global": g["choice"] == "GLOBAL", "chose_other_here": False}
     if g["choice"] == "GLOBAL": return "global", {"global": round(pg["GLOBAL"], 3)}, det
     inr = {r["id"]: r["name"] for r in rows if r["region"] == g["choice"]}; inr["other_here"] = "A different country in this part of the world, or no single country"
-    c = O.call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": inr}})["c"]; pc = {k: round(float(v) * pg[g["choice"]], 3) for k, v in c["probabilities"].items()}
+    c = call(st, {"c": {"type": "choice", "instructions": "Which country is this story mainly about?", "criteria": inr}})["c"]; pc = {k: round(float(v) * pg[g["choice"]], 3) for k, v in c["probabilities"].items()}
     det["other_here_p"] = round(float(c["probabilities"].get("other_here", 0.0)), 3); det["chose_other_here"] = c["choice"] == "other_here"
     return ("global" if c["choice"] == "other_here" else c["choice"]), pc, det
+def attr_label(r):
+    """The attribute's name; for BitMob there is no per-attribute answer, so the reading is named as what it is."""
+    return "BitMob condition reading" if O.is_bitmob() else r["attribute"]
 def read(P):
     g = {k: P[f"g|{k}"] for k in GENRE}; gate = (g["happened"] >= .5 or g["announced"] >= .5) and g["opinion"] < .5 and P["x|recent"] >= .3
     entry = "COUNTRY:usa" if P["x|us_focus"] >= .5 else ("WORLD:world" if P["x|foreign_focus"] >= .5 else "COUNTRY:usa")
@@ -64,7 +67,7 @@ def read(P):
     for d in sorted({k[0] for k in ATTRS}):
         present = {}
         for dirn in ("up", "down"):
-            ps = [(r["attribute"], (P[f"a|{d}|{dirn}|{i}|0"] + P[f"a|{d}|{dirn}|{i}|1"]) / 2) for i, r in enumerate(ATTRS.get((d, dirn), []))]
+            ps = [(attr_label(r), (P[f"a|{d}|{dirn}|{i}|0"] + P[f"a|{d}|{dirn}|{i}|1"]) / 2) for i, r in enumerate(ATTRS.get((d, dirn), []))]
             ps = [(n, m) for n, m in ps if m >= ATTR_MIN]
             if ps: present[dirn] = ps
         if len(present) == 1:
@@ -85,12 +88,12 @@ if __name__ == "__main__":
 
 # ---------- placement: what is this story ABOUT? (added 2026-10-05; see spec/ontology-domains.md) ----------
 DOMAINS = load("domains"); TYPE_W = {t["type"]: t for t in load("type_weights")}
-def place(ev, today=None, tag_choice=0.2, tag_yes=0.5):
+def place(ev, today=None, tag_choice=0.2, tag_yes=0.5, call=None):
     """Every story gets at least one domain. Forced choice over the closed list (always answers) plus one yes/no per domain (lets a story carry several)."""
     today = today or datetime.date.today().isoformat(); state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"
     qs = {"c": {"type": "choice", "instructions": "Which area is this story mainly about?", "criteria": {d["id"]: d["definition"] for d in DOMAINS}}}
     qs.update({"y|" + d["id"]: {"type": "noul", "instructions": f"Is this story about {d['name']}? ({d['definition']})"} for d in DOMAINS if d["id"] != "other"})
-    a = O.call(state, qs); pc = {k: float(v) for k, v in a["c"]["probabilities"].items()}; out = []
+    a = (call or O.call)(state, qs); pc = {k: float(v) for k, v in a["c"]["probabilities"].items()}; out = []
     for d in DOMAINS:
         py = float(a["y|" + d["id"]]["noul"]) if d["id"] != "other" else 0.0
         out.append({"id": d["id"], "name": d["name"], "p_choice": round(pc.get(d["id"], 0.0), 3), "p_yes": round(py, 3), "tagged": d["id"] != "other" and (pc.get(d["id"], 0.0) >= tag_choice or py >= tag_yes)})
@@ -109,7 +112,7 @@ def misses(P, k=3):
     for (d, dirn), lst in ATTRS.items():
         for i, r in enumerate(lst):
             a, b = P[f"a|{d}|{dirn}|{i}|0"], P[f"a|{d}|{dirn}|{i}|1"]; m = (a + b) / 2
-            if m < ATTR_MIN: rows.append({"dial": d, "direction": dirn, "attribute": r["attribute"], "mean": round(m, 3), "p1": round(a, 3), "p2": round(b, 3), "question": r["question_1"], "bar": ATTR_MIN})
+            if m < ATTR_MIN: rows.append({"dial": d, "direction": dirn, "attribute": attr_label(r), "mean": round(m, 3), "p1": round(a, 3), "p2": round(b, 3), "question": "(BitMob reads the condition, not this question)" if O.is_bitmob() else r["question_1"], "bar": ATTR_MIN})
     return sorted(rows, key=lambda x: -x["mean"])[:k]
 
 # ---------- expected impact: what the story is likely to DO if it plays out as reported (added 2026-10-05) ----------
@@ -124,6 +127,7 @@ def allowed_dials(placement):
 def expected(ev, reported_dials, allowed=None, today=None, min_p=None, min_net=0.05):
     """For every condition the story did not report directly, ask whether it is likely to push it up or down if it plays out as reported.
     Net direction = P(up) - P(down), so a story that could go either way gets a small net effect instead of none. Pending items (a hearing, a plan) are weighted lower than items already in effect."""
+    if O.cpu_only(): return []      # pure-CPU reader: no expected-impact readings (they need an LLM); skipped, not guessed
     today = today or datetime.date.today().isoformat(); state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"; qs = {}
     for d, r in PHRASES.items():
         if d in reported_dials or (allowed is not None and d not in allowed): continue
@@ -143,6 +147,7 @@ def expected(ev, reported_dials, allowed=None, today=None, min_p=None, min_net=0
 def severity(ev, dials, today=None):
     """How LARGE would each change be? (The yes/no questions say how sure the model is that a condition moves; this is the separate question of by how much.) One typed choice per condition over the
     levels in rules/impact_levels.csv; the size multiplier is the probability-weighted average of the levels' multipliers, so it varies smoothly. dials: {dial id: 'up' or 'down'}."""
+    if O.cpu_only(): return {d: {"level": "not rated (CPU-only reader)", "mult": 1.0, "p": {}} for d in dials}      # pure-CPU reader: every change counts at size 1.0, stated
     today = today or datetime.date.today().isoformat(); state = f"News item (published {ev['published_at']}; today is {today}):\n{ev['title']}. {ev['description']}"
     crit = {lv["id"]: lv["definition"] for lv in LEVELS}; mult = {lv["id"]: float(lv["multiplier"]) for lv in LEVELS}
     qs = {d: {"type": "choice", "instructions": f"Suppose the main development in this story plays out as described. How large would the change be in this: {PHRASES[d][dr]}? Judge it for ordinary people worldwide.", "criteria": crit} for d, dr in dials.items()}

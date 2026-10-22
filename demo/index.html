@@ -100,14 +100,14 @@ function table(rows, x, unscored = []) {
     el("tbody", {}, rows.map((r, i) => {
       const hard = r.tiers.hard || {};
       const acc = (tier) => el("td", { class: "num", "data-value": r.tiers[tier]?.accuracy ?? "", text: fmt.pct(r.tiers[tier]?.accuracy) });
-      const hosted = isHosted(r.id);
+      const hosted = isHosted(r.id), nr = !!r.notRun;   // registered, no benchmark run yet: labelled, never a number
       return el("tr", {},
-        el("td", { class: "rank", "data-value": i + 1, text: i + 1 }),
+        el("td", { class: "rank", "data-value": nr ? 999 : i + 1, text: nr ? "–" : i + 1 }),
         el("td", { "data-value": r.info.name },
           hosted ? null : el("span", { class: `dot ${Jev.isUp(r.id) ? "up" : ""}`, title: Jev.isUp(r.id) ? "Loaded now" : "Not loaded now", "aria-label": Jev.isUp(r.id) ? "Loaded now" : "Not loaded now" }),
           el("span", { class: "model-name" }, el("a", { href: `/models#${r.id}` }, Jev.tag(r.id)))),
-        el("td", { "data-value": r.mean_accuracy, style: "min-width:200px" }, meter(r.mean_accuracy)),
-        acc("easy"), acc("original"), acc("hard"),
+        nr ? el("td", { colspan: 4, class: "subtle", "data-value": -1, title: "Registered; no benchmark tier has finished for this model yet.", text: "Not run yet" })
+          : [el("td", { "data-value": r.mean_accuracy, style: "min-width:200px" }, meter(r.mean_accuracy)), acc("easy"), acc("original"), acc("hard")],
         el("td", { class: "num", "data-value": hard.ece ?? "", text: fmt.num(hard.ece) }),
         el("td", { class: "num", "data-value": hard.p50_s ?? "", text: fmt.ms(hard.p50_s) }),
         (() => { const m = memFor(r.id, x); return el("td", { class: "num", "data-value": m ? m.gb : "", title: m ? m.tip : "Not measured", text: m ? m.label : "–" }); })(),
@@ -265,7 +265,7 @@ mount(document.getElementById("table"), () => Promise.all([load(), extra(), Jev.
   const show = (t) => { [...seg.children].forEach(b => b.setAttribute("aria-pressed", b.dataset.tier === t)); fam.replaceChildren(families(d.rows, t)); };
   TIERS.slice().reverse().forEach(t => seg.append(el("button", { type: "button", "data-tier": t, onclick: () => show(t), text: TIER_LABEL[t] })));
   show("hard");
-  return table(d.rows, d.x, d.models.filter(m => m.unscored));
+  return table([...d.rows, ...d.pending.map(m => ({ id: m.id, info: m, tiers: {}, mean_accuracy: null, notRun: true }))], d.x, d.models.filter(m => m.unscored));
 });
 </script>
 </body>

@@ -24,6 +24,7 @@ from pathlib import Path
 
 import outside_api  # /v1/* for other systems: URL + API key (see its docstring)
 import backends  # the TypeSafe models (address, key, model label) and the classifier's teacher setting
+import hits  # World engine hit counter: collector + /api/world-engine/hits
 import registry  # the one list of models every page uses (demo/registry.py)
 import audio_library  # read-only data/audio library for /flow-lab
 import detector_api  # detector files + AI-drafted detectors for /flow-lab
@@ -410,7 +411,7 @@ def status():
     def ping(item):
         name, cfg = item
         f = facts.get(name, {})
-        base = {"code": f.get("code"), "name": f.get("name", name), "hosted": bool(cfg.get("hosted")), "params": f.get("params"), "library_only": bool(cfg.get("library_only"))}
+        base = {"code": f.get("code"), "name": f.get("name", name), "hosted": bool(cfg.get("hosted")), "params": f.get("params"), "library_only": bool(cfg.get("library_only")), "engine_reader": bool(cfg.get("engine_reader")), "cpu_only": bool(cfg.get("cpu_only"))}
         if cfg.get("hosted"):
             if not cfg["key"]:
                 return name, {**base, "up": False, "reason": "No API key configured", "identity": None}
@@ -447,7 +448,7 @@ WORLD_ENGINE = os.environ.get("WORLD_ENGINE_URL", "http://127.0.0.1:8112")  # pr
 
 
 def world_engine_proxy(method, sub, body):
-    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live", "/world", "/people_layout", "/people", "/gpu", "/graph", "/sowhat", "/reader"):
+    if sub.split("?")[0] not in ("/state", "/request", "/drill", "/commit", "/reset", "/live", "/world", "/people_layout", "/people", "/gpu", "/graph", "/sowhat", "/reader", "/shadow"):
         return 404, {"error": "not found"}
     try:
         req = urllib.request.Request(WORLD_ENGINE + sub, body, {"Content-Type": "application/json"}, method=method)
@@ -477,7 +478,7 @@ def set_reader(backend):
     """Point the World engine at another TypeSafe model; the address and key stay on this machine (the browser sends a name)."""
     if backend == "auto": body = json.dumps({"auto": True}).encode()
     elif backend not in BACKENDS: return 404, {"error": "unknown model"}
-    elif BACKENDS[backend]["library_only"]: return 400, {"error": "BitMob answers only the questions it has learned, so it cannot read stories"}
+    elif BACKENDS[backend]["library_only"] and not BACKENDS[backend]["engine_reader"]: return 400, {"error": "BitMob answers only the questions it has learned, so it cannot read stories"}
     else: cfg = BACKENDS[backend]
     if backend == "auto":
         try:
@@ -701,8 +702,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/world-engine/reader":
             return self._send(200, reader_info())
+        if path == "/api/world-engine/hits":
+            return self._send(200, hits.payload(self.path.partition("?")[2]))
         if path.startswith("/api/world-engine/"):
-            return self._send(*world_engine_proxy("GET", self.path[len("/api/world-engine"):], None))      # self.path keeps the query string (?since=N)
+            st_, body_ = world_engine_proxy("GET", self.path[len("/api/world-engine"):], None)
+            if path == "/api/world-engine/live" and st_ == 200: hits.ingest_bytes(body_)      # the hit counter learns from the same /live answers the pages get; it never polls /live itself (that would keep the feed awake)
+            return self._send(st_, body_)      # self.path keeps the query string (?since=N)
         if path.startswith("/api/cpu/"):
             return self._send(*cpu_engine_proxy("GET", path[len("/api/cpu"):], None))
         if path.startswith("/api/newsreader/"):
@@ -959,6 +964,7 @@ if __name__ == "__main__":
     host, port = os.environ.get("DEMO_HOST", "127.0.0.1"), int(os.environ.get("DEMO_PORT", "8100"))
     print(f"demo on http://{host}:{port}  (typesafe key: {'set' if BACKENDS['jev']['key'] else 'MISSING'})")
     threading.Thread(target=warm_memo, daemon=True).start()
+    hits.configure(WORLD_ENGINE)
     class Server(ThreadingHTTPServer):
         # The standard queue holds 5 waiting connections; a page that opens 20+ requests at once (Scenario lab) then has
         # the rest dropped, and the browser retries after 1 s, 3 s... which was the "sometimes it takes seconds" delay.

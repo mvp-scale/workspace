@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trainer live</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-size: 13px; }
+  body { overflow: hidden; display: flex; flex-direction: column; }
+  .app { flex: 1; min-height: 0; display: grid; grid-template-rows: auto auto 1fr; gap: 8px; padding: 8px 16px; box-sizing: border-box; }
+  header { display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 16px; margin: 0; }
+  .sub { color: var(--text-3); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-3); }
+  .dot.on { background: var(--good); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .win { margin-left: auto; background: var(--good-soft); color: var(--good); border: 1px solid var(--good); border-radius: 99px; padding: 2px 10px; font-weight: 600; max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .state { border-radius: 99px; padding: 2px 10px; font-weight: 700; white-space: nowrap; border: 1px solid; }
+  .state.working { background: var(--good-soft); color: var(--good); }
+  .state.waiting { background: var(--warn-soft); color: var(--warn); }
+  .state.failed { background: var(--bad-soft); color: var(--bad); }
+  .win.new { animation: pop .6s 3; }
+  @keyframes pop { 50% { transform: scale(1.05); } }
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; min-width: 0; }
+  .kpi b { font-size: 18px; display: block; }
+  .kpi span { color: var(--text-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .body { display: grid; grid-template-columns: 300px 1fr; gap: 8px; min-height: 0; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-height: 0; display: flex; flex-direction: column; }
+  .panel h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); margin: 0 0 6px; display: flex; gap: 6px; align-items: center; }
+  .side { display: grid; grid-template-rows: 1fr auto; gap: 8px; min-height: 0; }
+  .fill { overflow: auto; min-height: 0; flex: 1; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin: -2px -10px 8px; padding: 0 6px; }
+  .tabs button { background: none; border: 0; padding: 6px 10px; color: var(--text-2); cursor: pointer; font: inherit; border-bottom: 2px solid transparent; }
+  .tabs button[aria-selected="true"] { color: var(--text); border-color: var(--accent); font-weight: 600; }
+  .badge { font-size: 11px; padding: 1px 6px; border-radius: 99px; background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+  .b-training, .b-running, .b-scoring { background: var(--accent-soft); color: var(--accent); }
+  .b-done, .b-validated, .b-right, .b-pass { background: var(--good-soft); color: var(--good); }
+  .b-failed, .b-wrong, .b-fail, .b-disproven { background: var(--bad-soft); color: var(--bad); }
+  .b-partial, .b-queued, .b-weak, .b-split { background: var(--warn-soft); color: var(--warn); }
+  .b-waiting, .b-unproven, .b-none { background: var(--surface-2); color: var(--text-3); }
+  .g-pass { background: var(--good-soft); color: var(--good); } .g-near { background: var(--warn-soft); color: var(--warn); } .g-far { background: var(--bad-soft); color: var(--bad); } .g-none { color: var(--text-3); }
+  .kc { display: inline-block; border-radius: 4px; padding: 0 5px; margin: 1px 3px 1px 0; font-size: 12px; white-space: nowrap; }
+  .kc.g-none { background: var(--surface-2); }
+  .purpose { color: var(--text-2); margin: 0 0 8px; }
+  .legend { margin-top: 8px; color: var(--text-2); display: grid; gap: 3px; }
+  th small { display: block; font-weight: 400; color: var(--text-3); }
+  tr.grp td { background: var(--surface-2); font-weight: 600; border-top: 1px solid var(--border-strong); position: sticky; top: 0; }
+  .wrap { white-space: normal; word-break: break-word; }
+  table { border-collapse: collapse; width: 100%; }
+  td:first-child b { white-space: nowrap; }
+  th, td { text-align: left; padding: 3px 6px; border-top: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-2); font-weight: 600; position: sticky; top: 0; background: var(--surface); }
+  tr.click { cursor: pointer; } tr.click:hover td { background: var(--surface-2); }
+  .clip { max-width: 0; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .muted { color: var(--text-3); }
+  .c-pass { background: var(--good-soft); color: var(--good); } .c-fail { background: var(--bad-soft); color: var(--bad); } .c-none { color: var(--text-3); }
+  .cell { cursor: pointer; } .cell.best { box-shadow: inset 0 0 0 2px var(--good); }
+  .ov { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; min-height: 0; flex: 1; }
+  .area { display: grid; grid-template-columns: 82px 1fr 44px; gap: 6px; align-items: center; margin: 3px 0; cursor: pointer; }
+  .bar { height: 8px; background: var(--surface-2); border-radius: 99px; position: relative; overflow: hidden; }
+  .bar i { position: absolute; inset: 0 auto 0 0; background: var(--good); }
+  .bar em { position: absolute; top: 0; bottom: 0; left: 90%; width: 2px; background: var(--text-3); }
+  .crit { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 3px; }
+  .crit div { padding: 2px 6px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tools { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .tools input { flex: 1; min-width: 120px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+  .chip { border: 1px solid var(--border); background: var(--bg); color: var(--text-2); border-radius: 99px; padding: 1px 8px; cursor: pointer; font: inherit; font-size: 12px; }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .job { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; padding: 3px 0; border-top: 1px solid var(--border); align-items: baseline; }
+  .job .m { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .need div { padding: 3px 0; border-top: 1px solid var(--border); }
+  aside { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface); border-left: 1px solid var(--border-strong); box-shadow: -8px 0 24px rgba(0,0,0,.18); padding: 12px 16px; overflow: auto; transform: translateX(105%); transition: transform .2s; z-index: 1000; box-sizing: border-box; }
+  aside.open { transform: none; }
+  aside h3 { margin: 4px 0 6px; font-size: 14px; }
+  aside .x { float: right; cursor: pointer; border: 0; background: none; font-size: 18px; color: var(--text-2); }
+  .ev { border-top: 1px solid var(--border); padding: 5px 0; }
+  .link { color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+  pre { white-space: pre-wrap; font: 12px var(--mono); background: var(--surface-2); padding: 6px; border-radius: 6px; margin: 4px 0; }
+  @media (max-width: 900px) { body { overflow: auto; display: block; } .app { height: auto; } .body, .ov { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header><span class="dot" id="live"></span><h1>Trainer live</h1><span class="state waiting" id="state">…</span><span class="sub" id="round"></span><span class="sub" id="built">loading…</span><a class="sub" href="/mockups/vector-walkthrough.html" style="margin-left:auto">How the training works</a><span class="win" id="win" hidden></span></header>
+  <div class="kpis" id="kpis"></div>
+  <div class="body">
+    <div class="side">
+      <section class="panel"><h2>Working now <span class="badge" id="nrun"></span></h2><div class="fill" id="jobs"></div></section>
+      <section class="panel"><h2>Needs you</h2><div class="need" id="need"></div></section>
+    </div>
+    <section class="panel">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="fill" id="view" style="display:flex;flex-direction:column"></div>
+    </section>
+  </div>
+</div>
+<aside id="drawer" aria-label="Detail"><button class="x" id="close" aria-label="Close">×</button><div id="dbody"></div></aside>
+<script src="/static/app.js"></script>
+<script>
+(() => {
+  const el = Jev.el, $ = (id) => document.getElementById(id), put = (n, ...k) => n.replaceChildren(...k.flat(Infinity).filter(x => x != null && x !== false));
+  const ago = (t) => { const s = Math.max(0, Date.now() / 1000 - t); return s < 60 ? `${s | 0}s` : s < 3600 ? `${(s / 60) | 0}m` : `${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`; };
+  const badge = (t, cls) => el("span", { class: `badge b-${cls || t}`, text: t });
+  const AREA = { C: "Country", T: "Story type", S: "Scope/focus", P: "Topic", K: "Conditions" };
+  const TABS = ["Overview", "Models", "Rounds", "History"], OLD = ["Contract", "Overview (old)", "Models (old suite)", "Criteria", "Ledger", "MM3", "Forecasts", "Activity"];
+  const ORDER = ["P-0016", "P-0017", "P-0018", "P-0019", "P-0020", "P-0021", "P-0023", "P-0022"];
+  const X = (pid) => ((S && S.contract && S.contract.explain) || {})[pid] || { name: pid };
+  const pv = (pid, r) => !r || typeof r.value !== "number" ? "–" : (pid === "P-0017" ? "catches " : "") + (Math.round(r.value * 1000) / 10) + "%";
+  const progress = () => { const C = S.contract || {}, L = S.loop || {}, D = (C.rounds_detail || []).filter(d => Object.values(d.rows || {}).some(r => typeof r.value === "number"));
+    const last = D[D.length - 1], next = last && (L.round ?? 0) > last.round ? L.round : null;
+    const trend = (pid) => { const v = D.map(d => (d.rows[pid] || {}).value).filter(x => typeof x === "number"), r = last ? last.rows[pid] || {} : {};
+      if (r.pass === true) return el("span", { class: "badge b-pass", text: "passes" }); if (v.length < 2) return el("span", { class: "muted", text: v.length ? "first score" : "not scored" });
+      const dd = v[v.length - 1] - v[v.length - 2]; return el("span", { text: dd > 0.02 ? "↑ rising" : dd < -0.02 ? "↓ fell" : "→ flat", title: `change since last round: ${dd > 0 ? "+" : ""}${Math.round(dd * 1000) / 10} points` }); };
+    return el("div", { style: "overflow:auto" }, el("table", {},
+      el("thead", {}, el("tr", {}, [el("th", { text: "Step (in the order the engine runs them)" })].concat(D.map(d => el("th", { text: "Round " + d.round })), next ? [el("th", { text: "Round " + next })] : [], [el("th", { text: "Pass mark" }), el("th", { text: "Trend" }), el("th", { text: "Why it falls short, and the fix" })]))),
+      el("tbody", {}, ORDER.map(pid => { const x = X(pid), r = last ? last.rows[pid] || {} : {};
+        return el("tr", { title: `${pid} (ledger): ${x.what || ""}` }, el("th", { scope: "row", class: "wrap", text: x.name }),
+          D.map(d => el("td", { text: pv(pid, d.rows[pid]), title: (d.rows[pid] || {}).text || "" })), next ? el("td", { class: "muted", text: "running…" }) : null,
+          el("td", { text: x.mark || "–" }), el("td", {}, pid === "P-0022" ? el("span", { class: "muted", text: "your decision" }) : trend(pid)),
+          el("td", { class: "wrap", style: "white-space:normal", text: [x.why, x.fix].filter(Boolean).join(" ") })); }))),
+      el("div", { class: "muted", style: "margin-top:4px", text: "Each number = how often BitMob gives the same answer as Clef on the 2,000-story answer key it never trains on. Hover a row for what the step does." })); };
+  const stepChart = (pid, D) => { const NS = "http://www.w3.org/2000/svg", bar = ((S.contract || {}).bars || {})[pid], x = X(pid);
+    const pts = D.map(d => ({ r: d.round, v: (d.rows[pid] || {}).value, pass: (d.rows[pid] || {}).pass })).filter(p => typeof p.v === "number"), last = pts[pts.length - 1];
+    const W = 300, H = 150, l = 34, r = 44, t = 10, b = 22, Y = (v) => t + (1 - v) * (H - t - b), Xp = (k) => pts.length < 2 ? (l + W - r) / 2 : l + k * (W - l - r) / (pts.length - 1);
+    const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", "100%"); svg.setAttribute("role", "img");
+    const mk = (tag, a, txt) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.append(e); return e; };
+    const ttl = (e, s) => e.append(Object.assign(document.createElementNS(NS, "title"), { textContent: s }));
+    if (typeof bar === "number") mk("rect", { x: l, y: Y(1), width: W - l - r, height: Y(bar) - Y(1), fill: "var(--good-soft)" });
+    [0, 0.5, 1].forEach(g => { mk("line", { x1: l, x2: W - r, y1: Y(g), y2: Y(g), stroke: "var(--border)", "stroke-width": 1 }); mk("text", { x: l - 6, y: Y(g) + 4, "text-anchor": "end", "font-size": 10, fill: "var(--text-3)" }, `${g * 100}%`); });
+    if (typeof bar === "number") { mk("line", { x1: l, x2: W - r, y1: Y(bar), y2: Y(bar), stroke: "var(--good)", "stroke-width": 1.5, "stroke-dasharray": "4 3" }); }
+    pts.forEach((p, k) => mk("text", { x: Xp(k), y: H - 6, "text-anchor": "middle", "font-size": 10, fill: "var(--text-3)" }, "Round " + p.r));
+    if (pts.length > 1) mk("polyline", { points: pts.map((p, k) => `${Xp(k)},${Y(p.v)}`).join(" "), fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round" });
+    pts.forEach((p, k) => { mk("circle", { cx: Xp(k), cy: Y(p.v), r: 4.5, fill: p.pass ? "var(--good)" : "var(--accent)", stroke: "var(--surface)", "stroke-width": 2 });
+      ttl(mk("circle", { cx: Xp(k), cy: Y(p.v), r: 12, fill: "transparent" }), `Round ${p.r}: ${pv(pid, { value: p.v })}${p.pass ? " (passes)" : ""}`); });
+    if (last) mk("text", { x: Xp(pts.length - 1) + 8, y: Y(last.v) - 6, "font-size": 11, "font-weight": 600, fill: "var(--text)" }, `${Math.round(last.v * 1000) / 10}%`);
+    const gap = last && typeof bar === "number" ? Math.round((bar - last.v) * 1000) / 10 : null, prev = pts.length > 1 ? pts[pts.length - 2].v : null, dd = last && prev != null ? Math.round((last.v - prev) * 1000) / 10 : null;
+    const chip = !last ? el("span", { class: "badge", text: "not scored" }) : last.pass ? el("span", { class: "badge b-pass", text: "✓ passes" }) : el("span", { class: "badge b-fail", text: `${gap} points to go` });
+    const say = !last ? "" : dd == null ? "First score." : `${dd === 0 ? "No change last round" : `${dd > 0 ? "Up" : "Down"} ${Math.abs(dd)} point${Math.abs(dd) === 1 ? "" : "s"} last round`}${!last.pass && dd > 0 && gap / dd > 5 ? "; at this pace it won't reach the pass mark soon" : ""}.`;
+    return el("div", { style: "border:1px solid var(--border);border-radius:8px;padding:8px 10px" },
+      el("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:6px" }, el("b", { text: x.name }), chip),
+      el("div", { class: "muted", style: "font-size:12px;margin:2px 0 4px", text: x.what || "" }),
+      el("div", { style: "font-size:12px;margin-bottom:2px" }, "Now ", el("b", { text: last ? pv(pid, { value: last.v }) : "–" }), ` · pass mark ${typeof bar === "number" ? Math.round(bar * 100) + "%" : "–"} (dashed line)`), svg,
+      el("div", { style: "font-size:12px", text: say })); };
+  const GLOSS = [["Round", "One lap of the loop: label more stories, train BitMob on them, score it, then aim the next batch at the step that is furthest behind."],
+    ["Teacher", "The big, slow model whose answers BitMob learns to copy. Clef is the engine's reader today, so BitMob must agree with Clef. Jev is a hosted model: faster and cheaper, but its answers lean differently, so we translate them onto Clef's scale first."],
+    ["Labelling", "Asking a teacher the engine's questions about a story and saving the answers. Those answers are what BitMob studies."],
+    ["Training", "Showing BitMob thousands of labelled stories until it can predict the teacher's answers on its own. It runs on Kaggle's free GPUs (about 17 minutes); BitMob itself then runs on an ordinary CPU."],
+    ["Epoch", "One full read-through of all the training stories. Like rereading a textbook: a few passes help, too many and it memorises the examples instead of the pattern."],
+    ["Answer key", "2,000 stories Clef labelled that BitMob never sees in training (the 'frozen test'). Every score is measured on these, so memorising can't inflate it."],
+    ["Pass mark", "The score each step must reach. Written down before training started and never moved, so a pass can't be talked into existence."],
+    ["Catch rate and false alarms", "For conditions: of the stories where Clef sees a change, how many BitMob also flags (catch rate), and how often it flags one Clef didn't (false alarm). The engine needs both, catch 90% with under 1 false alarm per 1,000, because every false alarm moves the world model."],
+    ["Ranking score (topics)", "For each topic: does BitMob put the stories really about it above the ones that aren't? 1.0 is a perfect order; a topic passes at 0.70, and 80% of topics must pass."],
+    ["Got better by (value line)", "How much of the remaining gap a round closed, compared with what it cost (stories labelled, GPU hours). When it drops toward zero, more of the same has stopped paying and we change approach."]];
+  const glossary = (open) => { const d = document.createElement("details"), sm = document.createElement("summary"); sm.textContent = "What the words mean (2-minute read)"; d.append(sm); if (open) d.open = true;
+    d.append(el("div", { style: "max-width:70ch" }, GLOSS.map(([t, x]) => el("p", { style: "margin:6px 0" }, el("b", { text: t + ": " }), x)))); return d; };
+  let S = null, LED = null, LEDT = 0, tab = "Overview", seenWin = null, lf = { q: "", kind: "", verdict: "" };
+  try { const t0 = localStorage.getItem("trainer-tab"); if (TABS.includes(t0)) tab = t0; } catch (e) {}
+
+  const loadLedger = () => (Date.now() - LEDT < 8000 && LED) ? Promise.resolve(LED)
+    : fetch("ledger.json", { cache: "no-store" }).then(r => r.json()).then(d => { LED = d; LEDT = Date.now(); return d; });
+  const ref = (id) => el("span", { class: "link", text: id, onclick: (e) => { e.stopPropagation(); openItem(id); } });
+  const refsIn = (txt) => { const out = []; let last = 0; const re = /\b([PSCAFHTDN]-\d{4}|R-\d{4})\b/g; let m;
+    while ((m = re.exec(txt || ""))) { out.push(txt.slice(last, m.index), m[1].startsWith("R-") ? m[1] : ref(m[1])); last = m.index + m[0].length; }
+    out.push((txt || "").slice(last)); return out; };
+
+  // ---------- drawer ----------
+  const drawer = (...kids) => { put($("dbody"), kids); $("drawer").className = "open"; };
+  $("close").onclick = () => $("drawer").className = "";
+  addEventListener("keydown", (e) => { if (e.key === "Escape") $("drawer").className = ""; });
+  const openItem = (id) => loadLedger().then(L => {
+    const it = L.find(x => x.id === id); if (!it) return drawer(el("h3", { text: id }), el("div", { class: "muted", text: "not in the ledger" }));
+    drawer(el("div", {}, badge(it.verdict), " ", badge(it.kind, "x"), " ", el("span", { class: "muted", text: `${it.state} · step ${it.step ?? "–"} · ${(it.created || "").slice(0, 16)}` })),
+      el("h3", {}, `${it.id} `, ...refsIn(it.title)),
+      it.body && it.body !== "None" ? el("pre", {}, ...refsIn(it.body)) : null,
+      it.refs.length ? el("div", {}, "refs ", it.refs.map(r => [ref(r), " "])) : null,
+      el("h3", { text: `Evidence (${it.evidence.length})` }),
+      it.evidence.length ? it.evidence.map(e => el("div", { class: "ev" },
+        badge(e.src, "x"), " ", badge(e.stance || "", e.stance === "contradicts" ? "fail" : "x"), " ",
+        e.pin ? badge(`pin ${e.pin}`, e.pin === "ok" ? "pass" : "fail") : null, " ",
+        e.src === "item" ? ref(e.what) : el("b", { text: e.what }), el("span", { class: "muted", text: ` ${e.eid} · ${(e.ts || "").slice(0, 16)}` }),
+        e.note && e.note !== "None" ? el("div", {}, ...refsIn(e.note)) : null,
+        e.cmd && e.cmd !== "None" ? el("pre", { text: e.cmd }) : null))
+        : el("div", { class: "muted", text: "No evidence attached." }),
+      it.predictions.length ? [el("h3", { text: "Forecasts" }), it.predictions.map(p => el("div", { class: "ev" }, badge(p.result || "waiting", p.result || "queued"), ` ${p.rid} p ${p.p} · ${p.text}`, p.actual ? el("div", { class: "muted", text: "→ " + p.actual }) : null))] : null);
+  });
+  const openCell = (m, a) => { const v = m.areas[a];
+    drawer(el("h3", { text: `${m.name} · ${HEAD[a] ? HEAD[a][0] : a}` }), v ? [el("div", {}, v.pass != null ? badge(`${v.pass} of ${v.of} pass`, v.pass === v.of ? "pass" : "fail") : badge("no bar set", "x"), " ", cellBody(a, v, false)),
+      el("pre", { text: v.why }), el("div", { class: "muted", text: `Evidence file: data/suite/${m.id}/${a}.json (+ .npz test probabilities). Test: ${S.models.test}` })]
+      : el("div", { class: "muted", text: "Not run yet." }), el("div", {}, "Task ", ref("T-0025"))); };
+  const openCrit = (k) => { const c = S.card, v = c.values[k], n = c.nums && c.nums[k];
+    const r = (S.criteria || []).find(x => x.id === k) || {};
+    drawer(el("h3", { text: `${k} · ${AREA[k[0]]} · ${r.name || ""}` }), el("div", {}, badge(v === "✅" ? "pass" : v === "❌" ? "fail" : "not measured", v === "✅" ? "pass" : v === "❌" ? "fail" : "x"), r.bar ? ` pass mark ${r.bar}` : "", n != null ? ` · measured ${typeof n === "number" ? +n.toFixed(4) : n}` : ""),
+      el("div", { class: "muted", text: `Check ${c.ts} · ${c.label.slice(0, 80)} · pass-mark list id ${c.criteria_fp}` }),
+      el("div", { text: "Bars and full detail: docs/research/2026-10-20 Acceptance criteria draft.md (rev 2); card files in data/scorecard/." }),
+      el("h3", { text: "History" }), el("div", {}, (S.card_hist || []).map(h => el("span", { title: h.ts, text: h.values[k] }))));
+  };
+
+  // ---------- views ----------
+  const kpis = () => { const c = S.card, tot = c ? Object.values(c.grade).reduce((a, g) => [a[0] + g[0], a[1] + g[1]], [0, 0]) : [0, 0], p = S.predictions, pr = S.proof;
+    const best = (S.models.models || []).filter(m => Object.keys(m.areas).length).length;
+    const runs = (S.mm3_budget || "").match(/(\d+) of (\d+) runs/);
+    const k = (v, l, t) => el("div", { class: "kpi", onclick: () => setTab(t) }, el("b", { text: v }), el("span", { text: l }));
+    const C = S.contract || {}, rows = C.rows || [], R = C.resources || { kaggle: [], local: [] }, lab = (id) => ((C.labels || []).find(l => l.job === id) || {}),
+      np = rows.filter(r => r.pass === true).length, quota = (R.quota || "").match(/([\d.]+) h left of ([\d.]+)/);
+    return [k(`${np}/${rows.length}`, "engine steps pass (against Clef, frozen test)", "Overview"),
+      k(`${lab("clef-test").done ?? "?"}/2000`, "frozen test stories labelled by Clef", "Rounds"),
+      k(`${(R.local || []).reduce((a, l) => a + (l.stories_in_file || 0), 0)}`, "train stories labelled this round (5090)", "Rounds"),
+      k(`${R.kaggle.filter(x => /RUNNING|QUEUED/.test(x.status)).length}`, "Kaggle kernels running", "Overview"),
+      k(quota ? quota[1] : "–", `Kaggle GPU h left this week of ${quota ? quota[2] : "?"}`, "Rounds"),
+      k(R.stop ? "STOP" : "ok", R.stop ? "STOP file is set: nothing launches" : "no STOP file", "Overview")]; };
+
+  const jobs = () => S.jobs.length ? S.jobs.slice(0, 30).map(j => el("div", { class: "job", title: j.msg },
+      badge(j.state), el("span", { class: "m" }, el("b", { text: j.job }), " ", el("span", { class: "muted", text: j.msg })),
+      el("span", { class: "muted", text: ["done", "failed"].includes(j.state) ? ago(j.ts) : ago(j.started) })))
+    : el("div", { class: "muted", text: "Nothing running" });
+
+  const pct = (v) => `${Math.round(100 * v)}%`;
+  const grade = (v, bar) => bar == null || v == null ? "none" : v >= bar ? "pass" : bar - v <= 0.05 ? "near" : "far";
+  const kinds = ["happened", "announced", "opinion", "forecast"];
+  const speed = (ms) => { if (ms == null) return null; const sec = ms * 10; return sec < 60 ? `${+sec.toFixed(sec < 10 ? 1 : 0)} s` : `${+(sec / 60).toFixed(1)} min`; };
+  const condGrade = (v) => v.pass === v.of ? "pass" : grade(v.score, v.bar);
+  const cellGrade = (a, v) => !v ? "none" : a === "type" ? "none" : a === "conditions" ? condGrade(v) : grade(v.value, v.bar);
+  const cellBody = (a, v, compact) => {
+    if (a === "type") return v.parts ? [el("b", { text: `${v.pass} of 4` }), compact ? null : " pass ", compact ? null : v.parts.map(p => el("span", { class: `kc g-${grade(p.v, p.bar)}`, title: `${p.k}: ranking score ${p.v.toFixed(3)}, pass mark ${p.bar}`, text: `${p.k} ${p.v.toFixed(2)}` }))] : v.metric;
+    if (a === "conditions") return [el("b", { text: `${v.pass} of ${v.of}` }), compact ? null : " pass", compact ? null : el("span", { class: "muted", text: ` · average ${v.score.toFixed(3)}` })];
+    return [el("b", { text: v.value != null ? pct(v.value) : v.metric }), v.label ? ` ${v.label}` : "", v.bar != null ? el("span", { class: "muted", text: ` (pass ${pct(v.bar)})` }) : null];
+  };
+  const HEAD = { type: ["Story type", "4 kinds pass? ranking score each; pass 0.95 / 0.90 / 0.85 / 0.85"], topic: ["Topic", "% right (pass 85%)"], country: ["Country", "% agree with Jev (no bar set)"], conditions: ["Conditions", "48 conditions pass? ranking score ≥ 0.70 each"] };
+
+  const modelTable = (compact) => { const M = S.models; if (!M.models) return el("div", { class: "muted", text: "No model results yet" });
+    return el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "Model" }), M.areas.map(a => el("th", {}, HEAD[a][0], compact ? null : el("small", { text: HEAD[a][1] }))), compact ? null : el("th", {}, "Speed", el("small", { text: "ms per story" })))),
+      el("tbody", {}, M.models.map(m => el("tr", {}, el("td", { class: Object.keys(m.areas).length ? "" : "muted", text: m.name }),
+        M.areas.map(a => { const v = m.areas[a];
+          return el("td", { class: `cell g-${cellGrade(a, v)}${v && v.best ? " best" : ""}`, title: v ? v.why : "not run", onclick: () => openCell(m, a) }, v ? cellBody(a, v, compact) : "–"); }),
+        compact ? null : el("td", { class: m.ms == null ? "g-none" : "" }, m.ms == null ? "not measured" : [el("b", { text: `${m.ms} ms` }), el("div", { class: "muted", text: `10k stories ≈ ${speed(m.ms)}` })])))));
+  };
+
+  const areaBars = () => { const c = S.card, p = S.card_prev; return Object.entries(c.grade).map(([a, [n, m]]) => { const was = p && p.grade[a] ? p.grade[a][0] : n;
+    return el("div", { class: "area", onclick: () => setTab("Criteria") }, el("span", { text: a }), el("span", { class: "bar" }, el("i", { style: `width:${(100 * n / m) | 0}%` }), el("em")),
+      el("span", { class: n > was ? "right" : "", text: `${n}/${m}${n > was ? "▲" : n < was ? "▼" : ""}` })); }); };
+
+  const VIEWS = {
+    "Overview (old)": () => el("div", { class: "ov" },
+      el("div", {}, el("h2", { text: "Acceptance by area" }), areaBars(),
+        el("h2", { style: "margin-top:10px", text: "Proof health" }),
+        el("div", {}, ["validated", "weak", "unproven", "disproven"].map(v => el("span", { class: "chip", style: "margin:0 4px 4px 0", onclick: () => { lf.verdict = v; setTab("Ledger"); } }, `${v} ${S.proof[v]}`))),
+        el("h2", { style: "margin-top:10px", text: "Latest results" }),
+        S.wins.slice(0, 6).map(w => el("div", { class: "job" }, badge("done"), el("span", { class: "m" }, el("b", { text: w.job }), " ", w.msg), el("span", { class: "muted", text: ago(w.ts) })))),
+      el("div", { style: "min-height:0;overflow:auto" }, el("h2", { text: "Models × areas (click a cell for evidence)" }), modelTable(true))),
+
+    Overview: () => { const C = S.contract || {}, R = C.resources || { local: [], kaggle: [] }, D = C.rounds_detail || [], L = S.loop || {}, last = D.length ? D[D.length - 1] : null, bars = C.bars || {};
+      const rows = (C.rows || []), npass = rows.filter(r => r.pass === true).length, nmeas = rows.filter(r => typeof r.value === "number").length;
+      const lever = last && last.lever ? last.lever : null;
+      const running = R.kaggle.filter(k => /RUNNING|QUEUED/.test(k.status)), loc = R.local || [];
+      const head = nmeas === 0 ? `Not yet measured: no engine step has been scored (0 of ${rows.length} steps pass)` : npass === rows.length ? `Yes: all ${rows.length} engine steps pass` : `Not yet: ${npass} of ${rows.length} engine steps pass (${nmeas} measured)`;
+      const line = (k, v) => el("div", { class: "job", style: "grid-template-columns:110px 1fr" }, el("b", { text: k }), el("span", { class: "wrap", style: "white-space:normal", text: v }));
+      return [el("div", { class: "purpose", text: "Is BitMob ready to replace Clef in the engine?" }),
+        el("h2", { style: "font-size:22px;margin:4px 0 8px", text: head }),
+        line("Running now", [loc.length ? `5090 (Clef labelling): ${loc.map(l => `${l.stories_in_file ?? "?"} stories labelled so far in ${l.out.split("/").pop()}`).join("; ")}` : "5090: idle", running.length ? `Kaggle: ${running.map(k => `${k.kernel.split("/")[1]} ${k.status}`).join("; ")}` : "Kaggle: nothing running"].join(" · ")),
+        line("Round", `${L.round ?? 0} of ${L.of ?? 5}${L.phase ? ": " + L.phase : ""}${L.eta ? " · ETA " + L.eta : ""}`),
+        line("Next", lever ? `${lever.row ? X(lever.row).name : "all steps"}: ${X(lever.row).fix || lever.why}` : "Chosen after the next round is scored."),
+        el("h2", { style: "margin-top:12px", text: "Progress by round" }), progress(),
+        el("div", { class: "job", style: "margin-top:10px;flex-wrap:wrap;gap:8px;display:flex" }, R.stop ? badge("STOP is set", "fail") : badge("STOP not set", "pass"),
+          el("span", { class: "muted", text: R.quota || "Kaggle quota unavailable" }), el("span", { class: "muted", text: `Frozen test labelled by Clef so far: ${((C.labels || []).find(l => l.job === "clef-test") || {}).done ?? "?"} of 2,000 stories (never used for training).` })),
+        el("div", { class: "muted", style: "margin-top:6px", text: "Details: Models (which step falls short), Rounds (is each round paying off), History (earlier work, superseded)." }), glossary(false)]; },
+    Models: () => { const C = S.contract || {}, D = C.rounds_detail || [], M = S.readers_meta || {}, last = D.length ? D[D.length - 1] : null, bars = C.bars || {};
+      const STEPS = [["P-0016", "Gate", "agreement with Clef"], ["P-0017", "Conditions", "engine readings vs Clef"], ["P-0018", "Topics", "per-domain AP"], ["P-0019", "Country", "accuracy over 100 + global"], ["P-0020", "Expected impact", "same set as Clef"], ["P-0021", "Severity", "same level as Clef"], ["P-0022", "So-what", "open"], ["P-0023", "Engine output", "replay vs Clef"]];
+      const f2 = (x) => typeof x === "number" ? (Math.round(x * 100) / 100).toString() : "–", mark = (ok) => el("span", { class: "badge b-" + (ok ? "pass" : "fail"), text: ok ? "pass" : "fail" });
+      const extra = (m, nm) => [el("td", { text: m && m.ms != null ? `${Math.round(m.ms)} ms` : "–", title: "milliseconds per story (CPU); " + nm }), el("td", { text: m && m.ram_mb != null ? `${(m.ram_mb / 1024).toFixed(1)} GB` : "–", title: "RAM of the serving process" }), el("td", { text: m && m.gpu_s != null ? `${f2(m.gpu_s)} s` : "–", title: "GPU seconds per story" })];
+      const ref = el("tr", {}, el("th", { scope: "row", text: "Clef (the reference)" }), STEPS.map(() => el("td", { class: "muted", text: "reference", title: "Clef defines the answer key: 100% by definition" })), extra(M.clef, "Clef"));
+      const live = el("tr", {}, el("th", { scope: "row", text: "BitMob live (now serving)" }), STEPS.map(() => el("td", { class: "muted", text: "not yet scored", title: "The live build has not been scored against the contract yet (it was built for single-topic, top-15 country)" })), extra(M.live, "BitMob live"));
+      const cell = (pid, nm) => { if (pid === "P-0022") return el("td", { class: "muted", text: "open: you decide", title: "No training; keep Clef or a template: needs your decision" });
+        const r = last && last.rows ? last.rows[pid] : null; if (!r || typeof r.value !== "number") return el("td", { class: "muted", text: "not measured", title: r && r.note ? r.note : "no value yet" });
+        const bar = r.bar ?? bars[pid]; return el("td", { title: `${r.note || ""} n=${r.n ?? "?"}` }, mark(r.pass === true), ` ${r.text || f2(r.value)} / ${f2(bar)}`); };
+      const lat = el("tr", {}, el("th", { scope: "row", text: last ? `BitMob round ${last.round}` : "BitMob latest round" }), STEPS.map(([pid, nm]) => cell(pid, nm)), extra(M.latest, "latest round"));
+      const fails = STEPS.filter(([pid]) => last && last.rows && last.rows[pid] && last.rows[pid].pass === false);
+      return [el("div", { class: "purpose", text: "Which reader is closest, and on which step does it fall short?" }),
+        el("div", { style: "overflow:auto" }, el("table", {}, el("thead", {}, el("tr", {}, [el("th", { text: "Reader" })].concat(STEPS.map(([, n, d]) => el("th", { text: n, title: d })), [el("th", { text: "ms / story" }), el("th", { text: "RAM" }), el("th", { text: "GPU s / story" })]))), el("tbody", {}, ref, live, lat))),
+        el("div", { class: "muted", style: "margin:6px 0", text: "Each cell: value / pass mark, measured against Clef's own answers on the frozen test stories (hover for n and why). Columns are the engine's steps in the order it runs them." }),
+        el("h2", { text: last ? `Where round ${last.round} falls short` : "Where it falls short" }),
+        fails.length ? fails.map(([pid, nm]) => { const r = last.rows[pid]; return el("div", { class: "job", style: "grid-template-columns:120px 1fr" }, el("b", { text: nm }), el("span", { style: "white-space:normal", text: `${r.text || f2(r.value)} against a pass mark of ${f2(r.bar ?? bars[pid])}. ${r.note || ""}${last.lever && last.lever.row === pid ? " Next round is aimed here: " + last.lever.why : ""}` })); })
+          : el("div", { class: "muted", text: last && Object.values(last.rows || {}).some(r => typeof r.value === "number") ? "No step fails in the latest round." : "No round has been scored against the contract yet, so there is nothing to explain. Labelling of the Clef answer key is in progress (see Overview)." })]; },
+    History: () => { const box = el("div", {}, el("div", { class: "purpose", text: "History: earlier work, old criteria (superseded by D-0038)" }),
+        el("div", { class: "muted", style: "margin-bottom:8px", text: "The round-0 suite scored candidates against Jev's single-topic labels and 64 old criteria. Kept for the record; none of it is a contract score." }));
+      OLD.forEach(nm => { const d = document.createElement("details"), sm = document.createElement("summary"); sm.textContent = nm; d.append(sm); const body = el("div", {}); d.append(body); let done = false;
+        d.addEventListener("toggle", () => { if (d.open && !done) { done = true; put(body, VIEWS[nm]()); } }); box.append(d); }); return box; },
+    Rounds: () => { const C = S.contract; if (!C || !C.resources) return el("div", { class: "muted", text: "No contract data yet" });
+      const R = C.resources, D = C.rounds_detail || [], bars = C.bars || {}, ids = ["P-0016", "P-0017", "P-0018", "P-0019", "P-0020", "P-0021", "P-0022", "P-0023"], nm = (x) => x == null ? "–" : String(x);
+      const f1 = (x) => typeof x === "number" ? (Math.round(x * 100) / 100).toString() : "–", pct = (x) => typeof x === "number" ? Math.round(x * 1000) / 10 + "%" : "–";
+      const strip = el("div", { class: "job", style: "flex-wrap:wrap;gap:8px" }, R.stop ? badge("STOP is set", "fail") : badge("STOP not set", "pass"),
+        el("span", { class: "m", text: "Local labelling: " + (R.local.length ? R.local.map(l => `pid ${l.pid} (${l.workers} workers, ${l.stories_in_file == null ? "?" : l.stories_in_file} stories in ${l.out})`).join("; ") : "none running") }),
+        el("span", { class: "m", text: "Kaggle kernels (newest first): " + (R.kaggle.length ? R.kaggle.slice(0, 4).map(k => `${k.kernel.split("/")[1]} ${k.status}`).join("; ") : "none listed") }),
+        el("span", { class: "m", text: R.quota || "Kaggle quota unavailable" }));
+      const spark = (pid) => { const pts = D.map(d => ({ r: d.round, v: (d.rows[pid] || {}).value })).filter(p => typeof p.v === "number"), bar = ((D.length ? (D[D.length - 1].rows[pid] || {}).bar : null) ?? bars[pid]);
+        const NS = "http://www.w3.org/2000/svg", w = 120, h = 36, svg = document.createElementNS(NS, "svg"); svg.setAttribute("width", w); svg.setAttribute("height", h); svg.setAttribute("viewBox", `0 0 ${w} ${h}`); svg.setAttribute("role", "img");
+        const lo = Math.min(0, ...pts.map(p => p.v)), hi = Math.max(1, bar || 1, ...pts.map(p => p.v)), Y = (v) => h - 3 - (v - lo) / (hi - lo) * (h - 6), X = (i) => pts.length < 2 ? w / 2 : 4 + i / (pts.length - 1) * (w - 8);
+        const mk = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); svg.append(e); return e; };
+        if (typeof bar === "number") mk("line", { x1: 0, x2: w, y1: Y(bar), y2: Y(bar), stroke: "currentColor", "stroke-dasharray": "3 3", opacity: 0.6 });
+        if (pts.length) mk("polyline", { points: pts.map((p, i) => `${X(i)},${Y(p.v)}`).join(" "), fill: "none", stroke: "#2b6cb0", "stroke-width": 2 });
+        pts.forEach((p, i) => mk("circle", { cx: X(i), cy: Y(p.v), r: 2.5, fill: "#2b6cb0" }));
+        svg.append(Object.assign(document.createElementNS(NS, "title"), { textContent: `${pid}: ${pts.length ? pts.map(p => `round ${p.r}: ${f1(p.v)}`).join(", ") : "not measured yet"}; dashed line = pass mark ${nm(bar)}` })); return svg; };
+      const lab = (d) => [d.five090 && d.five090.stories ? `Clef on the 5090: ${d.five090.stories} stories (${f1(d.five090.per_min)} a minute)` : `Jev (hosted), translated to Clef's scale: ${nm(d.stories_added)} stories`].concat((d.kaggle || []).map(k => `${k.kernel.split("/").pop()}: ${k.stories ?? "?"} stories, ${f1(k.per_min)}/min, ${f1(k.gpu_h)} GPU h`)).join("; ");
+      const vl = (d) => { const v = d.value_line || {}; return v.closed == null ? "first scored round: nothing to compare yet" : v.share_closed != null ? `closed ${Math.round(v.share_closed * 100)}% of the gap left after the round before for ${f1(v.gpu_h)} GPU hours` : `${f1(v.closed)} total shortfall closed (${v.rows_compared} rows), ${f1(v.per_1000_stories)} per 1,000 stories, ${nm(v.per_gpu_h == null ? null : f1(v.per_gpu_h))} per GPU h (${f1(v.gpu_h)} h = Kaggle + 5090)`; };
+      const M = D.filter(d => Object.values(d.rows || {}).some(r => typeof r.value === "number")), sh = (d) => (d.value_line || {}).share_closed, gs = M.filter(d => typeof sh(d) === "number");
+      const lastSh = gs.length ? sh(gs[gs.length - 1]) : null;
+      const verdict = !gs.length ? "Not enough scored rounds yet to tell." : `Share of the remaining gap each round closed: ${gs.map(d => `round ${d.round} ${Math.round(sh(d) * 100)}%`).join(", ")}. ` + (lastSh < 0.1 ? "Returns are shrinking: more of the same won't finish the job, so the next round needs a different lever." : "Still paying off: keep going.");
+      const cost = (d) => [d.stories_added ? (d.five090 && d.five090.stories ? `Clef on the 5090: ${d.five090.stories.toLocaleString()} stories (${f1((d.five090_min || 0) / 60)} h)` : `Jev: ${d.stories_added.toLocaleString()} stories`) : "No new labels", `Kaggle training: ${f1(d.kaggle_gpu_h)} GPU h`].join(" · ");
+      const gap = (d) => { const v = sh(d); if (typeof v !== "number") return el("td", { class: "muted", text: "first score" });
+        return el("td", { title: vl(d) }, el("div", { style: "display:flex;align-items:center;gap:6px" }, el("div", { style: "width:90px;height:8px;background:var(--border);border-radius:4px;overflow:hidden" }, el("div", { style: `width:${Math.max(2, Math.round(Math.max(0, v) * 100))}%;height:100%;background:#2b6cb0` })), el("span", { text: `${Math.round(v * 100)}%` }))); };
+      return el("div", { style: "overflow:auto;min-height:0;flex:1" }, el("div", { class: "purpose", text: "Is each round paying off?" }),
+        el("h2", { style: "font-size:16px;margin:4px 0 8px;text-transform:none;letter-spacing:0", text: verdict }),
+        el("div", { style: "overflow:auto" }, el("table", {}, el("thead", {}, el("tr", {}, ["Round", "What we tried", "What it cost", "Gap closed", "What we learned"].map(h => el("th", { text: h })))),
+          el("tbody", {}, M.map(d => el("tr", {}, el("td", { text: String(d.round) }), el("td", { class: "wrap", style: "white-space:normal", text: d.tried || "" }), el("td", { class: "wrap", style: "white-space:normal", text: cost(d) }), gap(d), el("td", { class: "wrap", style: "white-space:normal", text: d.lesson || "" })))))),
+        el("div", { class: "muted", style: "margin:6px 0", text: "Gap closed: of the distance still left to the pass marks after the round before, how much this round closed. The scores per step are on Overview." }),
+        el("h2", { style: "margin-top:14px", text: "Each step, round by round" }),
+        el("div", { class: "muted", style: "margin-bottom:8px", text: "Every chart uses the same 0–100% scale. The green band is passing territory; the dashed line is the pass mark, set before training. A line that climbs into the green band has passed." }),
+        el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px" }, ids.filter(i => i !== "P-0022" && i !== "P-0023").map(i => stepChart(i, M))),
+        el("div", { class: "muted", style: "margin-top:6px", text: "Not charted: whole-engine check (runs after the steps pass) and the so-what summary (your decision)." }),
+        glossary(false)); },
+    Contract: () => { const C = S.contract; if (!C) return el("div", { class: "muted", text: "No contract data yet" });
+      const val = (r) => r.value_text || (typeof r.value === "number" ? String(r.value) : "–");
+      const st = (r) => r.open_decision ? badge("open: user decides", "unproven") : r.pass === true ? badge("pass", "pass") : r.pass === false ? badge("fail", "fail") : badge("not measured", "none");
+      const chg = (r) => r.change == null ? "–" : (r.change > 0 ? "+" : "") + r.change;
+      const rounds = C.rounds || [];
+      return [el("div", { class: "purpose", text: "BitMob must produce what the engine's reader (Clef) produces, the way the engine uses it. One row per contract item (D-0038); the pass mark is read from the ledger. Click a row for its ledger item." }),
+        el("div", { class: "muted", style: "margin-bottom:6px", text: C.made ? `Latest round: ${rounds[rounds.length - 1]} · scored ${C.made}` : "No round scored yet." }),
+        el("table", {}, el("thead", {}, el("tr", {}, ["Row", "Name", "Pass mark", "Value now", "Result", "Change since last round"].concat(rounds.map(r => "Round " + r)).map(h => el("th", { text: h })))),
+          el("tbody", {}, C.rows.map(r => el("tr", { class: "click", title: r.note || "", onclick: () => openItem(r.id) },
+            el("td", { text: r.id }), el("td", { class: "wrap", text: r.name }), el("td", { class: "wrap", text: r.bar || "" }), el("td", { text: val(r) }), el("td", {}, st(r)), el("td", { text: chg(r) }),
+            r.history.map(h => el("td", { class: "muted", text: h.pass === true ? "pass " + (h.text || h.value || "") : h.pass === false ? "fail " + (h.text || h.value || "") : "not measured" })))))),
+        el("h2", { style: "margin-top:12px", text: "Clef labels (the reference answers)" }),
+        C.labels.map(l => el("div", { class: "job", title: l.msg || "" }, badge(l.state || "queued", l.state === "running" ? "done" : l.state === "failed" ? "fail" : "none"),
+          el("span", { class: "m" }, el("b", { text: l.name }), ` ${l.done} of ${l.target}`, l.msg ? ` · ${l.msg}` : ""), el("span", { class: "muted", text: l.ts ? ago(l.ts) : "" }))),
+        el("div", { class: "muted", text: "Value, result and change come from data/progress/contract.json, written each time the captain scores a round." })]; },
+    "Models (old suite)": () => [el("div", { class: "purpose", text: "Each row is a candidate model; each cell is its result on the frozen test stories, colored against that column's pass mark. Click a cell for evidence." }), modelTable(false),
+      el("div", { class: "legend" },
+        el("div", {}, el("span", { class: "kc g-pass", text: "green: meets the pass mark" }), el("span", { class: "kc g-near", text: "amber: within 0.05 of it" }), el("span", { class: "kc g-far", text: "red: further off" }), el("span", { class: "kc g-none", text: "grey: no bar set" }), " Green outline = best model in that column."),
+        el("div", { text: "Ranking score (AP, average precision): 1.0 = the model ranks every true story above every false one." }),
+        el("div", { text: "% right / % agree: share of the 11,997 frozen test stories where the model's answer matches Jev's (Jev = the reference model whose labels are the answer key)." }),
+        el("div", { text: "Conditions = the 48 yes/no story traits a model must flag; a condition passes at ranking score 0.70." }),
+        el("div", { class: "muted", text: `Test set: ${S.models.test || ""}.` }))],
+    Criteria: () => { const c = S.card; if (!c) return el("div", { class: "muted", text: "no card" });
+      const rows = S.criteria || [], areas = [...new Set(rows.map(r => r.area))];
+      return [el("div", { class: "purpose", text: "Pass marks set before testing; an area is done when all its rows are green." }),
+        el("div", { class: "muted", style: "margin-bottom:6px", text: `Latest check ${c.ts} · ${S.cards} checks so far. Grey = not measured yet (counts as not passed).` }),
+        el("table", {}, el("thead", {}, el("tr", {}, ["Criterion", "Pass mark", "Best value now", "Which model", "Result"].map(h => el("th", { text: h })))),
+          el("tbody", {}, areas.map(a => [el("tr", { class: "grp" }, el("td", { colSpan: 5, text: `${a} · ${c.grade[a] ? c.grade[a][0] + " of " + c.grade[a][1] + " pass" : ""}` })),
+            rows.filter(r => r.area === a).map(r => el("tr", { class: "click", onclick: () => openCrit(r.id) },
+              el("td", { class: "wrap" }, el("span", { class: "muted", text: r.id + " " }), r.name), el("td", { class: "wrap", text: r.bar }),
+              el("td", { class: r.best ? "" : "muted", text: r.best || "–" }), el("td", { class: "muted wrap", text: r.model || "–" }),
+              el("td", {}, badge(r.state === "pass" ? "pass" : r.state === "fail" ? "fail" : "not measured", r.state))))])))]; },
+    Ledger: () => { const box = el("div", { class: "fill" }, el("div", { class: "muted", text: "loading…" }));
+      const draw = () => loadLedger().then(L => { const q = lf.q.toLowerCase();
+        const rows = L.filter(i => (!lf.kind || i.kind === lf.kind) && (!lf.verdict || i.verdict === lf.verdict) && (!q || (i.id + " " + i.title).toLowerCase().includes(q))).reverse();
+        put(box, el("table", {}, el("thead", {}, el("tr", {}, ["Item", "Kind", "Proof state", "Evidence attached", "What it says"].map(h => el("th", { text: h })))),
+          el("tbody", {}, rows.slice(0, 300).map(i => el("tr", { class: "click", onclick: () => openItem(i.id) }, el("td", {}, el("b", { text: i.id })), el("td", { class: "muted", text: i.kind }), el("td", {}, badge(i.verdict)),
+            el("td", { class: "muted", text: [i.n.mm3 ? `${i.n.mm3} model review${i.n.mm3 > 1 ? "s" : ""}` : "", i.n.file ? `${i.n.file} file${i.n.file > 1 ? "s" : ""}` : "", i.bad ? `${i.bad} changed or missing` : ""].filter(Boolean).join(" · ") || "none" }), el("td", { class: "clip", title: i.title, text: i.title }))))));
+      });
+      const chips = (field, vals) => vals.map(v => el("button", { class: "chip", "aria-pressed": String(lf[field] === v), text: v || "all", onclick: (e) => { lf[field] = v; [...e.target.parentNode.children].forEach(c => c.dataset.f === field && c.setAttribute("aria-pressed", String(c.textContent === (v || "all")))); draw(); }, "data-f": field }));
+      const inp = el("input", { placeholder: "filter id or text", value: lf.q, oninput: (e) => { lf.q = e.target.value; draw(); } });
+      draw(); return [el("div", { class: "purpose", text: "The shared record of every fact, task, decision and concern, each with its evidence. Proof state: validated = proven and its evidence files are unchanged; weak = proven but evidence is missing or changed; unproven = no proof yet." }), el("div", { class: "tools" }, inp, chips("verdict", ["", "validated", "weak", "unproven"]), chips("kind", ["", "fact", "task", "decision", "note", "concern"])), box]; },
+    MM3: () => [el("div", { class: "purpose", text: "MM3 = automated review of our write-ups by two models: local Clef and hosted Jev. A split means the two disagreed on at least one question; splits are recorded, not resolved." }),
+      el("div", { class: "muted", style: "margin-bottom:6px", text: S.mm3_budget || "" }),
+      el("table", {}, el("thead", {}, el("tr", {}, ["Review", "Reviewer", "About item", "What the reviewer said"].map(h => el("th", { text: h })))),
+        el("tbody", {}, S.mm3.map(m => el("tr", { class: "click", onclick: () => openItem(m.item) }, el("td", {}, el("b", { text: m.run })),
+          el("td", { class: "muted", text: /^hosted/.test(m.note || "") ? "hosted Jev" : /^local/.test(m.note || "") ? "local Clef" : "–" }), el("td", {}, ref(m.item)),
+          el("td", { class: "wrap" }, /SPLIT/.test(m.note || "") ? [badge("split"), " "] : null, m.note || "(see item)")))))],
+    Forecasts: () => { const p = S.predictions; return [el("div", { class: "purpose", text: "A forecast (R-0118 = forecast number 118) is a prediction written down before a run and scored after: right = it came true, wrong = it did not, waiting = not run yet. Confidence = the chance given in advance." }),
+      el("div", { style: "margin-bottom:6px" }, el("b", { text: `${p.right} of ${p.scored} right` }), el("span", { class: "muted", text: ` · ${p.made - p.scored} waiting` })),
+      el("table", {}, el("thead", {}, el("tr", {}, ["Result", "Forecast", "Confidence", "What was predicted / what happened"].map(h => el("th", { text: h })))),
+        el("tbody", {}, [...p.waiting.map(w => ({ ...w, result: "waiting" })), ...p.recent].map(r => el("tr", { class: "click", onclick: () => openItem(r.item) },
+        el("td", {}, badge(r.result)), el("td", { class: "muted", text: r.id }), el("td", { text: r.p != null ? pct(r.p) : "–" }), el("td", { class: "wrap" }, r.text, r.actual ? el("div", { class: "muted", text: "→ " + r.actual }) : null)))))]; },
+    Activity: () => [el("div", { class: "purpose", text: "Latest job events from the trainer, newest first: what started, is training, finished or failed." }),
+      el("table", {}, el("thead", {}, el("tr", {}, ["Time", "State", "Job (model:area)", "What happened"].map(h => el("th", { text: h })))),
+        el("tbody", {}, S.feed.map(e => el("tr", {}, el("td", { class: "muted", text: new Date(e.ts * 1000).toLocaleTimeString() }), el("td", {}, badge(e.state)), el("td", {}, el("b", { text: e.job })), el("td", { class: "wrap", text: e.msg })))))],
+  };
+
+  const setTab = (t) => { tab = t; try { localStorage.setItem("trainer-tab", t); } catch (e) {} drawTabs(); drawView(); };
+  const drawTabs = () => put($("tabs"), TABS.map(t => el("button", { role: "tab", "aria-selected": String(t === tab), text: t, onclick: () => setTab(t) })));
+  let histDrawn = false; const drawView = () => { if (!S) return; if (tab === "History") { if (histDrawn) return; histDrawn = true; } else histDrawn = false; put($("view"), VIEWS[tab]()); };
+
+  const draw = () => { if (!S) return;
+    put($("kpis"), kpis()); put($("jobs"), jobs()); const busy = S.jobs.filter(j => ["running", "training", "scoring"].includes(j.state) && S.built - j.ts < 1800).length;
+    const failed = S.jobs.filter(j => j.state === "failed" && S.built - j.ts < 3600).length, L = S.loop || {};
+    $("state").className = "state " + (failed ? "failed" : busy ? "working" : "waiting");
+    $("state").textContent = failed ? `● FAILED (${failed})` : busy ? `● WORKING · CPU ${busy} jobs` : (S.needs_you.length ? `● WAITING ON YOU (${S.needs_you.length})` : "● IDLE");
+    $("round").textContent = `round ${L.round ?? 0}/${L.of ?? 5}${L.phase ? " · " + L.phase : ""}`;
+    $("nrun").textContent = busy ? `${busy} running` : "idle"; $("live").className = "dot" + (busy ? " on" : "");
+    $("built").textContent = `${busy ? "working" : "idle"} · updated ${ago(S.built)} ago`;
+    put($("need"), S.needs_you.map(n => el("div", { title: "blocks: " + n.blocks }, n.q, el("span", { class: "muted", text: " · " + n.blocks }))));
+    const w = S.wins[0]; if (w) { $("win").hidden = false; $("win").textContent = `🎉 ${w.job}: ${w.msg}`; if (seenWin !== null && seenWin !== w.ts) { $("win").classList.remove("new"); void $("win").offsetWidth; $("win").classList.add("new"); } seenWin = w.ts; }
+    if (tab !== "Ledger") drawView();
+  };
+  const poll = () => fetch("live.json", { cache: "no-store" }).then(r => r.json()).then(d => { const first = !S; S = d; draw(); if (first && tab === "Ledger") drawView(); })
+    .catch((e) => { console.error("trainer", e); $("built").textContent = "error: " + e.message; });
+  drawTabs(); poll(); setInterval(poll, 4000);
+})();
+</script>
+</body>
+</html>

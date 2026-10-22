@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector walkthrough · mock-up</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+<style>
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; display: grid; gap: 22px; }
+  .step { display: grid; gap: 10px; }
+  .step > h2 { font-size: 18px; margin: 0; }
+  .what { color: var(--text-2); font-size: 14px; max-width: 88ch; margin: 0; }
+  .point { font-size: 14px; margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; max-width: 95ch; }
+  pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; font-family: var(--mono, ui-monospace, monospace); }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 12px; }
+  .four { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; }
+  .two > div, .four > div { min-width: 0; }
+  h3 { margin: 0 0 4px; font-size: 14px; }
+  .seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; background: var(--surface); color: var(--text-2); padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+  .sticky { position: sticky; top: 0; z-index: 3; background: var(--bg); padding: 8px 0; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; border-bottom: 1px solid var(--border); }
+  .toks { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tok { font-family: var(--mono, monospace); font-size: 12px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--text-2); }
+  .tok.s { border-color: var(--accent); color: var(--text); font-weight: 700; }
+  canvas.hm { width: 100%; image-rendering: pixelated; display: block; border: 1px solid var(--border); border-radius: 4px; }
+  .rowlab { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--text-2); }
+  .rowlab > span { font-family: var(--mono, monospace); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .big { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat { display: grid; gap: 2px; } .stat .small { color: var(--text-2); }
+  .stats { display: flex; flex-wrap: wrap; gap: 10px 26px; }
+  table { width: 100%; border-collapse: collapse; } td, th { font-size: 13px; padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ok { color: var(--good); font-weight: 700; } .bad { color: var(--bad); font-weight: 700; }
+  .scale { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+  .scale i { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, rgb(37,99,235), var(--surface), rgb(234,88,12)); border: 1px solid var(--border); }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis line { stroke: var(--border); } .axis text { fill: var(--text-3); font-size: 10px; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; display: none; z-index: 5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-2); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; background: var(--c); }
+  .eq { font-family: var(--mono, monospace); font-size: 13px; }
+</style>
+</head>
+<body>
+<p style="margin:0;padding:6px 16px;font-size:13px;background:var(--accent-soft);border-bottom:1px solid var(--border)">Earlier version (16 Oct 2026). Current: <a href="/mockups/vector-walkthrough.html">vector-walkthrough.html</a></p>
+<main id="main">
+  <header style="display:grid;gap:6px">
+    <h1 style="margin:0">Vector walkthrough: from text to a yes/no answer, every step</h1>
+    <p class="what">Two real test sentences that are both exactly <b>"Yes."</b>. People labelled one as agreeing to donate and the other as answering a small-talk question. Same words, opposite answers, so only the context can separate them. We follow both through the CPU classifier: tokens → numbers → one averaged vector → a map of all 248 training vectors → the trained head → a probability. Every number is real, read from <code>demo/mockups/vector-walkthrough.json</code> (built by <code>probes/vector_walkthrough.py</code> from the same vectors the state-depth test used). Nothing on this page calls a model.</p>
+  </header>
+  <div class="sticky"><span class="small muted">Encoder</span><span class="seg" id="encSeg"></span><span class="small subtle" id="encNote"></span></div>
+
+  <section class="card step">
+    <h2>0 · The two sentences and their context</h2>
+    <p class="what">This is the S2 state (Situation + Task + the sentence) for each. The question is the 'agree' question: does the speaker agree to donate?</p>
+    <div class="two" id="s0"></div>
+  </section>
+
+  <section class="card step">
+    <h2>1 · Words become tokens, tokens become numbers</h2>
+    <p class="what">The encoder splits text into tokens and gives each token a list of numbers (one row below, one coloured cell per number; blue = negative, orange = positive). Hover a cell for its value.</p>
+    <div class="scale"><span>negative</span><i></i><span>positive</span></div>
+    <div class="two" id="s1"></div>
+    <p class="point" id="s1pt"></p>
+  </section>
+
+  <section class="card step">
+    <h2>2 · The whole input becomes ONE vector: the average of every token row</h2>
+    <p class="what">Below is the full S3 input for the first "Yes." (Situation + Task + Action + sentence): one row per token, the sentence's own rows marked in the left margin. The encoder adds every row up, divides by the number of rows, and scales the result to length 1. That single row is all the classifier ever sees.</p>
+    <div id="s2"></div>
+    <p class="point" id="s2pt"></p>
+  </section>
+
+  <section class="card step">
+    <h2>3 · Where every training example lands</h2>
+    <p class="what">All 248 training vectors, flattened from <span id="dimtxt"></span> numbers to 2 (PCA: the two directions along which these vectors differ most). Orange = people said "agrees to donate", grey = everything else. The two "Yes." sentences are the ringed dots. All four panels use the same scale, so if the cloud shrinks, the vectors really did get closer together.</p>
+    <div class="legend"><span style="--c: rgb(234,88,12)">agrees to donate (62)</span><span style="--c: var(--text-3)">not agree (186)</span><span style="--c: transparent; box-shadow: inset 0 0 0 2px var(--text)">open ring: Yes. (agree)</span><span style="--c: var(--text)">filled: Yes. (small talk). In the first two panels they sit on the exact same spot, so the filled dot covers the ring.</span></div>
+    <div class="four" id="s3"></div>
+    <p class="point" id="s3pt"></p>
+  </section>
+
+  <section class="card step">
+    <h2>4 · The head: one weight per number, add up, squash to a probability</h2>
+    <p class="what">The trained head for 'agree' is a weight for each of the numbers plus a bias. Score = Σ weightᵢ × numberᵢ + bias; probability = 1 / (1 + e<sup>−score</sup>); above 50% means "yes, agrees". Rows: the head's weights, then for each "Yes." its vector and the products weight × number (what each number contributes). Pick which input the head was trained on.</p>
+    <div class="seg" id="headSeg"></div>
+    <div id="s4"></div>
+    <p class="point" id="s4pt"></p>
+  </section>
+
+  <section class="card step">
+    <h2>5 · The scorecard: this pair vs all 200 test sentences</h2>
+    <p class="what">What happened to the two "Yes." sentences, and what happened on all 200 test sentences (balanced accuracy: average of yes caught and no kept; chance 50%), for each input.</p>
+    <div id="s5"></div>
+    <p class="point" id="s5pt"></p>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+<script>
+(async () => {
+  const { el } = Jev;
+  const D = await (await fetch("/mockups/vector-walkthrough.json")).json();
+  const F = D.featured;
+  let enc = "e5", head = "S1";
+  const ENC = { static: "Static (potion-base-8M): one fixed list of 256 numbers per word", e5: "e5-small int8 (what the CPU engine runs): 384 numbers per token, rewritten by the words around it" };
+  const LBL = ["Yes. (agree)", "Yes. (small talk)"];
+  const tip = document.getElementById("tip");
+  const showTip = (ev, lines) => { tip.replaceChildren(...lines.map((l, i) => el("div", { text: l, style: i ? "color:var(--text-2)" : "font-weight:600" }))); tip.style.display = "block";
+    const w = tip.offsetWidth; tip.style.left = Math.min(ev.pageX + 14, window.scrollX + document.documentElement.clientWidth - w - 8) + "px"; tip.style.top = (ev.pageY + 12) + "px"; };
+  const hideTip = () => tip.style.display = "none";
+  const pc = (v, d = 1) => (v * 100).toFixed(d) + "%";
+  const NS = "http://www.w3.org/2000/svg";
+  const S = (tag, a = {}, ...kids) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); for (const k of kids) n.append(k.nodeType ? k : document.createTextNode(k)); return n; };
+
+  // heat map: rows of numbers -> canvas; diverging blue / surface / orange, scaled to the 98th percentile of |value|
+  function heat(rows, { cell = 3, rowH = 6, scaleMax, labels, mark, title } = {}) {
+    const n = rows[0].length, c = el("canvas", { class: "hm" }); c.width = n; c.height = rows.length;
+    c.style.height = Math.max(rowH * rows.length, 6) + "px";
+    const ctx = c.getContext("2d"), img = ctx.createImageData(n, rows.length);
+    const bg = getComputedStyle(document.body).getPropertyValue("--surface").trim() || "#fff";
+    const hex = (h) => { const m = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(m.slice(i, i + 2), 16)); };
+    const B = /^#[0-9a-f]{6}$/i.test(bg) ? hex(bg) : [255, 255, 255];
+    const all = rows.flat().map(Math.abs).sort((a, b) => a - b); const mx = scaleMax || all[Math.floor(all.length * 0.98)] || 1;
+    rows.forEach((r, y) => r.forEach((v, x) => {
+      const t = Math.min(1, Math.abs(v) / mx), C = v < 0 ? [37, 99, 235] : [234, 88, 12], k = (y * n + x) * 4;
+      for (let j = 0; j < 3; j++) img.data[k + j] = Math.round(B[j] + (C[j] - B[j]) * t); img.data[k + 3] = 255;
+    }));
+    ctx.putImageData(img, 0, 0);
+    c.addEventListener("mousemove", (ev) => { const r = c.getBoundingClientRect(); const x = Math.floor((ev.clientX - r.left) / r.width * n), y = Math.floor((ev.clientY - r.top) / r.height * rows.length);
+      if (rows[y]) showTip(ev, [`${labels ? "token " + JSON.stringify(labels[y]) : title || ""}`, `number ${x + 1} of ${n} = ${rows[y][x]}`]); });
+    c.addEventListener("mouseleave", hideTip);
+    return c;
+  }
+  const cos = (a, b) => { let s = 0, na = 0, nb = 0; for (let i = 0; i < a.length; i++) { s += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; } return s / Math.sqrt(na * nb); };
+
+  function s0() {
+    document.getElementById("s0").replaceChildren(...F.map((f, k) => el("div", {}, el("h3", { text: `${LBL[k]} · human label: ${f.label} → agree = ${f.truth ? "yes" : "no"}` }), el("pre", { text: f.S2 }))));
+  }
+  function s1() {
+    const E = D.enc[enc], box = document.getElementById("s1"); box.replaceChildren();
+    F.forEach((f, k) => {
+      const t = E.tokens[`${k}|S1`];
+      box.append(el("div", {}, el("h3", { text: `${LBL[k]} alone (S1): ${t.tok.length} tokens × ${E.dim} numbers` }),
+        el("div", { class: "toks" }, t.tok.map((x, j) => el("span", { class: "tok" + (t.is_sent[j] ? " s" : ""), text: x }))),
+        heat(t.vec, { labels: t.tok, rowH: 14 })));
+    });
+    const y = E.yes_token_cos;
+    document.getElementById("s1pt").textContent = enc === "static"
+      ? `Static: the token "yes" is the same 256 numbers everywhere. Its row inside the long S3 input is identical to its row on its own (cosine ${y["0|S3"]} and ${y["1|S3"]}; 1 = identical). The context can only add other rows; it never changes what "yes" means.`
+      : `e5-small: each token's numbers are rewritten by the words around it (12 layers of attention). The "yes" row inside the full S3 input has cosine ${y["0|S3"]} (first "Yes.") and ${y["1|S3"]} (second) with "yes" on its own, so the context really did change it. That is why e5 beats static. The two S1 inputs are byte-identical, so their rows are identical.`;
+  }
+  function s2() {
+    const E = D.enc[enc], t = E.tokens["0|S3"], s1 = E.tokens["0|S1"], box = document.getElementById("s2");
+    const ns = t.is_sent.reduce((a, b) => a + b, 0), N = t.tok.length;
+    const marks = el("div", { style: `display:grid;grid-template-rows:repeat(${N},1fr);height:${N * 3}px;width:6px` }, t.is_sent.map(f => el("div", { style: `background:${f ? "var(--accent)" : "transparent"}` })));
+    box.replaceChildren(
+      el("div", { class: "stats" },
+        el("div", { class: "stat" }, el("span", { class: "big", text: `${N}` }), el("span", { class: "small", text: "token rows in the S3 input" })),
+        el("div", { class: "stat" }, el("span", { class: "big", text: `${ns}` }), el("span", { class: "small", text: `rows are the sentence "Yes." (marked)` })),
+        el("div", { class: "stat" }, el("span", { class: "big", text: pc(ns / N) }), el("span", { class: "small", text: "the sentence's share of the average" }))),
+      el("div", { style: "display:grid;grid-template-columns:6px 1fr;gap:4px;align-items:stretch" }, marks, heat(t.vec, { labels: t.tok, rowH: 3 })),
+      el("div", { class: "rowlab" }, el("span", { text: "average, S3" }), heat([t.unit], { rowH: 18, title: "S3 average (length 1)" })),
+      el("div", { class: "rowlab" }, el("span", { text: "average, S1" }), heat([s1.unit], { rowH: 18, title: "S1 average (length 1)" })));
+    const sc = E.self_cos, pcs = E.pair_cos;
+    document.getElementById("s2pt").textContent = `"Yes." is ${ns} of ${N} rows, ${pc(ns / N)} of the average. The S3 average and the S1 average are not the same vector: cosine ${sc.S3[0]} (1 = same direction). `
+      + `Now the two sentences: alone (S1) the two "Yes." vectors are identical (cosine ${pcs.S1}), so no head can ever tell them apart; with S2 they differ a little (${pcs.S2}), with S3 (${pcs.S3}). The context is what separates them, and it is also what drowns the sentence.`;
+  }
+  function s3() {
+    const E = D.enc[enc], box = document.getElementById("s3"); box.replaceChildren();
+    document.getElementById("dimtxt").textContent = E.dim;
+    const names = { "S1": "S1 · sentence alone", "S1+instr+crit": "S1 + instructions + criteria", "S2": "S2 · + Situation, Task", "S3": "S3 · + Action" };
+    const all = Object.values(E.map).flatMap(m => m.pts.flatMap(p => [Math.abs(p[0]), Math.abs(p[1])])); const R = Math.max(...all) * 1.05;
+    for (const [s, m] of Object.entries(E.map)) {
+      const W = 260, x = (v) => W / 2 + v / R * (W / 2 - 6), y = (v) => W / 2 - v / R * (W / 2 - 6);
+      const svg = S("svg", { viewBox: `0 0 ${W} ${W}`, role: "img", "aria-label": `Map of 248 training vectors, ${names[s]}` });
+      svg.append(S("g", { class: "axis" }, S("line", { x1: 0, x2: W, y1: W / 2, y2: W / 2 }), S("line", { y1: 0, y2: W, x1: W / 2, x2: W / 2 })));
+      for (const [a, b, t] of [...m.pts].sort((p, q) => p[2] - q[2])) svg.append(S("circle", { cx: x(a), cy: y(b), r: 3, fill: t ? "rgb(234,88,12)" : "var(--text-3)", "fill-opacity": t ? 0.9 : 0.45 }));
+      m.feat.forEach(([a, b], k) => { const c = S("circle", { cx: x(a), cy: y(b), r: 6, fill: k ? "var(--text)" : "none", stroke: "var(--text)", "stroke-width": 2 });
+        c.addEventListener("mousemove", (ev) => showTip(ev, [LBL[k], `position ${a.toFixed(3)}, ${b.toFixed(3)}`])); c.addEventListener("mouseleave", hideTip); svg.append(c); });
+      box.append(el("div", {}, el("h3", { text: names[s] }), svg,
+        el("div", { class: "small muted", text: `avg cosine between two different items ${m.avg_cos} · distance between the agree-centre and the rest ${m.gap} · typical spread ${m.spread} · ratio ${(m.gap / m.spread).toFixed(2)}` })));
+    }
+    const M = E.map;
+    document.getElementById("s3pt").textContent = `Sentence alone: items are spread out (average cosine between two different items ${M.S1.avg_cos}) and the agree group sits ${(M.S1.gap / M.S1.spread).toFixed(2)} spreads away from the rest. `
+      + `Add the same instructions and criteria to every item and the whole cloud shrinks to a dot (average cosine ${M["S1+instr+crit"].avg_cos}): every vector now contains the same long shared text. Add the per-item context (S2, S3) and the cloud is still squeezed (${M.S2.avg_cos}, ${M.S3.avg_cos}) and the agree group is relatively closer to the rest (${(M.S3.gap / M.S3.spread).toFixed(2)} in S3): the context, different for every item, adds spread that has nothing to do with agreeing.`;
+  }
+  function s4() {
+    const E = D.enc[enc], H = E.head[head], box = document.getElementById("s4");
+    const n = H.w.length, isSplit = head === "split";
+    const row = (lab, v, o = {}) => el("div", { class: "rowlab" }, el("span", { text: lab }), heat([v], { rowH: 16, title: lab, ...o }));
+    const parts = H.items.map((it, k) => {
+      const half = (a, b) => it.contrib.slice(a, b).reduce((s, v) => s + v, 0);
+      return el("div", { style: "display:grid;gap:4px;margin-top:6px" },
+        el("h3", { text: `${LBL[k]} → truth: ${F[k].truth ? "agree" : "not agree"}` }),
+        row("numbers x", it.x), row("weight × x", it.contrib),
+        el("div", { class: "eq" }, isSplit
+          ? `score = sentence part ${half(0, n / 2).toFixed(3)} + context part ${half(n / 2, n).toFixed(3)} + bias ${H.b} = ${it.score}`
+          : `score = Σ weight×x ${(it.score - H.b).toFixed(3)} + bias ${H.b} = ${it.score}`,
+          el("br"), `probability = 1/(1+e^−score) = `, el("b", { text: pc(it.p) }), ` → `,
+          el("span", { class: ((it.p > 0.5) === !!F[k].truth) ? "ok" : "bad", text: `${it.p > 0.5 ? "agree" : "not agree"} (${((it.p > 0.5) === !!F[k].truth) ? "right" : "wrong"})` })));
+    });
+    box.replaceChildren(el("div", { class: "small muted", text: isSplit ? `Input: the sentence's vector and the context's vector side by side (${n} numbers: first half sentence, second half context).` : `Input: one vector of ${n} numbers.` }),
+      row("head weights", H.w), el("div", { class: "small subtle", text: `size of the weights (length of the weight list) = ${H.w_norm}` }), ...parts);
+    const sc = { S1: `Alone, the two "Yes." vectors are identical, so they get the identical score (${pc(H.items[0].p)}): one of them has to be wrong. The head can only move the line; it cannot split one point in two.`,
+      "S1+instr+crit": `Same story with the question attached: the two inputs are still identical. And because every item now shares that long text, the numbers that differ between items are small, so the head needs bigger weights to read them. Its training penalty (C=1) holds the weights down (size ${H.w_norm} vs ${E.head.S1.w_norm} for the sentence alone), so it reads them less well. That is a tuning effect: rescaling the numbers first won most of it back in the follow-up check.`,
+      S2: `With the context the two vectors differ, and the head does pull them apart: ${pc(H.items[0].p)} vs ${pc(H.items[1].p)}. On this pair, context helps, which is your idea working. The question is what it costs on the other 198 sentences (step 5).`,
+      S3: `More context: ${pc(H.items[0].p)} vs ${pc(H.items[1].p)}. The pair is still separated, but the weights are smaller (${H.w_norm}) because everything is squeezed together (step 3).`,
+      split: `Sentence and context as separate vectors: the score is just the sentence part plus the context part. Both "Yes." have the same sentence part, so only the context part differs; here it is not enough to cross 50% for the agree one. A head that adds can shift the score by context but cannot express "yes means agree only after a donation ask".` };
+    document.getElementById("s4pt").textContent = sc[head];
+  }
+  function s5() {
+    const E = D.enc[enc], rows = ["S1", "S1+instr+crit", "S2", "S3", "split"];
+    const name = { S1: "S1 sentence alone", "S1+instr+crit": "S1 + instructions + criteria", S2: "S2 + Situation, Task", S3: "S3 + Action", split: "split: sentence vector + context vector" };
+    document.getElementById("s5").replaceChildren(el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "input" }), el("th", { class: "num", text: "p(agree) · Yes. (agree)" }), el("th", { class: "num", text: "p(agree) · Yes. (small talk)" }), el("th", { text: "pair" }), el("th", { class: "num", text: "agree · all 200" }), el("th", { class: "num", text: "refuse · all 200" }), el("th", { class: "num", text: "askorg · all 200" }))),
+      el("tbody", {}, rows.map(s => { const it = E.head[s].items, okk = (it[0].p > 0.5) && (it[1].p <= 0.5);
+        return el("tr", {}, el("td", { text: name[s] }), el("td", { class: "num", text: pc(it[0].p) }), el("td", { class: "num", text: pc(it[1].p) }), el("td", { class: okk ? "ok" : "bad", text: okk ? "both right" : "one wrong" }),
+          ...["agree", "refuse", "askorg"].map(q => el("td", { class: "num", text: pc(E.acc[s][q]) }))); }))));
+    document.getElementById("s5pt").textContent = `The trade-off in one table: adding the state fixes this pair (S2, S3 get both right), because these two sentences differ only in context. But across all 200 test sentences accuracy drops, because for most sentences the words alone decide the answer, and the averaged-in context is mostly noise that blurs them. Separate vectors keep the sentence intact (no loss) but an adding head gets little out of the context. To get the gain without the loss, the encoder itself would have to learn to read the sentence in light of the context, which a frozen encoder plus one averaged vector cannot.`;
+  }
+  const seg = document.getElementById("encSeg");
+  for (const k of ["static", "e5"]) seg.append(el("button", { type: "button", "aria-pressed": String(k === enc), text: k === "e5" ? "e5-small int8" : "Static potion-base-8M", onclick: (ev) => { enc = k; for (const b of seg.children) b.setAttribute("aria-pressed", String(b === ev.currentTarget)); draw(); } }));
+  const hs = document.getElementById("headSeg");
+  for (const k of ["S1", "S1+instr+crit", "S2", "S3", "split"]) hs.append(el("button", { type: "button", "aria-pressed": String(k === head), text: k, onclick: (ev) => { head = k; for (const b of hs.children) b.setAttribute("aria-pressed", String(b === ev.currentTarget)); s4(); } }));
+  function draw() { document.getElementById("encNote").textContent = ENC[enc]; s1(); s2(); s3(); s4(); s5(); }
+  s0(); draw();
+})();
+</script>
+</body>
+</html>

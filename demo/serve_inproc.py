@@ -39,6 +39,9 @@ def make(model):
     if model == "clef-flash":
         from jevbench.adapters.clef_local import ClefLocalAdapter
         return ClefLocalAdapter(endpoint=str(ROOT / "data/models/clef-flash")), {"base": "Qwen/Qwen3.5-9B with vision encoder (BF16)", "readout": "joint schema head, one logit per option"}
+    if model == "clef-flash-nvfp4":
+        from jevbench.adapters.clef_nvfp4_local import ClefNvfp4LocalAdapter
+        return ClefNvfp4LocalAdapter(endpoint=str(ROOT / "data/models/clef-flash-nvfp4-alpha")), {"base": "Cloudflare/clef-flash, NVFP4/FP8 compressed-tensors (alpha-x-ai, unofficial), vLLM 0.30.0", "readout": "joint schema head, one logit per option"}
     raise SystemExit(f"unknown model {model}")
 
 
@@ -66,7 +69,7 @@ def answer(q, probs):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True, choices=["semif", "so1", "laya", "verdict", "clef-flash"])
+    ap.add_argument("--model", required=True, choices=["semif", "so1", "laya", "verdict", "clef-flash", "clef-flash-nvfp4"])
     ap.add_argument("--port", type=int, required=True)
     ap.add_argument("--host", default="127.0.0.1")
     a = ap.parse_args()

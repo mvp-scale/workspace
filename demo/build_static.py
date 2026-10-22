@@ -85,8 +85,8 @@ def main():
             # paths resolve correctly regardless of what prefix the site is served under, since
             # every page here sits flat in the same directory.
             js = f.read_text()
-            old_nav = '  const NAV = [["/", "Leaderboard"], ["/compare", "Baseline compare"], ["/scenarios", "Scenario lab"], ["/flow", "Conversation flow"], ["/models", "How they work"], ["/report", "Report"]];'
-            new_nav = '  const NAV = [["index.html", "Leaderboard"], ["scenarios.html", "Scenario lab"], ["flow-recordings.html", "Conversation flow"], ["models.html", "How they work"], ["report.html", "Report"]];'
+            old_nav = '  const NAV = [["/", "Leaderboard"], ["/compare", "Baseline compare"], ["/scenarios", "Scenario lab"], ["/imagelab", "Image lab"], ["/worldengine", "World engine"], ["/worldengine-how", "How it works"], ["/flow", "Conversation flow"], ["/latent", "Latent lab"], ["/report", "Report"], ["/models", "How they work"]];'
+            new_nav = '  const NAV = [["index.html", "Leaderboard"], ["scenarios.html", "Scenario lab"], ["flow-recordings.html", "Conversation flow"], ["report.html", "Report"], ["models.html", "How they work"]];'
             assert old_nav in js, "NAV literal in app.js has changed -- update build_static.py's substitution"
             js = js.replace(old_nav, new_nav).replace('href: "/" }, "Jev Bench "', 'href: "index.html" }, "Jev Bench "')
             old_active = 'const path = location.pathname.replace(/\\/$/, "") || "/";'

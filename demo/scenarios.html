@@ -2842,15 +2842,18 @@ function renderCustom({ library: lib, examples }) {
 
 /* ---------- overview ---------- */
 function renderOverview(details) {  // models with results get a row; the rest are named in one "not run" line under the map
-  const sets = PROBES.map((p, i) => ({ p, d: details[i] })).filter(x => x.d);
-  const failed = PROBES.length - sets.length;
-  const mids = orderModels(sets.flatMap(x => modelsIn(x.d)));
+  const sets0 = PROBES.map((p, i) => ({ p, d: details[i] })).filter(x => x.d);
+  const failed = PROBES.length - sets0.length;
+  const mids = orderModels(sets0.flatMap(x => modelsIn(x.d)));
   const cell = {}; // cell[mid][setId] = stat
-  for (const m of mids) { cell[m] = {}; for (const x of sets) cell[m][x.p.id] = statFor(x.d, m); }
+  for (const m of mids) { cell[m] = {}; for (const x of sets0) cell[m][x.p.id] = statFor(x.d, m); }
+  /* Sets (columns here, the table is transposed): families by their mean, sets within a family by theirs, best on the left. */
+  const setFams = []; for (const x of sets0) { const g = meta(x.p.id).group; let f = setFams.find(z => z[0] === g); if (!f) setFams.push(f = [g, []]); f[1].push(x); }
+  const sets = Jev.heat.sortGroups(setFams, (x) => Jev.heat.mean(mids.map(m => cell[m][x.p.id]?.acc ?? null))).flatMap(([, xs]) => xs);
   const chance = (p) => 1 / nClasses(p);
   const macro = (m) => { const v = sets.map(x => ({ s: cell[m][x.p.id], c: chance(x.p) })).filter(z => z.s); return v.length ? { acc: v.reduce((a, z) => a + z.s.acc, 0) / v.length, ch: v.reduce((a, z) => a + z.c, 0) / v.length, k: v.length } : null; };
   const M = Object.fromEntries(mids.map(m => [m, macro(m)]));
-  const ordered = [...mids].sort((a, b) => (M[b] ? M[b].acc : -1) - (M[a] ? M[a].acc : -1));
+  const ordered = Jev.heat.sortModels(mids, (m) => M[m] ? M[m].acc : null);
   let above = 0, below = 0, within = 0;
   for (const m of mids) for (const x of sets) { const s = cell[m][x.p.id]; if (!s) continue; const c = chance(x.p); if (s.lo > c) above++; else if (s.hi < c) below++; else within++; }
 
@@ -2881,7 +2884,7 @@ function renderOverview(details) {  // models with results get a row; the rest a
   };
   const wrap = el("div", { class: "stack" },
     el("section", { class: "section", style: "margin-top:0", "aria-labelledby": "ov-h" },
-      el("header", {}, el("div", {}, el("h2", { id: "ov-h", text: "All sets: accuracy by model" }),
+      el("header", {}, el("div", {}, el("h2", { id: "ov-h", text: "All sets: accuracy by model" }), Jev.heat.note("set", true),
         el("p", { class: "small", text: "Colour shows how far above or below chance each model is. Hover a cell for the numbers and interval; click it to open that model on that set." })),
         el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: exportCsv, text: "Export CSV" }))),
       ordered.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any set."),
@@ -2905,14 +2908,15 @@ function renderWorldMap(details) {
   const macroByModel = (m) => { const v = subs.map(x => ({ s: cell[x.p.id][m], c: chance(x.p) })).filter(z => z.s);
     return v.length ? { acc: v.reduce((a, z) => a + z.s.acc, 0) / v.length, ch: v.reduce((a, z) => a + z.c, 0) / v.length, k: v.length } : null; };
   const M = Object.fromEntries(mids.map(m => [m, macroByModel(m)]));
-  const orderedModels = [...mids].sort((a, b) => (M[b] ? M[b].acc : -1) - (M[a] ? M[a].acc : -1));
+  const orderedModels = Jev.heat.sortModels(mids, (m) => M[m] ? M[m].acc : null);
 
   let above = 0, below = 0, within = 0;
   for (const x of subs) for (const m of mids) { const s = cell[x.p.id][m]; if (!s) continue; const c = chance(x.p); if (s.lo > c) above++; else if (s.hi < c) below++; else within++; }
 
   const CAT_ORDER = ["STEM", "Humanities", "Social sciences", "Other"];
   const catOf = (x) => MMLU_CATEGORY[x.p.id.slice(5)];
-  const groups = CAT_ORDER.map(cat => [cat, subs.filter(x => catOf(x) === cat)]).filter(([, list]) => list.length);
+  const groups = Jev.heat.sortGroups(CAT_ORDER.map(cat => [cat, subs.filter(x => catOf(x) === cat)]), (x) => Jev.heat.mean(mids.map(m => cell[x.p.id][m]?.acc ?? null)));
+  const subsShown = groups.flatMap(([, list]) => list);   /* displayed order, for the CSV */
 
   const sizeLabel = (id) => INFO[id]?.params || "size not published";
   const shortBase = (id) => { const b = INFO[id]?.base; return b ? b.split(/ \+ | \(/)[0].split(",")[0].replace(/^[\w.-]+\//, "") : null; };
@@ -2944,16 +2948,16 @@ function renderWorldMap(details) {
 
   const exportCsv = () => {
     const h = ["subject", "category", "n_items", ...orderedModels.flatMap(m => [`${m}_acc`, `${m}_ci95_lo`, `${m}_ci95_hi`, `${m}_n`])];
-    const rows = [h, ...subs.map(x => [meta(x.p.id).short, catOf(x), x.p.n, ...orderedModels.flatMap(m => { const s = cell[x.p.id][m]; return s ? [s.acc.toFixed(4), s.lo.toFixed(4), s.hi.toFixed(4), s.n] : ["", "", "", ""]; })]),
+    const rows = [h, ...subsShown.map(x => [meta(x.p.id).short, catOf(x), x.p.n, ...orderedModels.flatMap(m => { const s = cell[x.p.id][m]; return s ? [s.acc.toFixed(4), s.lo.toFixed(4), s.hi.toFixed(4), s.n] : ["", "", "", ""]; })]),
       ["average", "", "", ...orderedModels.flatMap(m => [M[m] ? M[m].acc.toFixed(4) : "", "", "", M[m] ? M[m].k : 0])]];
     Jev.download("world-knowledge-accuracy.csv", Jev.csv(rows), "text/csv");
   };
   const wrap = el("div", { class: "stack" },
     el("section", { class: "section", style: "margin-top:0", "aria-labelledby": "wm-h" },
-      el("header", {}, el("div", {}, el("h2", { id: "wm-h", text: "World knowledge: accuracy by subject" }),
+      el("header", {}, el("div", {}, el("h2", { id: "wm-h", text: "World knowledge: accuracy by subject" }), Jev.heat.note("subject"),
         el("p", { class: "point" }, "14,042 questions across 57 subjects — the complete public MMLU test set, nothing sampled."),
         el("div", { class: "provenance" }, el("span", { class: "badge" }, "Published 2021 (Hendrycks et al.)"), el("span", { class: "badge" }, "Unrevised since"), el("span", { class: "badge accent" }, "The field's original general-knowledge benchmark")),
-        el("p", { class: "small", style: "margin-top:8px" }, "Columns: models, strongest first. Hover a column for its size and base model, a cell for the exact score and range; click a cell to open it.")),
+        el("p", { class: "small", style: "margin-top:8px" }, "Hover a column for its size and base model, a cell for the exact score and range; click a cell to open it.")),
         el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: exportCsv, text: "Export CSV" }))),
       subs.length ? el("div", { class: "table-wrap" }, table) : empty("No results yet", "No model has results on any MMLU subject yet."),
       el("div", { class: "scale", "aria-label": "Colour scale" }, el("span", { text: "Worse than chance" }), STEPS.map(i => el("i", { style: `background:${stepBg(i)}` })), el("span", { text: "Near perfect" }), el("span", { class: "mid", text: "Centre = at chance" })),

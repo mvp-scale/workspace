@@ -165,6 +165,10 @@
   const isUp = (id) => !!(ALL || STATUS)?.[id]?.up;
   /* Every model, registry order, facts + abilities + live state. The one list pages use; never a page-local list. */
   const models = (o = {}) => REG.filter(m => o.retired || !m.retired).map(m => ({ ...m, ...((ALL || {})[m.id] || {}), up: !!(ALL || {})[m.id]?.up }));
+  /* The registered models a page has no results for yet (registry order, retired ones left out): the one place that decides who
+     is "not run yet", so a newly registered model shows on every page at once. have = ids the page already shows; opt.lib:false drops
+     library-only models (BitMob answers only its learned questions). Pages label these rows "Not run yet"; they never get numbers. */
+  const pending = (have = [], o = {}) => { const h = new Set(have); return models().filter(m => !h.has(m.id) && (o.lib !== false || !m.library_only)); };
   /* Code chip plus full name. Use {name:false} where space is tight; the code alone is always enough because the panel maps it. */
   const tag = (id, o = {}) => el("span", { class: "mtag", title: `${codeOf(id)} = ${nameOf(id)}` }, el("span", { class: "mcode", text: codeOf(id) }), o.name === false ? null : el("span", { class: "mname", text: nameOf(id) }));
   const gib = (mb) => (mb / 1024).toFixed(1) + " GiB";
@@ -233,7 +237,7 @@
             return el("tr", {}, el("td", {}, el("span", { class: "mcode", text: codeOf(id) })), el("td", { text: nameOf(id) }), el("td", { class: "dim", text: FACTS[id]?.params || "–" }),
               el("td", {}, el("span", { class: `dot ${s.up ? "up" : "down"}`, "aria-hidden": "true" }), s.up ? "Loaded" : (s.reason || "Not loaded")),
               el("td", { class: "dim", text: s.hosted ? "hosted" : s.up ? (s.gpu_mb ? gib(s.gpu_mb) : "CPU") : "–" }),
-              el("td", { class: "dim", text: s.up ? (s.identity || "") + (s.identity_ok === false ? "  (does not match its label)" : "") : (s.library_only ? "answers only the questions it has learned" : "") })); })))),
+              el("td", { class: "dim", text: s.up ? (s.identity || "") + (s.identity_ok === false ? "  (does not match its label)" : "") : (s.engine_reader ? "World engine reader: answers the engine's questions only" : s.library_only ? "answers only the questions it has learned" : "") })); })))),
         el("p", { class: "note", text: RULE }));
     };
     btn.addEventListener("click", () => { const open = panel.hidden; panel.hidden = !open; btn.setAttribute("aria-expanded", String(open)); if (open) refreshStatus(); });
@@ -263,7 +267,8 @@
   const load = () => cache ||= Promise.all([api("api/leaderboard"), api("api/models")]).then(([rows, meta]) => {
     const info = Object.fromEntries(meta.models.map(m => [m.id, m]));
     return { rows: rows.filter(r => !info[r.id]?.retired).map(r => ({ ...r, info: info[r.id] || { id: r.id, name: r.id } })), models: meta.models.filter(m => !m.retired), tiers: meta.tiers,
-             retired: meta.models.filter(m => m.retired) };
+             retired: meta.models.filter(m => m.retired),
+             pending: meta.models.filter(m => !m.retired && !m.unscored && !m.library_only && !rows.some(r => r.id === m.id)) };   /* registered, no leaderboard row yet */
   }).catch(e => { cache = null; throw e; });
 
   /* Heat-map colour: accuracy relative to chance, in seven steps. Shared by the Scenario lab and the Image lab. */
@@ -271,6 +276,16 @@
   const heat = { STEPS: [-3, -2, -1, 0, 1, 2, 3],
     stepOf: (acc, chance) => Math.max(-3, Math.min(3, Math.round((acc >= chance ? (acc - chance) / (1 - chance) : -(chance - acc) / chance) * 4))),
     stepBg: (i) => i === 0 ? "var(--surface-2)" : `color-mix(in srgb, var(${i > 0 ? "--good" : "--bad"}) ${STEP_MIX[i]}%, var(--surface))` };
+  /* Heat-map ordering, computed from the data every render (so a new model or a landed run re-sorts the table). Shared by both labs.
+     mean(values): mean of the non-null numbers, or null. sortBy(items, valueOf, tie): highest value first; null/NaN values last; ties by tie(item) (default: input order). */
+  heat.mean = (vs) => { const v = vs.filter(x => typeof x === "number" && Number.isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  heat.sortBy = (items, valueOf, tie) => items.map((it, i) => ({ it, i, v: valueOf(it) })).sort((a, b) => ((b.v ?? -Infinity) - (a.v ?? -Infinity) || 0) || ((tie ? tie(a.it) - tie(b.it) : 0) || a.i - b.i)).map(x => x.it);
+  /* Columns (models): highest overall mean first (meanOf(id) -> number|null); ties and models with no result (null) in registry order. */
+  heat.sortModels = (ids, meanOf) => { const reg = REG.map(m => m.id), at = (id) => { const i = reg.indexOf(id); return i < 0 ? 1e9 : i; };
+    return heat.sortBy([...ids].sort((a, b) => at(a) - at(b)), meanOf, at); };
+  /* Rows in groups: groups = [[name, rows]]; rowMean(row) -> number|null. Groups by their mean row value, rows within each group by theirs; empty groups dropped. */
+  heat.sortGroups = (groups, rowMean) => heat.sortBy(groups.filter(([, rows]) => rows.length).map(([g, rows]) => [g, heat.sortBy(rows, rowMean)]), ([, rows]) => heat.mean(rows.map(rowMean)));
+  heat.note = (rowNoun, transposed) => el("p", { class: "small muted heat-sorted", text: transposed ? `Sorted by accuracy: best model on top, best ${rowNoun} on the left.` : `Sorted by accuracy: best model on the left, best ${rowNoun} on top.` });
   /* Highlighted, indented JSON as DOM nodes (no innerHTML): keys, strings, numbers, literals, punctuation. */
   function jsonNodes(v, ind = 0) {
     const sp = "  ".repeat(ind), out = [], T = (c, t) => el("span", { class: "j-" + c, text: t });
@@ -297,6 +312,6 @@
     const bodyEl = opts.compact ? el("div", { class: "json json-inline" }, ...jsonNodes(JSON.parse(JSON.stringify(v))).map(n => (n.nodeType === 3 ? document.createTextNode(n.textContent.replace(/\n\s*/g, " ")) : (n.textContent = n.textContent.replace(/\n\s*/g, " "), n)))) : el("div", { class: "json" }, ...jsonLines(v));
     return el("div", { class: "jsonview" + (opts.compact ? " compact" : "") }, el("div", { class: "jsonview-head" }, el("span", { text: label || "JSON" }), copyBtn), bodyEl);
   };
-  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, shareLink, copyLink, statusAll: () => ALL || STATUS, libOnly: (id) => !!FACTS[id]?.library_only, models, isRetired: retired, LIB_NOTE: "is trained only on the questions it has learned (others get an untrained guess)", onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, shareLink, copyLink, statusAll: () => ALL || STATUS, libOnly: (id) => !!FACTS[id]?.library_only, models, pending, isRetired: retired, LIB_NOTE: "is trained only on the questions it has learned (others get an untrained guess)", onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();

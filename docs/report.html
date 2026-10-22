@@ -34,7 +34,7 @@
   <div class="page-head">
     <div>
       <h1>Typed decision models: local benchmark report</h1>
-      <p>Nine typed decision models, benchmarked on the public JevBench tiers on one machine.</p>
+      <p>Typed decision models, benchmarked on the public JevBench tiers on one machine.</p>
       <div class="facts"><span class="badge">Dated 2026-09-20</span><span class="badge">NVIDIA RTX 5090 (32 GB)</span><span class="badge">Public tiers only</span></div>
     </div>
     <div class="actions">
@@ -236,7 +236,7 @@ function resultsTable(a) {
 function liveCard(a) {
   const box = el("div", { class: "card prose", style: "margin-top:16px" });
   const draw = () => {
-    const st = Jev.status() || {}, ids = Object.keys(st), up = ids.filter(id => st[id].up), down = ids.filter(id => !st[id].up);
+    const st = Jev.statusAll() || {}, ids = Object.keys(st), up = ids.filter(id => st[id].up), down = ids.filter(id => !st[id].up);
     const used = up.reduce((n, id) => n + (st[id].gpu_mb || 0), 0);
     const tags = (l) => l.map((id, i) => [i ? " " : null, Jev.tag(id)]);
     box.replaceChildren(el("h3", { text: "Models loaded right now" }),

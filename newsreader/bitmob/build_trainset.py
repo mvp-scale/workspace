@@ -11,13 +11,20 @@ import classify as C, backends
 NAME = sys.argv[1]; NC = int(sys.argv[2]) if len(sys.argv) > 2 else 800; NF = int(sys.argv[3]) if len(sys.argv) > 3 else 200
 TEACHER = sys.argv[4] if len(sys.argv) > 4 else "jev"; CONC = int(sys.argv[5]) if len(sys.argv) > 5 else 4
 D = "/workspace/data/trainset"; os.makedirs(D, exist_ok=True); OUT = f"{D}/{NAME}.jsonl"; LOG = f"{D}/{NAME}.log"
-PROMPT_VERSION = "engine328+def159+topic49+country2step v1"
+PROMPT_VERSION = "engine328+def159+topic49 one call; country2step v2"
 def log(m):
     line = f"{time.strftime('%F %T')}  {m}"; print(line, flush=True); open(LOG, "a").write(line + "\n")
 
 # ---- teacher, with token counts (R14) ----
 B = backends.BACKENDS[TEACHER]; tls = threading.local()
+CHUNK = int(os.environ.get("CHUNK", "0"))      # >0: split the question set into calls of this many questions (local Clef cannot take 487 in one call)
 def call(state, qs):
+    if CHUNK and len(qs) > CHUNK:
+        ks = list(qs); out = {}
+        for i in range(0, len(ks), CHUNK): out.update(call1(state, {k: qs[k] for k in ks[i:i + CHUNK]}))
+        return out
+    return call1(state, qs)
+def call1(state, qs):
     body = {"state": state, "questions": qs, **({"model": B["model"]} if B["model"] else {})}
     hdr = {"Content-Type": "application/json", "User-Agent": "jev-demo/0.1", **({"Authorization": f"Bearer {B['key']}"} if B["key"] else {})}
     for attempt in range(3):
@@ -59,6 +66,11 @@ fd = [dict(zip(("id", "url", "feed", "source", "title", "teaser", "body", "publi
 fd = [r for r in fd if ok(r["title"], r["teaser"])]; fd.sort(key=lambda r: r["id"]); random.Random(1).shuffle(fd); fd = [r for r in fd if fresh(r["title"], r["teaser"])]
 pool_c, pool_f = len(cc), len(fd)
 items = [("ccnews", r) for r in cc[:NC]] + [("feed", r) for r in fd[:NF]]
+SELECT = os.environ.get("SELECT_IDS")      # optional: label exactly these ids (one JSON {"id","selection"} per line), e.g. a targeted round (D-0013)
+if SELECT:
+    sel = {(x := json.loads(l))["id"]: x["selection"] for l in open(SELECT)}
+    byid = {"cc:" + r["url"]: ("ccnews", r) for r in cc} | {"nr:" + r["id"]: ("feed", r) for r in fd}
+    items = [byid[i] for i in sel if i in byid]
 done = {json.loads(l)["id"] for l in open(OUT)} if os.path.exists(OUT) else set()
 Q3 = {f"a|{d}|{dirn}|{i}|2": f"This story reports that {r['definition'].strip().rstrip('.')}." for (d, dirn), lst in C.ATTRS.items() for i, r in enumerate(lst)}
 TOPIC_Q = {"type": "choice", "instructions": "Which topic is this news story mainly about?", "criteria": {d["id"]: f"{d['name']}: {(d.get('definition') or '').strip()[:140]}" for d in C.DOMAINS}}
@@ -96,9 +108,10 @@ def one(idx, kind, r):
     if rid in done: return None
     day = day or time.strftime("%F"); d250 = desc.strip()[:250]; inp = f"{title} — {d250}"
     ev = {"published_at": day, "title": title, "description": d250}; state = f"News item (published {day}; today is {day}):\n{title}. {d250}"
-    P = C.ask(ev, today=day); P.update(ask(state, {k: {"type": "noul", "instructions": q} for k, q in Q3.items()}))
+    allq = {k: {"type": "noul", "instructions": q} for k, q in C.QS.items()}; allq.update({k: {"type": "noul", "instructions": q} for k, q in Q3.items()}); allq["topic"] = TOPIC_Q
+    ans = C.O.call(state, allq)      # one call per story: every yes/no question + topic (Jev answers do not depend on grouping, F-0041)
+    P = {k: v["noul"] for k, v in ans.items() if k != "topic"}; tp = ans["topic"]
     rd = C.read(P)
-    tp = C.O.call(state, {"topic": TOPIC_Q})["topic"]
     country, cprob, _ = C.ask_country_detailed(ev, today=day)
     keys, conflicts = target(P)
     rec = {"id": rid, "source": kind, "ccnews": kind == "ccnews", "outlet": outlet, "feed": feed, "date": day, "title": title, "description": d250,
@@ -107,7 +120,8 @@ def one(idx, kind, r):
            "topic": tp["choice"], "topic_p": {k: round(float(v), 3) for k, v in tp["probabilities"].items()}, "topic_source": "reader",
            "country": country, "country_p": cprob, "country_source": "reader",
            "teacher": TEACHER, "teacher_model": getattr(tls, "model", None) or B["model"], "rules": os.environ["WE_RULES"], "prompt_version": PROMPT_VERSION, "labelled_at": time.strftime("%FT%T"),
-           "inclusion_prob": round((NC / pool_c) if kind == "ccnews" else (NF / pool_f), 6), "split": "train"}
+           "inclusion_prob": None if SELECT else round((NC / pool_c) if kind == "ccnews" else (NF / pool_f), 6), "split": "train",
+           "selection": sel.get(rid) if SELECT else "random"}
     if idx % 50 == 0:      # R17: replicate read of the engine questions
         rec["replicate"] = True; R = C.ask(ev, today=day); rec["P_rep"] = R
         rec["rep_flips"] = sorted({f"{x['dial']}|{x['direction']}" for x in rd["readings"]} ^ {f"{x['dial']}|{x['direction']}" for x in C.read(R)["readings"]})

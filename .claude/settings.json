@@ -1,5 +1,23 @@
 {
   "enabledPlugins": {
     "mm3@mvp-scale": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "timeout 10 python3 /workspace/newsreader/bitmob/progress.py build >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash /workspace/tools/statusline.sh",
+    "padding": 0
   }
 }

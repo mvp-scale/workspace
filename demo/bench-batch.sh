@@ -1,23 +1,25 @@
 #!/bin/bash
 # Benchmark in-process models one at a time: each loads, runs every tier, exits, and frees the GPU.
-#   demo/bench-batch.sh <model ...>      models: laya verdict semif so1 clef-flash   (env from ./dev-bench-setup.sh)
+#   demo/bench-batch.sh <model ...>      models: laya verdict semif so1 clef-flash clef-flash-nvfp4   (env from ./dev-bench-setup.sh)
 #   TIERS="original easy hard" to change tiers. Existing complete runs are skipped.
 cd "$(dirname "$0")/../jevbench" || exit 1
 B=${BENCH_OUT:-/workspace/data/bench}; M=/workspace/models
 TIERS=${TIERS:-original easy hard}
 export HF_HOME=/workspace/data/models/hf-cache JEVBENCH_WARM_LOAD=1 PYTHONPATH=/workspace/jevbench
-declare -A ADAPTER=( [laya]=laya_local [verdict]=verdict_local [semif]=semif_direct [so1]=so1_decider [clef-flash]=clef_local )
-declare -A ENDPOINT=( [laya]=/workspace/data/models/laya [verdict]=/workspace/data/models/verdict [semif]=Qwen/Qwen3.5-4B [so1]=Qwen/Qwen3.5-4B [clef-flash]=/workspace/data/models/clef-flash )
+declare -A ADAPTER=( [laya]=laya_local [verdict]=verdict_local [semif]=semif_direct [so1]=so1_decider [clef-flash]=clef_local [clef-flash-nvfp4]=clef_nvfp4_local )
+declare -A ENDPOINT=( [laya]=/workspace/data/models/laya [verdict]=/workspace/data/models/verdict [semif]=Qwen/Qwen3.5-4B [so1]=Qwen/Qwen3.5-4B [clef-flash]=/workspace/data/models/clef-flash [clef-flash-nvfp4]=/workspace/data/models/clef-flash-nvfp4-alpha )
 # Local models cost $0, so each run gets its own small ledger. The shared one grows with every item and is re-read on every
 # reserve/settle (1.5 s per item at 180k lines, about 90% of a run); per run it stays in the milliseconds.
 # Tasks in flight per model for a batching adapter (needs the adapter's thread_safe micro-batcher). Only for accuracy-only sets:
 # the leaderboard tiers stay serial because per-item latency under concurrency includes queue time and is not comparable.
-declare -A CONC=( [clef-flash]=64 )
-declare -A COST=( [clef-flash]=local_gpu_no_provider_tariff )
+declare -A CONC=( [clef-flash]=64 [clef-flash-nvfp4]=64 )
+declare -A COST=( [clef-flash]=local_gpu_no_provider_tariff [clef-flash-nvfp4]=local_gpu_no_provider_tariff )
 snap() { ls $HF_HOME/hub/models--Qwen--Qwen3.5-4B/snapshots | head -1; }   # SemIf requires a pinned commit
 for n in "$@"; do
   REV=(); [ $n = semif ] && REV=(--revision "$(snap)")
   [ -x $M/$n/.venv/bin/python ] || { echo "skip $n: run ./dev-bench-setup.sh $n"; continue; }
+  # version archive: copy the current results of this model into data/run-versions (idempotent, never blocks the run)
+  python3 /workspace/tools/run_versions.py snapshot $n >/dev/null 2>&1 || true
   for tier in $TIERS; do
     out=$B/$n-$tier; [ -e "$out" ] && { echo "skip $n-$tier"; continue; }
     echo "== $n $tier"

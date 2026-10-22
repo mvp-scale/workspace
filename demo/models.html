@@ -304,6 +304,7 @@ const SAUCES = [
 
 /* ---------- Data-driven pieces ---------- */
 const range = (vals, f) => { const v = vals.filter(x => x != null); if (!v.length) return "–"; const lo = Math.min(...v), hi = Math.max(...v); return lo === hi ? f(lo) : `${f(lo)} – ${f(hi)}`; };
+const allRows = (d) => [...d.rows, ...d.pending.map(m => ({ id: m.id, info: m, tiers: {}, mean_accuracy: null, notRun: true }))];   // ranked rows, then registered models not run yet
 const famRows = (rows, fam) => rows.filter(r => r.info.family === fam);
 const usedBy = (rows, fam) => { const rs = famRows(rows, fam); if (!rs.length) return null;
   return el("div", { class: "used" }, el("span", { text: "Used by" }), rs.map(r => el("a", { class: "badge", href: `#${r.id}` }, Jev.tag(r.id))),
@@ -314,14 +315,14 @@ function sauces(d) {
     el("div", {}, el("h3", { text: s.title }), s.term ? el("p", { class: "term" }, s.term) : null, el("p", { class: "lead" }, rich(s.lead)),
       s.points.length ? el("ul", { class: "facts-list" }, s.points.map(([b, t]) => el("li", {}, el("b", { text: b + " " }), rich(t)))) : null,
       s.guess ? el("p", { class: "guess" }, el("b", { text: "Our guess, unconfirmed. " }), rich(s.guess)) : null,
-      usedBy(d.rows, s.fam)),
+      usedBy(allRows(d), s.fam)),
     s.diagrams.length ? el("div", { class: "diagrams" }, s.diagrams.map(f => f())) : null)));
 }
 function famTable(d) {
   const head = ["Technique", "Models", "Mean accuracy", "Hard accuracy", "Hard ECE", "Median latency", "Parameters"];
   return el("div", { class: "table-wrap" }, el("table", { class: "data fam" }, el("caption", { class: "sr-only", text: "Results by technique" }),
     el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { scope: "col", class: i > 1 && i < 6 ? "num" : null, text: h })))),
-    el("tbody", {}, Object.entries(FAM).map(([k, f]) => { const rs = famRows(d.rows, k); if (!rs.length) return null;
+    el("tbody", {}, Object.entries(FAM).map(([k, f]) => { const rs = famRows(allRows(d), k); if (!rs.length) return null;
       return el("tr", {}, el("td", { class: "model-name", text: f.name }), el("td", {}, rs.map((r, i) => [i ? " " : null, Jev.tag(r.id)])),
         el("td", { class: "num", text: range(rs.map(r => r.mean_accuracy), v => fmt.pct(v, 1)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.accuracy), v => fmt.pct(v, 1)) }),
         el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.ece), v => fmt.num(v)) }), el("td", { class: "num", text: range(rs.map(r => r.tiers.hard?.p50_s), fmt.ms) }),
@@ -339,10 +340,11 @@ function card(r, rank) {
   return el("article", { class: "card model", id: m.id },
     el("h3", {}, Jev.tag(m.id), el("span", { class: "vendor", text: m.vendor })),
     el("div", { class: "tags" }, liveChip(m.id), el("span", { class: `badge ${m.open ? "good" : ""}`, text: m.open ? "Open" : "Closed" }), m.params ? el("span", { class: "badge", text: m.params }) : null,
-      el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: m.unscored ? "Not benchmarked" : `Ranked #${rank} in our runs` })),
+      el("span", { class: "badge accent", text: FAM[m.family].short }), el("span", { class: "badge", text: m.served_as }), el("span", { class: "badge", text: m.unscored ? "Not benchmarked" : r.notRun ? "Not run yet" : `Ranked #${rank} in our runs` })),
     identLine(m.id), el("p", { class: "sauce-line" }, rich(m.sauce)), flow(m),
     el("div", { class: "bench" }, tier("easy", "Easy"), tier("original", "Original"), tier("hard", "Hard")),
     m.unscored ? el("p", { class: "small muted", text: `${m.unscored.tier} · ${Jev.fmt.pct(m.unscored.accuracy)} · ${m.unscored.latency_ms} ms · CPU · ${m.unscored.memory_mb} MB` })
+      : r.notRun ? el("p", { class: "small muted", text: "Not run yet: no benchmark results for this model so far." })
       : el("div", { class: "stats" }, el("span", {}, "Hard ECE ", el("b", { text: fmt.num(hard.ece) })), el("span", {}, "Median ", el("b", { text: fmt.ms(hard.p50_s) })), el("span", {}, "Mean ", el("b", { text: fmt.pct(r.mean_accuracy) }))),
     el("details", { class: "more" }, el("summary", { text: "How it works, in detail" }), el("ul", {}, m.how.map(h => el("li", {}, rich(h)))),
       el("dl", { class: "facts" }, facts.map(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]), m.repo ? [el("dt", { text: "Source" }), el("dd", {}, el("a", { href: m.repo, target: "_blank", rel: "noopener", text: m.repo.replace(/^https?:\/\//, "") }))] : null)));
@@ -351,7 +353,8 @@ function card(r, rank) {
 function cards(d) {
   const grid = document.getElementById("cards"), jump = document.getElementById("jump"), seg = document.getElementById("filter");
   // benchmarked models in rank order, then models that cannot take the benchmark (BitMob), unscored
-  const rows = [...d.rows, ...d.models.filter(m => m.unscored).map(m => ({ id: m.id, info: m, tiers: {}, mean_accuracy: null }))];
+  // registered models with no benchmark run yet (d.pending, from Jev.load) get a card too, labelled "Not run yet"
+  const rows = [...d.rows, ...d.models.filter(m => m.unscored).map(m => ({ id: m.id, info: m, tiers: {}, mean_accuracy: null })), ...allRows(d).filter(r => r.notRun)];
   const cs = rows.map((r, i) => card(r, i + 1));
   grid.replaceChildren(...cs);
   jump.replaceChildren(...rows.map(r => el("a", { href: `#${r.id}`, title: `${Jev.codeOf(r.id)} = ${Jev.nameOf(r.id)}` }, Jev.tag(r.id))));

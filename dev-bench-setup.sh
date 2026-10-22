@@ -1,7 +1,7 @@
 #!/bin/bash
 # Install the top open Jev-class models for benchmarking, one isolated venv each, the same way every time.
 #
-#   ./dev-bench-setup.sh [laya|verdict|semif|so1|clef-flash|kev|jeff ...]   # default: laya verdict semif so1
+#   ./dev-bench-setup.sh [laya|verdict|semif|so1|clef-flash|clef-flash-nvfp4|kev|jeff ...]   # default: laya verdict semif so1
 #   JEV_ROOT=/some/dir ./dev-bench-setup.sh ...   # install somewhere other than /workspace
 #
 # Layout (all ignored by git):
@@ -66,6 +66,13 @@ setup_clef_flash() { # Cloudflare Clef Flash, Qwen3.5-9B + joint schema head; ca
   hf clef-flash Cloudflare/clef-flash --local-dir $ROOT/data/models/clef-flash
 }
 
+setup_clef_flash_nvfp4() { # alpha-x-ai/clef-flash-NVFP4 (unofficial): runs on the card's pin vLLM 0.30.0 + clef_vllm.py bundled in the snapshot. Reuses the existing vLLM 0.30.0 env (models/cygnet-venv: vllm 0.30.0, transformers 5.17.0, torch 2.13.0+cu130) instead of a second 20 GB install; repoint the link if cygnet-venv is ever rebuilt
+  local V=$M/cygnet-venv; [ -x "$V/bin/python" ] || { echo "need $V (vLLM 0.30.0)"; return 1; }
+  mkdir -p "$M/clef-flash-nvfp4"; ln -sfn "$V" "$M/clef-flash-nvfp4/.venv"
+  "$V/bin/python" -c "import vllm; assert vllm.__version__=='0.30.0', vllm.__version__"
+  "$V/bin/hf" download alpha-x-ai/clef-flash-NVFP4 --local-dir $ROOT/data/models/clef-flash-nvfp4-alpha >/dev/null   # already present: a no-op when complete
+  ln -sf python "$V/bin/clef-flash-nvfp4"   # nvidia-smi shows the launch name
+}
 setup_clef_flash_q4km() { # bartowski Q4_K_M GGUF served by the official prebuilt llama.cpp b11430 (CUDA 12.8); needs a build with the clef architecture (PR 29831)
   local L=$M/llama-cpp-b11430; mkdir -p "$L" $ROOT/data/models/clef-flash-q4km
   [ -x "$L/llama-b11430/llama-server" ] || { (cd "$L" && gh release download b11430 --repo ggml-org/llama.cpp --pattern "llama-b11430-bin-ubuntu-cuda-12.8-x64.tar.gz" --pattern "cudart-llama-b11430-bin-ubuntu-cuda-12.8-x64.tar.gz" && for f in *.tar.gz; do tar xzf "$f"; done); }

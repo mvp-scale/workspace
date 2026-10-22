@@ -317,7 +317,7 @@ function decodeHash() {
 const pushHash = () => { try { history.replaceState(null, "", encodeHash(readForm())); } catch { /* address bar stays as is */ } };
 
 /* ---------- backends ---------- */
-const allIds = () => status ? Object.keys(status) : [];
+const allIds = () => status ? Object.keys(status).filter(id => !Jev.isRetired(id)) : [];   // registry order, retired models left out
 const loadedIds = () => allIds().filter(id => status[id]?.up);
 /* The dot already says loaded/not; code + its own hover tooltip already says which model. No
    need to also spell "loaded · 8.6 GiB" or "not loaded" in text next to it. */
@@ -334,8 +334,9 @@ function renderStrip() {
   strip.replaceChildren(el("p", { class: "small mstrip-h" }, el("strong", { text: `${up.length} of ${ids.length} models loaded` })),
     ...sorted.map(id => { const s = status[id], on = !!s.up, rank = leaderRank[id];
       return el("span", { class: "mchip " + (on ? "on" : "off"), role: "listitem", title: on ? "Loaded" : `Not loaded${s.reason ? ": " + s.reason : ""}` },
-        el("span", { class: `dot ${on ? "up" : "down"}`, "aria-hidden": "true" }), Jev.tag(id, { name: false }),
-        on && rank ? el("span", { class: "small muted", text: `#${rank}` }) : null); }));
+        el("span", { class: `dot ${on ? "up" : "down"}`, "aria-hidden": "true" }), Jev.tag(id),
+        on && rank ? el("span", { class: "small muted", text: `#${rank}` }) : null,
+        !rank && !s.library_only && Object.keys(leaderRank).length ? el("span", { class: "small muted", title: "Registered; no benchmark results yet", text: "not run yet" }) : null); }));
 }
 function refreshUi() { renderStrip(); renderMatrix(); if (!running) setRunning(false); }
 async function loadStatus() { try { status = await api("/api/status"); } catch { /* keep what we had */ } refreshUi(); }
@@ -423,7 +424,7 @@ function renderMatrix(phase) {
   body.push(row("Latency", r => failed(r, x => el("span", {}, fmt.ms(x.latency == null ? null : x.latency / 1000), sum && sum.fastest === x ? el("span", { class: "badge accent", style: "margin-left:6px", text: "fastest" }) : null))));
   const table = el("table", { class: "data cmp" }, el("caption", { class: "sr-only", text: "Comparison of every model's answer to the same question" }),
     el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "" }), cols.map(n => { const s = status && status[n]; return el("th", { scope: "col", title: s && !s.up ? `Not loaded: ${s.reason || "unknown"}` : null },
-      el("span", { class: "col-head" }, el("span", { class: `dot ${s ? (s.up ? "up" : "down") : ""}`, "aria-hidden": "true" }), Jev.tag(n, { name: false }))); }))),
+      el("span", { class: "col-head" }, el("span", { class: `dot ${s ? (s.up ? "up" : "down") : ""}`, "aria-hidden": "true" }), Jev.tag(n))); }))),
     el("tbody", {}, body));
   $("matrix").replaceChildren(table); $("matrix").setAttribute("aria-busy", String(phase === "running"));
 }

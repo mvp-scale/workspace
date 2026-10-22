@@ -38,6 +38,7 @@ BACKENDS = {
     "clef-flash-q4km": {"url": _local("CLEF_Q4KM_URL", 8018), "key": ""},
     "clef-flash": {"url": _local("CLEF_FLASH_URL", 8017), "key": ""},
     "clef-flash-q2k": {"url": _local("CLEF_Q2K_URL", 8019), "key": ""},
+    "clef-flash-nvfp4": {"url": _local("CLEF_NVFP4_URL", 8038), "key": ""},   # Clef Flash Fast: vLLM, on demand (benchmark port)
     "jev": {"url": os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"), "key": _env("TYPESAFE_API_KEY"), "hosted": True,
             "model": os.environ.get("JEV_MODEL", "jev-1.14.0")},      # pinned: jev-latest still resolves to 1.13.0 (checked 2026-10-19); labels record the version used
     "cygnet": {"url": _local("CYGNET_URL", 8016), "key": ""},
@@ -54,8 +55,12 @@ BACKENDS = {
     # ones are trained (the rest are labelled "untrained guess", near chance), so it is library_only: never a teacher, never a World engine reader, not offered where pages send
     # arbitrary questions; it shows in the Models panel and on the outside API.
     "bitmob": {"url": _local("CPU_ENGINE_URL", 8020), "key": "", "model": "bitmob", "library_only": True, "health": "/health"},
+    # BitMob as a World-engine reader (D-0037, newsreader/bitmob/reader/engine_reader.py, :8021): our fine-tuned CPU readers answer the engine's gate, type, scope, recent, condition, topic and country
+    # questions; library_only (so it is never a teacher, never in Auto, never offered where pages send arbitrary questions) but engine_reader (so the World engine's Reader picker can pin it).
+    # The model label picks the mode: "bitmob-clef" sends expected-impact, severity and So-what questions to local Clef; "bitmob-cpu" refuses them (the engine skips them).
+    "bitmob-cpu": {"url": _local("BITMOB_READER_URL", 8021), "key": "", "model": "bitmob-cpu", "library_only": True, "engine_reader": True, "cpu_only": True, "health": "/health"},
 }
-for _b in BACKENDS.values(): _b.setdefault("model", "jev-latest"); _b.setdefault("hosted", False); _b.setdefault("library_only", False)
+for _b in BACKENDS.values(): _b.setdefault("model", "jev-latest"); _b.setdefault("hosted", False); _b.setdefault("library_only", False); _b.setdefault("engine_reader", False); _b.setdefault("cpu_only", False)
 
 
 def full_models():
