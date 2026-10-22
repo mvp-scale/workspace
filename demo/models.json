@@ -110,7 +110,7 @@
         "Same mechanism as Clef Flash: the backbone reads the state once and the joint schema head scores every option of every question.",
         "Per the card: MLP, linear-attention and full-attention layers are NVFP4 or FP8 (chosen per layer by measured damage); the vision encoder, lm_head and the joint head stay BF16.",
         "Loaded in vLLM through the card's own clef_vllm.py (not a chat model). The card says images work (image-text-to-text) and video was not evaluated.",
-        "Status: under acceptance test against Clef Flash Q4 and BF16 (Scenario Lab: 57 MMLU sets + 15 probe sets; Image Lab)."
+        "Status: accepted 2026-10-22 (ledger D-0045) as equal to Clef Flash Q4 on the Scenario lab: world knowledge 91.9% vs 91.7% on 14,042 questions, 97.9% same answers; one exception (sarcasm headlines, 4 answers on 80). Image acceptance not run yet."
       ],
       "vision": true
     },
