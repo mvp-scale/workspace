@@ -192,7 +192,7 @@ def contract_view(items, evs):
     for job, name, target, fn in LABEL_JOBS:
         f = f"{W}/data/clef-labels/{fn}"; n = sum(1 for _ in open(f)) if os.path.exists(f) else 0
         e = last.get(job) or {}; lab.append({"job": job, "name": name, "done": n, "target": target, "state": e.get("state"), "msg": e.get("msg"), "ts": e.get("ts"), "pid": e.get("pid")})
-    return {"rounds_detail": rounds_view(rounds), "resources": resources(evs), "bars": BARS, "rows": rows, "rounds": [r["round"] for r in rounds], "made": rounds[-1].get("made") if rounds else None, "labels": lab, "explain": explain}
+    return {"rounds_detail": rounds_view(rounds), "resources": resources(evs), "bars": BARS, "rows": rows, "rounds": [r["round"] for r in rounds], "made": rounds[-1].get("made") if rounds else None, "labels": lab, "explain": explain, "hybrid": cj.get("hybrid", {}), "readers": cj.get("readers", [])}
 
 
 def build():
