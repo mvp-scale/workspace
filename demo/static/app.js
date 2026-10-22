@@ -312,6 +312,17 @@
     const bodyEl = opts.compact ? el("div", { class: "json json-inline" }, ...jsonNodes(JSON.parse(JSON.stringify(v))).map(n => (n.nodeType === 3 ? document.createTextNode(n.textContent.replace(/\n\s*/g, " ")) : (n.textContent = n.textContent.replace(/\n\s*/g, " "), n)))) : el("div", { class: "json" }, ...jsonLines(v));
     return el("div", { class: "jsonview" + (opts.compact ? " compact" : "") }, el("div", { class: "jsonview-head" }, el("span", { text: label || "JSON" }), copyBtn), bodyEl);
   };
-  window.Jev = { hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, shareLink, copyLink, statusAll: () => ALL || STATUS, libOnly: (id) => !!FACTS[id]?.library_only, models, pending, isRetired: retired, LIB_NOTE: "is trained only on the questions it has learned (others get an untrained guess)", onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
+  /* Version stamp at the very top of a page: "Updated 2026-10-22 14:05 · version 3388216" (+ "uncommitted changes" when the page file differs from git HEAD). Reads GET /api/version. */
+  async function stamp(page) {
+    const bar = el("div", { class: "version-stamp small subtle", role: "note", style: "padding:6px 16px;border-bottom:1px solid var(--line,#8884);font-variant-numeric:tabular-nums" }, "Version: loading…");
+    document.body.prepend(bar);
+    try {
+      const v = await api("/api/version?page=" + encodeURIComponent(page || ""));
+      const when = ((v.uncommitted_changes && v.file_modified) || v.commit_time || v.file_modified || "").slice(0, 16).replace("T", " ");
+      bar.textContent = `Updated ${when || "unknown"} \u00b7 version ${v.commit || "unknown"}` + (v.uncommitted_changes ? " \u00b7 uncommitted changes" : "");
+    } catch { bar.textContent = "Version unknown (server did not answer)"; }
+    return bar;
+  }
+  window.Jev = { stamp, hash: () => (MASK ? hashReal() : location.hash), masked: () => !!MASK, jsonView, jsonNodes, heat, ready, codeOf, nameOf, isUp, tag, modelSelect, status: () => STATUS, shareLink, copyLink, statusAll: () => ALL || STATUS, libOnly: (id) => !!FACTS[id]?.library_only, models, pending, isRetired: retired, LIB_NOTE: "is trained only on the questions it has learned (others get an untrained guess)", onStatus: (f) => subs.add(f), el, fmt, api, toast, download, csv, copy, skeleton, empty, failure, mount, sortable, meter, load };
   document.addEventListener("DOMContentLoaded", shell);
 })();

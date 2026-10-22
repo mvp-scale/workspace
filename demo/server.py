@@ -400,6 +400,23 @@ def _rss_mb(pid):
         return None
 
 
+_VER = {"t": 0.0, "v": None}
+def version_info(page=""):
+    """GET /api/version[?page=latent.html]: git HEAD short hash + commit time, whether that page file differs from HEAD, and its modified time. Read-only; HEAD part cached for 5 s."""
+    def git(*a):
+        return subprocess.run(["git", "-C", str(ROOT), *a], capture_output=True, text=True, timeout=5).stdout.strip()
+    now = time.time()
+    if not _VER["v"] or now - _VER["t"] > 5:
+        try: h, _, ct = git("log", "-1", "--format=%h %cI").partition(" "); _VER["v"] = {"commit": h, "commit_time": ct}
+        except Exception: _VER["v"] = {"commit": None, "commit_time": None}
+        _VER["t"] = now
+    out = dict(_VER["v"]); out["page"] = None
+    if re.fullmatch(r"[A-Za-z0-9_-]+\.html", page or "") and (HERE / page).is_file():
+        f = HERE / page; out["page"] = page; out["file_modified"] = time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(f.stat().st_mtime))
+        try: out["uncommitted_changes"] = bool(git("status", "--porcelain", "--", str(f)))
+        except Exception: out["uncommitted_changes"] = None
+    return out
+
 def status():
     """What is actually loaded, checked live. Identity comes from the running server, not from our label, so a port serving
     something unexpected is flagged instead of trusted. Cached for two seconds."""
@@ -439,7 +456,7 @@ def status():
     return result
 
 
-PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldengine": "worldengine2.html", "/worldengine-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html", "/handcheck": "handcheck.html"}
+PAGES = {"/": "index.html", "/compare": "compare.html", "/scenarios": "scenarios.html", "/imagelab": "imagelab.html", "/personalab": "personalab.html", "/worldengine": "worldengine2.html", "/worldengine-how": "worldengine2-how.html", "/flow": "flow.html", "/flow-classic": "flow-classic.html", "/flow-lab": "flow-lab.html", "/flow-lab-final": "flow.html", "/models": "models.html", "/report": "report.html", "/latent": "latent.html", "/latent-2026-10-22-before": "latent-2026-10-22-before.html", "/handcheck": "handcheck.html"}
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json",
          ".html": "text/html; charset=utf-8", ".md": "text/plain; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".txt": "text/plain; charset=utf-8"}
 
@@ -752,6 +769,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, memo("probe:" + set_id, lambda: probe_detail(set_id)))
             except KeyError:
                 self._send(404, {"error": "unknown set"})
+        elif path == "/api/version":   # build stamp for page headers (Jev.stamp): git HEAD + whether the page file is uncommitted
+            self._send(200, version_info(dict(urllib.parse.parse_qsl(self.path.partition("?")[2])).get("page", "")))
         elif path == "/api/vram":
             self._send(200, vram())
         elif path == "/api/latent/teacher":  # the classifier's teacher: trains new questions, and backs up / compares answers

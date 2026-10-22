@@ -140,39 +140,75 @@
   .chk { display: grid; grid-template-columns: 22px 1fr; gap: 6px; font-size: 14px; } .chk .ok { color: var(--good); font-weight: 700; } .chk .bad { color: var(--bad); font-weight: 700; }
   @media (max-width: 900px) { .jr-grid { grid-template-columns: 1fr; } }
   @media (max-width: 900px) { .lane, .two, .diffs { grid-template-columns: 1fr; } .grow { grid-template-columns: 1fr; gap: 4px; } }
+
+  .stamp-nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; } .stamp-nav a { font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-2); text-decoration: none; } .stamp-nav a:hover { border-color: var(--accent); }
+  .story-sec { margin-top: 26px; scroll-margin-top: 70px; } .story-sec > h2 .no { display: inline-block; min-width: 26px; margin-right: 6px; color: var(--text-3); font-weight: 600; }
+  .expect { border-left: 4px solid var(--warn, #b7791f); } .expect h3 { margin: 0 0 4px; } .expect .big2 { font-size: 15px; font-weight: 600; color: var(--text); }
+  .two-speeds { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 8px; margin: 8px 0; } .two-speeds div { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; background: var(--surface); font-size: 13px; color: var(--text-2); } .two-speeds b { display: block; font-size: 18px; color: var(--text); }
+  .decide { display: grid; grid-template-columns: minmax(0,.8fr) 22px minmax(0,1fr) 22px minmax(0,1.1fr) 22px minmax(0,1.3fr); gap: 6px; align-items: stretch; } .decide .st { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface); font-size: 13px; color: var(--text-2); } .decide .st b { display: block; color: var(--text); font-size: 15px; margin-bottom: 2px; } .decide .ar { display: flex; align-items: center; justify-content: center; color: var(--text-3); font-size: 20px; }
+  .decide .fork div { border-radius: var(--radius-sm); padding: 5px 8px; margin-top: 4px; border: 1px solid var(--border); } .decide .fork .c { border-color: var(--good); color: var(--text); } .decide .fork .g { border-color: var(--warn, var(--bad)); color: var(--text); }
+  @media (max-width: 860px) { .decide { grid-template-columns: 1fr; } .decide .ar { transform: rotate(90deg); } }
+  .cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; } .cols2 > div { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; background: var(--surface); font-size: 13.5px; color: var(--text-2); } .cols2 b.cpu { color: var(--good); } .cols2 b.clef { color: var(--warn, var(--bad)); }
+  .ladder { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 8px; } .ladder .beat .big { font-size: 22px; }
+  .timebar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); margin: 6px 0; font-size: 12px; } .timebar span { display: flex; align-items: center; justify-content: center; color: #fff; white-space: nowrap; } .timebar .lab { background: var(--accent); } .timebar .trn { background: var(--text-3); }
+  .badge.proposed { border-color: var(--warn, var(--bad)); color: var(--warn, var(--bad)); font-weight: 700; } .badge.feas { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 6px; } .loop .st { border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--surface); font-size: 13px; color: var(--text-2); } .loop .st b { display: block; color: var(--text); font-size: 14px; }
+  details.fold > summary { cursor: pointer; font-size: 15px; padding: 2px 0; } details.fold[open] > summary { margin-bottom: 8px; } details.fold .section { margin-top: 10px; }
+  table.data td.l, table.data th.l { text-align: left; }
 </style>
 </head>
 <body>
+<div style="padding:8px 16px;background:#fff3cd;color:#533f03;border-bottom:1px solid #e0c36a;font:14px sans-serif">Earlier version (before 22 Oct 2026 rework). Current: <a href="/latent">/latent</a></div>
 <main class="page" id="main">
   <div class="page-head">
     <div>
-      <h1>TypeSafe answers on a CPU: 4 ms, 233 MB, no GPU</h1>
-      <p>Clef teaches each question once on a GPU. After that, a small encoder plus a trained sidecar answers on any CPU.</p>
+      <h1>A CPU can answer many of Clef's questions in about 4 ms</h1>
+      <p>Clef is our accurate model; it runs on a GPU (a graphics processor, expensive and scarce). A small program on an ordinary CPU can take over the questions it is sure about, and hand the rest to Clef. This page shows what that buys, and what it costs to get there.</p>
     </div>
   </div>
+  <nav class="stamp-nav" aria-label="Sections"><a href="#s1">1 The promise</a><a href="#s2">2 How it works</a><a href="#s3">3 Fast check</a><a href="#s4">4 Where it works</a><a href="#s5">5 What quality costs</a><a href="#s6">6 The real case</a><a href="#s7">7 Versus fine-tuning</a><a href="#s8">8 What next</a><a href="#s9">9 The depth</a></nav>
+  <section class="story-sec" id="s1" aria-labelledby="h-s1">
+    <h2 id="h-s1"><span class="no">1</span>The promise, and the catch</h2>
+    <p class="takeaway"><span class="k">The point</span>The speed is real and fast to confirm. Quality good enough to rely on is slower: it takes hours per area, and most of that time is labelling, not training.</p>
+    <div class="cols2" style="margin-bottom:10px">
+      <div><b class="cpu">The promise</b><br>About 4 ms per answer on a CPU, against 46 ms on a GPU for Clef. No GPU, no per-call fee, text stays on your machine. Measured live below.</div>
+      <div class="expect card"><h3>Set your expectation: two speeds</h3>
+        <div class="two-speeds"><div><b>About 20 seconds</b>A feasibility check tells you <i>if</i> a question can move to the CPU.</div><div><b>5 to 20 hours</b>Production quality for one area, mostly labelling (Clef reading and answering examples).</div></div>
+        <p class="small muted" style="margin:4px 0 0">Evidence, this week's World engine work (BitMob): Clef labelled 7,307 stories in 643 minutes (10.7 hours, about 13 stories a minute); Jev (the hosted model) supplied another 12,237 labels; the training runs themselves took 17 seconds to 38 minutes each. After 7 rounds over about 20 hours of elapsed time, 3 of the 6 engine steps pass their bar. Sources: <code>data/progress/contract.json</code> (rounds 0 to 7), <code>data/kaggle/mh_r7/score_r7.json</code>.</p>
+      </div>
+    </div>
   <div class="pitch card stack" style="margin-bottom:14px">
     <div class="tiers">
       <div class="tier"><span class="bn">1 · Hosted API</span><h3>Jev</h3><div class="big">281 ms · pay per call</div><div class="r"><span>Time per answer</span><b>281 ms</b></div><div class="r"><span>Memory on your side</span><b>none</b></div><div class="r"><span>Cost</span><b>$16 per million answers</b></div><div class="r"><span>Your text</span><b>leaves your network</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>86.5%</b></div></div>
       <div class="arrow" aria-hidden="true">→</div>
       <div class="tier"><span class="bn">2 · Your GPU</span><h3>Clef Flash Q4</h3><div class="big">46 ms · 9.7 GB VRAM</div><div class="r"><span>Time per answer</span><b>46 ms</b></div><div class="r"><span>Memory</span><b>9.7 GB of GPU memory</b></div><div class="r"><span>Cost</span><b>a GPU; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>any, no training</b></div><div class="r"><span>Tone, human labels</span><b>84.4%</b></div></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="tier win"><span class="bn">3 · Your CPU</span><h3>Local engine</h3><div class="big">4 ms · 233 MB RAM</div><div class="r"><span>Time per answer</span><b>4 ms</b></div><div class="r"><span>Memory</span><b>233 MB RAM, no GPU</b></div><div class="r"><span>Cost</span><b>any server; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>only ones it learned (1.5 KB each)</b></div><div class="r"><span>Tone, human labels</span><b>83.2%</b></div></div>
+      <div class="tier win"><span class="bn">3 · Your CPU</span><h3>Local engine</h3><div class="big">4 ms · <span data-mem>–</span> RAM</div><div class="r"><span>Time per answer</span><b>4 ms</b></div><div class="r"><span>Memory</span><b><span data-mem>–</span> RAM, no GPU</b></div><div class="r"><span>Cost</span><b>any server; no per-call fee</b></div><div class="r"><span>Your text</span><b>stays local</b></div><div class="r"><span>Questions</span><b>only ones it learned (1.5 KB each)</b></div><div class="r"><span>Tone, human labels</span><b>83.2%</b></div></div>
     </div>
     <div class="wins">
       <div><b>70× faster</b>than the hosted API (4 ms against 281 ms)</div>
-      <div><b>40× less memory</b>than Clef on a GPU (233 MB of RAM against 9.7 GB of GPU memory)</div>
+      <div><b><span data-memx>many times</span> less memory</b>than Clef on a GPU (<span data-mem>–</span> of RAM against 9.7 GB of GPU memory; read live from the running classifier)</div>
       <div><b>1–3 points</b>below Clef and Jev on tone, judged by people (83% against 84% and 87%)</div>
-      <div class="gap"><b>Not there yet</b>On its own the CPU gives Clef's answer 89% of the time on a price question; with Clef as backup for the unsure 11%, 96%</div>
+      <div class="gap"><b>Best case, one common question</b>On its own the CPU gives Clef's answer 89% of the time on a price question; with Clef as backup for the unsure 11%, 96%</div>
     </div>
-    <details class="more"><summary>Where these numbers come from</summary><p class="small muted">Jev: median of 15,479 hosted calls at the public tariff. Clef Flash Q4 on the RTX 5090. Local engine: e5-small encoder (ONNX Runtime, int8, 8 threads) plus one classifier per question on the i9-10900K CPU. Tone accuracy: the same items from 5 published sets with human labels; the local engine was trained on about 2,000 examples per question.</p></details>
+    <details class="more"><summary>Where these numbers come from</summary><p class="small muted">Jev: median of 15,479 hosted calls at the public tariff. Clef Flash Q4 on the RTX 5090. Memory is read live from the running classifier (/api/cpu/health). Local engine: e5-small encoder (ONNX Runtime, int8, 8 threads) plus one classifier per question on the i9-10900K CPU. Tone accuracy: the same items from 5 published sets with human labels; the local engine was trained on about 2,000 examples per question.</p></details>
   </div>
-  <section class="section" aria-labelledby="h-flow" id="flowSec">
-    <header><div><h2 id="h-flow">How it works: an encoder that reads, a sidecar that decides</h2>
-      <p class="takeaway"><span class="k">The point</span>The encoder turns the text into 384 numbers once. Each question is a tiny classifier (the sidecar) that reads those numbers. One question or a thousand costs the same 4 ms.</p></div></header>
-    <div class="flow">
+  </section>
+  <section class="story-sec" id="s2" aria-labelledby="h-s2">
+    <h2 id="h-s2"><span class="no">2</span>How it works, in one picture</h2>
+    <p class="takeaway"><span class="k">The point</span>A small decider answers each question from the text's numbers. If it is confident the CPU answers; otherwise the question goes to Clef.</p>
+    <div class="card"><div class="decide">
+      <div class="st"><b>Text</b>A line or a news story.</div><div class="ar">→</div>
+      <div class="st"><b>Encoder</b>Turns the text into a list of numbers, once (about 4 ms).</div><div class="ar">→</div>
+      <div class="st"><b>A small decider per question</b>Each one gives a score between no (0) and yes (1), and how sure it is.</div><div class="ar">→</div>
+      <div class="st fork"><b>Confident?</b><div class="c"><b>Yes: the CPU answers</b>about 4 ms, no GPU</div><div class="g"><b>No: Clef answers</b>about 46 ms, on the GPU</div></div>
+    </div>
+    <details class="more" style="margin-top:8px"><summary>The technical version, with sizes and what is optional</summary>
+<h3>How it works: an encoder that reads, a sidecar that decides</h3>
+<div class="flow">
       <div class="st"><b>Text</b>The request's state: a line or window of a conversation.</div><div class="ar">→</div>
       <div class="st"><b>Encoder</b>e5-small reads the text once and turns it into 384 numbers that capture what it says.<span class="n">≈4 ms · 33 MB model</span></div><div class="ar">→</div>
-      <div class="st side"><b>Sidecar: one classifier per question</b>384 learned weights per question: which of the numbers matter, and which way. Multiply, add, done.<span class="n">1.5 KB each · &lt;0.1 ms for all</span></div><div class="ar">→</div>
+      <div class="st side"><b>Sidecar: one classifier per question</b>One learned weight for each of the encoder's numbers (384 for e5-small, plus one offset): which numbers matter, and which way. Multiply, add, done.<span class="n">about 1.5 KB each (30,800 bytes over 20 questions, live) · &lt;0.1 ms for all</span></div><div class="ar">→</div>
       <div class="st"><b>TypeSafe answer</b>P(yes) for every question in the request, in the <code>/v1/systemone</code> format.</div>
     </div>
     <div class="wins" style="margin-top:8px">
@@ -180,7 +216,53 @@
       <div><b>Backup, optional</b>Answers the sidecar is unsure about can go to Clef. Everything else never touches the GPU.</div>
       <div><b>Limits</b>Yes/no questions only, and only questions it has learned. It copies Clef, so it can match Clef but not beat it.</div>
     </div>
+  
+    </details></div>
   </section>
+  <section class="story-sec" id="s3" aria-labelledby="h-s3">
+    <h2 id="h-s3"><span class="no">3</span>Try the fast check live <span class="badge feas">Feasibility check, not a trained model</span></h2>
+    <p class="takeaway"><span class="k">The point</span>In seconds, you learn whether a question is learnable by a CPU. You do not get a model good enough for production.</p>
+    <div class="card expect" style="margin-bottom:10px"><h3>Before you read the numbers below</h3><p class="small" style="margin:0">Both tools use a few hundred of Clef's answers on one clearly worded question, a best case. They answer "could the CPU take this over?", in about 20 seconds. Production quality is a different job: thousands of labelled examples per area, hours of Clef time, and tuning (sections 5 and 6).</p></div>
+  <section class="section" aria-labelledby="h-intake" id="intakeSec">
+    <header><div><h2 id="h-intake">Check a new question in 20 seconds</h2><p class="takeaway"><span class="k">The point</span>Type a yes/no question; the page measures whether the CPU can take it over, and how much it would still send to Clef.</p><details class="more"><summary>How to read this</summary><p class="small muted">Clef (local GPU, no hosted calls) answers real conversation windows (half random, half the closest to the question); a sidecar learns from most of them; a confidence band set on those decides which new windows the CPU answers and which go to Clef; windows from other conversations measure the result. Quick check: 300 windows, about 20 seconds, provisional. Full: 1,300 windows, 1–3 minutes.</p></details></div></header>
+    <div class="card stack">
+      <div class="rules">
+        <div><b>Ready for the CPU when</b>CPU plus the teacher as backup gives the teacher's answer at least 97% of the time and catches most yes cases (yes-F1 of 0.90 or more), on windows it never saw.</div>
+        <div><b class="tier tier-Local">Local</b> Bar met and Clef answers at most 25% of windows.</div>
+        <div><b class="tier tier-Hybrid">Hybrid</b> Bar met and Clef answers 25–50%.</div>
+        <div><b class="tier tier-Clef">Clef</b> Bar missed, Clef needed for more than 50%, or fewer than 30 positive examples.</div>
+      </div>
+      <form class="intake-form" id="intakeForm">
+        <div class="field"><label for="inName">Name</label><input type="text" id="inName" maxlength="80" placeholder="Mentions a refund"></div>
+        <div class="field"><label for="inWhat">The speaker… (what to detect)</label><input type="text" id="inWhat" maxlength="300" placeholder="the speaker asks for or mentions a refund"></div>
+        <div class="field"><label for="inEx">Example (optional)</label><input type="text" id="inEx" maxlength="300" placeholder="I'd like my money back for this order."></div>
+        <div class="field"><label for="inMode">Depth</label><select id="inMode"><option value="quick">Quick check · 300 calls · ~20 s</option><option value="full">Full · 1,300 calls · 1–3 min</option></select></div>
+        <div class="row" style="gap:6px"><span class="small muted teacher-now"></span><button class="btn primary" type="submit" id="inGo">Measure</button><button class="btn" type="button" id="inCancel" hidden>Cancel</button></div>
+      </form>
+      <p class="small muted" id="inStatus"></p>
+    </div>
+    <div class="table-wrap" style="margin-top:10px"><table class="data" id="intakeTbl"></table></div>
+    <div class="card stack" id="intakeDetail" style="margin-top:10px" hidden></div>
+  </section>
+  <section class="section" style="margin-top:12px" aria-labelledby="h-jr" id="jrSec">
+    <header><div><h2 id="h-jr">Learning one question: from 0 to 800 examples</h2><p class="takeaway"><span class="k">Read this first</span>This is the best case: one common, clearly worded question on clean data. It shows <i>whether</i> a CPU can learn a question, not what a production model costs. In this run, after about 50 of Clef's answers the CPU handles most requests; by 800 it answers 89% itself, and with Clef as backup it matches Clef 96% of the time.</p><details class="more"><summary>How to read this</summary><p class="small muted" id="jrIntro">A real run, precomputed so it is instant: the question "the speaker mentions a price, cost or budget", 4,322 conversation windows that Clef answered, the e5-small encoder and one sidecar classifier. Step through it, or switch to Your data and watch it happen live on your own texts.</p></details></div>
+      <div class="row"><div class="segmented" id="jrMode" role="group" aria-label="Source"><button type="button" data-v="example" aria-pressed="true">Worked example</button><button type="button" data-v="live">Your data (live)</button></div><button class="btn" type="button" id="jrPrev">Back</button><button class="btn primary" type="button" id="jrNext">Next</button></div></header>
+    <div class="card stack" id="jrLive" hidden>
+      <p class="small muted">Paste your own conversation lines (one per line), upload a .txt / .csv / .jsonl file, or load a sample. Clef (local GPU) labels them with your question while you watch; each step below appears as soon as it is measured. 60–2,000 lines; 30% are held out to measure the result.</p>
+      <div class="intake-form"><div class="field"><label for="jlName">Name</label><input type="text" id="jlName" maxlength="80" value="Mentions money"></div>
+        <div class="field"><label for="jlWhat">The speaker… (what to detect)</label><input type="text" id="jlWhat" maxlength="300" value="the speaker mentions money, a price, a payment or a cost"></div>
+        <div class="field"><label for="jlEx">Example</label><input type="text" id="jlEx" maxlength="300" value="That will cost you two hundred dollars."></div><div></div><div></div></div>
+      <div class="field"><label for="jlTexts">Your texts <span class="subtle" id="jlCount"></span></label><textarea id="jlTexts" rows="7" placeholder="One conversation line or window per line"></textarea></div>
+      <div class="row"><input type="file" id="jlFile" accept=".txt,.csv,.jsonl,.json"><button class="btn" type="button" id="jlSample">Load sample: 200 film and TV dialogues</button><span class="spacer"></span><span class="small muted teacher-now"></span><button class="btn primary" type="button" id="jlRun">Run live</button><button class="btn" type="button" id="jlCancel" hidden>Cancel</button></div>
+      <p class="small" id="jlStatus"></p>
+    </div>
+    <div class="jr-steps" id="jrSteps"></div>
+    <div class="jr-grid" style="margin-top:10px">
+      <div class="card stack"><div class="jr-story" id="jrStory"></div><div class="tiles" id="jrTiles"></div><p class="small muted" id="jrScope" hidden><b>Stays in its lane.</b> The local model answers only the questions it was trained on, and only for texts like the ones it learned from (here: conversation lines). A new question needs its own short training run (Clef labels a few hundred texts, about a minute). If the texts change kind, it is re-checked against Clef first. Clef itself needs no training and answers any question.</p><div class="stack" id="jrFeat"></div></div>
+      <div class="card stack" style="position:sticky;top:76px"><div id="jrMap"></div><div class="legend" id="jrLegend"></div><div id="jrChart"></div></div>
+    </div>
+  </section>
+    <details class="fold card" style="margin-top:10px"><summary><b>Live demo: send a real request to the trained CPU engine</b> (20 questions it has learned)</summary>
   <section class="section" aria-labelledby="h-try" id="trySec">
     <header><div><h2 id="h-try">Proof: send it a real request</h2><p class="takeaway"><span class="k">The point</span>It is real: type any text and BitMob answers every question it knows, live. Tick "ask the teacher" to see the teacher's answer next to it.</p><details class="more"><summary>How to read this</summary><p class="small muted">A TypeSafe <code>/v1/systemone</code> server running on this machine’s CPU, with the GPU hidden from it. The right-hand panel shows the exact request and response, and the engine’s receipt of what it received; copy it as curl to run it yourself.</p></details></div>
       <div class="row" id="tryHealth"></div></header>
@@ -204,53 +286,125 @@
       <div id="waysMeasured" class="stack"></div>
     </div>
   </section>
-  <section class="section" style="margin-top:12px" aria-labelledby="h-jr" id="jrSec">
-    <header><div><h2 id="h-jr">Learning one question: from 0 to 800 examples</h2><p class="takeaway"><span class="k">The point</span>After about 50 of Clef's answers the CPU handles most requests. By 800 it answers 89% itself, and with Clef as backup it matches Clef 96% of the time.</p><details class="more"><summary>How to read this</summary><p class="small muted" id="jrIntro">A real run, precomputed so it is instant: the question "the speaker mentions a price, cost or budget", 4,322 conversation windows that Clef answered, the e5-small encoder and one sidecar classifier. Step through it, or switch to Your data and watch it happen live on your own texts.</p></details></div>
-      <div class="row"><div class="segmented" id="jrMode" role="group" aria-label="Source"><button type="button" data-v="example" aria-pressed="true">Worked example</button><button type="button" data-v="live">Your data (live)</button></div><button class="btn" type="button" id="jrPrev">Back</button><button class="btn primary" type="button" id="jrNext">Next</button></div></header>
-    <div class="card stack" id="jrLive" hidden>
-      <p class="small muted">Paste your own conversation lines (one per line), upload a .txt / .csv / .jsonl file, or load a sample. Clef (local GPU) labels them with your question while you watch; each step below appears as soon as it is measured. 60–2,000 lines; 30% are held out to measure the result.</p>
-      <div class="intake-form"><div class="field"><label for="jlName">Name</label><input type="text" id="jlName" maxlength="80" value="Mentions money"></div>
-        <div class="field"><label for="jlWhat">The speaker… (what to detect)</label><input type="text" id="jlWhat" maxlength="300" value="the speaker mentions money, a price, a payment or a cost"></div>
-        <div class="field"><label for="jlEx">Example</label><input type="text" id="jlEx" maxlength="300" value="That will cost you two hundred dollars."></div><div></div><div></div></div>
-      <div class="field"><label for="jlTexts">Your texts <span class="subtle" id="jlCount"></span></label><textarea id="jlTexts" rows="7" placeholder="One conversation line or window per line"></textarea></div>
-      <div class="row"><input type="file" id="jlFile" accept=".txt,.csv,.jsonl,.json"><button class="btn" type="button" id="jlSample">Load sample: 200 film and TV dialogues</button><span class="spacer"></span><span class="small muted teacher-now"></span><button class="btn primary" type="button" id="jlRun">Run live</button><button class="btn" type="button" id="jlCancel" hidden>Cancel</button></div>
-      <p class="small" id="jlStatus"></p>
-    </div>
-    <div class="jr-steps" id="jrSteps"></div>
-    <div class="jr-grid" style="margin-top:10px">
-      <div class="card stack"><div class="jr-story" id="jrStory"></div><div class="tiles" id="jrTiles"></div><p class="small muted" id="jrScope" hidden><b>Stays in its lane.</b> The local model answers only the questions it was trained on, and only for texts like the ones it learned from (here: conversation lines). A new question needs its own short training run (Clef labels a few hundred texts, about a minute). If the texts change kind, it is re-checked against Clef first. Clef itself needs no training and answers any question.</p><div class="stack" id="jrFeat"></div></div>
-      <div class="card stack" style="position:sticky;top:76px"><div id="jrMap"></div><div class="legend" id="jrLegend"></div><div id="jrChart"></div></div>
-    </div>
+    </details>
   </section>
-
+  <section class="story-sec" id="s4" aria-labelledby="h-s4">
+    <h2 id="h-s4"><span class="no">4</span>Where it works, and where it does not</h2>
+    <p class="takeaway"><span class="k">The point</span>Obvious and common questions move to the CPU. Subtle and rare ones stay with Clef.</p>
+    <div class="cols2" style="margin-bottom:10px"><div><b class="cpu">Moves to the CPU</b><br>Price, rapport, blame and similar surface questions (83 to 91% handled on the CPU in the worked test); tone and text type, where the CPU ties Clef; topics and countries in news (41 of 44 topics reach the bar).</div>
+      <div><b class="clef">Stays with Clef</b><br>Vague answers, hints, sarcasm and false facts; code security and world knowledge; the rare "what is changing in the world" conditions in news (the CPU catches 31% of them).</div></div>
   <section class="section" style="margin-top:18px" aria-labelledby="h-depth" id="depthSec" hidden>
     <header><div><h2 id="h-depth">Where it works, and where it does not</h2><p class="takeaway"><span class="k">The point</span>Strong on surface and relationship questions: price, rapport and blame are 83–91% handled on the CPU. Weak on subtle ones: vague answers stay with Clef. Hints, sarcasm and false facts were too rare here to judge.</p><details class="more"><summary>How to read this</summary><p class="small muted" id="depthIntro"></p></details></div>
       <div class="row"><div class="segmented" id="depthN" role="group" aria-label="Training examples"></div></div></header>
     <div class="card"><div class="table-wrap"><table class="data depth" id="depthTbl"></table></div>
       <p class="small muted" style="margin-top:8px" id="depthFoot"></p></div>
   </section>
-
-  <section class="section" aria-labelledby="h-intake" id="intakeSec">
-    <header><div><h2 id="h-intake">Check a new question in 20 seconds</h2><p class="takeaway"><span class="k">The point</span>Type a yes/no question; the page measures whether the CPU can take it over, and how much it would still send to Clef.</p><details class="more"><summary>How to read this</summary><p class="small muted">Clef (local GPU, no hosted calls) answers real conversation windows (half random, half the closest to the question); a sidecar learns from most of them; a confidence band set on those decides which new windows the CPU answers and which go to Clef; windows from other conversations measure the result. Quick check: 300 windows, about 20 seconds, provisional. Full: 1,300 windows, 1–3 minutes.</p></details></div></header>
-    <div class="card stack">
-      <div class="rules">
-        <div><b>Ready for the CPU when</b>CPU plus the teacher as backup gives the teacher's answer at least 97% of the time and catches most yes cases (yes-F1 of 0.90 or more), on windows it never saw.</div>
-        <div><b class="tier tier-Local">Local</b> Bar met and Clef answers at most 25% of windows.</div>
-        <div><b class="tier tier-Hybrid">Hybrid</b> Bar met and Clef answers 25–50%.</div>
-        <div><b class="tier tier-Clef">Clef</b> Bar missed, Clef needed for more than 50%, or fewer than 30 positive examples.</div>
-      </div>
-      <form class="intake-form" id="intakeForm">
-        <div class="field"><label for="inName">Name</label><input type="text" id="inName" maxlength="80" placeholder="Mentions a refund"></div>
-        <div class="field"><label for="inWhat">The speaker… (what to detect)</label><input type="text" id="inWhat" maxlength="300" placeholder="the speaker asks for or mentions a refund"></div>
-        <div class="field"><label for="inEx">Example (optional)</label><input type="text" id="inEx" maxlength="300" placeholder="I'd like my money back for this order."></div>
-        <div class="field"><label for="inMode">Depth</label><select id="inMode"><option value="quick">Quick check · 300 calls · ~20 s</option><option value="full">Full · 1,300 calls · 1–3 min</option></select></div>
-        <div class="row" style="gap:6px"><span class="small muted teacher-now"></span><button class="btn primary" type="submit" id="inGo">Measure</button><button class="btn" type="button" id="inCancel" hidden>Cancel</button></div>
-      </form>
-      <p class="small muted" id="inStatus"></p>
-    </div>
-    <div class="table-wrap" style="margin-top:10px"><table class="data" id="intakeTbl"></table></div>
-    <div class="card stack" id="intakeDetail" style="margin-top:10px" hidden></div>
+  <section class="section" aria-labelledby="h-holds" id="holdsSec">
+    <header><div><h2 id="h-holds">Verdict by area</h2><p class="takeaway"><span class="k">The point</span>Tone and text type: the CPU ties Clef. Reading and judging: beats Clef in places, ties Jev. Code security and world knowledge: stay with Clef or Jev.</p><details class="more"><summary>How to read this</summary><p class="small muted">The answer so far, by area: the best small recipe measured on the same test items as Clef Flash and Jev, what to run it on, and how fast. Detail and every idea tried are in the table below and in docs/latent-lab-playbook.md.</p></details></div></header>
+    <div class="areas" id="areas"></div>
+    <div class="table-wrap" style="margin-top:10px"><table class="data" id="ideasTbl"></table></div>
+    <p class="small subtle" id="verdictSrc" style="margin-top:6px"></p>
   </section>
+  </section>
+  <section class="story-sec" id="s5" aria-labelledby="h-s5">
+    <h2 id="h-s5"><span class="no">5</span>What quality really costs</h2>
+    <p class="takeaway"><span class="k">The point</span>Each step up in quality needs several times more labelled examples, and labelling Clef's answers is where the time goes.</p>
+    <div class="ladder">
+      <div class="beat"><span class="bn">50 examples</span><span class="big">minutes</span><span>About 4 minutes of Clef time for 50 news stories. Enough to see if a question is learnable. Not enough to rely on.</span></div>
+      <div class="beat"><span class="bn">800 examples</span><span class="big">about 1 hour</span><span>Round 1 here: 1,097 stories took 78 minutes to label; the first model agreed with Clef on read-or-skip 61% of the time and caught none of the conditions.</span></div>
+      <div class="beat"><span class="bn">2,000 examples</span><span class="big">about 2.5 hours</span><span>Round 3: 2,000 stories took 150 minutes. Tone questions reach 86% (level with Clef) at about this size.</span></div>
+      <div class="beat gap"><span class="bn">20,000 examples</span><span class="big">about 26 hours</span><span>At Clef's pace (13 stories a minute; a calculation, not a run). We used 19,192 stories in total, 12,237 of them from Jev, and conditions were still at 31% against a 90% bar.</span></div>
+    </div>
+    <div class="card stack" style="margin-top:10px"><h3>Where the time goes</h3>
+      <div class="timebar" role="img" aria-label="Labelling about 643 minutes, training at most about 144 minutes"><span class="lab" style="flex:643">Labelling by Clef: 643 min (10.7 h)</span><span class="trn" style="flex:144">Training: up to 144 min</span></div>
+      <p class="small muted">Labelling is the sum of the Clef rounds (<code>contract.json</code>: 138, 78, 150, 237 and 40 minutes). Training is the sum of the per-round Kaggle GPU hours, 2.4 h at most (single runs: 17 seconds, a 2-minute retrain, a 38-minute run for the largest encoder). Wait time and analysis are not counted.</p>
+      <p class="small">What else the data shows: going from 80 to about 2,000 examples per question lifts the small encoder from 76% to 86% on tone (the curve below). Picking examples cleverly helped more than adding random ones: aimed stories gave 1.1 condition examples each against 0.3 for random ones.</p>
+    </div>
+    <details class="fold card" style="margin-top:10px"><summary><b>The measured curve: accuracy against number of examples</b> (tone questions)</summary>
+  <section class="section" aria-labelledby="h-curve">
+    <header><div><h2 id="h-curve">The biggest lever: more examples</h2><p class="takeaway"><span class="k">The point</span>Going from 80 to about 2,000 examples per question lifts the small encoder from 76% to 86% on tone, level with Clef and Jev.</p><details class="more"><summary>How to read this</summary><p class="small muted">The comparison above gives each head about 80 examples (a 5-fold split of each set). Here each tone/text-type question's head trains on 80, 250, 1,000 or about 2,000 extra examples, built from the same sources with the same labelling rule, and is tested on the probe items, which no head ever sees. Dashed: Clef Flash and Jev on the same items. Click a line to highlight it.</p></details></div>
+      <div class="segmented" id="curveSeg" role="group" aria-label="Input"><button type="button" data-v="text" aria-pressed="true">Text only (one encode for every detector)</button><button type="button" data-v="ask">Question + text</button></div>
+    </header>
+    <div class="stack">
+      <div class="card"><div id="curvePlot"></div></div>
+      <div class="card"><h3 id="curveTitle">Per set</h3><div class="table-wrap" style="margin-top:6px"><table class="data" id="curveTbl"></table></div><p class="small subtle" style="margin-top:6px">AUC (how well the scores rank yes above no, 50% = chance) is in the tooltip. Below the full pool each figure is the mean of three random draws.</p></div>
+    </div>
+  </section>
+    </details>
+  </section>
+  <section class="story-sec" id="s6" aria-labelledby="h-s6">
+    <h2 id="h-s6"><span class="no">6</span>The real case: the World engine (BitMob)</h2>
+    <p class="takeaway"><span class="k">The point</span>On the engine's 6 scored steps, 3 pass, 3 stall. A confident-CPU, Clef-for-the-rest hybrid would still take most of Clef's work on the easy steps, but conditions need Clef on most stories.</p>
+    <div class="card"><div class="table-wrap"><table class="data">
+      <thead><tr><th class="l">Engine step</th><th class="l">Bar</th><th>Round 6 (small)</th><th>Round 7 (large encoder)</th><th class="l">Result</th></tr></thead><tbody>
+      <tr><td class="l">Read or skip (gate)</td><td class="l">90% agreement</td><td>80.8%</td><td>81.1%</td><td class="l">Stalled</td></tr>
+      <tr><td class="l">Conditions (what is changing)</td><td class="l">catch 90% at under 0.1% false</td><td>catch 31%</td><td>catch 24%</td><td class="l">Stalled</td></tr>
+      <tr><td class="l">Topics</td><td class="l">AP 0.70 on 80% of domains</td><td>95%</td><td>93%</td><td class="l">Passes</td></tr>
+      <tr><td class="l">Country</td><td class="l">90% agreement</td><td>89.2%</td><td>90.5%</td><td class="l">Passes only with the large encoder (90 ms and 2 GB per story)</td></tr>
+      <tr><td class="l">Expected impact</td><td class="l">75% same set</td><td>60.2%</td><td>62.1%</td><td class="l">Stalled</td></tr>
+      <tr><td class="l">Severity</td><td class="l">75% same level</td><td>79.8%</td><td>79.6%</td><td class="l">Passes</td></tr></tbody></table></div>
+      <p class="small subtle" style="margin-top:6px">Sources: <code>data/kaggle/mh_r6c1/score_r6c1.json</code>, <code>data/kaggle/mh_r7/score_r7.json</code>, 2,000-story answer key <code>data/clef-labels/test.jsonl</code>. AP = average precision, how well likely topics rank first.</p></div>
+    <div class="card stack" style="margin-top:10px"><h3>New measurement: how much of Clef's work could the CPU take?</h3>
+      <p class="small muted">Method: for each step, a confidence band chosen on tune stories (Clef-labelled, never trained on) so that "CPU answers inside the band, Clef answers outside" agrees with Clef 97% of the time. Then applied unchanged to the 2,000 test stories. Round 6 model, CPU only, computed 22 Oct 2026 by <code>newsreader/bitmob/mh/hybrid_per_question.py</code> into <code>data/latent-lab/hybrid_per_question.json</code>.</p>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th class="l">Step</th><th>Clef seconds per story</th><th>CPU answers this share</th><th>Agreement with Clef (test)</th><th class="l">Note</th></tr></thead><tbody>
+        <tr><td class="l">Read or skip (gate)</td><td>0.15</td><td>83%</td><td>96.8%</td><td class="l">Just under 97% on test</td></tr>
+        <tr><td class="l">Scope</td><td>0.15</td><td>81%</td><td>96.2%</td><td class="l">Just under 97% on test</td></tr>
+        <tr><td class="l">Conditions</td><td>9.6</td><td>99% by the 97% bar, but only 30% by the engine's own bar</td><td>98.1%</td><td class="l">Catches 93% of Clef's readings but invents 33 false ones per 1,000 story-dials, 30 times the allowed rate. To meet the engine's bar, Clef must check 70% of stories.</td></tr>
+        <tr><td class="l">Topics</td><td>1.1</td><td>99.6%</td><td>98.8%</td><td class="l">Most answers are "not this topic"</td></tr>
+        <tr><td class="l">Country</td><td>0.9</td><td>87%</td><td>95.4%</td><td class="l">Under 97% on test</td></tr>
+        <tr><td class="l">Expected impact</td><td>0.4</td><td>78%</td><td>98.1%</td><td class="l">Scored per answer, not through the engine's full rule</td></tr>
+        <tr><td class="l">Severity</td><td>0.2</td><td>52%</td><td>96.8%</td><td class="l">The CPU's own answers are right 93.8% of the time</td></tr></tbody></table></div>
+      <div class="wins"><div><b>96% of Clef's time</b>if the 97% per-answer bar is all that counts. Flattering: most answers are an easy "no".</div>
+        <div class="gap"><b>44% of Clef's time</b>if conditions must meet the engine's own bar. This is the honest figure. Clef would still do the other 56%, mostly reading stories for conditions.</div></div>
+      <p class="small subtle">Time is Clef's measured seconds per story (12.6 s in total, <code>test.jsonl</code> field <code>t</code>). Counted by questions instead, the figures are 92% and 52%. Bands are fitted on 894 tune stories, so test agreement can land a little under 97%; that is shown as measured.</p>
+      <p class="small">How the training works, step by step: <a href="/mockups/vector-walkthrough.html">How the training works (walkthrough)</a>.</p>
+    </div>
+  </section>
+  <section class="story-sec" id="s7" aria-labelledby="h-s7">
+    <h2 id="h-s7"><span class="no">7</span>Compared with fine-tuning a large language model</h2>
+    <p class="takeaway"><span class="k">The point</span>The small model starts knowing nothing about the task, so it needs many labels. A language model starts capable but needs a GPU to run.</p>
+    <div class="card"><div class="table-wrap"><table class="data">
+      <thead><tr><th class="l"></th><th class="l">Small model on a CPU (BitMob, measured here)</th><th class="l">Fine-tuned large language model (typical; not measured here)</th></tr></thead><tbody>
+      <tr><td class="l">Starts out</td><td class="l">Knowing nothing about the task</td><td class="l">Already capable; fine-tuning adjusts it</td></tr>
+      <tr><td class="l">Examples needed</td><td class="l">Thousands: 2,000 for tone, 19,192 stories for the engine; about 50 only to test feasibility</td><td class="l">Typically fewer, because it starts capable</td></tr>
+      <tr><td class="l">Time to train</td><td class="l">17 seconds to 38 minutes per round; labelling took 10.7 hours</td><td class="l">Typically hours on a GPU, plus labelling</td></tr>
+      <tr><td class="l">Runs on</td><td class="l">An ordinary CPU: about 4 ms a question, 24 ms to read a story (round 6)</td><td class="l">A GPU: Clef Flash Q4 needs 9.7 GB of GPU memory and takes 46 ms an answer</td></tr>
+      <tr><td class="l">Cost per answer</td><td class="l">No per-call fee; the cost is a CPU server</td><td class="l">GPU time; hosted Jev is $16 per million answers</td></tr></tbody></table></div>
+      <p class="small subtle" style="margin-top:6px">Our numbers: <code>data/progress/contract.json</code>, <code>/api/cpu/health</code>, <code>docs/latent-lab-playbook.md</code>. The repo has no measured LLM fine-tune (the playbook marks it "out of scope by choice"), so that column is general knowledge and deliberately qualitative. The nearest measured case is encoder fine-tuning (SetFit): 13 to 55 seconds per detector on a GPU.</p></div>
+  </section>
+  <section class="story-sec" id="s8" aria-labelledby="h-s8">
+    <h2 id="h-s8"><span class="no">8</span>The better pipeline, next <span class="badge proposed">Proposed, not built</span></h2>
+    <p class="takeaway"><span class="k">The point</span>Let the system teach itself from its own work: every question Clef answers becomes a new training example.</p>
+    <div class="card"><div class="loop">
+      <div class="st"><b>1 · CPU answers</b>what it is sure about (most of the traffic)</div>
+      <div class="st"><b>2 · Clef answers</b>the rest</div>
+      <div class="st"><b>3 · Save Clef's answers</b>as new labelled examples, at no extra cost</div>
+      <div class="st"><b>4 · Retrain</b>on a schedule (a warm retrain took 2 minutes in round 6)</div>
+      <div class="st"><b>5 · Measure, then repeat</b>the CPU's share grows as its confidence does</div></div>
+      <p class="small muted" style="margin-top:8px">Why it helps: labelling is the expensive part (section 5), and this removes the separate labelling job. It focuses labels on the stories the CPU finds hard. Not built or measured; the bands in section 6 are the first piece it needs.</p></div>
+  </section>
+  <section class="story-sec" id="s9" aria-labelledby="h-s9">
+    <h2 id="h-s9"><span class="no">9</span>The depth</h2>
+    <p class="takeaway"><span class="k">The point</span>The research behind all of this. Every view is here, closed by default; open what you need.</p>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>The research behind it: choose an encoder and a labelled set</b> · every view below follows these two choices</summary>
+  <h2 style="margin-top:26px">The research behind it</h2><p class="takeaway"><span class="k">The point</span>We tried 16 ideas on published, human-labelled sets. The big levers: a trained sidecar, more examples per question, and the right encoder. Pick an encoder and a set below; every view follows them.</p>
+  <div class="bar-ctl">
+    <div class="field"><label for="model">Embedding model</label><select id="model"></select></div>
+    <div class="field"><label for="set">Labelled set</label><select id="set"></select></div>
+    <div class="small muted setinfo" id="setinfo"></div>
+  </div>
+
+  <section class="section" style="margin-top:12px" aria-labelledby="h-model">
+    <div class="card stack">
+      <h2 id="h-model" style="font-size:16px">Selected model</h2>
+      <div class="row" id="modelBadges"></div>
+      <p class="small muted" id="modelText"></p>
+      <p class="small muted">The research views below read vectors saved earlier; the only live model on this page is BitMob above.</p>
+    </div>
+  </section>
+  </details>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>Why a sidecar? Similarity alone does not decide</b></summary>
   <section class="section" aria-labelledby="h-how">
     <header><div><h2 id="h-how">Why a sidecar? Similarity alone does not decide</h2><p class="takeaway"><span class="k">The point</span>Comparing the text with the words "yes" and "no" is close to a coin flip on most questions (about 53% on tone with e5-small). Learning which numbers matter for each question is what turns the same vectors into answers.</p>
       <div class="two" style="margin-top:8px">
@@ -315,32 +469,8 @@
     </div>
     </details>
   </section>
-  <h2 style="margin-top:26px">The research behind it</h2><p class="takeaway"><span class="k">The point</span>We tried 16 ideas on published, human-labelled sets. The big levers: a trained sidecar, more examples per question, and the right encoder. Pick an encoder and a set below; every view follows them.</p>
-  <div class="bar-ctl">
-    <div class="field"><label for="model">Embedding model</label><select id="model"></select></div>
-    <div class="field"><label for="set">Labelled set</label><select id="set"></select></div>
-    <div class="small muted setinfo" id="setinfo"></div>
-  </div>
-
-
-  <section class="section" style="margin-top:12px" aria-labelledby="h-model">
-    <div class="card stack">
-      <h2 id="h-model" style="font-size:16px">Selected model</h2>
-      <div class="row" id="modelBadges"></div>
-      <p class="small muted" id="modelText"></p>
-      <p class="small muted">The research views below read vectors saved earlier; the only live model on this page is BitMob above.</p>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="h-holds" id="holdsSec">
-    <header><div><h2 id="h-holds">Verdict by area</h2><p class="takeaway"><span class="k">The point</span>Tone and text type: the CPU ties Clef. Reading and judging: beats Clef in places, ties Jev. Code security and world knowledge: stay with Clef or Jev.</p><details class="more"><summary>How to read this</summary><p class="small muted">The answer so far, by area: the best small recipe measured on the same test items as Clef Flash and Jev, what to run it on, and how fast. Detail and every idea tried are in the table below and in docs/latent-lab-playbook.md.</p></details></div></header>
-    <div class="areas" id="areas"></div>
-    <div class="table-wrap" style="margin-top:10px"><table class="data" id="ideasTbl"></table></div>
-    <p class="small subtle" id="verdictSrc" style="margin-top:6px"></p>
-  </section>
-
-
-
+  </details>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>Which encoder?</b></summary>
   <section class="section" aria-labelledby="h-cmp">
     <header><div><h2 id="h-cmp">Which encoder?</h2><p class="takeaway"><span class="k">The point</span>With few examples (about 80 per question), big encoders win by a lot: Qwen 4B 84% against e5-small 67% on tone. But the 4B is about 170× slower on a CPU. More examples close most of the gap (next chart).</p><details class="more"><summary>How to read this</summary><p class="small muted">Every model went through the same steps on the same items. Filled dot: a learned head (one logistic readout per question, 5-fold, every item scored by a fit that never saw it). Ring: the best readout that uses no labels (cosine, bias-corrected or whitened). Dashed lines: Clef Flash and Jev on the same sets. Speed: one call on this machine's CPU (i9-10900K, plain PyTorch, untuned; the live engine now runs e5-small in about 4 ms), option vectors cached. Click a model (or use Embedding model at the top) to load it into every view on the page.</p></details></div>
       <div class="segmented" id="grpSeg" role="group" aria-label="Group of sets"><button type="button" data-v="Tone and text type" aria-pressed="true">Tone and text type</button><button type="button" data-v="Reading and judging">Reading and judging</button><button type="button" data-v="Code security">Code security</button><button type="button" data-v="World knowledge">World knowledge</button></div>
@@ -349,17 +479,8 @@
     <div class="table-wrap" style="margin-top:10px"><table class="data" id="cmpTbl"></table></div>
     <p class="small subtle" style="margin-top:6px">Cells: learned-head accuracy per set; blue at or above Clef Flash on that set, orange below, stronger colour for a bigger gap. Each set has 64–545 items, so a single cell carries about ±8–12 points of noise; group averages are steadier.</p>
   </section>
-
-  <section class="section" aria-labelledby="h-curve">
-    <header><div><h2 id="h-curve">The biggest lever: more examples</h2><p class="takeaway"><span class="k">The point</span>Going from 80 to about 2,000 examples per question lifts the small encoder from 76% to 86% on tone, level with Clef and Jev.</p><details class="more"><summary>How to read this</summary><p class="small muted">The comparison above gives each head about 80 examples (a 5-fold split of each set). Here each tone/text-type question's head trains on 80, 250, 1,000 or about 2,000 extra examples, built from the same sources with the same labelling rule, and is tested on the probe items, which no head ever sees. Dashed: Clef Flash and Jev on the same items. Click a line to highlight it.</p></details></div>
-      <div class="segmented" id="curveSeg" role="group" aria-label="Input"><button type="button" data-v="text" aria-pressed="true">Text only (one encode for every detector)</button><button type="button" data-v="ask">Question + text</button></div>
-    </header>
-    <div class="stack">
-      <div class="card"><div id="curvePlot"></div></div>
-      <div class="card"><h3 id="curveTitle">Per set</h3><div class="table-wrap" style="margin-top:6px"><table class="data" id="curveTbl"></table></div><p class="small subtle" style="margin-top:6px">AUC (how well the scores rank yes above no, 50% = chance) is in the tooltip. Below the full pool each figure is the mean of three random draws.</p></div>
-    </div>
-  </section>
-
+  </details>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>What the encoder sees</b></summary>
   <section class="section" aria-labelledby="h-space">
     <header><div><h2 id="h-space">What the encoder sees</h2><p class="takeaway"><span class="k">The point</span>Every text is a point. Flattened to two directions, yes and no texts mostly overlap; the sidecar finds the directions in all 384 (or 2,560) numbers that pull them apart.</p><details class="more"><summary>How to read this</summary><p class="small muted">Each dot is one item's q vector, flattened from all its dimensions to the two directions where the items differ most. It is a shadow of the real space: separation here means separation there, but overlap here can hide separation in other directions. Click a dot to open it below. Ringed dots have their full vectors exported.</p></details></div>
       <div class="row">
@@ -369,13 +490,15 @@
     </header>
     <div class="card"><div id="scatter"></div><div class="legend" id="scLegend"></div></div>
   </section>
-
+  </details>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>Every item, every readout</b></summary>
   <section class="section" aria-labelledby="h-strip">
     <header><div><h2 id="h-strip">Every item, every readout</h2><p class="takeaway"><span class="k">The point</span>Dots right of the dashed line are right answers. Compare the learned row with the untrained ones above it.</p><details class="more"><summary>How to read this</summary><p class="small muted">One dot per item. Position is how far the right answer is ahead of the best wrong answer: right of the dashed line means the readout got it right. Each row is scaled to its own spread, so compare where the dots fall against the line, not the widths. Colour is the true answer.</p></details></div></header>
     <div class="card"><div id="strip"></div><div class="legend" id="stLegend"></div>
     </div>
   </section>
-
+  </details>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>No training at all? Ask five ways</b></summary>
   <section class="section" aria-labelledby="h-ang" id="angSec">
     <header><div><h2 id="h-ang">No training at all? Ask five ways</h2><p class="takeaway"><span class="k">The point</span>With no training, asking five ways lifts the big Qwen 4B encoder from 63% to 80% on tone, Clef's level. But it needs a GPU; the trained sidecar gets there on a CPU.</p><details class="more"><summary>How to read this</summary><p class="small muted">One question is one line through the space. Here the same question is asked five ways, each written before any was scored: the original, its opposite, two rephrasings and one adjacent question. The scores are then corrected, combined and checked against each other. Yes/no sets only.</p></details></div></header>
     <details class="more"><summary>The terms, in plain words</summary>
@@ -398,7 +521,8 @@
       <div class="card"><h3>What this costs</h3><p class="small muted" id="costNote"></p></div>
     </div>
   </section>
-
+  </details>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>One item, dimension by dimension</b></summary>
   <section class="section" aria-labelledby="h-item">
     <header><div><h2 id="h-item">One item, dimension by dimension</h2><p class="takeaway"><span class="k">The point</span>An answer is a sum over every number in the vector: blue cells push towards an option, orange away. Untrained, the right answer often wins by a hair, which is why it flips so easily.</p><details class="more"><summary>How to read this</summary><p class="small muted">Each grid is one vector, one cell per dimension. The option rows show q × o, cell by cell: the readout's score is the sum of that grid. Blue pushes towards the option, orange against it.</p></details></div>
       <div class="row">
@@ -411,10 +535,13 @@
       <div class="card"><div id="grids" class="grids"></div><div class="scale"><span>against</span><span class="g"></span><span>towards</span></div><p class="small muted" id="gridNote" style="margin-top:6px"></p></div>
     </div>
   </section>
-
+  </details>
+  <details class="fold card" style="margin-bottom:10px"><summary><b>Across all sets</b></summary>
   <section class="section" aria-labelledby="h-all">
     <header><div><h2 id="h-all">Across all sets</h2><p class="takeaway"><span class="k">The point</span>The trained sidecar wins on tone, judging and code. World knowledge is the exception: small vectors score 13–53% where Clef and Jev score 73–100%, so those questions stay with them.</p><details class="more"><summary>How to read this</summary><p class="small muted">Share of items answered right. Universal is one readout fitted on the other sets only, never on the set it is tested on. Click a row to open that set.</p></details></div></header>
     <div class="table-wrap"><table class="data" id="allTbl"></table></div>
+  </section>
+  </details>
   </section>
 </main>
 <div class="tip" id="tip" hidden></div>
@@ -616,7 +743,14 @@ async function teacherUI() {
   sel.value = TEACH.cur.id; sel.disabled = !TEACH.can;
   sel.title = TEACH.can ? "Trains new questions, and backs up and is compared with the CPU" : "The teacher can only be changed from this machine";
 }
+async function liveFacts() {
+  try { const h = await api("/api/cpu/health"); const mb = h.memory_mb;
+    document.querySelectorAll("[data-mem]").forEach(n => { n.textContent = `${mb} MB`; });
+    document.querySelectorAll("[data-memx]").forEach(n => { n.textContent = `${Math.round(9.7 * 1024 / mb)}×`; });
+  } catch { document.querySelectorAll("[data-mem]").forEach(n => { n.textContent = "(classifier off)"; }); }
+}
 async function boot() {
+  Jev.stamp("latent.html"); liveFacts();
   tryInit(); drawJourney(); drawDepth();  // the story comes first; it does not wait for the lab data below
   let res; try { res = await api("/api/latent"); }
   catch (e) { document.getElementById("main").append(Jev.empty("No export yet", "Run probes/embed_readouts.py or probes/embed_sweep.py, then probes/latent_export.py, and reload.")); return; }
