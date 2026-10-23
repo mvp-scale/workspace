@@ -1,43 +1,59 @@
 # GO — session handoff
 
-Written 2026-10-20 evening. Overwritten at each handoff.
+Written 2026-10-22 ~20:30. Overwritten at each handoff. Branch `world-engine-100-countries`, pushed to GitHub (mvp-scale/workspace).
 
 ## First reply of the new session
-Read this file, run `node tools/ledger.mjs board` and `node tools/ledger.mjs score | head -8` (not the full miss list: tokens), skim `.claude/skills/ontology-trainer/SKILL.md`. Check the suite jobs (below). Then reply in at most 8 lines, opening with the model/effort shortcode (`~/.claude/CLAUDE.md`, digit from `$CLAUDE_EFFORT`): (1) goal, (2) where we are, (3) next step and its forecasts, (4) waiting on the user. After the user confirms, chain in-method steps without asking again (D-0006, memory "no ceremony").
+Read this file. Do NOT start any job until the user says so (the user asked for a clean stop). Check the two background results below (files, not agents: the agents from the old session cannot report to the new one). Then reply in at most 8 lines, opening with the shortcode (`~/.claude/CLAUDE.md`): (1) goal, (2) where we are, (3) the two background results if done, (4) what waits on the user.
 
-## The user's view: Trainer live
-`http://localhost:8100/mockups/trainer/` (one screen, tabs, click anything for its evidence). It reads `demo/mockups/trainer/live.json` + `ledger.json`, built by `newsreader/bitmob/progress.py build` (runs on every job event and after every Bash/Write/Edit via the PostToolUse hook in `.claude/settings.json`). Per-model grid from `newsreader/bitmob/suite_card.py` -> `data/scorecard/models.json`. "Needs you" list: `data/progress/needs-you.json` (edit it when a user decision opens or closes).
-- Every job MUST post events: `from progress import event; event("<model>:<area>", "training|scoring|done|failed", msg, pid=os.getpid(), win=True on results)`, or CLI `progress.py event <job> <state> "<msg>" --pid N [--win]`. A job that runs without events is invisible to the user: not allowed.
-- Proof status on the page is checked, not stated: file pins re-hashed vs the ledger. 65 validated, 17 weak (proven but a pin changed or no evidence), 93 unproven.
+## Goal
+Run the World engine on a CPU reader (BitMob) instead of Clef on the GPU, matching Clef's contract (rows P-0016..P-0023, ledger). **A BitMob pass means BitMob alone.** Any result where Clef answers part of the work is a *fallback* that needs the user's approved exception; never call it a pass (memory: bitmob-alone-counts).
 
-## Running at handoff (background, nohup, each `timeout 3000`)
-Suite jobs `newsreader/bitmob/suite.py <model> [areas]`, logs `data/suite/logs/`, results `data/suite/<model>/<area>.json|.npz`: e5tfidf (all areas), potion_ft (conditions left), setfit (type pilot), e5ft (type pilot, ~30 min/area at 5 threads). Check: `pgrep -af suite.py`, or the page. Done: tfidf, e5, potion (all 4 areas); potion_ft type/topic/country.
+## Score now (BitMob alone, 2,000-story Clef answer key; Trainer page Models tab)
+| Step | Best | Bar | |
+|---|---|---|---|
+| Topics | 95.5% (round 6) | 80% of topics | pass |
+| Country | 90.5% (round 7, larger model) | 90% | pass |
+| Severity | 79.8% (round 6) | 75% | pass |
+| Read-or-skip | 81.1% | 90% | fail (8.9 short) |
+| Conditions | catches 31.1% | catch 90% at <=0.1% false alarms | fail (58.9 short) |
+| Expected impact | 62.1% (always-empty baseline 61.1%) | 75% | fail |
+| So-what | not trained | user decides (keep Clef / template) | open |
+| Whole engine | not run | needs engine restart | open |
 
-## Pipeline (one iteration; repeat)
-1. **Predict**: ledger forecast per run (`predict <task> "..." --p`), tagged [source]/[harness]/[structure]/[model].
-2. **Train in parallel**: every candidate x every area, same train (night1-train + round1 + round2) and frozen test (night1 held-out + testA, Jev labels) via `suite.py`; split the 20 cores (THREADS env); each job < 50 min.
-3. **Score**: per-model card (suite_card) + acceptance card (`scorecard.py`, fingerprint must stay `017dc4c3784a`); both show on the page.
-4. **Verify**: MM3 on the write-up before any keep/drop decision (`tools/mm3local` + `tools/mm3hosted class <yaml>`, 2 runs; splits recorded, not resolved). Budget 15 of 500 runs: only the user can raise it.
-5. **Decide with a reason**: every model or reader dropped/kept gets a ledger decision with its evidence (F-0070 found three drops with no reason: never again).
-6. **Next round**: 1,000 stories (500 random, 500 aimed at failing criteria: `round_select.py`), label with Jev (~$0.5), back to 2. A criterion with no stable trend after 3 rounds -> Opus investigator, then the user (D-0013).
+## Why the three fail (diagnosed, free CPU; ledger F-0110, F-0111)
+- Conditions: BitMob ranks condition answers well (AUC 0.989) but under-states rare strong yeses (-0.27 where Clef triggers; only 0.27% of answers trigger). Not brittleness (Clef +-0.10 noise still passes), not truncation. Labels plateaued: rounds 3/5/6 aimed 65%/79%/100% of Clef labels at conditions -> 18% / 31% / 31%; bigger encoder 24%. More labels will not fix it.
+- Read-or-skip: happened/announced answers sit near their 0.5 cut on ~19% of stories; BitMob ±0.13 there.
+- Expected impact: never targeted with labels (0% of Clef labels); BitMob under-triggers.
+- Label targeting by round (all Clef-labelled train, 6,661): conditions 63%, random 23%, read-or-skip 10%, country 4%, topics/expected/severity 0%.
 
-## Next steps, in order (gap list F-0070, task T-0025, forecasts R-0117..R-0120 waiting)
-1. Finish the suite: when the running jobs end, score R-0117..R-0120; run setfit and e5ft on the other areas (or record why not, e.g. time), build the ensemble (e5tfidf + e5ft, 50/50) for every area as a `data/suite/ensemble/` model.
-2. Honest card: mark C5 (30 probes, bar >= 20 per pair = 120), C7 (dev stand-in), C9 (9 'check' sources undecided) not passed, with a ledger note; split calibration and threshold sets (MM3-0486/0487 q13) and re-measure K6/K8.
-3. Re-prove or retract the 17 weak items (page Ledger tab, filter weak).
-4. T-0011 definition check (skill step 1b, skipped before scaling): codebook per condition inside the question text; Jev + Sonnet `[S2]` + Haiku `[H1]` on pilot50; score R-0064..R-0068.
-5. Criteria rev 3 from MM3-0484/0485 points; user approves; then the jury test set (skill step 4).
-6. Country checker v3 (club names, small cities, Georgia the state), confirmed on a NEW fresh set with 120 look-alike probes.
+## Running at handoff (results land in files)
+1. **Fallback test** (BitMob + Clef check, Kaggle kernels `coreygorman/bitmob-screenk-comb1` COMPLETE + `comb2` RUNNING at 19:47): output `data/kaggle/screen_comb*/out`, report `data/diag/combined_reader_2026-10-22.txt` (when written), scripts `newsreader/bitmob/reader/combined_*.py`. Report it ONLY as a fallback with BitMob-alone numbers beside it. Also settles a scorer discrepancy: variant B 98.2% (screen_real_analyse.py) vs 93.9% (screen_real_analyse_c.py) on the same answers.
+2. **CPU checker** (the BitMob-alone fix): a small CPU cross-encoder that verifies BitMob's shortlist (story + one candidate question), trained on Kaggle from Clef labels; conditions first, then read-or-skip, expected impact. Report: `data/diag/cpu_checker_2026-10-22.txt` + a ledger fact; prediction on F-0110. If it does not move conditions meaningfully, stop and report (no more same-lever rounds).
+Check: `source tools/kaggle.env; kaggle kernels list --mine --page-size 5`, `ls -t data/diag/`, `node tools/ledger.mjs show F-0110`.
 
-## Where things stand
-- Acceptance card 5/50 (of which C5/C7/C9 are generous: honest ~2-3). Best per area so far vs Jev: type e5 frozen (T2 2/4, AP 0.822); topic potion fine-tuned 0.725 (bar 0.85); country e5 0.805 (no per-model bar; script v2 recall 0.88 vs 0.97, F-0062); conditions ensemble 0.482 mean AP, 4 of 48 keys >= 0.70 (F-0058), K6 19/48, K8 0.80 (F-0068).
-- Drift audit F-0070 (MM3-0486/0487): SetFit/model2vec never trained, areas not retrained, retirements unrecorded; route both "fill gaps then continue".
+## Verified fallback evidence (not passes)
+Conditions, BitMob shortlist + Clef asked the usual 20-question blocks holding it (real Clef, Kaggle, 298 stories): 98.2% caught, 0.026% false alarms, ~24% of full-battery Clef time. Bare shortlisted questions fail (64%); +3/+7 neighbours fail (75%/78%) (R-0175 wrong). Read-or-skip / expected fallbacks are simulations only.
 
-## Rules that bind
-- CLAUDE.md, memory, `~/.claude/CLAUDE.md` (shortcode on every model action; cheapest tier; flag big fan-outs first).
-- Every claim cites a ledger item, a pinned file + command, or an MM3 id. Predict before, score after. No job over 1 hour unattended.
-- Tokens: send job output to logs and `tail`/`grep`; `ledger show <id>` instead of listing whole kinds; scorecard prints are ~2.5k tokens.
-- Stopping services: give the user `! ./service.sh stop <name> -y`.
+## Done today (committed and pushed)
+- Clef Flash Fast (CLF9F4, vLLM NVFP4) onboarded on every surface; accepted D-0045 (MMLU 91.9 vs Q4 91.7; one 80-item set -5 pts). Image Lab acceptance paused by the user; speed/memory (vram) not measured (needs voice paused). add-model skill has a "Done means" 10-surface table + MM3 touchpoint map.
+- Pages list registered models as "not run yet"; heat maps sorted by accuracy; Image Lab lists only `vision: true` models.
+- Benchmark results versioned: `tools/run_versions.py`, archive `data/run-versions/` (Jev 1.13.0 archived; Jev 1.14.0 run: +0.4 MMLU, cost $0.29).
+- Latent lab rebuilt as a 9-section story with expectations first and a version stamp (`/api/version`); training walkthrough `/mockups/vector-walkthrough.html` updated; Trainer Models tab: one number per cell, BitMob-alone pass/gap, fallback column.
+- .gitignore blocks model weights/binaries by type; `checkpoints/`, picker libraries/data/cache out of git.
+- Kaggle: this project uses coreygorman's API token by path (`tools/kaggle.env`: `KAGGLE_API_TOKEN=/root/.kaggle/coreygorman.token`, mode 600; never print it). The user has two Kaggle accounts (coreygorman = this project, gtrash = other). watch.sh pre-flights the account and treats login gaps as a pause (C-0014, T-0026; open: account in run ledger, login status on Trainer page).
+
+## Test-set quality (self-rating vs our own research, 12/25)
+Reference ceiling not measured (Clef vs Clef), baselines not checked before bars, too few cases per condition (~5 in 2,000), no planned slices, integrity good. Fixes proposed (not started): Clef self-agreement on 300 stories (~1 Kaggle h), per-step baselines (free), an enriched slice for rare conditions + borderline read-or-skip, a datasheet.
 
 ## Waiting on the user
-Sport topic; countries outside the 100; the 9 'check' sources; Clef or Jev as the engine target (D-0017); MM3 run budget.
+1. Start nothing until told.
+2. Engine restart for the whole-engine check (resets world state); can be combined with 3.
+3. Engine reads with Clef Flash Fast (~5x less GPU per story).
+4. So-what summary: keep Clef or a template.
+5. Earlier open offers: training guide refresh (+HTML), Latent lab "better pipeline" build, World engine live feed back on (it is off since labelling).
+
+## State of resources at handoff
+5090: idle (Clef Q4 :8018 up, voice up, World engine up with live feed off). Kaggle: ~24 GPU h left this week (account coreygorman). Jev: $9.95 of $10 (no spend planned). Today: 5090 ~6 h, Kaggle ~3 h, money $0.29.
+
+## Rules that bind (memory + CLAUDE.md)
+Shortcode on every model action. Kaggle first; local 5090 only with the user's yes. Never rm (move aside); no rm with variables. Commit only when asked (the user has asked to check in this branch's work). No hosted calls without asking. No job over 1 h unattended. Never drive the user's Chrome (headless only). Free, in-plan CPU/Kaggle work: start it, don't ask (but this handoff says: wait). Plain language, exec style, one number per cell on pages.
