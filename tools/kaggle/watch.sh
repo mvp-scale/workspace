@@ -27,7 +27,7 @@ RECORD() {  # status
 }
 # Login check (read only: account name and expiry, never the token). OAuth logins (credentials.json) last about 3 hours;
 # a classic API key (kaggle.json) does not expire. The job's owner is the part of the slug before "/".
-LOGIN(){ python3 - "$1" <<'PY'
+LOGIN(){ python3 - "${1:-}" <<'PY'
 import json, os, sys, datetime as dt
 d = os.path.expanduser("~/.kaggle"); c, k = os.path.join(d, "credentials.json"), os.path.join(d, "kaggle.json")
 if os.environ.get("KAGGLE_API_TOKEN") or os.path.exists(os.path.join(d, "access_token.txt")): print("api-token 99999"); sys.exit()   # settings-page token: no expiry; account not stored locally

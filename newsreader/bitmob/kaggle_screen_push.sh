@@ -25,7 +25,7 @@ S
 cat > $B/pkg/newsreader/bitmob/progress.py <<'S'
 def event(job, state, msg, pid=None, win=False, **kw): print("[event]", job, state, msg, flush=True)
 S
-RUNNER=${RUNNER:-screen_real_run.py}; STORIES=${STORIES:-stories.jsonl}; cp $W/newsreader/bitmob/$RUNNER $B/pkg/newsreader/bitmob/
+RUNNER=${RUNNER:-screen_real_run.py}; STORIES=${STORIES:-stories.jsonl}; cp $W/newsreader/bitmob/$RUNNER $B/pkg/newsreader/bitmob/; for f in ${EXTRA:-}; do mkdir -p $B/pkg/newsreader/bitmob/$(dirname $f); cp $W/newsreader/bitmob/$f $B/pkg/newsreader/bitmob/$f; done
 tar czf $B/ds/pkg.tar.gz -C $B/pkg . ; mv $B/pkg /tmp/pkg_$$_old 2>/dev/null || true
 cat > $B/ds/dataset-metadata.json <<J
 {"title": "$DS", "id": "coreygorman/$DS", "licenses": [{"name": "other"}], "isPrivate": true}
