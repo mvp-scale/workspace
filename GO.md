@@ -3,7 +3,15 @@
 Written 2026-10-22 ~20:30. Overwritten at each handoff. Branch `world-engine-100-countries`, pushed to GitHub (mvp-scale/workspace).
 
 ## First reply of the new session
-Read this file. Do NOT start any job until the user says so (the user asked for a clean stop). Check the two background results below (files, not agents: the agents from the old session cannot report to the new one). Then reply in at most 8 lines, opening with the shortcode (`~/.claude/CLAUDE.md`): (1) goal, (2) where we are, (3) the two background results if done, (4) what waits on the user.
+Read this file. Do NOT start any job until the user says yes to the plan below. Check the two background results below (files, not agents: the agents from the old session cannot report to the new one). Then reply in at most 8 lines, opening with the shortcode (`~/.claude/CLAUDE.md`): (1) goal, (2) where we are, (3) both background jobs are DONE (fallback F-0112, CPU checker F-0113 failed), (4) the ranked Kaggle plan below, asking for a yes, plus the user decisions waiting.
+
+## Next session's plan (user, 2026-10-23: "clear and go, then come back at this and use Kaggle and improve where we were")
+Present this ranked list in the first reply and start on the user's yes (Kaggle + CPU only; no 5090, no money):
+1. **Measure the target before chasing it** (test-set fixes, 12/25 self-rating): Clef against itself on 300 stories (rerun + regrouped questions) per step = the ceiling; per-step trivial baselines. ~1 Kaggle h. Re-check every bar against ceiling and baseline; bring any bar that sits above Clef's own ceiling to the user (exception/discussion, not silently).
+2. **Block-context reader** (the untested lever from F-0113): train the checker/BitMob on the question WITH its usual 20-question block context (the block's other question texts in the input), since Clef's answers depend on the block. Conditions first, then gate. ~1-2 Kaggle h.
+3. **Enriched test slice**: rare conditions + borderline read-or-skip so each condition has ~30+ cases; Clef-labelled on Kaggle; a datasheet for the test set.
+4. If 2 fails: stop the CPU-only push and put the decision to the user (approve the Clef-assisted fallback as an exception: all six pass, Clef ~23% of its time; or another direction).
+Predict in the ledger before each run; stop rule: no gain -> stop and report, no repeat of the same lever.
 
 ## Goal
 Run the World engine on a CPU reader (BitMob) instead of Clef on the GPU, matching Clef's contract (rows P-0016..P-0023, ledger). **A BitMob pass means BitMob alone.** Any result where Clef answers part of the work is a *fallback* that needs the user's approved exception; never call it a pass (memory: bitmob-alone-counts).
