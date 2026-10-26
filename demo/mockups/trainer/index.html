@@ -104,7 +104,7 @@
   const ago = (t) => { const s = Math.max(0, Date.now() / 1000 - t); return s < 60 ? `${s | 0}s` : s < 3600 ? `${(s / 60) | 0}m` : `${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`; };
   const badge = (t, cls) => el("span", { class: `badge b-${cls || t}`, text: t });
   const AREA = { C: "Country", T: "Story type", S: "Scope/focus", P: "Topic", K: "Conditions" };
-  const TABS = ["Overview", "Models", "Rounds", "History"], OLD = ["Contract", "Overview (old)", "Models (old suite)", "Criteria", "Ledger", "MM3", "Forecasts", "Activity"];
+  const TABS = ["Experiments", "Overview", "Models", "Rounds", "History"], OLD = ["Contract", "Overview (old)", "Models (old suite)", "Criteria", "Ledger", "MM3", "Forecasts", "Activity"];
   const ORDER = ["P-0016", "P-0017", "P-0018", "P-0019", "P-0020", "P-0021", "P-0023", "P-0022"];
   const X = (pid) => ((S && S.contract && S.contract.explain) || {})[pid] || { name: pid };
   const pv = (pid, r) => !r || typeof r.value !== "number" ? "–" : (pid === "P-0017" ? "catches " : "") + (Math.round(r.value * 1000) / 10) + "%";
@@ -155,8 +155,8 @@
     ["Got better by (value line)", "How much of the remaining gap a round closed, compared with what it cost (stories labelled, GPU hours). When it drops toward zero, more of the same has stopped paying and we change approach."]];
   const glossary = (open) => { const d = document.createElement("details"), sm = document.createElement("summary"); sm.textContent = "What the words mean (2-minute read)"; d.append(sm); if (open) d.open = true;
     d.append(el("div", { style: "max-width:70ch" }, GLOSS.map(([t, x]) => el("p", { style: "margin:6px 0" }, el("b", { text: t + ": " }), x)))); return d; };
-  let S = null, LED = null, LEDT = 0, tab = "Overview", seenWin = null, lf = { q: "", kind: "", verdict: "" };
-  try { const t0 = localStorage.getItem("trainer-tab"); if (TABS.includes(t0)) tab = t0; } catch (e) {}
+  let S = null, LED = null, LEDT = 0, tab = "Experiments", seenWin = null, lf = { q: "", kind: "", verdict: "" };
+  try { const t0 = localStorage.getItem("trainer-tab2"); if (TABS.includes(t0)) tab = t0; } catch (e) {}
 
   const loadLedger = () => (Date.now() - LEDT < 8000 && LED) ? Promise.resolve(LED)
     : fetch("ledger.json", { cache: "no-store" }).then(r => r.json()).then(d => { LED = d; LEDT = Date.now(); return d; });
@@ -242,6 +242,22 @@
       el("span", { class: n > was ? "right" : "", text: `${n}/${m}${n > was ? "▲" : n < was ? "▼" : ""}` })); }); };
 
   const VIEWS = {
+    Experiments: () => { const Q = S.queue || {}, F = Q.frame || {}, I = Q.items || [], pct = (x) => x == null ? "–" : Math.round(x * 100) + "%";
+      const h = (t) => el("h3", { text: t, style: "margin:12px 0 4px;font-size:13px" }), ul = (a) => el("ul", { style: "margin:2px 0 0 16px;padding:0" }, (a || []).map(x => el("li", { text: x })));
+      const stat = (st) => /^done/.test(st) ? "done" : /^fail/.test(st) ? "failed" : /^running/.test(st) ? "running" : "waiting";
+      return [el("div", { class: "purpose", text: F.goal || "" }), el("div", { text: F.now || "", style: "font-weight:600;margin:4px 0" }),
+        h("Definition of done"), ul(F.done), h("How we measure"), ul(F.measure),
+        h("Assumptions (what we believe, and what it rests on)"),
+        el("table", {}, el("tbody", {}, (F.assumptions || []).map(a => el("tr", {}, el("td", {}, badge(a.s === "evidence" ? "evidence" : "untested", a.s === "evidence" ? "pass" : "waiting")), el("td", { class: "wrap", text: a.t }), el("td", { class: "muted wrap", text: a.e }))))),
+        h("Questions we are answering"), ul(F.questions),
+        h("Experiments: prediction before, result after"),
+        el("div", { style: "overflow:auto" }, el("table", {}, el("thead", {}, el("tr", {}, ["", "Kind", "Question it answers", "Predicted", "Bar to beat", "Result"].map(x => el("th", { text: x })))),
+          el("tbody", {}, I.map(i => el("tr", {}, el("td", {}, el("b", { text: i.id }), " ", badge(stat(i.status || ""), stat(i.status || ""))), el("td", { class: "muted", text: i.style }),
+            el("td", { class: "wrap", style: "white-space:normal" }, el("b", { text: i.name }), el("div", { class: "muted", text: i.question || "" })),
+            el("td", { text: i.p != null ? "chance " + pct(i.p) : "–" }), el("td", { class: "wrap", text: i.bar || "–" }),
+            el("td", { class: "wrap", style: "white-space:normal", text: i.result || i.status || "" })))))),
+        h("Next, in order"), el("table", {}, el("tbody", {}, (Q.next || []).map(n => el("tr", {}, el("td", {}, el("b", { text: n.id })), el("td", { class: "wrap", style: "white-space:normal", text: n.t }), el("td", { class: "muted wrap", style: "white-space:normal", text: n.why }))))),
+        h("What each round taught"), ul(Q.learned), el("div", { class: "muted", style: "margin-top:8px", text: Q.rule || "" })]; },
     "Overview (old)": () => el("div", { class: "ov" },
       el("div", {}, el("h2", { text: "Acceptance by area" }), areaBars(),
         el("h2", { style: "margin-top:10px", text: "Proof health" }),
@@ -379,7 +395,7 @@
         el("tbody", {}, S.feed.map(e => el("tr", {}, el("td", { class: "muted", text: new Date(e.ts * 1000).toLocaleTimeString() }), el("td", {}, badge(e.state)), el("td", {}, el("b", { text: e.job })), el("td", { class: "wrap", text: e.msg })))))],
   };
 
-  const setTab = (t) => { tab = t; try { localStorage.setItem("trainer-tab", t); } catch (e) {} drawTabs(); drawView(); };
+  const setTab = (t) => { tab = t; try { localStorage.setItem("trainer-tab2", t); } catch (e) {} drawTabs(); drawView(); };
   const drawTabs = () => put($("tabs"), TABS.map(t => el("button", { role: "tab", "aria-selected": String(t === tab), text: t, onclick: () => setTab(t) })));
   let histDrawn = false; const drawView = () => { if (!S) return; if (tab === "History") { if (histDrawn) return; histDrawn = true; } else histDrawn = false; put($("view"), VIEWS[tab]()); };
 
@@ -395,7 +411,7 @@
     const w = S.wins[0]; if (w) { $("win").hidden = false; $("win").textContent = `🎉 ${w.job}: ${w.msg}`; if (seenWin !== null && seenWin !== w.ts) { $("win").classList.remove("new"); void $("win").offsetWidth; $("win").classList.add("new"); } seenWin = w.ts; }
     if (tab !== "Ledger") drawView();
   };
-  const poll = () => fetch("live.json", { cache: "no-store" }).then(r => r.json()).then(d => { const first = !S; S = d; draw(); if (first && tab === "Ledger") drawView(); })
+  const poll = () => fetch("live.json", { cache: "no-store" }).then(r => r.json()).then(d => { const first = !S, same = S && d.built === S.built; S = d; if (same) { $("built").textContent = $("built").textContent.replace(/updated .* ago/, `updated ${ago(S.built)} ago`); return; } draw(); if (first && tab === "Ledger") drawView(); })
     .catch((e) => { console.error("trainer", e); $("built").textContent = "error: " + e.message; });
   drawTabs(); poll(); setInterval(poll, 4000);
 })();

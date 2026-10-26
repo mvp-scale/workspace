@@ -21,9 +21,27 @@ def alive(pid):
     except Exception: return False
 
 
+_BC = f"{W}/data/progress/.build_cache.json"
+
+
+def cached(name, ttl, argv, stamp="", env=None, timeout=30):
+    """Run a helper command, or reuse its last stdout while it is younger than ttl seconds and `stamp` (a change marker, e.g. a file size and mtime) is unchanged."""
+    try: c = json.load(open(_BC))
+    except Exception: c = {}
+    e = c.get(name)
+    if e and e.get("stamp") == stamp and time.time() - e.get("t", 0) < ttl: return e["out"]
+    out = subprocess.run(argv, capture_output=True, text=True, timeout=timeout, env=env).stdout
+    c[name] = {"t": time.time(), "stamp": stamp, "out": out}; tmp = f"{_BC}.{os.getpid()}.tmp"; json.dump(c, open(tmp, "w")); os.replace(tmp, _BC)
+    return out
+
+
+def _stamp(*paths):
+    return "|".join(f"{os.path.getsize(f)}:{int(os.path.getmtime(f))}" if os.path.exists(f) else "-" for f in paths)
+
+
 def ledger():
-    r = subprocess.run(["node", f"{W}/tools/ledger.mjs", "list", "--json"], capture_output=True, text=True, timeout=10)
-    return [json.loads(l) for l in r.stdout.splitlines() if l.strip()]
+    out = cached("ledger", 3600, ["node", f"{W}/tools/ledger.mjs", "list", "--json"], stamp=_stamp(f"{W}/ledger/ledger.jsonl"), timeout=10)      # reread only when the ledger file changed
+    return [json.loads(l) for l in out.splitlines() if l.strip()]
 
 
 def pin(f, want, cache):
@@ -148,7 +166,7 @@ def resources(evs):
         res["kaggle"] = c.get("kernels", [])
     except Exception as e: res["kaggle_err"] = str(e)[:80]
     try:
-        q = subprocess.run(["python3", f"{W}/tools/kaggle/runs.py", "quota"], capture_output=True, text=True, timeout=30, env=dict(os.environ, KAGGLE_RUNS_LEDGER=f"{W}/data/kaggle/runs.jsonl")).stdout.splitlines()
+        q = cached("quota", 120, ["python3", f"{W}/tools/kaggle/runs.py", "quota"], env=dict(os.environ, KAGGLE_RUNS_LEDGER=f"{W}/data/kaggle/runs.jsonl")).splitlines()
         res["quota"] = q[0] if q else None
     except Exception as e: res["quota_err"] = str(e)[:80]
     return res
@@ -214,10 +232,10 @@ def build():
     hist = [json.loads(l) for l in open(f"{W}/data/scorecard/history.jsonl")] if os.path.exists(f"{W}/data/scorecard/history.jsonl") else []
     tags = sorted((os.path.basename(d)[5:] for d in glob.glob(f"{W}/data/suite_r[0-9]*") if all(os.path.exists(f"{d}/ensemble/{a}.json") for a in ("type", "topic", "conditions", "country"))), key=lambda t: -int(t[2:]))
     tag = tags[0] if tags else ""    # newest complete suite round (data/suite_rN), else round 0 (data/suite)
-    subprocess.run([f"{W}/models/embed-zs/.venv/bin/python", f"{W}/newsreader/bitmob/suite_card.py"], capture_output=True, timeout=20, env=dict(os.environ, SUITE_TAG=tag))   # numpy lives in this venv
+    cached("suite_card", 300, [f"{W}/models/embed-zs/.venv/bin/python", f"{W}/newsreader/bitmob/suite_card.py"], stamp=tag, env=dict(os.environ, SUITE_TAG=tag), timeout=20)   # numpy lives in this venv
     models = json.load(open(f"{W}/data/scorecard/models{tag}.json")) if os.path.exists(f"{W}/data/scorecard/models{tag}.json") else {}
     models["round"] = tag or "_r0"
-    budget = subprocess.run([f"{W}/tools/mm3local", "budget"], capture_output=True, text=True, timeout=10).stdout.strip().splitlines()
+    budget = cached("mm3_budget", 120, [f"{W}/tools/mm3local", "budget"], timeout=10).strip().splitlines()
     st = {"built": time.time(),
           "jobs": sorted(jobs.values(), key=lambda j: -j["ts"]),
           "feed": evs[-60:][::-1],
@@ -232,6 +250,7 @@ def build():
           "mm3": sorted(mm3, key=lambda m: m["ts"] or "")[-8:][::-1], "mm3_budget": next((l for l in budget if "runs" in l), None)}
     st["criteria"] = criteria_view(st["card"], models)
     lv = ledger_view(items); st["proof"] = {v: sum(i["verdict"] == v for i in lv) for v in ("validated", "weak", "unproven", "disproven", "retracted")}
+    st["queue"] = json.load(open(f"{W}/data/progress/queue.json")) if os.path.exists(f"{W}/data/progress/queue.json") else {}   # experiment queue, kept by the loop
     st["readers_meta"] = readers_meta()
     st["loop"] = json.load(open(f"{W}/data/progress/loop.json")) if os.path.exists(f"{W}/data/progress/loop.json") else {}   # round counter, kept by the captain
     st["contract"] = contract_view(items, evs)
