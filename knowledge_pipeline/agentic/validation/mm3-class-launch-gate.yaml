@@ -1,0 +1,47 @@
+mak:
+  goal: The launch gate blocks every compute launch that lacks a passing task card
+  depth: quick
+  where: [knowledge_pipeline/agentic/hooks/pre_launch.mjs, knowledge_pipeline/agentic/scripts/check_card.mjs]
+  ask:
+    concerns:
+      gate-path:
+        family: input
+        pass: yes
+        1: Does `pre_launch.mjs` read the Bash command from the hook stdin JSON field `tool_input.command`?
+        2: Does `check_card.mjs` check the card has a stop rule, measurable done criteria and all four budget caps?
+        3: Does `pre_launch.mjs` exit with code 2 when CARD= is missing or `check_card.mjs` exits non-zero?
+      bypass:
+        family: design-risk
+        pass: no
+        4: Could a GPU training job start through a command that the LAUNCH pattern in `pre_launch.mjs` does not match?
+        5: Would `pre_launch.mjs` exit with a code other than 2 if its stdin JSON fails to parse?
+        6: Can `check_card.mjs` pass a card whose input marked frozen is missing from disk?
+      card-rules:
+        family: correctness
+        pass: yes
+        7: Does `check_card.mjs` require a smoke log when the GPU or CPU hour cap exceeds 0.5?
+        8: Does `check_card.mjs` accept either the raw or the LF-normalised sha256 prefix of an input file?
+        9: Does `check_card.mjs` exit 1 when any of its check lines is a FAIL?
+    decisions:
+      severity:
+        pass: [none, low]
+        10:
+          scale: How severe is the worst gap that lets a launch through without a passing card?
+          levels: [none, low, medium, high, critical]
+      route:
+        pass: [adopt]
+        11:
+          choice: What should happen to this launch gate next?
+          options: [adopt, tighten, redesign, none-fits]
+      scope:
+        pass: [enough]
+        12:
+          choice: Can this be answered from the code shown?
+          options: [enough, partial, missing]
+mdl:
+  why: validate
+  area: build
+  stage: review
+  risk: medium
+  problem: Pilot check that the CPU model factory launch hook and card checker cannot be bypassed
+  touches: [pre_launch, check_card]

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CPU model factory task card",
+  "description": "One card per compute task. scripts/check_card.mjs validates it and blocks launch on any failure (acceptance R1-R5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "stage", "question", "method", "inputs", "outputs", "done", "stop", "budget", "compute", "smoke"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^T[0-9]+[a-z]?$"},
+    "stage": {"enum": ["S1-frame", "S2-guideline", "S3-teacher", "S4-train", "S5-gate", "S6-speed", "S7-ship", "S8-review"]},
+    "question": {"type": "string", "minLength": 10, "maxLength": 200},
+    "method": {
+      "type": "object", "additionalProperties": false, "required": ["name", "source"],
+      "properties": {"name": {"type": "string"}, "source": {"type": "string", "description": "paper/doc URL or 'exploratory'"}}
+    },
+    "inputs": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "additionalProperties": false, "required": ["path", "sha8"],
+        "properties": {"path": {"type": "string"}, "sha8": {"type": "string", "pattern": "^[0-9a-f]{8}$"}, "frozen": {"type": "boolean"}}}
+    },
+    "outputs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "done": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "additionalProperties": false, "required": ["metric", "op", "value"],
+        "properties": {
+          "metric": {"type": "string", "description": "e.g. EVENT_VERB.exact.f1.lower95"},
+          "op": {"enum": [">=", "<=", "==", "<", ">"]},
+          "value": {"type": "number"},
+          "accept_id": {"type": "string", "pattern": "^[RDMPS][0-9]+$"}
+        }}
+    },
+    "stop": {"type": "string", "minLength": 10, "description": "when to stop even if not done"},
+    "budget": {
+      "type": "object", "additionalProperties": false, "required": ["gpu_h", "cpu_h", "usd", "tokens"],
+      "properties": {"gpu_h": {"type": "number", "minimum": 0}, "cpu_h": {"type": "number", "minimum": 0},
+        "usd": {"type": "number", "minimum": 0}, "tokens": {"type": "integer", "minimum": 0}}
+    },
+    "compute": {"enum": ["local-gpu-5090", "local-gpu-3090", "local-cpu", "api", "runpod", "gcp", "kaggle-cpu", "kaggle-gpu"]},
+    "smoke": {
+      "type": "object", "additionalProperties": false, "required": ["required"],
+      "properties": {"required": {"type": "boolean"}, "log": {"type": "string", "description": "smoke log path or run id; required before launch when required=true"}}
+    },
+    "risk_first": {"type": "string", "description": "cheapest test that could kill the idea"},
+    "selection_rule": {"type": "string", "description": "S4 only: how the variant is picked on dev, logged before test scoring"}
+  }
+}

@@ -1,0 +1,69 @@
+# MM3 loop: stress-test the CPU model factory design before other projects adopt it.
+# Run (repo root, MM3 MCP tool or CLI):  mm3 view knowledge_pipeline/agentic/validation/mm3-loop-factory.yaml
+#                                        mm3 loop - < knowledge_pipeline/agentic/validation/mm3-loop-factory.yaml
+mak:
+  goal: The CPU model factory stages, gates and roles let agents build verified CPU models without waste
+  depth: quick
+  where: [knowledge_pipeline/agentic/]
+  over:
+    part:
+      - name: frame
+        story: [task-card, per-item-budget]
+      - name: guideline
+        story: [iaa-measure, gold-freeze]
+      - name: teacher
+        story: [teacher-qualify, consensus-labels]
+      - name: train
+        story: [multi-head, selection-rule]
+      - name: export
+        story: [int8-pick, tokenizer-parity]
+      - name: gate
+        story: [lower-bound-gate, evaluator-verdict]
+      - name: speed
+        story: [speed-report]
+      - name: ship
+        story: [clean-env-test]
+  ask:
+    part:
+      concerns:
+        boundaries:
+          family: design
+          pass: yes
+          1: Does the {part} stage own one clear responsibility?
+          2: Can the {part} stage be checked without running the later stages?
+    story:
+      concerns:
+        done:
+          family: done
+          pass: yes
+          3: Is "{story}" testable by a script or evaluator as written in the {part} stage?
+          4: Does "{story}" have a named owning role?
+          5: Is "{story}" small enough to finish in one task?
+        risk:
+          family: design-risk
+          pass: no
+          6: Does "{story}" need data the {part} stage doesn't own?
+          7: Could an agent satisfy "{story}" on paper while skipping the real check?
+          8: Could "{story}" fail silently and still let the run proceed?
+        fit:
+          family: design
+          pass: yes
+          9: Does "{story}" match how small CPU models are normally built and evaluated?
+          10: Would "{story}" still hold if the compute tier changed from Kaggle to local GPU?
+          11: Is "{story}" enforced by a script or schema today?
+      decisions:
+        risk-level:
+          pass: [none, low]
+          12:
+            scale: How risky is "{story}" for wasted compute or a false pass?
+            levels: [none, low, medium, high, critical]
+        route:
+          pass: [adopt]
+          13:
+            choice: What should happen to "{story}" next?
+            options: [adopt, tighten, redesign]
+mdl:
+  why: validate
+  area: build
+  stage: design
+  problem: Validating the agentic CPU model factory (stages, gates, roles) before handing it to other projects

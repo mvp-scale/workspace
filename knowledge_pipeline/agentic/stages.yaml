@@ -1,0 +1,73 @@
+# CPU model factory: the stage machine agents follow.
+# Each stage: who owns it, what it needs (entry), what it must produce (exit), the acceptance IDs that gate it
+# (knowledge_pipeline/ACCEPTANCE.md), and what to do on failure. A stage starts only when every entry item exists
+# and the previous stage's exit gate passed. Agents never skip a stage; the owner may waive one with a decision line.
+version: 1
+stages:
+  - id: S1-frame
+    owner: planner
+    entry: [owner goal in one sentence]
+    exit:
+      - task card per head, valid against schemas/task-card.schema.json
+      - per-item budget = 60000 * vcpu / items_per_min, written on the card
+      - owner decision line approving targets (items/min, hardware, $/M items, quality floor)
+    gates: [R1]
+    on_fail: ask the owner for the missing target; do not proceed on guesses
+
+  - id: S2-guideline
+    owner: guideline-agent
+    entry: [S1 exit]
+    exit:
+      - guideline v1 with positive, negative and boundary examples
+      - IAA per layer on >= 30 items from two independent annotators (two LLM families, humans on a subset)
+      - frozen gold (>= 20-30 human-reviewed items per source type) + scorer, both with sha
+      - gate per layer = 0.8 * IAA, written on the card
+    gates: [D1, D2, D3]
+    on_fail: "kappa < 0.4 -> rewrite guideline and re-measure (max 3 rounds), then escalate to owner"
+
+  - id: S3-teacher
+    owner: teacher-labeler
+    entry: [S2 exit]
+    exit:
+      - teacher passes its gate on gold for every layer it labels (pilot on <= 50 items first)
+      - label pool with provenance per item; spend log under cap
+    gates: [D4, D5, D6, R2, R5]
+    on_fail: try next teacher in order [CPU candidates + small API model, + second family, larger model]; stop at cap
+
+  - id: S4-train
+    owner: trainer
+    entry: [S3 exit]
+    exit:
+      - >= 2 variants (backbone or depth) trained, >= 3 seeds for any variant claim
+      - selection rule logged before any test scoring
+      - fp32 and int8 ONNX exported; int8 vs fp32 dev drop <= 0.01 per layer; tokenizer parity 100%
+    gates: [R1, R2, R3, R4, M3, M4, M6, M8]
+    on_fail: stop rule on the card (default: 2 variants without dev gain -> stop and report)
+
+  - id: S5-gate
+    owner: evaluator
+    entry: [S4 exit]
+    exit: [gate report filled; every layer lower 95% bound >= gate; baseline comparison]
+    gates: [M1, M2, R6]
+    on_fail: report failing layers; route to S2 if judge IAA is low, else S4
+
+  - id: S6-speed
+    owner: bencher
+    entry: [S5 pass]
+    exit: [ms/call, ms/item p50 p95, vCPU-s/item, items/s with process x thread layout, CPU flags]
+    gates: [M5]
+    on_fail: list stage breakdown and the top lever from playbook/07; owner decides
+
+  - id: S7-ship
+    owner: trainer
+    entry: [S5 pass, S6 reported]
+    exit: [clean-env ship test identical to harness; model card; release scope]
+    gates: [M7, M9]
+    on_fail: fix env pins; never ship on a failed M7
+
+  - id: S8-review
+    owner: planner
+    entry: [phase end]
+    exit: [program measures P1-P7 computed from the ledger; playbook change proposals]
+    gates: [P1, P2, P3, P4, P5, P6, P7]
+    on_fail: propose one rule change per missed measure

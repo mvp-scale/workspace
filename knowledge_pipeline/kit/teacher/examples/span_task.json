@@ -1,0 +1,302 @@
+{
+ "name": "span_task_example",
+ "prompt_version": "span-v1",
+ "model": "claude-haiku-5-5",
+ "max_tokens": 1024,
+ "cap_usd": 1.0,
+ "layers": [
+  "ENTITY",
+  "EVENT"
+ ],
+ "mode": "verify",
+ "verify": {
+  "labels": {
+   "ENTITY": [
+    "PER",
+    "ORG",
+    "LOC",
+    "OTHER",
+    "X"
+   ],
+   "EVENT": [
+    "Y",
+    "N"
+   ]
+  },
+  "reject": [
+   "X",
+   "N"
+  ],
+  "max_add": 10
+ },
+ "guideline": [
+  "You check candidate annotations for a span-labelling task with two layers, ENTITY and EVENT. A program proposed the candidates; you decide every candidate by its id and add the mentions no candidate covers. Be precise and conservative: when unsure, follow the boundary rules below, never guess from the example lists alone.",
+  "",
+  "INPUT: one item text between <text> tags, then the candidate list, one per line: id [LAYER] \"exact text\" (hints). Hints come from the program (which proposer voted, NER or POS tags); they are evidence, not answers.",
+  "",
+  "ENTITY layer. A mention is a span that refers to a specific person, group, organisation, place or other thing in the world. Codes:",
+  " PER  a person or a group of people (Mayor Ilse Dovan, residents, the farmers, she, they when they refer to people).",
+  " ORG  an organisation, company, institution, team or government body, including pronouns that refer to one (it, which) when the text makes the referent clear.",
+  " LOC  a place, building, facility or geographic feature (a city, a river, the pier, the terminal).",
+  " OTHER a referring mention that is none of the above (a named product, law, event name, vehicle).",
+  " X    not an entity mention: a fragment, a word inside a longer candidate that only repeats part of it (\"Council\" inside \"The Harbor Council of Varnel\"), a non-referring pronoun (\"it\" in \"it is likely\"), a time or quantity expression, an adjective or a verb.",
+  "Boundaries: keep the full noun phrase with its determiner and modifiers (\"the old ferry terminal\" when that is the candidate; do not shorten or extend candidates, decide them as given). A place name nested inside an organisation name is its own LOC mention: add it when no candidate covers it.",
+  "",
+  "EVENT layer. A trigger is a verb or noun that says something happened, happens, will or may happen, was done, said, asked, decided or planned. Codes:",
+  " Y  a trigger: main verbs in any form (announced, said, close, damaged, asked), reporting verbs, verbs of wanting, deciding, asking and planning, and event nouns that name an occurrence or action (storm, closure, talks, vote, attack, election).",
+  " N  not a trigger: auxiliaries and modals (will, would, has, is), copulas, verbs that only state a relation or order between things (follows, includes, equals), verbs used as adjectives before a noun, and nouns naming a person, thing, place, document or measure.",
+  "",
+  "ADDITIONS: list in \"add\" only mentions of either layer that NO candidate covers, even partly; copy the text exactly as it appears (same case and punctuation); at most 10; [] when none.",
+  "OUTPUT: exactly one JSON object, {\"d\": {id: code, ...}, \"add\": [...]}, with a code for EVERY candidate id in the order given and nothing else: no prose, no markdown fences."
+ ],
+ "input_template": "ITEM {id}\n<text>\n{text}\n</text>\n{candidates}",
+ "candidates": [
+  {
+   "type": "regex",
+   "layer": "ENTITY",
+   "name": "caps",
+   "patterns": [
+    "\\b[A-Z][a-z]+(?: (?:of )?[A-Z][a-z]+)+\\b"
+   ]
+  },
+  {
+   "type": "dictionary",
+   "layer": "ENTITY",
+   "name": "nouns",
+   "terms": [
+    "council",
+    "pier",
+    "terminal",
+    "ferry terminal",
+    "residents",
+    "it"
+   ]
+  },
+  {
+   "type": "regex",
+   "layer": "EVENT",
+   "name": "verb_ed",
+   "patterns": [
+    "\\b[a-z]{3,}ed\\b"
+   ]
+  },
+  {
+   "type": "dictionary",
+   "layer": "EVENT",
+   "name": "event_words",
+   "terms": [
+    "said",
+    "close",
+    "closure",
+    "storm",
+    "talks",
+    "vote",
+    "will",
+    "follows"
+   ]
+  }
+ ],
+ "output_schema": {
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+   "spans"
+  ],
+  "properties": {
+   "spans": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "layer",
+      "start",
+      "end",
+      "text",
+      "label",
+      "src"
+     ],
+     "properties": {
+      "layer": {
+       "type": "string",
+       "enum": [
+        "ENTITY",
+        "EVENT"
+       ]
+      },
+      "start": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "end": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "text": {
+       "type": "string",
+       "minLength": 1
+      },
+      "label": {
+       "type": "string",
+       "enum": [
+        "PER",
+        "ORG",
+        "LOC",
+        "OTHER",
+        "Y"
+       ]
+      },
+      "src": {
+       "type": "string",
+       "enum": [
+        "cand",
+        "add",
+        "gen"
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "examples": [
+  {
+   "input": {
+    "id": "synthetic-1",
+    "text": "The Harbor Council of Varnel announced on Tuesday that it will close the old ferry terminal. Mayor Ilse Dovan said the closure follows a storm that damaged the pier, and residents asked for talks.",
+    "candidates": [
+     {
+      "id": "c1",
+      "layer": "ENTITY",
+      "text": "The Harbor Council of Varnel",
+      "hints": {}
+     },
+     {
+      "id": "c2",
+      "layer": "ENTITY",
+      "text": "Council",
+      "hints": {}
+     },
+     {
+      "id": "c3",
+      "layer": "EVENT",
+      "text": "announced",
+      "hints": {}
+     },
+     {
+      "id": "c4",
+      "layer": "ENTITY",
+      "text": "it",
+      "hints": {}
+     },
+     {
+      "id": "c5",
+      "layer": "EVENT",
+      "text": "will",
+      "hints": {}
+     },
+     {
+      "id": "c6",
+      "layer": "EVENT",
+      "text": "close",
+      "hints": {}
+     },
+     {
+      "id": "c7",
+      "layer": "ENTITY",
+      "text": "ferry terminal",
+      "hints": {}
+     },
+     {
+      "id": "c8",
+      "layer": "ENTITY",
+      "text": "Mayor Ilse Dovan",
+      "hints": {}
+     },
+     {
+      "id": "c9",
+      "layer": "EVENT",
+      "text": "said",
+      "hints": {}
+     },
+     {
+      "id": "c10",
+      "layer": "EVENT",
+      "text": "closure",
+      "hints": {}
+     },
+     {
+      "id": "c11",
+      "layer": "EVENT",
+      "text": "follows",
+      "hints": {}
+     },
+     {
+      "id": "c12",
+      "layer": "EVENT",
+      "text": "storm",
+      "hints": {}
+     },
+     {
+      "id": "c13",
+      "layer": "EVENT",
+      "text": "damaged",
+      "hints": {}
+     },
+     {
+      "id": "c14",
+      "layer": "ENTITY",
+      "text": "pier",
+      "hints": {}
+     },
+     {
+      "id": "c15",
+      "layer": "ENTITY",
+      "text": "residents",
+      "hints": {}
+     },
+     {
+      "id": "c16",
+      "layer": "EVENT",
+      "text": "asked",
+      "hints": {}
+     },
+     {
+      "id": "c17",
+      "layer": "EVENT",
+      "text": "talks",
+      "hints": {}
+     }
+    ]
+   },
+   "output": {
+    "d": {
+     "c1": "ORG",
+     "c2": "X",
+     "c3": "Y",
+     "c4": "ORG",
+     "c5": "N",
+     "c6": "Y",
+     "c7": "LOC",
+     "c8": "PER",
+     "c9": "Y",
+     "c10": "Y",
+     "c11": "N",
+     "c12": "Y",
+     "c13": "Y",
+     "c14": "LOC",
+     "c15": "PER",
+     "c16": "Y",
+     "c17": "Y"
+    },
+    "add": [
+     {
+      "layer": "ENTITY",
+      "text": "Varnel",
+      "label": "LOC"
+     }
+    ]
+   }
+  }
+ ]
+}

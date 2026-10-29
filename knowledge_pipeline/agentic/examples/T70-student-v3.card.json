@@ -1,0 +1,62 @@
+{
+  "id": "T70",
+  "stage": "S4-train",
+  "question": "Does an Ettin-17M multi-head student without spaCy keep every layer gate while cutting encoder time per window?",
+  "method": {
+    "name": "LLM-teacher distillation into a small multi-task encoder, int8 ONNX",
+    "source": "Hinton et al. 2015 https://arxiv.org/abs/1503.02531"
+  },
+  "inputs": [
+    {
+      "path": "kit/eval/score_spans.py",
+      "sha8": "47d2b656",
+      "frozen": true
+    },
+    {
+      "path": "gold/test.jsonl",
+      "sha8": "00000000",
+      "frozen": false
+    }
+  ],
+  "outputs": [
+    "runs/t70/report.json"
+  ],
+  "done": [
+    {
+      "metric": "EVENT_VERB.exact.f1.lower95",
+      "op": ">=",
+      "value": 0.535,
+      "accept_id": "M1"
+    },
+    {
+      "metric": "ENTITY.overlap.f1.lower95",
+      "op": ">=",
+      "value": 0.739,
+      "accept_id": "M1"
+    },
+    {
+      "metric": "int8_vs_fp32.max_layer_drop",
+      "op": "<=",
+      "value": 0.01,
+      "accept_id": "M4"
+    },
+    {
+      "metric": "encoder_ms_per_window_vs_v2",
+      "op": "<=",
+      "value": 0.7
+    }
+  ],
+  "stop": "Stop after 2 backbone variants x 3 seeds if neither keeps every dev layer within 0.01 of v2.",
+  "budget": {
+    "gpu_h": 3,
+    "cpu_h": 2,
+    "usd": 0,
+    "tokens": 2000000
+  },
+  "compute": "local-gpu-5090",
+  "smoke": {
+    "required": true
+  },
+  "risk_first": "Export Ettin-17M with 5 heads to ONNX and confirm ORT int8 runs before training.",
+  "selection_rule": "Pick the variant with the highest dev minimum-layer F1; ties -> lower encoder ms."
+}

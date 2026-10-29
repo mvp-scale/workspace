@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Model Runner</title>
+<style>
+:root{--bg:#f3f5f8;--paper:#fff;--sunk:#e8ecf1;--ink:#141c25;--muted:#5b6776;--line:#d6dde5;--accent:#3846b8;--bad:#b0281d;
+  --f-b:"Segoe UI",system-ui,-apple-system,sans-serif;--f-m:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d131a;--paper:#151d27;--sunk:#1d2733;--ink:#e4e9ef;--muted:#98a4b3;--line:#2b3746;--accent:#909cff;--bad:#ff8a7a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d131a;--paper:#151d27;--sunk:#1d2733;--ink:#e4e9ef;--muted:#98a4b3;--line:#2b3746;--accent:#909cff;--bad:#ff8a7a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--f-b)}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:28px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px}
+.panel h2{font-size:18px;margin:0 0 10px}
+textarea{width:100%;min-height:260px;font:15px/1.5 var(--f-b);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;resize:vertical}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+button{font:600 15px var(--f-b);padding:9px 18px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+.state{font:13px var(--f-m);color:var(--muted)}
+.err{color:var(--bad);font:13px var(--f-m)}
+.bar{height:5px;background:var(--sunk);border-radius:99px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;width:0;background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.tg{display:inline-flex;gap:6px;align-items:center;font:500 13px var(--f-b);padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.tg i{width:10px;height:10px;border-radius:3px}.tg b{font:12px var(--f-m);color:var(--muted)}.tg[aria-pressed="false"]{opacity:.45}
+.out{white-space:pre-wrap;word-wrap:break-word;line-height:1.95;background:var(--bg);border-radius:10px;padding:12px;min-height:200px}
+mark{color:inherit;border-radius:3px;padding:1px 0}
+mark.multi{outline:1px dashed var(--muted)}
+.labels{margin-top:10px;font:13px var(--f-m);color:var(--muted)}
+pre{font:12px/1.5 var(--f-m);background:var(--bg);border-radius:10px;padding:10px;overflow:auto;max-height:340px}
+code{font-family:var(--f-m)}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Student model runner</h1>
+  <p class="sub">Runs an exported student (labels.json + ONNX + tokenizer.json) on this computer's CPU with onnxruntime-web. Nothing is sent to a server. Model folder: <code id="dir"></code> (set with <code>?model=path/</code>).</p>
+  <div class="grid">
+    <section class="panel">
+      <h2>Input</h2>
+      <textarea id="text"></textarea>
+      <div class="row"><button id="go" disabled>Loading…</button><span class="state" id="state"></span></div>
+      <div class="bar"><i id="prog"></i></div>
+      <p class="err" id="err"></p>
+    </section>
+    <section class="panel">
+      <h2>Spans</h2>
+      <div class="legend" id="legend"></div>
+      <div class="out" id="out">Run the model to see highlights.</div>
+      <div class="labels" id="labels"></div>
+    </section>
+  </div>
+  <details class="panel" style="margin-top:16px"><summary>Raw output (JSON)</summary><pre id="json">–</pre></details>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script src="runtime.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+// Synthetic example text only (invented; no corpus text).
+const EXAMPLE = "Harbor Valley Robotics said on Monday it will open a 40-person research lab in Lakeview next spring.\n\n" +
+  "The company, founded in 2019 by engineers Ana Ruiz and Tom Becker, builds small sorting robots for recycling plants. " +
+  "Ruiz said the new site would test machines that separate glass from plastic about 30 percent faster.\n\n" +
+  "City officials approved a $2 million grant for the project after a vote on Thursday.";
+const PALETTE = ["#3846b8", "#c2410c", "#0b7a6e", "#8a2fa8", "#a3600c", "#1d6fb8", "#b0281d", "#4d7c0f"];
+const params = new URLSearchParams(location.search), DIR = params.get("model") || "model/";
+$("dir").textContent = DIR; $("text").value = EXAMPLE;
+let rt = null, last = null; const on = {};
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const color = h => PALETTE[rt.heads.indexOf(h) % PALETTE.length];
+function render() {
+  const counts = {}; rt.heads.forEach(h => counts[h] = last ? last.spans.filter(s => s.label === h).length : "–");
+  $("legend").innerHTML = rt.heads.map(h => `<button class="tg" aria-pressed="${on[h]}" data-h="${esc(h)}"><i style="background:${color(h)}"></i>${esc(h)}<b>${counts[h]}</b></button>`).join("");
+  $("legend").querySelectorAll("button").forEach(b => b.onclick = () => { on[b.dataset.h] = !on[b.dataset.h]; render(); });
+  if (!last) return;
+  const text = last.text, act = last.spans.filter(s => on[s.label]);
+  const cuts = new Set([0, text.length]); act.forEach(s => { cuts.add(s.start); cuts.add(s.end); });
+  const pts = [...cuts].sort((a, b) => a - b); let html = "";
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], seg = esc(text.slice(a, b));
+    const hit = act.filter(s => s.start <= a && s.end >= b);
+    if (!hit.length) { html += seg; continue; }
+    const c = color(hit[0].label);
+    html += `<mark class="${hit.length > 1 ? "multi" : ""}" style="background:${c}2e;box-shadow:inset 0 -2px ${c}" title="${esc(hit.map(s => s.label).join(" + "))}">${seg}</mark>`;
+  }
+  $("out").innerHTML = html;
+  $("labels").textContent = last.labels ? "Sequence labels: " + (last.labels.join(", ") || "none") : "";
+}
+async function go() {
+  const text = $("text").value; if (!text.trim()) { $("err").textContent = "Type some text first."; return; }
+  $("err").textContent = ""; $("go").disabled = true; $("state").textContent = "Running…";
+  try {
+    const o = await rt.run(text); last = { ...o, text };
+    const { ms, tokens, windows, ...rest } = o;
+    $("json").textContent = JSON.stringify(rest, null, 1);
+    $("state").textContent = `${ms.toFixed(0)} ms · ${tokens} word pieces · ${windows} window(s) · 1 browser thread`;
+    render();
+  } catch (e) { $("err").textContent = "Error: " + (e && e.message || e); $("state").textContent = ""; }
+  $("go").disabled = false;
+}
+$("go").onclick = go;
+$("text").addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") go(); });
+(async () => {
+  try {
+    $("state").textContent = "Downloading model…";
+    rt = await KitRuntime.load(DIR, { onProgress: (got, total) => { $("prog").style.width = total ? Math.min(100, got / total * 100) + "%" : "50%"; $("state").textContent = `Downloading model… ${(got / 1e6).toFixed(1)}${total ? " / " + (total / 1e6).toFixed(1) : ""} MB`; } });
+    rt.heads.forEach(h => on[h] = true);
+    $("prog").style.width = "100%"; $("go").disabled = false; $("go").textContent = "Run";
+    $("state").textContent = "Model ready (sha " + String(rt.spec.model_sha256).slice(0, 8) + "). Ctrl+Enter runs.";
+    render(); go();
+  } catch (e) { $("err").textContent = "Could not load the model: " + (e && e.message || e); $("state").textContent = ""; }
+})();
+</script>
+</body>
+</html>

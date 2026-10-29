@@ -1,0 +1,71 @@
+# Student kit config (train.py, export.py). Copy, rename the heads, point data at your files.
+# Labels are yours: nothing in the kit knows any label name. Token heads are BIO taggers over word pieces;
+# the optional sequence head is multi-label over the whole item.
+run_name: example-student
+
+backbone:
+  # Default: MiniLM-L12 cut to its first 4 layers (h384, 12 heads; the first project's shipped student).
+  name: sentence-transformers/all-MiniLM-L12-v2
+  layers: 4                  # keep the first N encoder layers; null = keep all
+  attn_implementation: eager # eager exports cleanly to ONNX
+  tokenizer: null            # null = the backbone's own tokenizer
+  # Alternative (0.57x encoder time per window, measured): ModernBERT-style, byte-level BPE tokenizer.
+  # name: jhu-clsp/ettin-encoder-17m
+  # layers: null
+  # Note: web/runtime.js only implements WordPiece; Ettin runs in runtime.py (tokenizers), not the web runner yet.
+
+heads:
+  token:                     # one BIO head per span layer; spans in the data carry one of these names as `label`
+    - {name: SPAN_A, channels: 2}   # channels > 1: overlapping/nested spans of one label go to extra channels
+    - {name: SPAN_B}
+    - {name: SPAN_C}
+  sequence:                  # optional multi-label head on [CLS]; delete the block for none
+    labels: [CLASS_X, CLASS_Y, CLASS_Z]
+    threshold: 0.5           # label on if pooled sigmoid >= threshold
+    pool: max                # max | mean over windows of a long item
+    loss_weight: 1.0
+
+window:
+  size: 254                  # word pieces per window, plus [CLS] and [SEP] = 256
+  stride: 192
+
+train:
+  seeds: [42, 43, 44]        # >= 3 seeds for any variant claim (M8); --seed picks one, --all-seeds runs each
+  epochs: 12                 # epochs actually run
+  schedule_epochs: 15        # linear LR schedule length (first project: 12 of a 15-epoch schedule)
+  batch_size: 32
+  lr_encoder: 1.0e-4
+  lr_head: 1.0e-3
+  weight_decay: 0.01
+  warmup_frac: 0.1
+  dropout: 0.1
+  grad_clip: 1.0
+  amp: true                  # CUDA autocast
+  class_weights: none        # none | auto (inverse sqrt frequency per channel) | [w_O, w_B, w_I]
+  max_drop_frac: 0.01        # warn when layering drops more than this share of a head's spans
+  soft_targets:              # used only when the data has span `p` or item `probs`
+    weight: 0.5              # loss = (1 - weight) * hard CE + weight * KL(teacher || student)
+    temperature: 1.0
+    hard_threshold: 0.5      # spans with p < this are O in the hard target
+  # Selection rule, written to the run dir before training (M3). last = the final epoch, no dev pick.
+  selection: last            # last | best_dev_min_f1
+
+data:                        # JSONL: {"id", "text", "spans": [{"start", "end", "label", "p"?}], "labels": [...],
+  train: data/train.jsonl    #         "probs": {"CLASS_X": 0.8, ...}?}  (char offsets, end exclusive)
+  dev: data/dev.jsonl        # selection/dev only; the test set never goes through this kit before the rule is logged
+  calib: null                # int8 calibration text; null = first export.calib_items train items (never dev)
+
+out_dir: runs/example-student
+
+export:
+  opset: 17
+  optimize: auto             # auto (ORT transformer optimizer for BERT-family) | bert | none (portable, OpenVINO-ok)
+  options: [D0, D1, QA, S1]  # D0 dynamic per-tensor, D1 dynamic per-channel, QA attention/QKV only,
+                             # S1 static QDQ (MinMax, calibration set), D1BC = D1 + output bias correction
+  calib_items: 96
+  dev_items: null            # null = all dev items
+  latency_windows: 200       # windows timed per option, 1 thread
+  parity_min_agreement: 0.999  # torch vs fp32 ONNX token tag agreement on dev
+  qa_node_regex: "(query|key|value|q_proj|k_proj|v_proj|Wqkv)"  # QA on an unfused graph: MatMuls to quantize
+  pick_rule:
+    max_layer_drop: 0.01     # M4
