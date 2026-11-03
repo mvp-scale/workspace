@@ -18,10 +18,28 @@ Chapters, in the order you use them:
 | 08 | [Compute and runs](08-compute-and-runs.md) | Where do jobs run (local 3090/5090, RunPod, Google, Kaggle) and how do we not waste hours? |
 | 09 | [Ship and monitor](09-ship-and-monitor.md) | What is shipped, how it runs in Python and the browser, how it stays honest? |
 | 10 | [Lessons](10-lessons.md) | What cost us time and GPU hours, and the rule each one produced |
+| 11 | [Model selection](11-model-selection.md) | Which trunk, span and claim models, chosen on measured fit from live sources? |
+
+## Words we use
+
+One word, one meaning. Tag every status line and every ledger note with one of the first three.
+
+| Word | Means | Example |
+|---|---|---|
+| **Main loop** | Train the reader on the best labels, score it on a clean held-out set, mine its mistakes, change ONE thing, retrain, repeat. A ledger prediction before each round, a number on the page after. Nothing else is called a loop. | Round 1 on the 46k pool labels |
+| **Check** | Work that tests how we measure | Agreement scores, codebook tests, planted-bug tests |
+| **Groundwork** | Preparing data or tools for the main loop | Pool labelling, picking a labeller |
+| **Scheduler** | The timer that wakes the agent (`/loop` wakeups) | A wakeup that finds nothing to do |
+| **Owner decision** | Only the owner can approve it | The engine switch, condition tiers, capability sources |
+
+Why: in 2026-11-03 the scheduler, the pipeline and the improvement cycle were all called "the loop". Checks and
+groundwork looked like loop work, and the best built reader (v6b-student, story type 0.888 to 0.918 on the clean
+holdout, GO.md, item 1 under "NOW") sat un-adopted while we measured the measuring stick. Chapter 10 has the rule.
 
 ## One-page checklist
 
 Before any compute:
+- [ ] Say which part of the main loop the step moves, or tag it check or groundwork (README, Words we use)
 - [ ] One-sentence question per head, and the product target: items/min, hardware, $ per million items, quality floor (01)
 - [ ] Guideline written; 30–50 items doubly annotated; agreement (IAA) measured per layer (02)
 - [ ] If IAA κ < 0.4: fix the guideline, not the model (02)
@@ -34,7 +52,7 @@ Labels:
 - [ ] Batch API + prompt caching; spend logged per job (03)
 
 Model:
-- [ ] Small encoder (≤ 30M params), one shared pass, one head per question (04)
+- [ ] Small encoder, one shared pass, one head per question; chosen on measured CPU fit from live, dated sources, licence read from the LICENSE file (04, 11)
 - [ ] Variants compared on dev only; the pick rule written before test scoring (04, 06)
 - [ ] int8 export; quantized vs fp32 agreement checked on dev; fused ops noted (05)
 
