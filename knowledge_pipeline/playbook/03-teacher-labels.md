@@ -52,3 +52,10 @@ Professional pattern for the structure layer: sentence split, NER, event trigger
 - **Size:** the top-50 parts of "names a condition" repeat on an independent sample only 12% at 1,000 items, 42% at 5,000 and 52% at 12,000 (no plateau yet). Pool batches; promote a part to a rule only after it repeats on an independent sample.
 - **Floor:** items with almost no significant parts (5 or fewer hits) are 15.6% of the field and carry a condition 4.6% of the time. Report coverage per output instead of forcing a value.
 - **Code:** `projects/world-state/fingerprint_store.py`; store `runs/fingerprint/fingerprints.db` (git-ignored, publisher-derived).
+
+## Label store, versions and what to pool (2026-11-04; ledger L643 to L649)
+- **One store.** `projects/world-state/build_label_store.py` collects every `labels.jsonl` into `runs/label_store/` (180,889 rows, 50,354 items, by labeller, model and prompt version). Train from it, newest version first, one label per item. Before this, each experiment read its own folders and left out 10,000 version-2 Sonnet rows and 19,500 wave rows.
+- **Pool across versions only where the versions agree.** Presence agrees between guideline versions at alpha 0.71 (v2 against v3b). Adding the 7,900 older wave rows lifted story and topic but cut presence recall at 80% precision from about 0.5 to about 0.4; train a field on the versions that define it the same way (`TA_PRES_MAX` in `train_all_sonnet.py`).
+- **Weaker labellers add nothing at volume.** 46,700 Gemma pool labels did not move story or topic (L608 to L611); 10,800 Haiku rows lowered story from 0.920 to 0.903 (L649). A vote across different labellers does help presence (Gemma + Qwen 27B + Haiku, two of three: alpha 0.64 against 0.52 to 0.57 for any one; L646).
+- **Pilot a yield before buying it.** A presence model with AUC 0.93 ranked the pool, yet its top 3,000 held 136 positives (4.5%), not the 450 to 650 forecast (L636).
+- **Batch API.** The tool's cost cap uses the worst case, so a low cap trims a chunk to about 120 items; run 1,500 to 2,000 per batch with a spend check between, 15 to 30 minutes each, real cost about 0.0015 USD an item (L618, L634).

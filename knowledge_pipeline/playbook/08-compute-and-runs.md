@@ -166,3 +166,10 @@ spend recorded against the cap.
 - Short, bursty CPU tests (minutes): run on this machine (i9-10900K, 20 threads). Several can run side by side, about one core each. Free, no upload.
 - Hours-long jobs, GPU fine-tuning, or many variants at once: Kaggle, several sessions in parallel. Within the D12 caps (3 GPU-hours total, 4 a week); tell the owner when one starts.
 - Every run is registered in the job history (`projects/world-state/log_run.py`, `kit/live/heartbeat.py`) when it starts and when it ends.
+
+## Ops notes from the 2026-11-04 session (ledger L647, L662)
+- **GPU is shared.** Clef holds 10.8 GB, the voice server 5.8 GB and the world engine 1.25 GB; Qwen3.6-27B needs about 25 GB free (estimate: it failed to start with 24.0 GB free) and Gemma 4 26B about 23 GB. Run `nvidia-smi` first, size `gpu_memory_utilization` to what is free, and ask before stopping a service other than Clef.
+- **Measured speeds.** Qwen3.6-27B (thinking off) 2.9 items/s, so 13,000 items take about 1.3 hours; Gemma 4 26B 29 items/s.
+- **Waits.** Never `until ! pgrep -f "<name>"` inside the waiting shell: the shell's own command line matches, so it never exits (four such loops ran for hours to days). Wait on a pid or a file.
+- **Smoke first.** Run 20 items before any job longer than 10 minutes (wrong working directory, dtype, missing `no_grad` and a missing multiprocessing guard each cost a full launch).
+- **Every script registers with the heartbeat (2026-11-04, ledger L685).** A process that runs over a minute inside `knowledge_pipeline` and has no heartbeat is picked up by the watchdog as `auto-<script>-<pid>`. Before the fix it was then written to the history as *failed* when it ended, so 25 finished xtest runs and servers looked like failures. Now such rows end as *lost* (unknown, not failed), and `xtest/run.py` reports its own start, progress and result. A new starter calls `hb.beat(...)` at the start and `hb.finish(...)` with the real outcome; a server process started from a shell script needs its own beat.

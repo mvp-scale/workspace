@@ -12,6 +12,10 @@ You are working in a project run by the ledger kit. Read this before touching an
 6. **A warning is information, not a stop.** When the tool replies `warned: <rule> (...; fix: ...)`, apply the fix next time; the warning is recorded. A refusal writes nothing: read its rule and fix, then try again.
 7. **A miss is a post-mortem, not a new task.** When a verdict fails, record why with evidence; what to do about it is decided at a ceremony, from the pattern.
 
+8. **A note that compares names its comparator and cites it.** "Baseline", "best" and "gain" appear only with the model named (for example "registered v6b-student") and the score file or note id the number came from (ledger L663, classes C1 and C3). Run `python3 ../kit/live/note_guard.py "<text>"` before `cp.mjs note`; it blocks comparison words with no source, hedged figures next to a bar, absolutes without scope, and a Ready verdict without its rule. It cannot check that a number is right: compute it, and use Lean for a rule that has counts.
+9. **A prediction is a note before the run; a score is a note after.** The prediction names the number it expects and what would make it wrong; a forecast that rests on a yield (positives found, items per second, cost) is piloted on a small labelled slice first (class C4). A correction names every earlier note it supersedes. Scores inside the baseline's 95% interval, or inside run-to-run spread, are written as "no gain". Main-loop rounds run through `kit/live/run_round.py <card.json>`: it reads the baseline from its score file, writes both notes itself, and refuses a card with a missing field, a missing baseline file or a note the guard blocks.
+10. **Read before you propose.** Before proposing a round or asking the owner, read `GO.md` Findings and grep the ledger for the topic (class C6); restate the goal from `CLAUDE.md` in every owner ask (class C7).
+
 ## Working a task
 
 ```bash

@@ -1,0 +1,41 @@
+mak:
+  goal: A ledger note cannot state a number or a baseline that its cited source does not contain
+  verb: class
+  depth: quick
+  where: ["knowledge_pipeline/kit/live/note_guard.py", "knowledge_pipeline/kit/live/run_round.py"]
+  ask:
+    concerns:
+      source-check:
+        family: correctness
+        pass: yes
+        1: Does `note_guard.py` open a cited file to confirm that it exists?
+        2: Does `note_guard.py` compare a quoted number with the value stored in the cited file?
+        3: Does `run_round.py` read the baseline value from its score file instead of from typed text?
+      loopholes:
+        family: design-risk
+        pass: no
+        4: Can a note pass `note_guard.py` by naming a path that does not exist?
+        5: Can a note pass `note_guard.py` while quoting a number that differs from its source?
+        6: Does `note_guard.py` ever check numbers that appear without a comparison word?
+      cost:
+        family: availability
+        pass: yes
+        7: Does `run_round.py` stop a run when a cumulative spend limit is reached?
+        8: Does `run_round.py` refuse a card that lacks a numeric prediction range?
+        9: Does `run_round.py` write the score note from the result file?
+    decisions:
+      gap:
+        pass: [none, low]
+        10:
+          scale: How serious is the worst way a wrong statement can reach the ledger?
+          levels: [none, low, medium, high]
+      scope:
+        pass: [enough]
+        11:
+          choice: Can this be answered from the code shown?
+          options: [enough, partial, missing]
+mdl:
+  why: find
+  area: tests
+  stage: review
+  problem: Find the ways a wrong or unsupported statement can still reach the ledger

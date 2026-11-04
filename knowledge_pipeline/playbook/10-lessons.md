@@ -57,6 +57,23 @@ were superseded. With local GPUs, smoke tests and API teachers first, the same r
 | Pool run failed at start: the engine asked for 26.65 GiB of GPU, 24.0 GiB were free because two services held 7 GB | Size the GPU memory request to free memory at launch (`nvidia-smi` first), not to the model's usual setting |
 | The heartbeat logged "done, 0 of 46,775" for that failed start | A job that ends with no progress is recorded as failed, never done (fixed in `beat_pool.py`) |
 
+### Process drift, 2026-11-04 (ledger L652 to L663; owner: "keep the ledger accurate, always")
+
+17 of 56 notes reported a missed forecast and 9 corrected an earlier claim of mine. Classes and the rule each produced:
+
+| Class | What happened | Rule |
+|---|---|---|
+| C1 wrong comparator | A distilled leaf head was called "the baseline" while the registered student was already higher | Name the model, cite its score file (chapter 06, rule 12) |
+| C2 unchecked arithmetic | A presence limit of "about 3.5%" was exactly 8.4% | Compute it; a rule with counts gets a Lean check (rule 15) |
+| C3 over-reading one comparison | "+0.06 per doubling" from one half-against-full pair; noise is +-0.03 | Two runs or an interval before any slope (rule 16) |
+| C4 untested forecast assumption | 450 to 650 positives forecast, 136 found; 11 to 15 traits forecast, 6 found | Pilot the yield on a labelled slice before forecasting or spending |
+| C5 wrong object | The presence head was set against the 328-key engine tolerance | Name the spec a bar belongs to and cite its GO.md line |
+| C6 record not read | The owner was asked what GO.md already answered; closed levers were re-run | Read GO.md Findings and grep the ledger before proposing a round |
+| C7 goal drift | Options offered that kept the work on the GPU | Restate the goal from CLAUDE.md in every owner ask |
+| C8 code and run bugs | Wrong working directory, self-matching wait loops, dtype, no_grad, spawn guard, GPU share | Smoke run first; wait on a pid (chapter 08) |
+
+Runner: `kit/live/run_round.py` takes a round card (question, one change, baseline file, numeric prediction, command, result file) and writes the PREDICTION and SCORE notes from files; replayed on round 13b it wrote "MISS, NO GAIN, 0.794 vs 0.790", the sentence I failed to write by hand. Guard: `kit/live/note_guard.py` runs before each ledger note; on the 56 notes it caught 6 of 8 known-bad ones and flagged 22 of the other 48 for no cited source. It does not check that a number is right.
+
 ## What showed the process works (2026-11-03; figures are from the ledger, not recomputed)
 
 - **A pre-registered rule stopped a tempting switch.** Qwen3.8-27B was 0.11 better on topic than the baseline but not higher on

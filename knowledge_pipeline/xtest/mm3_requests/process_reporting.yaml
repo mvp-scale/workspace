@@ -1,0 +1,41 @@
+mak:
+  goal: Every job this pipeline starts reports its true outcome, and the machine is left in a good state when a job ends or is killed
+  verb: class
+  depth: quick
+  where: ["knowledge_pipeline/xtest/run.py", "knowledge_pipeline/xtest/run_bundle.sh", "knowledge_pipeline/kit/live/heartbeat.py:50-80"]
+  ask:
+    concerns:
+      registration:
+        family: done
+        pass: yes
+        1: Does `run.py` call `hb.beat` before it sends the first request to the model?
+        2: Does `run.py` choose the state passed to `hb.finish` from the count of failed tasks?
+        3: Does `run_bundle.sh` register the vLLM server process it starts with the heartbeat?
+      recovery:
+        family: availability
+        pass: yes
+        4: If `run_bundle.sh` is killed part way, does anything restart the voice service and Clef?
+        5: Does `run_bundle.sh` use a trap so the services are restored whenever it exits?
+        6: Does `run_bundle.sh` stop a server it started when a task run fails?
+      false-state:
+        family: correctness
+        pass: no
+        7: Can `heartbeat.py` write the state failed for a process that finished correctly?
+        8: Can `run.py` write the state done when more than five percent of tasks failed?
+        9: Does `run.py` leave failed tasks out of its counts?
+    decisions:
+      gap:
+        pass: [none, low]
+        10:
+          scale: How serious is the worst gap between what these scripts report and what happened?
+          levels: [none, low, medium, high]
+      scope:
+        pass: [enough]
+        11:
+          choice: Can this be answered from the code shown?
+          options: [enough, partial, missing]
+mdl:
+  why: find
+  area: tests
+  stage: review
+  problem: Find the process gaps that let finished jobs show as failed and leave services down

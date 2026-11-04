@@ -1,10 +1,27 @@
 """Pre-check for a ledger note before `node cp.mjs note ...` (owner, 2026-11-04: keep the ledger accurate). Catches the cheap, mechanical error classes only; it cannot check that a number is right.
     python3 note_guard.py "note text"     exit 0 = clean, exit 1 = reasons printed.   python3 note_guard.py --audit   re-checks past notes.
 Rules: E1 comparison words (baseline, best, gain, improved, beats, new best) need a cited source (a runs/ or .json/.py path, an L-number or MM3-number).  E2 a hedged figure (~, about, roughly, approx) next to a rate, limit or bar needs the words 'computed' or 'estimate'.  E3 an absolute (cannot, never, impossible, proved, no reader) needs 'Lean', 'MM3-' or 'tried' (the scope).  E4 'Ready' or 'pass' needs the rule cited (L492-L495 or 'Ready rule')."""
-import re, sys, json
+import re, sys, json, os
 SRC = re.compile(r"(runs/[\w./-]+|[\w./-]+\.(json|py|npz|lean)|\bL\d{3}\b|MM3-\d{4}|score_end2end)")
+BASES = ["/workspace/knowledge_pipeline/projects/world-state", "/workspace/knowledge_pipeline", "/workspace"]
+SRCTOK = re.compile(r"(-?\d+(?:\.\d+)?)\s*\(src:\s*([^\s#)]+)#([^\s)]+)\)")
+def verify_sources(t):
+    """E5 (ledger L686, Lean model lean/ClaimSource.lean): every number written as `0.790 (src: path#a.b.c)` is checked: the file must exist, the key must resolve, and the stored value rounded to the quoted decimals must equal the quote."""
+    out = []
+    for num, path, key in SRCTOK.findall(t):
+        p = path if os.path.isabs(path) else next((os.path.join(b, path) for b in BASES if os.path.exists(os.path.join(b, path))), None)
+        if not p or not os.path.exists(p): out.append(f"E5 source file not found: {path}"); continue
+        try: d = json.load(open(p))
+        except Exception: out.append(f"E5 source is not readable JSON: {path}"); continue
+        try:
+            for k in key.split("."): d = d[int(k)] if isinstance(d, list) else d[k]
+            v = float(d)
+        except Exception: out.append(f"E5 key not found in {path}: {key}"); continue
+        dec = len(num.split(".")[1]) if "." in num else 0
+        if round(v, dec) != round(float(num), dec): out.append(f"E5 quoted {num} but {path}#{key} holds {v:.6g}")
+    return out
 def check(t):
-    why = []
+    why = verify_sources(t)
     if re.search(r"\bbaseline\b|\bnew best\b|\bbest (single|reader|so far)|\bboth up\b|\bfirst (story )?gain\b", t, re.I) and not SRC.search(t): why.append("E1 comparison without a cited source file or note id")
     if re.search(r"(~|\babout\b|\broughly\b|\bapprox\w*)\s*[\d.]+\s*(%|x|times)?", t, re.I) and re.search(r"\b(limit|bar|FPR|AUC)\b", t, re.I) and not re.search(r"computed|estimate|exact|measured|from the|slope|retract", t, re.I): why.append("E2 hedged figure next to a rate or bar without saying computed or estimate")
     if re.search(r"\b(cannot|can't|never|impossible|proved|proven|no reader)\b", t, re.I) and not re.search(r"Lean|MM3-\d|\btried\b|\bwe built\b|\bso far\b", t, re.I): why.append("E3 absolute statement without its scope (Lean, MM3 id, or 'tried')")

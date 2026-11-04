@@ -27,6 +27,14 @@
    best epoch picked on a validation slice cut from the training items.
 10. **Train linear heads on the GPU** (sparse matmul plus L-BFGS in PyTorch: 1.1 s against 703 s, same accuracy). Language is not the cost.
 
+
+## What did not help (presence and topic; 2026-11-04; ledger L624 to L655)
+Each was one change, scored against the registered student; none moved presence or topic outside run-to-run spread (+-0.03).
+- A larger encoder: fine-tuned bge-base (110M) scored presence alpha 0.53 against 0.56 to 0.60 for the 22M leaf; frozen Qwen3-4B 0.60. Topic 0.790 against 0.777.
+- More positives: adding 3,300 version-2 positives to about 450 gave 0.57. A size head left recall at 80% precision at 0.41 to 0.49 (no change, L651); a per-condition checklist on Gemma scored alpha 0.48 against 0.52 one-shot (L640).
+- More Sonnet rows for story and topic: the all-Sonnet reader (32,436 items) scored 0.920 and 0.794, the same as the registered student (0.919, 0.79).
+- Result: the fine-tuned head and the registered student sit on one presence curve (AUC 0.927 and 0.928). The remaining gap to the Ready rule is 68 false alarms too many at 177 of 221 found (L662).
+
 ## Done when
 
 Dev curves and the selection rule are on the ledger, and the picked checkpoint is exported (chapter 05).

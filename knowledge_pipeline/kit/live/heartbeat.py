@@ -71,6 +71,7 @@ def watch_pids():
             r = json.loads(p.read_text()); pid = r.get("pid")
             if not pid or r.get("state") not in ("running", "queued"): continue
             if os.path.exists(f"/proc/{pid}"): beat(r["job"])
+            elif str(r["job"]).startswith("auto-"): finish(r["job"], "lost", last="ended; exit status unknown (the starter never registered it, so this is not a failure signal; see its own outputs)")
             else: finish(r["job"], "failed", last="process ended without reporting a result")
         except Exception: pass
 

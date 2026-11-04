@@ -28,6 +28,12 @@
     written: one strong field does not outweigh a failed rule. Compare agreement with a guess baseline, and score only items dated
     after the training cutoff.
 
+12. **The baseline is the registered version's own score file, named and cited.** Never "the baseline" without the model: on 2026-11-03/04 a distilled leaf head (story 0.906, topic 0.786) stood in for the registered student (0.919, 0.79, `runs/pulse/end2end_v6b-student_devq.json`) and fifteen rounds looked like gains that were not (ledger L652, L653).
+13. **Measure the ceiling before training.** Rerun the answer key (Sonnet) on the same items and score it against itself, per field (about 1,600 labels, 2.5 USD in 2026-11). That number is the most any reader can score as "agreement with Sonnet" (story 0.99, topic 0.98, presence alpha 0.94, size 0.91 to 0.94, L619). Bar rule for the Pulse (owner, L621): 0.80 x that ceiling, written down before scoring. The Engine page keeps its own verdict, the Ready rule (GO.md, L492 to L495); report both and say which surface each belongs to.
+14. **Compare curves, not points, for rare fields.** Two readers at different cut-offs are not different readers: production found 24.9% of real presence cases at precision 0.917, my head 22.2% at 0.90, and their AUCs were 0.928 and 0.927 (L654). Report recall at fixed precision and AUC; say the operating point when quoting a rate.
+15. **A rule with counts gets a Lean check.** `projects/world-state/lean/PresenceReady.lean` derives the exact error budget of the Ready rule (1,804 of 1,997 agreements; 149 false alarms at 177 of 221 found) and corrected a hand figure that was wrong by a factor of 2.4 (L662). Plant three bugs and see them caught before trusting a proof file.
+16. **Noise floor.** Presence alpha moves +-0.03 between identical reruns (L635). A gain smaller than that, or inside the baseline's 95% interval, is "no gain". Anything chosen on the evaluation items (a vote, a reader per question, a weight) is labelled optimistic.
+
 ## Done when
 
 Gate report (`../templates/gate-report.md`) filled, with scorer sha, intervals, and a verdict per criterion.

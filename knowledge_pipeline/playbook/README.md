@@ -19,6 +19,7 @@ Chapters, in the order you use them:
 | 09 | [Ship and monitor](09-ship-and-monitor.md) | What is shipped, how it runs in Python and the browser, how it stays honest? |
 | 10 | [Lessons](10-lessons.md) | What cost us time and GPU hours, and the rule each one produced |
 | 11 | [Model selection](11-model-selection.md) | Which trunk, span and claim models, chosen on measured fit from live sources? |
+| 12 | [Cross-family test](12-cross-family-test.md) | One test, run unchanged on any model family, that returns comparable scores? |
 
 ## Words we use
 
@@ -27,6 +28,8 @@ One word, one meaning. Tag every status line and every ledger note with one of t
 | Word | Means | Example |
 |---|---|---|
 | **Main loop** | Train the reader on the best labels, score it on a clean held-out set, mine its mistakes, change ONE thing, retrain, repeat. A ledger prediction before each round, a number on the page after. Nothing else is called a loop. | Round 1 on the 46k pool labels |
+| **Ceiling** | What Sonnet scores against its own rerun on a field: the most any reader can score as agreement with Sonnet | story 0.99, presence alpha 0.94 |
+| **Registered student** | The reader the Engine page names (now `v6b-student`); every comparison uses its own score file | `runs/pulse/end2end_v6b-student_devq.json` |
 | **Check** | Work that tests how we measure | Agreement scores, codebook tests, planted-bug tests |
 | **Groundwork** | Preparing data or tools for the main loop | Pool labelling, picking a labeller |
 | **Scheduler** | The timer that wakes the agent (`/loop` wakeups) | A wakeup that finds nothing to do |
@@ -58,6 +61,9 @@ Model:
 
 Decide:
 - [ ] Score once on gold; gate = 0.8 × IAA on the lower 95% bound (06)
+- [ ] Ceiling measured first (Sonnet against itself, per field); bar = 0.8 × ceiling, written before scoring (06, rule 13)
+- [ ] Baseline = the registered version's score file, named and cited; gains inside its 95% interval or run noise are "no gain" (06, rules 12, 16)
+- [ ] Rare fields: curves (AUC, recall at fixed precision), not one cut-off (06, rule 14)
 - [ ] Speed: ms per call, ms and vCPU-s per item, items/s with the process × thread layout (07)
 - [ ] Gate report + model card filled (`../templates/`)
-- [ ] Ledger line with every number and its source
+- [ ] Ledger line with every number and its source; run `kit/live/note_guard.py` first; predictions before, scores after, corrections name what they supersede (`.ledger/AGENTS.md` rules 8 to 10)
