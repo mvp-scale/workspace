@@ -46,6 +46,18 @@ depends on this repo. Tools:
 | Pick up a piece of the pipeline | `workstreams/README.md`, choose a package, copy `templates/task-card.md` |
 | Report a result | `templates/gate-report.md` |
 
+## Where new guidance goes
+
+One place per kind of knowledge. Edit an existing file before adding a new one.
+
+| You learned | Put it in |
+|---|---|
+| How to do a step, and why | the matching `playbook/` chapter |
+| A rule an agent must follow every time | `agentic/` (SKILL hard rules, `stages.yaml`, `agents/*.md`); if code can enforce it, a script or hook |
+| What "done" means | `ACCEPTANCE.md`, one ID per criterion |
+| The state of one project: plan, blockers, predictions | that project's single `PLAN.md` |
+| Something not yet placed | one line in `LESSONS_LEARNED.md`; promote it, then delete the line |
+
 ## The method in one paragraph
 
 Write down the question and how a human would mark the answer. Measure how well two annotators (or two LLM families)

@@ -29,7 +29,7 @@ Run the World engine on a CPU reader instead of Clef on the GPU.
 
 ## Services
 - `./service.sh up | reset | down`; `./service.sh start <name>` for on-demand services. Config `service.yaml`. Details `START.md`, `docs/service-architecture.md`.
-- Ports: console 8100, Clef 8018, World engine 8112, news queue 8140, CPU classifier 8020, voice 8200.
+- Ports: console 8100, Clef 8018, World engine 8112, news queue 8140, CPU classifier 8020, voice 8200, ledger viewer 18766 (fixed; `./service.sh start ledger-viewer`).
 - Python for the engine: `/workspace/kev/.venv/bin/python` with `WE_RULES=rules_v2`. CPU only: `WORLD_GPU=0`.
 
 ## Rules

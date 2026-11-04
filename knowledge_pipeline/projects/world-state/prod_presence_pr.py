@@ -11,3 +11,4 @@ o = np.argsort(-pm); t = np.cumsum(ym[o]); nn = np.arange(1, len(o) + 1)
 for P in (0.80, 0.85, 0.90, 0.92, round(float(tp / pred), 2)):
     ok = np.where(t / nn >= P)[0]; print(f"my leaf head at precision >= {P}: recall {t[ok.max()] / ym.sum():.3f}" if len(ok) else f"my head precision >= {P}: none")
 print("my head AUC", round(float(roc_auc_score(ym, pm)), 3), "n", len(keep))
+np.savez("runs/pulse/prod_presence_scores.npz", ids=np.array(ids), yes=yes, ansd=ansd, conf=conf, pos=pos)

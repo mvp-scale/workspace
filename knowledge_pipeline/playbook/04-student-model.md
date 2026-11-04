@@ -20,6 +20,12 @@
    then lowest latency"). Score the pick once on gold.
 7. **Replace pipeline glue with heads over time.** We still call spaCy for part-of-speech (57 ms of 228 per article);
    v3 learns POS as a head and drops spaCy.
+8. **Cascade the encoder.** Run the linear student always (about 3 ms); call a small encoder (bge-small, MIT, through ONNX Runtime
+   and the Rust `tokenizers`, no torch at serving) only on items a cheap gate routes (measured: 32 percent routed, 9.3 ms mean, every one of
+   400 reads under 50 ms). Distilling the encoder into static vectors kept none of its gain.
+9. **New heads need their own learning rate** (2e-3 against 4e-5 for the encoder), a positive weight on rare multi-label losses, and the
+   best epoch picked on a validation slice cut from the training items.
+10. **Train linear heads on the GPU** (sparse matmul plus L-BFGS in PyTorch: 1.1 s against 703 s, same accuracy). Language is not the cost.
 
 ## Done when
 

@@ -1,0 +1,16 @@
+id: task-framing
+name: "Task framing"
+definition: "turn an owner goal into a task card with targets, caps and a stop rule"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Task card", note: "the record this capability owns"}
+goals:
+  - id: task-framing.signed-card
+    title: "The owner signs a card that passes the checker"
+    why: "nothing paid or trained starts without one"
+    acceptance:
+      - "The card passes the kit's card checker (R1)"
+      - "The owner's decision line records items per minute, hardware, dollars and the quality floor (S1)"
+    serves_via: []
+    functions: []

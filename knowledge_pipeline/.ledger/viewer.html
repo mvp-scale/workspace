@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge pipeline ledger</title>
+<style>
+/* Read only. Asks ./data every 30 s, redraws when the answer changed. Story first (where we are, what is next, what needs you),
+   then drill: Map (stage > domain > capability), Work (board), Quality (rules and defects). Details open in a side sheet. */
+:root{--bg:#0b0d10;--panel:#12151a;--raised:#1a1e25;--line:#252a33;--hair:#1b1f26;--t1:#eef1f5;--t2:#a3abb7;--t3:#6f7886;
+  --accent:#5ad1c4;--good:#3fcf8e;--live:#4c9bff;--warn:#f2b441;--stop:#ff6b6b;--quiet:#586170;--ready:#dfe5ee;--r:12px;--shadow:0 12px 40px rgba(0,0,0,.45)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f3f4f7;--panel:#fff;--raised:#eef0f4;--line:#dfe3e9;--hair:#e9ecf0;--t1:#12161d;--t2:#4b5462;--t3:#78818e;
+  --accent:#0c8d81;--good:#15885a;--live:#1c6bdc;--warn:#a96a00;--stop:#cf3b3b;--quiet:#98a1ad;--ready:#27303c;--shadow:0 12px 40px rgba(18,22,29,.14)}}
+:root[data-theme="light"]{--bg:#f3f4f7;--panel:#fff;--raised:#eef0f4;--line:#dfe3e9;--hair:#e9ecf0;--t1:#12161d;--t2:#4b5462;--t3:#78818e;
+  --accent:#0c8d81;--good:#15885a;--live:#1c6bdc;--warn:#a96a00;--stop:#cf3b3b;--quiet:#98a1ad;--ready:#27303c;--shadow:0 12px 40px rgba(18,22,29,.14)}
+.erow{display:grid;grid-template-columns:minmax(120px,.8fr) 104px 210px repeat(3,minmax(0,1.1fr));gap:14px;align-items:start;padding:12px 0;border-bottom:1px solid var(--hair)}.erow:last-child{border-bottom:0}.erd summary{list-style:none;cursor:pointer}.erd summary::-webkit-details-marker{display:none}.erd[open]>summary{background:var(--hair)}.ec{text-align:right;font-variant-numeric:tabular-nums;font-size:14px}.ehd .ec{font-size:11px}.edet{padding:6px 0 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 18px;font-size:12px;color:var(--t2)}.etab{container-type:inline-size}.etx{font-size:13px;line-height:1.4;text-wrap:pretty;overflow-wrap:normal;word-break:normal;hyphens:none}.etx::before{display:none}@container (max-width:900px){.erow{grid-template-columns:1fr auto;gap:6px 12px}.erow.ehd{display:none}.erow>.enow,.erow>.etx{grid-column:1/-1}.etx::before{display:block;content:attr(data-l);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}.qtab{grid-template-columns:1fr 1fr 1fr!important}.ftt,.vtab{grid-template-columns:1fr!important}.ftt.ehd,.vtab.ehd{display:none}.ftt>span::before,.vtab>span::before{content:attr(data-l)": ";font-size:10px;color:var(--t3)}.qtab.ehd{display:none}.qtab .qc::before{content:attr(data-l)" ";font-size:10px;color:var(--t3)}}.ftab{display:grid;gap:8px 10px;align-items:center;font-size:13px;padding:8px 0}.ftab.ehd{font-size:11px}.qtab{display:grid;grid-template-columns:minmax(110px,1fr) 88px repeat(5,minmax(72px,.8fr));gap:8px 10px;align-items:center;font-size:13px;padding:9px 0;border-bottom:1px solid var(--hair)}.qtab:last-child{border-bottom:0}.qtab.ehd{font-size:11px}.fbwrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px 40px;align-items:start}.fbh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:2px 0 4px}.fbg{display:grid;grid-template-columns:48px minmax(118px,max-content) minmax(0,1fr) auto;gap:5px 12px;font-size:13px;align-items:baseline;padding:2px 0}.fbg .num{font-variant-numeric:tabular-nums}.fsrc{font-size:10px;padding:0 7px;border:1px solid var(--hair);border-radius:9px;color:var(--t3);white-space:nowrap}.fbc{padding:6px 0 2px}.fbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);padding-bottom:3px}.fbr{display:grid;grid-template-columns:84px minmax(60px,1fr) 38px 64px;gap:10px;align-items:center;font-size:12px;padding:1px 0}.fbt{height:7px;background:var(--hair);border-radius:4px;overflow:hidden}.fbt i{display:block;height:100%}.fbt i.g{background:var(--good)}.fbt i.w{background:var(--warn)}.fbt i.b{background:var(--stop)}.fbw{padding-top:8px;font-size:13px}
+.qc{white-space:nowrap;font-variant-numeric:tabular-nums}.ftt,.vtab{display:grid;gap:8px 12px;align-items:start;font-size:13px;padding:9px 0;border-bottom:1px solid var(--hair)}.ftt{grid-template-columns:minmax(110px,.8fr) repeat(4,minmax(0,1.2fr))}.vtab{grid-template-columns:minmax(120px,.9fr) repeat(4,minmax(0,1.2fr))}.ftt:last-child,.vtab:last-child{border-bottom:0}.ftt.ehd,.vtab.ehd{font-size:11px}.qq{display:grid;grid-template-columns:130px minmax(0,1fr);gap:2px 12px;font-size:13px;padding:6px 0}.efit{font-size:11px;color:var(--t2);margin-top:4px}.enow .mt{font-size:13px}.tt{border-bottom:1px dotted var(--t3);cursor:help}.erow .big{font-size:22px;font-weight:650}.elh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.evb{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);white-space:nowrap}.trow{display:grid;grid-template-columns:1.6fr 150px 130px;gap:14px;padding:10px 0;border-bottom:1px solid var(--hair)}.trow:last-child{border-bottom:0}@media(max-width:760px){.erow,.trow{grid-template-columns:1fr}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:0 0 12px}.tile .big{font-size:28px;font-weight:700;line-height:1.1}.tile .tl{font-weight:600;margin-top:2px}.cta{border-left:4px solid var(--warn);margin:0 0 12px}.ehd{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);padding:8px 0}.det summary{cursor:pointer;color:var(--t2);font-size:12px}.trow{align-items:start}.trow>.det{grid-column:1/-1}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--t1);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:208px minmax(0,1fr);height:100vh;overflow:hidden}
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 10px;gap:2px}
+.brand{padding:2px 10px 18px;font-weight:650;letter-spacing:-.01em;font-size:15px}
+.brand small{display:block;color:var(--t3);font-weight:450;font-size:12px;margin-top:2px}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--t2);font-weight:500}
+.nav:hover{background:var(--raised)}.nav.on{background:var(--raised);color:var(--t1)}
+.nav svg{width:16px;height:16px;flex:none}
+.nav .b{margin-left:auto;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--line);color:var(--t2)}
+.nav .b.hot{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.rail .foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--hair);color:var(--t3);font-size:12px;display:grid;gap:6px}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-right:7px;animation:p 2.4s infinite}
+.pulse.off{background:var(--quiet);animation:none}
+@keyframes p{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 55%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.main{display:flex;flex-direction:column;min-width:0;height:100vh}
+.top{padding:22px 32px 6px}
+.top h1{margin:0;font-size:24px;font-weight:650;letter-spacing:-.02em}
+.top p{margin:4px 0 0;color:var(--t2);max-width:70ch}
+.top .link{color:var(--accent);margin-left:6px}
+.view{flex:1;overflow-y:auto;padding:18px 32px 64px}
+.sec{margin-top:22px}
+.sec>h2{margin:0 0 10px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);display:flex;gap:10px;align-items:center}
+.sec>h2 .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:450}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--raised);color:var(--t2);white-space:nowrap}
+.pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.t-good{--c:var(--good)}.t-live{--c:var(--live)}.t-warn{--c:var(--warn)}.t-stop{--c:var(--stop)}.t-ready{--c:var(--ready)}.t-quiet{--c:var(--quiet)}.t-drop{--c:var(--quiet)}
+.muted{color:var(--t3)}.sub{color:var(--t2)}
+.empty{color:var(--t3);padding:6px 0}
+/* lifecycle strip */
+.life{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);gap:8px;overflow-x:auto;padding:14px 0 4px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 11px;display:flex;flex-direction:column;gap:7px;position:relative;min-width:0}
+.stage:hover{border-color:var(--t3)}
+.stage.here{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.stage .n{font-weight:600}.stage .q{color:var(--t3);font-size:12px;min-height:34px}
+.seg{display:flex;height:6px;border-radius:99px;overflow:hidden;background:var(--hair);gap:1px}
+.seg i{display:block;height:100%}
+.row2{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--t2)}
+.here-tag{position:absolute;top:-9px;left:12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:#04201d;font-weight:700;padding:1px 7px;border-radius:99px}
+/* cards */
+.big{font-size:30px;font-weight:650;letter-spacing:-.02em;line-height:1.1}
+.item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--hair);width:100%;text-align:left}.item>span:last-child{min-width:0;flex:1}.ti,.mt,.sub{overflow-wrap:anywhere}
+.item:first-of-type{border-top:0}
+.item:hover .ti{color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--c);margin-top:6px;flex:none}
+.ti{font-weight:500}.mt{color:var(--t3);font-size:12px}
+.id{font-variant-numeric:tabular-nums;color:var(--t3);font-size:12px;min-width:34px}
+/* live runs */
+.lr{display:grid;grid-template-columns:auto minmax(0,1.2fr) minmax(0,2fr) auto;gap:6px 14px;align-items:baseline;padding:8px 0;border-top:1px solid var(--hair);width:100%;text-align:left}
+.rt{display:grid;width:100%}.rt .tr{display:grid;gap:0 12px;padding:5px 0;border-top:1px solid var(--hair);align-items:center;font-size:12.5px}
+.rt .th{border-top:0;padding:0 0 5px;color:var(--t3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}.rt .tr.row[data-go]{cursor:pointer}.rt .tr.row[data-go]:hover{background:var(--hair)}
+.rt .c,.rt .th span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.rt .c.st{font-weight:500}.rt .tr.stale .c.st{color:var(--stop);font-weight:600}.rt .me{color:var(--stop);font-weight:600}
+.rt .c:first-child{color:var(--t2)}
+@media(max-width:760px){.rt .th{display:none}.rt .tr{grid-template-columns:1fr!important;gap:1px;padding:8px 0}.rt .c{white-space:normal}.rt .c:empty{display:none}.rt .c[data-l]:not(:empty)::before{content:attr(data-l)': ';color:var(--t3);font-size:11px}}
+.lr:first-child{border-top:0}.lr .wh{font:600 11px ui-monospace,monospace;color:var(--t2)}.lr .jb{font-weight:500;overflow-wrap:anywhere}
+.lr .ls{color:var(--t2);font-size:12px;overflow-wrap:anywhere}.lr .ag{color:var(--t3);font-size:12px;white-space:nowrap}.lr.stale .ag{color:var(--stop);font-weight:600}
+.gl{display:inline-block;width:1.3em;color:var(--c);font-weight:700}.gl.on{animation:p 2.4s infinite}
+.sec-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}.sec-row h2{margin:0}
+.dayh{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:12px 0 2px}.dayh:first-child{padding-top:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips .tag{border:0;cursor:pointer}.tag.on{background:var(--accent);color:#04201d;font-weight:600}
+/* phases */
+.phases{display:flex;flex-wrap:wrap;gap:8px}
+.ph{display:flex;flex-direction:column;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:96px}
+.ph b{font-size:12px}.ph .mt{max-width:170px;white-space:normal}
+.ph.on{border-color:var(--accent)}
+/* map */
+.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--t2);font-size:12px;margin:2px 0 12px}
+.legend span{display:inline-flex;gap:6px;align-items:center}.legend i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.mapst{margin-top:12px}
+.mapst>button.hd{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.mapst .chev{width:14px;color:var(--t3);transition:transform .15s}.mapst.closed .chev{transform:rotate(-90deg)}
+.mapst .body{margin:6px 0 0 14px;border-left:1px solid var(--line);padding-left:14px}
+.mapst.closed .body{display:none}
+.dom{margin:10px 0 4px;font-size:12px;color:var(--t3);font-weight:600}
+.cap{display:grid;grid-template-columns:minmax(160px,1.2fr) auto minmax(90px,1fr) 56px;gap:12px;align-items:center;padding:7px 10px;border-radius:9px;width:100%}
+.cap:hover{background:var(--raised)}
+.cap .nm{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.sq{display:flex;gap:3px;flex-wrap:wrap;min-width:20px}
+.sq i{width:13px;height:13px;border-radius:3px;background:color-mix(in srgb,var(--c) 85%,transparent);display:block}
+.sq i.none{background:var(--hair);outline:1px dashed var(--line);outline-offset:-1px}
+.heatbar{height:8px;border-radius:99px;background:var(--hair);overflow:hidden}
+.heatbar i{display:block;height:100%;background:var(--good)}
+/* work */
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{padding:4px 11px;border-radius:99px;border:1px solid var(--line);color:var(--t2);font-size:12px;background:var(--panel)}
+.chip.on{background:var(--t1);color:var(--bg);border-color:var(--t1)}
+.board{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:10px;overflow-x:auto;align-items:start}
+.col>h3{margin:0 0 8px;font-size:12px;color:var(--t2);font-weight:600;display:flex;gap:8px;align-items:center}
+.col>h3 i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.col>h3 span{margin-left:auto;color:var(--t3)}
+.tc{display:block;width:100%;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:10px;padding:9px 11px;margin-bottom:8px}
+.tc:hover{border-color:var(--t3);border-left-color:var(--c)}
+.tc .ti{overflow-wrap:anywhere}
+.tc .ft{display:flex;gap:8px;align-items:center;margin-top:7px}
+.tc .heatbar{flex:1;height:5px}
+/* quality */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi .l{color:var(--t3);font-size:12px;margin-top:4px}
+.bars{display:grid;gap:8px}
+.brow{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr) 40px;gap:12px;align-items:center;width:100%;padding:3px 0}
+.brow:hover .nm{color:var(--accent)}
+.brow .bar{height:10px;border-radius:99px;background:var(--hair);overflow:hidden}
+.brow .bar i{display:block;height:100%;background:var(--warn);border-radius:99px}
+.brow .bar i.rdy{background:var(--accent)}
+.mx{display:grid;grid-template-columns:auto repeat(4,56px);gap:6px;align-items:center;font-size:12px;color:var(--t3)}
+.mx b{display:grid;place-items:center;height:44px;border-radius:8px;font-weight:600;color:var(--t1);background:color-mix(in srgb,var(--stop) calc(var(--k)*100%),var(--hair))}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+/* quality gates */
+.gh,.gr{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(90px,1.4fr) minmax(90px,1.4fr) minmax(80px,1fr) 80px;gap:14px;align-items:center;padding:9px 12px}
+.gh{color:var(--t3);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding-bottom:4px}
+.gr{border-top:1px solid var(--hair)}.gr .nm{font-weight:550}
+.gcol{display:flex;gap:6px;flex-wrap:wrap}
+.gq{width:20px;height:20px;border-radius:6px;background:var(--c);display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--bg)}
+.gq:hover{transform:scale(1.15)}
+.gq.none{background:transparent;border:1.5px dashed var(--quiet)}
+.gq.rx{outline:2px solid var(--stop);outline-offset:2px}
+.gq.prov{background-image:repeating-linear-gradient(45deg,transparent 0 3px,rgba(255,255,255,.28) 3px 5px)}
+.fun{display:grid;gap:8px}
+.fr{display:grid;grid-template-columns:minmax(120px,240px) minmax(0,1fr) 70px;gap:12px;align-items:center}
+.fr .bar{height:10px;border-radius:99px;background:var(--hair);overflow:hidden}.fr .bar i{display:block;height:100%;background:var(--good)}
+.lg{display:flex;gap:14px;flex-wrap:wrap;align-items:center;color:var(--t2);font-size:12px;margin:2px 0 12px}
+.lg span{display:inline-flex;gap:6px;align-items:center}
+/* sheet */
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);overflow-y:auto;padding:20px 22px 48px;z-index:6}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:5}
+.sheet h2{margin:10px 0 6px;font-size:19px;letter-spacing:-.01em}
+.sheet .k{margin:18px 0 6px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);font-weight:600}
+.sheet p{margin:0 0 6px;color:var(--t2)}
+.sheet .x{float:right;color:var(--t2);padding:4px 10px;border-radius:8px;background:var(--raised)}
+.crumb{display:flex;gap:6px;flex-wrap:wrap;color:var(--t3);font-size:12px}
+.crumb button{color:var(--t2)}.crumb button:hover{color:var(--accent)}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.steps li{display:flex;gap:9px;align-items:flex-start}
+.steps .ck{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--quiet);flex:none;margin-top:2px;display:grid;place-items:center;font-size:10px}
+.steps .ck.d{background:var(--good);border-color:var(--good);color:#04180e}
+.tl{list-style:none;margin:0;padding:0 0 0 12px;border-left:1px solid var(--line);display:grid;gap:10px}
+.tl li{position:relative}.tl li::before{content:"";position:absolute;left:-16px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--c,var(--quiet))}
+.ev{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--t2);word-break:break-all}
+@media (max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
+  .rail{order:2;flex-direction:row;padding:6px;border-right:0;border-top:1px solid var(--line);justify-content:space-around}
+  .brand,.rail .foot{display:none}.nav span:not(.b){font-size:12px}.nav{flex-direction:column;gap:2px;padding:6px 10px}.nav .b{display:none}
+  .gh,.gr{grid-template-columns:90px 1fr 1fr}.gh span:nth-child(n+4),.gr>:nth-child(n+4){display:none}
+  .top,.view{padding-left:16px;padding-right:16px}.cap{grid-template-columns:1fr auto}.cap .heatbar,.cap .rt{display:none}.board{grid-template-columns:repeat(5,230px)}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <nav class="rail" id="rail" aria-label="Views"></nav>
+  <main class="main"><header class="top" id="top"></header><div class="view" id="view"></div></main>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-label="Details"></aside>
+<script>
+'use strict';
+const PULSE_MS = 30000, NS = 'http://www.w3.org/2000/svg';
+const SVGS = new Set(['svg', 'path', 'circle', 'rect', 'g', 'line', 'title']);
+/* h(tag, attrs, ...children): builds elements; text goes in as text nodes only, never as markup. */
+function h(tag, a, ...kids) {
+  const e = SVGS.has(tag) && tag !== 'title' ? document.createElementNS(NS, tag) : document.createElement(tag);
+  for (const k in (a || {})) {
+    const v = a[k]; if (v == null || v === false) continue;
+    if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? '' : String(v));
+  }
+  for (const k of kids.flat(Infinity)) if (k != null && k !== false) e.append(typeof k === 'object' ? k : String(k));
+  return e;
+}
+/* set(el, ...nodes): replaces el's children with the given nodes, skipping empty values and flattening lists. */
+const set = (el, ...kids) => el.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false));
+const KIND = { wave: 'Phase opened', task: 'Task added', start: 'Started', step: 'Step done', done: 'Done', verdict: 'Verdict', block: 'Blocked', postmortem: 'Post-mortem', ceremony: 'Phase review',
+  decision: 'Decision', focus: 'Focus', warning: 'Warning', note: 'Note', exception: 'Exception', drop: 'Dropped', opportunity: 'Opportunity' };
+const GROUPS = [['quiet', 'Waiting'], ['ready', 'Ready'], ['live', 'In progress'], ['need', 'Needs you'], ['good', 'Passed']];
+const ICON = { engine: 'M2 12.500l3.500-4 3 2.500L14 4M10.500 4H14v3.500', live: 'M2 8a6 6 0 1012 0A6 6 0 002 8zM8 5v3.500l2 1.500', story: 'M1.5 8h3l2-5 3 10 2-5h3', map: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z', work: 'M2 3h3v10H2zM6.5 3h3v6h-3zM11 3h3v8h-3z', quality: 'M8 1.5l5.5 2v4.2c0 3-2.2 5-5.5 6.8C4.700 12.700 2.500 10.700 2.500 7.700V3.500z', rules: 'M2.500 4h11M2.500 8h11M2.500 12h6' };
+const VIEWS = [['story', 'Story'], ['engine', 'Engine'], ['live', 'Live'], ['map', 'Map'], ['work', 'Work'], ['quality', 'Quality'], ['rules', 'Rules']];
+
+let D = null, view = (location.hash || '#story').slice(1).split('/')[0], sheet = null, wave = null, shut = new Set(), last = '', ok = true, changedAt = 0;
+if (!VIEWS.some((v) => v[0] === view)) view = 'story';
+let T = {}, CAP = {}, DOM = {}, STG = {}, GATE = {}, PH = {}, PHT = {};
+
+const tone = (t) => (t.label === 'Dropped' ? 'drop' : t.tone);
+const grp = (t) => { const x = tone(t); return x === 'stop' || x === 'warn' ? 'need' : x; };
+const live = (list) => list.filter((t) => tone(t) !== 'drop');
+function counts(list) { const c = { good: 0, live: 0, need: 0, ready: 0, quiet: 0, total: 0 }; for (const t of live(list)) { c[grp(t)]++; c.total++; } return c; }
+const ago = (ts) => { const s = Math.max(0, (Date.now() - new Date(ts).getTime()) / 1000); return s < 90 ? 'just now' : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
+const first = (s) => (s || '').split(/(?<=[.;])\s/)[0];
+const pctOf = (n, d) => (d ? Math.round((100 * n) / d) : 0);
+const tasksIn = (key, id) => D.tasks.filter((t) => t[key] === id);
+
+function index() {
+  D.gates = D.gates || []; D.ratchet = D.ratchet || { rule: '', yieldRule: '', relaxations: [] };
+  T = Object.fromEntries(D.tasks.map((t) => [t.id, t])); PH = Object.fromEntries((D.phases || []).map((p) => [p.id, p])); PHT = Object.fromEntries((D.phases || []).map((p) => [p.task, p])); CAP = {}; DOM = {}; STG = {}; GATE = Object.fromEntries(D.gates.map((g) => [g.id, g]));
+  for (const s of D.journey) { STG[s.id] = s; for (const d of s.domains) { DOM[d.id] = { ...d, stage: s.id }; for (const c of d.capabilities) CAP[c.id] = { ...c, domain: d.id, stage: s.id }; } }
+}
+const currentStage = () => (D.journey.find((s) => { const c = counts(tasksIn('stage', s.id)); return c.total > 0 && c.good < c.total; }) || D.journey.find((s) => counts(tasksIn('stage', s.id)).total === 0) || D.journey[0] || {}).id;
+
+/* ---------- small parts ---------- */
+const seg = (c) => {
+  if (!c.total) return h('div', { class: 'seg' });
+  return h('div', { class: 'seg' }, [['good', 'good'], ['live', 'live'], ['need', 'warn'], ['ready', 'ready'], ['quiet', 'quiet']].map(([k, v]) => c[k] ? h('i', { style: `width:${(100 * c[k]) / c.total}%;background:var(--${v})` }) : null));
+};
+const pill = (t) => h('span', { class: `pill t-${tone(t)}`, text: t.label });
+const squares = (list) => h('div', { class: 'sq' }, list.length ? list.map((t) => h('i', { class: `t-${tone(t)}`, title: `${t.id} ${t.title}: ${t.label}` })) : h('i', { class: 'none', title: 'no tasks yet' }));
+const sparkline = () => {
+  const days = [...Array(14)].map((_, i) => new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10)), n = Object.fromEntries(days.map((d) => [d, 0]));
+  for (const t of D.tasks) for (const e of t.history) { const d = (e.ts || '').slice(0, 10); if (d in n) n[d]++; }
+  const max = Math.max(1, ...Object.values(n)), total = Object.values(n).reduce((a, b) => a + b, 0);
+  return { total, svg: h('svg', { viewBox: '0 0 196 44', width: '196', height: '44', role: 'img', 'aria-label': `${total} ledger events in 14 days` },
+    days.map((d, i) => h('rect', { x: i * 14, y: 44 - Math.max(2, (40 * n[d]) / max), width: 10, height: Math.max(2, (40 * n[d]) / max), rx: 2, fill: i === 13 ? 'var(--accent)' : 'var(--quiet)', opacity: n[d] ? 1 : 0.35 }))) };
+};
+const ring = (n, d) => {
+  const r = 26, c = 2 * Math.PI * r, f = d ? n / d : 0;
+  return h('svg', { viewBox: '0 0 64 64', width: '64', height: '64', role: 'img', 'aria-label': `${n} of ${d} passed` },
+    h('circle', { cx: 32, cy: 32, r, fill: 'none', stroke: 'var(--hair)', 'stroke-width': 7 }),
+    h('circle', { cx: 32, cy: 32, r, fill: 'none', stroke: 'var(--good)', 'stroke-width': 7, 'stroke-linecap': 'round', 'stroke-dasharray': `${c * f} ${c}`, transform: 'rotate(-90 32 32)' }));
+};
+const open = (type, id) => { sheet = { type, id }; draw(); };
+const go = (v, w) => { view = v; if (w !== undefined) wave = w; sheet = null; location.hash = v; draw(); };
+
+const TERMINAL = new Set(['done', 'failed', 'stopped', 'lost']);
+const GL = { running: ['●', 'live'], queued: ['○', 'quiet'], done: ['✓', 'good'], failed: ['✕', 'stop'], stopped: ['■', 'quiet'], lost: ['?', 'warn'], idle: ['○', 'quiet'], stale: ['!', 'stop'] };
+const LIVE = { where: 'all', outcome: 'all', rows: null, total: null };
+const activeRuns = () => (D.live || []).filter((r) => !TERMINAL.has(r.state)).filter((r, _i, all) => !(/^batch-/.test(r.job) && all.some((o) => !/^(batch-|poller)/.test(o.job) && /API/.test(o.where || '')))).map((r) => { const mins = (Date.now() - new Date(r.updated).getTime()) / 60000; return { ...r, stale: mins > 10 }; })
+  .sort((a, b) => (b.stale - a.stale) || ((b.state === 'running') - (a.state === 'running')) || String(b.updated).localeCompare(String(a.updated)));
+const liveBadge = () => { const a = activeRuns(), bad = a.some((r) => r.stale || r.state === 'failed'); return a.length || bad ? h('span', { class: `b${bad ? ' hot' : ''}`, text: a.length }) : null; };
+const runRow = (r, hist) => {
+  const k = r.stale && !hist ? 'stale' : r.state, [g, c] = GL[k] || GL.idle;
+  return h('button', { class: `lr${k === 'stale' ? ' stale' : ''}`, onclick: () => (r.task && T[r.task] ? open('task', r.task) : null) },
+    h('span', { class: 'wh', text: r.where || '' }),
+    h('span', { class: 'jb' }, h('span', { class: `gl t-${c}${k === 'running' ? ' on' : ''}`, text: g }), `${r.job} `, h('span', { class: 'muted', text: k === 'stale' ? 'NO UPDATE' : r.state })),
+    h('span', { class: 'ls', text: [r.progress, r.spent != null && r.spent !== '' ? `$${Number(r.spent).toFixed(2)}${r.cap ? '/$' + r.cap : ''}` : null, r.last].filter(Boolean).join(' · ') }),
+    h('span', { class: 'ag', text: ago(hist ? r.ended : r.updated) }));
+};
+const WHERE = { '[SESS]': 'this session', '[API]': 'Anthropic API', '[CON]': 'Console agent', '[KAG]': 'Kaggle', '[5090]': 'local GPU 5090', '[3090]': 'local GPU 3090', '[CPU]': 'local CPU', '[HOST]': 'third-party hosted' };
+const whereWords = (w) => String(w || '').split('+').map((x) => WHERE[x.trim()] || x.trim()).filter(Boolean).join(' + ');
+const INFER = [[/^p6/, 'T6'], [/^p[45]-/, 'T5'], [/^(wave|retest)/, 'T14']];
+const phaseOf = (r) => { const t = r.task || (INFER.find(([re]) => re.test(r.job || '')) || [])[1]; return (D.phases || []).find((x) => x.task && x.task === t) || {}; };
+const money = (r, hist) => (r.spent != null && r.spent !== '' ? `$${Number(r.spent).toFixed(2)}${!hist && r.cap ? '/$' + r.cap : ''}` : '');
+const runTable = (list, hist, head = true) => {
+  const needOf = (r) => (r.need && !/^nothing\.?$/i.test(String(r.need).trim()) ? r.need : '');
+  const col = (label, w, get, extra) => ({ label, w, get, extra });
+  const cols = [
+    col('Phase', '112px', (r, p) => (p.id ? `${p.id} ${p.name}` : '')),
+    col('Job', '116px', (r) => r.job),
+    col('State', '74px', (r) => (!hist && r.stale ? 'no update' : r.state), 'st'),
+    ...(hist ? [] : [col('Progress', 'minmax(60px,.8fr)', (r) => r.progress)]),
+    col('Cost', '64px', (r) => money(r, hist)),
+    col(hist ? 'Ended' : 'Updated', '66px', (r) => ago(hist ? r.ended : r.updated)),
+    col('Why', 'minmax(80px,1.4fr)', (r, p) => r.why || p.why),
+    col('Where', '96px', (r) => whereWords(r.where)),
+    col(hist ? 'Succeeded if' : 'Succeeds if', 'minmax(80px,1.4fr)', (r, p) => r.success || p.success),
+    ...(hist ? [col('Result', 'minmax(80px,1.4fr)', (r) => r.last)] : [col('Then', 'minmax(60px,1fr)', (r) => r.next), col('You', '80px', needOf, 'me')]),
+  ];
+  const tpl = cols.map((c) => c.w).join(' ');
+  const row = (r) => {
+    const p = phaseOf(r), k = !hist && r.stale ? 'stale' : r.state, [g, c] = GL[k] || GL.idle, tid = r.task || p.task;
+    const cells = cols.map((cl) => { const v = cl.get(r, p) || '';
+      return cl.label === 'State' ? h('span', { class: `c st t-${c}`, 'data-l': cl.label, title: v, text: v ? `${g} ${v}` : '' }) : h('span', { class: `c${cl.extra ? ' ' + cl.extra : ''}`, 'data-l': cl.label, title: v, text: v }); });
+    const tr = h('div', { class: `tr row${!hist && r.stale ? ' stale' : ''}`, style: `grid-template-columns:${tpl}`, onclick: () => (tid && T[tid] ? open('task', tid) : null) }, cells);
+    if (tid && T[tid]) tr.setAttribute('data-go', '1');
+    return tr;
+  };
+  return h('div', { class: `rt${hist ? ' hist' : ''}`, role: 'table' }, head ? h('div', { class: 'tr th', role: 'row', style: `grid-template-columns:${tpl}` }, cols.map((c) => h('span', { text: c.label, role: 'columnheader' }))) : null, list.map(row));
+};
+function runningStrip() {
+  const a = activeRuns(), last = (D.history || [])[0];
+  const body = a.length ? [runTable(a.slice(0, 6)), a.length > 6 ? h('div', { class: 'mt', style: 'padding-top:6px', text: `+${a.length - 6} more, see All runs` }) : null]
+    : h('div', { class: 'empty', text: last ? `Nothing running. Last: ${last.job} ${last.state} ${ago(last.ended)}.` : 'Nothing running.' });
+  return h('div', { class: 'sec' }, h('div', { class: 'sec-row' }, h('h2', { text: 'Running now' }), h('button', { class: 'link', style: 'color:var(--accent)', text: 'All runs and history', onclick: () => go('live') })), h('div', { class: 'card' }, body));
+}
+async function fetchHist(reset) {
+  const off = reset ? 0 : (LIVE.rows ?? D.history).length;
+  try {
+    const r = await (await fetch(`./history?where=${encodeURIComponent(LIVE.where)}&outcome=${encodeURIComponent(LIVE.outcome)}&offset=${off}&limit=30`, { cache: 'no-store' })).json();
+    LIVE.rows = reset ? r.rows : (LIVE.rows ?? D.history).concat(r.rows); LIVE.total = r.total;
+  } catch (e) { /* keep what is shown */ }
+  draw();
+}
+function liveView() {
+  const a = activeRuns(), rows = LIVE.rows ?? D.history ?? [], total = LIVE.total ?? D.historyTotal ?? 0;
+  const days = [...Array(14)].map((_, i) => new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10)), by = D.byDay || {};
+  const mx = Math.max(1, ...days.map((d) => (by[d] ? by[d].done + by[d].failed + by[d].other : 0)));
+  const strip = h('svg', { viewBox: '0 0 280 48', width: '280', height: '48', role: 'img', 'aria-label': 'runs finished per day, 14 days' }, days.flatMap((d, i) => {
+    const x = by[d] || { done: 0, failed: 0, other: 0 }; let y = 44;
+    return [['done', 'var(--good)'], ['failed', 'var(--stop)'], ['other', 'var(--quiet)']].map(([k, col]) => { const hh = (40 * x[k]) / mx; y -= hh; return h('rect', { x: i * 20, y, width: 16, height: Math.max(hh, 0), rx: 2, fill: col }); }); }));
+  const places = ['all', ...new Set([...(D.history || []), ...rows, ...a].map((r) => r.where).filter(Boolean))], outs = ['all', 'done', 'failed', 'stopped', 'lost'];
+  const chip = (key, val) => h('button', { class: `tag${LIVE[key] === val ? ' on' : ''}`, text: val, onclick: () => { LIVE[key] = val; fetchHist(true); } });
+  const groups = []; rows.forEach((r) => { const d = String(r.ended || '').slice(0, 10), g = groups[groups.length - 1]; if (g && g.d === d) g.rows.push(r); else groups.push({ d, rows: [r] }); });
+  return [h('div', { class: 'sec' }, h('div', { class: 'sec-row' }, h('h2', { text: `Active (${a.length})` })),
+      h('div', { class: 'card' }, a.length ? runTable(a) : h('div', { class: 'empty', text: 'Nothing is running.' }))),
+    h('div', { class: 'sec' }, h('div', { class: 'sec-row' }, h('h2', { text: `History (${total})` }), h('div', { title: 'Finished per day: green done, red failed, grey other' }, strip)),
+      h('div', { class: 'chips' }, places.map((v) => chip('where', v)), h('span', { class: 'muted', text: '  ' }), outs.map((v) => chip('outcome', v))),
+      h('div', { class: 'card' }, groups.length ? groups.map((g, gi) => [h('div', { class: 'dayh', text: `${g.d} · ${g.rows.length}` }), runTable(g.rows, true, gi === 0)])
+        : h('div', { class: 'empty', text: 'No finished runs match.' }),
+        rows.length < total ? h('button', { class: 'link', style: 'color:var(--accent);padding-top:10px', text: `Load more (${total - rows.length} older)`, onclick: () => fetchHist(false) }) : null))];
+}
+
+/* ---------- Story ---------- */
+function truthStrip() {
+  const C = D.engine && D.engine.card; if (!C || !C.fitness) return null; const fl = C.layers.flatMap((L) => L.fields).filter((f) => f.fit), cnt = (w) => fl.filter((f) => f.fit.verdict === w).length, K = C.consensus || { contested: {} };
+  const sp = Object.entries(K.contested).map(([k, v]) => `${k.replace('Condition present', 'presence').toLowerCase()} ${Math.round(v * 100)}%`).join(' · ');
+  const box = (n, t, q, big, sub, tip) => h('button', { class: 'stage', title: tip, onclick: () => go('engine') }, h('div', { class: 'n', text: `${n}  ${t}` }), h('div', { class: 'q', text: q }), h('div', { class: 'big num', style: 'font-size:15px;margin-top:6px', text: big }), h('div', { class: 'mt', text: sub }));
+  return h('div', { class: 'life' },
+    box(1, 'Qualify', 'Do labellers agree, and is the field worth classifying?', `${cnt('Clear')} clear · ${cnt('Tentative')} tentative · ${cnt('Reject')} reject`, `of ${fl.length} Pulse fields, by Krippendorff alpha`, 'Consensus = alpha bands from Krippendorff (0.80 clear, 0.667 tentative, under reject). Fit = four further tests, shown on the Engine tab with their sources.'),
+    box(2, 'Vote', 'Several systems label each item', 'Sonnet ×2 · Haiku ×2', 'plus local Clef and rules where they apply', 'No single system is the label. Each system\'s own risk is measured by how often it disagrees with the others and with itself.'),
+    box(3, 'Consensus', 'Unanimous, majority or split', `Split: ${sp || '–'}`, 'split items are left out, shown as contested', 'The consensus label is what most voters give. Items with no majority are reported, not forced.'),
+    box(4, 'Train', 'A small CPU model learns the consensus', `${C.name} ${C.version} live`, 'v6b-student is the challenger', 'Distillation: a small fast model trained to copy the voters.'),
+    box(5, 'Score', 'Beat always-guessing, on every item', 'Ready needs all four checks', 'low end of the range vs the guess rate', 'See the Ready rule on the Engine tab.'));
+}
+function story() {
+  const all = D.tasks, c = counts(all), here = currentStage();
+  const life = h('div', { class: 'life' }, D.journey.map((s) => {
+    const sc = counts(tasksIn('stage', s.id));
+    return h('button', { class: `stage${s.id === here && c.total ? ' here' : ''}`, onclick: () => open('stage', s.id) },
+      s.id === here && c.total ? h('span', { class: 'here-tag', text: 'Now' }) : null,
+      h('div', { class: 'n', text: s.name }), h('div', { class: 'q', text: s.question }), seg(sc),
+      h('div', { class: 'row2' }, h('span', { class: 'num', text: sc.total ? `${sc.good}/${sc.total} passed` : 'not started' }), sc.need ? h('span', { class: 'pill t-warn', text: `${sc.need} need you` }) : null));
+  }));
+  const nextT = D.next.map((id) => T[id]).filter(Boolean);
+  const nextCard = h('div', { class: 'card' }, nextT.length ? [
+    h('button', { class: 'item', onclick: () => open('task', nextT[0].id), style: 'border:0;padding-top:0' }, h('span', { class: `dot t-ready` }),
+      h('span', null, h('div', { class: 'ti', text: nextT[0].title }), h('div', { class: 'mt', text: [nextT[0].capability && CAP[nextT[0].capability]?.name, nextT[0].steps.length ? `${nextT[0].steps.length} steps` : null].filter(Boolean).join(' · ') }),
+        nextT[0].why ? h('div', { class: 'sub', text: nextT[0].why, style: 'margin-top:6px' }) : null)),
+    nextT.slice(1, 3).map((t) => h('button', { class: 'item', onclick: () => open('task', t.id) }, h('span', { class: 'id', text: t.id }), h('span', { class: 'ti sub', text: t.title }))),
+  ] : h('div', { class: 'empty', text: c.total ? 'Nothing is ready. Check what is waiting or blocked.' : 'No tasks yet.' }));
+  const need = D.attention;
+  const needCard = h('div', { class: 'card' }, need.length ? [need.slice(0, 5).map((a) => h('button', { class: 'item', onclick: () => (a.id ? open('task', a.id) : a.rule ? open('rule', a.rule) : go('work', a.wave || null)) },
+    h('span', { class: 't-warn dot' }), h('span', null, h('div', { class: 'ti', text: a.id || a.rule || a.wave }), h('div', { class: 'mt', text: a.why })))),
+    need.length > 5 ? h('button', { class: 'link', style: 'color:var(--accent);padding-top:8px', text: `+${need.length - 5} more`, onclick: () => go('work') }) : null]
+    : h('div', { class: 'empty', text: 'Nothing needs you.' }));
+  const sp = sparkline();
+  const pulseCard = h('div', { class: 'card', style: 'display:flex;gap:16px;align-items:center;flex-wrap:wrap' }, ring(c.good, c.total),
+    h('div', null, h('div', { class: 'big num', text: `${c.good}/${c.total}` }), h('div', { class: 'mt', text: 'tasks passed' })),
+    h('div', { style: 'margin-left:auto' }, sp.svg, h('div', { class: 'mt', text: `${sp.total} ledger events, 14 days` })),
+    h('div', { style: 'flex-basis:100%' }, h('span', { class: `pill t-${D.ratchet.relaxations.length ? 'stop' : 'good'}`, text: D.ratchet.relaxations.length ? `${D.ratchet.relaxations.length} bar${D.ratchet.relaxations.length > 1 ? 's' : ''} lowered` : 'No bar lowered' })));
+  const phases = D.waves.length ? h('div', { class: 'phases' }, D.waves.map((w) => h('button', { class: `ph${wave === w.id ? ' on' : ''}`, onclick: () => go('work', w.id) },
+    h('b', { text: w.id }), h('span', { class: 'mt', text: w.title }), seg(counts(w.tasks.map((i) => T[i]).filter(Boolean)))))) : h('div', { class: 'empty', text: 'No phases yet.' });
+  return [h('div', { class: 'sec' }, h('h2', { text: 'Where we are' }), life), truthStrip() ? h('div', { class: 'sec' }, h('h2', { text: 'How a field earns its place (click: Engine tab)' }), truthStrip()) : null, runningStrip(),
+    h('div', { class: 'sec grid3' }, h('div', null, h('h2', { class: 'sec-h', text: 'Next up', style: 'margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)' }), nextCard),
+      h('div', null, h('h2', { text: 'Needs you', style: 'margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)' }), needCard),
+      h('div', null, h('h2', { text: 'Pulse', style: 'margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)' }), pulseCard)),
+    h('div', { class: 'sec' }, h('h2', { text: 'Roadmap: phases P0 to P12 (click one: why, success, today, how to check)' }), roadmap())];
+}
+
+/* ---------- Map ---------- */
+function mapView() {
+  const legend = h('div', { class: 'legend' }, [['good', 'Passed'], ['live', 'In progress'], ['warn', 'Needs review or stalled'], ['stop', 'Blocked or failed'], ['ready', 'Ready'], ['quiet', 'Waiting']].map(([k, l]) => h('span', { class: `t-${k}` }, h('i'), l)));
+  const stages = D.journey.map((s) => {
+    const sc = counts(tasksIn('stage', s.id)), closed = shut.has(s.id);
+    return h('div', { class: `mapst${closed ? ' closed' : ''}` },
+      h('button', { class: 'hd', onclick: () => { closed ? shut.delete(s.id) : shut.add(s.id); draw(); }, 'aria-expanded': String(!closed) },
+        h('span', { class: 'chev', text: '▾' }), h('b', { text: s.name }), h('span', { class: 'mt', style: 'flex:1', text: s.goal }), h('div', { style: 'width:120px' }, seg(sc)), h('span', { class: 'num mt', text: sc.total ? `${sc.good}/${sc.total}` : '—' })),
+      h('div', { class: 'body' }, s.domains.map((d) => [h('div', { class: 'dom', text: d.name }), d.capabilities.map((cp) => {
+        const ts = tasksIn('capability', cp.id), c = counts(ts);
+        return h('button', { class: 'cap', onclick: () => open('cap', cp.id) }, h('span', { class: 'nm', text: cp.name }), squares(live(ts)),
+          h('div', { class: 'heatbar' }, h('i', { style: `width:${pctOf(c.good, c.total)}%` })), h('span', { class: 'rt num mt', text: c.total ? `${c.good}/${c.total}` : cp.tier || '' }));
+      })])));
+  });
+  return [legend, stages];
+}
+
+/* ---------- Work ---------- */
+function work() {
+  const filt = h('div', { class: 'filters' }, h('button', { class: `chip${wave === null ? ' on' : ''}`, text: 'All', onclick: () => go('work', null) }),
+    D.waves.map((w) => h('button', { class: `chip${wave === w.id ? ' on' : ''}`, text: `${w.id} ${w.title}`, onclick: () => go('work', w.id) })));
+  const list = live(D.tasks).filter((t) => wave === null || t.wave === wave);
+  const cols = GROUPS.map(([g, label]) => {
+    const ts = list.filter((t) => grp(t) === g).sort((a, b) => (g === 'ready' ? (a.next - b.next) : 0) || a.id.localeCompare(b.id, undefined, { numeric: true }));
+    return h('div', { class: `col t-${g === 'need' ? 'warn' : g}` }, h('h3', null, h('i'), label, h('span', { class: 'num', text: ts.length })),
+      ts.length ? ts.map((t) => h('button', { class: `tc t-${tone(t)}`, onclick: () => open('task', t.id) },
+        h('div', { class: 'ti', text: `${t.id}  ${t.title}` }),
+        h('div', { class: 'ft' }, t.capability && CAP[t.capability] ? h('span', { class: 'tag', text: CAP[t.capability].name }) : null,
+          t.steps.length ? h('div', { class: 'heatbar' }, h('i', { style: `width:${pctOf(t.steps.filter((x) => x.done).length, t.steps.length)}%;background:var(--c)` })) : null,
+          t.who ? h('span', { class: 'mt', text: t.who }) : null))) : h('div', { class: 'empty', text: '—' }));
+  });
+  return [filt, h('div', { class: 'board' }, cols)];
+}
+
+/* ---------- Rules ---------- */
+function rules() {
+  const all = live(D.tasks), passed = all.filter((t) => tone(t) === 'good').length, failed = all.filter((t) => /^Failed/.test(t.label)).length;
+  const W = D.warnings, totalW = W.reduce((a, w) => a + w.count, 0), max = Math.max(1, ...W.map((w) => w.count));
+  const kpi = (n, l, sub) => h('div', { class: 'card kpi' }, h('div', { class: 'big num', text: n }), h('div', { class: 'l', text: l }), sub ? h('div', { class: 'mt', text: sub }) : null);
+  const kpis = h('div', { class: 'kpis' }, kpi(passed + failed ? `${pctOf(passed, passed + failed)}%` : '—', 'pass rate', `${passed} passed, ${failed} failed`), kpi(totalW, 'warnings', `${W.length} rules`),
+    kpi(D.rules.enforced.length + D.rules.dayOne.length, 'rules strict', `${D.rules.dayOne.length} from day one`), kpi(W.filter((w) => w.ready).length, 'ready to enforce', `after ${D.rules.readyAfter} tasks`));
+  const bars = W.length ? h('div', { class: 'card bars' }, W.map((w) => h('button', { class: 'brow', onclick: () => open('rule', w.rule) }, h('span', { class: 'nm', text: w.rule }),
+    h('div', { class: 'bar' }, h('i', { class: w.ready ? 'rdy' : '', style: `width:${(100 * w.count) / max}%` })), h('span', { class: 'num mt', text: w.count })))) : h('div', { class: 'card empty', text: 'No warnings.' });
+  const sev = ['high', 'medium', 'low'], blast = ['code', 'component', 'container', 'system'], bugs = D.tasks.filter((t) => t.severity);
+  const cell = (s, b) => bugs.filter((t) => t.severity === s && t.blast === b).length, mx = Math.max(1, ...sev.flatMap((s) => blast.map((b) => cell(s, b))));
+  const matrix = bugs.length ? h('div', { class: 'card' }, h('div', { class: 'mx' }, h('span'), blast.map((b) => h('span', { text: b })),
+    sev.map((s) => [h('span', { text: s }), blast.map((b) => h('b', { class: 'num', style: `--k:${cell(s, b) / mx}`, text: cell(s, b) || '' }))]))) : h('div', { class: 'card empty', text: 'No defects recorded.' });
+  const strict = h('div', { class: 'card chips' }, D.rules.enforced.length ? D.rules.enforced.map((r) => h('span', { class: 'tag', text: r })) : h('span', { class: 'empty', text: 'Only the day-one rules are strict.' }));
+  const sec = (t, n) => h('div', { class: 'sec' }, h('h2', { text: t }), n);
+  return [kpis, sec('Warnings by rule', bars), h('div', { class: 'sec grid3' }, h('div', null, h('h2', { text: 'Defects: severity by reach', style: 'margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)' }), matrix),
+    h('div', null, h('h2', { text: 'Promoted to strict', style: 'margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)' }), strict))];
+}
+
+/* ---------- Engine: what the CPU engine can extract, by layer, across its versions ---------- */
+function engineView() {
+  const E = D.engine || {}, C = E.card; if (!C) return h('div', { class: 'card empty', text: 'No engine card on the ledger yet. Record one with: node cp.mjs engine <task> --card <json>' });
+  const Q = (E.measures || []).filter((m) => m.gate === 'Q25'), skip = C.challengers || [], vers = [...new Set(Q.map((m) => m.version))].filter((x) => !skip.includes(x)), by = {};
+  Q.forEach((m) => { (by[m.field] = by[m.field] || {})[m.version] = m; });
+  const latest = (k) => { const o = by[k]; if (!o) return null; for (let i = vers.length - 1; i >= 0; i--) if (o[vers[i]]) return o[vers[i]]; return null; };
+  const P = (v) => (v == null ? '–' : `${Math.round(v * 100)}%`), P1 = (v) => (v == null ? '–' : `${(v * 100).toFixed(1)}%`), bar = C.bar || 0.8;
+  const E2E = (m) => (m && m.agree != null ? (m.e2e != null ? m.e2e : m.agree * (m.answered_share != null ? m.answered_share : 1)) : null);
+  const E2L = (m) => (m && m.lo != null ? (m.e2e_lo != null ? m.e2e_lo : m.lo * (m.answered_share != null ? m.answered_share : 1)) : null);
+  const fld = {}; C.layers.forEach((L) => L.fields.forEach((f) => { fld[f.key] = f; }));
+  /* Ready needs all four: low end of the range over EVERY item >= bar; beats always guessing the common answer; rare things found >= bar; dependent steps wait. Returns [tone, word, plain reason]. */
+  const verdict = (f) => { if (f.later) return ['quiet', 'Later phase', ''];
+    const m = latest(f.key); if (!m) return ['quiet', 'Not measured', '']; const r = f.reach && latest(f.reach);
+    if (m.n_in < 30) return ['quiet', "Can't tell", `only ${m.n_in} items`];
+    const e = E2E(m), lo = E2L(m), base = m.base;
+    if (base == null) return ['quiet', "Can't tell", 'no guess baseline'];
+    if (lo <= base) return ['stop', 'Not yet', `no better than guessing (${P1(base)})${r ? `; finds ${P(r.agree)}` : ''}`];
+    if (r && r.agree < bar) return ['stop', 'Not yet', `finds ${P(r.agree)} of real`];
+    if (lo < bar) return (m.agree >= bar && m.answered_share != null && m.answered_share >= 0.5) ? ['warn', 'Partial', `answers ${P(m.answered_share)}`] : ['stop', 'Not yet', `low end ${P1(lo)} < ${P(bar)}`];
+    const up = f.needs && fld[f.needs] && verdict(fld[f.needs]); if (up && up[1] !== 'Ready') return ['stop', 'Not yet', `waits on ${fld[f.needs].label}`];
+    return ['good', 'Ready', `beats guessing (${P1(base)})`]; };
+  const spark = (key) => { const W = 110, Hh = 40, x = (i) => 10 + (vers.length > 1 ? i * (W - 20) / (vers.length - 1) : 0), y = (v) => Hh - 4 - (Math.max(0.5, Math.min(1, v)) - 0.5) / 0.5 * (Hh - 8), pts = [];
+    vers.forEach((vn, i) => { const m = (by[key] || {})[vn]; if (m && m.agree != null) pts.push([x(i), y(E2E(m)), m]); });
+    return h('svg', { width: W, height: Hh, viewBox: `0 0 ${W} ${Hh}`, role: 'img', 'aria-label': `agreement across versions ${vers.join(', ')}` },
+      h('line', { x1: 0, x2: W, y1: y(bar), y2: y(bar), stroke: 'var(--t3)', 'stroke-dasharray': '3 3', 'stroke-width': 1 }),
+      pts.length > 1 ? h('path', { d: pts.map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`).join(' '), fill: 'none', stroke: 'var(--live)', 'stroke-width': 1.5 }) : null,
+      pts.map((p) => h('g', null, p[2].lo != null ? h('line', { x1: p[0], x2: p[0], y1: y(E2L(p[2])), y2: y(p[2].e2e_lo != null ? p[2].e2e_lo + (p[2].hi - p[2].lo) : p[2].hi * (p[2].answered_share != null ? p[2].answered_share : 1)), stroke: 'var(--live)', 'stroke-width': 1, opacity: 0.55 }) : null,
+        h('circle', { cx: p[0], cy: p[1], r: 3.5, fill: 'var(--live)' }, h('title', { text: `${p[2].version}: right ${P(E2E(p[2]))} on every item; ${P(p[2].agree)} where it answers (95% ${P(p[2].lo)} to ${P(p[2].hi)}) on ${p[2].n_in}` })))));
+  };
+  const E2H = (m) => (m.e2e_lo != null ? m.e2e_lo + (m.hi - m.lo) : m.hi * (m.answered_share != null ? m.answered_share : 1));
+  /* bullet chart: grey = what always guessing the common answer scores, bar = engine on every item, whisker = 95% range, black line = target, diamond = challenger */
+  const bullet = (tone, e, lo, hi, base, tgt, min, chal, tip) => { const W = 220, x = (v) => Math.max(0, Math.min(W, (v - min) / (1 - min) * W));
+    return h('div', { class: `t-${tone}`, title: tip }, h('svg', { width: W, height: 28, viewBox: `0 0 ${W} 28`, role: 'img', 'aria-label': tip },
+      h('rect', { x: 0, y: 7, width: W, height: 14, rx: 3, fill: 'var(--hair)' }),
+      base != null && base > min ? h('rect', { x: 0, y: 7, width: x(base), height: 14, rx: 3, fill: 'var(--quiet)', opacity: 0.5 }) : null,
+      h('rect', { x: 0, y: 10, width: x(e), height: 8, rx: 2, fill: 'var(--c)' }),
+      lo != null && hi != null ? h('line', { x1: x(lo), x2: x(hi), y1: 14, y2: 14, stroke: 'var(--t1)', 'stroke-width': 1.5 }) : null,
+      h('line', { x1: x(tgt), x2: x(tgt), y1: 1, y2: 27, stroke: 'var(--t1)', 'stroke-width': 2.5 }),
+      chal != null ? h('path', { d: `M${x(chal)} 6 l5 8 l-5 8 l-5 -8 z`, fill: 'var(--live)', stroke: 'var(--bg, #000)', 'stroke-width': 1 }) : null)); };
+  const D1 = (v) => (v == null ? '–' : (v * 100).toFixed(1));
+  const cell = (t, st) => h('div', { class: 'ec', style: st || null, text: t });
+  const clr = (g) => `color:var(--${g >= 0 ? 'good' : 'stop'})`;
+  const TERMS = {
+    'Ready': 'Passes every check: right at least 80% of the time over all items (low end of the range), beats always guessing the common answer, finds at least 80% of rare cases.',
+    'Partial': 'Right 80%+ but only on the items it answers, and it answers at least half.',
+    'Not yet': 'Fails at least one Ready check. The reason is in the expanded row.',
+    "Can't tell": 'Fewer than 30 items or no guess baseline, so no verdict.',
+    'Always-guess baseline': 'The score you get by always giving the most common answer. A field must beat this to count.',
+    'Target': 'The higher of 80% and the always-guess score. The line on the chart.',
+    'Gap': 'Low end of the 95% range minus the target, in points. Negative means short.',
+    '95% range': 'Where the true score probably sits, given how many items were tested.',
+    'Reach': 'Of the real conditions, the share the engine finds.',
+    'Fit': 'Is the field worth classifying at all? Four tests: not too subjective, enough real cases, a source of truth, evidence in the input. Not the same as Consensus.',
+    'Agreement score': 'Krippendorff\'s alpha: how much labellers agree beyond what chance alone would give. 1.0 is perfect; 0 is no better than guessing.',
+    'Consensus': 'Do independent labellers agree? Decided only by the sourced alpha bands (Krippendorff): 0.80 or more Clear, 0.667 to 0.80 Tentative, under 0.667 Reject. Our own measures are flags and never decide.',
+    'Clear': 'Alpha 0.80 or more: labellers agree beyond chance (Krippendorff).',
+    'Tentative': 'Alpha 0.667 to 0.80: usable for tentative conclusions only (Krippendorff).',
+    'Reject': 'Alpha under 0.667: labellers do not agree beyond chance. Fix the definition before training.',
+    'Same voter twice': 'The same model labelling the same item twice gives the same answer this often.',
+    'Sonnet vs Haiku': 'Two different models agree this often. Our ceiling: a student should not be expected to beat how well the teachers agree with each other.',
+    'Unanimous': 'Share of items where every voter gave the same answer.',
+    'Split': 'Share of items with no majority. Industry calls this conflict (Snorkel).',
+    'Surface': 'Stated in the text. Different models agree (90%+).',
+    'Mixed': 'Partly stated, partly judged. Models agree 75 to 90%.',
+    'Implied': 'Needs judgment or subtext. Models agree under 75%.',
+    'Snorkel': 'Open-source tool that combines several noisy labelling sources into one label and reports each source\'s coverage, overlap and conflict. We borrow the idea. Not installed.',
+    'Cleanlab multi-annotator': 'Library that builds one consensus label from several annotators and scores every label and every annotator. We borrow the idea. Not installed.',
+    'Consensus': 'The answer most voters give. Unanimous, majority, or split. No single system is the truth.',
+    'Distillation': 'Training a small fast model to copy a big slow one.',
+    'MAMA': 'Model, Annotate, Model, Annotate: pilot-label a small set, refine the definition, repeat.',
+    'Document classification': 'Give a whole text one label from a fixed list. The oldest, best-supported recipe.',
+    'Event detection': 'Decide whether a text reports an event of interest. Rare events make this lopsided.',
+    'Event-type classification': 'Given an event, say which type (ACE and TAC-KBP are the standard sets).',
+    'Ordinal classification': 'Labels with an order (minor to extreme). Neighbouring steps are near-misses.',
+    'Within one step': 'Counts a near-miss as right. Guessing the middle already scores about 97%, so it cannot prove skill.',
+    'Sealed set': 'Items nobody scores or labels until the owner says adopt. Stops us tuning to the test.'
+  };
+  const tip = (t, k) => h('span', { class: 'tt', title: TERMS[k || t] || '', text: t });
+  const chip = (tone, word, k) => h('div', { class: 'ev' }, h('span', { class: `evb t-${tone}`, title: TERMS[k || word] || '', text: word }));
+  const ln = (k, v, tk) => v == null ? null : h('div', null, h('b', null, tip(k, tk), ': '), v);
+  const F2 = (ft) => { const Q = (C.fitness && C.fitness.measures) || []; return Q.map((q) => { const c = ft.checks[q.k]; return `${q.t} ${SYM[c.s]}`; }).join(' · '); };
+  const SYM = { pass: '✓', warn: '!', fail: '✗' };
+  const FT = { Build: 'good', Rework: 'warn', "Don't build": 'stop', Wait: 'quiet', Clear: 'good', Tentative: 'warn', Reject: 'stop' };
+  const txt = (s, l) => h('div', { class: 'etx', 'data-l': l || '', title: s || '', text: s || '–' });
+  const gaps = (g) => (g == null ? '–' : `${g >= 0 ? '+' : '−'}${Math.abs(g).toFixed(1)}`);
+  const nowTgt = (e, tgt, tone, chart) => h('div', { class: 'enow' }, h('div', null, h('b', { class: `t-${tone}`, style: 'color:var(--c);font-size:17px', text: D1(e) }), h('span', { class: 'mt', text: ` → ${D1(tgt)}` })), chart);
+  const fitBlock = (ft) => { const Ms = (C.fitness && C.fitness.measures) || [], Ts = (C.fitness && C.fitness.fit_tests) || [];
+    const mark = (st) => { const y = SY[st] || ['quiet', 'n/a']; return h('span', { class: `t-${y[0]}`, style: 'color:var(--c);font-weight:700;text-align:center', text: y[1] }); };
+    const tag = (src) => h('span', { class: 'fsrc', text: src === 'sourced' ? 'sourced' : 'ours' });
+    const cls = ft.classes ? Object.entries(ft.classes) : [];
+    const c1 = h('div', null, h('div', { class: 'fbh' }, h('b', null, tip('Consensus', 'Consensus')), chip(FT[ft.verdict], ft.verdict, ft.verdict), h('span', { class: 'mt', text: `agreement score ${ft.alpha.toFixed(3)}` })),
+      h('div', { class: 'fbg' }, Ms.map((q) => { const c = ft.checks[q.k] || { s: 'quiet', v: null }; return [mark(c.s), h('span', { title: `${q.q} ${q.bar}`, text: q.t }), h('span', { class: 'num', text: c.v == null ? 'n/a' : qv(q, c) + (c.which ? ` (${c.which})` : '') }), tag(q.src.startsWith('sourced') ? 'sourced' : q.src)]; })),
+      h('div', { class: 'mt', style: 'padding-top:4px', text: 'Clear from 0.800, tentative from 0.667 (Krippendorff). Only the agreement score decides; the rest are flags.' }));
+    const c2 = cls.length ? h('div', null, h('div', { class: 'fbh' }, h('b', { text: 'Per answer' }), h('span', { class: 'mt', text: 'how often labellers agree on each answer' })),
+      cls.map(([k, v]) => h('div', { class: 'fbr' }, h('span', { text: k }), h('span', { class: 'fbt' }, h('i', { class: v.agree >= 0.7 ? 'g' : v.agree >= 0.5 ? 'w' : 'b', style: `width:${Math.round(v.agree * 100)}%` })), h('span', { class: 'num', text: `${Math.round(v.agree * 100)}%` }), h('span', { class: 'mt', text: `${v.n} votes` })))) : null;
+    const c3 = h('div', null, h('div', { class: 'fbh' }, h('b', null, tip('Fit', 'Fit')), h('span', { class: 'mt', text: 'is the field worth classifying?' })),
+      h('div', { class: 'fbg' }, Ts.map((q) => { const c = ft.fit_tests[q.k]; return [mark(c.s), h('span', { title: `${q.q} ${q.bar}`, text: q.t }), h('span', { text: c.t }), tag(q.src)]; })));
+    return h('div', { class: `efitb t-${FT[ft.verdict]}`, style: 'grid-column:1/-1;border-left:3px solid var(--c);padding:6px 14px;margin-bottom:6px' },
+      h('div', { class: 'fbwrap' }, c1, c2, c3),
+      h('div', { class: 'fbw' }, h('b', { text: 'Next: ' }), ft.fix || ''),
+      det('Why this verdict', h('div', { class: 'mt', style: 'padding:4px 0', text: ft.why || '' }))); };
+  const row = (f) => { const [tone, word, why] = verdict(f), m = latest(f.key), ch = f.chal || {}, ft = f.fit;
+    const fitLine = ft ? h('div', { class: 'efit' }, tip('Consensus', 'Consensus'), ': ', h('span', { class: `t-${FT[ft.verdict]}`, style: 'color:var(--c)', title: TERMS[ft.verdict], text: ft.verdict })) : null;
+    if (f.later || !m) return h('div', { class: 'erow', style: 'opacity:.7' }, h('div', { class: 'ti', title: f.what, text: f.label }), h('div', null, chip('quiet', f.later ? 'Later' : 'Not measured', "Can't tell"), fitLine), h('div'), txt(f.work, 'Working'), txt(f.bad, 'Not working'), txt(f.step, 'Next step'));
+    const e = E2E(m), lo = E2L(m), tgt = Math.max(bar, m.base != null ? m.base : 0), gap = lo != null ? (lo - tgt) * 100 : null, n = m.n_all || (m.answered_share ? Math.round(m.n_in / m.answered_share) : m.n_in), a = f.also && latest(f.also), ans = m.answered_share != null && m.answered_share < 0.995;
+    return h('details', { class: 'erd' }, h('summary', { class: 'erow' }, h('div', { class: 'ti', title: f.what, text: f.label }), h('div', null, chip(tone, word), fitLine),
+      nowTgt(e, tgt, tone, bullet(tone, e, lo, E2H(m), m.base, tgt, 0.5, ch.e2e, `${f.label}: engine ${D1(e)}, guess ${D1(m.base)}, target ${D1(tgt)}`)), txt(f.work, 'Working'), txt(f.bad, 'Not working'), txt(f.step, 'Next step')),
+      h('div', { class: 'edet' }, ft ? fitBlock(ft) : null,
+        ln('What', f.what), ln('Why this status', why), ln('Always-guess baseline', D1(m.base)), ln('Target', D1(tgt)), ln('Gap', `${gaps(gap)} pts`), ln('95% range', `${D1(lo)} to ${D1(E2H(m))}`), ln('Items', n.toLocaleString()),
+        ln(f.also_label ? `Top-1 (${f.also_label})` : null, a ? D1(a.agree) : null), ans ? ln('Answers', D1(m.answered_share)) : null, ans ? ln('Right where it answers', D1(m.agree)) : null, ch.v ? ln(ch.v, `${D1(ch.e2e)} on a separate fresh set`) : null,
+        ft ? ln('Pattern', ft.pattern, ft.pattern.split(' (')[0]) : null, ft ? ln('Recipe in industry', ft.recipe) : null,
+        ft ? ln('Agreement score', `${ft.alpha.toFixed(3)} on ${ft.n} items`) : null, ft ? ln('Same voter twice', D1(ft.self)) : null, ft ? ln('Sonnet vs Haiku', D1(ft.cross)) : null, ft ? ln('Unanimous', D1(ft.unanimous)) : null, ft ? ln('Split', D1(ft.split)) : null,
+        ft ? ln('Reading', null) : null, ft ? h('div', null, h('b', null, 'Reading: '), tip(ft.kind[0].toUpperCase() + ft.kind.slice(1), ft.kind[0].toUpperCase() + ft.kind.slice(1)), ' (from model agreement)') : null,
+        h('div', null, h('b', { text: 'Trend by version: ' }), spark(f.key)))); };
+  const rowReach = (f) => { const r = f.reach && latest(f.reach); if (!r) return null; const ch = f.chal || {}, g = (r.agree - bar) * 100, tone = r.agree >= bar ? 'good' : 'stop', t = f.reach_txt || {};
+    return h('details', { class: 'erd' }, h('summary', { class: 'erow' }, h('div', { class: 'ti', text: `${f.label}: finds real cases` }), h('div', null, chip(tone, r.agree >= bar ? 'Ready' : 'Not yet')),
+      nowTgt(r.agree, bar, tone, bullet(tone, r.agree, r.lo, r.hi, null, bar, 0, ch.reach, `finds ${D1(r.agree)}, target ${D1(bar)}`)), txt(t.work, 'Working'), txt(t.bad, 'Not working'), txt(t.step, 'Next step')),
+      h('div', { class: 'edet' }, ln('What', 'Share of the real conditions (per Sonnet) that the engine says yes to', 'Reach'), ln('Gap', `${gaps(g)} pts`), ln('Items', `${r.n_in} real conditions`), ch.v ? ln(ch.v, `${D1(ch.reach)} on a separate fresh set`) : null)); };
+  const layer = (L) => h('div', { class: 'sec' }, h('div', { class: 'elh' }, h('h2', { text: L.name, style: 'margin:0;font-size:15px' }), h('span', { class: `evb t-${L.status === 'building' ? 'live' : 'quiet'}`, text: L.status === 'building' ? 'Building now' : 'Later phase' }), h('span', { class: 'mt', text: L.asks })), (C.fitness && C.fitness.legend && L.fields.some((f) => f.fit)) ? h('div', { class: 'mt', style: 'margin:-2px 0 8px', text: C.fitness.legend }) : null,
+    h('div', { class: 'card etab', style: 'padding:4px 14px' }, h('div', { class: 'erow ehd' }, h('span', { text: 'Field' }), h('span', { text: 'Status' }), h('span', { title: 'Bar = engine on every item · grey = always-guess · line = target · ◆ challenger v6b', text: 'Now → target' }), h('span', { text: 'Working' }), h('span', { text: 'Not working' }), h('span', { text: 'Next step' })), L.fields.flatMap((f) => [row(f), rowReach(f)])));
+  const consensus = (K) => h('div', { class: 'sec' }, det(`Scored against consensus (${K.voters}, ${K.n} clean items)`, h('div', { class: 'card', style: 'padding:4px 14px' },
+    h('div', { class: 'ftab ehd', style: 'grid-template-columns:200px repeat(3,80px) minmax(0,1fr)' }, h('span', { text: 'Field' }), h('span', { title: TERMS['Always-guess baseline'], text: 'Guess %' }), h('span', { text: 'v5-leaf %' }), h('span', { text: 'v6b %' }), h('span', { title: TERMS.Split, text: 'Voters split' })),
+    K.rows.map((r) => { const kk = Object.keys(K.contested).find((k) => r[0].startsWith(k)), sp = kk ? K.contested[kk] : null; return h('div', { class: 'ftab', style: 'grid-template-columns:200px repeat(3,80px) minmax(0,1fr)' }, h('div', { class: 'ti', text: r[0] }), h('span', { text: r[1] == null ? '–' : r[1].toFixed(1) }),
+      h('span', { style: r[1] == null ? null : clr(r[2] - r[1]), text: r[2].toFixed(1) }), h('span', { style: r[1] == null ? null : clr(r[3] - r[1]), text: r[3].toFixed(1) }), h('span', { class: 'mt', text: sp == null ? '–' : D1(sp) })); })),
+    h('div', { class: 'mt', style: 'padding:6px 0' }, 'Items where the voters split are left out and shown in the last column. No single system is the truth.'), K.notes.map((t) => h('div', { class: 'mt', style: 'padding:2px 0', text: `· ${t}` }))));
+  const SY = { pass: ['good', 'pass'], warn: ['warn', 'partly'], fail: ['stop', 'fail'] };
+  const qv = (q, c) => c.v == null ? 'n/a' : (q.fmt === 'n3' ? c.v.toFixed(3) : q.fmt === 'n2' ? c.v.toFixed(2) : c.base != null ? `${Math.round(c.v * 100)} vs ${Math.round(c.base * 100)}%` : `${Math.round(c.v * 100)}%`);
+  const fitness = (F) => { const fl = C.layers.flatMap((L) => L.fields).filter((f) => f.fit && f.fit.checks), Ms = F.measures || [], Ts = F.fit_tests || [];
+    const stag = (q) => h('span', { class: 'mt', style: 'display:block;font-size:10px;text-transform:none;letter-spacing:0', text: q.src });
+    const sec = (title, sub) => h('div', { class: 'elh', style: 'margin-top:18px' }, h('h2', { text: title, style: 'margin:0;font-size:15px' }), h('span', { class: 'mt', text: sub }));
+    const defs = (L, extra) => h('div', { class: 'card', style: 'padding:8px 14px;margin-top:8px' }, L.map((q) => h('div', { class: 'qq' }, h('b', { text: q.t }), h('span', null, `${q.q} ${q.m}. ${q.bar}. `, h('b', { class: `t-${q.src === 'sourced' ? 'good' : 'warn'}`, style: 'color:var(--c)', text: `[${q.src}]` }), ` ${q.cite}`))), extra);
+    return h('div', { class: 'sec' },
+      h('div', { class: 'elh' }, h('h2', { text: 'Consensus: do the labels hold up?', style: 'margin:0;font-size:15px' }), h('span', { class: 'evb t-live', text: 'Define stage' }), h('span', { class: 'mt', text: `${F.n} items, ${F.voters}` })),
+      h('div', { class: 'card etab', style: 'padding:4px 14px' },
+        h('div', { class: 'qtab ehd' }, h('span', { text: 'Field' }), h('span', { title: TERMS.Consensus, text: 'Verdict' }), Ms.map((q) => h('span', { title: `${q.q} ${q.m}. ${q.bar}. Source: ${q.src} (${q.cite}).` }, q.t, stag(q)))),
+        fl.map((f) => h('div', { class: 'qtab' }, h('div', { class: 'ti', text: f.label }), chip(FT[f.fit.verdict], f.fit.verdict, f.fit.verdict), Ms.map((q) => { const c = f.fit.checks[q.k] || { s: 'quiet', v: null }, y = SY[c.s] || ['quiet', 'n/a']; return h('span', { class: `qc t-${y[0]}`, 'data-l': q.t, style: 'color:var(--c)', title: `${q.q} ${q.m}: ${qv(q, c)}${c.which ? ` (lowest: ${c.which})` : ''}. ${q.bar}. Source: ${q.src}.`, text: c.v == null ? 'n/a' : `${y[1]} ${qv(q, c)}` }); })))),
+      defs(Ms, h('div', { style: 'padding-top:6px;font-weight:600', text: F.rule })),
+      sec('Fit: is the field worth classifying?', 'your definition: not too subjective, enough real cases, a source of truth, evidence in the input'),
+      h('div', { class: 'card etab', style: 'padding:4px 14px' },
+        h('div', { class: 'ftt ehd' }, h('span', { text: 'Field' }), Ts.map((q) => h('span', { title: `${q.q} ${q.m}. ${q.bar}. Source: ${q.src} (${q.cite}).` }, q.t, stag(q)))),
+        fl.map((f) => h('div', { class: 'ftt' }, h('div', { class: 'ti', text: f.label }), Ts.map((q) => { const c = f.fit.fit_tests[q.k], y = SY[c.s] || ['quiet', 'n/a']; return h('span', { class: `t-${y[0]}`, 'data-l': q.t, style: 'color:var(--c)', text: `${y[1]} ${c.t}` }); })))),
+      defs(Ts),
+      sec('How the checks were checked', 'sources, Lean proofs, MM3 reviews and planted-bug tests'),
+      h('div', { class: 'card etab', style: 'padding:4px 14px' },
+        h('div', { class: 'vtab ehd' }, ['Check', 'Source', 'Lean proof', 'MM3', 'Planted bugs'].map((t) => h('span', { text: t }))),
+        (F.verify || []).map((v) => h('div', { class: 'vtab' }, h('div', { class: 'ti', text: v.check }), h('span', { 'data-l': 'Source', text: v.source }), h('span', { 'data-l': 'Lean proof', text: v.lean }), h('span', { 'data-l': 'MM3', text: v.mm3 }), h('span', { 'data-l': 'Planted bugs', text: v.bugs })))),
+      det('Assumptions we are working under', (F.assumptions || []).map((t) => h('div', { class: 'mt', style: 'padding:2px 0', text: `· ${t}` }))),
+      det('Notes and the third system', h('div', { class: 'mt', style: 'padding:6px 0' }, F.clef), (F.notes || []).map((t) => h('div', { class: 'mt', style: 'padding:2px 0', text: `· ${t}` })))); };
+  const fpAll = (E.measures || []).filter((m) => m.gate === 'Q28' && m.ram_mb_peak), fp = fpAll.filter((m) => m.version === C.version).at(-1) || fpAll.at(-1), all = C.layers.flatMap((L) => L.fields), cnt = { good: 0, warn: 0, stop: 0, quiet: 0 };
+  all.forEach((f) => { cnt[verdict(f)[0]]++; });
+  const story = latest('story_type'), built = all.length - cnt.quiet;
+  const tile = (big, label, sub, tone) => h('div', { class: 'card tile' }, h('div', { class: `big num${tone ? ` t-${tone}` : ''}`, style: tone ? 'color:var(--c)' : null, text: big }), h('div', { class: 'tl', text: label }), h('div', { class: 'mt', text: sub }));
+  const tiles = h('div', { class: 'tiles' }, fp ? tile(`${Math.round(fp.ms_p50)} ms`, 'Typical read', `95% of reads under ${fp.ms_p95} ms · one CPU thread`) : null,
+    fp ? tile(`${(fp.ram_mb_peak / 1000).toFixed(1)} GB`, 'Memory in use', `${fp.ram_mb_peak} MB at peak · files ${fp.file_mb} MB model + ${fp.onnx_mb} MB encoder`) : null,
+    tile('CPU only', 'Hardware', fp ? `no GPU, no API · loads in ${fp.load_s} s` : 'no GPU, no API'),
+    tile(`${cnt.good} of ${all.length - cnt.quiet}`, 'Fields you can rely on', `${cnt.good} ready · ${cnt.warn} partial · ${cnt.stop} not yet · ${cnt.quiet} later phase or untested`, cnt.good ? 'good' : 'stop'));
+  const nx = C.next, tried = C.tried_groups || [];
+  const det = (t, ...k) => h('details', { class: 'det' }, h('summary', { text: t }), ...k);
+  const nm = (w) => all.filter((f) => verdict(f)[1] === w).map((f) => f.label);
+  const lbl = 'text-transform:uppercase;letter-spacing:.08em;font-size:11px';
+  return [h('div', { class: 'card', style: 'margin-bottom:10px;padding:10px 14px' }, h('div', { style: 'display:flex;gap:10px;align-items:baseline;flex-wrap:wrap' }, h('h2', { text: `${C.name} ${C.version}`, style: 'margin:0;font-size:18px' }), h('span', { class: 'mt', text: `reads a ${C.domain}` })),
+      h('div', { style: 'margin-top:4px;font-size:15px;font-weight:650' }, h('span', { class: 't-good', style: 'color:var(--c)', text: `Ready: ${nm('Ready').join(', ') || 'none'}` }), h('span', { class: 'mt', text: '  ·  ' }), h('span', { class: 't-stop', style: 'color:var(--c)', text: `Not yet: ${nm('Not yet').length} of ${all.length - cnt.quiet}` })),
+      h('div', { style: 'display:flex;gap:3px;margin:6px 0 2px' }, all.filter((f) => !f.later).map((f) => { const v = verdict(f); return h('div', { title: `${f.label}: ${v[1]}`, style: `flex:1;height:8px;border-radius:3px;background:var(--${{ good: 'good', warn: 'warn', stop: 'stop' }[v[0]] || 'quiet'})` }); })),
+      det('Ready rule', h('div', { class: 'mt', style: 'padding:4px 0', text: C.rule }))),
+    tiles, fp && fp.stalls ? h('div', { class: 'mt', style: 'margin:-2px 0 10px', text: `Speed caveat: ${fp.stalls}.` }) : null,
+    C.layers.map(layer), C.fitness ? fitness(C.fitness) : null, C.consensus ? consensus(C.consensus) : null,
+    nx ? h('div', { class: 'card cta', style: 'padding:10px 14px' }, h('div', { class: 'mt', text: 'Next decision', style: lbl }), h('div', { style: 'font-weight:650;font-size:15px;margin:2px 0', text: nx.headline }), h('div', { style: 'font-weight:600', text: `${nx.who ? nx.who + ': ' : ''}${nx.ask}` }), det('Detail', h('div', { class: 'mt', style: 'padding:4px 0', text: nx.body }))) : null,
+    (C.changes && C.changes.length) ? h('div', { class: 'sec' }, det(`What changed (${C.changes.length})`, h('div', { class: 'card', style: 'padding:2px 14px' }, C.changes.map((g) => h('div', { class: 'trow', title: g.text }, h('div', { class: 'ti', text: g.title }), h('span', { class: `evb t-${{ Win: 'good', Fixed: 'live', 'No gain': 'warn', Trying: 'quiet' }[g.tag] || 'quiet'}`, text: g.tag })))))) : null,
+    h('div', { class: 'sec' }, det('Glossary: hover any dotted term on the page', h('div', { style: 'padding:6px 0' }, Object.entries(TERMS).map(([k, v]) => h('div', { class: 'mt', style: 'padding:3px 0' }, h('b', { text: `${k}: ` }), v))))),
+    h('div', { class: 'sec' }, det('How it works and why', h('div', { style: 'padding:6px 0' }, h('div', { text: C.how }), h('div', { class: 'mt', style: 'margin-top:6px', text: C.why })))),
+    h('div', { class: 'sec' }, h('h2', { text: 'What we tried instead, in short', style: 'margin:0 0 8px;font-size:15px' }), h('div', { class: 'card', style: 'padding:4px 14px' }, tried.map((g) => h('div', { class: 'trow' }, h('div', null, h('div', { class: 'ti', text: g.name }), h('div', { class: 'mt', text: g.summary })), h('div', null, h('span', { class: `evb t-${g.verdict === 'kept' ? 'good' : g.verdict === 'rejected' ? 'stop' : 'warn'}`, text: g.verdict[0].toUpperCase() + g.verdict.slice(1) })), h('div', { class: 'mt num', text: g.ledger }),
+        det(`${g.items.length} test${g.items.length === 1 ? '' : 's'}`, g.items.map((t) => h('div', { class: 'mt', style: 'padding:3px 0' }, h('b', { text: `${t.ledger}: ${t.what}. ` }), `${t.result}. ${t.outcome}.`)))))))];
+}
+
+/* ---------- Quality: the gate map, in and out ---------- */
+const gtone = (g) => (!g.last ? 'quiet' : g.last.pass ? (g.last.thin ? 'warn' : 'good') : 'stop');
+const gateSq = (g) => h('button', { class: `gq t-${gtone(g)}${g.last ? '' : ' none'}${g.relaxed ? ' rx' : ''}${g.status === 'provisional' ? ' prov' : ''}`, onclick: () => open('gate', g.id),
+  title: `${g.id} ${g.dimension}: ${g.test} (${g.threshold})`, 'aria-label': `${g.id} ${g.dimension}: ${g.last ? (g.last.pass ? 'passing' : 'failing') : 'not measured'}`, text: g.relaxed ? '!' : '' });
+function quality() {
+  const G = D.gates, M = G.filter((g) => g.last), P = M.filter((g) => g.last.pass), F = M.length - P.length, R = D.ratchet.relaxations;
+  const counted = G.filter((g) => g.last && g.last.n_in), rolled = counted.reduce((a, g) => a * (g.last.n_pass / g.last.n_in), 1);
+  const kpi = (n, l, sub, c) => h('div', { class: 'card kpi' }, h('div', { class: `big num${c ? ` t-${c}` : ''}`, style: c ? 'color:var(--c)' : null, text: n }), h('div', { class: 'l', text: l }), sub ? h('div', { class: 'mt', text: sub }) : null);
+  const kpis = h('div', { class: 'kpis' }, kpi(`${M.length}/${G.length}`, 'gates measured'), kpi(P.length, 'passing', null, P.length ? 'good' : null), kpi(F, 'failing', null, F ? 'stop' : null),
+    kpi(R.length, 'bars lowered', R.length ? 'see below' : 'the bar has held', R.length ? 'stop' : 'good'), kpi(counted.length ? `${Math.round(100 * rolled)}%` : '—', 'rolled yield', counted.length ? `across ${counted.length} counted gates` : 'no counts yet'));
+  const legend = h('div', { class: 'lg' }, [['good', 'Passing'], ['warn', 'Passing, thin margin'], ['stop', 'Failing'], ['quiet', 'Not measured']].map(([k, l]) => h('span', { class: `t-${k}` }, h('i', { class: `gq${k === 'quiet' ? ' none' : ''}`, style: 'width:12px;height:12px;border-radius:4px' }), l)),
+    h('span', null, h('i', { class: 'gq t-good prov', style: 'width:12px;height:12px;border-radius:4px' }), 'Striped: provisional bar'), h('span', null, h('i', { class: 'gq t-good rx', style: 'width:12px;height:12px;border-radius:4px' }), 'Outlined: bar was lowered'));
+  const rows = D.journey.map((s) => { const gs = G.filter((g) => g.stage === s.id); if (!gs.length) return null;
+    const m = gs.filter((g) => g.last), ok2 = m.filter((g) => g.last.pass).length, inn = gs.filter((g) => g.side === 'entry'), out = gs.filter((g) => g.side === 'exit');
+    return h('div', { class: 'gr' }, h('span', { class: 'nm', text: s.name }), h('div', { class: 'gcol' }, inn.length ? inn.map(gateSq) : h('span', { class: 'mt', text: '—' })), h('div', { class: 'gcol' }, out.length ? out.map(gateSq) : h('span', { class: 'mt', text: '—' })),
+      h('div', { class: 'heatbar' }, h('i', { style: `width:${pctOf(ok2, m.length)}%` })), h('span', { class: 'num mt', text: m.length ? `${ok2}/${m.length}` : 'not measured' })); });
+  const map = G.length ? h('div', { class: 'card', style: 'padding:8px 4px' }, h('div', { class: 'gh' }, h('span', { text: 'Stage' }), h('span', { text: 'Going in' }), h('span', { text: 'Coming out' }), h('span', { text: 'Passing' }), h('span')), rows) : h('div', { class: 'card empty', text: 'No gates in the contract.' });
+  const fun = counted.length ? h('div', { class: 'card fun' }, counted.map((g) => h('button', { class: 'fr', onclick: () => open('gate', g.id) }, h('span', { class: 'nm', text: `${g.id} ${g.population}` }),
+    h('div', { class: 'bar' }, h('i', { style: `width:${pctOf(g.last.n_pass, g.last.n_in)}%` })), h('span', { class: 'num mt', text: `${g.last.n_pass}/${g.last.n_in}` })))) : h('div', { class: 'card empty', text: 'No counts recorded yet.' });
+  const ratchet = h('div', { class: 'card' }, R.length ? R.map((r) => h('button', { class: 'item', onclick: () => open('gate', r.gate) }, h('span', { class: 't-stop dot' }), h('span', null, h('div', { class: 'ti', text: `${r.gate}: ${r.from} → ${r.to}` }), h('div', { class: 'mt', text: `${ago(r.ts)} · ${r.text}` }))))
+    : h('div', { class: 'sub', text: first(D.ratchet.rule) || 'No bar has been lowered.' }));
+  const hd = (t) => h('h2', { text: t, style: 'margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)' });
+  return [kpis, h('div', { class: 'sec' }, hd('Quality in and out, by stage'), legend, map), h('div', { class: 'sec grid3' }, h('div', null, hd('Yield through the gates'), fun), h('div', null, hd('Has the bar held?'), ratchet))];
+}
+
+/* ---------- Sheets ---------- */
+const kv = (k, ...n) => [h('div', { class: 'k', text: k }), ...n];
+const crumbBtn = (t, type, id) => h('button', { text: t, onclick: () => open(type, id) });
+const phDot = (p) => { const t = T[p.task]; return ({ done: 'good', passed: 'good', in_progress: 'live', ready: 'ready', blocked: 'stop', failed: 'stop' })[t && t.status] || 'quiet'; };
+const phBlock = (p) => [kv('Success means', h('p', { text: p.success })), kv('Where it stands today', h('p', { text: p.today })), kv('How to check it', h('code', { text: p.how || 'not yet written', style: 'overflow-wrap:anywhere' }))];
+function phaseSheet(p) {
+  const t = T[p.task], ev = p.evidence || [];
+  return [h('div', { class: 'crumb' }, STG[p.stage] ? crumbBtn(STG[p.stage].name, 'stage', p.stage) : null), h('h2', { text: `${p.id} · ${p.name}` }),
+    h('div', { class: 'chips' }, t ? pill(t) : null, h('span', { class: 'tag', text: `Ledger task ${p.task}` }), p.card ? h('span', { class: 'tag', text: `Budget card ${p.card}` }) : h('span', { class: 'tag', text: 'no budget card' })),
+    kv('Why it matters', h('p', { text: p.why })), ...phBlock(p),
+    ev.length ? kv('Evidence (files and notes)', ev.map((e) => h('div', { class: 'ev', text: e }))) : null,
+    t ? h('button', { class: 'link', style: 'color:var(--accent);margin-top:12px', text: `Open ledger task ${p.task}: steps, history and notes`, onclick: () => open('task', p.task) }) : null];
+}
+function roadmap() {
+  const ps = D.phases || []; if (!ps.length) return h('div', { class: 'empty', text: 'No phase definitions found (projects/world-state/phases.json).' });
+  return h('div', { class: 'card' }, D.journey.map((s) => { const g = ps.filter((p) => p.stage === s.id); return g.length ? h('div', { style: 'padding:6px 0;border-top:1px solid var(--hair)' },
+    h('div', { class: 'mt', style: 'padding-bottom:4px', text: `${s.name}: ${s.goal}` }),
+    h('div', { style: 'display:flex;flex-wrap:wrap;gap:8px' }, g.map((p) => h('button', { class: 'ph', onclick: () => open('phase', p.id) },
+      h('b', null, h('span', { class: `dot t-${phDot(p)}`, style: 'display:inline-block;margin-right:6px' }), `${p.id} · ${p.task}`), h('span', { class: 'mt', style: 'max-width:200px;white-space:normal', text: p.name }))))) : null; }));
+}
+
+function taskSheet(t) {
+  const path = [t.stage && STG[t.stage] && crumbBtn(STG[t.stage].name, 'stage', t.stage), t.domain && DOM[t.domain] && h('span', { text: '›' }), t.domain && DOM[t.domain] && h('span', { text: DOM[t.domain].name }),
+    t.capability && CAP[t.capability] && h('span', { text: '›' }), t.capability && CAP[t.capability] && crumbBtn(CAP[t.capability].name, 'cap', t.capability)];
+  const ev = t.history.flatMap((e) => e.evidence || []);
+  const done = t.steps.filter((s) => s.done).length;
+  return [h('div', { class: 'crumb' }, path), h('h2', { text: t.title }),
+    h('div', { class: 'chips' }, pill(t), h('span', { class: 'tag', text: t.id }), t.wave ? h('span', { class: 'tag', text: `Phase ${t.wave}` }) : null, t.who ? h('span', { class: 'tag', text: t.who }) : null),
+    PHT[t.id] ? kv(`Phase ${PHT[t.id].id}${PHT[t.id].card ? ' · budget card ' + PHT[t.id].card : ''}`, h('p', { text: PHT[t.id].why })) : null, ...(PHT[t.id] ? phBlock(PHT[t.id]) : []), t.detail ? h('p', { text: t.detail, style: 'margin-top:8px' }) : null, t.why ? kv('Why', h('p', { text: t.why })) : null,
+    t.steps.length ? kv(`Steps ${done}/${t.steps.length}${done < t.steps.length && ['passed', 'completed'].includes(t.status) ? ' logged: closed before its steps were logged, see the task notes' : ''}`, h('ul', { class: 'steps' }, t.steps.map((s) => h('li', null, h('span', { class: `ck${s.done ? ' d' : ''}`, text: s.done ? '✓' : '' }), h('span', { class: s.done ? 'muted' : '', text: s.text }))))) : null,
+    t.acceptance.length ? kv('Acceptance', h('ul', { class: 'steps' }, t.acceptance.map((a) => { const v = (t.verdictCriteria || []).find((c) => c.criterion === a); return h('li', null, h('span', { class: `ck${v && v.result === 'pass' ? ' d' : ''}`, text: v ? (v.result === 'pass' ? '✓' : '✕') : '' }), h('span', { text: a })); }))) : null,
+    t.needs.length ? kv('Needs', t.needs.map((n) => h('button', { class: 'item', onclick: () => open('task', n.id) }, h('span', { class: 'id', text: n.id }), h('span', { class: 'ti', text: n.title }), h('span', { class: 'tag', text: n.label })))) : null,
+    ev.length ? kv('Evidence', ev.map((e) => h('div', { class: 'ev', text: `${e.type}: ${e.ref}` }))) : null,
+    t.warnings.length ? kv('Warnings', h('div', { class: 'chips' }, t.warnings.map((w) => h('button', { class: 'tag', text: w, onclick: () => open('rule', w) })))) : null,
+    t.history.length ? kv('History', h('ol', { class: 'tl' }, t.history.slice(-12).reverse().map((e) => h('li', null, h('b', { text: KIND[e.kind] || e.kind }), ' ', h('span', { class: 'mt', text: `${e.who || ''} · ${ago(e.ts)}` }), e.text ? h('div', { class: 'sub', text: e.text }) : null)))) : null];
+}
+function capSheet(c) {
+  const ts = tasksIn('capability', c.id);
+  return [h('div', { class: 'crumb' }, crumbBtn(STG[c.stage].name, 'stage', c.stage), h('span', { text: '›' }), h('span', { text: DOM[c.domain].name })), h('h2', { text: c.name }),
+    h('div', { class: 'chips' }, c.tier ? h('span', { class: 'tag', text: c.tier }) : null, h('span', { class: 'tag', text: c.confirmed ? 'confirmed' : 'not yet confirmed' })), h('p', { text: c.definition, style: 'margin-top:8px' }),
+    c.goals.map((g) => [h('div', { class: 'k', text: 'Goal' }), h('b', { text: g.title }), g.why ? h('p', { text: g.why }) : null,
+      g.acceptance.length ? h('ul', { class: 'steps' }, g.acceptance.map((a) => h('li', null, h('span', { class: 'ck' }), h('span', { text: a })))) : null,
+      g.tasks.length ? h('div', null, g.tasks.map((id) => T[id] && h('button', { class: 'item', onclick: () => open('task', id) }, h('span', { class: `dot t-${tone(T[id])}` }), h('span', { class: 'ti', text: `${id}  ${T[id].title}` })))) : h('p', { class: 'muted', text: 'No tasks yet.' })]),
+    ts.length ? null : null];
+}
+function stageSheet(s) {
+  return [h('h2', { text: s.name }), h('p', { text: s.question }), h('p', { class: 'muted', text: s.goal }),
+    s.domains.map((d) => [h('div', { class: 'k', text: d.name }), h('p', { text: d.goal }), d.capabilities.map((cp) => { const c = counts(tasksIn('capability', cp.id));
+      return h('button', { class: 'cap', style: 'grid-template-columns:1fr 80px 40px', onclick: () => open('cap', cp.id) }, h('span', { class: 'nm', text: cp.name }), seg(c), h('span', { class: 'num mt', text: c.total ? `${c.good}/${c.total}` : '—' })); })])];
+}
+function gateSheet(g) {
+  const st = g.last ? (g.last.pass ? (g.last.thin ? 'Passing, thin margin' : 'Passing') : 'Failing') : 'Not measured yet';
+  const rx = D.ratchet.relaxations.filter((r) => r.gate === g.id);
+  return [h('div', { class: 'crumb' }, STG[g.stage] ? crumbBtn(STG[g.stage].name, 'stage', g.stage) : null, h('span', { text: '›' }), h('span', { text: g.side === 'entry' ? 'going in' : 'coming out' })),
+    h('h2', { text: g.test }), h('div', { class: 'chips' }, h('span', { class: `pill t-${gtone(g)}`, text: st }), h('span', { class: 'tag', text: g.id }), h('span', { class: 'tag', text: g.dimension }), h('span', { class: 'tag', text: `applies to ${g.applies_to}` }),
+      h('span', { class: 'tag', text: g.status === 'provisional' ? 'provisional bar' : 'bar from a rule' })),
+    kv('Bar', h('p', { text: g.threshold })), kv('Basis', h('p', { text: g.basis })), kv('Population', h('p', { text: g.population })),
+    g.last ? kv('Latest', h('p', { text: `${g.last.value || (g.last.pass ? 'pass' : 'fail')}${g.last.n_in ? ` · ${g.last.n_pass}/${g.last.n_in} kept` : ''}` }), h('div', { class: 'mt', text: `${g.last.task || g.last.line} · ${ago(g.last.ts)}` })) : null,
+    g.history.length > 1 ? kv('Runs', h('ol', { class: 'tl' }, g.history.slice().reverse().map((m) => h('li', { class: `t-${m.pass ? (m.thin ? 'warn' : 'good') : 'stop'}` }, h('b', { text: m.pass ? 'Pass' : 'Fail' }), ' ', h('span', { class: 'mt', text: ago(m.ts) }), m.value ? h('div', { class: 'sub', text: m.value }) : null)))) : null,
+    rx.length ? kv('Bar changes', rx.map((r) => h('p', { text: `${r.from} → ${r.to}. ${r.text}` }))) : null];
+}
+function ruleSheet(r) {
+  const w = D.warnings.find((x) => x.rule === r) || { rule: r, count: 0, tasks: [], text: '', fix: '' };
+  return [h('h2', { text: w.rule }), h('div', { class: 'chips' }, h('span', { class: 'tag', text: `${w.count} warnings` }), w.ready ? h('span', { class: 'pill t-good', text: 'ready to enforce' }) : null),
+    w.text ? kv('What was wrong', h('p', { text: w.text })) : null, w.fix ? kv('Fix', h('p', { text: w.fix })) : null,
+    w.tasks.length ? kv('Tasks', w.tasks.map((id) => T[id] && h('button', { class: 'item', onclick: () => open('task', id) }, h('span', { class: 'id', text: id }), h('span', { class: 'ti', text: T[id].title })))) : null];
+}
+function starSheet() { return [h('h2', { text: D.northStar.name || 'North star' }), Object.entries(D.northStar).filter(([k]) => k !== 'name').map(([k, v]) => kv(k.replace(/_/g, ' '), h('p', { text: String(v) })))]; }
+
+/* ---------- shell ---------- */
+function draw() {
+  if (!D) return;
+  const needs = D.counts.needsYou, W = D.warnings.length;
+  document.title = D.name;
+  const rail = document.getElementById('rail'); set(rail,
+    h('div', { class: 'brand' }, D.name, h('small', { text: D.contract ? `contract ${D.contract}` : 'contract not released' })),
+    VIEWS.map(([k, l]) => h('button', { class: `nav${view === k ? ' on' : ''}`, onclick: () => go(k), 'aria-current': view === k ? 'page' : null },
+      h('svg', { viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, h('path', { d: ICON[k] })), h('span', { text: l }),
+      k === 'live' && liveBadge() ? liveBadge() : k === 'work' && needs ? h('span', { class: 'b hot', text: needs }) : k === 'quality' && D.ratchet.relaxations.length ? h('span', { class: 'b hot', text: D.ratchet.relaxations.length }) : k === 'rules' && W ? h('span', { class: 'b', text: W }) : null)),
+    h('div', { class: 'foot' }, h('span', null, h('span', { class: `pulse${ok ? '' : ' off'}`, id: 'pulse' }), h('span', { id: 'ago', text: '' })), h('span', { class: 'num', text: `${D.lines} lines` })));
+  const sub = { live: 'What is running now, where, and what finished.', story: first(D.northStar.statement), map: 'Stage, domain, capability. Each square is a task.', work: `${live(D.tasks).length} tasks in ${D.waves.length} phases.`, engine: 'What the CPU engine can extract, how far it has come, and what we tried.', quality: 'Quality going in and coming out of each stage. A hollow square is not measured yet.', rules: 'What the ledger rules caught, and what is still defective.' }[view];
+  set(document.getElementById('top'), h('h1', { text: view === 'story' ? D.name : VIEWS.find((v) => v[0] === view)[1] }),
+    h('p', null, sub, view === 'story' && D.northStar.statement ? h('button', { class: 'link', text: 'North star', onclick: () => open('star') }) : null));
+  set(document.getElementById('view'), { story, engine: engineView, live: liveView, map: mapView, work, quality, rules }[view]());
+  const sh = document.getElementById('sheet'), sc = document.getElementById('scrim');
+  const body = !sheet ? null : sheet.type === 'task' && T[sheet.id] ? taskSheet(T[sheet.id]) : sheet.type === 'cap' && CAP[sheet.id] ? capSheet(CAP[sheet.id]) : sheet.type === 'stage' && STG[sheet.id] ? stageSheet(STG[sheet.id])
+    : sheet.type === 'phase' && PH[sheet.id] ? phaseSheet(PH[sheet.id]) : sheet.type === 'rule' ? ruleSheet(sheet.id) : sheet.type === 'gate' && GATE[sheet.id] ? gateSheet(GATE[sheet.id]) : sheet.type === 'star' ? starSheet() : null;
+  sh.hidden = sc.hidden = !body;
+  if (body) { set(sh, h('button', { class: 'x', text: 'Close', onclick: () => { sheet = null; draw(); } }), body); sc.onclick = () => { sheet = null; draw(); }; }
+  tick();
+}
+function tick() {
+  const a = document.getElementById('ago'), p = document.getElementById('pulse');
+  if (a) a.textContent = !ok ? 'Not reachable' : changedAt ? `Updated ${ago(changedAt)}` : 'Connecting';
+  if (p) p.setAttribute('class', `pulse${ok ? '' : ' off'}`);
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheet) { sheet = null; draw(); } });
+window.addEventListener('hashchange', () => { const v = location.hash.slice(1).split('/')[0]; if (VIEWS.some((x) => x[0] === v) && v !== view) { view = v; sheet = null; draw(); } });
+async function pulse() {
+  try {
+    const r = await fetch('./data', { cache: 'no-store' }), text = await r.text();
+    ok = r.ok;
+    if (!r.ok) { set(document.getElementById('view'), h('div', { class: 'empty', text: `The ledger does not replay: ${text}` })); return tick(); }
+    if (text !== last) { last = text; D = JSON.parse(text); index(); changedAt = Date.now(); draw(); }
+  } catch { ok = false; }
+  tick();
+}
+pulse(); setInterval(pulse, PULSE_MS); setInterval(tick, 1000);
+</script>
+</body>
+</html>

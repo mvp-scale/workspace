@@ -1,0 +1,32 @@
+id: student-training
+name: "Student training"
+definition: "export the data, train a small multi-head model, and export it for CPU"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Student model", note: "the record this capability owns"}
+goals:
+  - id: student-training.dataset
+    title: "The training data is exported with a split that cannot leak"
+    why: "a bad split hides overfitting"
+    acceptance:
+      - "Train and dev are split by source and date, with zero test ids in train (D3, R3)"
+    serves_via: []
+    functions: []
+  - id: student-training.trained
+    title: "Variants are trained under a selection rule fixed before any test score"
+    why: "choosing after seeing the test inflates the result"
+    acceptance:
+      - "Selection rule logged before test scoring (M3)"
+      - "At least 3 seeds for any claim that one variant beats another (M8)"
+      - "The loss curve is read before scoring"
+    serves_via: []
+    functions: []
+  - id: student-training.exported
+    title: "The model is exported to a CPU runtime file with checked parity"
+    why: "an export that drifts is a different model"
+    acceptance:
+      - "int8 versus fp32 drop on dev is at most 0.01 (M4)"
+      - "Tokenizer parity is 100 percent (M6)"
+    serves_via: []
+    functions: []

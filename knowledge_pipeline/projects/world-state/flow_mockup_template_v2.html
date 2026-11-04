@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Knowledge flow, the story</title>
+<style>
+:root{--bg:#f6f6f2;--card:#fff;--ink:#1b1d21;--mut:#5d6470;--line:#dcdcd4;--built:#1c7c54;--part:#a8680a;--no:#a23b3b;--acc:#2456c9;--chip:#eef0f4}
+@media (prefers-color-scheme:dark){:root{--bg:#14161a;--card:#1c1f25;--ink:#e8eaee;--mut:#9aa2b0;--line:#2e333c;--built:#4cc38a;--part:#e0a24a;--no:#e27b7b;--acc:#7aa2ff;--chip:#262a33}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:22px 24px 70px}h1{font-size:24px;margin:0}h2{font-size:18px;margin:34px 0 4px}.sub{color:var(--mut);margin:0 0 12px;font-size:14px}.mut{color:var(--mut)}
+.warn{border:1px solid var(--part);border-radius:8px;padding:6px 12px;margin:10px 0;font-size:13px}
+.chip{display:inline-block;font-size:11px;border-radius:99px;padding:1px 8px;border:1px solid currentColor}
+.built{color:var(--built)}.partial{color:var(--part)}.notbuilt{color:var(--no)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.steps{display:grid;grid-template-columns:repeat(7,1fr);gap:24px;margin:12px 0}
+@media(max-width:1100px){.steps{grid-template-columns:repeat(3,1fr)}}@media(max-width:640px){.steps{grid-template-columns:1fr 1fr}}
+.step{cursor:pointer;text-align:left;color:var(--ink);font:inherit;position:relative;display:flex;flex-direction:column;gap:6px}
+.step[aria-pressed=true]{outline:2px solid var(--acc)}
+.step:not(:last-child)::after{content:"›";position:absolute;right:-20px;top:42%;font-size:26px;color:var(--mut)}
+.step .n{font-size:12px;color:var(--mut)}.step b{font-size:15px}.step .why{font-size:13px;color:var(--mut);min-height:52px}
+.big{font-size:26px;font-weight:650;line-height:1.05}.big small{display:block;font-size:12px;font-weight:400;color:var(--mut);margin-top:2px}
+.detail{margin-top:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}@media(max-width:800px){.detail{grid-template-columns:1fr}}
+.detail h4{margin:0 0 2px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:1000px){.grid3,.grid4{grid-template-columns:1fr 1fr}}@media(max-width:700px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.card h3{font-size:14px;margin:0 0 8px}
+.row{display:grid;grid-template-columns:150px 1fr 70px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.track{position:relative;height:12px;background:var(--chip);border-radius:6px}.fill{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:6px}.mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--no)}
+.split{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:8px 0;font-size:13px;color:#fff}.split div{display:flex;align-items:center;padding:0 10px}
+.chips span{display:inline-block;background:var(--chip);border-radius:6px;padding:1px 6px;margin:2px 3px 2px 0;font-size:12px;font-family:ui-monospace,Menlo,monospace}.chips span.g{outline:1px solid var(--built)}.chips span.r{outline:1px solid var(--no)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.tabs button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}.tabs button[aria-pressed=true]{outline:2px solid var(--acc)}
+.itemtext{background:var(--chip);border-radius:8px;padding:8px 10px;font-size:13px;margin:6px 0}
+.walk{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:18px}@media(max-width:900px){.walk{grid-template-columns:1fr}}
+.wstep{border-left:3px solid var(--line);padding:1px 0 1px 10px;margin:0 0 9px}.wstep h4{margin:0 0 2px;font-size:13px}
+.kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:1000px){.kinds{grid-template-columns:1fr 1fr}}@media(max-width:600px){.kinds{grid-template-columns:1fr}}
+.kind code{background:var(--chip);border-radius:5px;padding:1px 6px;font-weight:650}.kind p{margin:4px 0;font-size:13px}.kind .ex{color:var(--mut);font-size:12px}
+.kan{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}@media(max-width:900px){.kan{grid-template-columns:1fr 1fr}}
+.kan h3{display:flex;justify-content:space-between}.kan li{margin:5px 0;font-size:13px;list-style:none}.kan ul{margin:0;padding:0}.kan small{color:var(--mut);display:block}
+.idea{border-top:3px solid var(--part)}.idea b{display:block;margin-bottom:3px}.idea p{margin:2px 0;font-size:13px}.idea .prior{border-top:1px dashed var(--line);margin-top:6px!important;padding-top:6px;color:var(--ink)}.idea .num{color:var(--mut);font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid var(--line);padding:3px 8px;text-align:left;vertical-align:top}
+</style></head><body><main>
+<h1>How the knowledge machine works, as a story</h1>
+<p class="sub">Goal: read a news item in under 50 ms on one CPU, instead of 6 seconds and 328 questions to a large model. Green = built and measured. Amber = partly. Red = not built, shown empty.</p>
+<div class="warn">Local only: contains publisher text. Do not publish, share or commit.</div>
+
+<h2>The story in six steps</h2>
+<p class="sub">Click a step. Each exists because of the problem before it.</p>
+<div class="steps" id="steps"></div>
+<div class="card detail" id="detail"></div>
+
+<h2>Which tool does each step, and why</h2>
+<p class="sub">Only free, open-source pieces, plus the hosted teachers (paid, used at labelling time only, never when reading).</p>
+<div class="card"><table id="tools"></table></div>
+<div class="card" style="margin-top:12px"><h3>Candidates to add (check the licence first; unchecked means not allowed in)</h3><div class="grid3" id="cand"></div></div>
+
+<!--STUDENT_BLOCK--><h2>Where the student stands now</h2>
+<p class="sub">Agreement with Sonnet on later items the model never saw. The red line is how well the two teachers agree with each other. Agreement, not accuracy.</p>
+<div class="grid2"><div class="card"><h3>Full coverage</h3><div id="b4"></div></div><div class="card"><h3>Share of items it can answer while staying at 80% agreement</h3><div id="b5"></div><p class="mut" style="font-size:12px">Topic uses the best student (words + embeddings). Single answer vs top-two choices.</p></div></div>
+<h2>The expert as built (version 3.1: a cascade)</h2>
+<p class="sub">The cheap model always runs. A small neural encoder (bge-small) runs only on the 32% of items that need it, and reads at most 64 tokens (validated on a separate slice). Agreement with Sonnet, not truth.</p>
+<div class="grid4"><div class="card"><h3>Topic, top two</h3><div class="big">0.857<small>agreement on all items (linear alone 0.832)</small></div></div>
+<div class="card"><h3>Which condition</h3><div class="big">0.854<small>top choice right, on items it commits to a condition</small></div></div>
+<div class="card"><h3>Condition present (honest figure)</h3><div class="big">0.826<small>agreement; answers 36% (blend 51% on the natural stream, partly circular)</small></div></div>
+<div class="card"><h3>Speed, one thread</h3><div class="big">9.3 ms<small>mean; p95 35.9 ms; slowest of 400: 42.9 ms</small></div></div></div>
+<h2>The hard part: the two teachers split on one thing</h2>
+<p class="sub">Not on what a story is about, but on whether a condition counts or is only mentioned in passing.</p>
+<div class="grid2">
+<div class="card"><h3 id="splitH"></h3><div class="split" id="split"></div><div class="mut" style="font-size:13px" id="splitN"></div></div>
+<div class="card"><h3>Words that go with each side</h3><div id="m2"></div></div>
+</div>
+
+<h2>What we tried, and what it told us</h2>
+<p class="sub">Bars show the score (AUC: 0.5 is a coin flip, 1.0 is perfect). The red line is our keep rule: a change must add at least +0.01.</p>
+<div class="grid3">
+<div class="card"><h3>Adding new signal: nothing moved</h3><div id="b1"></div><p class="mut" style="font-size:12px">Change in score for "names a condition". L178, L183</p></div>
+<div class="card"><h3>Checking our own number</h3><div id="b2"></div><p class="mut" style="font-size:12px">Twins barely matter; later news costs ~0.02. L191</p></div>
+<div class="card"><h3>Signals that do exist</h3><div id="b3"></div><p class="mut" style="font-size:12px">Predicting "confirmed, not passing", and the floor. L185</p></div>
+</div>
+
+<h2>Follow one real article</h2>
+<div class="tabs" id="tabs"></div>
+<div class="card walk" id="walk"></div>
+
+<h2>The seven kinds of part</h2>
+<p class="sub">Parts are cut from the article text. The labels belong to the whole article.</p>
+<div class="kinds" id="kinds"></div>
+<div class="card" style="margin-top:12px"><h3>Structure flags (kind f): on or off, about how the text is written</h3><div class="grid3" id="flags"></div></div>
+
+<h2>What the deep research said, and where each idea stands</h2>
+<p class="sub">Two returns agreed on the order: fix the labels, add a gate, train a soft-label student. Citations not yet checked.</p>
+<div class="kan" id="kan"></div>
+
+<h2>Patterns with signal that we don't use yet</h2>
+<p class="sub">Each rests on a measured number, and now a quick look at prior work. None is tested as a fix yet.</p>
+<div class="grid4" id="ideas"></div>
+
+<script>
+const D=/*DATA*/null;
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+const ST={built:"BUILT",partial:"PARTIAL",notbuilt:"NOT BUILT"};
+const pc=v=>Math.round(v*100)+"%";
+const S=[
+{t:"Ask teachers",s:"built",why:"A small reader needs answers to learn from.",big:D.n.toLocaleString(),cap:"items labelled by Haiku; 7,710 re-read by Sonnet",in:"News items: headline, text, source.",does:"Two models label topic, story type and conditions.",learned:"They agree on topic (84%) and story type (92%), but name the same condition only 48% of the time."},
+{t:"Break into parts",s:"built",why:"To learn why a label fits, not only that it does.",big:D.vocab.toLocaleString(),cap:"distinct parts, about "+Math.round(D.ppi)+" per item",in:"One item.",does:"Cuts words, pairs, headline words, entities, flags and source.",learned:"A 'why' lookup takes "+D.m4.why_lookup_ms+" ms from a "+Math.round(D.m4.mb)+" MB store."},
+{t:"Mine across items",s:"built",why:"One article proves nothing. A collection does.",big:pc(D.m1.names_a_condition["12000"]),cap:"top-part overlap at 12,000 items; only "+pc(D.m1.names_a_condition["100"])+" at 100",in:"All parts and labels together.",does:"Scores each part: does it appear with a label more than chance?",learned:"Fingerprints need thousands of items and are still rising at 12,000. Our guess of 500 was far too small."},
+{t:"Triage",s:"built",why:"Most items name no condition. Skip them cheaply.",big:"51%",cap:"of items can be skipped, keeping 90% of positives (AUC 0.86)",in:"Static embedding plus 24 structure flags.",does:"Guesses 'Haiku names a condition' before anything expensive runs.",learned:"Holds up on grouped splits (0.860). On later news it falls to about 0.84."},
+{t:"Small CPU student",s:"partial",why:"Read the item for real: topic, story type, condition present.",big:"9.3 ms",cap:"mean per item, one thread; encoder on about 1 in 3 items",in:"Headline + description.",does:"Word and character n-grams always; a small neural encoder (bge-small, ONNX) on routed items for topic and which condition.",learned:"Story type is at teacher level. Topic and condition present are below it. Structure flags helped nothing inside this model."},{t:"Route by disagreement",s:"partial",why:"The teachers split on passing mentions. Ask extra only there.",big:"2.2×",cap:"Sonnet's split rate in the 100 most doubtful items",in:"The triage model's out-of-fold confidence.",does:"Ranks items where Haiku and Sonnet are likely to differ.",learned:"Tested (L193), not wired in. It finds where teachers split, not who is right."},
+{t:"Snapshot and learn",s:"partial",why:"Prove the knowledge keeps getting better.",big:"+0.028",cap:"score gain from 5,000 to 20,000 items (v1 to v4)",in:"Each new batch, in date order.",does:"Train on earlier batches, score the next unseen one, save a snapshot.",learned:"It improves, slowly, and flattens. Rollback and the second-batch rule are not automated yet."}];
+let cur=0;
+function drawSteps(){const f=document.getElementById("steps");f.textContent="";S.forEach((p,i)=>{const b=el("button","card step");b.setAttribute("aria-pressed",i===cur);b.append(el("span","n","Step "+(i+1)),el("b","",p.t),el("span","why",p.why));const g=el("div","big",p.big);g.append(el("small","",p.cap));b.append(g,el("span","chip "+p.s,ST[p.s]));b.onclick=()=>{cur=i;drawSteps();drawDetail()};f.append(b)})}
+function drawDetail(){const p=S[cur],d=document.getElementById("detail");d.textContent="";[["Takes in",p.in],["Does",p.does],["What we learned",p.learned]].forEach(([k,v])=>{const c=el("div");c.append(el("h4","",k),el("div","",v));d.append(c)})}
+const T=[["1 Ask teachers","Claude Haiku and Sonnet (hosted)","Write the labels the small reader learns from","Paid; labelling time only","Strongest readers we can afford. Local Clef and Jev review but do not yet vote."],
+["2 Break into parts","spaCy 3.8 + en_core_web_sm","Word forms, entity types and names, 24 structure flags","MIT (checked)","Small, runs on CPU, no GPU."],
+["3 Mine across items","NumPy / SciPy + SQLite","2×2 log-odds score for every part; the 'why' store","BSD (checked); SQLite built in","Plain statistics: no model needed to ask 'does this part go with this label?'"],
+["4 Student (cascade)","scikit-learn TF-IDF + logistic regression always; bge-small (MIT) through ONNX Runtime + Rust tokenizers on routed items; heads trained with PyTorch on the 5090","Sparse n-grams are the student; the static embedding adds meaning for topic only","MIT (checked); BSD-3 (checked)","Fast enough to sit in front of everything."],
+["5 Route","scikit-learn cross-validation","Out-of-fold confidence ranks where the teachers split","BSD-3 (checked)","Our own ranking code, about 20 lines."],
+["6 Snapshot and learn","Our ledger (cp.mjs) + MM3 reviewers","Records each prediction and score; reviewers pass or fail a task","Ours; MM3 runs on local Clef and hosted Jev","Snapshots themselves are not built."]];
+{const t=document.getElementById("tools");const h=el("tr");["Step","Tool","Job","Licence","Why this one"].forEach(x=>h.append(el("th","",x)));t.append(h);T.forEach(r=>{const tr=el("tr");r.forEach((c,i)=>tr.append(el(i==1?"td":"td","",c)));t.append(tr)})}
+const C=[["fastText-style n-gram model","MIT, per one research return (not checked by us). A cheap floor to compare the embedding against."],["Label-shift correction (EM)","Our own small code. Adjusts the base rate per outlet. Needs calibrated probabilities."],["Calibrated gate (MAPIE or own)","BSD-3 per one return (not checked). Guarantee covers agreement with teachers only."],["Salience data (WN-Salience)","Licence not yet checked. Would give 'main subject vs passing mention' labels."],["Learning-to-defer code","Research code, licence not yet checked. Our simple version needs no library."],["IPTC topics","CC-BY-4.0 per one return (not checked). A free topic tree to cross-map."]];
+{const c=document.getElementById("cand");C.forEach(r=>{const d=el("div");d.style.fontSize="13px";d.append(el("b","",r[0]),el("div","mut",r[1]));c.append(d)})}
+// split bar
+{const k=Math.round(D.m2.share*100);document.getElementById("splitH").textContent="Of "+D.m2.n.toLocaleString()+" items where Haiku named a condition, Sonnet agreed on "+k+"%";const s=document.getElementById("split");const a=el("div","","Sonnet agrees "+k+"%"),b=el("div","","Passing mention? "+(100-k)+"%");a.style.width=k+"%";a.style.background="var(--built)";b.style.width=(100-k)+"%";b.style.background="var(--part)";s.append(a,b);document.getElementById("splitN").textContent="Predicting which side an item falls on from its words alone: AUC "+D.m2.auc.body_words+". That is a real, learnable signal."}
+{const m=document.getElementById("m2");m.append(el("div","mut","Sonnet agrees:"),(()=>{const c=el("div","chips");D.m2.conf.slice(0,10).forEach(x=>c.append(el("span","g",x[0])));return c})(),el("div","mut","Passing mention only:"),(()=>{const c=el("div","chips");D.m2.pas.slice(0,10).forEach(x=>c.append(el("span","r",x[0])));return c})())}
+// bars
+function bars(id,rows,lo,hi,keep){const b=document.getElementById(id);rows.forEach(r=>{const kp=(r[3]!==undefined)?r[3]:keep;const d=el("div","row");d.append(el("span","",r[0]));const t=el("div","track"),f=el("div","fill");f.style.width=Math.max(1,Math.round((r[1]-lo)/(hi-lo)*100))+"%";t.append(f);if(kp!==undefined){const k=el("div","mark");k.style.left=Math.round((kp-lo)/(hi-lo)*100)+"%";t.append(k)}d.append(t,el("span","mut",r[2]));b.append(d)})}
+bars("b1",[["Open-IE extractor",0,"+0.000"],["Quantity parser",0,"+0.000"],["Source name",0.0011,"+0.001"]],0,0.02,0.01);
+bars("b2",[["Random split",0.8618,"0.862"],["Twins kept together",0.8601,"0.860"],["Later news only",0.842,"≈0.842"]],0.8,0.87);
+bars("b3",[["Fingerprint hit count",0.771,"0.771"],["All parts",D.m2.auc.body_words,String(D.m2.auc.body_words)],["Headline words",D.m2.auc.headline_words,String(D.m2.auc.headline_words)],["Entities",D.m2.auc.entities,String(D.m2.auc.entities)],["Structure flags",D.m2.auc.structure_flags,String(D.m2.auc.structure_flags)],["Source",D.m2.auc.source,String(D.m2.auc.source)]],0.5,0.8);
+{const f=document.createElement("p");f.className="mut";f.style.fontSize="12px";f.textContent="Floor: "+(D.m3.share_of_items*100).toFixed(1)+"% of items have 5 or fewer significant parts and name a condition only "+(D.m3.positive_rate*100).toFixed(1)+"% of the time.";document.getElementById("b3").parentNode.append(f)}
+bars("b4",[["Story type",0.913,"0.913",0.923],["Topic",0.673,"0.673",0.824],["Condition present",0.683,"0.683",0.723]],0.5,1.0);
+bars("b5",[["Story type",1.0,"100%"],["Topic, one answer",0.66,"66%"],["Topic, top two",1.0,"100%"],["Condition present",0.482,"48%"]],0,1);
+// walkthrough
+let it=0;
+function drawTabs(){const t=document.getElementById("tabs");t.textContent="";const L={confirmed:"Both models agree",disagree:"Haiku yes, Sonnet none",floor:"Nothing identifiable"};D.items.forEach((x,i)=>{const b=el("button","",L[x.kind]);b.setAttribute("aria-pressed",i===it);b.onclick=()=>{it=i;drawTabs();drawWalk()};t.append(b)})}
+function chips(list,cls){const c=el("div","chips");list.forEach(x=>c.append(el("span",cls||"",typeof x==="string"?x:x[0]+"  "+x[1])));return c}
+function drawWalk(){const x=D.items[it],w=document.getElementById("walk");w.textContent="";
+const L=el("div");L.append(el("div","mut","Source: "+x.source+" · "+x.date),el("div","itemtext",x.text));
+const lab=el("table");[["Haiku",x.haiku],["Sonnet",x.sonnet],["Topic",x.topic],["Story type",x.story_type]].forEach(r=>{const tr=el("tr");tr.append(el("td","mut",r[0]),el("td","",r[1]));lab.append(tr)});L.append(lab);
+const R=el("div");const st=(h,...k)=>{const s=el("div","wstep");s.append(el("h4","",h));k.forEach(n=>s.append(n));R.append(s)};
+st("1. "+x.n_parts+" parts cut out",chips(x.parts));
+st("2. Parts that point toward 'names a condition'",x.sig.length?chips(x.sig,"g"):el("div","mut","None."),x.neg.length?chips(x.neg,"r"):el("div","mut","Nothing points away."));
+const fl=x.hits<=5;st("3. Floor check: "+x.hits+" significant parts",el("div","",fl?"Too few to say anything: 'nothing identifiable' for conditions.":"Enough to say something about conditions."));
+st("4. Snapshot",el("div","mut","Not built. Would store this score as v0 and re-score it at v1."));
+w.append(L,R)}
+// kinds
+const G=[["w","One word","A noun, name, verb, adjective or adverb cut down to its base form. Filler words (the, of, for, and…) are dropped.","protests → w:protest, rallied → w:rally, estimates → w:estimate, Paris → w:paris"],
+["b","Word pair","Two content words that sit side by side with no filler between them. Kept only if the pair appears in at least 25 articles.","North Korea → b:north_korea, stock market → b:stock_market. This France article has none that qualify."],
+["h","Headline word","Same as a word, but only from the headline, so 'protest in the headline' is different from 'protest buried in the text'.","h:protest, h:clash, h:france. Known flaw: in this article an emoji stopped the headline split, so the second sentence's words (ministry, estimate, rally) were also marked as headline."],
+["et","Entity type","Which kinds of named thing appear: place (GPE), organization (ORG), person (PERSON), date (DATE), number (CARDINAL), money (MONEY), percent (PERCENT)… from the spaCy tagger.","et:GPE (France, Paris), et:ORG (Ministry of the Interior), et:DATE (Saturday), et:CARDINAL (410,000; 110,000)"],
+["en","Entity name","The actual name, kept only for places, organizations, nationalities/groups, events and locations.","en:GPE:france, en:GPE:paris"],
+["f","Structure flag","A yes/no switch from simple rules about how the text is written, not what it is about. A part is present if the switch is on.","See the list below."],
+["s","Source","The outlet or web domain.","s:France 24"]];
+{const k=document.getElementById("kinds");G.forEach(r=>{const c=el("div","card kind");const h=el("div");h.append(el("code","",r[0]+":"),el("b","","  "+r[1]));c.append(h,el("p","",r[2]),el("p","ex","e.g. "+r[3]));k.append(c)})}
+const FL=[["f:quote","Has quotation marks","\"calm\" in the France article"],["f:report_verb","A reporting verb appears (say, announce, estimate, warn, claim, report…)","\"estimates\""],["f:claimer_found","A reporting verb has a subject, so we know who is claiming","\"police said\""],["f:modal_future","will / shall","\"will increase\""],["f:modal_hedge","may / might / could / would","\"could intensify\""],["f:modal_opinion","should / must","\"must act\""],["f:past_tense_verbs","A past-tense verb appears","\"rallied\", \"broke out\""],["f:negation","no, not, never, denied, without…","\"denied\""],["f:hedge_words","reportedly, allegedly, suspected, likely, possibly…","\"suspected militants\""],["f:future_words","plans to, expected to, set to, forecast, projected…","\"expected to remain\""],["f:opinion_words","we believe, editorial, unacceptable, urge, best, worst…","\"calls for\""],["f:evidence_words","data, study, poll, according to, police, ministry, analysts, figures…","\"Ministry\", \"reported\""],["f:numbers","A number appears","\"410,000\""],["f:distinct_gpe","More than one different place named","France and Paris"],["f:global_words","global, worldwide, EU, Europe, Africa, countries…","\"across southern Africa\""],["f:question","A question mark appears",""],["f:ent_<TYPE>","That entity type is present (one switch per type)","f:ent_GPE, f:ent_DATE"]];
+{const f=document.getElementById("flags");FL.forEach(r=>{const c=el("div");c.append(el("b","",r[0]),el("div","",r[1]),el("div","mut",r[2]));c.style.fontSize="13px";f.append(c)})}
+// research status
+const K=[["Done",[["Near-duplicate + time split","scores held, about 0.02 drift cost"],["Label-error ranking","2.2 to 2.9x more teacher splits"],["N-gram student","words + characters beat embeddings; 0.5 ms"],["Soft labels","blend of two teachers best against both"],["Source as a feature","no gain for condition, topic or story type"],["More data (to 36,000)","no gain beyond noise: ceiling reached"],["Clef as third voter","tested with 6 wordings; AUC about 0.77, no help"],["Jev as third voter","engine screens too; AUC 0.81, no help"],["Neural encoder cascade","bge-small on 1 in 3 items; topic 0.83 to 0.86"],["GPU heads","same accuracy, 620 times faster training"],["64-token cut","chosen on validation; costs nothing measurable"],["Expert 1 v3.1 built","9.3 ms mean, every read under 50 ms (400)"]],"built"],
+["Waiting on you",[["Review of expert 1","two reviewers split twice; rule stops the loop"],["Kaggle export step (T9)","skipped: trained on CPU instead"],["Ship decision (P12)","yours"]],"partial"],
+["Queued",[["IPTC topic crosswalk","free; licence to verify"],["GDELT event codes","free per its terms; verify"],["Second expert","tests that the factory is reusable"]],"partial"],
+["Not allowed or unproven",[["Human labelling","no human labels, ever"],["Paid or restricted data","free, open, usable licences only"],["Claim / evidence from a headline","no proven method"],["Condition present past 0.67","teachers agree only 0.72"]],"notbuilt"]];
+{const k=document.getElementById("kan");K.forEach(([h,items,cls])=>{const c=el("div","card");const t=el("h3");t.append(el("span","",h),el("span","chip "+cls,String(items.length)));c.append(t);const u=el("ul");items.forEach(i=>{const l=el("li");l.append(el("b","",i[0]),el("small","",i[1]));u.append(l)});c.append(u);k.append(c)})}
+// ideas
+const I=[["Learn 'passing mention' itself","The split is predictable (AUC 0.757). Treat it as a label to learn, not noise.","0.757","Studied as entity salience. Open news sets exist (WN-Salience: ~7,000 Wikinews articles, ~90,000 entity labels; licence to check). Best models are fine-tuned transformers, so too heavy for CPU. Supports the idea; copy the label design, not the model."],
+["Ask extra only where teachers split","Spend Sonnet or Jev on the doubtful 10%, not every item.","2.2×","Called learning to defer. Only paper code exists, no maintained library, and nothing for deferring to an LLM. Our confidence ranking is the simple version."],
+["Source as a prior, not a feature","Condition rate runs from 36% (DW) to 4.5% (Boston.com). Per-outlet thresholds untried.","36% → 4.5%","A known fix called prior (label) shift: re-estimate each outlet's base rate with a short EM loop (Saerens 2002). It works best when probabilities are calibrated first (Alexandari 2020). A direct fit, and tiny code."],
+["Headline first","Headline words alone reach 0.702 against 0.757. A fast headline pass may settle most items.","0.702 vs 0.757","Studies find titles reach 90 to 95% of full-text quality on several sets (arXiv 1705.05311). Ours is 93%. The gap is widest for simple models, which is our case."],
+["Free skip of the floor","15.6% of items have almost nothing to read and rarely carry a condition.","4.6%","Our own measurement. No outside work needed."],
+["Hit count as second voter","It errs differently from the embedding. The two are not combined yet.","0.771","Our own measurement; combining is routine stacking."],
+["Outside data as independent voter","A labelled public set breaks the 'two teachers, same mistakes' problem.","untested","Only free sets with a clear licence qualify. None checked yet."],
+["Rolling retrain window","News drift costs about 0.02. Retraining on recent items fixes it directly.","−0.02","Mixed. Recent data helps with diminishing returns, but on Reuters a longer window sometimes hurt (Forman 2006). Window length must be tested, with adaptive windows as the classic answer."]];
+{const g=document.getElementById("ideas");I.forEach(r=>{const c=el("div","card idea");c.append(el("b","",r[0]),el("p","",r[1]),el("p","num","Our evidence: "+r[2]),el("p","prior","Prior work: "+r[3]));g.append(c)})}
+drawSteps();drawDetail();drawTabs();drawWalk();
+</script></main></body></html>

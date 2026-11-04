@@ -1,0 +1,62 @@
+{
+ "id": "T06",
+ "stage": "S3-teacher",
+ "question": "Conditional: does Sonnet pass D4 on a layer Haiku failed, and label a 1,500-item slice under $25?",
+ "method": {
+  "name": "Teacher escalation step 3 (larger model, same family)",
+  "source": "kit/teacher/README.md (Teacher order)"
+ },
+ "inputs": [
+  {
+   "path": "gold/q50.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "specs/world_state_v1_sonnet.json",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "data/slice1500.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/teacher/claude_batch.py",
+   "sha8": "d681885c",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/sonnet_q/teacher_gate.json",
+  "runs/slice1500/labels.jsonl"
+ ],
+ "done": [
+  {
+   "metric": "sonnet_vs_goldQ.failed_layer_lower95_minus_gate",
+   "op": ">=",
+   "value": 0,
+   "accept_id": "D4"
+  },
+  {
+   "metric": "spend_usd",
+   "op": "<=",
+   "value": 25,
+   "accept_id": "R5"
+  }
+ ],
+ "stop": "Runs only if T02 failed a layer. Sonnet fails D4 on gold-Q: stop, no slice; layer goes back to P1.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.2,
+  "usd": 25,
+  "tokens": 500000
+ },
+ "compute": "api",
+ "smoke": {
+  "required": true,
+  "log": "runs/sonnet_q/smoke.jsonl"
+ },
+ "risk_first": "Qualify on gold-Q (50 items, about $0.5) before any slice."
+}

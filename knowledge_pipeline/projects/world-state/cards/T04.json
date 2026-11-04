@@ -1,0 +1,62 @@
+{
+ "id": "T04",
+ "stage": "S3-teacher",
+ "question": "Does the full labelling path work on 1,000 items within cost, and does quota beat random on yield?",
+ "method": {
+  "name": "Claude Message Batches, cached guideline, strict JSON",
+  "source": "agentic/README.md (Claude Console section)"
+ },
+ "inputs": [
+  {
+   "path": "specs/world_state_v2.json",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "data/pilot1000.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/teacher/claude_batch.py",
+   "sha8": "d681885c",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/pilot1000/labels.jsonl",
+  "runs/pilot1000/yield.json"
+ ],
+ "done": [
+  {
+   "metric": "reject_rate",
+   "op": "<=",
+   "value": 0.05
+  },
+  {
+   "metric": "spend_usd",
+   "op": "<=",
+   "value": 1.5,
+   "accept_id": "R5"
+  },
+  {
+   "metric": "rows_with_provenance_share",
+   "op": "==",
+   "value": 1,
+   "accept_id": "D6"
+  }
+ ],
+ "stop": "Reject rate above 5% or zero cache reads: stop, fix, re-smoke. Cap $1.5 hit: stop.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.2,
+  "usd": 1.5,
+  "tokens": 500000
+ },
+ "compute": "api",
+ "smoke": {
+  "required": true,
+  "log": "runs/smoke/labels.jsonl"
+ },
+ "risk_first": "dry 1000 prints expected and worst-case cost first."
+}

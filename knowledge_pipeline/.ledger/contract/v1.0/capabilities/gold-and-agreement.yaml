@@ -1,0 +1,25 @@
+id: gold-and-agreement
+name: "Gold and agreement"
+definition: "write the guideline, measure agreement per output, and freeze the gold set"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Gold set", note: "the record this capability owns"}
+goals:
+  - id: gold-and-agreement.agreement-gate
+    title: "Agreement is measured per output and sets the gate"
+    why: "a model cannot be judged more exactly than its raters agree"
+    acceptance:
+      - "At least 30 items rated by two independent raters per output, with a 95% interval (D1)"
+      - "Gate per output is 0.8 times agreement and is written on the card (M1)"
+      - "Marked provisional while models stand in for people"
+    serves_via: []
+    functions: []
+  - id: gold-and-agreement.frozen-gold
+    title: "Gold and scorer are frozen by sha and kept away from training"
+    why: "a moved answer key makes every score meaningless"
+    acceptance:
+      - "Gold and scorer shas are recorded (R3)"
+      - "No near-duplicate of a gold item is in the training pool (D3)"
+    serves_via: []
+    functions: []

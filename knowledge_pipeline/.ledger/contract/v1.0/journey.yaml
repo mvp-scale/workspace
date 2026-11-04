@@ -1,0 +1,24 @@
+# The knowledge pipeline's lifecycle for one model: the kit's stage machine S1 to S8, regrouped. Stage then domain then capability; each goal serves the level above.
+definitions:
+  stage: "A step in the life of one model, from the question to the lessons; named from the kit stage machine."
+  domain: "A bucket of work inside one stage, named as a noun, never a goal; it holds the records its work produces, first to last."
+  capability: "What the pipeline can do inside one domain; it owns its records, and its goals serve the domain goal."
+  function: "The way a capability achieves one of its goals."
+lifecycle: frame, define, teach, train, prove, ship, learn (agentic/stages.yaml S1 to S8)
+stages:
+  - {id: frame, name: "Frame", question: "What question are we answering, and what is good enough?", goal: "The target, the budget caps and the stop rule are written down and signed."}
+  - {id: define, name: "Define", question: "What counts as a correct answer?", goal: "The guideline, the agreement between raters and the frozen gold set exist, and the gate is set from them."}
+  - {id: teach, name: "Teach", question: "Can teachers label it, and can we trust them?", goal: "A labelled pool exists, with provenance, from teachers that passed the gate on gold."}
+  - {id: train, name: "Train", question: "Can a small CPU model learn it?", goal: "A student is trained and exported under a selection rule fixed before any test score."}
+  - {id: prove, name: "Prove", question: "Does it pass the gate and the speed budget?", goal: "Each output has an honest verdict against its gate, with the speed numbers beside it."}
+  - {id: ship, name: "Ship and watch", question: "Can it be released and kept honest?", goal: "The model file ships with its card, passes a clean-environment test, and is watched for drift."}
+  - {id: learn, name: "Learn", question: "What changes for the next time?", goal: "The plan, the kit and the lessons are updated from what the phase measured."}
+domains:
+  - {id: D01, stage: frame, name: "Task card", goal: "One signed card says what is built, for what budget and when to stop", definition: "Holds the question, the targets, the budget caps and the stop rule, from the owner's goal to a signed card. Not the labelling guideline.", capabilities: [task-framing]}
+  - {id: D02, stage: define, name: "Guideline and gold", goal: "The meaning of a correct answer is written, measured and frozen", definition: "Holds guideline versions, agreement results, gold files with their shas and the gate per output. Not the teacher labels.", capabilities: [gold-and-agreement]}
+  - {id: D03, stage: teach, name: "Item pool", goal: "A clean pool of items exists, and the sample drawn from it is known", definition: "Holds items from intake through dedupe and sampling, with a manifest. Not their labels.", capabilities: [item-pool-building]}
+  - {id: D04, stage: teach, name: "Label pool", goal: "Labels from qualified teachers are kept with their provenance", definition: "Holds teacher labels, voter agreement and spend logs, from a qualified teacher to a kept label. Not the student.", capabilities: [teacher-qualification, batch-labelling, label-voting]}
+  - {id: D05, stage: train, name: "Student model", goal: "A small CPU model is trained from the label pool and exported", definition: "Holds the exported dataset, the training runs with their seeds and the exported model files. Not the verdict.", capabilities: [student-training]}
+  - {id: D06, stage: prove, name: "Gate report", goal: "Every output has a verdict and a speed number that others can re-run", definition: "Holds scores with intervals, baselines, run noise and speed numbers. Not the decision to ship.", capabilities: [gate-scoring, speed-measurement]}
+  - {id: D07, stage: ship, name: "Release", goal: "The model is released with its card and watched for drift", definition: "Holds the model file, its card, the clean-environment test and drift checks. Not training.", capabilities: [ship-packaging, drift-watch]}
+  - {id: D08, stage: learn, name: "Plan and lessons", goal: "Each phase leaves the plan and the kit better than it found them", definition: "Holds phase reviews, plan changes, lessons and confidence passes. Not the work they describe.", capabilities: [phase-review]}

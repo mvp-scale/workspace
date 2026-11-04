@@ -1,0 +1,17 @@
+id: batch-labelling
+name: "Batch labelling"
+definition: "label the pool in capped batches with provenance"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Label pool", note: "the record this capability owns"}
+goals:
+  - id: batch-labelling.capped-labels
+    title: "The pool is labelled within the cap, with provenance on every label"
+    why: "spend and trust must both be traceable"
+    acceptance:
+      - "Spend stays under the card's cap (R5)"
+      - "Every label records teacher, prompt version, date and text sha (D6)"
+      - "A chunk with more than 5 percent rejected rows stops the run"
+    serves_via: []
+    functions: []

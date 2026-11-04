@@ -1,0 +1,199 @@
+{
+ "project": "world-state",
+ "updated": "2026-10-30",
+ "phases": [
+  {
+   "id": "P0",
+   "task": "T1",
+   "stage": "frame",
+   "name": "Freeze the spec, cards and targets",
+   "card": null,
+   "why": "So nothing we measure or pay for can quietly change later. The files that define the test are fingerprinted, every job has a budget and a stop rule, and the owner has signed the targets.",
+   "success": "All 6 fingerprints still match. All 11 budget cards pass the kit's card checker (spend cap, GPU-hour cap, stop rule). The owner has signed: under 50 ms per item on one CPU thread; $61.50 planned of $190; pass line = 0.8 x the raters' agreement.",
+   "today": "Fingerprints match (6 of 6). Cards pass (11 of 11). Waiting for the owner's sign-off.",
+   "how": "bash projects/world-state/verify_t1.sh",
+   "evidence": [
+    "projects/world-state/verify_t1.sh",
+    "ledger T1 notes"
+   ]
+  },
+  {
+   "id": "P1",
+   "task": "T2",
+   "stage": "define",
+   "name": "Guideline and gold answer key",
+   "card": null,
+   "why": "Every later pass line is set from how well independent raters agree on a fixed answer key. No key means no pass line, and nothing downstream can be called good or bad.",
+   "success": "At least 30 items, each rated by two independent raters on every question, with agreement and its 95% range written down; the key is frozen with a fingerprint. Marked provisional while models stand in for people.",
+   "today": "50 items rated by 4 models (Haiku, Sonnet, Clef, Jev). Agreement between raters: topic 78%, story type 87%, anything changing 70%. Key fingerprint 98f9d7aff3697186. Not yet: a 95% range on the agreement, and a person checking a sample.",
+   "how": "not yet written; numbers are in runs/p1/jury_agreement.json",
+   "evidence": [
+    "gold/q50_jury.jsonl",
+    "gold/q50_key_provisional.jsonl",
+    "runs/p1/jury_agreement.json"
+   ]
+  },
+  {
+   "id": "P2",
+   "task": "T3",
+   "stage": "define",
+   "name": "Agreement between two model families",
+   "card": "T01",
+   "why": "Tells us whether each question is clear enough to train on. If two careful readers disagree, a model cannot be expected to agree.",
+   "success": "Per question: agreement of 0.6 or more means go; 0.4 to 0.6 means go with a review; under 0.4 means rewrite the guideline.",
+   "today": "Topic 0.78 and story type 0.87 are go. Anything changing 0.70 is go. Conditions (which of 38) are the weak spot: Haiku and Sonnet overlap 0.59 to 0.64.",
+   "how": "not yet written",
+   "evidence": [
+    "runs/p1/jury_agreement.json",
+    "ledger T14 notes"
+   ]
+  },
+  {
+   "id": "P3",
+   "task": "T4",
+   "stage": "teach",
+   "name": "Qualify the teacher (Haiku)",
+   "card": "T02",
+   "why": "Before we pay to label 25,000 items, prove the cheap labeller is good enough, judged by a model from a different family.",
+   "success": "On each question Haiku scores at least 0.8 x the raters' agreement, at the low end of its 95% range, against a judge that shares no model family with it.",
+   "today": "Haiku against the TypeSafe pair (Clef + Jev): topic 82% (low end 68%, line 62%), story type 87% (77%, line 70%), anything changing 69% (56%, line 56%: right on the line). 50 items, so the ranges are wide.",
+   "how": "not yet written",
+   "evidence": [
+    "gold/q50_jury.jsonl",
+    "ledger T4 notes"
+   ]
+  },
+  {
+   "id": "P4",
+   "task": "T5",
+   "stage": "teach",
+   "name": "Free CPU triage and sample",
+   "card": "T03",
+   "why": "Only about 8 in 100 items report a change in anything. Without a sample that finds them, the rare conditions have too few examples for any model to learn.",
+   "success": "The sample holds at least 1.5 times as many rare cases as a random sample, with zero near-duplicates of the frozen test.",
+   "today": "Gate running over 46,775 items (short Haiku prompt; earlier test found 93% of sure changes while flagging 19%). 9 pool items are near-duplicates of the test and are listed to exclude.",
+   "how": "not yet written",
+   "evidence": [
+    "runs/p4/gate_pool",
+    "runs/p4/exclude_near_dups_of_test.txt"
+   ]
+  },
+  {
+   "id": "P6",
+   "task": "T6",
+   "stage": "teach",
+   "name": "Pilot, 1,000 items",
+   "card": "T04",
+   "why": "Proves the whole labelling path on 1,000 items for a dollar or two before committing $20 to 25,000.",
+   "success": "Cost within $1.50; at most 5% of rows rejected; the prompt cache is working; and the gate-chosen half beats the random half on rare cases.",
+   "today": "Queued behind the gate. Predictions recorded: rejects at most 2%, Haiku about $0.08 per 1,000, flagged half at least 3x the random half.",
+   "how": "not yet written",
+   "evidence": [
+    "ledger T6 prediction"
+   ]
+  },
+  {
+   "id": "P7",
+   "task": "T7",
+   "stage": "teach",
+   "name": "Bulk labelling, about 25,000 items",
+   "card": "T05 ($20); T06 ($25, only if Haiku fails a question)",
+   "why": "This is the training set the CPU reader learns from.",
+   "success": "About 25,000 items labelled with the frozen guideline; at least 30 examples for at least 25 of the 38 conditions; every label records model, guideline version and date; spend within $20.",
+   "today": "Not started. Estimated cost with Haiku and the gate: about $9 (an estimate).",
+   "how": "not yet written",
+   "evidence": []
+  },
+  {
+   "id": "P7b",
+   "task": "T8",
+   "stage": "teach",
+   "name": "Second-family vote on labels",
+   "card": null,
+   "why": "A label is only trusted when two qualified voters agree. Disagreements go to a small review set, not into training.",
+   "success": "Every voter used passed the pass line on gold; every kept label has at least two agreeing voters.",
+   "today": "Not started. Jev stage 1 (3 made-up items) and stage 2 (50 gold items) done.",
+   "how": "not yet written",
+   "evidence": [
+    "ledger T2 notes"
+   ]
+  },
+  {
+   "id": "P8",
+   "task": "T9",
+   "stage": "teach",
+   "name": "Export to Kaggle",
+   "card": "T07",
+   "why": "Puts the training data where the trainer can read it, privately, with the test items kept out.",
+   "success": "A manifest of fingerprints and counts; overlap with the frozen test is zero.",
+   "today": "Not started. Kaggle token works; account coreygorman; GPU 10:20 of 30 hours used this week.",
+   "how": "not yet written",
+   "evidence": []
+  },
+  {
+   "id": "P9",
+   "task": "T10",
+   "stage": "train",
+   "name": "Train the small CPU reader",
+   "card": "T08",
+   "why": "This builds the thing we are making: a model that reads an item on a CPU instead of calling a large AI.",
+   "success": "Chosen on dev data only, by a rule written before looking at the test; beats the plain word-count baseline; the 8-bit export loses at most 0.01; at most 3 Kaggle GPU hours.",
+   "today": "Not started. A free probe suggests a stronger encoder than the 30 MB static model is needed for topic.",
+   "how": "not yet written",
+   "evidence": [
+    "playbook/08 tool registry"
+   ]
+  },
+  {
+   "id": "P10",
+   "task": "T11",
+   "stage": "prove",
+   "name": "Score once on the frozen test",
+   "card": "T09",
+   "why": "The one honest pass or fail. It is scored once so it cannot be tuned toward.",
+   "success": "Per question, the low end of the 95% range is at least 0.8 x the raters' agreement on the frozen 300, and it beats the baseline.",
+   "today": "Not started. Pass lines (provisional): topic 0.62, story type 0.70, anything changing 0.56.",
+   "how": "not yet written",
+   "evidence": []
+  },
+  {
+   "id": "P11",
+   "task": "T12",
+   "stage": "prove",
+   "name": "Speed",
+   "card": "T10",
+   "why": "The product only works if it is fast and needs no GPU or API at serving time.",
+   "success": "Under 50 ms per item on one CPU thread, measured on hardware like production.",
+   "today": "Not started. Static embedding encode measured at 0.03 ms per item (a part of the pipeline, not the whole reader).",
+   "how": "not yet written",
+   "evidence": []
+  },
+  {
+   "id": "P12",
+   "task": "T13",
+   "stage": "ship",
+   "name": "Ship decision",
+   "card": "T11",
+   "why": "Decides whether the model leaves the lab, with its card.",
+   "success": "A clean-environment run gives byte-identical output; the file ships with its card; the owner says go.",
+   "today": "Not started.",
+   "how": "not yet written",
+   "evidence": []
+  },
+  {
+   "id": "W",
+   "task": "T14",
+   "stage": "define",
+   "name": "Wave loop: which guideline wording is stable",
+   "card": null,
+   "why": "Find which wording of the guideline gives stable answers before labelling at scale.",
+   "success": "Two rounds in a row move topic agreement by less than 0.015.",
+   "today": "Met: waves 9 to 17 moved it by 0.013 then 0.003. Stopped; guideline frozen at the wave-5 version. Cost $33.80 of $50. Condition agreement did not improve.",
+   "how": "runs/waves/log.jsonl",
+   "evidence": [
+    "runs/waves/log.jsonl",
+    "ledger D7"
+   ]
+  }
+ ]
+}

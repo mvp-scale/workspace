@@ -1,0 +1,87 @@
+# Kit v1.0: the ledger's rules. Keep them, or change them and say so in a new version: engine.mjs enforces exactly this list.
+# First agreed for a real project on 2026-10-23; test/ holds the engine and this file equal.
+purpose: One append-only file records who did what, where, when, and the evidence. Any agent or person can pick up from it.
+structure:
+  project: tenancy; one ledger per Project
+  wave: W<n>, a batch of tasks in one shared space, worked with one agent's context; closed only by a ceremony
+  task: T<n>, with title, acceptance criteria, needs, budget and optional steps
+  step: T<n>.<k>, a small ordered piece of a task, done by the same agent
+  bug: B<n>, a task plus severity, blast radius, area and the evidence that it fails
+  ceremony: C<n>, reviews a finished wave (patterns, stale work, opportunities, pooled bugs, focus) and closes it
+  opportunity: I<n>, a pooled improvement; becomes work only when a task cites it
+  decision: D<n>, settled with evidence; reopened only with new evidence
+  line: L<n>, one record; everything above is told in lines
+shared_space:
+  fields: [stage, domain, capability, goal]
+  rule: every wave and task names where it works by contract id; on a wave, goal is the wave's own sentence
+  grouping:
+    - a task's steps stay inside one capability
+    - a wave's tasks share one domain
+value_and_focus:
+  lasting_value: in the contract, each capability's tier and the outcome measures
+  focus: in the ledger; by default journey order (stage, then domain, then capability); a ceremony may append a focus line that moves a domain or capability up, with the reason and evidence
+  order: the next task is computed from the latest focus, then journey order, then the order filed; there is no typed task priority
+bugs:
+  severity: [high, medium, low]
+  blast: [code, component, container, system]
+  priority: computed, never typed; P1 only when severity is high and blast is container or wider; P2 for other high bugs and medium bugs of container or wider; P3 otherwise
+  area: every bug names its capability
+  block_is_not_a_bug: a block is the reason work stopped; it becomes a bug only when evidence shows a defect
+  routing: a high bug becomes a task; low and medium go to the pool (D034)
+done_and_validators:
+  validator: each skill chain names one validator, run the same way for every task of that kind
+  done: cites evidence, a green validate receipt for the commit, and an MM3 run for high-blast work
+  exception: a failing validator refuses done unless an exception line gives the reason and evidence; exceptions are counted for the ceremony
+enforcement:
+  modes: [warn, enforce]
+  warn: the line goes through and a warning line is appended with the rule, what was wrong, why and the fix
+  promotion: after warning on 3 separate runs a rule shows ready to enforce; a decision line citing those warnings turns it on
+  ready_after: 3
+  day_one:
+    why: letting these through costs more to undo than stopping now
+    rules: [bad-kind, no-who, no-text, no-ts, bad-id, duplicate-wave, duplicate-task, duplicate-opportunity, duplicate-ceremony, unknown-task, unknown-wave, unknown-need, bad-transition, chain-broken, no-evidence, self-verdict, bad-result, no-criteria, verdict-inconsistent, unknown-space, no-validation, settled, no-new-evidence, bad-coverage, bad-mode]
+  imported: a line imported from an older ledger records history; it never warns and is not refused for missing evidence
+stale:
+  rule: the board flags a task in progress with no new line past the window, so another agent may take it over; whether it still matters is decided at a ceremony against its goal (keep, regroup, merge or drop, with the reason)
+  window_hours: 48
+  window_decided: false
+five_rules:
+  - One line per fact, appended, never edited.
+  - No evidence, no decision.
+  - Completed is not closed; only a ceremony closes a wave.
+  - A miss is a post-mortem, not an automatic new task.
+  - Never read the whole file; the reader answers one question.
+line:
+  always: [id, ts, kind, who, text, prev]
+  prev: the sha256 of the line before it exactly as written, so an edited or removed line breaks the chain
+  ts: ISO 8601 UTC with milliseconds and Z
+  commits: full 40-character shas
+  kinds: [wave, task, step, start, block, done, verdict, postmortem, opportunity, ceremony, decision, focus, exception, warning, drop, note, goal, draft, proof, answer]
+states:
+  task: open, in_progress, completed (done, not yet judged), passed, failed; also blocked, retry, dropped
+  wave: open until every member is passed, dropped, or failed with its post-mortem; then completed; closed only by a ceremony
+mm3: the ledger holds a pointer and a one-word verdict so it still reads on a fresh clone, as {type mm3, ref, verdict, commit}
+adopting: start one project on one ledger; import an older tracker's history as imported lines so it reads in the same place
+not_decided:
+  - the window that makes work stale (48 hours is the starting value)
+  - pinning a skill's version
+vocabulary:
+  note: how we say it in the knowledge pipeline; the tool's verbs and line kinds keep their kit names
+  wave: phase
+  ceremony: phase review
+  bug: defect, a result that shows something is broken
+  project: pipeline project
+  journey: the life of one model, from the question to the lessons
+  commit: not used; our evidence is a run, a file with its sha, an MM3 run or a gate report
+evidence_types:
+  run: a Kaggle run or Console batch id
+  file: a path with its sha256
+  mm3: an MM3 run id
+  gate-report: the gate report for one output
+  ledger: an id from the old repo ledger, for history only
+prediction:
+  status: planned, not yet enforced; each task will carry a prediction with a probability before it starts and its score after, as extra fields, with a warn-mode rule when one is missing
+quality_gates:
+  record: a done or verdict line may carry "measures":[{gate, pass, value, n_in, n_pass, thin}]; the gate ids come from quality.yaml
+  relax: a decision line with "change":"relax", "gate", "from", "to" records a loosened bar; it always warns and is shown on the gate map
+  warn_rules: [bad-measure, unknown-gate, bar-relaxed]

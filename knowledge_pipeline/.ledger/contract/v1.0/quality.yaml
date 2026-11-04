@@ -1,0 +1,47 @@
+# Quality gates: what must be true going into and out of each stage, with the evidence behind each bar.
+# Proven ideas this follows: entry and exit criteria (stage-gate), critical-to-quality measures and rolled yield (Six Sigma), acceptance sampling (ANSI/ASQ Z1.4),
+# control charts for drift (Shewhart), data validation checks (TFX Data Validation, Great Expectations), and datasheets for datasets.
+principle: "Every stage has a qualifier set on the way in and on the way out. A bar is measured the same way every time, so quality in and quality out can be compared on one map."
+ratchet:
+  rule: "A bar is frozen when this contract version is released. Loosening one needs a new contract version and a decision line with new evidence, made before the next measurement. Every relaxation is counted and shown on the gate map."
+  never_relaxed: ["the frozen test set", "every qualifier that applies to test", "the gate formula: lower 95% bound at or above 0.8 times agreement"]
+  yield_rule: "When a stage's yield falls below its floor, fix upstream (better input, more sampling). Never loosen the bar to let more through."
+  cooling_off: "A bar cannot be changed in the phase where it was just missed; the decision waits for the phase review."
+parity: "Item qualifiers apply to train and test alike. Test-side bars are set first and never relaxed, so the test stays an honest sample of the same population."
+dimensions: [validity, completeness, uniqueness, coverage, consistency, accuracy, provenance, independence]
+measures:
+  yield: "items passing a gate divided by items entering it, with the reason for every rejection"
+  rolled_yield: "the product of stage yields from the first gate to the last"
+  margin: "how far a measured value sits past its threshold; thin margins show amber"
+  sampling: "a large pool is checked by acceptance sampling (sample size, accepted defects, interval), not item by item"
+  drift: "each gate's metric is plotted per chunk and per phase; a run outside its usual band is a warning"
+gates:
+  - {id: Q01, stage: frame, side: exit, population: "task card", dimension: completeness, test: "card has question, output shape, per-item budget, caps and stop rule", threshold: "card checker passes", basis: "R1", applies_to: both, status: rule}
+  - {id: Q02, stage: frame, side: exit, population: "task card", dimension: provenance, test: "owner decision line records targets and the quality floor", threshold: "line exists", basis: "S1", applies_to: both, status: rule}
+  - {id: Q03, stage: define, side: entry, population: "guideline", dimension: completeness, test: "per output: positive, negative and boundary examples, and an unsure rule", threshold: "at least 5, 5 and 3", basis: "playbook 02", applies_to: both, status: rule}
+  - {id: Q04, stage: define, side: exit, population: "gold set", dimension: consistency, test: "agreement between independent raters, per output", threshold: "at least 30 items, 95% interval; kappa 0.6 go, 0.4 to 0.6 review, below 0.4 fix", basis: "D1, D2", applies_to: test, status: rule}
+  - {id: Q05, stage: define, side: exit, population: "gold set", dimension: uniqueness, test: "near-duplicates between gold and the training pool", threshold: "zero", basis: "D3", applies_to: test, status: rule}
+  - {id: Q06, stage: define, side: exit, population: "gold and scorer", dimension: provenance, test: "gold and scorer files frozen by sha", threshold: "shas recorded", basis: "R3", applies_to: test, status: rule}
+  - {id: Q07, stage: teach, side: entry, population: "item", dimension: validity, test: "headline and description present, English, with a date and a source", threshold: "all present", basis: "playbook 03", applies_to: both, status: rule}
+  - {id: Q08, stage: teach, side: entry, population: "item", dimension: completeness, test: "headline plus description long enough to carry a claim", threshold: "at least 40 characters", basis: "none yet", applies_to: both, status: provisional}
+  - {id: Q09, stage: teach, side: entry, population: "item", dimension: uniqueness, test: "exact or near duplicate (MinHash 0.8) of another pool item", threshold: "none kept", basis: "D3", applies_to: both, status: rule}
+  - {id: Q10, stage: teach, side: entry, population: "item", dimension: uniqueness, test: "item or near-duplicate present in the frozen test set", threshold: "zero", basis: "D3", applies_to: train, status: rule}
+  - {id: Q11, stage: teach, side: exit, population: "sample", dimension: coverage, test: "rare-condition positives per label in the quota sample against random", threshold: "at least 1.5 times random, else bulk uses random", basis: "playbook 03 rule 5", applies_to: train, status: provisional}
+  - {id: Q12, stage: teach, side: entry, population: "teacher", dimension: accuracy, test: "teacher against gold, per output it labels", threshold: "clears the output's gate", basis: "D4", applies_to: both, status: rule}
+  - {id: Q13, stage: teach, side: entry, population: "judge", dimension: independence, test: "the judge shares no model family with the teacher", threshold: "none shared", basis: "D5", applies_to: both, status: rule}
+  - {id: Q14, stage: teach, side: exit, population: "label", dimension: validity, test: "rows that pass the output schema, per chunk", threshold: "at least 95%; a chunk below stops the run", basis: "spec cap", applies_to: train, status: provisional}
+  - {id: Q15, stage: teach, side: exit, population: "label", dimension: provenance, test: "labels carrying teacher, prompt version, date and text sha", threshold: "100%", basis: "D6", applies_to: train, status: rule}
+  - {id: Q16, stage: teach, side: exit, population: "label", dimension: consistency, test: "a label is kept only when at least two qualified voters agree", threshold: "two of the available voters", basis: "plan P7", applies_to: train, status: provisional}
+  - {id: Q17, stage: teach, side: exit, population: "label pool", dimension: coverage, test: "conditions with enough positives to train", threshold: "at least 30 positives for at least 25 of 38", basis: "plan P7", applies_to: train, status: provisional}
+  - {id: Q18, stage: teach, side: exit, population: "spend", dimension: validity, test: "labelling spend against the card cap", threshold: "at or under the cap", basis: "R5", applies_to: both, status: rule}
+  - {id: Q19, stage: train, side: entry, population: "training data", dimension: uniqueness, test: "test ids in the training data", threshold: "zero", basis: "D3, R3", applies_to: train, status: rule}
+  - {id: Q20, stage: train, side: entry, population: "split", dimension: validity, test: "split by source and date; selection rule logged before any test score", threshold: "both true", basis: "D3, M3", applies_to: both, status: rule}
+  - {id: Q21, stage: train, side: exit, population: "training run", dimension: validity, test: "loss curve falls and does not collapse (read before scoring)", threshold: "read and recorded", basis: "lessons", applies_to: both, status: rule}
+  - {id: Q22, stage: train, side: exit, population: "export", dimension: accuracy, test: "int8 against fp32 on dev, largest drop per output", threshold: "at most 0.01", basis: "M4", applies_to: both, status: rule}
+  - {id: Q23, stage: train, side: exit, population: "export", dimension: consistency, test: "tokenizer parity between training and runtime", threshold: "100%", basis: "M6", applies_to: both, status: rule}
+  - {id: Q24, stage: train, side: exit, population: "variant claim", dimension: consistency, test: "seeds behind any claim that one variant beats another", threshold: "at least 3, gap above twice the spread", basis: "M8", applies_to: both, status: rule}
+  - {id: Q25, stage: prove, side: exit, population: "output", dimension: accuracy, test: "lower 95% bound against the gate", threshold: "at or above 0.8 times agreement", basis: "M1", applies_to: test, status: rule}
+  - {id: Q26, stage: prove, side: exit, population: "output", dimension: accuracy, test: "against the baseline and the previous model", threshold: "non-overlapping intervals, or says no change", basis: "M2", applies_to: test, status: rule}
+  - {id: Q27, stage: prove, side: exit, population: "verdict", dimension: consistency, test: "a second agent re-scores from saved outputs", threshold: "numbers match exactly", basis: "R6", applies_to: test, status: rule}
+  - {id: Q28, stage: prove, side: exit, population: "speed", dimension: validity, test: "all questions per item on one CPU thread", threshold: "under 50 ms, p50 and p95 recorded", basis: "M5", applies_to: both, status: provisional}
+  - {id: Q29, stage: ship, side: exit, population: "release", dimension: consistency, test: "clean-environment run against the evaluation harness", threshold: "identical", basis: "M7", applies_to: both, status: rule}

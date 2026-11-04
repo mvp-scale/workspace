@@ -1,0 +1,51 @@
+{
+ "id": "T03",
+ "stage": "S3-teacher",
+ "question": "After dedupe and rules, does quota sampling by the CPU reader find more rare-condition items than random?",
+ "method": {
+  "name": "Exact + MinHash dedupe, rules filter, stratified quota sampling with a pre-set random comparison",
+  "source": "playbook/03-teacher-labels.md rule 5"
+ },
+ "inputs": [
+  {
+   "path": "data/pool.jsonl",
+   "sha8": "b9257301",
+   "frozen": true
+  },
+  {
+   "path": "/workspace/data/clef-labels/test.jsonl",
+   "sha8": "e61331d3",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/p4/triage.json",
+  "data/pilot1000.jsonl",
+  "data/bulk25k.jsonl"
+ ],
+ "done": [
+  {
+   "metric": "near_duplicates_pool_vs_test",
+   "op": "==",
+   "value": 0,
+   "accept_id": "D3"
+  },
+  {
+   "metric": "quota_over_random_positive_ratio_rare19",
+   "op": ">=",
+   "value": 1.5
+  }
+ ],
+ "stop": "Dedupe removes more than 30% of the pool: stop and check the shingle setting. Ratio is scored at P6.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.5,
+  "usd": 0,
+  "tokens": 1000000
+ },
+ "compute": "local-cpu",
+ "smoke": {
+  "required": false
+ },
+ "risk_first": "Run triage on 1,000 items first; check the CPU reader answers and timing."
+}

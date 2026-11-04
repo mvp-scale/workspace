@@ -1,0 +1,23 @@
+id: item-pool-building
+name: "Item pool building"
+definition: "turn raw items into a clean pool and a sample that covers rare conditions"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Item pool", note: "the record this capability owns"}
+goals:
+  - id: item-pool-building.clean-pool
+    title: "The pool has no duplicates and no test items"
+    why: "a leaked item inflates every score"
+    acceptance:
+      - "Zero near-duplicates between the pool and the frozen test (D3)"
+      - "Counts at every step are recorded in a manifest"
+    serves_via: []
+    functions: []
+  - id: item-pool-building.triage-sample
+    title: "The sample gives rare conditions enough examples, and beats random on them"
+    why: "a random sample leaves rare conditions with too few positives"
+    acceptance:
+      - "Quota sampling yields at least 1.5 times random's positives on the rarest conditions, or bulk uses random (playbook 03 rule 5)"
+    serves_via: []
+    functions: []

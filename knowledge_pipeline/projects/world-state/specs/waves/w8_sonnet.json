@@ -1,0 +1,353 @@
+{
+ "name": "world_state_wave8_sonnet",
+ "prompt_version": "ws-w8",
+ "model": "claude-sonnet-5-5",
+ "max_tokens": 450,
+ "cap_usd": 5.0,
+ "layers": [
+  "TOPIC",
+  "CONDITIONS"
+ ],
+ "mode": "generate",
+ "guideline": [
+  "You read one short news item (a headline and a one or two sentence description) and describe what it says about the state of the world.",
+  "Reply with the JSON object only. Fill four fields: topic, story_type, claim, conditions.",
+  "topic: the single best topic id from the list below. Use 'other' only if nothing fits.",
+  "story_type: 'fact' if the item reports something that happened or was announced; 'forecast' if mainly a prediction; 'opinion' if mainly commentary; 'unclear' otherwise.",
+  "claim: the main claim of the item in one plain sentence of at most 25 words, using only what the item says.",
+  "conditions: the conditions of a place that this item reports as moving, or gives a real reason to expect to move. A condition appears at most once. Use the condition ids below. direction 'up' means the condition rises as defined by its 'up' meaning; 'down' means it falls.",
+  "level: how large the change is for the people affected: minor = A small change that most people would hardly notice; notable = A clear change that many people would notice. This is the size every reading had before levels existed; major = A big change that affects daily life for many people; severe = A very large change that amounts to a crisis; extreme = An unprecedented change that reshapes how society works.",
+  "Be conservative. If the item does not clearly report or imply a change in a listed condition, leave conditions empty. Do not guess from background knowledge about the world. An item about a person, sport or entertainment with no effect on any condition has an empty list.",
+  "",
+  "TOPICS (id: meaning)",
+  "macro_growth_recession: Growth and recession - The overall size and health of an economy: output, recession, recovery, national income, business cycle",
+  "inflation_prices: Inflation and living costs - Prices of everyday goods and services rising or falling, cost of living, price controls",
+  "interest_credit_banking: Interest rates, credit and banks - Central bank decisions, loan and mortgage rates, bank health, lending, household and business debt",
+  "markets_investment: Markets and investing - Stock, bond, currency, commodity and crypto prices, investor behaviour, savings products",
+  "public_budget_tax: Taxes and public budgets - Taxation, government spending, deficits and debt, subsidies, public-sector pay",
+  "trade_tariffs: Trade and supply chains - Imports, exports, tariffs, trade deals, shipping and supply disruptions of goods",
+  "housing_rents: Housing and rents - Home prices, rents, construction of homes, evictions, homelessness, housing policy",
+  "work_labour: Jobs and wages - Employment, unemployment, hiring, layoffs, pay, working hours and conditions",
+  "labour_disputes: Unions and strikes - Trade unions, strikes, collective bargaining, labour law disputes",
+  "ai_automation: AI and automation - Artificial intelligence, robots and software replacing or changing tasks and jobs, AI safety and rules",
+  "retirement_pensions: Retirement and pensions - Pension systems, retirement age, ageing populations' income, elder care funding",
+  "social_welfare_poverty: Welfare, poverty and inequality - Benefits, poverty, hunger programmes, income inequality, social safety nets",
+  "energy_power: Energy and fuel - Oil, gas, coal, electricity, power grids, fuel prices, renewable build-out",
+  "transport_infrastructure: Transport and infrastructure - Roads, rail, aviation, ports, public transport, bridges, grid and network build and failure",
+  "food_agriculture: Food and farming - Crops, livestock, fisheries, food supply and safety, famine, food prices",
+  "water_utilities: Water and utilities - Drinking water, sanitation, droughts and floods affecting supply, utility services",
+  "climate_change: Climate change - Global warming, emissions, climate policy and targets, adaptation",
+  "pollution_nature: Pollution and nature - Air and water pollution, waste, wildlife, forests, conservation, land use",
+  "natural_disasters: Disasters and extreme weather - Storms, floods, heatwaves, wildfires, earthquakes and the response",
+  "public_health: Disease and public health - Epidemics, vaccination, outbreaks, health warnings, food and drug safety",
+  "health_care_system: Health care services - Hospitals, doctors, insurance, waiting times, health costs and funding",
+  "medicines_science: Medicines and treatments - New drugs, trials, approvals, medical devices and medical research",
+  "mental_health_substances: Mental health and substance use - Mental illness, wellbeing, addiction, drugs, alcohol, tobacco policy",
+  "crime_policing: Crime and policing - Violent and property crime, policing, gangs, organised crime, prisons",
+  "courts_rulings: Courts and legal rulings - Court cases, judgments, legal rights decisions, investigations and trials of public interest",
+  "accidents_incidents: Accidents and incidents - Transport crashes, industrial accidents, fires, product failures, rescues",
+  "cyber_privacy: Cyber security and privacy - Hacks, data breaches, surveillance, online fraud, privacy law",
+  "war_conflict: War and armed conflict - Wars, invasions, ceasefires, attacks on civilians, conflict casualties",
+  "terrorism_violence: Terrorism and political violence - Terror attacks, extremism, assassination attempts and other premeditated political violence",
+  "defence_weapons: Defence and weapons - Military budgets, arms, alliances, conscription, nuclear and weapons programmes",
+  "diplomacy_treaties: Diplomacy and treaties - Summits, treaties, alliances, global institutions, relations between states",
+  "sanctions_aid: Sanctions and aid - Sanctions, embargoes, foreign aid, humanitarian relief, development finance",
+  "migration_refugees: Migration and refugees - Immigration rules, border control, asylum, refugee flows, integration",
+  "elections_politics: Elections and political parties - Elections, campaigns, polls, party politics, leaders' standing, coalitions",
+  "legislation_regulation: Laws and regulation - New laws, rules, bans, licensing, regulation of industries",
+  "governance_corruption: Government performance and corruption - Scandals, corruption, public services failing and institutional failure",
+  "civil_rights_discrimination: Civil rights and discrimination - Equality, minority and gender rights, freedom of speech, discrimination",
+  "protest_movements: Protests and social movements - Demonstrations, activism, petitions, boycotts, riots and civil unrest",
+  "family_demographics: Family and demographics - Births, marriage, childcare, ageing, population change, family policy",
+  "religion_identity: Religion and identity - Religion, culture clashes, nationalism, community identity, social values",
+  "education_schools: Schools and universities - Schools, universities, fees, exams, teachers, training and skills programmes",
+  "research_space: Science and space - Scientific discoveries, research funding, space missions, physics, biology (non-medical)",
+  "technology_consumer: Digital technology and consumer tech - Gadgets, internet services, software, telecoms, platforms' products and rules",
+  "media_information: Media and information - News media, misinformation, censorship, social media content, press freedom",
+  "consumer_retail: Consumer goods and retail - Shops, product launches, recalls, consumer protection, brand fortunes at household level",
+  "business_corporate: Business and companies - What one company does: deals, mergers, leadership, lawsuits, earnings",
+  "mining_materials: Minerals and materials - Metals, rare earths, mining and industrial raw materials",
+  "culture_leisure: Culture, sport and leisure - Film, music, art, celebrities, books, games, sport, tournaments, mass events, holidays, hospitality and the leisure industry",
+  "other: Other - None of the above fits at all (review bucket, never counted)",
+  "",
+  "CONDITIONS (id: meaning | up = ... | down = ...)",
+  "water_stress: How short or unsafe water supply is for a place. | up = water supply gets shorter or less safe | down = water supply gets more plentiful or safer",
+  "land_degradation: Loss of usable farmland, forest and soil through erosion, fire, flooding or sprawl. | up = farmland, forest or soil is lost or damaged | down = farmland, forest or soil is restored or protected",
+  "biodiversity_loss: Decline of species, habitats and fish stocks. | up = wildlife, habitats or fish stocks decline | down = wildlife, habitats or fish stocks recover",
+  "climate_stress: How severe heat, drought, flood and storm hazard is compared with normal. | up = heat, drought, flood or storm hazard gets worse | down = heat, drought, flood or storm hazard eases",
+  "air_pollution: Concentration of harmful particles and gases in the air. | up = the air gets dirtier | down = the air gets cleaner",
+  "energy_fuel: How expensive and how available fuel, electricity and heating are. | up = fuel, electricity or heating costs rise or supply gets tighter | down = fuel, electricity or heating costs fall or supply improves",
+  "mineral_scarcity: How hard it is to obtain metals and raw materials. | up = metals and raw materials get scarcer or costlier | down = metals and raw materials get easier to obtain or cheaper",
+  "food_insecurity: Share of people who cannot reliably get enough affordable food. | up = more people struggle to get enough affordable food | down = fewer people struggle to get enough affordable food",
+  "housing_cost: Rent, house prices and mortgage cost relative to income. | up = rents, house prices or mortgage payments rise | down = rents, house prices or mortgage payments fall",
+  "infrastructure_condition: How well roads, grids, pipes and public buildings are maintained. | up = roads, grids, pipes and public buildings get better maintained | down = roads, grids, pipes and public buildings fall into disrepair",
+  "disruption: Interruptions to travel, power, water and public services. | up = travel, power, water or public services are interrupted more often | down = travel, power, water or public services are interrupted less often",
+  "industrial_output: How much goods production is running relative to capacity. | up = factories produce more | down = factories produce less",
+  "supply_chain_strain: Delays, shortages and trade barriers in moving goods. | up = goods get harder or slower to move and trade | down = goods get easier and faster to move and trade",
+  "tech_adoption: Share of daily life and work done with newer digital tools. | up = more daily life and work moves onto newer digital tools | down = less daily life and work moves onto newer digital tools",
+  "cyber_insecurity: How exposed digital systems are to breaches and outages. | up = digital systems become more exposed to breaches and outages | down = digital systems become less exposed to breaches and outages",
+  "prices: How expensive everyday goods and services are, i.e. how little a unit of money buys. | up = everyday prices and the cost of living rise | down = everyday prices and the cost of living fall",
+  "borrowing_cost: How costly and available loans are. | up = loans get costlier or harder to get | down = loans get cheaper or easier to get",
+  "asset_values: Level of share, property and savings values. | up = share, property and savings values rise | down = share, property and savings values fall",
+  "market_volatility: How violently asset prices are swinging. | up = financial markets swing more wildly | down = financial markets become calmer",
+  "private_debt: Share of income that households and firms owe in repayments. | up = repayments take a bigger share of household or firm income | down = repayments take a smaller share of household or firm income",
+  "inequality: Gap between richest and poorest in income and wealth (the Gini coefficient is the usual single number for it). | up = the gap between the richest and poorest widens | down = the gap between the richest and poorest narrows",
+  "fiscal_strain: Pressure on government budgets from deficits, debt and spending needs. | up = pressure on government budgets increases | down = pressure on government budgets eases",
+  "health_risk: Exposure to illness, injury and disease outbreak. | up = exposure to illness, injury or outbreak increases | down = exposure to illness, injury or outbreak decreases",
+  "mental_distress: Share of people with anxiety, depression or stress. | up = more people suffer anxiety, depression or stress | down = fewer people suffer anxiety, depression or stress",
+  "care_strain: Pressure on hospitals, clinics, staff and medicine supply. | up = hospitals, clinics, staff or medicine supply come under more strain | down = hospitals, clinics, staff or medicine supply come under less strain",
+  "job_security: How secure people's jobs and work availability are. | up = work and incomes become more secure | down = jobs and incomes become less secure",
+  "pay_growth: How fast pay is rising, before any price rises are taken off. | up = pay rises faster | down = pay rises more slowly or falls",
+  "social_division: Polarisation and unfairness between groups. | up = society becomes more polarised or unfair | down = society becomes less polarised or unfair",
+  "community: How connected and supportive local communities are. | up = local communities become more connected and supportive | down = local communities become less connected and supportive",
+  "trust_institutions: How credibly government, business and media are seen to act. | up = government, business or media come to be seen as more credible and trustworthy | down = government, business or media come to be seen as less credible and trustworthy",
+  "public_service_quality: How well government delivers schools, courts, permits and benefits. | up = schools, courts, permits and benefits are delivered better | down = schools, courts, permits and benefits are delivered worse",
+  "civil_liberties: How freely people can speak, vote, assemble and get fair legal treatment. | up = people become freer to speak, vote, assemble and get fair legal treatment | down = people become less free to speak, vote, assemble and get fair legal treatment",
+  "crime: Crime and violence around people's daily life. | up = street crime and violence by individuals in people's daily lives increase | down = street crime and violence by individuals in people's daily lives decrease",
+  "war_terror: Armed conflict and terrorism affecting the audience's country or region. | up = armed conflict or terrorism affecting the country or region increases | down = armed conflict or terrorism affecting the country or region decreases",
+  "civil_unrest: Level of riots, mass protest and disorder. | up = riots, mass protest and disorder increase | down = riots, mass protest and disorder decrease",
+  "information_reliability: How accurate and trustworthy public information is. | up = public information becomes more accurate and trustworthy | down = public information becomes less accurate and trustworthy",
+  "migration_flow: How many people are arriving in or leaving a place, relative to its population. | up = more people arrive in a place than leave it | down = more people leave a place than arrive in it",
+  "skills_level: How far the people of a place have the education and skills they need for work and life. | up = more people gain the skills and education they need | down = fewer people have the skills and education they need",
+  "A single crime, arrest, attack or accident is an event, not a reported rise in the crime, war_terror or health_risk condition, so leave conditions empty unless the item says the overall level or trend is changing.",
+  "Do not tag a condition from a routine product release, company announcement, market quote, order book or one-off investment plan unless the item itself states a clear effect on that condition for people.",
+  "Count a condition only when the item states or clearly implies the change in the place itself; a pending plan, a demand, a proposal, or a mere mention of the subject does not count.",
+  "Do not add a second or third condition as a side effect of the first; include one only if the item gives its own separate evidence of movement.",
+  "Use minor only when the change is real but barely noticeable, and reserve major and above for items that describe wide disruption, mass casualties or crisis-scale effects, not a single incident.",
+  "When an item fits both a topic about a specific kind of event and a broader subject topic, choose the topic that describes what the item is mainly about (its actors and main action), and treat sport, celebrity and lawsuit items by their main subject.",
+  "Treat an event, however harmful, as one occurrence; tag a condition only when the item itself says the overall level, trend or supply for the place is changing, not merely that something bad or good happened.",
+  "Do not infer a condition from a minor side effect of the event, such as a few injuries, a brief disruption, a single price quote or a one-company outcome; require the item to state a wider effect on people in the place.",
+  "Regulatory proposals, funding decisions, court steps, studies, arrests and company filings do not by themselves move a condition unless the item describes the resulting change in people's circumstances.",
+  "Do not tag a condition when its direction would rest on your own background reasoning about what such news usually leads to; when the effect is only plausible, not stated, leave conditions empty.",
+  "Choose the topic by what the item mainly reports (the central action and who does it), not by the broader setting, a mentioned person or the type of event it is a passing example of.",
+  "Reserve severe for crisis-scale effects that the item itself describes as widespread and use major or lower for large but regional or single-cause situations, so that level reflects the stated scale rather than dramatic wording.",
+  "When an item reports a charge, lawsuit, ruling, fine or inquiry, choose the topic of the subject matter at issue only if the item is mainly about that subject; if it mainly reports the legal or official step, choose the courts or governance topic.",
+  "Choose the topic that matches the main actor's field when the item is about a person, a visit, a profile or a commentary piece, and do not pick a topic from a background issue that is only mentioned.",
+  "A single market move, price quote, share fall or personal fortune change reports a one-off outcome, so it does not move asset_values or market_volatility unless the item says the broad market level or swings are changing.",
+  "A weather warning, forecast, proposal, criticism of a policy or a call for action is not a reported change, so leave conditions empty unless the item says service or conditions are already changing.",
+  "Do not tag trust_institutions, public_service_quality or skills_level from a statement, watchdog remark, lawsuit, pledge or small programme unless the item states a clear change in how people see or receive that service.",
+  "Use story_type 'fact' when the item reports that something was said, decided or happened, even if the subject is future-facing or contested, and use 'unclear' only when the item is a bare list or has no identifiable claim.",
+  "Tag a condition only when the item states a change that has already happened or is under way for people in the place; a warning, fear, risk or worry voiced by someone is not a change.",
+  "A job cut, buyout, quarantine rule, closure or other single organisational or official step moves a condition only if the item says how many people in the place are affected in their wider circumstances; otherwise leave conditions empty.",
+  "For weather and disaster items, tag disruption only when the item names the services interrupted, and tag climate_stress, health_risk or other hazard conditions only when the item says the hazard level itself is worsening, not because a storm or flood occurred.",
+  "When an item is a human-interest story, personal tribute, pet or animal appeal, or a daily roundup with no policy or sector subject, use 'other' instead of stretching a nearby topic to fit.",
+  "When an item is mainly about a government or company response, a reported official step or a dispute between named parties, choose the topic of that actor's field or the legal or governance step, not the broader issue behind it.",
+  "Choose the topic of what is being delivered or regulated (health services, medicines, public budgets, trade) according to the item's main verb and subject, and do not pick a topic from an incidental detail such as a place, a group affected or a funding amount.",
+  "When an item reports a single closure, interruption or incident at one site, leave conditions empty even if service was briefly affected, unless the item states that service across the place is being disrupted repeatedly or widely.",
+  "When an item reports a large number of people affected by a hazard or outbreak, such as evacuations or a first confirmed case with official response, count it as a stated change in the matching condition at a level matching the stated numbers.",
+  "Do not tag a condition from a small scheme, pilot, new office or training programme, from an item's own mention of fears or doubts, or from a downgrade or rating, unless the item states a measurable effect on people in the place.",
+  "For fines, penalties and settlements imposed by a regulator or exchange on a firm, choose the topic of the regulator's or firm's field if the item is mainly about the firm's conduct, and choose courts_rulings only when a court or formal legal judgment is the main event.",
+  "For a violent incident, choose the topic by its nature: war_conflict only when part of a stated war, terrorism_violence only when the item states or police say the act is political or premeditated mass violence, accidents_incidents for blasts or collapses with no stated attack, and crime_policing for ordinary arrests and shootings.",
+  "For stories about a politician's or official's conduct, appointment or administrative measures, choose governance_corruption or the actor's field rather than elections_politics, unless the item is about voting, parties, polls or campaigns.",
+  "When one company is the actor and the item is about its product, launch, outage, earnings or leadership, choose business_corporate over the sector or technology topic its product belongs to, unless the item is mainly about that sector as a whole.",
+  "When the item is mainly about price or yield movements in traded assets, choose markets_investment, even if a central bank, regulator, company or commodity is named as the cause.",
+  "When the item reports an outage, blackout or attack and gives no stated wider or repeated effect on people across the place, leave conditions empty, and choose the topic by who acted and what happened.",
+  "Choose 'other' for an obituary, personal milestone, personal health story, family tribute or oddity about a private person, and use a subject topic only when the item itself describes a policy, sector or institutional action.",
+  "When an item reports an official or legal step (a lawsuit, ruling, closure of a case or order to pay), choose the topic of the legal or official body or the field it acts in, and use the subject-matter topic only when the item is mainly about that subject.",
+  "Tag a research, conservation or science item with a condition only when the item reports measured change in the real world, not when it reports a lab result, a prospect or a hope."
+ ],
+ "input_template": "ITEM {id}\n<text>\n{text}\n</text>",
+ "output_schema": {
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+   "topic",
+   "story_type",
+   "claim",
+   "conditions"
+  ],
+  "properties": {
+   "topic": {
+    "type": "string",
+    "enum": [
+     "macro_growth_recession",
+     "inflation_prices",
+     "interest_credit_banking",
+     "markets_investment",
+     "public_budget_tax",
+     "trade_tariffs",
+     "housing_rents",
+     "work_labour",
+     "labour_disputes",
+     "ai_automation",
+     "retirement_pensions",
+     "social_welfare_poverty",
+     "energy_power",
+     "transport_infrastructure",
+     "food_agriculture",
+     "water_utilities",
+     "climate_change",
+     "pollution_nature",
+     "natural_disasters",
+     "public_health",
+     "health_care_system",
+     "medicines_science",
+     "mental_health_substances",
+     "crime_policing",
+     "courts_rulings",
+     "accidents_incidents",
+     "cyber_privacy",
+     "war_conflict",
+     "terrorism_violence",
+     "defence_weapons",
+     "diplomacy_treaties",
+     "sanctions_aid",
+     "migration_refugees",
+     "elections_politics",
+     "legislation_regulation",
+     "governance_corruption",
+     "civil_rights_discrimination",
+     "protest_movements",
+     "family_demographics",
+     "religion_identity",
+     "education_schools",
+     "research_space",
+     "technology_consumer",
+     "media_information",
+     "consumer_retail",
+     "business_corporate",
+     "mining_materials",
+     "culture_leisure",
+     "other"
+    ]
+   },
+   "story_type": {
+    "type": "string",
+    "enum": [
+     "fact",
+     "forecast",
+     "opinion",
+     "unclear"
+    ]
+   },
+   "claim": {
+    "type": "string",
+    "maxLength": 220
+   },
+   "conditions": {
+    "type": "array",
+    "maxItems": 6,
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "condition",
+      "direction",
+      "level"
+     ],
+     "properties": {
+      "condition": {
+       "type": "string",
+       "enum": [
+        "water_stress",
+        "land_degradation",
+        "biodiversity_loss",
+        "climate_stress",
+        "air_pollution",
+        "energy_fuel",
+        "mineral_scarcity",
+        "food_insecurity",
+        "housing_cost",
+        "infrastructure_condition",
+        "disruption",
+        "industrial_output",
+        "supply_chain_strain",
+        "tech_adoption",
+        "cyber_insecurity",
+        "prices",
+        "borrowing_cost",
+        "asset_values",
+        "market_volatility",
+        "private_debt",
+        "inequality",
+        "fiscal_strain",
+        "health_risk",
+        "mental_distress",
+        "care_strain",
+        "job_security",
+        "pay_growth",
+        "social_division",
+        "community",
+        "trust_institutions",
+        "public_service_quality",
+        "civil_liberties",
+        "crime",
+        "war_terror",
+        "civil_unrest",
+        "information_reliability",
+        "migration_flow",
+        "skills_level"
+       ]
+      },
+      "direction": {
+       "type": "string",
+       "enum": [
+        "up",
+        "down"
+       ]
+      },
+      "level": {
+       "type": "string",
+       "enum": [
+        "minor",
+        "notable",
+        "major",
+        "severe",
+        "extreme"
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "examples": [
+  {
+   "input": {
+    "id": "synthetic-1",
+    "text": "Harbor Council closes ferry terminal after storm. The council of the fictional town of Varnel said the old terminal will stay shut for months while the pier is rebuilt."
+   },
+   "output": {
+    "topic": "transport_infrastructure",
+    "story_type": "fact",
+    "claim": "A storm-damaged ferry terminal in Varnel will stay closed for months while the pier is rebuilt.",
+    "conditions": [
+     {
+      "condition": "infrastructure_condition",
+      "direction": "down",
+      "level": "notable"
+     },
+     {
+      "condition": "disruption",
+      "direction": "up",
+      "level": "minor"
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "id": "synthetic-2",
+    "text": "Analyst predicts steady growth for the toy market. A commentator at the fictional firm Corvale says sales of wooden toys should keep rising next year."
+   },
+   "output": {
+    "topic": "consumer_retail",
+    "story_type": "forecast",
+    "claim": "An analyst expects wooden toy sales to keep rising next year.",
+    "conditions": []
+   }
+  },
+  {
+   "input": {
+    "id": "synthetic-3",
+    "text": "Village band wins regional contest. The fictional Marlow Brass Band took first prize at the weekend festival in front of a large crowd."
+   },
+   "output": {
+    "topic": "culture_leisure",
+    "story_type": "fact",
+    "claim": "The Marlow Brass Band won first prize at a regional festival.",
+    "conditions": []
+   }
+  }
+ ]
+}

@@ -1,0 +1,62 @@
+{
+ "id": "T05",
+ "stage": "S3-teacher",
+ "question": "Can Haiku label about 25,000 triaged items under a $20 cap with 30+ positives for most conditions?",
+ "method": {
+  "name": "Claude Message Batches in 5,000-item chunks, max-wait 3600 s",
+  "source": "kit/teacher/README.md"
+ },
+ "inputs": [
+  {
+   "path": "specs/world_state_v2.json",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "data/bulk25k.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/teacher/claude_batch.py",
+   "sha8": "d681885c",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/bulk25k/labels.jsonl",
+  "runs/bulk25k/spend.jsonl"
+ ],
+ "done": [
+  {
+   "metric": "conditions_with_30_positives",
+   "op": ">=",
+   "value": 25
+  },
+  {
+   "metric": "spend_usd",
+   "op": "<=",
+   "value": 20,
+   "accept_id": "R5"
+  },
+  {
+   "metric": "rows_with_provenance_share",
+   "op": "==",
+   "value": 1,
+   "accept_id": "D6"
+  }
+ ],
+ "stop": "Cap $20 hit, or one chunk's reject rate above 5%: stop before the next chunk.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.5,
+  "usd": 20,
+  "tokens": 1000000
+ },
+ "compute": "api",
+ "smoke": {
+  "required": true,
+  "log": "runs/pilot1000/yield.json"
+ },
+ "risk_first": "Only after T02 PASS and T04 pass."
+}

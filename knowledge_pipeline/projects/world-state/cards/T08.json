@@ -1,0 +1,82 @@
+{
+ "id": "T08",
+ "stage": "S4-train",
+ "question": "Does a 4-layer MiniLM or Ettin-17M multi-label student beat the lexical baseline on dev by more than run noise?",
+ "method": {
+  "name": "LLM-teacher distillation into a small multi-task encoder, int8 ONNX",
+  "source": "Hinton et al. 2015 https://arxiv.org/abs/1503.02531; kit/student/README.md"
+ },
+ "inputs": [
+  {
+   "path": "runs/p8/manifest.json",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/student/train.py",
+   "sha8": "a206745a",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/student/export.py",
+   "sha8": "896cc68c",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/student/tokenizer_parity.py",
+   "sha8": "1de432c1",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/ops/kaggle_run.sh",
+   "sha8": "b235d60d",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/p9/selection_rule.json",
+  "runs/p9/export_report.json",
+  "runs/p9/tokenizer_parity.json",
+  "runs/p9/compare.json"
+ ],
+ "done": [
+  {
+   "metric": "dev.CONDITIONS.gain_over_lexical_baseline_in_seed_sd",
+   "op": ">=",
+   "value": 2,
+   "accept_id": "M8"
+  },
+  {
+   "metric": "seeds_per_arm",
+   "op": ">=",
+   "value": 3,
+   "accept_id": "M8"
+  },
+  {
+   "metric": "int8_vs_fp32.max_layer_drop",
+   "op": "<=",
+   "value": 0.01,
+   "accept_id": "M4"
+  },
+  {
+   "metric": "tokenizer_parity_share",
+   "op": "==",
+   "value": 1,
+   "accept_id": "M6"
+  }
+ ],
+ "stop": "2 backbones x 3 seeds without a dev gain over the baseline: stop and report. Any kernel over 1 h: killed by its timer.",
+ "budget": {
+  "gpu_h": 3,
+  "cpu_h": 1,
+  "usd": 0,
+  "tokens": 2000000
+ },
+ "compute": "kaggle-gpu",
+ "smoke": {
+  "required": true,
+  "log": "runs/p9/smoke/smoke.json"
+ },
+ "risk_first": "Read the loss curve of seed 42 before running the other seeds.",
+ "selection_rule": "Highest dev minimum-layer score (TOPIC kappa, STORY_TYPE kappa, CONDITIONS F1 at dev-fixed thresholds); ties -> lower ms per item."
+}

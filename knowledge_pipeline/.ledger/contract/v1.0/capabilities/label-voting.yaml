@@ -1,0 +1,16 @@
+id: label-voting
+name: "Label voting"
+definition: "check each label against other voters and keep those that agree"
+tier: "later"
+confirmed: null
+entities:
+  - {name: "Voter record", note: "the record this capability owns"}
+goals:
+  - id: label-voting.two-agree
+    title: "A label is kept when at least two qualified voters agree"
+    why: "a second family catches one teacher's habits"
+    acceptance:
+      - "Each voter used to filter labels passed the gate on gold"
+      - "Disagreements go to a small review slice, not into training"
+    serves_via: []
+    functions: []

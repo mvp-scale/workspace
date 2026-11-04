@@ -1,0 +1,51 @@
+{
+ "id": "T11",
+ "stage": "S7-ship",
+ "question": "Does the shipped file give byte-identical output in a clean environment, with a filled model card?",
+ "method": {
+  "name": "Clean-env ship test against harness output",
+  "source": "playbook/09-ship-and-monitor.md; kit/student/ship_check.py"
+ },
+ "inputs": [
+  {
+   "path": "../../kit/student/ship_check.py",
+   "sha8": "e79687a8",
+   "frozen": true
+  },
+  {
+   "path": "runs/p10/gate_report.md",
+   "sha8": "00000000",
+   "frozen": false
+  }
+ ],
+ "outputs": [
+  "runs/p12/ship_log.json",
+  "runs/p12/model_card.md"
+ ],
+ "done": [
+  {
+   "metric": "ship_output_identical",
+   "op": "==",
+   "value": 1,
+   "accept_id": "M7"
+  },
+  {
+   "metric": "model_card_and_owner_line",
+   "op": "==",
+   "value": 1,
+   "accept_id": "M9"
+  }
+ ],
+ "stop": "M7 fails: fix pins and retry once; never ship on a failed M7.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.2,
+  "usd": 0,
+  "tokens": 500000
+ },
+ "compute": "local-cpu",
+ "smoke": {
+  "required": false
+ },
+ "risk_first": "Build the clean venv from the lock file first."
+}

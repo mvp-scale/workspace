@@ -169,6 +169,19 @@ services:
     tags: [cpu, model, demand]
     log: logs/cpu-engine.log
 
+  ledger-viewer:
+    kind: proc
+    desc: "Knowledge-pipeline ledger viewer (Story, Live, Map, Work, Quality). Fixed port: always 18766."
+    panel: CPU only, no GPU
+    port: 18766
+    cwd: knowledge_pipeline/.ledger
+    cmd: [node, cp.mjs, serve, --port, "${port}"]
+    match: cp\.mjs serve
+    health: /data
+    boot: 15
+    tags: [cpu, demand]
+    log: logs/ledger-viewer.log
+
   bitmob-reader:
     kind: proc
     desc: "BitMob as a World-engine reader (D-0037): fine-tuned CPU readers answer the engine's gate, type, scope, condition, topic and country questions; local Clef answers only expected impact and severity (or nothing, in the CPU-only mode)"

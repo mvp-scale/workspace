@@ -1,0 +1,54 @@
+{
+ "id": "T07",
+ "stage": "S3-teacher",
+ "question": "Is the labelled pool split by publisher and date, free of test items, and uploaded as kp-world-state-v1?",
+ "method": {
+  "name": "Cluster split + overlap check, private Kaggle dataset",
+  "source": "playbook/02 rule 6; kit/ops/kaggle_dataset.sh"
+ },
+ "inputs": [
+  {
+   "path": "/workspace/data/clef-labels/test.jsonl",
+   "sha8": "e61331d3",
+   "frozen": true
+  },
+  {
+   "path": "runs/bulk25k/labels.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/ops/kaggle_dataset.sh",
+   "sha8": "e5bd89fd",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/p8/manifest.json"
+ ],
+ "done": [
+  {
+   "metric": "test_ids_or_near_dups_in_train_or_dev",
+   "op": "==",
+   "value": 0,
+   "accept_id": "D3"
+  },
+  {
+   "metric": "dev_items",
+   "op": ">=",
+   "value": 2000
+  }
+ ],
+ "stop": "Any test id or near-duplicate found in train or dev: stop, do not upload.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.5,
+  "usd": 0,
+  "tokens": 1000000
+ },
+ "compute": "local-cpu",
+ "smoke": {
+  "required": false
+ },
+ "risk_first": "Overlap check before writing files."
+}

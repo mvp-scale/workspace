@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CPU expert scorecard</title>
+<style>
+:root{--bg:#fafaf8;--card:#fff;--ink:#1c1c1a;--mut:#6b6b66;--line:#e3e2dc;--ok:#1a7f4b;--okbg:#e4f4ea;--mid:#9a6700;--midbg:#fff3d6;--bad:#b3261e;--badbg:#fbe5e3;--na:#555;--nabg:#ececea}
+@media(prefers-color-scheme:dark){:root{--bg:#161614;--card:#1f1f1c;--ink:#ecebe6;--mut:#a3a29a;--line:#34342f;--ok:#6fd49b;--okbg:#17321f;--mid:#f0c05a;--midbg:#3a2f12;--bad:#ff8c84;--badbg:#3d1a17;--na:#bbb;--nabg:#2b2b27}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 60px}h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:32px 0 8px}
+.sub{color:var(--mut);margin:0 0 14px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;color:var(--mut);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.b{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.Ready{background:var(--okbg);color:var(--ok)}.Partial{background:var(--midbg);color:var(--mid)}.Not-yet{background:var(--badbg);color:var(--bad)}.Cant-tell,.Not-built{background:var(--nabg);color:var(--na)}
+.bar{height:8px;background:var(--line);border-radius:4px;position:relative;min-width:80px}.bar i{display:block;height:100%;border-radius:4px;background:var(--mut)}.bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);left:80%}
+.q{font-size:12px;color:var(--mut)}.txt{white-space:pre-wrap;margin:4px 0 8px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:640px){.row{grid-template-columns:1fr}}
+.lab{font-size:12px;color:var(--mut);margin-top:4px}.hit{color:var(--ok);font-weight:600}.miss{color:var(--bad);font-weight:600}details summary{cursor:pointer;color:var(--mut)}
+</style></head><body><main id="app"></main>
+<script id="d" type="application/json">/*DATA*/null</script>
+<script>
+const D = JSON.parse(document.getElementById('d').textContent) || {};
+const h = (t, a, ...k) => { const e = document.createElement(t); for (const [x, v] of Object.entries(a || {})) { if (x === 'text') e.textContent = v; else e.setAttribute(x, v); } k.flat().forEach(c => c != null && e.append(c)); return e; };
+const pct = v => v == null ? '–' : Math.round(v * 100) + '%';
+const badge = v => h('span', { class: 'b ' + v.replace(/[' ]/g, c => c === ' ' ? '-' : ''), text: v });
+const meter = v => v == null ? h('span', { class: 'q', text: '–' }) : h('div', null, h('div', { class: 'bar', title: 'line = the 80% bar' }, h('i', { style: 'width:' + Math.round(v * 100) + '%' }), h('u')), h('span', { class: 'q', text: pct(v) }));
+const app = document.getElementById('app'); const R = D.fields.filter(f => f.verdict !== 'Not built');
+app.append(h('h1', { text: 'What the CPU expert can extract from news' }),
+  h('p', { class: 'sub', text: `Expert 1 v3.1 on ${D.n_items.toLocaleString()} later, unseen news items. Runs on one CPU thread, about ${D.ms_per_item_this_run} ms per item here. "Agreement" means it gave the same answer as ${D.teacher}. It is not accuracy: nobody has labelled these by hand. Line on each bar = the 80% bar. Built ${D.built}.` }));
+// headline
+const ready = D.fields.filter(f => f.verdict === 'Ready').length;
+app.append(h('div', { class: 'card' }, h('b', { text: `${ready} of ${D.fields.length} fields meet the bar. ` }), h('span', { text: 'Ready = agrees with Sonnet on 80% or more of the items it answers, on at least 30 items, answering at least half the stream. Partial = it only reaches 80% on part of the stream. Not yet = below 80%. Not built = no model yet.' })));
+const t = h('table', null, h('tr', null, ...['Can we extract…', 'Verdict', 'Agreement on answered items', 'Answers this share of items', 'Items tested', 'Note'].map((x, i) => h('th', { class: i > 3 && i < 5 ? 'n' : '', text: x }))));
+D.fields.forEach(f => t.append(h('tr', null, h('td', null, h('b', { text: f.field }), h('div', { class: 'q', text: f.what })), h('td', null, badge(f.verdict)), h('td', null, meter(f.agreement)), h('td', { text: f.answered_share == null ? '–' : pct(f.answered_share) }), h('td', { class: 'n', text: f.n ? f.n.toLocaleString() : '–' }),
+  h('td', { class: 'q', text: [f.commit_precision != null ? `When it says present it is right ${pct(f.commit_precision)} of the time, but it catches only ${pct(f.catch_rate)} of the real ones.` : '', f.strict != null ? `Strict (first guess = Sonnet's first condition): ${pct(f.strict)}.` : '', f.note].filter(Boolean).join(' ') }))));
+app.append(h('div', { class: 'card' }, t));
+// examples
+app.append(h('h2', { text: 'Real items, read by the model' }), h('p', { class: 'sub', text: 'Ten items picked at random (not hand-picked), shown in full. Left is what Sonnet said, right is what the CPU expert said.' }));
+D.examples.forEach(x => { const m = x.model, s = x.sonnet; const ok = (b, tx) => h('span', { class: b ? 'hit' : 'miss', text: (b ? '✓ ' : '✗ ') + tx });
+  app.append(h('div', { class: 'card' }, h('div', { class: 'txt', text: x.text }), h('div', { class: 'row' },
+    h('div', null, h('div', { class: 'lab', text: 'SONNET SAID' }), h('div', { text: `Topic: ${s.topic}` }), h('div', { text: `Story type: ${s.story}` }), h('div', { text: 'Conditions: ' + (s.conditions.join('; ') || 'none') })),
+    h('div', null, h('div', { class: 'lab', text: 'CPU EXPERT SAID' }), h('div', null, ok(m.topic_hit, `Topic: ${(m.topic || []).join(' or ')}`)), h('div', null, ok(m.story_hit, `Story type: ${m.story}`)),
+      h('div', { text: m.present_status === 'answered' ? `Condition present: ${m.present ? 'yes' : 'no'}` + (m.condition ? ` → ${m.condition.join(', ')}` : '') : 'Condition present: unknown (it does not force an answer)' }), h('div', { class: 'q', text: `read on the ${m.path} path` })))));
+});
+// per topic / condition
+const tbl = (rows, cols) => h('table', null, h('tr', null, ...cols.map(c => h('th', { class: c[2] ? 'n' : '', text: c[0] }))), ...rows.map(r => h('tr', null, ...cols.map(c => h('td', { class: c[2] ? 'n' : '', ...(c[3] ? {} : {}) }, c[3] ? c[3](r) : (c[1](r)))))));
+app.append(h('h2', { text: 'Topic by topic' }), h('p', { class: 'sub', text: 'For stories Sonnet put in this topic: how often the model got it in one guess, and in two. Ready = two guesses reach 80%. Needs 20+ items to judge.' }),
+  h('div', { class: 'card' }, tbl(D.topics, [['Topic', r => r.name], ['Items', r => r.n, 1], ['One guess', r => pct(r.top1), 1], ['Two guesses', r => pct(r.top2), 1], ['Verdict', null, 0, r => badge(r.verdict)]])));
+app.append(h('h2', { text: 'Condition by condition' }), h('p', { class: 'sub', text: 'For stories where Sonnet found this condition: how often the model both noticed something and named it in its two guesses. Ready = 50% or more. This is the weak part of the expert.' }),
+  h('div', { class: 'card' }, tbl(D.conditions, [['Condition', r => r.name], ['Items', r => r.n, 1], ['Named in two guesses', r => pct(r.found), 1], ['First guess right', r => pct(r.top1), 1], ['Verdict', null, 0, r => badge(r.verdict)]])));
+app.append(h('p', { class: 'q', text: 'Source: projects/world-state/scorecard.py, result runs/snapshots/scorecard.json. Condition-present is weighted back to the natural stream; other fields are plain counts over the items Sonnet also labelled.' }));
+</script></body></html>

@@ -1,0 +1,13 @@
+# Lessons learned (intake only)
+
+One line per lesson that is not yet in the playbook or `agentic/`. When it is placed, delete the line. Rules for where things go: `README.md`, "Where new guidance goes". Keep this file under 10 lines.
+
+Waiting to be placed:
+
+- Check the checks: plant bugs mechanically (operator and constant swaps) and see what catches them. v2 on alpha() / pair_stats() (28 / 51 bugs): independent reference implementation with exact-digit compare 93 / 100 percent, hand fixtures with boundary cases 96 / 88, Lean-computed oracle (2 coders only) 79 / 90, all three together 100 / 100; MM3 reading the code caught 1 of 10 (v1 sample). Exact rounding ties need a rule or clean code fails. Use fixtures + independent reference + boundary cases; Lean for certified expected values and proofs; MM3 for spec-level questions. Caveat: I wrote the references too, so a shared misreading would not show. Evidence: ledger L520 to L525, runs/pulse/replication_FO_v2.json.
+
+Placed on 2026-10-29: account and workspace checks, `ant` and vault gotchas -> `playbook/08` and `agentic/skills/cpu-model-factory/SKILL.md` rule 10. Noise, operating point and scoring unit were already in the kit (M8, ch06, ch10).
+
+2026-11-04, ledger accuracy (owner correction): I wrote "baseline" and "new best" in ledger notes L624-L645 against a distilled leaf head (story 0.906, topic 0.786) when the registered v6b-student already scored 0.919 / 0.79 end to end, so 15 rounds looked like gains and were not. Rule: before any comparison, read the baseline from the registered version's own score file (score_end2end.py output) and cite the file in the note; name the model ("registered v6b-student", "distilled leaf head"), never just "baseline". When a claim turns out wrong, append a correction that names every earlier note it supersedes (done in L652, L653). A gain inside the baseline's 95% interval, or inside run-to-run spread (+-0.03 on presence alpha), is not a gain.
+
+2026-11-04, error classes in my own claims (ledger error register): C1 wrong comparator, C2 unchecked arithmetic, C3 over-reading one comparison or picking on the eval items, C4 untested assumption in a forecast, C5 wrong object (a bar from another spec), C6 record not read, C7 goal drift, C8 code and run bugs. Controls: `kit/live/note_guard.py "<note text>"` before `cp.mjs note` (catches comparison words with no cited source, hedged figures, absolutes without scope, Ready verdicts without the rule; measured: 6 of 8 known-bad notes caught, 22 of 48 others flagged); Lean for any rule-and-count claim; a pilot before any forecast that depends on a yield; read GO.md Findings and grep the ledger before proposing a round; restate the goal in every owner ask; 20-item smoke run before long runs.

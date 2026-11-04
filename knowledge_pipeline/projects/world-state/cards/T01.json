@@ -1,0 +1,78 @@
+{
+ "id": "T01",
+ "stage": "S2-guideline",
+ "question": "How well do two people, and Haiku vs Clef, agree per layer on world-state labels (guideline v2)?",
+ "method": {
+  "name": "Inter-annotator agreement, kappa per label and pooled F1, bootstrap 95% CI",
+  "source": "playbook/02-guidelines-and-gold.md; kit/eval/agreement.py"
+ },
+ "inputs": [
+  {
+   "path": "data/pilot300.jsonl",
+   "sha8": "5005e4a0",
+   "frozen": true
+  },
+  {
+   "path": "/workspace/data/clef-labels/test_fast300.jsonl",
+   "sha8": "670ee731",
+   "frozen": true
+  },
+  {
+   "path": "specs/world_state_v2.json",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "gold/q50.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/eval/agreement.py",
+   "sha8": "229a17b8",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/teacher/claude_batch.py",
+   "sha8": "d681885c",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/pilot/labels.jsonl",
+  "runs/p2/iaa.json"
+ ],
+ "done": [
+  {
+   "metric": "iaa.min_items_per_layer",
+   "op": ">=",
+   "value": 30,
+   "accept_id": "D1"
+  },
+  {
+   "metric": "iaa_human.min_layer_kappa_or_f1",
+   "op": ">=",
+   "value": 0.4,
+   "accept_id": "D2"
+  },
+  {
+   "metric": "spend_usd",
+   "op": "<=",
+   "value": 1.0,
+   "accept_id": "R5"
+  }
+ ],
+ "stop": "Any layer below 0.4: stop, return to P1 guideline (max 3 rounds, then owner). Cap $1 hit: stop.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.2,
+  "usd": 1.0,
+  "tokens": 1000000
+ },
+ "compute": "api",
+ "smoke": {
+  "required": true,
+  "log": "runs/smoke/labels.jsonl"
+ },
+ "risk_first": "Smoke 3 items: schema valid, cache_read_input_tokens > 0."
+}

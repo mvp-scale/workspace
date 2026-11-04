@@ -1,0 +1,16 @@
+id: ship-packaging
+name: "Ship packaging"
+definition: "package the model and prove it runs the same outside the lab"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Release", note: "the record this capability owns"}
+goals:
+  - id: ship-packaging.clean-ship
+    title: "A clean-environment run matches the evaluation harness exactly"
+    why: "a model that only runs on our machine is not shipped"
+    acceptance:
+      - "Clean-environment output is identical to the harness (M7)"
+      - "Model card and scope are filled and approved by the owner (M9)"
+    serves_via: []
+    functions: []

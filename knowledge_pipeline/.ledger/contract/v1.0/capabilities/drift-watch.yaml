@@ -1,0 +1,15 @@
+id: drift-watch
+name: "Drift watch"
+definition: "relabel a small daily sample and compare it with the model"
+tier: "later"
+confirmed: null
+entities:
+  - {name: "Drift sample", note: "the record this capability owns"}
+goals:
+  - id: drift-watch.watched
+    title: "Rates are re-estimated on a schedule and a change is noticed"
+    why: "the world moves and a model does not"
+    acceptance:
+      - "A daily sample is labelled and compared; true and false positive rates are re-estimated monthly"
+    serves_via: []
+    functions: []

@@ -1,0 +1,44 @@
+{
+ "id": "T10",
+ "stage": "S6-speed",
+ "question": "How fast is the int8 student per item on 4 vCPU, against the 80 vCPU-ms budget?",
+ "method": {
+  "name": "Four speed numbers, 4 processes x 1 thread, fixed 1,000-item sample",
+  "source": "playbook/07-speed-and-cost.md"
+ },
+ "inputs": [
+  {
+   "path": "data/pool.jsonl",
+   "sha8": "b9257301",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/student/bench.py",
+   "sha8": "2a251e86",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/p11/speed_report.json"
+ ],
+ "done": [
+  {
+   "metric": "vcpu_ms_per_item.p50",
+   "op": "<=",
+   "value": 80,
+   "accept_id": "M5"
+  }
+ ],
+ "stop": "One bench run per model file; machine noise is handled by ratios, not reruns.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.5,
+  "usd": 0,
+  "tokens": 500000
+ },
+ "compute": "local-cpu",
+ "smoke": {
+  "required": false
+ },
+ "risk_first": "Record CPU flags (VNNI/AVX-512) before timing."
+}

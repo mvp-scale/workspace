@@ -1,0 +1,17 @@
+id: gate-scoring
+name: "Gate scoring"
+definition: "score once against the frozen test and give each output a verdict"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Gate report", note: "the record this capability owns"}
+goals:
+  - id: gate-scoring.verdict
+    title: "Each output has a pass, fail or inconclusive verdict that another agent can reproduce"
+    why: "a score nobody can re-run is an opinion"
+    acceptance:
+      - "Lower 95% bound at or above 0.8 times agreement per output (M1)"
+      - "Beats the baseline with non-overlapping intervals, or says no change (M2)"
+      - "A second agent re-scores and matches exactly (R6)"
+    serves_via: []
+    functions: []

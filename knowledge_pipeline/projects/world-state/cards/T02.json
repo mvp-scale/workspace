@@ -1,0 +1,65 @@
+{
+ "id": "T02",
+ "stage": "S3-teacher",
+ "question": "Does Haiku clear 0.8 x human IAA on gold-Q for every layer it will label (D4)?",
+ "method": {
+  "name": "Teacher qualification on human gold, pseudo-span labels, lower 95% bound vs gate",
+  "source": "kit/teacher/qualify.py; ACCEPTANCE.md D4"
+ },
+ "inputs": [
+  {
+   "path": "gold/q50.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "runs/pilot/labels.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "runs/p1/iaa_human.json",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/eval/gate.py",
+   "sha8": "a69585aa",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/eval/agreement.py",
+   "sha8": "229a17b8",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/p3/teacher_gate.json"
+ ],
+ "done": [
+  {
+   "metric": "teacher_vs_goldQ.min_layer_lower95_minus_gate",
+   "op": ">=",
+   "value": 0,
+   "accept_id": "D4"
+  },
+  {
+   "metric": "ruler_contains_teacher_labels",
+   "op": "==",
+   "value": 0,
+   "accept_id": "D5"
+  }
+ ],
+ "stop": "Score once. A failing layer is not bulk-labelled; it goes to P5 verify mode or the Sonnet route (T06).",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.1,
+  "usd": 0,
+  "tokens": 500000
+ },
+ "compute": "local-cpu",
+ "smoke": {
+  "required": false
+ },
+ "risk_first": "Self-check: gold vs itself must score 1.0 (playbook 06 rule 7)."
+}

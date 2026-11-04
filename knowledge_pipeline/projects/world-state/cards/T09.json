@@ -1,0 +1,77 @@
+{
+ "id": "T09",
+ "stage": "S5-gate",
+ "question": "Does the picked student clear 0.8 x human IAA on every gated layer of gold-T, scored once?",
+ "method": {
+  "name": "Bootstrap 95% CI by item, gate on the lower bound, paired compare vs baseline",
+  "source": "playbook/06-evaluate-and-gate.md; kit/eval/gate.py"
+ },
+ "inputs": [
+  {
+   "path": "gold/t100.jsonl",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "/workspace/data/clef-labels/test.jsonl",
+   "sha8": "e61331d3",
+   "frozen": true
+  },
+  {
+   "path": "runs/p9/selection_rule.json",
+   "sha8": "00000000",
+   "frozen": false
+  },
+  {
+   "path": "../../kit/eval/gate.py",
+   "sha8": "a69585aa",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/eval/compare.py",
+   "sha8": "c4408f5f",
+   "frozen": true
+  },
+  {
+   "path": "../../kit/eval/agreement.py",
+   "sha8": "229a17b8",
+   "frozen": true
+  }
+ ],
+ "outputs": [
+  "runs/p10/gate_report.md",
+  "runs/p10/score.json"
+ ],
+ "done": [
+  {
+   "metric": "min_layer_lower95_minus_gate",
+   "op": ">=",
+   "value": 0,
+   "accept_id": "M1"
+  },
+  {
+   "metric": "vs_lexical_baseline.diff_lower95",
+   "op": ">",
+   "value": 0,
+   "accept_id": "M2"
+  },
+  {
+   "metric": "evaluator_rescore_exact_match",
+   "op": "==",
+   "value": 1,
+   "accept_id": "R6"
+  }
+ ],
+ "stop": "Score once. Any change after this needs a new card, a new dev pick and a new single score.",
+ "budget": {
+  "gpu_h": 0,
+  "cpu_h": 0.5,
+  "usd": 0,
+  "tokens": 1000000
+ },
+ "compute": "local-cpu",
+ "smoke": {
+  "required": false
+ },
+ "risk_first": "Harness self-check: gold vs itself = 1.0 before scoring the student."
+}

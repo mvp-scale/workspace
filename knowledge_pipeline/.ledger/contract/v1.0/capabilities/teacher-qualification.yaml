@@ -1,0 +1,16 @@
+id: teacher-qualification
+name: "Teacher qualification"
+definition: "prove a teacher can label an output before it labels at scale"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Teacher gate", note: "the record this capability owns"}
+goals:
+  - id: teacher-qualification.qualified
+    title: "A teacher passes the gate on gold for every output it labels"
+    why: "an unqualified teacher writes noise at scale"
+    acceptance:
+      - "Teacher clears the gate on the gold set for each output (D4)"
+      - "The judge shares no family with the teacher (D5)"
+    serves_via: []
+    functions: []

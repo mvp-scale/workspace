@@ -1,0 +1,50 @@
+{
+ "name": "world_state_gate_v1",
+ "prompt_version": "gate-v1",
+ "model": "claude-haiku-5-5",
+ "max_tokens": 120,
+ "cap_usd": 5.0,
+ "layers": [
+  "GATE"
+ ],
+ "mode": "generate",
+ "guideline": [
+  "You read one short news item (a headline and a one or two sentence description).",
+  "Reply with the JSON object only: {\"change\": true or false}.",
+  "change is true only if the item reports, or gives a real reason to expect, that some condition of a place is rising or falling for the people there: prices, housing, jobs, health, safety, hunger, water, energy, supply, environment, security, trust, technology use and similar. A single crime, accident, arrest, sports result, product launch, company announcement, plan, demand or opinion with no clear effect on such a condition is false.",
+  "Be conservative: when unsure, false."
+ ],
+ "input_template": "ITEM {id}\n<text>\n{text}\n</text>",
+ "output_schema": {
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+   "change"
+  ],
+  "properties": {
+   "change": {
+    "type": "boolean"
+   }
+  }
+ },
+ "examples": [
+  {
+   "input": {
+    "id": "synthetic-1",
+    "text": "Varnel port workers strike over pay. Cargo handling at the fictional port of Varnel stopped for a second day, and shop shelves are emptying."
+   },
+   "output": {
+    "change": true
+   }
+  },
+  {
+   "input": {
+    "id": "synthetic-2",
+    "text": "Council names new library director. The council of the fictional town of Orlin appointed a former teacher to lead its library."
+   },
+   "output": {
+    "change": false
+   }
+  }
+ ]
+}

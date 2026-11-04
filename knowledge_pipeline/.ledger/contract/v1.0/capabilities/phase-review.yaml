@@ -1,0 +1,24 @@
+id: phase-review
+name: "Phase review"
+definition: "close a phase by scoring its prediction, revising the plan and recording lessons"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Phase review", note: "the record this capability owns"}
+goals:
+  - id: phase-review.reviewed
+    title: "Every phase ends with its prediction scored and the plan revised"
+    why: "a plan that is not updated is a guess that ages"
+    acceptance:
+      - "Prediction scored against the measured number"
+      - "Plan revised with a dated note; lessons placed in the playbook or the agent skill"
+      - "Owner signs off before the next paid phase"
+    serves_via: []
+    functions: []
+  - id: phase-review.confidence
+    title: "The same nine MM3 questions are asked of every open phase after each review"
+    why: "it shows whether the plan is getting more or less certain"
+    acceptance:
+      - "A new pass is added and the trend row shows the change"
+    serves_via: []
+    functions: []

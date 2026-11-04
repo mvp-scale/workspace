@@ -1,0 +1,643 @@
+{
+ "name": "traits_v1_sonnet",
+ "prompt_version": "traits-v1-bare",
+ "model": "claude-sonnet-5-5",
+ "max_tokens": 900,
+ "cap_usd": 6.0,
+ "layers": [
+  "TRAITS"
+ ],
+ "mode": "generate",
+ "guideline": [
+  "You read one short news item (a headline and a one or two sentence description) and answer 51 questions about it.",
+  "Reply with the JSON object only. Each key is a question id; each value is exactly one of: 'not at all', 'slightly', 'clearly', 'strongly', 'cannot tell'.",
+  "Use only what the item says. Do not use background knowledge about the world or about the people and places named.",
+  "'not at all' means the item gives no sign of it. 'slightly' means a weak or passing sign. 'clearly' means the item plainly shows it. 'strongly' means it is the main point of the item.",
+  "Use 'cannot tell' only when the item gives no basis to judge the question either way, for example a question about timing for an item that gives no time. Do not use it for a plain no: that is 'not at all'.",
+  "Answer all 51 questions for every item.",
+  "",
+  "QUESTIONS (id [group]: question)",
+  "x001 [movement]: Does the story report that something measurable went up?",
+  "x002 [movement]: Does the story report that something measurable went down?",
+  "x003 [movement]: Does the story report a change that is still going on?",
+  "x004 [movement]: Does the story report a change that has already finished?",
+  "x005 [movement]: Does the story say a trend is speeding up?",
+  "x006 [movement]: Does the story say a trend is slowing or reversing?",
+  "x007 [movement]: Does the story compare a number with an earlier number?",
+  "x008 [movement]: Does the story give a figure that says how big the change is?",
+  "x009 [direction_effect]: Does the story say people are better off because of what happened?",
+  "x010 [direction_effect]: Does the story say people are worse off because of what happened?",
+  "x011 [direction_effect]: Does the story say a supply of something grew?",
+  "x012 [direction_effect]: Does the story say a supply of something shrank?",
+  "x013 [direction_effect]: Does the story say a cost grew for ordinary people?",
+  "x014 [direction_effect]: Does the story say a risk to safety grew?",
+  "x015 [direction_effect]: Does the story say a risk to safety fell?",
+  "x016 [direction_effect]: Does the story say a service people rely on got worse?",
+  "x017 [intent]: Does the story say someone acted on purpose to cause the outcome?",
+  "x018 [intent]: Does the story say the outcome was an accident or natural event?",
+  "x019 [intent]: Does the story say a government decided or announced a policy?",
+  "x020 [intent]: Does the story say a company decided or announced a move?",
+  "x021 [intent]: Does the story report a threat or warning about the future?",
+  "x022 [intent]: Does the story report a promise or plan that has not happened yet?",
+  "x023 [intent]: Does the story report a dispute between named parties?",
+  "x024 [intent]: Does the story report that parties reached an agreement?",
+  "x025 [risk]: Does the story report deaths or injuries?",
+  "x026 [risk]: Does the story report damage to buildings or infrastructure?",
+  "x027 [risk]: Does the story report a shortage of a basic need?",
+  "x028 [risk]: Does the story report a threat to public health?",
+  "x029 [risk]: Does the story report a threat to jobs or income?",
+  "x030 [risk]: Does the story report a threat to public order?",
+  "x031 [risk]: Does the story report a threat to the natural environment?",
+  "x032 [risk]: Does the story report a threat to data or computer systems?",
+  "x033 [scale]: Does the story affect a whole country or more?",
+  "x034 [scale]: Does the story affect a single city or smaller area?",
+  "x035 [scale]: Does the story affect more than a million people?",
+  "x036 [scale]: Does the story affect a specific industry only?",
+  "x037 [scale]: Does the story affect people across several countries?",
+  "x038 [scale]: Does the story describe something unusual or without recent precedent?",
+  "x039 [time]: Does the story say the event happened in the last few days?",
+  "x040 [time]: Does the story look ahead to something expected within a year?",
+  "x041 [time]: Does the story say the effect will last for years?",
+  "x042 [time]: Does the story say the effect is temporary?",
+  "x043 [certainty]: Does the story state the facts as confirmed?",
+  "x044 [certainty]: Does the story rely on unconfirmed reports or sources?",
+  "x045 [certainty]: Does the story give an official source for its main claim?",
+  "x046 [certainty]: Does the story present an estimate or forecast as its main claim?",
+  "x047 [certainty]: Does the story present one person's opinion as its main claim?",
+  "x048 [importance]: Would an ordinary household notice the effect within a month?",
+  "x049 [importance]: Would a business owner need to change a decision because of this?",
+  "x050 [importance]: Does the story only mention the change in passing?",
+  "x051 [importance]: Is the change the main subject of the story?"
+ ],
+ "input_template": "ITEM {id}\n<text>\n{text}\n</text>",
+ "output_schema": {
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+   "x001",
+   "x002",
+   "x003",
+   "x004",
+   "x005",
+   "x006",
+   "x007",
+   "x008",
+   "x009",
+   "x010",
+   "x011",
+   "x012",
+   "x013",
+   "x014",
+   "x015",
+   "x016",
+   "x017",
+   "x018",
+   "x019",
+   "x020",
+   "x021",
+   "x022",
+   "x023",
+   "x024",
+   "x025",
+   "x026",
+   "x027",
+   "x028",
+   "x029",
+   "x030",
+   "x031",
+   "x032",
+   "x033",
+   "x034",
+   "x035",
+   "x036",
+   "x037",
+   "x038",
+   "x039",
+   "x040",
+   "x041",
+   "x042",
+   "x043",
+   "x044",
+   "x045",
+   "x046",
+   "x047",
+   "x048",
+   "x049",
+   "x050",
+   "x051"
+  ],
+  "properties": {
+   "x001": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x002": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x003": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x004": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x005": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x006": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x007": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x008": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x009": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x010": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x011": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x012": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x013": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x014": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x015": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x016": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x017": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x018": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x019": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x020": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x021": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x022": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x023": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x024": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x025": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x026": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x027": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x028": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x029": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x030": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x031": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x032": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x033": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x034": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x035": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x036": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x037": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x038": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x039": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x040": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x041": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x042": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x043": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x044": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x045": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x046": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x047": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x048": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x049": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x050": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   },
+   "x051": {
+    "type": "string",
+    "enum": [
+     "not at all",
+     "slightly",
+     "clearly",
+     "strongly",
+     "cannot tell"
+    ]
+   }
+  }
+ },
+ "examples": []
+}

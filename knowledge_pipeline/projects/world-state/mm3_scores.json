@@ -1,0 +1,326 @@
+{
+ "questions": [
+  "Steps are concrete enough to run",
+  "Exit gate and evidence file are named",
+  "Stop rule and rollback exist",
+  "Prediction is backed by a measurement",
+  "Numbers come from a named source",
+  "Method has worked on similar data",
+  "Does not depend on unwritten code",
+  "Does not depend on an approval not yet given",
+  "A failure here would be noticed"
+ ],
+ "good_if_low": [
+  7,
+  8,
+  9
+ ],
+ "passes": [
+  {
+   "pass": 1,
+   "date": "2026-10-30",
+   "note": "Baseline: MM3 class run on each phase's text, same 9 questions",
+   "phases": {
+    "P0": {
+     "mm3": "MM3-0540",
+     "q": [
+      0.48,
+      0.95,
+      0.96,
+      0.05,
+      0.61,
+      0.26,
+      0.44,
+      0.65,
+      0.13
+     ],
+     "goal_p": 0.46,
+     "conf": [
+      "medium",
+      0.55
+     ],
+     "route": [
+      "proceed",
+      0.54
+     ]
+    },
+    "P1": {
+     "mm3": "MM3-0541",
+     "q": [
+      0.44,
+      0.91,
+      0.96,
+      0.04,
+      0.22,
+      0.2,
+      0.38,
+      0.59,
+      0.43
+     ],
+     "goal_p": 0.35,
+     "conf": [
+      "medium",
+      0.69
+     ],
+     "route": [
+      "proceed",
+      0.54
+     ]
+    },
+    "P2": {
+     "mm3": "MM3-0542",
+     "q": [
+      0.39,
+      0.94,
+      0.97,
+      0.03,
+      0.12,
+      0.4,
+      0.34,
+      0.64,
+      0.3
+     ],
+     "goal_p": 0.31,
+     "conf": [
+      "medium",
+      0.67
+     ],
+     "route": [
+      "ask-owner",
+      0.79
+     ]
+    },
+    "P3": {
+     "mm3": "MM3-0543",
+     "q": [
+      0.77,
+      0.95,
+      0.94,
+      0.09,
+      0.77,
+      0.27,
+      0.12,
+      0.03,
+      0.08
+     ],
+     "goal_p": 0.33,
+     "conf": [
+      "medium",
+      0.59
+     ],
+     "route": [
+      "proceed",
+      0.83
+     ]
+    },
+    "P4": {
+     "mm3": "MM3-0544",
+     "q": [
+      0.7,
+      0.96,
+      0.96,
+      0.05,
+      0.41,
+      0.37,
+      0.27,
+      0.01,
+      0.35
+     ],
+     "goal_p": 0.73,
+     "conf": [
+      "high",
+      0.62
+     ],
+     "route": [
+      "proceed",
+      0.83
+     ]
+    },
+    "P5": {
+     "mm3": "MM3-0545",
+     "q": [
+      0.28,
+      0.84,
+      0.09,
+      0.16,
+      0.46,
+      0.22,
+      0.29,
+      0.05,
+      0.42
+     ],
+     "goal_p": 0.13,
+     "conf": [
+      "medium",
+      0.58
+     ],
+     "route": [
+      "refine",
+      0.5
+     ]
+    },
+    "P6": {
+     "mm3": "MM3-0546",
+     "q": [
+      0.16,
+      0.95,
+      0.96,
+      0.07,
+      0.28,
+      0.33,
+      0.13,
+      0.89,
+      0.19
+     ],
+     "goal_p": 0.52,
+     "conf": [
+      "high",
+      0.49
+     ],
+     "route": [
+      "ask-owner",
+      0.69
+     ]
+    },
+    "P7": {
+     "mm3": "MM3-0547",
+     "q": [
+      0.16,
+      0.92,
+      0.96,
+      0.04,
+      0.55,
+      0.4,
+      0.29,
+      0.87,
+      0.28
+     ],
+     "goal_p": 0.38,
+     "conf": [
+      "medium",
+      0.61
+     ],
+     "route": [
+      "ask-owner",
+      0.9
+     ]
+    },
+    "P8": {
+     "mm3": "MM3-0548",
+     "q": [
+      0.66,
+      0.96,
+      0.96,
+      0.04,
+      0.1,
+      0.19,
+      0.27,
+      0.06,
+      0.23
+     ],
+     "goal_p": 0.56,
+     "conf": [
+      "medium",
+      0.47
+     ],
+     "route": [
+      "proceed",
+      0.69
+     ]
+    },
+    "P9": {
+     "mm3": "MM3-0549",
+     "q": [
+      0.62,
+      0.9,
+      0.96,
+      0.05,
+      0.26,
+      0.37,
+      0.34,
+      0.07,
+      0.23
+     ],
+     "goal_p": 0.57,
+     "conf": [
+      "high",
+      0.46
+     ],
+     "route": [
+      "proceed",
+      0.67
+     ]
+    },
+    "P10": {
+     "mm3": "MM3-0550",
+     "q": [
+      0.38,
+      0.96,
+      0.92,
+      0.14,
+      0.47,
+      0.41,
+      0.12,
+      0.18,
+      0.12
+     ],
+     "goal_p": 0.24,
+     "conf": [
+      "medium",
+      0.65
+     ],
+     "route": [
+      "proceed",
+      0.57
+     ]
+    },
+    "P11": {
+     "mm3": "MM3-0551",
+     "q": [
+      0.73,
+      0.94,
+      0.91,
+      0.09,
+      0.4,
+      0.28,
+      0.14,
+      0.12,
+      0.22
+     ],
+     "goal_p": 0.81,
+     "conf": [
+      "high",
+      0.73
+     ],
+     "route": [
+      "proceed",
+      0.9
+     ]
+    },
+    "P12": {
+     "mm3": "MM3-0552",
+     "q": [
+      0.22,
+      0.96,
+      0.97,
+      0.13,
+      0.83,
+      0.13,
+      0.46,
+      0.43,
+      0.09
+     ],
+     "goal_p": 0.23,
+     "conf": [
+      "medium",
+      0.68
+     ],
+     "route": [
+      "refine",
+      0.38
+     ]
+    }
+   }
+  }
+ ]
+}

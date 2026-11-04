@@ -1,0 +1,65 @@
+[
+ {
+  "version": "v1",
+  "path": "runs/expert1/expert1_v1.pkl",
+  "class": "V1",
+  "what": "static word vectors + word/char TF-IDF linear heads, presence blended from two teachers",
+  "ms_note": 2.77
+ },
+ {
+  "version": "v2",
+  "path": "runs/expert1/expert1_v2.pkl",
+  "class": "Expert",
+  "what": "v1 + which-condition, direction and size heads",
+  "ms_note": 2.94
+ },
+ {
+  "version": "v3",
+  "path": "runs/expert1/expert1_v3.pkl",
+  "class": "Expert3",
+  "what": "v2 + bge-small encoder (ONNX) on routed items only",
+  "ms_note": 9.8
+ },
+ {
+  "version": "v3.1",
+  "path": "runs/expert1/expert1_v31.pkl",
+  "class": "Expert3",
+  "what": "v3 with the encoder capped at 64 tokens (length chosen on validation)",
+  "ms_note": 9.3
+ },
+ {
+  "version": "v3.2",
+  "path": "runs/expert1/expert1_v32.pkl",
+  "class": "Expert3",
+  "what": "v3.1 with regularisation chosen on a validation slice: linear topic head C=0.3, encoder topic head C=1 (story head unchanged at C=3); answered cut-offs recomputed",
+  "ms_note": 9.3
+ },
+ {
+  "version": "v4-granite",
+  "path": "runs/expert1/expert1_v4_granite.pkl",
+  "class": "Expert3",
+  "what": "v3.2 with the encoder swapped from bge-small to granite-embedding-small-english-r2 (47.7M, 8k context, ModernBERT); encoder heads retrained, topic C chosen on validation",
+  "ms_note": 0
+ },
+ {
+  "version": "v5-leaf",
+  "path": "runs/expert1/expert1_v5_leaf.pkl",
+  "class": "Expert3",
+  "what": "v3.2 with the encoder swapped from bge-small to MongoDB/mdbr-leaf-mt (22.6M, 6-layer MiniLM, mean pooling + dense); encoder heads retrained, topic C chosen on validation",
+  "ms_note": 0
+ },
+ {
+  "version": "v6-student",
+  "path": "runs/expert1/expert1_v6_student.pkl",
+  "class": "ExpertS",
+  "what": "CHALLENGER. v5-leaf sparse parts + the fine-tuned leaf student (distilled from Qwen3-Embedding-4B, 16 epochs) reading story, topic, presence (stacked with the sparse gate) and which-condition in one ONNX pass",
+  "ms_note": 0
+ },
+ {
+  "version": "v6b-student",
+  "path": "runs/expert1/expert1_v6b_student.pkl",
+  "class": "ExpertS",
+  "what": "CHALLENGER. v5-leaf sparse parts + the fine-tuned leaf student B_t16e16lr5 (distilled from Qwen3-Embedding-4B, 16,000 Sonnet labels) reading story, topic, presence (stacked with the sparse gate) and which-condition in one ONNX pass",
+  "ms_note": 0
+ }
+]

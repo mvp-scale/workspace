@@ -1,0 +1,16 @@
+id: speed-measurement
+name: "Speed measurement"
+definition: "measure time per item on the target CPU"
+tier: "v1 must"
+confirmed: null
+entities:
+  - {name: "Speed report", note: "the record this capability owns"}
+goals:
+  - id: speed-measurement.under-budget
+    title: "All questions are answered under 50 ms per item on one thread"
+    why: "speed is the point of a CPU model"
+    acceptance:
+      - "p50 and p95 recorded with CPU flags and the unit stated (M5)"
+      - "Throughput on 4 vCPU recorded against 3,000 items per minute"
+    serves_via: []
+    functions: []

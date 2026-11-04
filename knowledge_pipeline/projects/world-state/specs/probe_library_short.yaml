@@ -1,0 +1,610 @@
+conditions:
+  air_pollution:
+    down:
+    - air gets cleaner
+    - sharp air gets cleaner
+    - slight air gets cleaner
+    inverse_down:
+    - air gets dirtier
+    inverse_up:
+    - air gets cleaner
+    meaning: concentration harmful particles gases air
+    none:
+    - concentration harmful particles gases air
+    up:
+    - air gets dirtier
+    - sharp air gets dirtier
+    - slight air gets dirtier
+  asset_values:
+    down:
+    - share property savings values fall
+    - sharp share property savings values
+    - slight share property savings values
+    inverse_down:
+    - share property savings values rise
+    inverse_up:
+    - share property savings values fall
+    meaning: level share property savings values
+    none:
+    - level share property savings values
+    up:
+    - share property savings values rise
+    - sharp share property savings values
+    - slight share property savings values
+  biodiversity_loss:
+    down:
+    - wildlife habitats fish stocks recover
+    - sharp wildlife habitats fish stocks
+    - slight wildlife habitats fish stocks
+    inverse_down:
+    - wildlife habitats fish stocks decline
+    inverse_up:
+    - wildlife habitats fish stocks recover
+    meaning: decline species habitats fish stocks
+    none:
+    - decline species habitats fish stocks
+    up:
+    - wildlife habitats fish stocks decline
+    - sharp wildlife habitats fish stocks
+    - slight wildlife habitats fish stocks
+  borrowing_cost:
+    down:
+    - loans cheaper easier
+    - sharp loans cheaper easier
+    - slight loans cheaper easier
+    inverse_down:
+    - loans costlier harder
+    inverse_up:
+    - loans cheaper easier
+    meaning: costly available loans
+    none:
+    - costly available loans
+    up:
+    - loans costlier harder
+    - sharp loans costlier harder
+    - slight loans costlier harder
+  care_strain:
+    down:
+    - hospitals clinics staff medicine supply
+    - sharp hospitals clinics staff medicine
+    - slight hospitals clinics staff medicine
+    inverse_down:
+    - hospitals clinics staff medicine supply
+    inverse_up:
+    - hospitals clinics staff medicine supply
+    meaning: pressure hospitals clinics staff medicine
+    none:
+    - pressure hospitals clinics staff medicine
+    up:
+    - hospitals clinics staff medicine supply
+    - sharp hospitals clinics staff medicine
+    - slight hospitals clinics staff medicine
+  civil_liberties:
+    down:
+    - people less free speak vote
+    - sharp people less free speak
+    - slight people less free speak
+    inverse_down:
+    - people freer speak vote assemble
+    inverse_up:
+    - people less free speak vote
+    meaning: freely people speak vote assemble
+    none:
+    - freely people speak vote assemble
+    up:
+    - people freer speak vote assemble
+    - sharp people freer speak vote
+    - slight people freer speak vote
+  civil_unrest:
+    down:
+    - riots mass protest disorder decrease
+    - sharp riots mass protest disorder
+    - slight riots mass protest disorder
+    inverse_down:
+    - riots mass protest disorder increase
+    inverse_up:
+    - riots mass protest disorder decrease
+    meaning: level riots mass protest disorder
+    none:
+    - level riots mass protest disorder
+    up:
+    - riots mass protest disorder increase
+    - sharp riots mass protest disorder
+    - slight riots mass protest disorder
+  climate_stress:
+    down:
+    - heat drought flood storm hazard
+    - sharp heat drought flood storm
+    - slight heat drought flood storm
+    inverse_down:
+    - heat drought flood storm hazard
+    inverse_up:
+    - heat drought flood storm hazard
+    meaning: severe heat drought flood storm
+    none:
+    - severe heat drought flood storm
+    up:
+    - heat drought flood storm hazard
+    - sharp heat drought flood storm
+    - slight heat drought flood storm
+  community:
+    down:
+    - local communities less connected supportive
+    - sharp local communities less connected
+    - slight local communities less connected
+    inverse_down:
+    - local communities more connected supportive
+    inverse_up:
+    - local communities less connected supportive
+    meaning: connected supportive local communities
+    none:
+    - connected supportive local communities
+    up:
+    - local communities more connected supportive
+    - sharp local communities more connected
+    - slight local communities more connected
+  crime:
+    down:
+    - street crime violence individuals people
+    - sharp street crime violence individuals
+    - slight street crime violence individuals
+    inverse_down:
+    - street crime violence individuals people
+    inverse_up:
+    - street crime violence individuals people
+    meaning: crime violence people daily life
+    none:
+    - crime violence people daily life
+    up:
+    - street crime violence individuals people
+    - sharp street crime violence individuals
+    - slight street crime violence individuals
+  cyber_insecurity:
+    down:
+    - digital systems less exposed breaches
+    - sharp digital systems less exposed
+    - slight digital systems less exposed
+    inverse_down:
+    - digital systems more exposed breaches
+    inverse_up:
+    - digital systems less exposed breaches
+    meaning: exposed digital systems breaches outages
+    none:
+    - exposed digital systems breaches outages
+    up:
+    - digital systems more exposed breaches
+    - sharp digital systems more exposed
+    - slight digital systems more exposed
+  disruption:
+    down:
+    - travel power water public services
+    - sharp travel power water public
+    - slight travel power water public
+    inverse_down:
+    - travel power water public services
+    inverse_up:
+    - travel power water public services
+    meaning: interruptions travel power water public
+    none:
+    - interruptions travel power water public
+    up:
+    - travel power water public services
+    - sharp travel power water public
+    - slight travel power water public
+  energy_fuel:
+    down:
+    - fuel electricity heating costs fall
+    - sharp fuel electricity heating costs
+    - slight fuel electricity heating costs
+    inverse_down:
+    - fuel electricity heating costs rise
+    inverse_up:
+    - fuel electricity heating costs fall
+    meaning: expensive available fuel electricity heating
+    none:
+    - expensive available fuel electricity heating
+    up:
+    - fuel electricity heating costs rise
+    - sharp fuel electricity heating costs
+    - slight fuel electricity heating costs
+  fiscal_strain:
+    down:
+    - pressure government budgets eases
+    - sharp pressure government budgets eases
+    - slight pressure government budgets eases
+    inverse_down:
+    - pressure government budgets increases
+    inverse_up:
+    - pressure government budgets eases
+    meaning: pressure government budgets deficits debt
+    none:
+    - pressure government budgets deficits debt
+    up:
+    - pressure government budgets increases
+    - sharp pressure government budgets increases
+    - slight pressure government budgets increases
+  food_insecurity:
+    down:
+    - fewer people struggle affordable food
+    - sharp fewer people struggle affordable
+    - slight fewer people struggle affordable
+    inverse_down:
+    - more people struggle affordable food
+    inverse_up:
+    - fewer people struggle affordable food
+    meaning: share people reliably affordable food
+    none:
+    - share people reliably affordable food
+    up:
+    - more people struggle affordable food
+    - sharp more people struggle affordable
+    - slight more people struggle affordable
+  health_risk:
+    down:
+    - exposure illness injury outbreak decreases
+    - sharp exposure illness injury outbreak
+    - slight exposure illness injury outbreak
+    inverse_down:
+    - exposure illness injury outbreak increases
+    inverse_up:
+    - exposure illness injury outbreak decreases
+    meaning: exposure illness injury disease outbreak
+    none:
+    - exposure illness injury disease outbreak
+    up:
+    - exposure illness injury outbreak increases
+    - sharp exposure illness injury outbreak
+    - slight exposure illness injury outbreak
+  housing_cost:
+    down:
+    - rents house prices mortgage payments
+    - sharp rents house prices mortgage
+    - slight rents house prices mortgage
+    inverse_down:
+    - rents house prices mortgage payments
+    inverse_up:
+    - rents house prices mortgage payments
+    meaning: rent house prices mortgage cost
+    none:
+    - rent house prices mortgage cost
+    up:
+    - rents house prices mortgage payments
+    - sharp rents house prices mortgage
+    - slight rents house prices mortgage
+  industrial_output:
+    down:
+    - factories produce less
+    - sharp factories produce less
+    - slight factories produce less
+    inverse_down:
+    - factories produce more
+    inverse_up:
+    - factories produce less
+    meaning: goods production running relative capacity
+    none:
+    - goods production running relative capacity
+    up:
+    - factories produce more
+    - sharp factories produce more
+    - slight factories produce more
+  inequality:
+    down:
+    - gap richest poorest narrows
+    - sharp gap richest poorest narrows
+    - slight gap richest poorest narrows
+    inverse_down:
+    - gap richest poorest widens
+    inverse_up:
+    - gap richest poorest narrows
+    meaning: gap richest poorest income wealth
+    none:
+    - gap richest poorest income wealth
+    up:
+    - gap richest poorest widens
+    - sharp gap richest poorest widens
+    - slight gap richest poorest widens
+  information_reliability:
+    down:
+    - public information less accurate trustworthy
+    - sharp public information less accurate
+    - slight public information less accurate
+    inverse_down:
+    - public information more accurate trustworthy
+    inverse_up:
+    - public information less accurate trustworthy
+    meaning: accurate trustworthy public information
+    none:
+    - accurate trustworthy public information
+    up:
+    - public information more accurate trustworthy
+    - sharp public information more accurate
+    - slight public information more accurate
+  infrastructure_condition:
+    down:
+    - roads grids pipes public buildings
+    - sharp roads grids pipes public
+    - slight roads grids pipes public
+    inverse_down:
+    - roads grids pipes public buildings
+    inverse_up:
+    - roads grids pipes public buildings
+    meaning: roads grids pipes public buildings
+    none:
+    - roads grids pipes public buildings
+    up:
+    - roads grids pipes public buildings
+    - sharp roads grids pipes public
+    - slight roads grids pipes public
+  job_security:
+    down:
+    - jobs incomes less secure
+    - sharp jobs incomes less secure
+    - slight jobs incomes less secure
+    inverse_down:
+    - work incomes more secure
+    inverse_up:
+    - jobs incomes less secure
+    meaning: secure people jobs work availability
+    none:
+    - secure people jobs work availability
+    up:
+    - work incomes more secure
+    - sharp work incomes more secure
+    - slight work incomes more secure
+  land_degradation:
+    down:
+    - farmland forest soil restored protected
+    - sharp farmland forest soil restored
+    - slight farmland forest soil restored
+    inverse_down:
+    - farmland forest soil lost damaged
+    inverse_up:
+    - farmland forest soil restored protected
+    meaning: loss usable farmland forest soil
+    none:
+    - loss usable farmland forest soil
+    up:
+    - farmland forest soil lost damaged
+    - sharp farmland forest soil lost
+    - slight farmland forest soil lost
+  market_volatility:
+    down:
+    - financial markets calmer
+    - sharp financial markets calmer
+    - slight financial markets calmer
+    inverse_down:
+    - financial markets swing more wildly
+    inverse_up:
+    - financial markets calmer
+    meaning: violently asset prices swinging
+    none:
+    - violently asset prices swinging
+    up:
+    - financial markets swing more wildly
+    - sharp financial markets swing more
+    - slight financial markets swing more
+  mental_distress:
+    down:
+    - fewer people suffer anxiety depression
+    - sharp fewer people suffer anxiety
+    - slight fewer people suffer anxiety
+    inverse_down:
+    - more people suffer anxiety depression
+    inverse_up:
+    - fewer people suffer anxiety depression
+    meaning: share people anxiety depression stress
+    none:
+    - share people anxiety depression stress
+    up:
+    - more people suffer anxiety depression
+    - sharp more people suffer anxiety
+    - slight more people suffer anxiety
+  migration_flow:
+    down:
+    - more people leave place arrive
+    - sharp more people leave place
+    - slight more people leave place
+    inverse_down:
+    - more people arrive place leave
+    inverse_up:
+    - more people leave place arrive
+    meaning: people arriving leaving place relative
+    none:
+    - people arriving leaving place relative
+    up:
+    - more people arrive place leave
+    - sharp more people arrive place
+    - slight more people arrive place
+  mineral_scarcity:
+    down:
+    - metals raw materials easier obtain
+    - sharp metals raw materials easier
+    - slight metals raw materials easier
+    inverse_down:
+    - metals raw materials scarcer costlier
+    inverse_up:
+    - metals raw materials easier obtain
+    meaning: hard obtain metals raw materials
+    none:
+    - hard obtain metals raw materials
+    up:
+    - metals raw materials scarcer costlier
+    - sharp metals raw materials scarcer
+    - slight metals raw materials scarcer
+  pay_growth:
+    down:
+    - pay rises more slowly falls
+    - sharp pay rises more slowly
+    - slight pay rises more slowly
+    inverse_down:
+    - pay rises faster
+    inverse_up:
+    - pay rises more slowly falls
+    meaning: fast pay rising price rises
+    none:
+    - fast pay rising price rises
+    up:
+    - pay rises faster
+    - sharp pay rises faster
+    - slight pay rises faster
+  prices:
+    down:
+    - everyday prices cost living fall
+    - sharp everyday prices cost living
+    - slight everyday prices cost living
+    inverse_down:
+    - everyday prices cost living rise
+    inverse_up:
+    - everyday prices cost living fall
+    meaning: expensive everyday goods services little
+    none:
+    - expensive everyday goods services little
+    up:
+    - everyday prices cost living rise
+    - sharp everyday prices cost living
+    - slight everyday prices cost living
+  private_debt:
+    down:
+    - repayments smaller share household firm
+    - sharp repayments smaller share household
+    - slight repayments smaller share household
+    inverse_down:
+    - repayments bigger share household firm
+    inverse_up:
+    - repayments smaller share household firm
+    meaning: share income households firms owe
+    none:
+    - share income households firms owe
+    up:
+    - repayments bigger share household firm
+    - sharp repayments bigger share household
+    - slight repayments bigger share household
+  public_service_quality:
+    down:
+    - schools courts permits benefits delivered
+    - sharp schools courts permits benefits
+    - slight schools courts permits benefits
+    inverse_down:
+    - schools courts permits benefits delivered
+    inverse_up:
+    - schools courts permits benefits delivered
+    meaning: government delivers schools courts permits
+    none:
+    - government delivers schools courts permits
+    up:
+    - schools courts permits benefits delivered
+    - sharp schools courts permits benefits
+    - slight schools courts permits benefits
+  skills_level:
+    down:
+    - fewer people skills education need
+    - sharp fewer people skills education
+    - slight fewer people skills education
+    inverse_down:
+    - more people gain skills education
+    inverse_up:
+    - fewer people skills education need
+    meaning: far people place education skills
+    none:
+    - far people place education skills
+    up:
+    - more people gain skills education
+    - sharp more people gain skills
+    - slight more people gain skills
+  social_division:
+    down:
+    - society less polarised unfair
+    - sharp society less polarised unfair
+    - slight society less polarised unfair
+    inverse_down:
+    - society more polarised unfair
+    inverse_up:
+    - society less polarised unfair
+    meaning: polarisation unfairness groups
+    none:
+    - polarisation unfairness groups
+    up:
+    - society more polarised unfair
+    - sharp society more polarised unfair
+    - slight society more polarised unfair
+  supply_chain_strain:
+    down:
+    - goods easier faster trade
+    - sharp goods easier faster trade
+    - slight goods easier faster trade
+    inverse_down:
+    - goods harder slower trade
+    inverse_up:
+    - goods easier faster trade
+    meaning: delays shortages trade barriers moving
+    none:
+    - delays shortages trade barriers moving
+    up:
+    - goods harder slower trade
+    - sharp goods harder slower trade
+    - slight goods harder slower trade
+  tech_adoption:
+    down:
+    - less daily life work moves
+    - sharp less daily life work
+    - slight less daily life work
+    inverse_down:
+    - more daily life work moves
+    inverse_up:
+    - less daily life work moves
+    meaning: share daily life work newer
+    none:
+    - share daily life work newer
+    up:
+    - more daily life work moves
+    - sharp more daily life work
+    - slight more daily life work
+  trust_institutions:
+    down:
+    - government business media come seen
+    - sharp government business media come
+    - slight government business media come
+    inverse_down:
+    - government business media come seen
+    inverse_up:
+    - government business media come seen
+    meaning: credibly government business media seen
+    none:
+    - credibly government business media seen
+    up:
+    - government business media come seen
+    - sharp government business media come
+    - slight government business media come
+  war_terror:
+    down:
+    - armed conflict terrorism affecting country
+    - sharp armed conflict terrorism affecting
+    - slight armed conflict terrorism affecting
+    inverse_down:
+    - armed conflict terrorism affecting country
+    inverse_up:
+    - armed conflict terrorism affecting country
+    meaning: armed conflict terrorism affecting audience
+    none:
+    - armed conflict terrorism affecting audience
+    up:
+    - armed conflict terrorism affecting country
+    - sharp armed conflict terrorism affecting
+    - slight armed conflict terrorism affecting
+  water_stress:
+    down:
+    - water supply gets more plentiful
+    - sharp water supply gets more
+    - slight water supply gets more
+    inverse_down:
+    - water supply gets shorter less
+    inverse_up:
+    - water supply gets more plentiful
+    meaning: short unsafe water supply place
+    none:
+    - short unsafe water supply place
+    up:
+    - water supply gets shorter less
+    - sharp water supply gets shorter
+    - slight water supply gets shorter
+version: probe-lib-short-v0
