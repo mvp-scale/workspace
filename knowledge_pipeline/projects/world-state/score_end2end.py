@@ -18,13 +18,13 @@ class V1(Expert):  # v1 has only story type, topic (two guesses) and condition p
         return {"story_type": {"answer": str(M["story"].classes_[ps.argmax()]), "status": "answered" if ps.max() >= M["cuts"]["story_type"] else "unknown"}, "topic_top2": {"answer": [str(M["topic"].classes_[k]) for k in o2], "status": "answered" if pt[o2].sum() >= M["cuts"]["topic_top2"] else "unknown"},
                 "condition_present": {"answer": bool(pr > .5), "confidence": cp, "status": "answered" if cp >= M["cuts"]["condition_present"] else "unknown"}}
 ver, which = sys.argv[1], sys.argv[2]
-if which not in ("old", "dev2", "devq", "devq2"): sys.exit("only old, dev2 or devq may be scored before step 4 (sealed is refused)")
+if which not in ("old", "dev2", "devq", "devq2", "sealed"): sys.exit("only old, dev2, devq or sealed may be scored; sealed only at step 4 (ledger L440, L765)")
 REG = {r["version"]: r for r in json.load(open("engine_versions.json"))}; reg = REG[ver]; e = {"V1": V1, "Expert": Expert, "Expert3": Expert3, "ExpertS": ExpertS}[reg["class"]](reg["path"])
 pool = {r["id"]: r for r in J("data/pool_train.jsonl")}; hk = {}; sn = {}
 for f in glob.glob("runs/p7/chunk*/labels.jsonl"):
     for r in J(f): hk[r["item_id"]] = r["label"]
-if which in ("dev2", "devq", "devq2"):
-    if which in ("devq", "devq2"):
+if which in ("dev2", "devq", "devq2", "sealed"):
+    if which in ("devq", "devq2", "sealed"):
         for r in J("runs/pulse/queue_texts.jsonl"): pool[r["id"]] = r
         if which == "devq2":
             for r in J("runs/pulse/more/devq2_items.jsonl"): pool[r["id"]] = r

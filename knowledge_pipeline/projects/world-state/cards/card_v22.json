@@ -1,0 +1,1073 @@
+{
+ "name": "BitMob Expert 1",
+ "version": "v6b-student",
+ "domain": "news item (headline + short description)",
+ "how": "Every item is read by fast linear models on word counts and static word vectors. About a third of items, the ones a cheap first pass flags, also go through a small encoder: MongoDB's mdbr-leaf-mt (22.6M parameters, 6 layers, 512 tokens). Long articles are cut into chunks. From 2026-11-04 the reader is v6b-student: the same sparse parts plus a fine-tuned copy of that encoder (22.6M parameters, distilled from 16,000 Sonnet labels) that reads story type, topic, condition presence and which condition in one pass; 15 ms typical on one CPU thread.",
+ "why": "Linear models alone already match Sonnet on story type. The encoder adds the most on which-condition and topic. Chosen from the full field of 215 scored models: in our size class it ties on every Pulse field, is about 40% faster than bge-small (95% of reads under 23 ms), uses 80 MB less memory, and joins related articles better. Adopted after one scoring on the sealed 1,499 items (ledger L771): better than v5-leaf on story type, topic and real conditions found; condition is still Not ready.",
+ "teacher": "claude-sonnet-5-5 (frozen guideline). Agreement with Sonnet, never accuracy: no human gold.",
+ "bar": 0.8,
+ "bar_note": "Owner's working figure: agreement of 80% or more on the items it answers.",
+ "rule": "Ready needs all four: (1) counted over every item, a skipped item is a miss, and the low end of the 95% range is 80% or more; (2) the low end beats always guessing the most common answer; (3) if the field finds something rare, it finds 80% or more of the real cases; (4) 30+ items, and a step that depends on an earlier one waits until that one is Ready. Partial = 80% or more only on the items it answers (it answers at least half). Not yet = anything else. Later phase = not built.",
+ "layers": [
+  {
+   "id": "pulse",
+   "name": "Macro / Pulse",
+   "asks": "What is changing, and where? One expert reads each item once and answers all of these.",
+   "status": "building",
+   "fields": [
+    {
+     "key": "story_type",
+     "label": "Story type",
+     "what": "Fact, forecast, opinion or unclear",
+     "chal": null,
+     "work": "v6b-student 91.5% on the sealed set (always saying 'fact': 84.5%)",
+     "bad": null,
+     "step": "Outside anchor for fact vs opinion (T30)",
+     "fit": {
+      "verdict": "Tentative",
+      "alpha": 0.695,
+      "self": 0.986,
+      "cross": 0.921,
+      "unanimous": 0.909,
+      "majority": 0.025,
+      "split": 0.066,
+      "kind": "surface",
+      "n": 395,
+      "pattern": "Document classification (factual vs opinion)",
+      "recipe": "Standard",
+      "why": "Agreement score 0.695 sits between Krippendorff's 0.667 and 0.80, so conclusions are tentative. 'Fact' agrees 97% but opinion 61% and unclear 52% (the 20-vote bar for a rare answer is ours).",
+      "fix": "Rewrite the opinion and unclear rules, re-vote, and see whether agreement score reaches 0.80.",
+      "classes": {
+       "fact": {
+        "agree": 0.97,
+        "n": 1421
+       },
+       "forecast": {
+        "agree": 0.789,
+        "n": 87
+       },
+       "opinion": {
+        "agree": 0.609,
+        "n": 58
+       },
+       "unclear": {
+        "agree": 0.524,
+        "n": 14
+       }
+      },
+      "checks": {
+       "alpha": {
+        "v": 0.695,
+        "s": "warn"
+       },
+       "answers": {
+        "v": 0.609,
+        "s": "warn",
+        "which": "opinion"
+       },
+       "three": {
+        "v": 0.411,
+        "s": "fail"
+       },
+       "cross": {
+        "v": 0.921,
+        "s": "pass"
+       },
+       "split": {
+        "v": 0.066,
+        "s": "pass"
+       },
+       "self": {
+        "v": 0.986,
+        "s": "pass"
+       }
+      },
+      "fit_tests": {
+       "f1": {
+        "s": "warn",
+        "t": "Tentative (agreement score 0.695)"
+       },
+       "f2": {
+        "s": "fail",
+        "t": "3 of 4 answers under 30 cases (rarest: unclear 1, opinion 8, forecast 16)",
+        "small": 3,
+        "answers": 4
+       },
+       "f3": {
+        "s": "warn",
+        "t": "none known; agreement only"
+       },
+       "f4": {
+        "s": "quiet",
+        "t": "not measured"
+       }
+      }
+     }
+    },
+    {
+     "key": "topic_top2",
+     "label": "Topic",
+     "what": "One of 49 topics, two guesses",
+     "also": "topic_top1",
+     "also_label": "one guess",
+     "chal": null,
+     "work": "v6b-student 92.2% with two guesses on the sealed set (best constant pair: 38.2%); 79.9% against human labels",
+     "bad": "Voters split on 1 in 8 items",
+     "step": "Decide which bar governs: Sonnet agreement or human labels",
+     "fit": {
+      "verdict": "Clear",
+      "alpha": 0.89,
+      "self": 0.949,
+      "cross": 0.867,
+      "unanimous": 0.825,
+      "majority": 0.081,
+      "split": 0.094,
+      "kind": "mixed",
+      "n": 395,
+      "pattern": "Multi-class document classification (49 topics)",
+      "recipe": "Standard",
+      "why": "Agreement score 0.89 is above 0.80. The weakest topic, governance_corruption, agrees 70%.",
+      "fix": "Nothing to fix before training. Open question: a trusted outside label set (F3).",
+      "classes": null,
+      "checks": {
+       "alpha": {
+        "v": 0.89,
+        "s": "pass"
+       },
+       "answers": {
+        "v": 0.7,
+        "s": "pass",
+        "which": "governance_corruption"
+       },
+       "three": {
+        "v": 0.733,
+        "s": "warn"
+       },
+       "cross": {
+        "v": 0.867,
+        "s": "pass"
+       },
+       "split": {
+        "v": 0.094,
+        "s": "pass"
+       },
+       "self": {
+        "v": 0.949,
+        "s": "pass"
+       }
+      },
+      "fit_tests": {
+       "f1": {
+        "s": "pass",
+        "t": "Clear (agreement score 0.89)"
+       },
+       "f2": {
+        "s": "fail",
+        "t": "46 of 47 answers under 30 cases (rarest: media_information 1, technology_consumer 1, courts_rulings 1)",
+        "small": 46,
+        "answers": 47
+       },
+       "f3": {
+        "s": "warn",
+        "t": "MN-DS / IPTC (playbook 01); not used yet"
+       },
+       "f4": {
+        "s": "quiet",
+        "t": "not measured"
+       }
+      }
+     }
+    },
+    {
+     "key": "condition_present",
+     "label": "Condition present",
+     "what": "Does the story report a change in one of 38 world conditions",
+     "reach": "condition_reach",
+     "chal": null,
+     "work": "v6b-student finds 29.3% of real conditions (0.80 needed); end to end 86.3% is below always saying no (89.1%)",
+     "bad": "Finds 1 in 5 real cases; voters agree on only 68%",
+     "step": "Parked at the field gate (T32); routing with soft labels is the follow-on (T27)",
+     "fit": {
+      "verdict": "Reject",
+      "alpha": 0.5,
+      "self": 0.904,
+      "cross": 0.682,
+      "unanimous": 0.59,
+      "majority": 0.177,
+      "split": 0.233,
+      "kind": "implied",
+      "n": 395,
+      "pattern": "Event detection (rare-event yes/no)",
+      "recipe": "Known; our own condition list",
+      "why": "Agreement score 0.50 is under 0.667: labellers do not agree beyond chance. Sonnet says yes 49% of the time, Haiku 67%, and Clef cannot arbitrate (57% on the split items).",
+      "fix": "Rewrite the rule (a condition counts only if the story reports it changed), re-vote, re-measure. If agreement score stays under 0.667, drop it or make it two-tier.",
+      "classes": {
+       "yes": {
+        "agree": 0.79,
+        "n": 916
+       },
+       "no": {
+        "agree": 0.71,
+        "n": 664
+       }
+      },
+      "checks": {
+       "alpha": {
+        "v": 0.5,
+        "s": "fail"
+       },
+       "answers": {
+        "v": 0.71,
+        "s": "pass",
+        "which": "no"
+       },
+       "three": {
+        "v": 0.288,
+        "s": "fail"
+       },
+       "cross": {
+        "v": 0.682,
+        "s": "warn"
+       },
+       "split": {
+        "v": 0.233,
+        "s": "fail"
+       },
+       "self": {
+        "v": 0.904,
+        "s": "pass"
+       }
+      },
+      "fit_tests": {
+       "f1": {
+        "s": "fail",
+        "t": "Reject (agreement score 0.5)"
+       },
+       "f2": {
+        "s": "pass",
+        "t": "all 2 answers have 30+ cases",
+        "small": 0,
+        "answers": 2
+       },
+       "f3": {
+        "s": "warn",
+        "t": "none known; agreement only"
+       },
+       "f4": {
+        "s": "quiet",
+        "t": "not measured"
+       }
+      }
+     },
+     "reach_txt": {
+      "work": "v6b: 32.5% on a fresh set",
+      "bad": "Target is 80%",
+      "step": "Decision 2: confident or possible tier"
+     }
+    },
+    {
+     "key": "which_condition_all",
+     "label": "Which condition (of real cases)",
+     "what": "Its top pick for every real condition, no confidence gate (the honest version of the row above)",
+     "needs": "condition_present",
+     "chal": {
+      "v": "v6b-student",
+      "e2e": 0.827
+     },
+     "work": "Waits on condition. v6b-student on the sealed set, given a found condition: 95.8% (n 48); too few cases to call it ready",
+     "bad": "79.2%, 3 pts short",
+     "step": "Adopt v6b: 82.7% (decision 1)",
+     "fit": {
+      "verdict": "Clear",
+      "alpha": 0.913,
+      "self": 0.957,
+      "cross": 0.895,
+      "unanimous": 0.881,
+      "majority": 0.048,
+      "split": 0.07,
+      "kind": "mixed",
+      "n": 270,
+      "pattern": "Event-type classification",
+      "recipe": "Known (ACE / TAC-KBP style)",
+      "why": "Agreement score 0.913 is above 0.80: the labels are clean.",
+      "fix": "The stall is elsewhere: too few real cases for most conditions (F2) and model capacity.",
+      "classes": null,
+      "checks": {
+       "alpha": {
+        "v": 0.913,
+        "s": "pass"
+       },
+       "answers": {
+        "v": 0.837,
+        "s": "pass",
+        "which": "trust_institutions"
+       },
+       "three": {
+        "v": null,
+        "s": "quiet"
+       },
+       "cross": {
+        "v": 0.895,
+        "s": "pass"
+       },
+       "split": {
+        "v": 0.07,
+        "s": "pass"
+       },
+       "self": {
+        "v": 0.957,
+        "s": "pass"
+       }
+      },
+      "fit_tests": {
+       "f1": {
+        "s": "pass",
+        "t": "Clear (agreement score 0.913)"
+       },
+       "f2": {
+        "s": "fail",
+        "t": "35 of 35 answers under 30 cases (rarest: tech_adoption 1, mental_distress 1, information_reliability 1)",
+        "small": 35,
+        "answers": 35
+       },
+       "f3": {
+        "s": "warn",
+        "t": "none known; agreement only"
+       },
+       "f4": {
+        "s": "quiet",
+        "t": "not measured"
+       }
+      }
+     }
+    },
+    {
+     "key": "direction_all",
+     "label": "Direction (of real cases)",
+     "what": "Up or down, once it named the right condition, over all real conditions",
+     "needs": "condition_present",
+     "work": "Waits on condition. Sealed set, given the right condition: 91.3% (n 46); guess 78.2%; too few cases to call it ready",
+     "bad": "Blocked until Condition present is Ready",
+     "step": "Unblocks with the condition fix",
+     "fit": {
+      "verdict": "Clear",
+      "alpha": 0.945,
+      "self": 0.988,
+      "cross": 0.978,
+      "unanimous": 0.973,
+      "majority": 0.011,
+      "split": 0.015,
+      "kind": "surface",
+      "n": 263,
+      "pattern": "Polarity of the event",
+      "recipe": "Known when explicit",
+      "why": "Agreement score 0.945 is above 0.80.",
+      "fix": "Nothing to fix. Check F3 (outside label set) before calling it correct.",
+      "classes": null,
+      "checks": {
+       "alpha": {
+        "v": 0.945,
+        "s": "pass"
+       },
+       "answers": {
+        "v": 0.95,
+        "s": "pass",
+        "which": "down"
+       },
+       "three": {
+        "v": 0.908,
+        "s": "pass"
+       },
+       "cross": {
+        "v": 0.978,
+        "s": "pass"
+       },
+       "split": {
+        "v": 0.015,
+        "s": "pass"
+       },
+       "self": {
+        "v": 0.988,
+        "s": "pass"
+       }
+      },
+      "fit_tests": {
+       "f1": {
+        "s": "pass",
+        "t": "Clear (agreement score 0.945)"
+       },
+       "f2": {
+        "s": "pass",
+        "t": "all 2 answers have 30+ cases",
+        "small": 0,
+        "answers": 2
+       },
+       "f3": {
+        "s": "warn",
+        "t": "PLOVER / POLECAT (playbook 01); not used yet"
+       },
+       "f4": {
+        "s": "quiet",
+        "t": "not measured"
+       }
+      }
+     }
+    },
+    {
+     "key": "size_all",
+     "label": "Size (of real cases)",
+     "what": "Within one step, once it named the right condition, over all real conditions",
+     "needs": "condition_present",
+     "work": "Waits on condition. Sealed set within one step: 93.5% (n 46); guess 97.3%, so this number is not informative",
+     "bad": "Within-one is trivial: guessing scores 97.3%",
+     "step": "Switch to exact-step measure (needs your yes)",
+     "fit": {
+      "verdict": "Clear",
+      "alpha": 0.831,
+      "self": 0.904,
+      "cross": 0.742,
+      "unanimous": 0.753,
+      "majority": 0.133,
+      "split": 0.114,
+      "kind": "implied",
+      "n": 263,
+      "pattern": "Ordinal classification",
+      "recipe": "Known; magnitude is subjective",
+      "why": "Interval agreement score 0.831 is above 0.80. Flags (ours): exact-step agreement is 74% and 'major' 66%.",
+      "fix": "Decide whether exact steps matter. If so, the exact-step measure needs your yes.",
+      "classes": null,
+      "checks": {
+       "alpha": {
+        "v": 0.831,
+        "s": "pass"
+       },
+       "answers": {
+        "v": 0.658,
+        "s": "warn",
+        "which": "major"
+       },
+       "three": {
+        "v": 0.619,
+        "s": "fail"
+       },
+       "cross": {
+        "v": 0.742,
+        "s": "warn"
+       },
+       "split": {
+        "v": 0.114,
+        "s": "warn"
+       },
+       "self": {
+        "v": 0.904,
+        "s": "pass"
+       }
+      },
+      "fit_tests": {
+       "f1": {
+        "s": "pass",
+        "t": "Clear (agreement score 0.831)"
+       },
+       "f2": {
+        "s": "warn",
+        "t": "1 of 4 answers under 30 cases (rarest: severe 2)",
+        "small": 1,
+        "answers": 4
+       },
+       "f3": {
+        "s": "warn",
+        "t": "none known; agreement only"
+       },
+       "f4": {
+        "s": "quiet",
+        "t": "not measured"
+       }
+      }
+     }
+    },
+    {
+     "key": "traits",
+     "label": "Traits (51 questions, 8 groups)",
+     "what": "51 questions in 8 groups. Not built into the engine yet. Tested on the CPU reader as present/absent flags: 24 of 51 questions usable (find half of present cases at 80% right); strongest groups scale (6 of 6) and intent (5 of 8). Graded answers (slightly / clearly / strongly) are not ready: 2 of 51.",
+     "later": true,
+     "work": "1 of 51 traits GO; 2 close (wording to settle); 45 revise; 2 need positives",
+     "bad": "29 need a new definition, 4 drop",
+     "step": "Revise wording of the 45 and re-gate (T41)"
+    }
+   ]
+  },
+  {
+   "id": "area",
+   "name": "Area (drill into one thing)",
+   "asks": "Pick something from the Pulse, such as a capability, and see what drives it, depends on it and is affected by it. Pilot done (L384): tags can be proposed on the CPU and verified by Clef, but agreement is only moderate, so the design is a hybrid.",
+   "status": "later phase",
+   "fields": [
+    {
+     "key": "anchors",
+     "label": "Things and capabilities",
+     "what": "Find entities, places, concepts and capabilities in the item and link each to one stable identity. Pilot: about 5 tags per full article, 3 per headline item; reading the whole article adds 56% new tags.",
+     "later": true
+    },
+    {
+     "key": "events",
+     "label": "Events and relations",
+     "what": "What happened, who took part, and how things connect. Related tags (Gaza / Gaza Strip / Palestinians) merge by similarity; identity needs entity linking.",
+     "later": true
+    }
+   ]
+  },
+  {
+   "id": "understanding",
+   "name": "Understanding (downstream, does not block)",
+   "asks": "One consolidated explanation per capability, whoever said it, traced back to its sources. Where do new items agree, disagree or leave gaps?",
+   "status": "later phase",
+   "fields": [
+    {
+     "key": "consolidated",
+     "label": "Consolidated knowledge",
+     "what": "How a capability works and best practice across the field, merged from many sources",
+     "later": true
+    },
+    {
+     "key": "alignment",
+     "label": "Agree, contradict, gap",
+     "what": "Check each new item against what we know and flag what is new or missing",
+     "later": true
+    },
+    {
+     "key": "trace",
+     "label": "Claim, evidence, source",
+     "what": "Every statement traced to the source text it came from; the raw documents stay but are not the focus",
+     "later": true
+    }
+   ]
+  }
+ ],
+ "next": {
+  "headline": "Adopt v6b-student? Passes story type; condition detection still not ready.",
+  "body": "Under the new Ready rule (counted over every item, and it must beat always guessing the common answer): today's engine passes on topic only. Story type is 87.5% against 87.0% for always saying 'fact', so it is not proven to add anything. v6b-student passes on story type (91.8%, low end 90.3%, against 85.2% for guessing) and on topic. Neither version passes condition detection: v6b finds 33% of real conditions (needs 80%), and its yes/no on 'is there a condition' (86.7%) is still under the 89.6% you get by always saying no. Measured on 1,593 fresh items it never saw; agreement with Sonnet, not accuracy. Nothing has been replaced yet.",
+  "ask": "adopt v6b-student (sealed check first) \u00b7 capability sources \u00b7 tags at serving",
+  "who": "Owner"
+ },
+ "tried_groups": [
+  {
+   "name": "What worked",
+   "summary": "Word counts and static vectors for everything, a frozen small encoder on routed items (now mdbr-leaf-mt, 22.6M), and regularisation tuned on a validation slice (topic +0.02, topic overfitting gap 0.103 to 0.042).",
+   "verdict": "kept",
+   "ledger": "L46, L55, L289, L364, L381",
+   "items": [
+    {
+     "what": "Word counts + logistic regression alone",
+     "result": "Story type at teacher level (0.90), topic weak (0.54)",
+     "outcome": "Kept for story type and as the always-on path",
+     "ledger": "L46"
+    },
+    {
+     "what": "Static word vectors (potion-8M) + logistic regression",
+     "result": "Topic 0.62; confidence is trustworthy (calibration error 0.04)",
+     "outcome": "Kept (the base of every version)",
+     "ledger": "L55"
+    },
+    {
+     "what": "Frozen bge-small encoder features added",
+     "result": "Which-condition top-1 0.704 to 0.770, top-2 0.828 to 0.905",
+     "outcome": "Adopted, routed items only (v3)",
+     "ledger": "L289"
+    },
+    {
+     "what": "Tuning regularisation (C) of the topic heads on a validation slice",
+     "result": "Topic top-2 0.857 to 0.877; topic gap 0.103 to 0.059; story unchanged (best C stays 3)",
+     "outcome": "Adopted as v3.2",
+     "ledger": "L362, L364"
+    },
+    {
+     "what": "Swapping the encoder bge-small for MongoDB/mdbr-leaf-mt, picked from a scan of all 215 scored models",
+     "result": "Pulse fields tie; 95% of reads under 22.6 ms vs 36.6; 643 MB vs 724; neighbour topic agreement 0.683 vs 0.648; chunked late-passage recall 0.859 vs 0.867",
+     "outcome": "Adopted as the trunk (all three adoption rules held)",
+     "ledger": "L378, L380, L381"
+    }
+   ]
+  },
+  {
+   "name": "Swapping the trunk (Granite small R2)",
+   "summary": "Ties with bge-small on every Pulse field (short items). On whole articles a bigger window beats truncating at 512, but chunking bge-small beats one long Granite pass and costs far less CPU. Plan for long articles: bge-small chunks feeding tag-level joins.",
+   "verdict": "challenger, not adopted",
+   "ledger": "L366, L368, L370, L371, L373, L374",
+   "items": [
+    {
+     "what": "ibm-granite/granite-embedding-small-english-r2 as the shared encoder (47.7M, Apache-2.0, 8k, ModernBERT), same heads and items",
+     "result": "Topic top-2 0.881 vs 0.877, which-condition 0.875 vs 0.863, all inside the noise; encoder alone 23 ms; engine p95 44.5 ms vs 36.2; memory 837 MB vs 732",
+     "outcome": "bge-small stays; revisit when Area needs token-level heads",
+     "ledger": "L366, L368"
+    },
+    {
+     "what": "Long-term features: joining quality and long-input cost, Granite vs bge-small",
+     "result": "Neighbour topic agreement 0.634 vs 0.648; cluster agreement (NMI) 0.383 vs 0.408; 8,192 tokens 22 s vs about 3.9 s chunked",
+     "outcome": "Granite not ahead; one test left (token-level tagging head, needs the Area tag labels)",
+     "ledger": "L370, L371"
+    },
+    {
+     "what": "Whole-article test: can a passage from the late part find its article? (1,500 long articles, median 1,078 tokens)",
+     "result": "bge truncated 0.50; Granite whole article 0.64; bge chunked mean 0.77; bge best chunk 0.87 (recall@1, late passages)",
+     "outcome": "Owner's logic holds (bigger window beats truncation); chunking a small model wins",
+     "ledger": "L373, L374"
+    }
+   ]
+  },
+  {
+   "name": "Bigger or tuned neural models",
+   "summary": "Fine-tuning, int8 and distilling the encoder were not better, or not fast enough.",
+   "verdict": "rejected",
+   "ledger": "L292, L294, L296, L297",
+   "items": [
+    {
+     "what": "Fine-tuning the encoder",
+     "result": "First try much worse (topic top-2 0.726); corrected try +0.014 on topic but worse on which-condition",
+     "outcome": "Rejected: frozen features beat it",
+     "ledger": "L292, L296"
+    },
+    {
+     "what": "int8 encoder to make it fast enough",
+     "result": "Topic top-2 drops 0.019 against a 0.01 limit",
+     "outcome": "Rejected; cascade instead",
+     "ledger": "L297"
+    },
+    {
+     "what": "Distilling the encoder into static vectors",
+     "result": "Keeps none of the encoder's lift (topic top-2 0.813 vs 0.832)",
+     "outcome": "Rejected",
+     "ledger": "L294"
+    }
+   ]
+  },
+  {
+   "name": "Outside language models (d1, LFM3)",
+   "summary": "d1 is a strong second opinion (topic 0.926 when combined) but needs the GPU and its licence does not fit. LFM3 is unusable.",
+   "verdict": "second opinion only",
+   "ledger": "L328 to L337",
+   "items": [
+    {
+     "what": "d1-2B decision model, zero-shot, on the GPU",
+     "result": "Alone: topic top-2 0.852. Fused with our student: topic top-2 0.926, condition top-1 0.834",
+     "outcome": "Pipeline test only: GPU, and a licence the owner called not commercially viable",
+     "ledger": "L328, L330"
+    },
+    {
+     "what": "LFM3-1.7B as a JSON reader",
+     "result": "Only 28% valid JSON; as a yes/no scorer AUC 0.54 to 0.61",
+     "outcome": "Rejected",
+     "ledger": "L331, L333, L337"
+    }
+   ]
+  },
+  {
+   "name": "Teaching tricks",
+   "summary": "Training our student on d1's soft labels gave no gain.",
+   "verdict": "rejected",
+   "ledger": "L343",
+   "items": [
+    {
+     "what": "Training the student on d1's soft labels",
+     "result": "Topic top-2 -0.008, story -0.006, which-condition +0.009 to +0.02",
+     "outcome": "No gain; d1 stays a live second opinion",
+     "ledger": "L343"
+    }
+   ]
+  },
+  {
+   "name": "Free-form tags (pilot: 100 articles, 100 headline items)",
+   "summary": "CPU proposes, Clef verifies: about 3 tags per headline item, 5.4 per full article; wording agreement about 0.5; 77% of tags occur once. Capabilities are 7% of general-news tags and 23% of tech-news tags, and almost never recur across articles: news can propose capability candidates but cannot supply the capability layer. Design: a hybrid.",
+   "verdict": "hybrid",
+   "ledger": "L383, L384, L386, L387",
+   "items": [
+    {
+     "what": "Tag pilot with spaCy proposer and local Clef verifier (5 narrow yes/no questions per candidate)",
+     "result": "41% of 2,762 candidates accepted; kappa 0.49 to 0.53; merge at cosine 0.80 cuts distinct tags by 33% but merges related, not only identical, tags; 56% of full-article tags are absent from the short version",
+     "outcome": "Hybrid design; capability layer needs tech sources; a token-level tag head is the serving route (the proposer takes 0.7 s per item)",
+     "ledger": "L383, L384"
+    }
+   ]
+  }
+ ],
+ "challengers": [
+  "v4-granite",
+  "v6-student"
+ ],
+ "changes": [
+  {
+   "tag": "Win",
+   "title": "Adopted v6b-student after one sealed-set scoring",
+   "text": "Sealed set scored once (1,499 items, 2.19 USD hosted): story 91.5%, topic two guesses 92.2%, real conditions found 29.3%, all better than v5-leaf (87.1%, 90.1%, 22.0%). Ledger L771."
+  },
+  {
+   "tag": "Win",
+   "title": "Challenger v6b-student: ADOPTED 2026-11-04 (was waiting for your yes)",
+   "text": "A 22M student (same size as today's encoder) taught by a 4B reader on the GPU, trained on about 16,000 Sonnet labels; one CPU pass per item, no GPU at serving. On 1,593 fresh items it never trained or tuned on: story type 88.8% to 91.8% (+3.0, interval 1.5 to 4.5), topic one guess 78.6% to 81.9% (+3.3), real conditions found 17.5% to 32.5% (+15 points, 9 to 21), condition-direction-size all right 15.1% to 25.9% (+10.8), which condition 79.2% to 82.7% (+3.6, 1,176 cases). Speed 15 ms typical, 17 ms at 95% (v5-leaf: 4.4 ms typical, 23 ms at 95% with rare multi-second stalls), 595 MB. Agreement with Sonnet, not accuracy. Earlier 6,000-label version: v6-student."
+  },
+  {
+   "tag": "Win",
+   "title": "Condition tiers, read from a curve",
+   "text": "On 1,593 fresh items (166 real conditions), v6b-student finds more real conditions than v5-leaf at every level of 'how sure the yes is': at 95% right 31% vs 13%, at 90% right 36% vs 22%, at 83% right 39% vs 28%, at 75% right 55% vs 33%, at 60% right 71% vs 58%. A confident tier (about 90% right) would flag about 41 items per 1,000 and find about 36% of real conditions; a possible tier (about 60% right) about 123 per 1,000 and find about 71%. Which tier the engine speaks at is your decision."
+  },
+  {
+   "tag": "Win",
+   "title": "Topic",
+   "text": "One guess 0.698 to 0.747 and two guesses 0.831 to 0.896 from v1 to v5, on 1,997 natural unseen items (agreement with Sonnet)."
+  },
+  {
+   "tag": "Win",
+   "title": "Speed and memory",
+   "text": "95% of reads under 23 ms (v3.2: 36 ms) and 643 MB (v3.2: 734 MB) after the switch to the leaf encoder."
+  },
+  {
+   "tag": "Fixed",
+   "title": "Honest measuring",
+   "text": "Every figure now comes from 1,997 natural, never-seen items. Older figures (story 0.911, real conditions found 10%) came from a condition-enriched test set and are replaced: story 0.875, found 20%."
+  },
+  {
+   "tag": "No gain",
+   "title": "Story type, condition answering",
+   "text": "Flat since v1 (story 0.875; condition answers 0.966 on the 80% it answers; real conditions found 19.9%)."
+  },
+  {
+   "tag": "No gain",
+   "title": "Finding real conditions: 5 levers tried",
+   "text": "Lowering the cut, adding the encoder to the presence gate, training the which-condition head on Sonnet, reweighting the blend, and 38 per-condition detectors. None lifts the share found at 83% right above a third (33%)."
+  },
+  {
+   "tag": "Trying",
+   "title": "Story and topic trained on Sonnet labels",
+   "text": "The engine learns from 36,070 Haiku labels; Haiku and Sonnet agree on story type only 93% of the time. Test running, pass bar +0.02."
+  },
+  {
+   "tag": "Trying",
+   "title": "Traits (51 questions)",
+   "text": "Wording tested on 150 items: 50 of 51 pass the pilot rule; Sonnet agrees with itself on 87% of its active answers. Student heads training on 2,500 Sonnet-graded items."
+  },
+  {
+   "tag": "Fixed",
+   "title": "Real conditions: counts",
+   "text": "The which / direction / size rows above rest on only 44 and 38 found items (the easy slice). New rows use all 1,176 real conditions we hold: which condition 79.2% (77 to 81), direction 88.2%, size 93.6%, all three right 64.9%."
+  },
+  {
+   "tag": "Trying",
+   "title": "Next for the challenger",
+   "text": "Rerun with 16,000 Sonnet labels (10,000 more are being labelled), a second training sweep, and the sealed test once at the end."
+  },
+  {
+   "tag": "Trying",
+   "title": "Traits: first results",
+   "text": "Sonnet graded 2,650 items on 51 questions (agrees with itself 87% on active answers). On the CPU reader, 24 of 51 questions work as present/absent flags; a 4B reader adds only a little (30 of 51). Next: build the flags into the engine, or label more graded examples."
+  }
+ ],
+ "fitness": {
+  "name": "Field checks v2",
+  "n": 395,
+  "voters": "Sonnet \u00d72, Haiku \u00d72 (same spec)",
+  "traits": {},
+  "agreed": false,
+  "rule": "Consensus verdict uses ONLY the sourced agreement score bands (Krippendorff 2004, p.241): 0.80 or more clear, 0.667 to 0.80 tentative, under 0.667 reject. Our own measures are flags and never decide.",
+  "measures": [
+   {
+    "k": "alpha",
+    "t": "Agreement score",
+    "q": "Do labellers agree beyond chance?",
+    "m": "Krippendorff's alpha: agreement beyond chance (1 = perfect, 0 = no better than guessing)",
+    "bar": "0.80+ clear \u00b7 0.667\u20130.80 tentative \u00b7 under 0.667 reject",
+    "fmt": "n3",
+    "src": "sourced",
+    "cite": "Krippendorff 2004, p.241 (via secondary sources)"
+   },
+   {
+    "k": "three",
+    "t": "Two makers",
+    "q": "Does agreement hold when a model from a different maker (Qwen3-14B) votes with Sonnet and Haiku?",
+    "m": "alpha over Sonnet, Haiku (one maker) and Qwen on the 395 items",
+    "bar": "same bands as the agreement score; a flag only, it does not change the verdict",
+    "fmt": "n3",
+    "src": "sourced bands, flag only",
+    "cite": "Krippendorff 2004 p.241; third family added 2026-11-03"
+   },
+   {
+    "k": "answers",
+    "t": "Every answer",
+    "q": "Does each answer agree, the rare ones too?",
+    "m": "lowest per-answer agreement (answers with 20+ votes)",
+    "bar": "ours: 70%+ ok \u00b7 under 50% fail",
+    "src": "measure sourced, bar ours",
+    "cite": "Cicchetti & Feinstein 1990"
+   },
+   {
+    "k": "cross",
+    "t": "Sonnet vs Haiku",
+    "q": "Do Sonnet and Haiku agree, not just each with itself? Same maker, so this is not an independent check.",
+    "m": "Sonnet-vs-Haiku agreement (one maker)",
+    "bar": "ours: 75%+ ok \u00b7 under 60% fail",
+    "src": "ours",
+    "cite": "none found"
+   },
+   {
+    "k": "split",
+    "t": "Contested",
+    "q": "How many items have no 3-of-4 majority?",
+    "m": "share of split items",
+    "bar": "ours: 10% or less ok \u00b7 over 20% fail",
+    "src": "ours",
+    "cite": "none found; 3-of-4 rule unsourced"
+   },
+   {
+    "k": "self",
+    "t": "Same voter twice",
+    "q": "Does one model repeat itself?",
+    "m": "self-agreement",
+    "bar": "ours: 90%+ ok \u00b7 under 80% fail",
+    "src": "ours",
+    "cite": "none found (stability is not correctness: arXiv 2609.15194)"
+   }
+  ],
+  "fit_tests": [
+   {
+    "k": "f1",
+    "t": "Not too subjective",
+    "q": "Would careful readers give the same answer?",
+    "m": "the Agreement score above",
+    "bar": "same bands as agreement score",
+    "src": "sourced",
+    "cite": "Krippendorff 2004, p.241"
+   },
+   {
+    "k": "f2",
+    "t": "Enough real cases",
+    "q": "Does every answer have enough cases to learn and to score?",
+    "m": "cases per answer on the 395 four-vote items (the full labelled pool is larger, with one voter)",
+    "bar": "ours: 30+ per answer; under that the answer needs targeted data",
+    "src": "idea sourced, bar ours",
+    "cite": "LESSONS #8 (our notes); Graham & Bull 1998 uses 200+ for intervals"
+   },
+   {
+    "k": "f3",
+    "t": "A source of truth",
+    "q": "Is there trusted outside labelled data?",
+    "m": "named outside dataset for the field",
+    "bar": "none = agreement only: the field can never be called correct",
+    "src": "our design; datasets named in playbook 01",
+    "cite": "playbook/01 rule 5; LESSONS #6"
+   },
+   {
+    "k": "f4",
+    "t": "Evidence in the input",
+    "q": "Does the headline plus description carry the evidence?",
+    "m": "agreement between headline-only and full-article labels",
+    "bar": "not measured yet",
+    "src": "ours",
+    "cite": "LESSONS checklist #3 (our notes)"
+   }
+  ],
+  "verify": [
+   {
+    "check": "Agreement score (Krippendorff's alpha)",
+    "source": "Krippendorff 2004 p.241 (secondary)",
+    "lean": "alpha_le_one, alpha_one_iff, alpha_worked_case (lean/FitChecks.lean)",
+    "mm3": "MM3-0570 pass 9 of 9",
+    "bugs": "28 planted: fixtures 96% \u00b7 reference 93% \u00b7 Lean oracle 79% \u00b7 all three 100%"
+   },
+   {
+    "check": "\u03ba, AC1, per-answer agreement",
+    "source": "Feinstein & Cicchetti 1990; Cicchetti & Feinstein 1990",
+    "lean": "balanced_case, skewed_case (lean/PairStats.lean)",
+    "mm3": "MM3-0581 clean pass; caught 1 of 10 planted",
+    "bugs": "51 planted: fixtures 88% \u00b7 oracle 90% \u00b7 reference 100% \u00b7 all three 100%"
+   },
+   {
+    "check": "Vote status (unanimous / majority / split)",
+    "source": "ours (3-of-4 rule unsourced)",
+    "lean": "status_rule: all 256 vote combinations",
+    "mm3": "MM3-0579 / 0580: weak signal only",
+    "bugs": "1 planted: Lean table caught it, fixtures had no test for it"
+   },
+   {
+    "check": "Consensus verdict bands",
+    "source": "Krippendorff 2004 p.241 (secondary)",
+    "lean": "verdict_clear_iff, _tentative_iff, _reject_iff, _total, _monotone, _edges (lean/Verdict.lean)",
+    "mm3": "MM3-0594 pass on the bands; first wording MM3-0592 unsure on rounding",
+    "bugs": "6 planted: all caught by the Lean table (2,001 agreement score values)"
+   },
+   {
+    "check": "Two families, contested, same voter, rarest answer, evidence in input",
+    "source": "ours",
+    "lean": "none",
+    "mm3": "none",
+    "bugs": "unverified"
+   }
+  ],
+  "assumptions": [
+   "The 395-item sample represents the news pool beyond its stratification (about half real conditions).",
+   "Sonnet and Haiku come from one maker and share habits, so they count as one source; Qwen3-14B is the first independent maker (measured: same-maker agreement is higher than cross-maker on every field, L572).",
+   "Krippendorff's bands, set for human coders, also suit LLM voters.",
+   "The Lean models cover two coders and two answers; the pipeline uses 4 voters and up to 40 answers.",
+   "Catching planted bugs predicts catching real ones; the references, Lean models and fixtures were all written by us, so a shared misreading would survive every method.",
+   "MM3's quick 9-question form says nothing about its thorough form.",
+   "Sources were read as search summaries; none of the papers was opened."
+  ],
+  "notes": [
+   "Traits (51 questions) were scored under the old rule and are not shown until rescored.",
+   "Fit and Consensus were one column called 'Fit' before 2026-11-02. Consensus is how well the labels hold up; Fit is whether the field is worth classifying at all.",
+   "Source tags: 'sourced' = a published criterion; 'ours' = our own bar or design, not validated.",
+   "Story type's \u03ba is 0.58 but its skew-resistant AC1 is 0.92; condition present's \u03ba 0.37 and AC1 0.38 match, so its disagreement is real, not skew (ledger L515)."
+  ],
+  "clef": "Clef agrees with Sonnet 63% and with Haiku 63% on presence (a different question wording); on the 162 split items it matches majority 57%, so it cannot arbitrate them.",
+  "f2_counts": {
+   "story_type": {
+    "fact": 344,
+    "forecast": 16,
+    "opinion": 8,
+    "unclear": 1
+   },
+   "condition_present": {
+    "yes": 178,
+    "no": 125
+   },
+   "which_condition": {
+    "disruption": 22,
+    "civil_unrest": 20,
+    "health_risk": 19,
+    "war_terror": 17,
+    "energy_fuel": 12,
+    "climate_stress": 11,
+    "prices": 11,
+    "job_security": 6,
+    "food_insecurity": 6,
+    "air_pollution": 5,
+    "borrowing_cost": 5,
+    "biodiversity_loss": 5,
+    "housing_cost": 5,
+    "care_strain": 5,
+    "land_degradation": 4,
+    "fiscal_strain": 4,
+    "supply_chain_strain": 4,
+    "pay_growth": 4,
+    "industrial_output": 3,
+    "water_stress": 3,
+    "trust_institutions": 3,
+    "civil_liberties": 3,
+    "cyber_insecurity": 3,
+    "inequality": 3,
+    "migration_flow": 2,
+    "mineral_scarcity": 2,
+    "public_service_quality": 2,
+    "tech_adoption": 1,
+    "mental_distress": 1,
+    "information_reliability": 1,
+    "social_division": 1,
+    "crime": 1,
+    "asset_values": 1,
+    "market_volatility": 1,
+    "infrastructure_condition": 1
+   },
+   "direction": {
+    "up": 162,
+    "down": 33
+   },
+   "size": {
+    "notable": 90,
+    "minor": 41,
+    "major": 30,
+    "severe": 2
+   }
+  }
+ },
+ "consensus": {
+  "voters": "Sonnet \u00d72, Haiku \u00d72",
+  "n": 86,
+  "contested": {
+   "Story type": 0.07,
+   "Topic": 0.093,
+   "Condition present": 0.221
+  },
+  "rows": [
+   [
+    "Story type",
+    90,
+    92.5,
+    95
+   ],
+   [
+    "Topic (two guesses)",
+    24.4,
+    93.6,
+    94.9
+   ],
+   [
+    "Condition present: right",
+    68.7,
+    26.9,
+    46.3
+   ],
+   [
+    "Condition present: finds real",
+    null,
+    10.9,
+    32.6
+   ],
+   [
+    "Which condition (of real)",
+    null,
+    8.7,
+    23.9
+   ]
+  ],
+  "notes": [
+   "Only items dated after the 2026-10-25 training cutoff are scored. The first run on all 395 items was contaminated (story type 98%) and was discarded.",
+   "86 items means wide ranges (story type v5-leaf 85 to 97%). This shows direction, not a verdict.",
+   "Set is 69% real conditions, so Condition present: right is judged against always-yes.",
+   "Direction and size have under 12 scorable items and are not scored."
+  ]
+ },
+ "plain": {
+  "blocker": "Story type and topic are ready; the reader that serves them is now v6b-student (15 ms, one CPU thread). Condition is parked: the readers differ in strictness and the CPU reader finds about 3 in 10 real cases; which condition, direction and size wait behind it.",
+  "kinds": {
+   "ok": "Works",
+   "switch": "Fix ready, not switched on",
+   "rare": "Rare in a feed",
+   "fuzzy": "Question too fuzzy",
+   "wait": "Waits on an earlier field"
+  },
+  "rows": [
+   {
+    "key": "story_type",
+    "kind": "ok",
+    "line": "Sealed set: 91.5% agreement with Sonnet (90.0% to 92.8%), always saying 'fact' gets 84.5%. No outside anchor yet (T30)."
+   },
+   {
+    "key": "topic_top2",
+    "kind": "ok",
+    "line": "Two guesses: 92.2% agreement with Sonnet on the sealed set (best constant pair 38.2%); 79.9% against human labels (MN-DS, fresh articles), right at the 80% line."
+   },
+   {
+    "key": "condition_present",
+    "kind": "fuzzy",
+    "line": "Parked at the field gate after two definition rounds. v6b-student finds 29.3% of real cases and its end-to-end 86.3% is below simply saying no (89.1%). No gross false-yes errors in the outside check."
+   },
+   {
+    "key": "which_condition_all",
+    "kind": "rare",
+    "line": "Only meaningful on articles that have a condition. 79.2%, 3 points short."
+   },
+   {
+    "key": "direction_all",
+    "kind": "wait",
+    "line": "Same slice as condition; waits until condition is ready."
+   },
+   {
+    "key": "size_all",
+    "kind": "wait",
+    "line": "Waits on condition; the old score is trivial (guessing scores 97.3%)."
+   },
+   {
+    "key": "traits",
+    "kind": "fuzzy",
+    "line": "Counted per trait, not one pass or fail: 1 of 51 traits is GO (deaths or injuries). Two more pass reliability and the in-the-text check but their wording is not settled (a cost grew for ordinary people; a threat to the natural environment). 45 need a wording revision, 2 need more positive examples. The row is Ready when you name the traits the product needs and all of them are GO."
+   }
+  ]
+ }
+}

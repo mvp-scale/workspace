@@ -1,0 +1,249 @@
+{
+ "version": "topic_to_iptc_v2",
+ "note": "Empirical crosswalk derived from the dev sample (items where Clef and Gemma agree on the topic). Measures consistency with human labels under the raters own behaviour; it is not an a-priori definition. Test on a fresh sample only.",
+ "iptc": [
+  "arts, culture, entertainment and media",
+  "conflict, war and peace",
+  "crime, law and justice",
+  "disaster, accident and emergency incident",
+  "economy, business and finance",
+  "education",
+  "environment",
+  "health",
+  "human interest",
+  "labour",
+  "lifestyle and leisure",
+  "politics",
+  "religion and belief",
+  "science and technology",
+  "society",
+  "sport",
+  "weather"
+ ],
+ "map": {
+  "macro_growth_recession": [
+   "economy, business and finance"
+  ],
+  "inflation_prices": [
+   "economy, business and finance"
+  ],
+  "interest_credit_banking": [
+   "economy, business and finance"
+  ],
+  "markets_investment": [
+   "economy, business and finance"
+  ],
+  "public_budget_tax": [
+   "economy, business and finance",
+   "politics"
+  ],
+  "trade_tariffs": [
+   "politics",
+   "economy, business and finance"
+  ],
+  "housing_rents": [
+   "society",
+   "economy, business and finance"
+  ],
+  "work_labour": [
+   "labour"
+  ],
+  "labour_disputes": [
+   "labour",
+   "health"
+  ],
+  "ai_automation": [
+   "science and technology"
+  ],
+  "retirement_pensions": [
+   "society",
+   "labour"
+  ],
+  "social_welfare_poverty": [
+   "society"
+  ],
+  "energy_power": [
+   "economy, business and finance"
+  ],
+  "transport_infrastructure": [
+   "economy, business and finance",
+   "society"
+  ],
+  "food_agriculture": [
+   "lifestyle and leisure",
+   "health"
+  ],
+  "water_utilities": [
+   "environment",
+   "economy, business and finance"
+  ],
+  "climate_change": [
+   "environment"
+  ],
+  "pollution_nature": [
+   "environment"
+  ],
+  "natural_disasters": [
+   "weather",
+   "disaster, accident and emergency incident"
+  ],
+  "public_health": [
+   "health",
+   "science and technology"
+  ],
+  "health_care_system": [
+   "health"
+  ],
+  "medicines_science": [
+   "health",
+   "science and technology"
+  ],
+  "mental_health_substances": [
+   "society",
+   "health"
+  ],
+  "crime_policing": [
+   "crime, law and justice"
+  ],
+  "courts_rulings": [
+   "crime, law and justice",
+   "religion and belief"
+  ],
+  "accidents_incidents": [
+   "disaster, accident and emergency incident"
+  ],
+  "cyber_privacy": [
+   "science and technology",
+   "crime, law and justice"
+  ],
+  "war_conflict": [
+   "conflict, war and peace"
+  ],
+  "terrorism_violence": [
+   "conflict, war and peace"
+  ],
+  "defence_weapons": [
+   "conflict, war and peace",
+   "politics"
+  ],
+  "diplomacy_treaties": [
+   "politics",
+   "conflict, war and peace"
+  ],
+  "sanctions_aid": [
+   "politics",
+   "economy, business and finance",
+   "conflict, war and peace"
+  ],
+  "migration_refugees": [
+   "society"
+  ],
+  "elections_politics": [
+   "politics"
+  ],
+  "legislation_regulation": [
+   "politics"
+  ],
+  "governance_corruption": [
+   "politics",
+   "crime, law and justice"
+  ],
+  "civil_rights_discrimination": [
+   "society",
+   "labour",
+   "religion and belief"
+  ],
+  "protest_movements": [
+   "conflict, war and peace",
+   "politics"
+  ],
+  "family_demographics": [
+   "society"
+  ],
+  "religion_identity": [
+   "religion and belief"
+  ],
+  "education_schools": [
+   "education"
+  ],
+  "research_space": [
+   "science and technology"
+  ],
+  "technology_consumer": [
+   "science and technology"
+  ],
+  "media_information": [
+   "arts, culture, entertainment and media",
+   "politics"
+  ],
+  "consumer_retail": [
+   "lifestyle and leisure",
+   "economy, business and finance",
+   "human interest"
+  ],
+  "business_corporate": [
+   "economy, business and finance",
+   "labour"
+  ],
+  "mining_materials": [
+   "economy, business and finance",
+   "environment"
+  ],
+  "culture_leisure": [
+   "sport",
+   "lifestyle and leisure",
+   "arts, culture, entertainment and media"
+  ],
+  "other": []
+ },
+ "derivation": {
+  "macro_growth_recession": "22 dev items; economy, business and finance 0.95, society 0.05",
+  "inflation_prices": "kept v1 (only 1 dev items)",
+  "interest_credit_banking": "kept v1 (only 2 dev items)",
+  "markets_investment": "kept v1 (only 7 dev items)",
+  "public_budget_tax": "kept v1 (only 8 dev items)",
+  "trade_tariffs": "15 dev items; politics 0.47, economy, business and finance 0.40, education 0.07, labour 0.07",
+  "housing_rents": "kept v1 (only 5 dev items)",
+  "work_labour": "39 dev items; labour 0.79, society 0.08, economy, business and finance 0.05, crime, law and justice 0.03",
+  "labour_disputes": "17 dev items; labour 0.53, health 0.24, education 0.12, conflict, war and peace 0.06",
+  "ai_automation": "kept v1 (only 5 dev items)",
+  "retirement_pensions": "kept v1 (only 2 dev items)",
+  "social_welfare_poverty": "kept v1 (only 4 dev items)",
+  "energy_power": "16 dev items; economy, business and finance 0.62, environment 0.12, disaster, accident and emergency incident 0.06, science and technology 0.06",
+  "transport_infrastructure": "kept v1 (only 3 dev items)",
+  "food_agriculture": "11 dev items; lifestyle and leisure 0.45, health 0.27, environment 0.09, science and technology 0.09",
+  "water_utilities": "kept v1 (only 3 dev items)",
+  "climate_change": "29 dev items; environment 0.69, weather 0.14, economy, business and finance 0.07, religion and belief 0.03",
+  "pollution_nature": "68 dev items; environment 0.78, human interest 0.07, disaster, accident and emergency incident 0.07, science and technology 0.04",
+  "natural_disasters": "116 dev items; weather 0.78, disaster, accident and emergency incident 0.21, politics 0.02",
+  "public_health": "27 dev items; health 0.63, science and technology 0.19, arts, culture, entertainment and media 0.07, crime, law and justice 0.04",
+  "health_care_system": "29 dev items; health 0.83, society 0.10, disaster, accident and emergency incident 0.03, lifestyle and leisure 0.03",
+  "medicines_science": "17 dev items; health 0.59, science and technology 0.29, lifestyle and leisure 0.06, society 0.06",
+  "mental_health_substances": "15 dev items; society 0.40, health 0.20, human interest 0.07, politics 0.07",
+  "crime_policing": "60 dev items; crime, law and justice 0.62, disaster, accident and emergency incident 0.10, society 0.10, religion and belief 0.07",
+  "courts_rulings": "30 dev items; crime, law and justice 0.50, religion and belief 0.20, conflict, war and peace 0.10, politics 0.07",
+  "accidents_incidents": "46 dev items; disaster, accident and emergency incident 0.85, human interest 0.04, religion and belief 0.04, science and technology 0.02",
+  "cyber_privacy": "kept v1 (only 9 dev items)",
+  "war_conflict": "46 dev items; conflict, war and peace 0.89, politics 0.07, religion and belief 0.02, crime, law and justice 0.02",
+  "terrorism_violence": "23 dev items; conflict, war and peace 0.48, disaster, accident and emergency incident 0.13, religion and belief 0.13, crime, law and justice 0.09",
+  "defence_weapons": "kept v1 (only 7 dev items)",
+  "diplomacy_treaties": "30 dev items; politics 0.50, conflict, war and peace 0.23, economy, business and finance 0.07, human interest 0.07",
+  "sanctions_aid": "kept v1 (only 8 dev items)",
+  "migration_refugees": "22 dev items; society 0.59, politics 0.14, religion and belief 0.09, crime, law and justice 0.05",
+  "elections_politics": "50 dev items; politics 0.48, human interest 0.08, arts, culture, entertainment and media 0.08, labour 0.08",
+  "legislation_regulation": "kept v1 (only 6 dev items)",
+  "governance_corruption": "kept v1 (only 5 dev items)",
+  "civil_rights_discrimination": "27 dev items; society 0.26, labour 0.19, religion and belief 0.19, education 0.15",
+  "protest_movements": "22 dev items; conflict, war and peace 0.41, politics 0.27, crime, law and justice 0.09, disaster, accident and emergency incident 0.05",
+  "family_demographics": "15 dev items; society 0.87, education 0.07, human interest 0.07",
+  "religion_identity": "51 dev items; religion and belief 0.78, science and technology 0.04, education 0.04, society 0.04",
+  "education_schools": "74 dev items; education 0.81, science and technology 0.09, society 0.03, health 0.03",
+  "research_space": "34 dev items; science and technology 0.79, human interest 0.12, environment 0.06, disaster, accident and emergency incident 0.03",
+  "technology_consumer": "kept v1 (only 5 dev items)",
+  "media_information": "29 dev items; arts, culture, entertainment and media 0.59, politics 0.21, religion and belief 0.07, science and technology 0.03",
+  "consumer_retail": "13 dev items; lifestyle and leisure 0.46, economy, business and finance 0.15, human interest 0.15, society 0.08",
+  "business_corporate": "18 dev items; economy, business and finance 0.50, labour 0.22, arts, culture, entertainment and media 0.11, science and technology 0.06",
+  "mining_materials": "kept v1 (only 0 dev items)",
+  "culture_leisure": "244 dev items; sport 0.36, lifestyle and leisure 0.19, arts, culture, entertainment and media 0.16, human interest 0.15"
+ }
+}

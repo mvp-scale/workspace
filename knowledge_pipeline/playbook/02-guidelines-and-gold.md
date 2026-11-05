@@ -3,6 +3,8 @@
 **Goal:** a written definition humans apply consistently, a measured agreement level, and a frozen test set. This is
 the cheapest step and the one that decides whether everything after it can be judged.
 
+**Exit gate:** a field leaves this chapter only through the field qualifier ([13](13-field-qualifier.md)): a pilot of 50 to 100 items that returns GO, REVISE or PARK. Nothing in chapter 03 starts on a field that has no GO.
+
 ## Rules
 
 1. **Write the guideline before labelling anything.** Include positive and negative examples, boundary rules

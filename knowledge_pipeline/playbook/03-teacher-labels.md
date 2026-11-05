@@ -2,6 +2,8 @@
 
 **Goal:** thousands of training labels at near-human quality, for dollars not weeks, with a known error profile.
 
+**Entry condition:** the field has a GO from the field qualifier ([13](13-field-qualifier.md)). A field that is REVISE or PARK is not labelled at scale; fix the definition first.
+
 ## Rules
 
 1. **CPU pass first, LLM second.** Rules, dictionaries, spaCy or regex propose candidates; the LLM accepts, rejects

@@ -4,22 +4,24 @@ For any task where you want a model that runs on plain CPUs (server, laptop, bro
 minute, with no GPU and no LLM at inference. Large models do the expensive thinking once, offline; a small student
 learns from them.
 
-Chapters, in the order you use them:
+Chapters, in the order you use them. The number is a stable file ID (scripts and the ledger cite it), not the position: read down the rows.
 
-| # | Chapter | Answers |
-|---|---|---|
-| 01 | [Frame the task](01-frame-the-task.md) | What exactly is the model deciding, and what speed/cost/quality does the product need? |
-| 02 | [Guidelines and gold](02-guidelines-and-gold.md) | How do humans mark it, how well do they agree, what is the test set? |
-| 03 | [Teacher labels](03-teacher-labels.md) | How do LLMs produce training labels cheaply and trustworthily? |
-| 04 | [Student model](04-student-model.md) | What small architecture, heads and training recipe? |
-| 05 | [Quantize and export](05-quantize-and-export.md) | How to get an int8 ONNX file without losing quality? |
-| 06 | [Evaluate and gate](06-evaluate-and-gate.md) | How do we decide it's good enough, honestly? |
-| 07 | [Speed and cost](07-speed-and-cost.md) | How to measure and budget items per second per vCPU? |
-| 08 | [Compute and runs](08-compute-and-runs.md) | Where do jobs run (local 3090/5090, RunPod, Google, Kaggle) and how do we not waste hours? |
-| 09 | [Ship and monitor](09-ship-and-monitor.md) | What is shipped, how it runs in Python and the browser, how it stays honest? |
-| 10 | [Lessons](10-lessons.md) | What cost us time and GPU hours, and the rule each one produced |
-| 11 | [Model selection](11-model-selection.md) | Which trunk, span and claim models, chosen on measured fit from live sources? |
-| 12 | [Cross-family test](12-cross-family-test.md) | One test, run unchanged on any model family, that returns comparable scores? |
+| Stage | ID | Chapter | Answers |
+|---|---|---|---|
+| Define | 01 | [Frame the task](01-frame-the-task.md) | What exactly is the model deciding, and what speed/cost/quality does the product need? |
+| Define | 02 | [Guidelines and gold](02-guidelines-and-gold.md) | How do humans mark it, how well do they agree, what is the test set? |
+| Define (gate) | 13 | [Field qualifier](13-field-qualifier.md) | Can this field be classed and measured at all? GO, REVISE or PARK on a small pilot, BEFORE any teacher labelling |
+| Label | 03 | [Teacher labels](03-teacher-labels.md) | How do LLMs produce training labels cheaply and trustworthily? (needs a GO from 13) |
+| Label | 14 | [Routing, soft targets and outside anchors](14-routing-and-anchors.md) | How is disagreement handled per item, and how is a field checked against something outside the models? |
+| Label | 12 | [Cross-family test](12-cross-family-test.md) | One test, run unchanged on any model family, that returns comparable scores? |
+| Build | 11 | [Model selection](11-model-selection.md) | Which trunk, span and claim models, chosen on measured fit from live sources? |
+| Build | 04 | [Student model](04-student-model.md) | What small architecture, heads and training recipe? |
+| Build | 05 | [Quantize and export](05-quantize-and-export.md) | How to get an int8 ONNX file without losing quality? |
+| Judge | 06 | [Evaluate and gate](06-evaluate-and-gate.md) | How do we decide it's good enough, honestly? |
+| Judge | 07 | [Speed and cost](07-speed-and-cost.md) | How to measure and budget items per second per vCPU? |
+| Ship | 09 | [Ship and monitor](09-ship-and-monitor.md) | What is shipped, how it runs in Python and the browser, how it stays honest? |
+| Any stage | 08 | [Compute and runs](08-compute-and-runs.md) | Where do jobs run (local 3090/5090, RunPod, Google, Kaggle) and how do we not waste hours? |
+| Any stage | 10 | [Lessons](10-lessons.md) | What cost us time and GPU hours, and the rule each one produced |
 
 ## Words we use
 
