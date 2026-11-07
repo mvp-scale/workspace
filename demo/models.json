@@ -484,6 +484,35 @@
       "code": "BMOBCP",
       "verify": "e5-small",
       "aliases": []
+    },
+    {
+      "id": "pulse-reader",
+      "name": "BitMob Reader (v6b-student)",
+      "vendor": "This workspace",
+      "kind": "Local, CPU reader, no GPU at all",
+      "open": true,
+      "licence": null,
+      "params": "22.6M fine-tuned leaf student + sparse heads + 4 kind heads + 1 direction head",
+      "base": "MongoDB/mdbr-leaf-mt fine-tuned (distilled from Qwen3-Embedding-4B on 16,000 Sonnet labels), ledger L771 and L774",
+      "architecture": "One ONNX student pass reads story type, topic, condition presence and which condition; sparse linear heads give direction and size",
+      "how": [
+        "Reads a headline plus short description once on one CPU thread and returns the Pulse fields: story type, topic (two guesses), condition present and, when present, which condition, direction and size.",
+        "Each field says answered or unknown; an unknown is the engine declining, not a guess.",
+        "Measured 2026-11-04 (ledger T35): 50 of 50 items identical to ExpertS.read called directly, median 16.3 ms over HTTP on one thread.",
+        "Condition present (the union of all 38 conditions) is parked at the field gate (ledger L758) and is returned marked parked. Four condition kinds have their own heads instead: air pollution, biodiversity loss, civil unrest, cyber insecurity. Each is one logistic head on the same embedding, taught by Sonnet's labels, and passed in both labeller directions (L894). Biodiversity loss also gives a direction, down or up (L898). The other three kinds are almost always up, so they get no direction.",
+        "What these numbers are: agreement between two Claude labellers (Sonnet and Haiku). There is no outside truth set for any of the four kinds (L896). Air pollution, civil unrest and cyber insecurity passed all three labeller designs; biodiversity loss passed two of three, missing the third by 0.001 (L905). Size is dropped: two labellers agree on it only 43 to 68 percent (L895)."
+      ],
+      "interface": "POST /v1/pulse {text} or {items:[{id,text}]} (probes/pulse_reader.py): story type, topic, parked union condition, and conditions [{kind, p, present, direction for biodiversity_loss}]; not a /v1/systemone model",
+      "served_as": "Local process, CPU only, GPU hidden, one thread (:8023)",
+      "price": "Self-hosted",
+      "public_score": null,
+      "public_rank": null,
+      "repo": null,
+      "family": "library",
+      "sauce": "One cheap read of the story, many fixed answers: the Pulse row of the World engine without a GPU.",
+      "code": "PULSEB",
+      "verify": "v6b-student",
+      "aliases": ["Pulse reader", "Pulse reader (v6b-student)", "BitMob Expert 1 v6b-student"]
     }
   ],
   "tiers": [

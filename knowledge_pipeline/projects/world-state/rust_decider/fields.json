@@ -1,0 +1,17 @@
+{
+ "note": "Field table: one row per field (layer pulse now; area and understanding rows later, same columns). Models by registry id (demo/models.json). Every number is READ from the file named in 'src' when route.py loads the table; nothing is typed here. mode ci: interval from file; counts: k and n from file, Wilson interval; acc: accuracy and n from file. guess: how the commonest-answer baseline is obtained.",
+ "thr_permille": 700,
+ "judges": {"validator": "the text itself", "outsideGold": "outside human labels", "claudeAgreement": "Claude labels (agreement, not truth)", "none": "no judge"},
+ "fields": [
+  {"layer":"pulse","field":"story_type","extractor":{"kind":"head","model":"pulse-reader","key":"story_type"},"judge":"outsideGold","judge_name":"CheckThat sentence subjectivity (fact versus opinion, not our four-way type)","contract_confirmed":false,
+   "src":"runs/pulse/anchor_checkthat_v6b-student.json","mode":"ci","n":"n","ci":"primary_subj_is_opinion.ci95","guess":{"kind":"constant","permille":500,"why":"two classes, balanced accuracy of a constant guess is one half (Certainty.lean constant_guess_recalls)"},"rare":null},
+  {"layer":"pulse","field":"topic","extractor":{"kind":"head","model":"pulse-reader","key":"topic_top2"},"judge":"outsideGold","judge_name":"MN-DS human topic labels, right within two guesses","contract_confirmed":true,
+   "src":"runs/pulse/anchor_mnds_fresh_v6b-student.json","mode":"counts","n":"n","k":"top2_lenient","guess":{"kind":"top2_share_of_gold","gold":"/workspace/data/anchors/mn_ds/gold_T28b.json"},"rare":null},
+  {"layer":"pulse","field":"change","extractor":{"kind":"rule","name":"word lists over stated-facts fragments"},"judge":"claudeAgreement","judge_name":"Claude direction labels","contract_confirmed":false,
+   "src":"runs/pulse/direction_cls.json","mode":"acc","n":"stories","acc":"heads.embedding.accuracy","guess":{"kind":"file","path":"always_up_accuracy"},"rare":null},
+  {"layer":"pulse","field":"size","extractor":{"kind":"rule","name":"stated-facts amount"},"judge":"validator","judge_name":"stated-facts validator (says the amount is in the text, not that it is true or the condition's own)","contract_confirmed":false,
+   "src":"runs/pulse/stated_facts.json","mode":"counts","n":"per_kind.amount.captured","k":"per_kind.amount.stated","guess":{"kind":"constant","permille":0,"why":"no commonest-answer exists for 'is stated'"},"rare":null},
+  {"layer":"pulse","field":"traits","extractor":{"kind":"rule","name":"trait rules"},"judge":"claudeAgreement","judge_name":"Claude labels","contract_confirmed":false,
+   "src":null,"mode":"none","guess":{"kind":"constant","permille":0,"why":"not measured"},"rare":null}
+ ]
+}

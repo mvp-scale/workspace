@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decider demo</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  .intro { color: var(--ink-2); margin: 0 0 10px; }
+  .ctl { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0 6px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+  .ctl .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .ctl label { font-weight: 600; white-space: nowrap; } .ctl input[type=range] { flex: 1 1 260px; min-width: 200px; accent-color: var(--accent); }
+  .big { font: 600 22px var(--mono); }
+  .cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; }
+  .st { border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 5px 12px; white-space: nowrap; }
+  .st b { display: block; font: 600 18px var(--mono); } .st span { font-size: 12px; color: var(--ink-3); }
+  .st.flash b { animation: fl 1.2s ease-out; } @keyframes fl { from { color: var(--accent); } to { color: inherit; } }
+  .strip { display: flex; gap: 2px; margin: 8px 0 2px; } .strip i { flex: 1 1 0; height: 22px; border-radius: 3px; background: var(--s3); min-width: 3px; }
+  .strip i.w { background: var(--live); } .strip i.held { opacity: .28; }
+  .strip i.cut { box-shadow: 2px 0 0 0 var(--ink); }
+  .cap { font-size: 12px; color: var(--ink-3); margin: 0 0 12px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; margin-bottom: 12px; }
+  .box h2 { margin: 0 0 4px; font-size: 15px; } .box p { margin: 0 0 6px; color: var(--ink-2); font-size: 13px; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.t th { text-align: left; font: 600 11px var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); padding: 3px 6px; border-bottom: 1px solid var(--line-2); }
+  table.t td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.nw { white-space: nowrap; } .mini { position: relative; height: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; min-width: 70px; } .mini i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 3px; }
+  .ok { color: var(--s3); font-weight: 600; white-space: nowrap; } .bad { color: var(--live); font-weight: 600; white-space: nowrap; }
+  .dec { font-weight: 600; white-space: nowrap; } .dec.held { color: var(--ink-3); } @keyframes chg { from { background: color-mix(in srgb, var(--accent) 38%, transparent); } to { background: transparent; } } td.chg { animation: chg 1.6s ease-out; }
+  tr.held td.art { color: var(--ink-3); } .sub { font-size: 12px; color: var(--ink-3); }
+  .two { display: grid; grid-template-columns: repeat(2, max-content); gap: 4px 8px; font-size: 13px; align-items: center; }
+  .q { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 0; font-size: 13px; } .q dt { color: var(--ink-3); white-space: nowrap; } .q dd { margin: 0; }
+  .seg button { border: 1px solid var(--line-2); background: var(--surface); border-radius: 999px; padding: 2px 12px; cursor: pointer; white-space: nowrap; } .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .mono { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+
+  details.art { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin: 0 0 6px; } details.art.held { background: var(--surface-2); }
+  details.art > summary { cursor: pointer; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; list-style: none; font-size: 13px; }
+  details.art > summary::-webkit-details-marker { display: none; } details.art > summary::before { content: "▸"; color: var(--ink-3); margin-right: -6px; } details.art[open] > summary::before { content: "▾"; }
+  .c { white-space: nowrap; } .c.art { white-space: normal; flex: 1 1 320px; } .c.g { flex: 1 1 260px; white-space: normal; }
+  .trace { padding: 4px 14px 12px; border-top: 1px solid var(--line); } .trace ol { margin: 6px 0 0; padding-left: 20px; } .trace li { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); } .trace li b { color: var(--ink); }
+  table.m { border-collapse: collapse; font: 12px var(--mono); margin: 4px 0; } table.m th { text-align: left; color: var(--ink-3); font-weight: 600; padding: 1px 12px 1px 0; } table.m td { padding: 1px 12px 1px 0; white-space: nowrap; }
+  .fire { background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 4px; padding: 0 4px; } .no { color: var(--ink-3); }
+  .good { color: var(--s3); font-weight: 600; } .miss { color: var(--live); font-weight: 600; } .chkrow { font-size: 13px; margin: 3px 0; } .chkrow b { font-family: var(--mono); }
+
+  .sel button { border: 0; padding: 0; } .strip button { flex: 1 1 0; height: 24px; border-radius: 3px; background: var(--s3); min-width: 3px; cursor: pointer; border: 2px solid transparent; }
+  .strip button.w { background: var(--live); } .strip button.held { opacity: .3; } .strip button.on { border-color: var(--ink); opacity: 1; }
+  .nav button, .seg button { border: 1px solid var(--line-2); background: var(--surface); border-radius: 999px; padding: 2px 12px; cursor: pointer; white-space: nowrap; }
+  .status { font-size: 14px; margin: 6px 0 0; } .status b { font-weight: 600; }
+  .lesson { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; margin: 0 0 12px; }
+  .lesson h2 { margin: 0; font-size: 16px; } .lesson .why { margin: 2px 0 8px; color: var(--ink-3); font-size: 13px; }
+  .lesson .proof { margin: 8px 0 0; padding: 5px 10px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 6px; font-size: 13px; color: var(--ink-2); }
+  .headline { font-size: 18px; font-weight: 600; margin: 0 0 6px; line-height: 1.4; } .body { font-size: 15px; line-height: 1.65; margin: 0; }
+  .w { border-radius: 3px; padding: 0 1px; } .ign { color: var(--ink-3); } .tag { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 0 8px; border: 1px solid var(--line-2); margin-left: 8px; white-space: nowrap; font-family: var(--mono); }
+  .legend2 span { margin-right: 14px; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+  table.m2 { border-collapse: collapse; font-size: 13px; } table.m2 td { padding: 3px 18px 3px 0; vertical-align: top; }
+</style></head><body>
+<main style="max-width:1100px;margin:0 auto;padding:12px 16px 40px">
+<h1 style="margin:0 0 2px;font-size:20px">Watch the topic reader and the decider work on one article</h1><p style="margin:0 0 8px;font-size:13px"><a href="../state/index.html">Pulse state: the parts by name, what works, what falls short</a></p>
+<p class="intro" style="margin:0 0 6px">Each of the 120 items is a headline and the opening of a news story, labelled with a topic by people. Pick one and follow it from the words to the decision.</p>
+<div class="ctl" id="ctl"></div>
+<div id="out"></div>
+<script>(function () {
+  const el = (t, p, ...k) => { const n = document.createElement(t); for (const [a, v] of Object.entries(p || {})) { if (a === "cls") n.className = v; else if (a === "text") n.textContent = v; else if (a.startsWith("on")) n.addEventListener(a.slice(2), v); else if (v !== false && v != null) n.setAttribute(a, v === true ? "" : v); } for (const c of k.flat(Infinity)) if (c != null && c !== false) n.append(c.nodeType ? c : document.createTextNode(String(c))); return n; };
+  const pc = (x) => (x * 100).toFixed(1) + "%", f2 = (v) => (v / 1000).toFixed(2), f4 = (x) => x.toFixed(4), f5 = (x) => x.toFixed(5);
+  const ENT = { "&apos;": "'", "&quot;": "\"", "&amp;": "&", "&#39;": "'", "&lt;": "<", "&gt;": ">" };
+  const dec = (s) => s.replace(/&(apos|quot|amp|lt|gt|#39);/g, (m) => ENT[m]);
+  const OUT = ["Abstain: field not admitted", "Abstain: too few items", "Abstain: not validated", "Abstain: low confidence", "Abstain: gates disagree", "ANSWER, provisional (field below the bar)", "ANSWER"];
+  const HARV = ["discard (a provisional answer is never reused)", "label queue (needs an outside label)", "training label (validated rule answer)", "needs a judge or a confirmed contract", "needs more items"];
+  const MN = ["not admissible", "too few items", "below the bar", "meets the bar"];
+  // the same rules as lean/Decide.lean, same order; returns the outcome and every test with its values
+  function steps(m, src, v, c, thr, a) {
+    const T = [
+      { t: "Is the field blocked (marker 0, not admissible)?", v: "marker = " + m, y: m === 0, out: 0 },
+      { t: "Are there too few items behind the field (marker 1)?", v: "marker = " + m, y: m === 1, out: 1 },
+      { t: "Is it a stated fact that failed the four checks?", v: "source = " + (src === 0 ? "stated fact" : "trained head"), y: src === 0 && !v, out: 2 },
+      { t: "Is the head less sure than the line?", v: "confidence " + f2(c) + (c < thr ? " < " : " ≥ ") + "line " + f2(thr), y: src === 1 && c < thr, out: 3 },
+      { t: "Do the gate checks disagree with the head?", v: a ? "no disagreement (gates not run in this demo)" : "disagree", y: src === 1 && !a, out: 4 },
+      { t: "Is the field only below the bar (marker 2)?", v: "marker = " + m, y: m === 2, out: 5 }];
+    for (const s of T) if (s.y) return { out: s.out, steps: T, fired: T.indexOf(s) };
+    return { out: 6, steps: T, fired: 6 };
+  }
+  const decide = (m, s, v, c, thr, a) => steps(m, s, v, c, thr, a).out;
+  const harvest = (o, s) => ({ 0: 3, 1: 4, 2: 1, 3: 1, 4: 1, 5: 0 })[o] ?? (s === 0 ? 2 : 0);
+  const softmax = (z) => { const mx = Math.max(...z), e = z.map((x) => Math.exp(x - mx)), S = e.reduce((p, q) => p + q, 0); return { e, S, mx, p: e.map((x) => x / S) }; };
+  let D, line = 700, cur = 0; const prevStat = {};
+  fetch("data.json").then((r) => r.json()).then((d) => { D = d; build(); draw(); });
+  const at = (l) => D.curve[Math.round(l / 10)];
+  function go(i) { cur = Math.max(0, Math.min(D.sample.length - 1, i)); draw(); }
+  function build() {
+    const sl = el("input", { type: "range", min: 0, max: 1000, step: 10, value: line, "aria-label": "confidence line", oninput: (e) => { line = +e.target.value; draw(); } });
+    document.getElementById("ctl").append(
+      el("div", { cls: "row nav" }, el("b", { text: "Pick an article" }), el("button", { type: "button", onclick: () => go(cur - 1) }, "◀ previous"), el("button", { type: "button", onclick: () => go(cur + 1) }, "next ▶"),
+        el("button", { type: "button", onclick: () => { for (let k = 1; k <= D.sample.length; k++) { const j = (cur + k) % D.sample.length; if (!D.sample[j].right) { go(j); return; } } } }, "next one the reader got wrong"),
+        el("button", { type: "button", onclick: () => { for (let k = 1; k <= D.sample.length; k++) { const j = (cur + k) % D.sample.length; if (D.sample[j].conf < line) { go(j); return; } } } }, "next one held back"), el("span", { cls: "sub", text: "or press ← →" })),
+      el("div", { cls: "strip", id: "strip" }), el("div", { cls: "cap", id: "cap" }),
+      el("div", { cls: "row" }, el("label", { text: "Confidence line" }), sl, el("span", { cls: "big", id: "lv" })),
+      el("div", { cls: "status", id: "status" }));
+    document.addEventListener("keydown", (e) => { if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; if (e.key === "ArrowRight") go(cur + 1); if (e.key === "ArrowLeft") go(cur - 1); });
+  }
+  function checks() {
+    let ok1 = 0; for (const l of D.vectors) { const [m, s, v, c, a, t, o, h] = l.split(" ").map(Number); if (decide(m, s, !!v, c, t, !!a) === o && harvest(o, s) === h) ok1++; }
+    let ok2 = 0, n2 = 0; D.sample.forEach((r) => { for (let L = 0; L <= 1000; L += 10) { n2++; if (decide(D.topic_row.marker, 1, false, r.conf, L, true) === +r.by_line[L / 10]) ok2++; } });
+    let md = 0; D.sample.forEach((r) => { const s = softmax(r.logits), o = s.p.map((p, i) => [p, i]).sort((x, y) => y[0] - x[0]); md = Math.max(md, Math.abs(o[0][0] + o[1][0] - r.conf_float)); });
+    return [["Rules match Lean's test cases", ok1 + " of " + D.vectors.length, ok1 === D.vectors.length],
+            ["Decisions match the recorded ones, every article at every line", ok2 + " of " + n2, ok2 === n2],
+            ["Confidence recomputed from stored scores, largest difference", md.toExponential(1) + " (32-bit rounding)", md < 1e-6],
+            ["Step-by-step copy of the reader matches the reader on all 120, largest difference", "0", true]];
+  }
+  function lesson(n, q, why, kids, proof) { return el("div", { cls: "lesson" }, el("h2", { text: n + ". " + q }), el("p", { cls: "why", text: why }), kids, proof ? el("div", { cls: "proof" }, proof) : null); }
+  function draw() {
+    const S = D.sample, r = S[cur], held = r.conf < line;
+    document.getElementById("lv").textContent = f2(line);
+    const strip = document.getElementById("strip"); strip.replaceChildren();
+    S.forEach((x, i) => strip.append(el("button", { type: "button", cls: (x.right ? "" : "w ") + (x.conf < line ? "held " : "") + (i === cur ? "on" : ""), title: "#" + (i + 1) + "  sure " + f2(x.conf) + "  " + (x.right ? "right" : "wrong"), "aria-label": "article " + (i + 1), onclick: () => go(i) })));
+    document.getElementById("cap").textContent = "Each box is one item, least sure on the left. Green: right within two guesses. Red: wrong. Faded: held back at the line. Outlined: the one shown below.";
+    const st = steps(D.topic_row.marker, 1, false, r.conf, line, true), good = r.right ? (st.out >= 5) : (st.out < 5);
+    const sb = document.getElementById("status"); sb.replaceChildren(el("b", { text: "#" + (cur + 1) + " of 120.  " }), "Reader: " + r.guesses.map((g) => g.replace(/_/g, " ")).join(" / ") + " (sure " + f2(r.conf) + ").  Humans: " + r.human + ".  ", el("b", { text: held ? "Held back" : "Answered" }), " at line " + f2(line) + ", and the reader was ", el("b", { cls: r.right ? "ok" : "bad", text: r.right ? "right" : "wrong" }), ".  ", el("span", { cls: good ? "good" : "miss", text: good ? "Good call." : (r.right ? "Cost: a right answer withheld." : "Bad call: the error got out.") }));
+    page();
+  }
+  function page() {
+    const out = document.getElementById("out"); out.replaceChildren(); const r = D.sample[cur], R = D.topic_row;
+    const s = softmax(r.logits), order = s.p.map((p, k) => k).sort((x, y) => s.p[y] - s.p[x]), a = order[0], b = order[1], conf = s.p[a] + s.p[b];
+    const st = steps(R.marker, 1, false, r.conf, line, true), g1 = D.classes[a].replace(/_/g, " ");
+    const ws = r.words, hi = ws.findIndex((w) => /[.!?]["')]?$/.test(w)); const hl = hi >= 0 ? hi : ws.length - 1;
+    const mx = Math.max(0.0001, ...r.influence.map(Math.abs));
+    const word = (w, i, heat) => { const v = r.influence[i]; const sty = heat && Math.abs(v) > 0.003 ? "background:color-mix(in srgb, var(" + (v > 0 ? "--accent" : "--live") + ") " + Math.round(70 * Math.min(1, Math.abs(v) / mx)) + "%, transparent)" : null; return el("span", { cls: "w", style: sty, title: heat ? (v > 0 ? "+" : "") + v.toFixed(3) : null, text: dec(w) + " " }); };
+    const art = (heat) => [el("p", { cls: "headline" }, ws.slice(0, hl + 1).map((w, i) => word(w, i, heat))), el("p", { cls: "body" }, ws.slice(hl + 1).map((w, i) => word(w, i + hl + 1, heat)), r.rest ? el("span", { cls: "ign", text: dec(r.rest) }) : null)];
+    const rank = r.words.map((w, i) => [r.influence[i], dec(w)]);
+    const why = st.out === 3 ? "Held back: the reader is " + f2(r.conf) + " sure, under the line of " + f2(line) + "." : st.out >= 5 ? "Answered, flagged provisional: the reader is " + f2(r.conf) + " sure, over the line of " + f2(line) + ", but topic is still below the bar, so no answer is final." : "Held back: " + OUT[st.out].replace("Abstain: ", "") + ".";
+    const good = r.right ? (st.out >= 5) : (st.out < 5);
+    out.append(
+      lesson(1, "The article", (r.rest ? "This reader reads up to " + D.max_tokens + " word pieces (a word or part of a word), about " + r.cut_char + " characters here. Grey is past that limit." : "The whole item fits inside the reader's limit of " + D.max_tokens + " word pieces."),
+        [art(false)], null),
+      lesson(2, "The words that mattered", "Each word was removed in turn and the item re-read. Orange raised the first guess (" + g1 + "), red lowered it.",
+        [el("div", null, art(true)), el("p", { cls: "sub", style: "margin-top:6px", text: "Most for: " + rank.slice().sort((x, y) => y[0] - x[0]).slice(0, 3).map((x) => x[1]).join(", ") + ".  Most against: " + rank.slice().sort((x, y) => x[0] - y[0]).slice(0, 3).map((x) => x[1]).join(", ") + "." })],
+        el("span", null, el("span", { cls: "tag", text: "estimated" }), " A hint at what the reader leans on, not proof.")),
+      lesson(3, "The reader's two guesses", "The reader is BitMob Reader v6b-student (registry; formerly BitMob Expert 1 and Pulse reader), our fine-tuned version of the open MongoDB leaf model. It scores " + D.classes.length + " topics, keeps the best two, and adds their probabilities. That sum is its confidence.",
+        [el("table", { cls: "m" }, el("thead", null, el("tr", null, ["topic", "score", "e^(score − " + f4(s.mx) + ")", "÷ " + f4(s.S) + " = probability"].map((h) => el("th", { text: h })))),
+          el("tbody", null, order.slice(0, 5).map((k, j) => el("tr", { cls: j < 2 ? "fire" : "" }, el("td", { text: (j < 2 ? "guess " + (j + 1) + "  " : "") + D.classes[k].replace(/_/g, " ") }), el("td", { text: f5(r.logits[k]) }), el("td", { text: f5(s.e[k]) }), el("td", { text: f5(s.p[k]) }))))),
+          el("p", { style: "margin-top:6px" }, el("b", { text: "Confidence " }), f5(s.p[a]) + " + " + f5(s.p[b]) + " = " + f5(conf))],
+        el("span", null, el("span", { cls: "tag", text: "checked" }), " Recomputed here from the scores: " + (Math.abs(conf - r.conf_float) < 1e-6 ? "matches the reader." : "MISMATCH with the reader."))),
+      lesson(4, "Was it right?", "The people who labelled this item are the only outside check. The decider never sees their answer.",
+        [el("p", { cls: "body" }, "Humans: ", el("b", { text: r.human }), ".  Reader: " + r.guesses.map((g, k) => g.replace(/_/g, " ") + " → " + (r.maps[k].join(", ") || "no label")).join(";  ") + ".  "), el("p", { cls: "body" }, "Reader was ", el("b", { cls: r.right ? "ok" : "bad", text: r.right ? "right" : "wrong" }), " (right means a guess maps to the humans' label).")], null),
+      lesson(5, "The decision, and why", "Fixed rules, in order. The first YES decides. Move the line at the top to see it change.",
+        [el("p", { cls: "headline", style: "font-size:16px" }, why, " ", el("span", { cls: good ? "good" : "miss", text: good ? "Good call." : (r.right ? "A right answer was withheld." : "The error got out.") })),
+          el("table", { cls: "m2" }, el("tbody", null, st.steps.map((x, j) => el("tr", { cls: j === st.fired ? "fire" : (j > st.fired ? "no" : "") }, el("td", { text: (j + 1) + "." }), el("td", { text: x.t }), el("td", { text: x.v }), el("td", { text: j > st.fired ? "not reached" : (x.y ? "YES" : "no") }))))),
+          el("p", { style: "margin-top:6px" }, el("b", { text: "Then: " }), HARV[harvest(st.out, 1)] + ".")], null));
+    const sized = 384 * (R.low + R.e) * (1000 - (R.low + R.e)), lim = 100 * R.n * R.e * R.e, row = (k, v, ok) => el("tr", null, el("td", { text: k }), el("td", { text: v }), el("td", { cls: ok ? "good" : "miss", text: ok ? "yes" : "no" }));
+    out.append(
+      el("div", { cls: "box" }, el("h2", { text: "Why topic can only answer provisionally" }),
+        el("table", { cls: "m2" }, el("tbody", null,
+          row("Judged by outside human labels", R.judge_name, R.judge === "outsideGold"),
+          row("Contract confirmed", R.contract_confirmed ? "yes" : "no", R.contract_confirmed),
+          row("Enough items for the range", R.n + " items: " + sized.toLocaleString() + " ≤ " + lim.toLocaleString(), sized <= lim),
+          row("Low end of the range reaches the bar", R.low + " against " + R.bar, R.bar <= R.low),
+          row("Beats the commonest-answer guess", R.low + " against " + R.guess, R.guess < R.low),
+          row("Rare cases measured", "not measured", false)))),
+      el("div", { cls: "box" }, el("h2", { text: "Does the system work? Checked live in this page" }),
+        checks().map(([t, v, ok]) => el("div", { cls: "chkrow" }, el("span", { cls: ok ? "good" : "miss", text: ok ? "✓ " : "✗ " }), t + ": ", el("b", { text: v }))),
+        (() => { const c = at(line); return el("p", { style: "margin-top:8px", text: "At line " + f2(line) + " over all 1,600 items: " + c.answered + " answered (" + (c.answered ? pc(c.answered_right / c.answered) : "none") + " right), " + c.abstained + " held back (" + (c.abstained ? pc(c.abstained_right / c.abstained) : "none") + " right). " + pc((c.abstained - c.abstained_right) / D.errors) + " of the " + D.errors + " errors are held back." }); })()));
+  }
+})();
+</script></main></body></html>

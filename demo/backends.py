@@ -59,6 +59,8 @@ BACKENDS = {
     # questions; library_only (so it is never a teacher, never in Auto, never offered where pages send arbitrary questions) but engine_reader (so the World engine's Reader picker can pin it).
     # The model label picks the mode: "bitmob-clef" sends expected-impact, severity and So-what questions to local Clef; "bitmob-cpu" refuses them (the engine skips them).
     "bitmob-cpu": {"url": _local("BITMOB_READER_URL", 8021), "key": "", "model": "bitmob-cpu", "library_only": True, "engine_reader": True, "cpu_only": True, "health": "/health"},
+    # BitMob Reader, formerly Pulse reader (T35, probes/pulse_reader.py, :8023): the registered CPU engine v6b-student behind POST /v1/pulse. Not a /v1/systemone model, so library_only (never a teacher, never in Auto, not offered where pages send arbitrary questions); it shows in the Models panel.
+    "pulse-reader": {"url": _local("PULSE_READER_URL", 8023), "key": "", "model": "pulse-reader", "library_only": True, "cpu_only": True, "health": "/health"},
 }
 for _b in BACKENDS.values(): _b.setdefault("model", "jev-latest"); _b.setdefault("hosted", False); _b.setdefault("library_only", False); _b.setdefault("engine_reader", False); _b.setdefault("cpu_only", False)
 

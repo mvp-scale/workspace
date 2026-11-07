@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reading gates</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  .intro { color: var(--ink-2); margin: 0 0 12px; }
+  .picker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 6px 0; }
+  .picker button { border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 8px 12px; cursor: pointer; text-align: left; white-space: nowrap; }
+  .picker button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .picker .src { display: block; font: 600 11px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .picker .ttl { display: block; font-size: 14px; }
+  .main { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; margin-bottom: 10px; }
+  .gcard { cursor: pointer; } .gcard.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card h2 { margin: 0 0 2px; font-size: 15px; }
+  .card h2 .g { font: 600 12px var(--mono); color: var(--accent); margin-right: 6px; }
+  .what { margin: 0 0 6px; color: var(--ink-3); font-size: 13px; }
+  .find { margin: 6px 0 0; padding: 6px 10px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 6px; font-size: 13px; color: var(--ink-2); }
+  .sent { margin: 0 0 6px; padding: 5px 8px 5px 10px; border-left: 4px solid var(--line-2); border-radius: 4px; font-size: 14px; line-height: 1.6; }
+  .sent .n { font: 500 11px var(--mono); color: var(--ink-3); margin-right: 6px; white-space: nowrap; }
+  .sent.hit { background: color-mix(in srgb, var(--accent) 12%, transparent); border-left-color: var(--accent); }
+  mark { background: transparent; color: inherit; padding: 0 1px; border-bottom: 2px solid var(--ink-3); border-radius: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+  .legend mark { font-size: 12px; padding: 1px 6px; white-space: nowrap; }
+  mark.entity { border-color: var(--s1); background: color-mix(in srgb, var(--s1) 13%, transparent); }
+  mark.quantity, mark.money, mark.percent { border-color: var(--s2); background: color-mix(in srgb, var(--s2) 16%, transparent); }
+  mark.date { border-color: var(--s4); background: color-mix(in srgb, var(--s4) 22%, transparent); }
+  mark.change { border-color: var(--s3); background: color-mix(in srgb, var(--s3) 16%, transparent); }
+  mark.event { border-color: var(--s6); background: color-mix(in srgb, var(--s6) 12%, transparent); }
+  mark.attribution { border-color: var(--s5); background: color-mix(in srgb, var(--s5) 14%, transparent); }
+  mark.modal { border-color: var(--s4); } mark.negation { border-color: var(--live); background: color-mix(in srgb, var(--live) 14%, transparent); }
+  mark.quote { border-color: var(--line-2); background: color-mix(in srgb, var(--ink-3) 10%, transparent); }
+  mark.subj { border-color: var(--s1); background: color-mix(in srgb, var(--s1) 18%, transparent); } mark.pred { border-color: var(--s2); background: color-mix(in srgb, var(--s2) 24%, transparent); font-weight: 600; } mark.obj { border-color: var(--s3); background: color-mix(in srgb, var(--s3) 18%, transparent); }
+  mark.snap { border-color: var(--s1); background: color-mix(in srgb, var(--s1) 12%, transparent); } mark.desc { border-color: var(--s3); background: color-mix(in srgb, var(--s3) 20%, transparent); }
+  mark.hd0 { border-color: var(--s1); background: color-mix(in srgb, var(--s1) 20%, transparent); } mark.hd1 { border-color: var(--s2); background: color-mix(in srgb, var(--s2) 22%, transparent); } mark.hd2 { border-color: var(--s3); background: color-mix(in srgb, var(--s3) 22%, transparent); } mark.hd3 { border-color: var(--s5); background: color-mix(in srgb, var(--s5) 22%, transparent); } mark.hd4 { border-color: var(--s6); background: color-mix(in srgb, var(--s6) 22%, transparent); }
+  mark.enc { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 0; font-size: 13px; } dl.kv dt { color: var(--ink-3); white-space: nowrap; } dl.kv dd { margin: 0; }
+  .org { font-size: 11px; border-radius: 999px; padding: 0 7px; margin-left: 6px; border: 1px solid var(--line-2); white-space: nowrap; }
+  .org.g { background: color-mix(in srgb, var(--s3) 20%, transparent); } .org.d { background: color-mix(in srgb, var(--s1) 18%, transparent); }
+  .line { font-size: 13px; margin: 4px 0; color: var(--ink-2); } .line b { color: var(--ink); }
+  .pair { display: inline-block; white-space: nowrap; margin-right: 14px; }
+  .ok { color: var(--s3); font-weight: 600; white-space: nowrap; } .bad { color: var(--live); font-weight: 600; white-space: nowrap; }
+  .frag { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 3px 8px; margin: 3px 0; font-size: 12px; cursor: pointer; }
+  .frag.sel { border-color: var(--accent); } .frag i { font-style: normal; color: var(--ink-3); }
+  table.lad { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+  table.lad th { text-align: left; font: 600 11px var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); padding: 3px 6px; border-bottom: 1px solid var(--line-2); }
+  table.lad td { padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .mini { position: relative; height: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; min-width: 70px; } .mini i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink-3); border-radius: 3px; } .mini.enc i { background: var(--accent); } .mini b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--live); }
+  .badge { white-space: nowrap; display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 600; border: 1px solid var(--line-2); }
+  .badge.wording { background: color-mix(in srgb, var(--s3) 20%, transparent); } .badge.meaning { background: color-mix(in srgb, var(--s1) 18%, transparent); } .badge.weak { background: color-mix(in srgb, var(--s4) 24%, transparent); }
+  .small { font-size: 12px; color: var(--ink-3); } .ng { font-family: var(--mono); font-size: 12px; color: var(--ink-2); } .ng span { white-space: nowrap; margin-right: 10px; display: inline-block; }
+  .abr { display: grid; grid-template-columns: 170px 1fr 1fr; gap: 10px; align-items: center; font-size: 13px; margin: 4px 0; white-space: nowrap; }
+  .abr .t { height: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; position: relative; } .abr .t i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 4px; } .abr .t i.g { background: var(--ink-3); } .abr .t span { position: absolute; left: 6px; top: -4px; font: 600 11px var(--mono); }
+  .flow { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; } .flow div { flex: 1 1 220px; border: 1px solid var(--line-2); background: var(--surface-2); border-radius: 10px; padding: 6px 10px; font-size: 13px; } .flow div b { display: block; color: var(--accent); }
+  .chipsw { display: flex; flex-wrap: wrap; gap: 5px; margin: 4px 0; } .chipsw span { border: 1px solid var(--line-2); background: var(--surface-2); border-radius: 999px; padding: 1px 9px; font-size: 12px; white-space: nowrap; } .chipsw span.s { background: color-mix(in srgb, var(--s3) 22%, transparent); } .chipsw span.p { background: color-mix(in srgb, var(--s4) 24%, transparent); } .chipsw span.n { color: var(--ink-3); border-style: dashed; }
+  mark.wn_s { border-color: var(--s3); background: color-mix(in srgb, var(--s3) 24%, transparent); } mark.wn_p { border-color: var(--s4); background: color-mix(in srgb, var(--s4) 26%, transparent); } mark.wn_n { border-bottom: 2px dashed var(--ink-3); }
+  mark.sf_amount { border-color: var(--s2); background: color-mix(in srgb, var(--s2) 22%, transparent); } mark.sf_date { border-color: var(--s4); background: color-mix(in srgb, var(--s4) 26%, transparent); } mark.sf_name { border-color: var(--s1); background: color-mix(in srgb, var(--s1) 16%, transparent); } mark.sf_triple { border-color: var(--s6); background: color-mix(in srgb, var(--s6) 22%, transparent); font-weight: 600; } mark.sf_un { border-bottom: 2px dashed var(--ink-3); }
+  .ev { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 0 8px; margin-left: 8px; border: 1px solid var(--line-2); white-space: nowrap; font-family: var(--sans); } .ev.chk { background: color-mix(in srgb, var(--s3) 22%, transparent); } .ev.par { background: color-mix(in srgb, var(--s1) 18%, transparent); } .ev.est { background: color-mix(in srgb, var(--s4) 26%, transparent); }
+  .key { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; } .key span { margin-right: 14px; white-space: nowrap; }
+  .prow { border-top: 1px solid var(--line); padding: 6px 4px; cursor: pointer; border-radius: 6px; } .prow:first-of-type { border-top: 0; } .prow.sel { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .prow .lab { font: 600 11px var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); } .prow .ans { font-size: 14px; font-weight: 600; } .prow .mth { font: 12px/1.45 var(--mono); color: var(--ink-2); margin-top: 2px; } .prow .cav { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  mark.pf_story_type { border-color: var(--s6); background: color-mix(in srgb, var(--s6) 22%, transparent); } mark.pf_topic { border-color: var(--s1); background: color-mix(in srgb, var(--s1) 20%, transparent); } mark.pf_change { border-color: var(--s3); background: color-mix(in srgb, var(--s3) 22%, transparent); } mark.pf_size { border-color: var(--s2); background: color-mix(in srgb, var(--s2) 22%, transparent); } mark.pf_traits { border-color: var(--s5); background: color-mix(in srgb, var(--s5) 22%, transparent); } mark.pf_what_changed { border-color: var(--s4); background: color-mix(in srgb, var(--s4) 26%, transparent); }
+  table.sb td { white-space: normal; vertical-align: top; } table.sb td.ng { overflow-wrap: anywhere; } dl.defs { grid-template-columns: max-content 1fr; } dl.defs dt { font-weight: 600; color: var(--ink); } dl.defs dd { margin: 0 0 4px; }
+  .prow .src { font: 11px var(--mono); color: var(--ink-3); }
+  @keyframes chg { from { background: color-mix(in srgb, var(--accent) 38%, transparent); } to { background: transparent; } } td.chg { animation: chg 2.2s ease-out; }
+  .sw3 { display: inline-flex; gap: 6px; margin-left: 12px; vertical-align: middle; } .sw3 button { border: 1px solid var(--line-2); background: var(--surface-2); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; } .sw3 button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  td.thisart { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .foot { font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+</style>
+</head><body><div class="wrap">
+<div class="bar"><a class="back" href="../index.html">All mock-ups</a><h1>Reading gates</h1><span class="sp"></span><span class="small" id="built"></span><p style="margin:0 0 8px;font-size:13px"><a href="../state/index.html">Pulse state: the parts by name, what works, what falls short</a></p></div>
+<p class="intro" id="intro"></p>
+<div class="picker" id="picker" role="group" aria-label="Choose an article"></div>
+<p class="key" id="key"></p>
+<div class="main">
+  <section class="card" aria-label="The article">
+    <h2 id="lenstitle"></h2>
+    <div class="legend" id="legend"></div>
+    <div id="sents"></div>
+  </section>
+  <div id="gates"></div>
+</div>
+<section class="card" id="agree"></section>
+<section class="card" id="ladder"></section>
+<p class="foot" id="foot"></p>
+</div>
+<script>
+(function () {
+  "use strict";
+  const el = (tag, props, ...kids) => { const n = document.createElement(tag); if (props) for (const k in props) { if (k === "text") n.textContent = props[k]; else if (k === "cls") n.className = props[k]; else if (k === "style") Object.assign(n.style, props[k]); else if (k.startsWith("on")) n.addEventListener(k.slice(2), props[k]); else n.setAttribute(k, props[k]); } for (const c of kids.flat()) if (c != null) n.append(c.nodeType ? c : document.createTextNode(String(c))); return n; };
+  const pct = (x) => (100 * x).toFixed(0) + "%";
+  const S = { a: 0, layer: "g0", frag: null, head: null, sfk: null, pf: null }; let D = null;
+  const CLS = { entity: "name", quantity: "quantity", money: "money", percent: "percent", date: "date", attribution: "who said it", negation: "not / despite", modal: "could / will", change: "change word", event: "event verb", quote: "quotation" };
+
+  fetch("data.json").then((r) => r.json()).then((d) => { D = d; init(); }).catch((e) => { document.getElementById("intro").textContent = "data.json is missing: run projects/world-state/gates_mockup_data.py then gates_v2.py (" + e + ")"; });
+
+  function init() {
+    document.getElementById("built").textContent = "computed by " + D.built_by + " and gates_v2.py";
+    document.getElementById("intro").textContent = "Three real articles through the gates of playbook 00. Click a card to see what that gate adds, highlighted in the article. Each card shows the contract check it passes and its measured cost.";
+    const pk = document.getElementById("picker");
+    D.articles.forEach((a, i) => pk.append(el("button", { type: "button", "aria-pressed": String(i === 0), onclick: () => { S.a = i; S.frag = null; S.head = null; draw(); } }, el("span", { cls: "src", text: a.source }), el("span", { cls: "ttl", text: a.title }))));
+    const kk = document.getElementById("key"); kk.append(el("b", { text: "What kind of evidence each card shows:  " }), el("span", null, el("span", { cls: "ev chk", text: "checked" }), " verified against the text itself"), el("span", null, el("span", { cls: "ev par", text: "parsed" }), " read by a parser, judged separately against outside gold"), el("span", null, el("span", { cls: "ev est", text: "estimated" }), " a similarity score or a trained model's probability: agreement with Sonnet's labels, not truth"), el("span", null, el("b", { text: "Keys 1, 2, 3 switch article from anywhere on the page." })));
+    document.addEventListener("keydown", (e) => { if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; const i = ["1", "2", "3"].indexOf(e.key); if (i >= 0 && i < D.articles.length) { S.a = i; S.frag = null; S.head = null; draw(); } });
+    document.getElementById("foot").textContent = "Limits: labels behind the ladder and the heads are Sonnet agreement, not outside truth. Heads read the first 600 characters (title plus body). The solver runs on a small spaCy model as a prototype of the playbook's bounded templates. Scan speed is Python regex, far under the playbook's Rust target. Not tuned for production.";
+    draw();
+  }
+  const art = () => D.articles[S.a];
+  function draw() { [...document.getElementById("picker").children].forEach((b, i) => b.setAttribute("aria-pressed", String(i === S.a))); const a = art(); drawGates(a); drawLens(a); drawAgree(a); drawLadder(a); }
+
+  // ---- lens: paint spans onto the body, per sentence
+  function layerSpans(a) {
+    const c = a.contract, body = c.body, out = [], legend = []; let hitRanges = [];
+    if (S.layer === "g0") {
+      out.push({ s: 0, e: Math.min(c.snapshot.length, body.length), cls: "snap", prio: 1 }); legend.push(["snap", "snapshot (first " + c.snapshot.length + " characters)"]);
+      const i = body.indexOf(c.description.slice(0, 40)); if (i >= 0) { out.push({ s: i, e: Math.min(i + c.description.length, body.length), cls: "desc", prio: 2 }); legend.push(["desc", "description"]); }
+    } else if (S.layer === "scan") {
+      a.scan.spots.forEach((x) => out.push({ s: x[0], e: x[1], cls: x[2], prio: 1 })); Object.keys(a.scan.counts).forEach((k) => legend.push([k, CLS[k] || k]));
+    } else if (S.layer === "solver") {
+      const fr = S.frag !== null ? [a.solver.fragments[S.frag]] : a.solver.fragments;
+      fr.forEach((f) => { if (f.subject) out.push({ s: f.subject[0], e: f.subject[1], cls: "subj", prio: 2 }); if (f.object) out.push({ s: f.object[0], e: f.object[1], cls: "obj", prio: 1 }); out.push({ s: f.predicate[0], e: f.predicate[1], cls: "pred", prio: 3 }); if (S.frag !== null) hitRanges.push(f.evidence); });
+      legend.push(["subj", "subject"], ["pred", "predicate"], ["obj", "object"]);
+    } else if (S.layer === "sparse") {
+      const ev = a.observation.evidence.filter((e) => e.words.length); ev.forEach((e, i) => { if (S.head && S.head !== e.head) return; e.words.forEach((w) => w.spans.forEach((sp) => out.push({ s: sp[0], e: sp[1], cls: "hd" + (i % 5), prio: 1 }))); legend.push(["hd" + (i % 5), e.head + "  ←  " + e.words.map((w) => w.word).join(", ")]); });
+    } else if (S.layer === "encoder") {
+      a.observation.conditions.filter((k) => k.encoder_status === "yes").forEach((k) => { const q = a.kinds.find((z) => z.kind === k.kind); if (q) { hitRanges.push(q.encoder_evidence); legend.push(["enc", k.kind + " (best sentence)"]); } });
+    } else if (S.layer === "pulse") {
+      const PL = { story_type: "story type", topic: "topic", what_changed: "what changed", change: "change and direction", size: "size", traits: "traits" };
+      Object.keys(PL).forEach((k) => { if (S.pf && S.pf !== k) return; a.pulse[k].evidence.forEach((e) => out.push({ s: e.s, e: e.e, cls: "pf_" + k, prio: 1 })); legend.push(["pf_" + k, PL[k]]); });
+    } else if (S.layer === "stated") {
+      const kinds = S.sfk ? [S.sfk] : ["amount", "date"]; a.stated_facts.facts.filter((f) => kinds.includes(f.kind)).forEach((f) => out.push({ s: f.s, e: f.e, cls: f.status === "stated" ? "sf_" + f.kind : "sf_un", prio: f.kind === "triple" ? 3 : 2 }));
+      kinds.forEach((k) => legend.push(["sf_" + k, k === "triple" ? "predicate of a triple (stated)" : k + " (stated)"])); legend.push(["sf_un", "unbound: no clear binding, left unknown"]);
+    } else if (S.layer === "wide") {
+      const w = a.wide_net; w.items.filter((o) => o.type === "keyphrase").forEach((o) => { const cl = o.strict ? "wn_s" : o.mapped ? "wn_p" : "wn_n"; findAll(body, o.phrase).forEach((r) => out.push({ s: r[0], e: r[1], cls: cl, prio: 2 })); });
+      w.entities.forEach((n) => findAll(body, n).forEach((r) => out.push({ s: r[0], e: r[1], cls: "entity", prio: 1 }))); legend.push(["wn_s", "strong match"], ["wn_p", "possible match"], ["wn_n", "matched nothing: new"], ["entity", "name"]);
+    } else if (S.layer === "density") { legend.push(["hd0", "darker sentence = closer in meaning to the title"]); }
+    return { out, legend, hitRanges };
+  }
+  const findAll = (body, ph) => { const out = []; const re = new RegExp("\\b" + ph.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+") + "\\b", "gi"); let m; while ((m = re.exec(body))) out.push([m.index, m.index + m[0].length]); return out; };
+  const LAYER_NAME = { pulse: "Pulse evidence: the exact words each answer rests on", stated: "Stated facts: spans that pass the validator (dashed = unbound)", wide: "Wide net: open phrases, coloured by what they matched", g0: "G0 record: where the snapshot and description sit in the body", scan: "G1 spot map", solver: "G2 fragments", density: "Lens linkage: each sentence shaded by its closeness to the title", sparse: "G3a evidence words, with the head that they carried", encoder: "G3b best sentences for heads the encoder answered" };
+  function drawLens(a) {
+    document.getElementById("lenstitle").textContent = LAYER_NAME[S.layer];
+    const { out, legend, hitRanges } = layerSpans(a), body = a.contract.body, cls = new Array(body.length).fill(null), pr = new Array(body.length).fill(-1);
+    out.forEach((sp) => { for (let i = sp.s; i < sp.e && i < body.length; i++) if (sp.prio > pr[i]) { pr[i] = sp.prio; cls[i] = sp.cls; } });
+    const lg = document.getElementById("legend"); lg.replaceChildren(); const seen = new Set(); legend.forEach(([c, n]) => { if (seen.has(c + n)) return; seen.add(c + n); lg.append(el("mark", { cls: c, text: n })); });
+    if (S.layer === "sparse" && !legend.length) lg.append(el("span", { cls: "small", text: "no head answered with evidence words for this article" }));
+    if (S.layer === "encoder" && !hitRanges.length) lg.append(el("span", { cls: "small", text: "no head was answered by the encoder for this article" }));
+    const box = document.getElementById("sents"); box.replaceChildren();
+    a.sentences.forEach((s, n) => {
+      const p = el("p", { cls: "sent" }); p.append(el("span", { cls: "n", text: String(n + 1) }));
+      if (hitRanges.some((r) => s.start < r[1] && s.end > r[0])) p.classList.add("hit");
+      if (S.layer === "density") { const v = a.lens.sentence_sims[n]; p.style.background = "color-mix(in srgb, var(--accent) " + Math.round(Math.max(0, v) * 70) + "%, transparent)"; p.append(el("span", { cls: "small", text: "  " + v.toFixed(2) })); }
+      let i = s.start; while (i < s.end) { let j = i; while (j < s.end && cls[j] === cls[i]) j++; const t = body.slice(i, j); p.append(cls[i] ? el("mark", { cls: cls[i] }, t) : t); i = j; }
+      box.append(p);
+    });
+  }
+
+  // ---- gate cards
+  function tbl(heads, rows) { const t = el("table", { cls: "lad" }, el("thead", null, el("tr", null, heads.map((h) => el("th", { text: h }))))); const tb = el("tbody"); rows.forEach((r) => tb.append(el("tr", null, r.map((c) => el("td", { text: String(c), cls: typeof c === "number" ? "num" : "" }))))); t.append(tb); return t; }
+  const ORIG = (o) => !o ? "" : el("span", { cls: "org " + (o.startsWith("given") ? "g" : "d"), text: o.startsWith("given") ? "given" : "derived", title: o });
+  const chk = (c) => Object.entries(c).map(([k, v]) => el("span", { cls: "pair " + (v ? "ok" : "bad"), text: (v ? "✓ " : "✗ ") + k.replace(/_/g, " ") }));
+  const EVT = { pulse: ["par", "rules over the evidence"], g0: ["chk", "checked"], scan: ["chk", "checked"], stated: ["chk", "checked"], solver: ["par", "parsed"], density: ["est", "estimated"], wide: ["est", "estimated"], sparse: ["est", "estimated"], encoder: ["est", "estimated"] };
+  function card(layer, g, title, what, ...kids) { return el("section", { cls: "card gcard" + (S.layer === layer ? " sel" : ""), onclick: () => { S.layer = layer; S.frag = null; S.head = null; S.sfk = null; S.pf = null; draw(); } }, el("h2", null, el("span", { cls: "g", text: g }), title, EVT[layer] ? el("span", { cls: "ev " + EVT[layer][0], text: EVT[layer][1] }) : ""), el("p", { cls: "what", text: what }), ...kids); }
+  function pulseCard(a) {
+    const P = a.pulse, rows = [["story_type", "Story type"], ["topic", "Topic"], ["what_changed", "What changed (who did what)"], ["change", "Change and direction"], ["size", "Size (stated amounts)"], ["traits", "Traits"]];
+    return card("pulse", "Pulse", "Assembled from the gates, with the working", "Each answer comes from the gate evidence by an explicit rule, with the arithmetic shown. Click a row to see its exact words in the article. The trained model's answer is shown only as a cross-check.",
+      ...rows.map(([k, lab]) => el("div", { cls: "prow" + (S.layer === "pulse" && S.pf === k ? " sel" : ""), onclick: (ev) => { ev.stopPropagation(); S.layer = "pulse"; S.pf = S.pf === k ? null : k; draw(); } },
+        el("div", { cls: "lab", text: lab }), el("div", { cls: "ans", text: P[k].answer }), el("div", { cls: "mth", text: P[k].math }), P[k].also ? el("div", { cls: "cav", text: "Trained model says: " + P[k].also }) : "", el("div", { cls: "cav", text: P[k].caveat }), el("div", { cls: "src", text: "Sources: " + P[k].src.join("   ") + "   ledger " + P[k].ledger }))));
+  }
+  function drawGates(a) {
+    const host = document.getElementById("gates"); host.replaceChildren(); host.append(pulseCard(a)); const c = a.contract, t = c.time, p = c.provenance, kv = [];
+    const f = (k, v, o) => kv.push(el("dt", { text: k }), el("dd", null, String(v === null || v === undefined ? "none" : v), ORIG(o)));
+    f("id", c.id); f("kind", c.kind); f("source", c.source.name + (c.source.region ? " (" + c.source.region + ")" : "")); f("title", c.title, c.title_from); f("description", c.description, c.description_from); f("snapshot", c.snapshot.length + " chars", "derived"); f("body", c.body_chars + " chars in " + c.segments.length + " segment" + (c.segments.length === 1 ? "" : "s"));
+    f("published", t.published_at, t.published_at ? "given" : null); f("ingested", t.ingested_at, t.ingested_at ? "given" : null); f("anchor", t.anchor, "derived"); f("language", c.language.code); f("provenance", p.tenant + ", " + p.permission_policy + ", " + p.extraction_version);
+    host.append(card("g0", "G0", "Normalise: the record", "The schema every source is populated into.", el("dl", { cls: "kv" }, kv)));
+    const sc = a.scan, so = a.solver, sp = a.sparse, su = D.g3a_suite, kinds = sp.kinds;
+    host.append(card("scan", "G1", "Scan: spot map", "One pass over the body. Every spot is [start, end, class] into the body, sorted and non-overlapping; dates are resolved against the record's anchor.",
+      el("p", { cls: "line" }, el("span", { cls: "pair", text: sc.spots.length + " spots" }), el("span", { cls: "pair", text: sc.per_1k_chars + " per 1,000 characters" }), el("span", { cls: "pair", text: sc.mb_per_s + " MB/s (Python regex; playbook target is Rust at gigabytes per second)" })),
+      el("p", { cls: "line" }, chk(sc.checks)), el("p", { cls: "line" }, Object.entries(sc.counts).sort((x, y) => y[1] - x[1]).map(([k, v]) => el("span", { cls: "pair", text: (CLS[k] || k) + " " + v }))),
+      el("p", { cls: "line" }, "Dates resolved: ", sc.spots.filter((x) => x[2] === "date").slice(0, 4).map((x) => el("span", { cls: "pair", text: a.contract.body.slice(x[0], x[1]) + " → " + x[3] })))));
+    host.append(card("solver", "G2", "Semantic solver: fragments", "Who did what to whom: subject, predicate and object spans, factuality, polarity and the evidence sentence.",
+      el("p", { cls: "line" }, el("span", { cls: "pair", text: so.n + " fragments" }), el("span", { cls: "pair", text: so.with_subject + " with a subject" }), el("span", { cls: "pair", text: so.with_object + " with an object" }), el("span", { cls: "pair", text: so.ms_per_1k_chars + " ms per 1,000 characters (prototype on a small parser)" })),
+      el("p", { cls: "line" }, chk(so.checks)), el("p", { cls: "line" }, Object.entries(so.factuality).map(([k, v]) => el("span", { cls: "pair", text: k + " " + v }))),
+      ...so.fragments.slice(0, 5).map((fr, i) => { const b = a.contract.body, g = (r) => r ? b.slice(r[0], r[1]) : "—"; return el("button", { type: "button", cls: "frag" + (S.layer === "solver" && S.frag === i ? " sel" : ""), onclick: (e) => { e.stopPropagation(); S.layer = "solver"; S.frag = S.frag === i ? null : i; draw(); } }, g(fr.subject), el("i", { text: " — " }), g(fr.predicate), el("i", { text: " — " }), g(fr.object), el("i", { text: "   " + fr.factuality })); })));
+    const obs = a.observation, g3 = D.g3_spec, SS = g3.sets, cond = obs.conditions, cnt = {}; cond.forEach((k) => { cnt[k.status] = (cnt[k.status] || 0) + 1; });
+    const L = a.lens;
+    host.append(card("density", "G2?", "Lens linkage (proposed addition)", "Title, description, snapshot and the whole body as four lenses; each cell is how close two lenses are in meaning. Click to shade each sentence by its closeness to the title.",
+      tbl([""].concat(L.names), L.names.map((n, i) => [n].concat(L.matrix[i].map((v) => v.toFixed(2))))),
+      el("p", { cls: "line" }, el("span", { cls: "pair", text: pct(L.density_close_to_title) + " of sentences are close to the title" }), el("span", { cls: "pair", text: "as classifier input: kinds macro F1 " + SS.B.kinds_macro_f1 + " to " + SS.D.kinds_macro_f1 }))));
+    const sf = a.stated_facts.counts, ss = D.stated_facts_suite.per_kind, lab = { amount: "amounts", date: "dates", name: "names", triple: "who-did-what triples" }, n0 = (o, k) => (o && o[k]) || 0;
+    host.append(card("stated", "G1+G2", "Stated facts (contract)", "Amounts, dates, names and triples that sit in the text, each with its span, value and binding. A fact is stated only when the checks pass; if the binding is unclear it stays unbound. This checks what the text says, not whether it is true.",
+      tbl(["kind", "this article: stated", "unbound", "all 4,102 stories: pass the checks"], ["amount", "date", "name", "triple"].map((k) => [lab[k], n0(sf[k], "stated"), n0(sf[k], "unbound") + n0(sf[k], "invalid"), pct(ss[k].validity) + (k === "triple" ? " (complete subject, verb and object)" : "")])),
+      ...["amount", "date", "name", "triple"].map((k) => el("button", { type: "button", cls: "frag" + (S.layer === "stated" && S.sfk === k ? " sel" : ""), onclick: (ev) => { ev.stopPropagation(); S.layer = "stated"; S.sfk = S.sfk === k ? null : k; draw(); } }, "show " + lab[k]))));
+    host.append(wideCard(a));
+    const heads = obs.evidence.filter((e) => e.words.length), SPEC = [["Hashed word and character n-grams", "done", "no gain over the vocabulary model, and larger"], ["fastText-like baseline", "not built", "library not installed"], ["Content function head", "partial", "story type, not the playbook's five functions"], ["Domain head", "partial", "topic (49), single label"], ["Conditions with direction", "partial", "16 topical kinds, no change-type labels"], ["Area, Capability, Novelty heads", "not built", "need a seeded ontology"], ["Multi-label output", "partial", "kinds yes, topic single"], ["Sparse features plus G2 fragments as input", "done", "lowered kinds macro F1 by about 0.03"], ["Calibration, abstention, coverage per head", "done", "unknown is a normal answer"], ["Thresholds that minimise CPU cost", "not built", "fixed at precision 0.85"], ["Sparse-first against encoder on every item", "done", "no speed gain, see G3b"], ["Versioned observation record (section 5)", "done", "ontology version none"]];
+    host.append(card("sparse", "G3a", "Sparse classify: heads with abstention", "Hashed word and character n-grams with logistic regression, calibrated. A head answers only above its accept threshold, otherwise it says unknown. Click a head to see the words that carried it.",
+      tbl(["head", "answer", "confidence", "status"], [["content function (story type)", obs.content_function.answer, obs.content_function.confidence, obs.content_function.status], ["domain (topic)", obs.domains.answer, obs.domains.confidence, obs.domains.status], ["conditions (16 kinds)", (cnt.yes || 0) + " yes, " + (cnt.no || 0) + " no, " + (cnt.unknown || 0) + " unknown", "", ""], ["area, capability, novelty", "not built", "", "needs a seeded ontology"]]),
+      ...heads.map((e) => el("button", { type: "button", cls: "frag" + (S.layer === "sparse" && S.head === e.head ? " sel" : ""), onclick: (ev) => { ev.stopPropagation(); S.layer = "sparse"; S.head = S.head === e.head ? null : e.head; draw(); } }, e.head, el("i", { text: "   ←   " }), e.words.map((w) => w.word).join(", "))),
+      el("p", { cls: "line" }, el("b", { text: "Same split, kinds macro F1: " }), el("span", { cls: "pair", text: "vocabulary " + SS.A.kinds_macro_f1 }), el("span", { cls: "pair", text: "hashed spec " + SS.B.kinds_macro_f1 + " (" + SS.B.model_mb + " MB against " + SS.A.model_mb + " MB)" }), el("span", { cls: "pair", text: "+ G1/G2 fragments " + SS.C.kinds_macro_f1 }), el("span", { cls: "pair", text: "+ lens linkage " + SS.D.kinds_macro_f1 })),
+      el("details", { onclick: (e) => e.stopPropagation() }, el("summary", { text: "Spec check: what the playbook asks for and what this card delivers" }), tbl(["playbook 00 asks for", "status", "note"], SPEC))));
+    const cas = g3.cascade_vs_encoder_everywhere, esc = cond.filter((k) => k.stage === "G3b"), eyes = esc.filter((k) => k.encoder_status === "yes");
+    host.append(card("encoder", "G3b", "Encoder: the unresolved heads", "The compact encoder is called for heads the sparse stage left unknown. One embedding serves every head.",
+      el("p", { cls: "line" }, el("span", { cls: "pair", text: "this article: " + esc.length + " of 16 heads escalated" }), el("span", { cls: "pair", text: eyes.length + " answered yes" })),
+      tbl(["on the test half", "kinds macro F1", "items per second, one thread"], [["encoder on every item", cas.kinds_macro_f1_encoder_everywhere, cas.items_per_s_encoder_everywhere], ["sparse first, encoder only if unsure", cas.kinds_macro_f1_sparse_first, cas.items_per_s_sparse_first]]),
+      el("p", { cls: "find", text: "Escalation saved nothing here: " + pct(cas.share_of_items_with_no_unresolved_head) + " of test items had every head resolved by the sparse stage, so the encoder ran every time and the sparse pass was extra work." })));
+  }
+  function wideCard(a) {
+    const w = a.wide_net, su = D.wide_net_suite, c = su.clef, st = su.tau_z, br = su.tau_broad_z, lvl = (z) => z >= st ? "s" : z >= br ? "p" : "n", nm = (b) => b.name.replace(/_/g, " "), fmt = (b) => nm(b) + " " + b.z;
+    const score = el("details", { onclick: (e) => e.stopPropagation() }, el("summary", { text: "How well the wide net scores, measured on " + c.stories.toLocaleString() + " stories Clef has read" }),
+      tbl(["method", "share of Clef's readings found", "false mappings", "dials reached of " + c.dials_in_clef], [["wide net, strict (no training)", pct(c.wide_at_kinds_tau.tpr), pct(c.wide_at_kinds_tau.fpr), c.wide_at_kinds_tau.dials_reached], ["wide net, broad (no training)", pct(c.wide_at_broad_tau.tpr), pct(c.wide_at_broad_tau.fpr), c.wide_at_broad_tau.dials_reached], ["trained heads, same false rate as strict", pct(c.supervised_dial_level_at_wide_kinds_fpr.tpr), pct(c.supervised_dial_level_at_wide_kinds_fpr.fpr), c.supervised_dial_level_at_wide_kinds_fpr.dials_reached], ["trained heads, tighter", pct(c.supervised_dial_level_at_fpr_0_002.tpr), pct(c.supervised_dial_level_at_fpr_0_002.fpr), c.supervised_dial_level_at_fpr_0_002.dials_reached]]),
+      el("p", { cls: "line", text: "Grouping onto the 49 topics with no training: right first time " + pct(su.domain_grouping.top1) + ", in the top three " + pct(su.domain_grouping.top3) + " (guessing the commonest topic: " + pct(su.domain_grouping.always_majority) + ")." }),
+      el("p", { cls: "line", text: pct(su.open_items.unmapped_share) + " of open phrases matched nothing. They are mostly names and places (" + su.open_items.most_common_unmapped.filter((x) => /west bank|pope|alberta|ukraine|saudi|germany|vatican|uk/.test(x[0])).slice(0, 5).map((x) => x[0]).join(", ") + ") and web page leftovers (" + su.open_items.most_common_unmapped.filter((x) => /editor|browser|thank you|nature|version|displaying|explorer/.test(x[0])).slice(0, 5).map((x) => x[0]).join(", ") + "): a where-and-who facet is missing, and G0 still passes web boilerplate." }));
+    return card("wide", "G2?", "Wide net: open extraction, then groupings (proposed addition)", "No predefined list. Keyphrases, names, event verbs and who-did-what phrases come out of the story, then each is matched by meaning onto the engine's dial wordings and the 49 topic definitions. Click to colour them in the article: green strong, amber possible, dashed matched nothing (new).",
+      ...w.themes.map((t) => el("div", { cls: "line" }, el("div", { cls: "chipsw" }, t.items.map((i) => el("span", { text: i })), el("span", { text: t.sentences + " sentences" })), el("div", { cls: "chipsw" }, "→", t.maps.map((m) => el("span", { cls: lvl(m.z), text: fmt(m) }))))),
+      el("div", { cls: "chipsw" }, w.items.slice(0, 12).map((o) => el("span", { cls: o.mapped ? (o.strict ? "s" : "p") : "n", text: o.phrase + (o.mapped ? " → " + fmt(o.best[0]) : " → new") }))),
+      el("p", { cls: "line" }, el("span", { cls: "pair", text: "Names: " + (w.entities.slice(0, 5).join(", ") || "none") })),
+      el("p", { cls: "line" }, el("span", { cls: "pair", text: "Clef read: " + (w.clef_dials.join(", ") || "none") }), el("span", { cls: "pair ok", text: "net found: " + (w.recovered.join(", ") || "none") }), el("span", { cls: "pair bad", text: "net missed: " + (w.missed.join(", ") || "none") }), el("span", { cls: "pair", text: "net also proposes: " + (w.beyond_clef.join(", ") || "none") })), score);
+  }
+  function drawAgree(a) {
+    const host = document.getElementById("agree"); host.replaceChildren(); const TIER = ["no cheap view", "1 of 3 views", "2 of 3 views", "3 of 3 views"];
+    const dot = (v, t) => el("td", { cls: v === null || v === undefined ? "small" : v ? "ok" : "small", text: v === null || v === undefined ? "—" : v ? "●" + (t ? " " + t : "") : "○" });
+    const wide = (r) => el("td", { cls: r.wide_level === "strict" ? "ok" : "small", text: r.wide_z === null || r.wide_z === undefined ? "○" : (r.wide_level === "strict" ? "● " : "◐ ") + r.wide_z });
+    const score = (r) => r.cheap_votes + (r.wide_level ? 1 : 0) + (r.clef ? 1 : 0), rows = a.agreement_rows.slice().sort((x, y) => score(y) - score(x));
+    host.append(el("h2", null, el("span", { cls: "g", text: "This article" }), "Which methods found each possible condition"),
+      el("p", { cls: "what", text: "One row per possible condition raised by any method for this article. A filled dot means that method found it; a dash means that method has no trained head for it. 'Cheap views' are the keyword rule, the sparse head and the encoder head, defined below. Clef's own reading is shown for comparison. Whether these findings are right is on the scoreboard, not here." }),
+      el("table", { cls: "lad" }, el("thead", null, el("tr", null, ["condition", "keyword rule", "sparse head", "encoder head", "wide net (match score)", "Clef reading", "cheap views that found it"].map((h) => el("th", { text: h })))), el("tbody", null, rows.map((r) => el("tr", null, el("td", { text: r.kind.replace(/_/g, " ") + (r.outside_funnel ? "  (not one of the 16 trained)" : "") }), dot(r.cue_rule), dot(r.sparse_yes), dot(r.encoder_yes), wide(r), dot(!!r.clef, r.clef), el("td", { text: r.outside_funnel ? "none trained" : TIER[r.cheap_votes] }))))));
+  }
+  function mini(v, ceil, enc) { return el("div", { cls: "mini" + (enc ? " enc" : "") }, el("i", { style: { width: pct(v) } }), el("b", { style: { left: pct(ceil) } })); }
+  const JTAG = { "the text (validator)": "chk", "outside human labels": "par", "structure only": "est", "Claude labels": "est", "Clef readings": "est" };
+  const PREV = {};
+  const sw3 = () => el("span", { cls: "sw3" }, D.articles.map((x, i) => el("button", { type: "button", "aria-pressed": String(i === S.a), onclick: () => { S.a = i; S.frag = null; S.head = null; draw(); } }, (i + 1) + "  " + x.source)));
+  function forArticle(key, a) {
+    const c = a.contract, sc = a.scan, so = a.solver, sf = a.stated_facts.counts, ob = a.observation, w = a.wide_net, P = a.pulse, n0 = (o, k) => (o && o[k]) || 0, cnt = (k) => sc.counts[k] || 0;
+    const sfc = (k) => n0(sf[k], "stated") + " stated, " + (n0(sf[k], "unbound") + n0(sf[k], "invalid")) + " unbound", cd = ob.conditions, tl = (st) => cd.filter((x) => x.status === st).length;
+    const M = {
+      g0: () => c.body_chars.toLocaleString() + " characters, " + c.segments.length + " segment, published-to-ingested lag " + (c.time.lag_hours === null ? "unknown" : c.time.lag_hours + " h"),
+      g1: () => sc.spots.length + " spans: " + Object.entries(sc.counts).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([k, v]) => v + " " + k).join(", "),
+      sf_amount: () => sfc("amount"), sf_date: () => sfc("date"), sf_name: () => sfc("name"), sf_triple: () => sfc("triple"),
+      g2: () => so.n + " fragments: " + Object.entries(so.factuality).map(([k, v]) => v + " " + k).join(", "),
+      cues: () => cnt("attribution") + " who-said-it, " + cnt("modal") + " could/will, " + cnt("negation") + " negations, " + cnt("quote") + " quotes",
+      story: () => ob.content_function.answer + " (" + pct(ob.content_function.confidence) + ", " + ob.content_function.status + ")",
+      topic_head: () => ob.domains.answer.replace(/_/g, " ") + " (" + pct(ob.domains.confidence) + ", " + ob.domains.status + ")",
+      topic_gate: () => P.topic.answer, topic_wide: () => (w.domains && w.domains.length ? w.domains.slice(0, 2).map((d) => d[0] + " " + d[1]).join("; ") : "none above the threshold"),
+      wide: () => "found " + (w.recovered.join(", ") || "none") + " | missed " + (w.missed.join(", ") || "none") + " | also proposes " + (w.beyond_clef.join(", ") || "none") + "  (Clef read: " + (w.clef_dials.join(", ") || "nothing") + ")",
+      lens: () => pct(a.lens.density_close_to_title) + " of sentences close to the title; title to whole body " + a.lens.matrix[0][3].toFixed(2),
+      sparse: () => tl("yes") + " yes, " + tl("no") + " no, " + tl("unknown") + " unknown of 16" + (cd.filter((x) => x.status === "yes").length ? " (yes: " + cd.filter((x) => x.status === "yes").map((x) => x.kind.replace(/_/g, " ")).join(", ") + ")" : ""),
+      encoder: () => cd.filter((x) => x.stage === "G3b").length + " heads escalated; encoder says yes to " + (cd.filter((x) => x.encoder_status === "yes").map((x) => x.kind.replace(/_/g, " ")).join(", ") || "none"),
+      direction: () => P.change.answer, size: () => P.size.answer,
+      agree: () => a.agreement_rows.filter((r) => r.cheap_votes > 0).map((r) => r.kind.replace(/_/g, " ") + " (" + r.cheap_votes + " of 3)").join(", ") || "no condition found by any cheap view"
+    };
+    return M[key] ? M[key]() : "";
+  }
+  function drawLadder(a) {
+    const host = document.getElementById("ladder"); host.replaceChildren();
+    const t = el("table", { cls: "lad sb" }, el("thead", null, el("tr", null, ["Technique", "What it extracts", "THIS ARTICLE produced", "Measured against", "Judge", "Result over the whole labelled corpus", "Where the number comes from"].map((h) => el("th", { text: h })))));
+    const tb = el("tbody"); D.scoreboard.forEach((r) => { const v = forArticle(r.key, a), changed = PREV[r.key] !== undefined && PREV[r.key] !== v; PREV[r.key] = v;
+      tb.append(el("tr", null, el("td", { text: r.technique }), el("td", { text: r.extracts }), el("td", { cls: "thisart" + (changed ? " chg" : ""), text: v }), el("td", { text: r.against }), el("td", null, el("span", { cls: "ev " + (JTAG[r.judge] || "est"), text: r.judge })), el("td", { text: r.result }), el("td", { cls: "ng", text: r.src.join("  ") + "   ledger " + r.ledger }))); }); t.append(tb);
+    host.append(el("h2", null, el("span", { cls: "g", text: "Scoreboard" }), "Every technique: what it produced for this article, and how it scored over the corpus", sw3()),
+      el("p", { cls: "what", text: "Shaded column: what each technique produced for the article selected (" + a.title + "); switch article with the buttons here or the keys 1, 2, 3 and the shaded cells change, flashing where they differ. Plain column: how that technique scored over the whole labelled corpus, read from the file in the last column when this page is built. The judge column says what the corpus score is worth: the text itself and outside human labels can show a method is right; Claude labels and Clef readings only show agreement with a model." }), t,
+      el("h2", { style: { marginTop: "14px" }, text: "Terms used on this page" }),
+      el("dl", { cls: "kv defs" }, ...D.definitions.flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })])));
+  }
+})();
+</script>
+</body></html>

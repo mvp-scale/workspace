@@ -169,6 +169,19 @@ services:
     tags: [cpu, model, demand]
     log: logs/cpu-engine.log
 
+  pulse-reader:
+    kind: proc
+    desc: "BitMob Reader (was Pulse reader): serves the registered CPU engine (v6b-student) as POST /v1/pulse: story type, topic, condition, direction, size from one read"
+    panel: CPU only, no GPU
+    port: 8023
+    cmd: [models/embed-zs/.venv/bin/python, probes/pulse_reader.py]
+    env: {PULSE_READER_PORT: "${port}", HF_HOME: "${root}/data/hf", CUDA_VISIBLE_DEVICES: ""}
+    match: pulse_reader\.py
+    health: /health
+    boot: 60
+    tags: [cpu, model, demand]
+    log: logs/pulse-reader.log
+
   ledger-viewer:
     kind: proc
     desc: "Knowledge-pipeline ledger viewer (Story, Live, Map, Work, Quality). Fixed port: always 18766."
