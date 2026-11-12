@@ -281,6 +281,10 @@ export function serve(project, port = 18766) {
     const path = (req.url ?? '/').split('?')[0];
     if (req.method !== 'GET') { res.writeHead(405); return res.end('read only'); }
     if (path.endsWith('/history')) { res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); return res.end(JSON.stringify(historyPage(project, Object.fromEntries(new URL(req.url, 'http://x').searchParams)))); }
+    if (path.endsWith('/training')) {
+      try { res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); return res.end(readFileSync(join(resolve(project), '..', 'training', 'training.json'))); }
+      catch (e) { res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('no training.json; run build_training.py'); }
+    }
     if (path.endsWith('/data')) {
       try { res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); return res.end(JSON.stringify({ ...view(project), ...liveData(project) })); }
       catch (e) { res.writeHead(500, { 'content-type': 'text/plain' }); return res.end(e instanceof Violation ? `${e.rule}: ${e.message} (fix: ${e.fix})` : String(e)); }

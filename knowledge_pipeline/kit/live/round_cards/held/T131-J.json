@@ -1,0 +1,36 @@
+{
+ "id": "T131-J",
+ "task": "T131",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How many new engine-style readings does Jev add, and is its share of stories with a reading in line with Clef's 0.55?",
+ "one_change": "hosted Jev reads 3,000 queue stories that the engine has not read",
+ "baseline": {
+  "model": "hosted Jev engine reading on 100 stories (T129-J)",
+  "file": "runs/pulse/t129/t129_jev_engine.json",
+  "key": "presence_agreement"
+ },
+ "prediction": {
+  "metric": "share of the 3,000 stories where Jev's engine reading has a presence",
+  "low": 0.5,
+  "high": 0.65,
+  "why": "T129 gave a Jev presence share of 0.56 on stories Clef had read (runs/pulse/t129/t129_jev_engine.json); the queue stories are the same feeds; the share of stories with a reading is the figure scored; my cost estimate 3.4 USD, the result prints the real cost; decision D35, no GPU"
+ },
+ "command": "cd /workspace/probes/world-engine && MODE=queue N=3000 CONC=8 ROWS=/workspace/data/newsreader/labels/jev-engine-queue.jsonl OUT=/workspace/knowledge_pipeline/projects/world-state/runs/pulse/t131 WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t130_jev_engine_all.py",
+ "result": {
+  "file": "runs/pulse/t131/t130_jev_engine.json",
+  "key": "jev_presence_share"
+ },
+ "cap_minutes": 40,
+ "noise": 0.04,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && MODE=queue N=3 CONC=3 ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/T131-Js.jsonl OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/T131-Js WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t130_jev_engine_all.py",
+  "cap_minutes": 8
+ },
+ "after": [
+  "T130-J"
+ ]
+}

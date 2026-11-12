@@ -1,0 +1,33 @@
+{
+ "id": "T144-R",
+ "task": "T144",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do the Jev reads of the stories the heads abstain on lower the held-out abstain share more than the same number of random stories?",
+ "one_change": "read 800 abstained and 800 random unread queue stories with call 1 only",
+ "baseline": {
+  "model": "chunked 328-question read, input tokens per story (T130)",
+  "file": "runs/pulse/t134/baseline_tokens.json",
+  "key": "tokens_per_story"
+ },
+ "prediction": {
+  "metric": "input tokens per story, call 1 only",
+  "low": 13000,
+  "high": 18000,
+  "why": "call 1 used 14,521 tokens a story on the MN-DS gold read (runs/pulse/t142/t135_full_read.json), 1,600 stories cost 0.97 USD by that figure, an estimate; selection: the Sonnet-all sparse heads abstained on 0.278 of 4,817 unread queue stories (runs/pulse/t144/t144_select.json); pass tests written before the run: P0 no errors and all answers typed; P2 at most 18,000 tokens a story; loop test after the read (t144_loop.py PHASE=eval, CPU): the held-out abstain share on MN-DS fresh2 of the heads retrained with the targeted rows is lower than with the random rows by more than 0.02, otherwise targeted selection is no better than random at this size (playbook 03 rule 5), and the topic score on MN-DS human labels does not fall by more than the interval; decision D41, no GPU"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=0 NL=0 NM=0 NREP=0 CALL1_ONLY=1 CONC=8 IDS_FILE=/workspace/data/newsreader/labels/t144_ids.jsonl OUT=/workspace/knowledge_pipeline/projects/world-state/runs/pulse/t144r ROWS=/workspace/data/newsreader/labels/t144_read.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t144_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+ "result": {
+  "file": "runs/pulse/t144r/t135_full_read.json",
+  "key": "tokens_per_story_total"
+ },
+ "cap_minutes": 40,
+ "noise": 3000,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=0 NL=0 NM=0 NREP=0 CALL1_ONLY=1 CONC=2 IDS_FILE=/workspace/data/newsreader/labels/t144_ids.jsonl OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t144s ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t144s.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t144s_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+  "cap_minutes": 15
+ }
+}

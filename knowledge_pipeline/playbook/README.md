@@ -11,6 +11,7 @@ Chapters, in the order you use them. The number is a stable file ID (scripts and
 | Define | 01 | [Frame the task](01-frame-the-task.md) | What exactly is the model deciding, and what speed/cost/quality does the product need? |
 | Define | 02 | [Guidelines and gold](02-guidelines-and-gold.md) | How do humans mark it, how well do they agree, what is the test set? |
 | Define (gate) | 13 | [Field qualifier](13-field-qualifier.md) | Can this field be classed and measured at all? GO, REVISE or PARK on a small pilot, BEFORE any teacher labelling |
+| Define | 15 | [The BitMob stack](15-bitmob-stack.md) | What are the tools, models and router, in what order do they run, and what does Lean prove about that order? |
 | Label | 03 | [Teacher labels](03-teacher-labels.md) | How do LLMs produce training labels cheaply and trustworthily? (needs a GO from 13) |
 | Label | 14 | [Routing, soft targets and outside anchors](14-routing-and-anchors.md) | How is disagreement handled per item, and how is a field checked against something outside the models? |
 | Label | 12 | [Cross-family test](12-cross-family-test.md) | One test, run unchanged on any model family, that returns comparable scores? |
@@ -22,6 +23,7 @@ Chapters, in the order you use them. The number is a stable file ID (scripts and
 | Ship | 09 | [Ship and monitor](09-ship-and-monitor.md) | What is shipped, how it runs in Python and the browser, how it stays honest? |
 | Any stage | 08 | [Compute and runs](08-compute-and-runs.md) | Where do jobs run (local 3090/5090, RunPod, Google, Kaggle) and how do we not waste hours? |
 | Any stage | 10 | [Lessons](10-lessons.md) | What cost us time and GPU hours, and the rule each one produced |
+| Any stage | 16 | [The working loop](16-the-working-loop.md) | How does one round run (card, prediction, smoke test, score, record), how do we see whether we are working or waiting, and how does the loop improve itself safely? |
 
 ## Words we use
 
@@ -36,6 +38,10 @@ One word, one meaning. Tag every status line and every ledger note with one of t
 | **Groundwork** | Preparing data or tools for the main loop | Pool labelling, picking a labeller |
 | **Scheduler** | The timer that wakes the agent (`/loop` wakeups) | A wakeup that finds nothing to do |
 | **Owner decision** | Only the owner can approve it | The engine switch, condition tiers, capability sources |
+| **BitMob stack** | Tools + models + router, in that order (chapter 15) | Clean, Scan, Validator; BitMob Domain; BitMob Router |
+| **BitMob tools** | Command-line tools that find, tie down and check things in the text; not classifiers | Scan, Fact extractors, Validator |
+| **BitMob model** | A small CPU classifier focused on one head: BitMob Domain, Function, Condition, Area, Capability, Novelty. Versions are tagged (Domain v6b, Domain sparse) | BitMob Function = story type |
+| **BitMob Router** | Reads what the tools found and calls a model only for a head they left open | Decider is its second half |
 
 Why: in 2026-11-03 the scheduler, the pipeline and the improvement cycle were all called "the loop". Checks and
 groundwork looked like loop work, and the best built reader (v6b-student, story type 0.888 to 0.918 on the clean

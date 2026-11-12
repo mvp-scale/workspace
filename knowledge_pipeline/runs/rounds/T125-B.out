@@ -1,0 +1,84 @@
+fold 0 12
+fold 1 20
+{
+ "jev_labels_used": 1500,
+ "engine_stories": 1736,
+ "folds": 2,
+ "direction_stories": 812,
+ "direction_majority": 0.6712,
+ "mix": {
+  "presence_auroc": 0.7619,
+  "direction_auroc": 0.6912,
+  "direction_accuracy": 0.6712
+ },
+ "engine_only": {
+  "presence_auroc": 0.7576,
+  "direction_auroc": 0.7207,
+  "direction_accuracy": 0.7057
+ },
+ "paired_95_interval": {
+  "mix_minus_engine_only_presence_auroc": [
+   -0.011,
+   0.0199
+  ],
+  "mix_minus_engine_only_direction_auroc": [
+   -0.0584,
+   -0.0015
+  ],
+  "mix_minus_engine_only_direction_accuracy": [
+   -0.0616,
+   -0.0049
+  ],
+  "engine_only_direction_accuracy_minus_majority": [
+   0.0,
+   0.069
+  ]
+ },
+ "note": "Same folds and features as T116; paired bootstrap, 1000 resamples of the engine stories; reference is the engine's stored reading (agreement, not accuracy).",
+ "seconds": 26
+}
+fold 0 111
+fold 1 225
+fold 2 334
+fold 3 445
+fold 4 551
+{
+ "jev_labels_used": 30989,
+ "engine_stories": 1736,
+ "folds": 5,
+ "direction_stories": 812,
+ "direction_majority": 0.6712,
+ "mix": {
+  "presence_auroc": 0.7599,
+  "direction_auroc": 0.6904,
+  "direction_accuracy": 0.6712
+ },
+ "engine_only": {
+  "presence_auroc": 0.7879,
+  "direction_auroc": 0.7437,
+  "direction_accuracy": 0.7204
+ },
+ "paired_95_interval": {
+  "mix_minus_engine_only_presence_auroc": [
+   -0.0486,
+   -0.0059
+  ],
+  "mix_minus_engine_only_direction_auroc": [
+   -0.091,
+   -0.0161
+  ],
+  "mix_minus_engine_only_direction_accuracy": [
+   -0.0862,
+   -0.0123
+  ],
+  "engine_only_direction_accuracy_minus_majority": [
+   0.0135,
+   0.0862
+  ]
+ },
+ "note": "Same folds and features as T116; paired bootstrap, 1000 resamples of the engine stories; reference is the engine's stored reading (agreement, not accuracy).",
+ "seconds": 557
+}
+L1975 appended
+L1976 appended
+T125-B: HIT, NO GAIN, mixed-training direction AUROC on held-out engine stories (reproduction of T116) 0.690 vs 0.690

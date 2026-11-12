@@ -1,0 +1,34 @@
+{
+ "id": "T110-J",
+ "task": "T110",
+ "part": "main loop: Condition and direction, next data",
+ "field": "condition",
+ "question": "Does hosted Jev on the Pulse reader's own view (headline plus two sentences) still name one of the engine's own dials as often as on 400 words?",
+ "one_change": "change the story text from 400 words to headline plus two sentences, same labeller, same 1736 stories",
+ "baseline": {
+  "model": "hosted Jev on 400 words (T107-J)",
+  "file": "runs/pulse/t107/t106_clef_dials.json",
+  "key": "dial_hit_of_engine_readings"
+ },
+ "prediction": {
+  "metric": "dial hit among stories with an engine reading",
+  "low": 0.45,
+  "high": 0.62,
+  "why": "T107 gave 0.6163 on 400 words (runs/pulse/t107/t106_clef_dials.json); less text should lower it or leave it flat; a drop below 0.45 means the headline view loses most dial labels; spend 0.05 USD or less under D27"
+ },
+ "command": "BACKEND=jev NPI=1736 OUT=runs/pulse/t110 python3 -u t110_jev_headline.py",
+ "result": {
+  "file": "runs/pulse/t110/t106_clef_dials.json",
+  "key": "dial_hit_of_engine_readings"
+ },
+ "cap_minutes": 15,
+ "noise": 0.03,
+ "who": "S3",
+ "priority": 1,
+ "threads": 1,
+ "smoke": {
+  "command": "BACKEND=jev NPI=8 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t110s_$(date +%s) python3 -u t110_jev_headline.py",
+  "cap_minutes": 5
+ },
+ "parallel": true
+}

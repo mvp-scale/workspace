@@ -1,0 +1,1675 @@
+{
+ "built": "2026-11-12T04:10:23Z",
+ "note": "Scores are agreement with Sonnet labels on the sealed set (1,499 items), not outside truth. Noise across seeds: about 0.009 topic, 0.007 story type, 0.019 presence F1.",
+ "baseline_sparse_sealed": {
+  "topic": 0.7532,
+  "story_type": 0.8893,
+  "presence_f1": 0.6429
+ },
+ "teacher_label_counts": {
+  "haiku": 70395,
+  "sonnet": 55500,
+  "gemma": 47513,
+  "other": 5885,
+  "qwen": 1596
+ },
+ "models": [
+  {
+   "model": "Domain (topic, 49 classes)",
+   "data": "36,092 Sonnet-labelled items (label store)",
+   "inp": "headline+teaser, 64 word pieces",
+   "out": "1 of 49 topics + margin",
+   "trainer": "CPU encoder finetune_cpu2/3 (3 epochs)",
+   "curve": "T56 curve page only",
+   "v1": "encoder 0.82 vs Sonnet; v6b-student already live",
+   "status": "v1 trained, not adopted"
+  },
+  {
+   "model": "Function (story type, 4)",
+   "data": "36,092 Sonnet-labelled",
+   "inp": "same",
+   "out": "1 of 4",
+   "trainer": "same encoder, second head",
+   "curve": "T56 only",
+   "v1": "0.92 vs Sonnet",
+   "status": "v1 trained, not adopted"
+  },
+  {
+   "model": "Condition (present, yes/no)",
+   "data": "36,092 Sonnet-labelled; 4,584 items with per-kind labels",
+   "inp": "same",
+   "out": "yes/no",
+   "trainer": "same encoder, third head",
+   "curve": "T56 only",
+   "v1": "F1 0.66, interval spans zero; at a lowered threshold (dev recall 0.80) sealed precision 0.57, recall 0.79, agreement 0.911 vs always-no 0.891; an event-trigger AND does not help (T37)",
+   "status": "v1 weak"
+  },
+  {
+   "model": "Condition (per kind)",
+   "data": "4,584 labelled items",
+   "inp": "same",
+   "out": "per-kind present",
+   "trainer": "small head on frozen encoder vectors (head_on_embeddings.py), 3 seeds",
+   "curve": "dev micro-F1 every 5 epochs, 3 seeds (this tab)",
+   "v1": "sealed micro-F1 0.811-0.825 (141 items with a condition) vs most-common-kind 0.10; says which kind, given a condition exists",
+   "status": "v1 candidate, not adopted"
+  },
+  {
+   "model": "Area",
+   "data": "Triples (subject, predicate, object) pulled from articles; an Area is a set of triples that several independent publishers support. Measured so far: independent support is rare (3.6% exact, 6.2% by embedding with the small parser; 4.5% and 7.6% with the transformer parser, T72) and partly limited by the extractor (T62-T66)",
+   "inp": "article sentences -> triples",
+   "out": "triple bucket (Area) with publisher count",
+   "trainer": "none yet: the route is extract, count support, then bucket; no human names",
+   "curve": "none",
+   "v1": "none",
+   "status": "draft table of ~120 IPTC terms; against MN-DS human IPTC level 2 the mapping is right 25-27% (embedding), 29.6% with a CPU zero-shot rerank fused in (T80-T82); top-5 ceiling 54%; no Area model yet"
+  },
+  {
+   "model": "Capability",
+   "data": "Same triple route one level down: predicates grouped under an Area by support; no human naming",
+   "inp": "Area triples",
+   "out": "capability bucket",
+   "trainer": "none yet",
+   "curve": "none",
+   "v1": "none",
+   "status": "waits on Area"
+  },
+  {
+   "model": "Novelty",
+   "data": "Defined as 'matches no Area triple set'",
+   "inp": "Area output",
+   "out": "new/known",
+   "trainer": "none",
+   "curve": "none",
+   "v1": "none",
+   "status": "waits on Area"
+  },
+  {
+   "model": "Understanding (claims/triples)",
+   "data": "Triples from spo_chains.py: 37-45% fully correct, CaRB F1 0.40, recall weak; no human labels; entity extractor round 2 pending",
+   "inp": "sentences",
+   "out": "triples",
+   "trainer": "none",
+   "curve": "none",
+   "v1": "none",
+   "status": "measured, weak; being rebuilt on a better extractor"
+  },
+  {
+   "model": "Size level (max_level)",
+   "data": "Re-measured 2026-11-09 from the label store: 37,735 Sonnet items, 33,275 have no level (-1), 4,458 have a real level 0-3 outside the sealed set (level 1: 2,252, level 0: 1,059, level 2: 1,031, level 3: 116); majority-level baseline 50.5%",
+   "inp": "same",
+   "out": "level",
+   "trainer": "small head on frozen encoder vectors (head_on_embeddings.py), 3 seeds",
+   "curve": "dev accuracy every 5 epochs, 3 seeds (heademb_size_s*.json)",
+   "v1": "dev accuracy 0.638-0.641 vs majority-level 0.507; dev split only, the sealed set has no size labels",
+   "status": "v1 candidate on dev only, not adopted"
+  }
+ ],
+ "runs": [
+  {
+   "id": "T56",
+   "label": "T56 monitored run, hard Sonnet labels",
+   "labels": "hard",
+   "seed": null,
+   "planned_epochs": 8,
+   "stop_reason": "early stop: 3 evaluations without a composite gain of 0.002",
+   "best_index": 5,
+   "points": [
+    {
+     "epoch": 0.5,
+     "step": 479,
+     "topic": 0.7589,
+     "story_type": 0.9043,
+     "presence_f1": 0.5996,
+     "composite": 0.7543,
+     "train_loss": 1.539
+    },
+    {
+     "epoch": 1.0,
+     "step": 958,
+     "topic": 0.7802,
+     "story_type": 0.9078,
+     "presence_f1": 0.6446,
+     "composite": 0.7775,
+     "train_loss": 1.268
+    },
+    {
+     "epoch": 1.5,
+     "step": 1437,
+     "topic": 0.782,
+     "story_type": 0.9137,
+     "presence_f1": 0.6133,
+     "composite": 0.7697,
+     "train_loss": 0.969
+    },
+    {
+     "epoch": 2.0,
+     "step": 1916,
+     "topic": 0.7959,
+     "story_type": 0.9167,
+     "presence_f1": 0.6677,
+     "composite": 0.7934,
+     "train_loss": 1.231
+    },
+    {
+     "epoch": 2.5,
+     "step": 2395,
+     "topic": 0.7933,
+     "story_type": 0.9215,
+     "presence_f1": 0.6697,
+     "composite": 0.7948,
+     "train_loss": 1.098
+    },
+    {
+     "epoch": 3.0,
+     "step": 2874,
+     "topic": 0.7979,
+     "story_type": 0.915,
+     "presence_f1": 0.6745,
+     "composite": 0.7958,
+     "train_loss": 0.838
+    },
+    {
+     "epoch": 3.5,
+     "step": 3353,
+     "topic": 0.7983,
+     "story_type": 0.9134,
+     "presence_f1": 0.6512,
+     "composite": 0.7876,
+     "train_loss": 1.015
+    }
+   ],
+   "sealed": {
+    "topic": 0.8152,
+    "story_type": 0.9133,
+    "presence_f1": 0.6784
+   },
+   "judge": "agreement with Sonnet on the sealed set, not outside truth",
+   "task": "T56",
+   "family": "encoder",
+   "updated": "2026-11-09T08:01Z",
+   "file": "finetune_cpu2.json",
+   "reached_epoch": 3.5,
+   "active": null
+  },
+  {
+   "id": "T60-r0",
+   "label": "T60 r0 hard labels",
+   "labels": "hard",
+   "seed": 7,
+   "planned_epochs": 3,
+   "stop_reason": "planned epochs finished",
+   "best_index": 5,
+   "points": [
+    {
+     "epoch": 0.5,
+     "step": 479,
+     "topic": 0.7534,
+     "story_type": 0.9054,
+     "presence_f1": 0.6267,
+     "composite": 0.7618,
+     "train_loss": 1.303
+    },
+    {
+     "epoch": 1.0,
+     "step": 958,
+     "topic": 0.7722,
+     "story_type": 0.9117,
+     "presence_f1": 0.6297,
+     "composite": 0.7712,
+     "train_loss": 1.39
+    },
+    {
+     "epoch": 1.5,
+     "step": 1437,
+     "topic": 0.7861,
+     "story_type": 0.913,
+     "presence_f1": 0.6296,
+     "composite": 0.7762,
+     "train_loss": 1.356
+    },
+    {
+     "epoch": 2.0,
+     "step": 1916,
+     "topic": 0.7911,
+     "story_type": 0.9183,
+     "presence_f1": 0.6331,
+     "composite": 0.7808,
+     "train_loss": 0.842
+    },
+    {
+     "epoch": 2.5,
+     "step": 2395,
+     "topic": 0.789,
+     "story_type": 0.9167,
+     "presence_f1": 0.653,
+     "composite": 0.7862,
+     "train_loss": 0.813
+    },
+    {
+     "epoch": 3.0,
+     "step": 2874,
+     "topic": 0.7973,
+     "story_type": 0.9206,
+     "presence_f1": 0.6611,
+     "composite": 0.793,
+     "train_loss": 1.055
+    }
+   ],
+   "sealed": {
+    "topic": 0.8192,
+    "story_type": 0.9206,
+    "presence_f1": 0.6593
+   },
+   "judge": "agreement with Sonnet on the sealed set, not outside truth",
+   "task": "T60",
+   "family": "encoder",
+   "updated": "2026-11-09T09:02Z",
+   "file": "finetune3_r0.json",
+   "reached_epoch": 3.0,
+   "active": null
+  },
+  {
+   "id": "T60-r1",
+   "label": "T60 r1 soft votes",
+   "labels": "soft",
+   "seed": 11,
+   "planned_epochs": 3,
+   "stop_reason": "planned epochs finished",
+   "best_index": 5,
+   "points": [
+    {
+     "epoch": 0.5,
+     "step": 479,
+     "topic": 0.7545,
+     "story_type": 0.9091,
+     "presence_f1": 0.618,
+     "composite": 0.7605,
+     "train_loss": 1.68
+    },
+    {
+     "epoch": 1.0,
+     "step": 958,
+     "topic": 0.773,
+     "story_type": 0.9071,
+     "presence_f1": 0.6303,
+     "composite": 0.7701,
+     "train_loss": 2.02
+    },
+    {
+     "epoch": 1.5,
+     "step": 1437,
+     "topic": 0.7726,
+     "story_type": 0.911,
+     "presence_f1": 0.614,
+     "composite": 0.7659,
+     "train_loss": 1.573
+    },
+    {
+     "epoch": 2.0,
+     "step": 1916,
+     "topic": 0.785,
+     "story_type": 0.9161,
+     "presence_f1": 0.6336,
+     "composite": 0.7782,
+     "train_loss": 1.213
+    },
+    {
+     "epoch": 2.5,
+     "step": 2395,
+     "topic": 0.7798,
+     "story_type": 0.9167,
+     "presence_f1": 0.6313,
+     "composite": 0.7759,
+     "train_loss": 1.085
+    },
+    {
+     "epoch": 3.0,
+     "step": 2874,
+     "topic": 0.784,
+     "story_type": 0.9176,
+     "presence_f1": 0.6454,
+     "composite": 0.7823,
+     "train_loss": 1.086
+    }
+   ],
+   "sealed": {
+    "topic": 0.8179,
+    "story_type": 0.9159,
+    "presence_f1": 0.6522
+   },
+   "judge": "agreement with Sonnet on the sealed set, not outside truth",
+   "task": "T60",
+   "family": "encoder",
+   "updated": "2026-11-09T09:34Z",
+   "file": "finetune3_r1.json",
+   "reached_epoch": 3.0,
+   "active": null
+  },
+  {
+   "id": "T60-r2",
+   "label": "T60 r2 hard labels",
+   "labels": "hard",
+   "seed": 11,
+   "planned_epochs": 3,
+   "stop_reason": "planned epochs finished",
+   "best_index": 5,
+   "points": [
+    {
+     "epoch": 0.5,
+     "step": 479,
+     "topic": 0.7648,
+     "story_type": 0.9017,
+     "presence_f1": 0.6,
+     "composite": 0.7555,
+     "train_loss": 1.39
+    },
+    {
+     "epoch": 1.0,
+     "step": 958,
+     "topic": 0.7809,
+     "story_type": 0.9117,
+     "presence_f1": 0.6195,
+     "composite": 0.7707,
+     "train_loss": 1.0
+    },
+    {
+     "epoch": 1.5,
+     "step": 1437,
+     "topic": 0.7855,
+     "story_type": 0.915,
+     "presence_f1": 0.6437,
+     "composite": 0.7814,
+     "train_loss": 0.731
+    },
+    {
+     "epoch": 2.0,
+     "step": 1916,
+     "topic": 0.7964,
+     "story_type": 0.9156,
+     "presence_f1": 0.669,
+     "composite": 0.7937,
+     "train_loss": 1.466
+    },
+    {
+     "epoch": 2.5,
+     "step": 2395,
+     "topic": 0.7986,
+     "story_type": 0.9174,
+     "presence_f1": 0.6653,
+     "composite": 0.7938,
+     "train_loss": 1.332
+    },
+    {
+     "epoch": 3.0,
+     "step": 2874,
+     "topic": 0.7997,
+     "story_type": 0.9217,
+     "presence_f1": 0.6632,
+     "composite": 0.7949,
+     "train_loss": 0.966
+    }
+   ],
+   "sealed": {
+    "topic": 0.8239,
+    "story_type": 0.9193,
+    "presence_f1": 0.6648
+   },
+   "judge": "agreement with Sonnet on the sealed set, not outside truth",
+   "task": "T60",
+   "family": "encoder",
+   "updated": "2026-11-09T10:07Z",
+   "file": "finetune3_r2.json",
+   "reached_epoch": 3.0,
+   "active": null
+  }
+ ],
+ "entity_bakeoff": {
+  "sentences": 1000,
+  "gold_spans": 2619,
+  "note": "Few-NERD is Wikipedia text; type ignored; adjacent same-type entities are merged in the gold",
+  "systems": {
+   "spacy_sm": {
+    "exact_f1": 0.5061,
+    "exact_p": 0.4475,
+    "exact_r": 0.5823,
+    "iou50_f1": 0.6743,
+    "pred_spans": 3408,
+    "seconds_total_incl_setup": 13.6
+   },
+   "stanza": {
+    "exact_f1": 0.5797,
+    "exact_p": 0.497,
+    "exact_r": 0.6953,
+    "iou50_f1": 0.7331,
+    "pred_spans": 3664,
+    "seconds_total_incl_setup": 187.2
+   },
+   "gliner": {
+    "exact_f1": 0.6186,
+    "exact_p": 0.5674,
+    "exact_r": 0.68,
+    "iou50_f1": 0.6985,
+    "pred_spans": 3139,
+    "seconds_total_incl_setup": 84.2
+   },
+   "spacy_trf": {
+    "exact_f1": 0.5589,
+    "exact_p": 0.4878,
+    "exact_r": 0.6544,
+    "iou50_f1": 0.735,
+    "pred_spans": 3514,
+    "seconds_total_incl_setup": 72.8
+   }
+  }
+ },
+ "live": [
+  {
+   "job": "kaggle-kp-t67-ner-bakeoff",
+   "state": "queued",
+   "progress": "kp t67 ner bakeoff",
+   "updated": "2026-11-12T04:07:23Z",
+   "last": "coreygorman/kp-t67-ner-bakeoff has status \"KernelWorkerStatus.QUEUED\""
+  }
+ ],
+ "next_flow": [
+  {
+   "n": 1,
+   "step": "T83: paired interval on the T82 rerank gain (+4.3 points)",
+   "state": "done",
+   "why": "Says whether the gain is real or noise.",
+   "gate": "none, CPU"
+  },
+  {
+   "n": 2,
+   "step": "Area: train the first model on supported triples and mapped terms, with a dev curve",
+   "state": "ready (CPU)",
+   "why": "Area has no trained model; a weak v1 still fills the row.",
+   "gate": "none"
+  },
+  {
+   "n": 3,
+   "step": "Capability and Novelty: write exact inputs and outputs, then the same steps as Area",
+   "state": "ready (CPU)",
+   "why": "Both rows have only a partial definition.",
+   "gate": "none"
+  },
+  {
+   "n": 4,
+   "step": "Understanding (triples): trained head with a leakage check",
+   "state": "ready (CPU)",
+   "why": "Extractor results exist (T73 to T82); no head is trained.",
+   "gate": "none"
+  },
+  {
+   "n": 5,
+   "step": "Encoder run for the rows with no encoder run: Area, Capability, Novelty, Understanding (claims/triples)",
+   "state": "ready (CPU)",
+   "why": "Same recipe as T60: dev-chosen epoch, sealed set read once, curve shown here.",
+   "gate": "none"
+  },
+  {
+   "n": 6,
+   "step": "Local Clef as a teacher for the IPTC term mapping",
+   "state": "needs owner yes",
+   "why": "Uses the 5090 as a labeller; the one lever left on the 30% level-2 match.",
+   "gate": "owner"
+  },
+  {
+   "n": 7,
+   "step": "Adopt a new encoder on the Engine card",
+   "state": "needs owner yes",
+   "why": "Engine change (step 5 of the method).",
+   "gate": "owner"
+  }
+ ],
+ "kinds_runs": [
+  {
+   "seed": 7,
+   "points": [
+    {
+     "epoch": 5,
+     "dev": 0.7431,
+     "train_loss": 0.0852
+    },
+    {
+     "epoch": 10,
+     "dev": 0.7878,
+     "train_loss": 0.0612
+    },
+    {
+     "epoch": 15,
+     "dev": 0.8063,
+     "train_loss": 0.0462
+    },
+    {
+     "epoch": 20,
+     "dev": 0.8162,
+     "train_loss": 0.077
+    },
+    {
+     "epoch": 25,
+     "dev": 0.819,
+     "train_loss": 0.0328
+    },
+    {
+     "epoch": 30,
+     "dev": 0.8089,
+     "train_loss": 0.0318
+    },
+    {
+     "epoch": 35,
+     "dev": 0.8119,
+     "train_loss": 0.0496
+    },
+    {
+     "epoch": 40,
+     "dev": 0.8103,
+     "train_loss": 0.0391
+    }
+   ],
+   "best_dev": 0.819,
+   "best_index": 4,
+   "stop": "early stop at epoch 40",
+   "sealed": {
+    "n": 141,
+    "micro_f1": 0.8246,
+    "ci95": [
+     0.7759,
+     0.8703
+    ],
+    "baseline_most_common_kind": 0.1,
+    "baseline_top3_kinds": 0.2591,
+    "note": "sealed items that have at least one kept kind; agreement with Sonnet, not outside truth; read once"
+   },
+   "dev_baseline_most_common_kind": 0.1689,
+   "dev_baseline_top3_kinds": 0.1884,
+   "task": "T69",
+   "family": "kinds",
+   "updated": "2026-11-09T22:39Z",
+   "file": "heademb_kinds_s7.json",
+   "reached_epoch": 40,
+   "active": null
+  },
+  {
+   "seed": 11,
+   "points": [
+    {
+     "epoch": 5,
+     "dev": 0.7325,
+     "train_loss": 0.067
+    },
+    {
+     "epoch": 10,
+     "dev": 0.7874,
+     "train_loss": 0.0627
+    },
+    {
+     "epoch": 15,
+     "dev": 0.8022,
+     "train_loss": 0.0504
+    },
+    {
+     "epoch": 20,
+     "dev": 0.809,
+     "train_loss": 0.0521
+    },
+    {
+     "epoch": 25,
+     "dev": 0.8057,
+     "train_loss": 0.0455
+    },
+    {
+     "epoch": 30,
+     "dev": 0.8155,
+     "train_loss": 0.0449
+    },
+    {
+     "epoch": 35,
+     "dev": 0.8126,
+     "train_loss": 0.049
+    },
+    {
+     "epoch": 40,
+     "dev": 0.811,
+     "train_loss": 0.0432
+    },
+    {
+     "epoch": 45,
+     "dev": 0.8075,
+     "train_loss": 0.0557
+    }
+   ],
+   "best_dev": 0.8155,
+   "best_index": 5,
+   "stop": "early stop at epoch 45",
+   "sealed": {
+    "n": 141,
+    "micro_f1": 0.8111,
+    "ci95": [
+     0.7657,
+     0.8617
+    ],
+    "baseline_most_common_kind": 0.1,
+    "baseline_top3_kinds": 0.2591,
+    "note": "sealed items that have at least one kept kind; agreement with Sonnet, not outside truth; read once"
+   },
+   "dev_baseline_most_common_kind": 0.1689,
+   "dev_baseline_top3_kinds": 0.1884,
+   "task": "T69",
+   "family": "kinds",
+   "updated": "2026-11-09T22:39Z",
+   "file": "heademb_kinds_s11.json",
+   "reached_epoch": 45,
+   "active": null
+  },
+  {
+   "seed": 13,
+   "points": [
+    {
+     "epoch": 5,
+     "dev": 0.7375,
+     "train_loss": 0.0747
+    },
+    {
+     "epoch": 10,
+     "dev": 0.7855,
+     "train_loss": 0.0645
+    },
+    {
+     "epoch": 15,
+     "dev": 0.8057,
+     "train_loss": 0.0501
+    },
+    {
+     "epoch": 20,
+     "dev": 0.8067,
+     "train_loss": 0.0256
+    },
+    {
+     "epoch": 25,
+     "dev": 0.8092,
+     "train_loss": 0.0411
+    },
+    {
+     "epoch": 30,
+     "dev": 0.8067,
+     "train_loss": 0.0444
+    },
+    {
+     "epoch": 35,
+     "dev": 0.8143,
+     "train_loss": 0.0452
+    },
+    {
+     "epoch": 40,
+     "dev": 0.8098,
+     "train_loss": 0.0491
+    },
+    {
+     "epoch": 45,
+     "dev": 0.8114,
+     "train_loss": 0.0299
+    },
+    {
+     "epoch": 50,
+     "dev": 0.8111,
+     "train_loss": 0.0413
+    }
+   ],
+   "best_dev": 0.8143,
+   "best_index": 6,
+   "stop": "early stop at epoch 50",
+   "sealed": {
+    "n": 141,
+    "micro_f1": 0.821,
+    "ci95": [
+     0.775,
+     0.8681
+    ],
+    "baseline_most_common_kind": 0.1,
+    "baseline_top3_kinds": 0.2591,
+    "note": "sealed items that have at least one kept kind; agreement with Sonnet, not outside truth; read once"
+   },
+   "dev_baseline_most_common_kind": 0.1689,
+   "dev_baseline_top3_kinds": 0.1884,
+   "task": "T69",
+   "family": "kinds",
+   "updated": "2026-11-09T22:39Z",
+   "file": "heademb_kinds_s13.json",
+   "reached_epoch": 50,
+   "active": null
+  }
+ ],
+ "area_runs": [
+  {
+   "task": "T84",
+   "family": "area",
+   "seed": 7,
+   "points": [
+    {
+     "epoch": 1,
+     "dev": 0.6647
+    },
+    {
+     "epoch": 2,
+     "dev": 0.7371
+    },
+    {
+     "epoch": 3,
+     "dev": 0.7741
+    },
+    {
+     "epoch": 4,
+     "dev": 0.8036
+    },
+    {
+     "epoch": 5,
+     "dev": 0.8185
+    },
+    {
+     "epoch": 6,
+     "dev": 0.8338
+    },
+    {
+     "epoch": 7,
+     "dev": 0.8338
+    },
+    {
+     "epoch": 8,
+     "dev": 0.8413
+    },
+    {
+     "epoch": 9,
+     "dev": 0.845
+    },
+    {
+     "epoch": 10,
+     "dev": 0.8503
+    },
+    {
+     "epoch": 11,
+     "dev": 0.8544
+    },
+    {
+     "epoch": 12,
+     "dev": 0.8488
+    },
+    {
+     "epoch": 13,
+     "dev": 0.8622
+    },
+    {
+     "epoch": 14,
+     "dev": 0.8559
+    },
+    {
+     "epoch": 15,
+     "dev": 0.8574
+    },
+    {
+     "epoch": 16,
+     "dev": 0.8615
+    }
+   ],
+   "best_epoch": 13,
+   "stop": "early stop",
+   "fresh": {
+    "items": 1286,
+    "head": 0.2309,
+    "head_limited_to_domain": 0.2302,
+    "paired_limited_minus_embedding": -0.0521,
+    "embedding": 0.2823,
+    "paired_head_minus_embedding": -0.0513,
+    "ci95": [
+     -0.0731,
+     -0.0288
+    ]
+   },
+   "fresh2": {
+    "items": 1113,
+    "head": 0.2156,
+    "head_limited_to_domain": 0.2129,
+    "paired_limited_minus_embedding": -0.0395,
+    "embedding": 0.2525,
+    "paired_head_minus_embedding": -0.0368,
+    "ci95": [
+     -0.0593,
+     -0.0153
+    ]
+   },
+   "updated": "2026-11-10T16:16Z",
+   "file": "t84_area_head.json",
+   "reached_epoch": 16,
+   "active": null
+  }
+ ],
+ "students": [
+  {
+   "task": "T109",
+   "label": "Pool-news Jev labels, word counts",
+   "view": "headline plus teaser",
+   "labels": "9,779 Jev",
+   "presence_auroc": 0.7099,
+   "direction_accuracy": 0.6232,
+   "file": "runs/pulse/t109/t109_students.json"
+  },
+  {
+   "task": "T112",
+   "label": "Queue Jev labels, word counts",
+   "view": "headline plus teaser",
+   "labels": "19,894 Jev",
+   "presence_auroc": 0.7253,
+   "direction_accuracy": 0.6576,
+   "file": "runs/pulse/t112/t112_students.json"
+  },
+  {
+   "task": "T113",
+   "label": "Queue Jev labels, bge-small embedding",
+   "view": "headline plus teaser",
+   "labels": "19,894 Jev",
+   "presence_auroc": 0.7229,
+   "direction_accuracy": 0.6416,
+   "file": "runs/pulse/t113/t113_students.json"
+  },
+  {
+   "task": "T115",
+   "label": "All queue Jev labels, word counts",
+   "view": "headline plus teaser",
+   "labels": "31,005 Jev",
+   "presence_auroc": 0.7331,
+   "direction_accuracy": 0.6675,
+   "file": "runs/pulse/t115/t112_students.json"
+  },
+  {
+   "task": "T116",
+   "label": "Engine readings only (grouped folds)",
+   "view": "headline plus teaser",
+   "labels": "1,388 engine readings per fold",
+   "presence_auroc": 0.7879,
+   "direction_accuracy": 0.7204,
+   "file": "runs/pulse/t116/t116_mix.json"
+  },
+  {
+   "task": "T116",
+   "label": "Engine readings plus Jev labels",
+   "view": "headline plus teaser",
+   "labels": "1,388 engine + 30,989 Jev",
+   "presence_auroc": 0.7599,
+   "direction_accuracy": 0.6712,
+   "file": "runs/pulse/t116/t116_mix.json"
+  },
+  {
+   "task": "T119",
+   "label": "Engine readings only, word counts",
+   "view": "full text",
+   "labels": "1,388 engine readings per fold",
+   "presence_auroc": 0.8553,
+   "direction_accuracy": 0.7389,
+   "file": "runs/pulse/t119/t119_engine_full.json"
+  },
+  {
+   "task": "T119",
+   "label": "Engine readings, counts plus embedding",
+   "view": "full text",
+   "labels": "1,388 engine readings per fold",
+   "presence_auroc": 0.8523,
+   "direction_accuracy": 0.7389,
+   "file": "runs/pulse/t119/t119_engine_full.json"
+  },
+  {
+   "task": "T122",
+   "label": "Learning curve at 300 readings",
+   "view": "full text",
+   "labels": "300 engine readings",
+   "presence_auroc": 0.8014,
+   "direction_accuracy": 0.7077,
+   "file": "runs/pulse/t122/t122_curve.json"
+  },
+  {
+   "task": "T122",
+   "label": "Learning curve at 1000 readings",
+   "view": "full text",
+   "labels": "1,000 engine readings",
+   "presence_auroc": 0.8433,
+   "direction_accuracy": 0.7233,
+   "file": "runs/pulse/t122/t122_curve.json"
+  },
+  {
+   "task": "T122",
+   "label": "Learning curve, all readings",
+   "view": "full text",
+   "labels": "1,388 engine readings per fold",
+   "presence_auroc": 0.8553,
+   "direction_accuracy": 0.7389,
+   "file": "runs/pulse/t122/t122_curve.json"
+  },
+  {
+   "task": "T128",
+   "label": "Encoder fine-tuned on engine readings (fold 0)",
+   "view": "headline plus teaser",
+   "labels": "1,780 engine readings",
+   "presence_auroc": 0.767,
+   "direction_accuracy": 0.7149,
+   "file": "runs/pulse/t128/t128_finetune.json"
+  },
+  {
+   "task": "T128",
+   "label": "Sparse heads, same fold as the fine-tune",
+   "view": "headline plus teaser",
+   "labels": "1,979 engine readings",
+   "presence_auroc": 0.7799,
+   "direction_accuracy": 0.6694,
+   "file": "runs/pulse/t128/t128_finetune.json"
+  },
+  {
+   "task": "T125",
+   "label": "Mixed training rerun with paired intervals",
+   "view": "headline plus teaser",
+   "labels": "1,388 engine + 30,989 Jev",
+   "presence_auroc": 0.7599,
+   "direction_accuracy": 0.6712,
+   "file": "runs/pulse/t125/t125_mix.json"
+  }
+ ],
+ "audit": {
+  "columns": [
+   "Data",
+   "In/out defined",
+   "Trained",
+   "Curve",
+   "Beats old head",
+   "Beats live head",
+   "No leakage",
+   "Outside truth",
+   "Self-improving loop",
+   "Repeats",
+   "v1"
+  ],
+  "rows": [
+   {
+    "model": "Domain (topic, 49)",
+    "cells": [
+     {
+      "s": "ok",
+      "t": "36,092 Sonnet-labelled items",
+      "src": "runs/label_store",
+      "ts": "2026-11-12T03:49Z",
+      "file": "label_store"
+     },
+     {
+      "s": "ok",
+      "t": "headline + teaser, 64 word pieces -> 1 of 49",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "ok",
+      "t": "4 encoder runs",
+      "src": "finetune_cpu2.json",
+      "ts": "2026-11-09T08:01Z",
+      "file": "finetune_cpu2.json"
+     },
+     {
+      "s": "ok",
+      "t": "dev score every half epoch, chosen epoch circled",
+      "src": "this tab"
+     },
+     {
+      "s": "ok",
+      "t": "topic: encoder 0.815-0.824 vs old sparse head 0.753 (gain +0.062 to +0.071); agreement with Sonnet",
+      "src": "finetune_cpu2.json#sparse_default_sealed",
+      "ts": "2026-11-09T08:01Z",
+      "file": "finetune_cpu2.json"
+     },
+     {
+      "s": "part",
+      "t": "vs the live head (v6b-student) on top-2 topic: +0.0027, 95% range -0.011 to +0.015: no measurable difference",
+      "src": "compare_v6b.json",
+      "ts": "2026-11-09T08:09Z",
+      "file": "compare_v6b.json"
+     },
+     {
+      "s": "ok",
+      "t": "1 of 1499 sealed items has a near-twin (cosine 0.95+) in the training text; 0 exact",
+      "src": "neardup.json",
+      "ts": "2026-11-09T08:08Z",
+      "file": "neardup.json"
+     },
+     {
+      "s": "ok",
+      "t": "MN-DS human topic labels, top-2: encoder 0.782 and 0.798 vs live head 0.797 and 0.787 on the two fresh sets; differences -0.014 and +0.011",
+      "src": "anchor_encoder_vs_v6b.json",
+      "ts": "2026-11-10T01:42Z",
+      "file": "anchor_encoder_vs_v6b.json"
+     },
+     {
+      "s": "ok",
+      "t": "sparse-head tuning loop: +0.017 on sealed (95% range +0.005 to +0.029); the encoder is not in the loop yet",
+      "src": "learn_loop.json",
+      "ts": "2026-11-09T06:39Z",
+      "file": "learn_loop.json"
+     },
+     {
+      "s": "ok",
+      "t": "4 runs, 0.815 to 0.824 (spread 0.009; seed noise 0.009)",
+      "src": "finetune_cpu2.json, finetune3_r0-r2.json",
+      "ts": "2026-11-09T10:07Z",
+      "file": "finetune3_r2.json"
+     },
+     {
+      "s": "part",
+      "t": "trained, not adopted: it does not beat the live head",
+      "src": "model_rollout.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-12T03:49Z",
+     "file": "label_store",
+     "col": 0
+    }
+   },
+   {
+    "model": "Function (story type, 4)",
+    "cells": [
+     {
+      "s": "ok",
+      "t": "36,092 Sonnet-labelled",
+      "src": "runs/label_store",
+      "ts": "2026-11-12T03:49Z",
+      "file": "label_store"
+     },
+     {
+      "s": "ok",
+      "t": "same input -> 1 of 4",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "ok",
+      "t": "second head on the same encoder",
+      "src": "finetune_cpu2.json",
+      "ts": "2026-11-09T08:01Z",
+      "file": "finetune_cpu2.json"
+     },
+     {
+      "s": "ok",
+      "t": "same chart",
+      "src": "this tab"
+     },
+     {
+      "s": "ok",
+      "t": "story type: encoder 0.913-0.921 vs old sparse head 0.889 (gain +0.024 to +0.031); agreement with Sonnet",
+      "src": "finetune_cpu2.json#sparse_default_sealed",
+      "ts": "2026-11-09T08:01Z",
+      "file": "finetune_cpu2.json"
+     },
+     {
+      "s": "part",
+      "t": "vs the live head (v6b-student) on story type: -0.0020, 95% range -0.013 to +0.008: no measurable difference",
+      "src": "compare_v6b.json",
+      "ts": "2026-11-09T08:09Z",
+      "file": "compare_v6b.json"
+     },
+     {
+      "s": "ok",
+      "t": "1 of 1499 sealed items has a near-twin (cosine 0.95+) in the training text; 0 exact",
+      "src": "neardup.json",
+      "ts": "2026-11-09T08:08Z",
+      "file": "neardup.json"
+     },
+     {
+      "s": "no",
+      "t": "the outside set (CheckThat) measures fact vs opinion, not our four types; contract unconfirmed",
+      "src": "field_table.json#story_type",
+      "ts": "2026-11-10T17:17Z",
+      "file": "field_table.json"
+     },
+     {
+      "s": "no",
+      "t": "sparse-head tuning loop: -0.003 on sealed (95% range -0.015 to +0.007); the encoder is not in the loop yet",
+      "src": "learn_loop.json",
+      "ts": "2026-11-09T06:39Z",
+      "file": "learn_loop.json"
+     },
+     {
+      "s": "ok",
+      "t": "4 runs, 0.913 to 0.921 (spread 0.007; seed noise 0.007)",
+      "src": "finetune_cpu2.json, finetune3_r0-r2.json",
+      "ts": "2026-11-09T10:07Z",
+      "file": "finetune3_r2.json"
+     },
+     {
+      "s": "part",
+      "t": "trained, not adopted",
+      "src": "model_rollout.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-12T03:49Z",
+     "file": "label_store",
+     "col": 0
+    }
+   },
+   {
+    "model": "Condition (present)",
+    "cells": [
+     {
+      "s": "ok",
+      "t": "36,092 Sonnet-labelled, 11.9% positive",
+      "src": "lap2_checks.json",
+      "ts": "2026-11-08T23:53Z",
+      "file": "lap2_checks.json"
+     },
+     {
+      "s": "ok",
+      "t": "same input -> yes/no",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "ok",
+      "t": "third head on the same encoder",
+      "src": "finetune_cpu2.json",
+      "ts": "2026-11-09T08:01Z",
+      "file": "finetune_cpu2.json"
+     },
+     {
+      "s": "ok",
+      "t": "same chart",
+      "src": "this tab"
+     },
+     {
+      "s": "part",
+      "t": "F1 0.652-0.678 vs old head 0.643; the range crosses zero (note on T56)",
+      "src": "finetune_cpu2.json#interval_vs_recorded_sparse",
+      "ts": "2026-11-09T08:01Z",
+      "file": "finetune_cpu2.json"
+     },
+     {
+      "s": "none",
+      "t": "not compared with a live head",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "1 of 1499 sealed items has a near-twin (cosine 0.95+) in the training text; 0 exact",
+      "src": "neardup.json",
+      "ts": "2026-11-09T08:08Z",
+      "file": "neardup.json"
+     },
+     {
+      "s": "none",
+      "t": "no outside set",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "4 runs, 0.652 to 0.678 (spread 0.026; seed noise 0.019)",
+      "src": "finetune_cpu2.json, finetune3_r0-r2.json",
+      "ts": "2026-11-09T10:07Z",
+      "file": "finetune3_r2.json"
+     },
+     {
+      "s": "part",
+      "t": "weak: F1 about 0.66, always-yes scores 0.20",
+      "src": "lap2_checks.json#m3_condition_head",
+      "ts": "2026-11-08T23:53Z",
+      "file": "lap2_checks.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-09T10:07Z",
+     "file": "finetune3_r2.json",
+     "col": 9
+    }
+   },
+   {
+    "model": "Condition (per kind)",
+    "cells": [
+     {
+      "s": "ok",
+      "t": "4,286 items with kinds; 19 kinds with 100+ items",
+      "src": "runs/pulse/heademb_kinds.json",
+      "ts": "2026-11-09T08:05Z",
+      "file": "heademb_kinds.json"
+     },
+     {
+      "s": "part",
+      "t": "says which kind, given a condition is present; it was never trained on items without one",
+      "src": "head_on_embeddings.py",
+      "ts": "2026-11-09T22:38Z",
+      "file": "head_on_embeddings.py"
+     },
+     {
+      "s": "part",
+      "t": "small head on the frozen fine-tuned encoder, not a fine-tune of its own",
+      "src": "heademb_kinds_s7.json",
+      "ts": "2026-11-09T22:39Z",
+      "file": "heademb_kinds_s7.json"
+     },
+     {
+      "s": "ok",
+      "t": "dev micro-F1 every 5 epochs, 3 seeds",
+      "src": "heademb_kinds_s7.json",
+      "ts": "2026-11-09T22:39Z",
+      "file": "heademb_kinds_s7.json"
+     },
+     {
+      "s": "ok",
+      "t": "sealed 0.811-0.825 vs most-common-kind 0.10 and top-3 kinds 0.26 (141 sealed items with a condition)",
+      "src": "heademb_kinds_s7.json#sealed",
+      "ts": "2026-11-09T22:39Z",
+      "file": "heademb_kinds_s7.json"
+     },
+     {
+      "s": "none",
+      "t": "no live per-kind head compared",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "sealed ids excluded from the training list (head_on_embeddings.py line 13); sealed read once per seed",
+      "src": "head_on_embeddings.py",
+      "ts": "2026-11-09T22:38Z",
+      "file": "head_on_embeddings.py"
+     },
+     {
+      "s": "none",
+      "t": "no outside set",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "3 seeds: sealed spread 0.013, dev spread 0.005; rerun of seed 7 reproduced the earlier 0.819",
+      "src": "heademb_kinds_s*.json"
+     },
+     {
+      "s": "part",
+      "t": "v1 candidate; agreement with Sonnet only",
+      "src": "model_rollout.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-09T22:39Z",
+     "file": "heademb_kinds_s7.json",
+     "col": 2
+    }
+   },
+   {
+    "model": "Area",
+    "cells": [
+     {
+      "s": "part",
+      "t": "triple route measured; independent support is rare (small parser 3.6% exact, 6.2% by embedding; transformer parser 4.5% and 7.6%, so the parser is not the main limit; GLiNER-entity keys add only 6 matches in 4,324 triples, T73; two of three elements match for 11.1% against 0.3% by chance, replicated at 11.1%, T74 and T75; about 10% of triples have 2+ independent supporters and 5% have 3+, mostly in big events, T76; mapped onto IPTC Media Topics the assignment is reproducible across publishers, 67% same term, against MN-DS human IPTC level 2 it is right 25-27% by embedding and 29.6% with a zero-shot rerank fused in, top-5 ceiling 54%, T80-T82)",
+      "src": "triple_pairs2.json",
+      "ts": "2026-11-09T17:15Z",
+      "file": "triple_pairs2.json"
+     },
+     {
+      "s": "part",
+      "t": "sentences -> triples -> buckets; no human names",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "part",
+      "t": "T84: a small head on frozen bge-small vectors, distilled from the IPTC term mapping over 36,092 Sonnet-labelled items; a candidate, not a v1",
+      "src": "t84/t84_area_head.json",
+      "ts": "2026-11-10T16:16Z",
+      "file": "t84_area_head.json"
+     },
+     {
+      "s": "ok",
+      "t": "dev agreement with its own pseudo-labels per epoch, best epoch 13, early stop (T84)",
+      "src": "t84/t84_area_head.json",
+      "ts": "2026-11-10T16:16Z",
+      "file": "t84_area_head.json"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "MN-DS human level 2: head 0.231 and 0.216 exact, below the embedding mapping it learns from (0.282 and 0.253); paired difference -0.051 and -0.037, intervals below zero (T84)",
+      "src": "t84/t84_area_head.json",
+      "ts": "2026-11-10T16:16Z",
+      "file": "t84_area_head.json"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-10T16:16Z",
+     "file": "t84_area_head.json",
+     "col": 2
+    }
+   },
+   {
+    "model": "Capability",
+    "cells": [
+     {
+      "s": "none",
+      "t": "waits on Area",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "same route one level down",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     }
+    ],
+    "changed": null
+   },
+   {
+    "model": "Novelty",
+    "cells": [
+     {
+      "s": "part",
+      "t": "MN-DS human level 2 marks which items fall outside the IPTC depth-1 list (259 of 1,545 and 239 of 1,352); no labelled novelty set beyond that",
+      "src": "t85/t85_novelty.json",
+      "ts": "2026-11-10T16:34Z",
+      "file": "t85_novelty.json"
+     },
+     {
+      "s": "part",
+      "t": "'matches no Area'; T85 used 'outside the Area vocabulary' as a first test",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "none",
+      "t": "no trained novelty model; scored the Area head and the embedding as novelty scores (T85)",
+      "src": "t85/t85_novelty.json",
+      "ts": "2026-11-10T16:34Z",
+      "file": "t85_novelty.json"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "no",
+      "t": "tried and failed: AUROC for out-of-vocabulary vs in-vocabulary items 0.50 and 0.47 for head confidence, 0.55 and 0.49 for embedding max-similarity; chance is 0.50 (T85)",
+      "src": "t85/t85_novelty.json",
+      "ts": "2026-11-10T16:34Z",
+      "file": "t85_novelty.json"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-10T16:34Z",
+     "file": "t85_novelty.json",
+     "col": 0
+    }
+   },
+   {
+    "model": "Understanding (triples)",
+    "cells": [
+     {
+      "s": "part",
+      "t": "no labels; scored on CaRB-style checks only",
+      "src": "spo_chains.py",
+      "ts": "2026-11-08T06:03Z",
+      "file": "spo_chains.py"
+     },
+     {
+      "s": "ok",
+      "t": "sentences -> triples",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "none",
+      "t": "rule-based on spaCy; no trained model",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "37-45% fully correct; CaRB F1 0.40; recall weak",
+      "src": "ledger L1092, L1096"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "entity bake-off on Few-NERD (Wikipedia): Stanza 0.58 vs spaCy small 0.51",
+      "src": "t67/kaggle/ner_bakeoff.json",
+      "ts": "2026-11-09T18:20Z",
+      "file": "ner_bakeoff.json"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-09T18:20Z",
+     "file": "ner_bakeoff.json",
+     "col": 7
+    }
+   },
+   {
+    "model": "Size level",
+    "cells": [
+     {
+      "s": "ok",
+      "t": "4,458 items with a real level 0-3 (of 37,735); majority level is 50.5%",
+      "src": "runs/label_store/labels.jsonl",
+      "ts": "2026-11-04T06:03Z",
+      "file": "labels.jsonl"
+     },
+     {
+      "s": "ok",
+      "t": "same input -> level 0-3",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "part",
+      "t": "small head on the frozen fine-tuned encoder",
+      "src": "heademb_size_s7.json",
+      "ts": "2026-11-10T01:20Z",
+      "file": "heademb_size_s7.json"
+     },
+     {
+      "s": "ok",
+      "t": "dev accuracy every 5 epochs, 3 seeds",
+      "src": "heademb_size_s7.json",
+      "ts": "2026-11-10T01:20Z",
+      "file": "heademb_size_s7.json"
+     },
+     {
+      "s": "part",
+      "t": "dev 0.638-0.641 vs majority level 0.507; dev split only",
+      "src": "heademb_size_s*.json"
+     },
+     {
+      "s": "none",
+      "t": "no live size head compared",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "sealed ids excluded from the training list; none read",
+      "src": "head_on_embeddings.py",
+      "ts": "2026-11-09T22:38Z",
+      "file": "head_on_embeddings.py"
+     },
+     {
+      "s": "no",
+      "t": "the sealed set has no size-level labels, so there is no sealed or outside check",
+      "src": "runs/pulse/sealed/labels.jsonl",
+      "ts": "2026-11-04T22:00Z",
+      "file": "labels.jsonl"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "3 seeds: dev spread 0.003",
+      "src": "heademb_size_s*.json"
+     },
+     {
+      "s": "part",
+      "t": "v1 candidate on dev only; agreement with Sonnet",
+      "src": "model_rollout.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-10T01:20Z",
+     "file": "heademb_size_s7.json",
+     "col": 2
+    }
+   }
+  ],
+  "works": [
+   "Sealed set is clean: only 1 of 1,499 items has a near-twin in training (MM3-0631 also passed the leakage group on the T56 fine-tune; MM3-0632 on the head factory).",
+   "Training is repeatable: 4 encoder runs land within 0.009 topic and 0.007 story type of each other, the same size as seed noise.",
+   "The encoder beats the old sparse heads on topic and story type by more than noise. The per-kind Condition head (T69) holds up: sealed 0.81-0.83 against 0.10 for the most-common-kind baseline, across 3 seeds.",
+   "The Condition (present) head, with its threshold lowered until dev recall reached 0.80, scores on the sealed set: precision 0.57 (0.50 to 0.63), recall 0.79, agreement 0.911 against 0.891 for always-no (T37; agreement with Sonnet). Adding an event-trigger filter does not help. Every step is recorded: 17 of 17 predictions have a score note (progress.json); the Training tab and live rows refresh from the poller every 3 minutes."
+  ],
+  "doesnt": [
+   "The new encoder does NOT clearly beat the head that is live (v6b-student): against Sonnet the paired differences are within noise, and against MN-DS human labels it is 1.4 points worse on one set and 1.1 better on the other. Adopting it buys nothing on these scores.",
+   "All encoder scores are agreement with Sonnet, not outside truth. Topic now has an outside check for both engines (MN-DS human labels, about 78-80% top-2); story type, condition, per-kind and size do not.",
+   "Condition is weak (F1 about 0.66) and its gain over the old head is not established.",
+   "Area, Capability, Novelty and Understanding have no trained model. The triple route is measured but limited by the entity extractor (T73 to T82 measured it on CPU; no model is trained yet).",
+   "Two MM3 splits are open: T56 question 9 (resume order) and T49 questions 5-6 (reporting). My code reading says yes on all three; the local reader says no. A second reviewer needs your yes (hosted)."
+  ],
+  "noise": {
+   "topic": 0.009,
+   "story_type": 0.007,
+   "presence_f1": 0.019
+  }
+ }
+}

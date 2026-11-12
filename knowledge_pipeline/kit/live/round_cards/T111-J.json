@@ -1,0 +1,33 @@
+{
+ "id": "T111-J",
+ "task": "T111",
+ "part": "main loop: Condition and direction, next data",
+ "field": "condition",
+ "question": "Does hosted Jev on the queue's own headline plus teaser give a dial label for about as many stories as it did on the engine stories (T110)?",
+ "one_change": "label 20,000 queue stories (engine stories left out) on headline plus teaser instead of 10,000 pool articles on 400 words",
+ "baseline": {
+  "model": "hosted Jev on the engine stories, headline plus two sentences (T110-J)",
+  "file": "runs/pulse/t110/t106_clef_dials.json",
+  "key": "labeller_says_dial_share"
+ },
+ "prediction": {
+  "metric": "share of stories given a dial",
+  "low": 0.4,
+  "high": 0.65,
+  "why": "T110 gave 0.553 on the engine stories (runs/pulse/t110/t106_clef_dials.json); the queue has the same feeds plus more; errors expected under 1 percent; spend 0.6 USD or less under D28"
+ },
+ "command": "N=20000 OUT=runs/pulse/t111 /workspace/models/embed-zs/.venv/bin/python -u t111_label_queue.py",
+ "result": {
+  "file": "runs/pulse/t111/t111_label_queue.json",
+  "key": "share_with_dial"
+ },
+ "cap_minutes": 40,
+ "noise": 0.04,
+ "who": "S3",
+ "priority": 1,
+ "threads": 2,
+ "smoke": {
+  "command": "N=20 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t111s_$(date +%s) /workspace/models/embed-zs/.venv/bin/python -u t111_label_queue.py",
+  "cap_minutes": 8
+ }
+}

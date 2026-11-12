@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Techniques on one article</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  main { max-width: 1180px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 4px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+  .box p { margin: 0 0 8px; color: var(--ink-2); font-size: 13px; }
+  .src { font: 12px var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0 8px; }
+  table.t th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line-2); }
+  table.t td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: right; font-family: var(--mono); }
+  .picker { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; } button.pk { text-align: left; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 5px 10px; cursor: pointer; font: 13px var(--sans); } button.pk[aria-pressed="true"] { border-color: var(--accent); background: var(--surface-2); }
+  .rawtext { font-size: 13px; color: var(--ink); white-space: pre-wrap; padding: 2px 0 6px; }
+  .bar { display: inline-block; height: 7px; border-radius: 3px; vertical-align: middle; margin-right: 4px; background: var(--s1); } .bar.e { background: var(--s3); } .bar.c { background: var(--live); } .bar.u { background: var(--ink-3); }
+  .lab { font: 11px var(--mono); color: var(--ink-3); } .tx { font-size: 13px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .kv { display: flex; gap: 8px; padding: 2px 0; font-size: 13px; border-bottom: 1px dotted var(--line); } .kv b { min-width: 90px; color: var(--ink-3); font-weight: 600; font-size: 12px; }
+  .warn { font-size: 13px; color: var(--ink); border-left: 3px solid var(--s4); padding: 2px 0 2px 10px; margin: 6px 0; }
+</style></head><body><main id="app"></main>
+<script>
+(function () {
+  var app = document.getElementById("app");
+  function el(tag, props) { var e = document.createElement(tag); props = props || {}; for (var k in props) { if (k === "text") e.textContent = props[k]; else if (k === "class") e.className = props[k]; else e.setAttribute(k, props[k]); } for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null) continue; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); } return e; }
+  var pct = function (x) { return Math.round(x * 100) + "%"; }, f2 = function (x) { return x.toFixed(2); };
+  function table(head, rows, numCols) { var t = el("table", { class: "t" }), tr = el("tr"); head.forEach(function (h, i) { tr.appendChild(el("th", { text: h, class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" })); }); t.appendChild(el("thead", {}, tr)); var tb = el("tbody"); rows.forEach(function (r) { var row = el("tr"); r.forEach(function (c, i) { var td = el("td", { class: numCols && numCols.indexOf(i) >= 0 ? "n" : (i === r.length - 1 && typeof c === "string" && c.length > 60 ? "tx" : "") }); if (c instanceof Node) td.appendChild(c); else td.textContent = c == null ? "" : String(c); row.appendChild(td); }); tb.appendChild(row); }); t.appendChild(tb); return t; }
+  function box(title, intro, body, src) { return el("section", { class: "box" }, el("h2", { text: title }), intro ? el("p", { text: intro }) : null, body, src ? el("div", { class: "src", text: "source: " + src }) : null); }
+  function pbar(v, cls) { return el("span", {}, el("span", { class: "bar " + (cls || ""), style: "width:" + Math.max(1, Math.round(60 * v)) + "px" }), el("span", { class: "lab", text: f2(v) })); }
+  fetch("data.json").then(function (r) { return r.json(); }).then(render).catch(function (e) { app.appendChild(el("p", { text: "Could not load data.json: " + e })); });
+  function render(D) {
+    var SRC = "runs/harvest/article_techniques.json";
+    app.appendChild(el("h1", { text: "Techniques on one article" }));
+    app.appendChild(el("p", { class: "lead", text: "Pick one article. Its own text is shown first, word for word. Below it, the existing extractors and four embedding techniques are run on that article alone. Embedding model: " + D.model + ". Support / contradiction model: " + D.nli_model + " (and a larger one for comparison)." }));
+    var G = el("div"); [
+      ["Keyphrase", "A word or short phrase taken word for word from the article. Candidates are the article's noun phrases and named entities. Each is turned into numbers, and the ones closest in meaning to the whole article are kept."],
+      ["Similarity", "How close two texts are in meaning, 0 (unrelated) to 1 (the same). It says nothing about whether one text agrees with another."],
+      ["Diversity step (MMR)", "After picking the best phrase, each next pick is penalised for being close to a phrase already picked, so the list is not eight versions of the same idea."],
+      ["Theme / segment", "A run of consecutive sentences that stay on one subject. A boundary is placed where the meaning of the sentences just before a point differs most from the sentences just after (a dip in similarity). Depth = how deep the dip is."],
+      ["Returns", "Two segments that are not neighbours but are close in meaning: the article comes back to an earlier theme."],
+      ["Opening + coverage", "Keep the first sentence, then add the three sentences that add the most coverage of the whole article, within 120 words. Coverage is defined as on the previous page."],
+      ["Claim", "The headline, used as the statement to test."],
+      ["Supports / contradicts / unrelated", "A trained model reads a sentence and the claim and gives three probabilities: entailment (the sentence supports the claim), contradiction (it opposes it) and neutral (neither). It is run only on the sentences closest in meaning to the claim, because on unrelated text it tends to say contradiction."],
+      ["Existing extractors", "The rule and NER tools already in the pipeline (amounts, dates, places, names, years). Their output for this article is shown as the tools produced it."]
+    ].forEach(function (d) { G.appendChild(el("p", {}, el("b", { text: d[0] + ": " }), d[1])); });
+    app.appendChild(box("Terms used on this page", "Defined once, apply everywhere below.", G));
+    var picker = el("div", { class: "picker" }), stage = el("div"), dnames = D.articles.map(function (a) { return a.title; });
+    D.articles.forEach(function (a, i) { var b = el("button", { class: "pk", "aria-pressed": "false", text: (i + 1) + ". " + a.title }); b.addEventListener("click", function () { draw(i); }); picker.appendChild(b); });
+    app.appendChild(box("Articles", null, picker)); app.appendChild(stage);
+
+    function draw(i) {
+      stage.textContent = ""; Array.prototype.forEach.call(picker.children, function (b, j) { b.setAttribute("aria-pressed", j === i ? "true" : "false"); });
+      var a = D.articles[i], S = a.sentences;
+      // raw
+      stage.appendChild(box(a.title, a.domain + ", " + a.words + " words, " + S.length + " sentences. The article exactly as held, with its paragraph breaks.", el("div", { class: "rawtext", text: a.raw }), SRC + "#articles[" + i + "].raw"));
+      // existing extractors
+      var X = a.extractors, ex = el("div", { class: "two" });
+      function kv(k, v) { return el("div", { class: "kv" }, el("b", { text: k }), el("span", { text: v })); }
+      var c1 = el("div"), c2 = el("div");
+      c1.appendChild(kv("Amounts", X.amounts.map(function (s) { return s.trim(); }).join(", ") || "none")); c1.appendChild(kv("Dates", X.dates.join(", ") || "none")); c1.appendChild(kv("Years", X.years.join(", ") || "none"));
+      c2.appendChild(kv("Places", X.places.map(function (p) { return p.text + (p.country ? " (" + p.country + ")" : " (no country)") + " x" + p.times; }).join(", ") || "none")); c2.appendChild(kv("Names", X.names.map(function (p) { return p.text + " x" + p.times; }).join(", ") || "none"));
+      ex.appendChild(c1); ex.appendChild(c2);
+      stage.appendChild(box("The existing extractors on this article", "Output as the tools produced it: " + X.tools.facts + " (amounts, dates), " + X.tools.places + " (places), " + X.tools.entities + " (names), " + X.tools.spans + " (years). Mistakes are left in.", ex, "runs/harvest/extract.jsonl row for this article"));
+      // keyphrases
+      stage.appendChild(box("Technique 1: keyphrases", "From " + a.candidates + " candidate phrases found in the article, the 8 closest in meaning to the whole article, diversified. Every phrase below is word for word in the title or body.",
+        table(["Phrase", "Closeness to the article", "Times in the article", "First in sentence", "In the title"], a.keyphrases.map(function (k) { return [k.phrase, pbar(k.similarity), k.times, k.first_sentence == null ? "title only" : k.first_sentence, k.in_title ? "yes" : "no"]; }), [2, 3]), SRC + "#keyphrases"));
+      // themes
+      var T = a.themes, sg = T.segments;
+      var tb = table(["Theme", "Sentences", "Words", "Opening sentence, word for word", "Phrases from this stretch of text"], sg.map(function (s, k) { return [String(k + 1), s.first + " to " + s.last, s.words, s.opening_sentence, s.phrases.map(function (p) { return p.phrase + " x" + p.times; }).join(", ")]; }), [2]);
+      var ret = []; for (var x = 0; x < sg.length; x++) for (var y = x + 2; y < sg.length; y++) ret.push([T.segment_similarity[x][y], x + 1, y + 1]); ret.sort(function (p, q) { return q[0] - p[0]; });
+      var retTable = table(["Theme", "Returns to theme", "Similarity"], ret.slice(0, 3).map(function (r) { return [String(r[1]), String(r[2]), f2(r[0])]; }), [2]);
+      stage.appendChild(box("Technique 2: themes along the article", "The article splits into " + sg.length + " themes. A boundary is placed where the dip in similarity between neighbouring stretches is deeper than " + T.threshold.toFixed(2) + " (mean + 0.5 standard deviation of all dips), with at least 3 sentences per theme.", el("div", {}, tb, el("p", { text: "Pairs of non-neighbouring themes that are closest in meaning (the article returning to an earlier subject):" }), retTable), SRC + "#themes"));
+      // opening + coverage
+      var oc = a.opening_plus_coverage;
+      stage.appendChild(box("Technique 3: opening sentence plus three chosen by coverage", "Sentences " + oc.pieces.join(", ") + " (picked in that order), shown in article order. Coverage of the whole article: " + f2(oc.coverage) + ", against " + f2(oc.gist_only_coverage) + " when all four are chosen by coverage alone.", (function () { var d = el("div"); oc.text.forEach(function (t) { d.appendChild(el("div", { class: "kv" }, el("span", { class: "tx", text: t }))); }); return d; })(), SRC + "#opening_plus_coverage"));
+      // NLI
+      var N = a.nli, rel = N.most_related_8, cw = Math.max(0, S.length);
+      var rows = rel.map(function (r) { return [String(r.piece), pbar(r.related_to_headline), el("span", {}, pbar(r.entailment, "e"), el("br"), pbar(r.contradiction, "c"), el("br"), pbar(r.neutral, "u")), el("span", {}, pbar(r.base.entailment, "e"), el("br"), pbar(r.base.contradiction, "c"), el("br"), pbar(r.base.neutral, "u")), r.text]; });
+      var nbody = el("div");
+      nbody.appendChild(el("p", { text: "Claim (the headline): " + N.claim }));
+      nbody.appendChild(table(["Sentence", "Closeness to the claim", "Small model: supports / opposes / neither", "Larger model: supports / opposes / neither", "Sentence, word for word"], rows, [0]));
+      nbody.appendChild(el("p", { class: "warn", text: "Run on every one of the " + S.length + " sentences, the small model says 'opposes' (above 0.5) for " + N.all_sentences_contradiction_over_half + " and 'supports' for " + N.all_sentences_entailment_over_half + ". On unrelated sentences it leans to 'opposes', so only the 8 closest sentences are shown. Among those 8: small model supports " + N.related_entailment_over_half + ", opposes " + N.related_contradiction_over_half + "; larger model supports " + N.base_related_entailment_over_half + ", opposes " + N.base_related_contradiction_over_half + ". The two models give the same label on " + N.agree_label_small_vs_base + " of 8." }));
+      stage.appendChild(box("Technique 4: does the text support or oppose the headline?", "Green = supports, red = opposes, grey = neither. Probabilities add to 1 for each model.", nbody, SRC + "#nli"));
+      // side by side
+      var sb = [["Keyphrases (technique 1)", a.keyphrases.slice(0, 4).map(function (k) { return k.phrase; }).join("; ")], ["Themes (technique 2)", sg.map(function (s, k) { return (k + 1) + ": " + (s.phrases[0] ? s.phrases[0].phrase : "no phrase"); }).slice(0, 6).join("; ")], ["Opening + coverage (technique 3)", oc.text[0]], ["Best support for the headline (technique 4)", rel.slice().sort(function (p, q) { return q.entailment - p.entailment; })[0].text], ["Names found by the existing tools", X.names.slice(0, 4).map(function (n) { return n.text; }).join("; ")], ["Places found by the existing tools", X.places.slice(0, 4).map(function (n) { return n.text; }).join("; ")]];
+      stage.appendChild(box("What each method says about this article, side by side", "Each row is that method's own output, unedited, so you can see where they agree and where they do not.", table(["Method", "Its output"], sb), SRC));
+    }
+    draw(0);
+  }
+})();
+</script></body></html>

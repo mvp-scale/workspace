@@ -1,0 +1,33 @@
+{
+ "id": "T123-C",
+ "task": "T123",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Does local Clef label queue stories at a rate and agreement with Jev that make Clef-labelled students worth training?",
+ "one_change": "label 6,000 queue stories that Jev already labelled with local Clef on the 5090, headline plus teaser",
+ "baseline": {
+  "model": "hosted Jev dial share on the same queue stories (T111-J)",
+  "file": "runs/pulse/t111/t111_label_queue.json",
+  "key": "share_with_dial"
+ },
+ "prediction": {
+  "metric": "share of stories given a dial by Clef",
+  "low": 0.4,
+  "high": 0.65,
+  "why": "Jev gave 0.5163 on these stories (runs/pulse/t111/t111_label_queue.json); local Clef ran 8 items per second for two choices in earlier cards, so 6,000 stories take about 15 minutes; this card needs the owner yes for the local GPU and has not been run; pass or fail test (added after MM3-0673): go to training students on these labels only if Clef agrees with Jev on the dial for at least half of the 6,000 stories; stop and report if the share given a dial falls outside 0.40 to 0.65; the owner decides engine adoption, the loop decides the training card"
+ },
+ "command": "N=6000 OUT=runs/pulse/t123 /workspace/models/embed-zs/.venv/bin/python -u t123_clef_label.py",
+ "result": {
+  "file": "runs/pulse/t123/t123_clef_label.json",
+  "key": "share_with_dial"
+ },
+ "cap_minutes": 40,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "N=20 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t123s_$(date +%s) /workspace/models/embed-zs/.venv/bin/python -u t123_clef_label.py",
+  "cap_minutes": 8
+ }
+}

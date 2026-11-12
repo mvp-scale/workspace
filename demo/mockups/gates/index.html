@@ -67,9 +67,38 @@
   .sw3 { display: inline-flex; gap: 6px; margin-left: 12px; vertical-align: middle; } .sw3 button { border: 1px solid var(--line-2); background: var(--surface-2); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; } .sw3 button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   td.thisart { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   .foot { font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+  .sum { font-size: 15px; line-height: 1.55; }
+  .sum h2 { font-size: 20px; margin: 0 0 8px; }
+  .sum h3 { font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); margin: 22px 0 8px; }
+  .sum .headline { font-size: 18px; line-height: 1.5; margin: 0 0 14px; max-width: 70ch; }
+  .sum .legend2 { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); margin: 6px 0 12px; } .sum .legend2 span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--c); vertical-align: -1px; }
+  .sum .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .sum .step { border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: 10px; padding: 12px 14px; background: var(--surface); }
+  .sum .step .n { font: 600 12px var(--mono); color: var(--ink-3); } .sum .step .nm { font-size: 16px; font-weight: 700; margin: 2px 0 6px; }
+  .sum .chip { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: var(--c); border-radius: 999px; padding: 2px 10px; margin-bottom: 8px; }
+  .sum .step p { margin: 6px 0; font-size: 14px; line-height: 1.5; } .sum .step .pred { font-size: 12px; color: var(--ink-3); } .sum .step .why { font-size: 13px; color: var(--ink-2); border-left: 3px solid var(--line-2); padding-left: 8px; }
+  .worked, .hit { --c: #2e7d5b; } .nochange { --c: #6b7280; } .mixed { --c: #b7791f; } .waiting { --c: #3b6fb6; } .miss { --c: #b4443a; }
+  .sum .three { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; } .sum .three ul { margin: 0; padding-left: 18px; } .sum .three li { margin: 6px 0; font-size: 14px; }
+  .sum table { width: 100%; border-collapse: collapse; font-size: 14px; } .sum th { text-align: left; font: 600 11px var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); padding: 6px 8px; border-bottom: 1px solid var(--line-2); } .sum td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.45; } .sum td.num { white-space: nowrap; font-weight: 600; } .sum td.mut { color: var(--ink-3); }
+  .sum .vchip { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: var(--c); border-radius: 999px; padding: 1px 9px; margin-right: 6px; white-space: nowrap; }
+  .sum details { margin-top: 14px; font-size: 13px; color: var(--ink-2); } .sum details summary { cursor: pointer; } .sum details li { font-family: var(--mono); font-size: 12px; }
+  .map .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 8px 0 4px; }
+  .map .a { border: 1px solid var(--line); border-left: 6px solid var(--c); border-radius: 8px; padding: 9px 11px; background: var(--surface); } .map .a b { font-size: 15px; } .map .a .t { display: inline-block; margin: 4px 0; font-size: 11px; font-weight: 700; color: #fff; background: var(--c); border-radius: 999px; padding: 1px 9px; } .map .a p { margin: 4px 0 0; font-size: 13px; line-height: 1.45; }
+  .map .cycle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; } .map .cyc { border: 2px solid var(--c); border-radius: 10px; padding: 8px 10px; min-width: 112px; text-align: center; background: var(--surface); font-size: 13px; line-height: 1.3; } .map .cyc b { display: block; font-size: 18px; color: var(--c); } .map .arrow { font-size: 22px; color: var(--ink-3); }
+  .map .here { background: var(--accent); color: #fff; border-radius: 999px; padding: 5px 14px; font-weight: 700; font-size: 13px; margin: 4px 0; display: inline-block; }
+  .map .lap2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; } .map .l2 { border: 1px dashed var(--line-2); border-radius: 10px; padding: 10px 12px; } .map .l2 .s { font: 600 11px var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); } .map .l2 p { margin: 4px 0; font-size: 14px; line-height: 1.45; } .map .who { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 9px; color: #fff; background: var(--c); } .me { --c: #2e7d5b; } .you { --c: #b7791f; }
+  h2.sect { font-size: 18px; margin: 28px 0 6px; padding-top: 14px; border-top: 2px solid var(--line-2); }
+  .rl { list-style: none; padding: 0; margin: 0; } .rl li { padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.45; } details.older { padding: 10px 14px; } details.older > summary { cursor: pointer; font-size: 14px; color: var(--ink-2); }
 </style>
 </head><body><div class="wrap">
 <div class="bar"><a class="back" href="../index.html">All mock-ups</a><h1>Reading gates</h1><span class="sp"></span><span class="small" id="built"></span><p style="margin:0 0 8px;font-size:13px"><a href="../state/index.html">Pulse state: the parts by name, what works, what falls short</a></p></div>
+<section class="card" id="board"></section>
+<details class="card older"><summary><b>Older detail</b>: the map, the lap board, the head table and every round (kept, but the board above is the page to read)</summary>
+<section class="card" id="map"></section>
+<section class="card" id="lap"></section>
+<section class="card" id="heads"></section>
+</details>
+<h2 class="sect" id="examples-title">Worked examples: three real articles through the gates</h2>
 <p class="intro" id="intro"></p>
 <div class="picker" id="picker" role="group" aria-label="Choose an article"></div>
 <p class="key" id="key"></p>
@@ -103,9 +132,76 @@
     const kk = document.getElementById("key"); kk.append(el("b", { text: "What kind of evidence each card shows:  " }), el("span", null, el("span", { cls: "ev chk", text: "checked" }), " verified against the text itself"), el("span", null, el("span", { cls: "ev par", text: "parsed" }), " read by a parser, judged separately against outside gold"), el("span", null, el("span", { cls: "ev est", text: "estimated" }), " a similarity score or a trained model's probability: agreement with Sonnet's labels, not truth"), el("span", null, el("b", { text: "Keys 1, 2, 3 switch article from anywhere on the page." })));
     document.addEventListener("keydown", (e) => { if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; const i = ["1", "2", "3"].indexOf(e.key); if (i >= 0 && i < D.articles.length) { S.a = i; S.frag = null; S.head = null; draw(); } });
     document.getElementById("foot").textContent = "Limits: labels behind the ladder and the heads are Sonnet agreement, not outside truth. Heads read the first 600 characters (title plus body). The solver runs on a small spaCy model as a prototype of the playbook's bounded templates. Scan speed is Python regex, far under the playbook's Rust target. Not tuned for production.";
+    drawBoard();
+    drawMap();
+    drawLap();
+    drawHeads();
     draw();
   }
   const art = () => D.articles[S.a];
+  function drawBoard() {
+    const host = document.getElementById("board"); host.replaceChildren(); host.className = "card sum"; if (!D.board) return; const b = D.board;
+    host.append(el("h2", { text: "Are we moving?" }), el("p", { cls: "headline", text: b.verdict + ". " + b.headline }));
+    const t = el("table"); t.append(el("thead", null, el("tr", null, ["What we measure", "At the start of the loop", "Now", "Did it move?"].map((h) => el("th", { text: h })))));
+    const tb = el("tbody"); const order = { headline: 0, machinery: 1, bookkeeping: 2 }; const KIND = { headline: "matters most", machinery: "serves the goal", bookkeeping: "bookkeeping, not progress" };
+    [...b.rows].sort((x, y) => order[x.kind] - order[y.kind]).forEach((r) => { const cls = r.kind === "bookkeeping" ? "nochange" : (r.change === "flat" ? "miss" : "worked"); const lab = r.kind === "bookkeeping" ? "bookkeeping" : (r.change === "flat" ? "flat" : (r.change === "new" ? "new" : "moved"));
+      tb.append(el("tr", null, el("td", null, el("b", { text: r.label }), el("div", { cls: "small", text: KIND[r.kind] + ". " + r.plain })), el("td", { cls: "num", text: r.start }), el("td", { cls: "num", text: r.now }), el("td", null, el("span", { cls: "vchip " + cls, text: lab })))); });
+    t.append(tb); host.append(t);
+    host.append(el("h3", { text: "What the Opus reviewer says" }), el("p", { text: b.review.plain }));
+    if (b.review.response) host.append(el("p", null, el("b", { text: "What I did with it: " }), b.review.response));
+    host.append(el("div", { cls: "three" }, el("div", null, el("b", { text: "The one change to the loop" }), el("p", { text: b.review.next_move }), el("p", { cls: "small", text: "Done when: " + b.review.done + " Prediction: " + b.review.prediction })), el("div", null, el("b", { text: "Stop doing" }), el("ul", null, b.review.stop.map((x) => el("li", { text: x })))), el("div", null, el("b", { text: "Work we were avoiding" }), el("ul", null, b.review.avoiding.map((x) => el("li", { text: x }))))));
+    host.append(el("h3", { text: "The last rounds, one line each" }));
+    const ul = el("ul", { cls: "rl" }); b.recent.forEach((r) => ul.append(el("li", null, el("span", { cls: "vchip " + (r.kind || "hit"), text: r.kind === "mixed" ? "partly" : (r.kind === "miss" ? "miss" : "hit") }), el("b", { text: r.id + "  " }), r.line)));
+    host.append(ul);
+    host.append(el("h3", { text: "Needs you (also the blocked task T48 in the pipeline)" }), el("ul", null, b.needs.map((x) => el("li", { text: x }))));
+    host.append(el("p", { cls: "small", text: "The ledger and the Live tab at http://localhost:18766/#live carry the same loop: every round is a line there with its prediction and result." }));
+  }
+  function drawMap() {
+    const host = document.getElementById("map"); host.replaceChildren(); host.className = "card sum map"; if (!D.map) return; const m = D.map;
+    host.append(el("h2", { text: "Where we are, where we are going" }), el("p", { cls: "headline", text: m.status_line }), el("p", { text: m.training_line }));
+    host.append(el("h3", { text: "1. Where we are going" }), el("p", { cls: "headline", text: m.goal }));
+    const an = el("div", { cls: "ans" }); m.answers.forEach((a) => an.append(el("div", { cls: "a " + a.state }, el("b", { text: a.name }), el("div", null, el("span", { cls: "t", text: a.label })), el("p", { cls: "small", text: a.by || "" }), el("p", { text: a.line })))); host.append(an);
+    host.append(el("div", { cls: "legend2" }, el("span", { cls: "worked", text: "answers today" }), el("span", { cls: "mixed", text: "held back by the rules" }), el("span", { cls: "miss", text: "not ready" })));
+    host.append(el("h3", { text: "2. The loop we follow, and where we are in it" }), el("p", { text: "Each lap goes through the same six steps. Lap 1 is finished. We are at the start of lap 2." }));
+    const cy = el("div", { cls: "cycle" }); m.loop.forEach((n, i) => { cy.append(el("div", { cls: "cyc nochange" }, el("b", { text: String(i + 1) }), n)); cy.append(el("span", { cls: "arrow", text: i < m.loop.length - 1 ? "\u2192" : "\u21bb" })); }); cy.append(el("span", { cls: "here", text: "YOU ARE HERE: start of lap 2" })); host.append(cy);
+    host.append(el("p", { cls: "small", text: m.health }));
+    host.append(el("h3", { text: "3. What lap 2 does, step by step" }));
+    const l2 = el("div", { cls: "lap2" }); m.lap2.forEach((x, i) => l2.append(el("div", { cls: "l2" }, el("div", { cls: "s", text: "Step " + (i + 1) + " \u00b7 " + x.step }), el("p", { text: x.plan }), el("div", { cls: "pred", text: "Status: " + x.status }), el("span", { cls: "who " + (x.ok ? "me" : "you"), text: x.ok ? "I can do this now" : x.who })))); host.append(l2);
+    host.append(el("h3", { text: "4. Can we train all six BitMob models?" }), el("p", { text: "What each model has to learn from, what judges it, and what stops it. Trains means the data exists; accepted means an outside judge and a confirmed contract exist." }));
+    const t = el("table"); t.append(el("thead", null, el("tr", null, ["Model", "Labels we have", "Judged against", "Can it train?", "What stops it", "Who clears it"].map((h) => el("th", { text: h })))));
+    const tb = el("tbody"); m.training.forEach((x) => tb.append(el("tr", null, el("td", null, el("b", { text: x.model })), el("td", { text: x.labels }), el("td", { text: x.judge }), el("td", null, el("span", { cls: "vchip " + x.state, text: x.can })), el("td", { text: x.block }), el("td", { text: x.who }))));
+    t.append(tb); host.append(t);
+    host.append(el("h3", { text: "5. The decisions that unlock training" }), el("p", { text: "Every blocker above is one of these. Each has the options and my recommendation, so an answer can be one word." }));
+    const dg = el("div", { cls: "lap2" }); m.decisions.forEach((x) => dg.append(el("div", { cls: "l2" }, el("div", { cls: "s", text: "Decision " + x.n }), el("p", null, el("b", { text: x.title })), el("p", { text: "Unlocks: " + x.unlocks }), el("p", { text: "Options: " + x.options }), el("p", null, el("b", { text: "I recommend: " }), x.rec)))); host.append(dg);
+  }
+  function drawLap() {
+    const host = document.getElementById("lap"); host.replaceChildren(); host.className = "card sum"; if (!D.lap || !D.summary) return;
+    const sm = D.summary;
+    host.append(el("h2", { text: "The first lap: what happened" }), el("p", { cls: "headline", text: sm.headline }));
+    const lg = el("div", { cls: "legend2" }); [["worked", "worked"], ["nochange", "ran, no change"], ["mixed", "ran, a prediction missed"], ["waiting", "waiting"]].forEach(([c, t]) => lg.append(el("span", { cls: c, text: t, style: { } }))); host.append(lg);
+    const g = el("div", { cls: "steps" });
+    D.lap.forEach((x) => g.append(el("div", { cls: "step " + x.outcome }, el("div", { cls: "n", text: "STEP " + x.n }), el("div", { cls: "nm", text: x.name }), el("span", { cls: "chip", text: x.outcome_label }), el("p", { text: x.what }), x.why ? el("p", { cls: "why", text: x.why }) : "", el("div", { cls: "pred", text: (x.prediction && x.prediction !== "-" ? x.prediction + "  ·  " : "") + "ledger " + x.ledger }))));
+    host.append(g);
+    host.append(el("h3", { text: "What we learned" }));
+    const th = el("div", { cls: "three" });
+    [["What worked", sm.worked], ["What did not", sm.did_not], ["What is next", sm.next]].forEach(([t, xs]) => th.append(el("div", null, el("b", { text: t }), el("ul", null, xs.map((x) => el("li", { text: x }))))));
+    host.append(th);
+  }
+  function drawHeads() {
+    const host = document.getElementById("heads"); host.replaceChildren(); host.className = "card sum"; if (!D.heads) return;
+    host.append(el("h2", { text: "How much each head settles" }), el("p", { text: "For each question the pipeline answers: how often the tools alone settle it, how often the model answers, how often that answer is right, and how much is left for the teacher. A dash means it is not measured or not built." }));
+    const t = el("table"); t.append(el("thead", null, el("tr", null, ["Question", "Tools alone settle", "Model answers", "Model is right", "Left for the teacher"].map((h) => el("th", { text: h })))));
+    const tb = el("tbody"); const v = (x) => { const m = /^[0-9.]+%/.exec(x || ""); if (!m) return el("td", { cls: "mut", text: "-" }); const note = /\(([^)]*)\)/.exec(x); return el("td", { cls: "num" }, m[0], note ? el("div", { cls: "small", text: note[1] }) : ""); };
+    D.heads.forEach((h) => tb.append(el("tr", null, el("td", null, el("b", { text: h.head })), v(h.tools_settled), v(h.model_answered), v(h.model_right), v(h.left))));
+    t.append(tb); host.append(t);
+    host.append(el("p", { cls: "small", text: "Right means: topic is scored against human labels (two guesses, MN-DS) and the other rows against Sonnet's labels on a sealed set, which is agreement, not truth. Tools alone settle none of these today. The model answers nearly everything, so almost nothing is left for the teacher." }));
+    host.append(el("h3", { text: "Each round of the improvement loop" }), el("p", { text: "One question, a prediction written before the run, the result, and the verdict. A miss is kept as a miss." }));
+    const r = el("table"); r.append(el("thead", null, el("tr", null, ["Round", "Question", "Predicted", "Result", "Verdict"].map((h) => el("th", { text: h })))));
+    const rb = el("tbody"); D.rounds.forEach((x) => rb.append(el("tr", null, el("td", { cls: "num", text: x.id }), el("td", { text: x.question }), el("td", { text: x.predicted }), el("td", { text: x.result }), el("td", null, el("span", { cls: "vchip " + (x.kind || "hit"), text: x.kind === "mixed" ? "partly" : (x.kind === "miss" ? "miss" : "hit") }), x.verdict))));
+    r.append(rb); host.append(r);
+    host.append(el("details", null, el("summary", { text: "Where each number comes from" }), el("ul", null, (D.sources || []).map((x) => el("li", { text: x })))));
+  }
+
   function draw() { [...document.getElementById("picker").children].forEach((b, i) => b.setAttribute("aria-pressed", String(i === S.a))); const a = art(); drawGates(a); drawLens(a); drawAgree(a); drawLadder(a); }
 
   // ---- lens: paint spans onto the body, per sentence

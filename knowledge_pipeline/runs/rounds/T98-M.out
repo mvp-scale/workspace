@@ -1,0 +1,52 @@
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 12488.46it/s]
+[1mBertModel LOAD REPORT[0m from: BAAI/bge-small-en-v1.5
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+{
+ "supported_triples": 2000,
+ "unique_keys": 1929,
+ "keys_in_2plus_articles": 64,
+ "pairs_same_key": 79,
+ "unconstrained": {
+  "pairs": 79,
+  "same_term": 0.7468,
+  "same_depth1_ancestor": 0.7722,
+  "same_top_level": 0.7848
+ },
+ "constrained_to_reader_domain": {
+  "pairs": 79,
+  "same_term": 0.6962,
+  "same_depth1_ancestor": 0.8101,
+  "same_top_level": 0.8481
+ },
+ "baseline_random_pairs_unconstrained": {
+  "pairs": 79,
+  "same_term": 0.0,
+  "same_depth1_ancestor": 0.038,
+  "same_top_level": 0.0759
+ },
+ "baseline_random_pairs_constrained": {
+  "pairs": 79,
+  "same_term": 0.0127,
+  "same_depth1_ancestor": 0.0759,
+  "same_top_level": 0.1392
+ },
+ "reader_domain_available_share": 1.0,
+ "note": "Pairs of rows with the same triple key from different articles. Same-term etc. = both rows were assigned the same ontology term / depth-1 ancestor / top-level category. Constrained = candidates limited to the descendants of the top-level categories of the live reader's top-two topics for the row's article. Measures reproducibility of the assignment, not truth.",
+ "constrained_terms_with_5plus": 106,
+ "constrained_terms_with_10plus": 46
+}
+[('defendant', 75), ('road incident', 53), ('border dispute', 51), ('arrest', 45), ('witness', 42), ('shootings', 40), ('disinformation and misinformation', 35), ('terrorist bombings', 32), ('mass media', 29), ('sports management and ownership', 27)]
+Traceback (most recent call last):
+  File "/workspace/knowledge_pipeline/projects/world-state/t79_constrain.py", line 4, in <module>
+    src = open("t77_map.py").read().split('res = {"depth_max"')[0]; exec(src)
+                                                                    ^^^^^^^^^
+  File "<string>", line 9, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: 'runs/pulse/t98/t76_supported_triples.json'
+L1765 appended
+L1766 appended
+L1766

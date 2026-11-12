@@ -1,0 +1,33 @@
+{
+ "id": "T127-L",
+ "task": "T127",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do the extra engine readings lift the all-readings presence AUROC toward the 0.87 bar, with an interval?",
+ "one_change": "add the T126 extension readings to the engine stories used for training and held-out scoring",
+ "baseline": {
+  "model": "T122 curve with all 1,388 readings per fold",
+  "file": "runs/pulse/t122/t122_curve.json",
+  "key": "curve.0.presence_auroc"
+ },
+ "prediction": {
+  "metric": "presence AUROC with all training readings, full-text view, grouped 5-fold",
+  "low": 0.86,
+  "high": 0.885,
+  "why": "T122 gave 0.8553 at 1,388 readings and the curve rises 0.012 over the last 388 (runs/pulse/t122/t122_curve.json); the 750 added stories make 2,000 readings per fold by my count; my extrapolation (ledger L1973, an estimate, not measured) puts presence at 0.867 there; the test set also changes, so the figure is not a paired comparison with T122"
+ },
+ "command": "FOLDS=5 SIZES=300,600,1000,1500,0 REPS=3 OUT=runs/pulse/t127 /workspace/kev/.venv/bin/python -u t127_curve_ext.py",
+ "result": {
+  "file": "runs/pulse/t127/t127_curve.json",
+  "key": "curve.0.presence_auroc"
+ },
+ "cap_minutes": 55,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "FOLDS=2 SIZES=100,0 REPS=2 LIMIT=300 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t127s_$(date +%s) /workspace/kev/.venv/bin/python -u t127_curve_ext.py",
+  "cap_minutes": 8
+ }
+}

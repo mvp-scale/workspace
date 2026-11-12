@@ -10,6 +10,8 @@ This folder turns what the world-engine news classifier learned into two things 
 angles: world model, knowledge management, ingestion, model training. `templates/` holds the cards every package
 uses: task card, gate report, model card.
 
+**Where things are:** `services.md` lists every page and service, `/workspace/GO.md` is the session handoff, and `playbook/16-the-working-loop.md` is the loop (one round, the health check, permissions).
+
 **Agents start in `agentic/`** (skill, roles, stage machine, task-card schema, launch hook). The playbook is the
 human-length reference behind each rule. `ACCEPTANCE.md` defines every gate by ID; `TECHNIQUE_REVIEW.md` says what
 could beat the current method.

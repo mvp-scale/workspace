@@ -1,0 +1,33 @@
+{
+ "id": "T135-F2",
+ "task": "T135",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "With the engine's 328 questions inside the same request and driving the dial details, a Domain choice, and the label-store set loaded, do all heads pass their tests on 100 stories?",
+ "one_change": "put the engine's 328 questions inside the one-pass request and take the dials for deeper questions from the engine's readings",
+ "baseline": {
+  "model": "chunked 328-question read, input tokens per story (T130)",
+  "file": "runs/pulse/t134/baseline_tokens.json",
+  "key": "tokens_per_story"
+ },
+ "prediction": {
+  "metric": "input tokens per story, all calls together (one request with everything up front, one for the dial details and place)",
+  "low": 18000,
+  "high": 27000,
+  "why": "T135-F used 22,380 tokens a story with the 328 questions as a separate request (runs/pulse/t135/t135_full_read.json); merging them removes the repeated article, a small saving, and adds a 17-option Domain choice; pass and fail tests written before the run: P0 no errors and all answers typed; P2 at most 35,000 tokens a story; P3 evidence exists for at least 0.80 of fired dials, the dials now come from the engine readings; P4 the Domain choice matches MN-DS on at least 0.50 of 30 stories (chance 0.06); P5 the function-derived story type agrees with the label store on at least 0.80 of 30; P6 the share of answers between 0.3 and 0.7 at most 0.15 per head; P7 ten stories read twice agree within a mean of 0.02; P8 the engine read inside this request agrees with Clef's stored reading on at least 0.80 of the 40 engine stories; the 39 experimental dial questions are reported, not tested, they stay on for tuning; plumbing fixes in this run: the label-store loader, the Domain choice; decisions D38 and D39, my cost estimate 0.1 USD, the result prints the real cost"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 CONC=5 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+ "result": {
+  "file": "runs/pulse/t135/t135_full_read.json",
+  "key": "tokens_per_story_total"
+ },
+ "cap_minutes": 40,
+ "noise": 3000,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=2 NL=2 NM=2 NREP=1 CONC=2 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t135s ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t135s.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t135s_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+  "cap_minutes": 10
+ }
+}

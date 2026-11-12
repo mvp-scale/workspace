@@ -1,0 +1,78 @@
+fold 0 5 (242, 20)
+fold 1 11 (213, 24)
+{
+ "engine_stories": 800,
+ "queue_stories_scored": 1500,
+ "confidence": 0.75,
+ "pseudo_labels_kept_per_fold_presence_direction": [
+  [
+   242,
+   20
+  ],
+  [
+   213,
+   24
+  ]
+ ],
+ "direction_majority": 0.673,
+ "engine_only": {
+  "presence_auroc": 0.6752,
+  "direction_auroc": 0.6517,
+  "direction_accuracy": 0.6812
+ },
+ "self_trained": {
+  "presence_auroc": 0.6828,
+  "direction_auroc": 0.6606,
+  "direction_accuracy": 0.6812
+ },
+ "note": "Grouped cross-validation over the engine stories, headline plus two sentences; reference is Clef's stored reading (agreement, not accuracy); engine_only here uses the same folds as T116.",
+ "seconds": 11
+}
+fold 0 34 (5712, 772)
+fold 1 59 (5759, 832)
+fold 2 92 (5691, 796)
+fold 3 126 (5619, 796)
+fold 4 159 (5824, 839)
+{
+ "engine_stories": 1736,
+ "queue_stories_scored": 20000,
+ "confidence": 0.75,
+ "pseudo_labels_kept_per_fold_presence_direction": [
+  [
+   5712,
+   772
+  ],
+  [
+   5759,
+   832
+  ],
+  [
+   5691,
+   796
+  ],
+  [
+   5619,
+   796
+  ],
+  [
+   5824,
+   839
+  ]
+ ],
+ "direction_majority": 0.6712,
+ "engine_only": {
+  "presence_auroc": 0.7879,
+  "direction_auroc": 0.7437,
+  "direction_accuracy": 0.7204
+ },
+ "self_trained": {
+  "presence_auroc": 0.7842,
+  "direction_auroc": 0.7483,
+  "direction_accuracy": 0.702
+ },
+ "note": "Grouped cross-validation over the engine stories, headline plus two sentences; reference is Clef's stored reading (agreement, not accuracy); engine_only here uses the same folds as T116.",
+ "seconds": 159
+}
+L1949 appended
+L1950 appended
+T121-S: HIT, NO GAIN, direction AUROC on held-out engine stories after self-training 0.748 vs 0.744

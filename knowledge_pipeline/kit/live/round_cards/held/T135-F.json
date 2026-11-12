@@ -1,0 +1,33 @@
+{
+ "id": "T135-F",
+ "task": "T135",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Does the whole one-pass read, every head on, run cleanly on 100 stories, what does it cost per story, and how do its heads compare with the references we have?",
+ "one_change": "read 100 stories with every head on in place of the earlier partial reads",
+ "baseline": {
+  "model": "chunked 328-question read, input tokens per story (T130)",
+  "file": "runs/pulse/t134/baseline_tokens.json",
+  "key": "tokens_per_story"
+ },
+ "prediction": {
+  "metric": "input tokens per story, all calls together (call 1, call 2 and the original 328 questions in one request)",
+  "low": 22000,
+  "high": 34000,
+  "why": "the chunked read used 27,339 tokens a story (runs/pulse/t134/baseline_tokens.json); the 328 questions in one request used 7,029 and the 42-question call 1 used 7,718 (runs/pulse/t134b/t134_pilot.json); this call 1 asks about 150 questions with criteria and the dial calls add direction, form, size, factuality and evidence; pass and fail tests written before the run: P0 no errors and all answers typed; P1 presence from the new dial questions agrees with the 328-question read on at least 0.85 of the 100 stories; P2 at most 35,000 tokens a story in total; P3 evidence exists for at least 0.80 of fired dials; P4 the top IPTC domain matches MN-DS on at least 0.50 of 30 stories (chance 0.06); P5 the function-derived story type agrees with the label store on at least 0.80 of 30; P6 the share of answers between 0.3 and 0.7 is at most 0.15 per head; P7 ten stories read twice agree within a mean of 0.02; decision D38 and D39, my cost estimate 0.15 USD, the result prints the real cost"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 CONC=5 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+ "result": {
+  "file": "runs/pulse/t135/t135_full_read.json",
+  "key": "tokens_per_story_total"
+ },
+ "cap_minutes": 40,
+ "noise": 3000,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=2 NL=2 NM=2 NREP=1 CONC=2 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t135s ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t135s.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t135s_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+  "cap_minutes": 10
+ }
+}

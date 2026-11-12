@@ -1,0 +1,33 @@
+{
+ "id": "T124-C",
+ "task": "T124",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How well does the local Clef two-call dial labeller agree with the engine's stored reading on presence, against Jev's 0.6912?",
+ "one_change": "run the local Clef dial labeller on the 1736 engine stories, headline plus two sentences",
+ "baseline": {
+  "model": "hosted Jev two-call dial labeller on the engine stories, headline plus two sentences (T110-J)",
+  "file": "runs/pulse/t110/t106_clef_dials.json",
+  "key": "presence_agreement"
+ },
+ "prediction": {
+  "metric": "presence agreement with the engine reading",
+  "low": 0.65,
+  "high": 0.82,
+  "why": "Jev gave 0.6912 on this view (runs/pulse/t110/t106_clef_dials.json); local Clef gave a dial hit of 0.61 on 60 stories in an earlier card; the pass test is 0.80 or more and the fail test below 0.74; this card needs the owner yes for the local GPU, about 4 minutes, and has not been run"
+ },
+ "command": "BACKEND=clef NPI=1736 OUT=runs/pulse/t124 python3 -u t110_jev_headline.py",
+ "result": {
+  "file": "runs/pulse/t124/t106_clef_dials.json",
+  "key": "presence_agreement"
+ },
+ "cap_minutes": 20,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "BACKEND=clef NPI=8 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t124s_$(date +%s) python3 -u t110_jev_headline.py",
+  "cap_minutes": 5
+ }
+}

@@ -1,0 +1,30 @@
+"""Are we moving? One table: each measure at the start of the improvement loop and now, with its source, marked moved, flat or new. Headline measures are what the owner wants (answers live, score); machinery measures are the speed, coverage and checks that serve them.
+Reads result files, the solver page, the ledger pairing check and the viewer data. Writes runs/pulse/progress.json.
+    python3 progress_board.py   (from projects/world-state)"""
+import json, re, subprocess, urllib.request
+R = "runs/pulse/"; J = lambda f: json.load(open(f)); pc = lambda x: f"{100*x:.1f}%"
+le = J(R + "lap1_exit.json"); wc = J(R + "wiring_check.json"); lc = J(R + "lap2_checks.json"); ft = J(R + "field_table.json"); pool = J("runs/harvest/pool_v1/summary.json")
+m1 = J(R + "m1_fresh.json"); m4 = J(R + "m4_fresh2.json")
+html = open("/workspace/demo/mockups/solver/index.html").read(); m = re.search(r"Of (\d+) tools, <b>(\d+)</b> are live", html); tools_now = (int(m.group(2)), int(m.group(1))) if m else None
+pairs = subprocess.run(["python3", "/workspace/knowledge_pipeline/kit/live/ledger_pairs.py"], capture_output=True, text=True).stdout; mp = re.search(r"(\d+) of (\d+) predictions", pairs)
+labels = sum(1 for f in ("/workspace/knowledge_pipeline/projects/world-state/runs/label_store/labels_ws_gist_v1.jsonl", "/workspace/knowledge_pipeline/projects/world-state/runs/label_store/labels_ws_gist_v1_lap2.jsonl") for _ in open(f))
+try: v = json.loads(urllib.request.urlopen("http://localhost:18766/data", timeout=10).read()); passed = v["counts"]["passed"]; needs = v["counts"]["needsYou"]
+except Exception: passed = needs = None
+live = [k for k, x in ft.items() if x.get("marker", 0) >= 2]
+def row(key, label, kind, start, now, change, plain): return {"key": key, "label": label, "kind": kind, "start": start, "now": now, "change": change, "plain": plain}
+rows = [
+ row("answers", "Answers the reader gives today (of 5)", "headline", {"v": "1 (topic)", "src": "ledger L1150"}, {"v": f"{len(live)} ({', '.join(live)})", "src": R + "field_table.json#*.marker"}, "flat", "Story type, size, change and traits are held back until you confirm their contracts. Nothing in the loop can move this alone."),
+ row("topic", "Topic score against human labels, whole chain", "headline", {"v": pc(le["heads_off"]["top2"]), "src": R + "lap1_exit.json#heads_off.top2"}, {"v": f"{pc(le['heads_on']['top2'])} (fresh slices: {pc(m1['all_articles_top2']['rate'])} and {pc(m4['all_articles_top2']['rate'])})", "src": R + "lap1_exit.json#heads_on.top2"}, "flat", "Near its ceiling against this judge: Sonnet itself scores 0.707 one-guess and our model 0.673 (ledger L1235). More topic labels will not move it; the gap is the scheme and mapping."),
+ row("speed", "Median time per full article", "machinery", {"v": f"{wc['median_ms_heads_off']} ms", "src": R + "wiring_check.json#median_ms_heads_off"}, {"v": f"{wc['median_ms_heads_on']} ms", "src": R + "wiring_check.json#median_ms_heads_on"}, "moved", f"{round(100*(1-wc['median_ms_heads_on']/wc['median_ms_heads_off']))}% faster with the same answers."),
+ row("skip", "Articles that skip the slow model", "machinery", {"v": "0%", "src": R + "wiring_check.json"}, {"v": pc(wc["encoder_skipped_share"]), "src": R + "wiring_check.json#encoder_skipped_share"}, "moved", "The sparse heads answer these on their own."),
+ row("tools", "Tools in the live chain", "machinery", {"v": "12 of 22", "src": "ledger L1118"}, {"v": f"{tools_now[0]} of {tools_now[1]}" if tools_now else "?", "src": "Solver page, Act 1"}, "moved" if tools_now and tools_now[0] > 12 else "flat", "Span rules and the sparse heads were wired in."),
+ row("pool", "Articles read by the whole toolchain, with evidence", "machinery", {"v": "0", "src": "ledger L1144"}, {"v": f"{pool['articles_done']:,}", "src": "runs/harvest/pool_v1/summary.json#articles_done"}, "new", "92% have at least one checked amount or date."),
+ row("labels", "Teacher labels on full articles (gist, weak)", "machinery", {"v": "0", "src": "ledger L1156"}, {"v": f"{labels:,}", "src": "runs/label_store/labels_ws_gist_v1*.jsonl"}, "new", "Enough for a test; only 50 carry a condition."),
+ row("cond", "Can a small model tell if an article has a condition (F1 vs Sonnet)", "machinery", {"v": "no model", "src": "ledger L1163"}, {"v": f"{lc['m3_condition_head']['f1']:.2f}", "src": R + "lap2_checks.json#m3_condition_head.f1"}, "new", "Agreement with Sonnet, not outside truth. It cannot be accepted until you confirm the Condition definition."),
+ row("checks", "Predictions written before a run that have a score note", "bookkeeping", {"v": "10 of 16 traceable", "src": "kit/live/ledger_pairs.py, first run"}, {"v": f"{mp.group(1)} of {mp.group(2)}" if mp else "?", "src": "kit/live/ledger_pairs.py"}, "moved", "Six scores were untraceable; now paired."),
+ row("tasks", "Pipeline tasks passed on an independent verdict", "bookkeeping", {"v": "4", "src": "viewer data, start of lap two"}, {"v": str(passed), "src": "http://localhost:18766/data#counts.passed"}, "moved", "T43 to T47 passed on MM3 verdicts."),
+]
+headline_flat = [r for r in rows if r["kind"] == "headline" and r["change"] == "flat"]
+out = {"rows": rows, "moved": sum(1 for r in rows if r["change"] in ("moved", "new") and r["kind"] != "bookkeeping"), "bookkeeping_moved": sum(1 for r in rows if r["change"] in ("moved", "new") and r["kind"] == "bookkeeping"), "flat": sum(1 for r in rows if r["change"] == "flat"), "headline_flat": len(headline_flat), "needs_you": needs,
+       "reading": "That is the Opus reviewer's verdict (ledger L1231). The measures that matter are answers live, accuracy against outside labels, and speed: speed moved, the other two did not. Pool, labels and the condition model are machinery for them. Tasks passed and predictions paired are bookkeeping and are not counted as progress. To move the headline the loop needs better teacher items (chosen by where the reader is unsure) and your four decisions (so more answers can be accepted)."}
+json.dump(out, open(R + "progress.json", "w"), indent=1); print(out["moved"], "moved,", out["flat"], "flat;", [(r["key"], r["change"]) for r in rows])

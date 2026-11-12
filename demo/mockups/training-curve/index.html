@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Training curve</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; padding: 16px; max-width: 980px; margin: 0 auto; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; }
+  .pill { border: 1px solid var(--line-2, #bbb); border-radius: 10px; padding: 6px 10px; }
+  .pill b { display: block; font-size: 18px; }
+  svg { width: 100%; height: auto; background: var(--surface, #fff); border: 1px solid var(--line, #ddd); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; } th, td { border-bottom: 1px solid var(--line, #ddd); padding: 4px 6px; text-align: right; } th:first-child, td:first-child { text-align: left; }
+  tr.best td { font-weight: 700; } .muted { color: var(--ink-3, #777); } .legend span { margin-right: 14px; }
+</style></head><body>
+<h1>Training curve (throwaway)</h1>
+<p class="muted">Runs: <a href="?">T56 (8 planned, early stop)</a> · <a href="?run=r0">T60 r0 hard seed 7</a> · <a href="?run=r1">T60 r1 soft votes</a> · <a href="?run=r2">T60 r2 hard seed 11</a></p>
+<p class="muted">Dev split, agreement with Sonnet (not outside truth). Refreshes every 15 s from curve.json. Overfitting looks like: training loss keeps falling while the dev lines turn down or stay flat.</p>
+<div id="status" class="row"></div><div id="legend" class="legend"></div><div id="chart"></div><div id="tbl"></div>
+<script src="/static/app.js"></script>
+<script>
+(function () {
+  const h = (window.Jev && Jev.el) || ((t, a, ...k) => { const n = document.createElement(t); for (const [x, v] of Object.entries(a || {})) { if (x === "text") n.textContent = v; else n.setAttribute(x, v); } k.flat().forEach(c => n.append(c.nodeType ? c : document.createTextNode(c))); return n; });
+  const NS = "http://www.w3.org/2000/svg", COL = { topic: "#2a6fdb", story_type: "#1f9d55", presence_f1: "#d9822b", composite: "#222", loss: "#c0392b" };
+  const sv = (t, a, text) => { const n = document.createElementNS(NS, t); for (const [k, v] of Object.entries(a || {})) n.setAttribute(k, v); if (text != null) n.textContent = text; return n; };
+  function draw(D) {
+    const st = document.getElementById("status"), ch = document.getElementById("chart"), tb = document.getElementById("tbl"), lg = document.getElementById("legend");
+    st.replaceChildren(); ch.replaceChildren(); tb.replaceChildren(); lg.replaceChildren();
+    const P = D.points, spe = D.steps_per_epoch, best = D.best_index, last = P[P.length - 1];
+    const pill = (a, b) => st.append(h("div", { class: "pill" }, h("span", { class: "muted", text: a }), h("b", { text: String(b) })));
+    pill("state", D.stop_reason ? "stopped: " + D.stop_reason : (D.running ? "running" : "not running"));
+    pill("step", (D.last_step ?? "-") + " / " + (D.planned_steps ?? "-")); pill("epoch", D.last_step ? (D.last_step / spe).toFixed(2) : "-");
+    pill("best epoch", best != null ? P[best].epoch : "-"); pill("flat checks in a row", last ? last.bad + " of 3" : "-"); pill("updated", D.updated);
+    if (!P.length) { ch.append(h("p", { text: "No dev point yet (first one at epoch 0.5)." })); return; }
+    const Wd = 900, Hd = 340, L = 50, R = 50, T = 14, B = 30, xmax = Math.max((D.planned_steps || 7664) / spe, P[P.length - 1].epoch + 0.5);
+    const lo = Math.min(...P.map(p => Math.min(p.topic, p.story_type, p.presence_f1))) - 0.03, hi = Math.max(...P.map(p => Math.max(p.topic, p.story_type, p.presence_f1))) + 0.03;
+    const X = e => L + (e / xmax) * (Wd - L - R), Y = v => T + (1 - (v - lo) / (hi - lo)) * (Hd - T - B);
+    const lmax = Math.max(...D.loss.map(p => p.loss), ...P.map(p => p.train_loss)) * 1.05, YL = v => T + (1 - v / lmax) * (Hd - T - B);
+    const s = sv("svg", { viewBox: "0 0 " + Wd + " " + Hd });
+    for (let e = 0; e <= xmax; e += 1) { s.append(sv("line", { x1: X(e), x2: X(e), y1: T, y2: Hd - B, stroke: "#8884", "stroke-width": 1 })); s.append(sv("text", { x: X(e), y: Hd - 10, "text-anchor": "middle", "font-size": 11, fill: "#777" }, "ep " + e)); }
+    for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4; s.append(sv("text", { x: L - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 11, fill: "#777" }, v.toFixed(3))); s.append(sv("line", { x1: L, x2: Wd - R, y1: Y(v), y2: Y(v), stroke: "#8883" })); }
+    for (let k = 0; k <= 4; k++) { const v = lmax * k / 4; s.append(sv("text", { x: Wd - R + 6, y: YL(v) + 4, "font-size": 11, fill: COL.loss }, v.toFixed(1))); }
+    const line = (arr, xf, yf, c, dash) => { if (arr.length) s.append(sv("polyline", { points: arr.map(p => xf(p) + "," + yf(p)).join(" "), fill: "none", stroke: c, "stroke-width": 2, "stroke-dasharray": dash || "" })); };
+    line(D.loss, p => X(p.step / spe), p => YL(p.loss), COL.loss, "4 3");
+    for (const k of ["topic", "story_type", "presence_f1", "composite"]) { line(P, p => X(p.epoch), p => Y(p[k]), COL[k]); P.forEach(p => s.append(sv("circle", { cx: X(p.epoch), cy: Y(p[k]), r: 3, fill: COL[k] }))); }
+    if (best != null) { s.append(sv("line", { x1: X(P[best].epoch), x2: X(P[best].epoch), y1: T, y2: Hd - B, stroke: "#c0a000", "stroke-width": 2 })); s.append(sv("text", { x: X(P[best].epoch) + 4, y: T + 12, "font-size": 11, fill: "#a08000" }, "best")); }
+    ch.append(s);
+    for (const [k, t] of [["topic", "topic (dev)"], ["story_type", "story type (dev)"], ["presence_f1", "presence F1 (dev)"], ["composite", "composite (dev)"], ["loss", "training loss (right axis)"]]) lg.append(h("span", { style: "color:" + COL[k], text: "● " + t }));
+    const hdr = ["epoch", "topic", "story", "presence F1", "composite", "train loss", "flat checks"]; const rows = P.map((p, i) => h("tr", { class: i === best ? "best" : "" }, [p.epoch, p.topic, p.story_type, p.presence_f1, p.composite, p.train_loss, p.bad].map(v => h("td", { text: String(v) }))));
+    tb.append(h("table", {}, h("tr", {}, hdr.map(x => h("th", { text: x }))), rows));
+  }
+  async function tick() { try { const r = await fetch((new URLSearchParams(location.search).get("run") ? "curve_" + new URLSearchParams(location.search).get("run").replace(/[^a-z0-9]/g, "") + ".json" : "curve.json") + "?t=" + Date.now()); draw(await r.json()); } catch (e) { document.getElementById("status").replaceChildren(h("div", { class: "pill", text: "no curve.json yet: " + e })); } }
+  tick(); setInterval(tick, 15000);
+})();
+</script></body></html>

@@ -42,6 +42,9 @@ def age_h(ts):
     except Exception: return 1e9
 
 
+a_every = 180
+
+
 def poll():
     for s in ant("beta:sessions", "list", "--limit", "20"):
         if age_h(s.get("updated_at") or s.get("created_at") or "") > 24: continue
@@ -70,7 +73,8 @@ def poll():
         for line in r.stdout.splitlines()[1:]:
             ref, title = (line.split(",") + ["", ""])[:2]
             st = subprocess.run(["kaggle", "kernels", "status", ref], capture_output=True, text=True, timeout=60, env=kaggle_env()).stdout.strip(); job = f"kaggle-{ref.split('/')[-1][:24]}"
-            if "running" in st.lower() or "queued" in st.lower(): beat(job, where="[KAG]", state="running" if "running" in st.lower() else "queued", last=st[:120], progress=title)
+            st = next((l for l in reversed(st.splitlines()) if "status" in l.lower() and not l.lower().startswith("warning")), st.splitlines()[-1] if st else "")  # the CLI prints version warnings first
+            if "running" in st.lower() or "queued" in st.lower(): beat(job, where="[KAG]", state="running" if "running" in st.lower() else "queued", last=st[:120], progress=title, every_s=a_every)
             else: record(job, "done" if "complete" in st.lower() else "failed", where="[KAG]", last=st[:120], progress=title); drop(job)
     except Exception as e:
         beat("kaggle", where="[KAG]", state="failed", last=f"kaggle poll failed: {type(e).__name__}")
@@ -81,7 +85,9 @@ def poll():
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--once", action="store_true"); ap.add_argument("--every", type=int, default=180); a = ap.parse_args()
     while True:
-        try: poll(); beat("poller", where="[CPU]", state="running", last="polling Console sessions, batches, Kaggle", progress=f"every {a.every}s")
+        try: subprocess.run([sys.executable, str(pathlib.Path(__file__).resolve().parent / "tick.py")], capture_output=True, timeout=180)  # Training tab + Kaggle heartbeat mirror
+        except Exception: pass
+        try: poll(); beat("poller", where="[CPU]", state="running", last="polling Console sessions, batches, Kaggle", progress=f"every {a.every}s", every_s=a.every)
         except Exception as e: beat("poller", where="[CPU]", state="failed", last=f"{type(e).__name__}: {str(e)[:100]}")
         if a.once: break
         time.sleep(a.every)

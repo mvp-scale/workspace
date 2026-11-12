@@ -53,7 +53,7 @@ STEPS = [
  ("5. Find names and places", "Turn mentions into things we can link: organisations, people, and places up to a country.", "spaCy marks entity types; places are matched to the GeoNames list through a short alias table (U.S., UK, Britain, state abbreviations).", chip("places partly", "mid"),
   f"<p>On the same 300 articles as before, a country candidate now resolves for {XS['places_300']['with_country']} ({XS['places_300']['share_country']*100:.1f}%), up from {XS['places_300']['before']*100:.1f}% with exact names only. Pre-registered target was 80%, so this is a miss. {PL['city_links_ambiguous']} of {PL['city_links']} city links still fit more than one country. The article's own countries, then the publisher's country, then the largest city decide among them. Whether the chosen country is right is not measured.</p>" + tool_table("spaCy NER")),
  ("6. Extract stated facts", "Pull out amounts, dates, names and who-did-what that the text states outright.", "Each fact must pass four checks (literal, reads back, bound to its noun or verb, one sentence) and is marked stated, unbound or invalid.", chip("built", "ok"), tool_table("Fact finder")),
- ("7. Make a meaning vector", "Give the heads something to compare when words and patterns are not enough.", f"The 22.6M BitMob Reader turns each window into {INV['embedding_dim']} numbers and gives topic and story-type probabilities.", chip("built", "ok"), tool_table("BitMob Reader (22.6M)") + "<p class='n'>Saved per article: the top two topics, story type and topic probabilities. The per-window vectors are not saved.</p>"),
+ ("7. Make a meaning vector", "Give the heads something to compare when words and patterns are not enough.", f"The 22.6M BitMob Domain (v6b) turns each window into {INV['embedding_dim']} numbers and gives topic and story-type probabilities.", chip("built", "ok"), tool_table("BitMob Domain (v6b, 22.6M)") + "<p class='n'>Saved per article: the top two topics, story type and topic probabilities. The per-window vectors are not saved.</p>"),
  ("8. Save one record per article", "Write everything once so every head and the training builder read the same thing.", "One JSON line per article; every item carries the tool, its version and where in the text it came from.", chip("built", "ok"),
   f"<p>{XS['articles']:,} articles processed at {XS['per_second_no_reader']:.0f} articles a second on 16 workers without the reader (the reader adds about 26 ms an article). File: runs/harvest/extract.jsonl, written by extract.py.</p>"),
  ("9. Build training labels", "Turn the record into labelled examples for each head, marked by how strong the evidence is.", "proved = the text states it and the checks passed; rule = a written rule fired; weak = a rule fired on a guess. Nothing is judged here.", chip("built", "ok"), "<p>See section 3 for the labels it builds per head.</p>")]
@@ -73,7 +73,7 @@ heads = tbl(["Head", "What it means", "Status"], "".join(pair([f"<b>{e(n)}</b>",
 def vdet(i, x): ev = "no examples" if x["examples"] == 0 and not x["tools_only"] else (f"{x['examples']:,} examples" + (f"; low end {pm(x['low'])} against a bar of {pm(x['bar'])} and a guess of {pm(x['guess'])}" if x["low"] else "")); return mini([("BitMob", META[i][0]), ("Tools that can try it", META[i][1]), ("Label source", META[i][2]), ("Evidence", ev), ("Next step", NEXT[x["verdict"]])], ("", ""))
 verd = tbl(["Target", "Verdict"], "".join(pair([f"<b>{e(x['label'])}</b>", f"<span class='{VW[x['verdict']][1]}'>{e(VW[x['verdict']][0])}</span>"], vdet(i, x), 2) for i, x in rows.items()), "main")
 TLR = [("domain", "Domain", "URL section", "Needs a second tool for the desks that fail"), ("function", "Content function (per sentence)", "grammar rules", "Rules are unjudged; no outside labels"), ("conditions", "Conditions", "change words tied to a noun", "Lexicon is ours; direction rule needs your review"), ("place", "Place (country)", "entity + GeoNames + aliases", "74% of articles; right-country rate unmeasured"),
-       ("entity", "Entity types", "spaCy NER", "Typed, but no alias or anchor yet"), ("size", "Size (stated amount)", "Fact finder", "Text proves it"), ("date", "Dates", "Fact finder", "Text proves it"), ("reader_topic", "Topic (reader's guess)", "BitMob Reader", "A model guess, kept only as a weak signal")]
+       ("entity", "Entity types", "spaCy NER", "Typed, but no alias or anchor yet"), ("size", "Size (stated amount)", "Fact finder", "Text proves it"), ("date", "Dates", "Fact finder", "Text proves it"), ("reader_topic", "Topic (reader's guess)", "BitMob Domain (v6b)", "A model guess, kept only as a weak signal")]
 def tlrow(k, nm, src, gap): v = TL["heads"][k]; return [f"<b>{e(nm)}</b>", f"{v['labels']:,}", f"{v['articles']:,}", f"{v['classes']} ({v['classes_ge60']} with 60 or more)", e(src), e(gap)]
 tl_rows = [tlrow(*x) for x in TLR] + [[f"<b>{e(n)}</b>", "0", "0", "0", "no tool yet", e(g)] for n, g in (("Area", "Needs the seed Area list and a matcher"), ("Capability", "Needs the capability list and a matcher"), ("Novelty", "Needs anchors first"))]
 tl_table = "<table class='main'><tr><th>Head</th><th>Labels</th><th>Articles</th><th>Classes</th><th>Source</th><th>Gap</th></tr>" + "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r_) + "</tr>" for r_ in tl_rows) + "</table>"
@@ -114,6 +114,42 @@ bars_old = "".join(bar(f"{x['articles']//1000}k read", x["A_labels_only"]["top1"
 hrows = "".join(f"<tr><td>{e(k)}</td><td>{v[0]:,}</td><td>{v[1]:.2f}</td></tr>" for k, v in sorted(HS["agree_by_class"].items(), key=lambda x: -x[1][1]))
 cc = r["C_class_count"]; classes = "".join(bar(f"{k} classes", cc[k]["top1_mean"], f"  (guess {cc[k]['chance']:.3f})") for k in ("5", "10", "20", "40", "109"))
 lean = open("lean/TrainReady.lean").read(); n_thm = len(re.findall(r"^theorem ", lean, re.M)); n_ex = len(re.findall(r"^example ", lean, re.M))
+# ---- Destination: one real story, consolidated (ledger L1051/L1052) ----
+import collections
+XR = [json.loads(l) for l in open("runs/harvest/extract.jsonl", encoding="utf-8")]; MP = H("multi_publisher")
+CL = sorted(MP["B_clusters"], key=lambda c: -len(c))[0]; CA = [XR[i] for i in CL]
+doms = sorted({a["source"]["domain"] for a in CA}); dates = sorted(a["source"]["date"] for a in CA if a["source"]["date"])
+head = lambda a: re.split(r"(?<=[a-z]{3})\.\s", a["text"])[0][:110]
+nm = collections.Counter(); 
+for a in CA:
+    for n_ in {x[0] for x in a["entities"]["items"] if x[1] in ("PERSON", "ORG", "GPE")}: nm[n_] += 1
+def merged(names):  # toy alias rule: a one-word name that ends a longer name seen in the same story is that name
+    long_ = [n_ for n_ in names if " " in n_]; out_ = {}
+    for n_ in names:
+        t = next((l_ for l_ in sorted(long_, key=len) if l_ != n_ and l_.split()[-1] == n_), n_); out_.setdefault(t, set()).add(n_)
+    return out_
+PER = {x[0] for a in CA for x in a["entities"]["items"] if x[1] == "PERSON"}; top_names = [n_ for n_, _ in nm.most_common(40) if n_ in PER]; groups = merged(top_names)
+def art_count(forms): return sum(1 for a in CA if forms & {x[0] for x in a["entities"]["items"]})
+split_ex = [(k, sorted(v)) for k, v in groups.items() if len(v) > 1][:3]
+topic1 = collections.Counter(a["reader"]["topic_top2"][0] for a in CA if a.get("reader")); story = collections.Counter(a["reader"]["story_type"] for a in CA if a.get("reader"))
+fz = collections.Counter(); [fz.update(a["function"]["counts"]) for a in CA]
+unplaced = collections.Counter(p_["text"] for a in CA for p_ in a["places"]["items"] if not p_["country"])
+amts = collections.Counter(x for a in CA for x in a["facts"]["amounts"]); cond = collections.Counter((c_["condition"], c_["direction"]) for a in CA for c_ in a["conditions"]["items"])
+cs = set(CL); a_in = sum(1 for c_ in MP["A_clusters"] if len(set(c_) & cs) >= 2)
+rows_art = "<table class='mini'><tr><th>Publisher</th><th>Date</th><th>Starts</th><th>Topic (Reader)</th></tr>" + "".join(f"<tr><td>{e(a['source']['domain'])}</td><td>{e(a['source']['date'] or '')}</td><td>{e(head(a))}</td><td>{e(a['reader']['topic_top2'][0] if a.get('reader') else '')}</td></tr>" for a in CA) + "</table>"
+nmtab = mini([(k, "; ".join(f"{f} ({art_count({f})} articles)" for f in v), f"{art_count(set(v))} articles") for k, v in split_ex], ("Same person or group (toy rule)", "Surface forms and their article counts", "Counted together")) if split_ex else ""
+DEST = [
+ ("1. Articles", "The raw items, one per publisher copy.", chip("built", "ok"), f"{len(CA)} articles from {len(doms)} publishers, {dates[0]} to {dates[-1]}", rows_art + f"<p class='n'>Source: runs/harvest/multi_publisher.json#B_clusters (largest, found by 3 or more shared names within 3 days). {a_in} pairs inside it are also near-duplicate text.</p>"),
+ ("2. Fragments", "Who did what to what, with amounts, dates and tense, one set per article.", chip("built, unjudged", "mid"), f"Sentence tags across the {len(CA)} articles: " + ", ".join(f"{v} {k}" for k, v in fz.most_common()), mini([(k, v) for k, v in fz.most_common()], ("Sentence tag", "Sentences")) + f"<p class='n'>Amounts stated: {', '.join(f'{k} ×{v}' for k, v in amts.most_common(6))}. Changes found: {', '.join(f'{c_[0]} {c_[1]} ×{v}' for c_, v in cond.most_common(5)) or 'none'}. The tags come from grammar rules judged by eye only (ledger L1042, L1043).</p>"),
+ ("3. Anchors", "A stable id for each person, place, group, thing, so every mention points at one node.", chip("not built", "no"), "Today the same person is counted under several spellings", nmtab + "<p class='n'>The merge above is a toy rule on person names only, to show the gap. Run on all names it also merged the House (of Representatives) into the White House, which is wrong; that is why anchors need a type and context. The Anchor layer (GeoNames, an alias table, a search index) is the first thing to build.</p>"),
+ ("4. Edges", "subject anchor, relation, object anchor, kept once with its supporting fragments.", chip("not built", "no"), f"Would be built from {len(CA)} articles and {len(doms)} independent publishers", "<p>Each edge keeps a list of the fragments behind it. Its strength is the number of independent publishers; syndicated copies count once. Depth levels: mentioned, candidate, corroborated, established.</p><p class='n'>Nothing is computed here. No relation extractor exists yet.</p>"),
+ ("5. Item profile (Domain)", "The Macro Pulse answers for the story: type, topic, change and direction, size, traits, place, time.", chip("built, partly judged", "mid"), f"Topic: {topic1.most_common(1)[0][0]} in {topic1.most_common(1)[0][1]} of {len(CA)}; story type: {story.most_common(1)[0][0]} in {story.most_common(1)[0][1]}", mini([(k, v) for k, v in topic1.most_common()], ("Topic (first guess)", "Articles")) + mini([(k, v) for k, v in story.most_common()], ("Story type", "Articles")) + "<p class='n'>Section 3 gives how well each of these is judged.</p>"),
+ ("6. Area", "A neighbourhood of anchors that co-occur, with its own Pulse counted from the items.", chip("not built", "no"), "Would sit above these anchors; opens with a core seed", "<p>Playbook section 9: a candidate Area is promoted only with independent evidence, coherence, distinctness and reuse beyond one event.</p>"),
+ ("7. Capability and Resource", "A recurring verb-object pattern across Areas; a resource (energy, food, water...) as an anchor kind.", chip("not built", "no"), "This story has no resource; a shortage story would fill that slot", "<p>Resource is a planned anchor kind in the PRD. The Conditions head would attach to it with a direction. Capability starts empty and grows only by promotion.</p>"),
+ ("8. Novelty", "Items the cascade could not place, sent to a review queue instead of becoming ontology.", chip("not built", "no"), f"Unplaced place mentions in this story: {sum(unplaced.values())}", mini(unplaced.most_common(8), ("Place text with no country", "Mentions")) + "<p class='n'>These are real unresolved items from the place linker, and they are only dropped today. Several are not places at all (a surname, 'Second Surgery'), so the place typing itself needs checking before this queue is useful.</p>"),
+]
+dest_tbl = tbl(["Tier", "What it holds", "Status", "This story"], "".join(pair([f"<b>{e(a)}</b>", e(b), c_, e(d_)], x, 4) for a, b, c_, d_, x in DEST), "main")
+
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>How an article is read</title><link rel="stylesheet" href="../mock.css">
 <style>
@@ -131,6 +167,9 @@ table{{border-collapse:collapse;width:100%;font-size:13px}} th,td{{text-align:le
 </style></head><body><main>
 <h1>How an article is read</h1>
 <p>The goal is an engine that reads news and builds its own training data. Cheap tools read each article first and keep everything they can prove. Each BitMob then learns from what the tools found, and its answers are checked against outside labels afterwards. Click any line to see numbers and examples.</p>
+<h2>Destination: one real story, consolidated</h2>
+<p>This is what the system should hold once many articles have been read. It is one real story from the {XS['articles']:,}-article run, shown tier by tier. Built tiers show real output; tiers not built are empty slots, not mock-ups. Click a row for the detail.</p>
+{dest_tbl}
 <h2>1. What happens to an article</h2>
 {steps}
 <p class="n">Only the last decision step is in Rust today ({e(INV['rust'])}); every step above runs in Python. Steps 1 to 7 are saved together in one record per article (step 8).</p>
@@ -156,7 +195,7 @@ table{{border-collapse:collapse;width:100%;font-size:13px}} th,td{{text-align:le
 <table class="main"><tr><th>Articles read</th><th>Labels from the URL tool</th><th>Accuracy on human-labelled articles</th></tr>{bars}</table>
 <div class="tools"><button class="show" type="button">Show or hide label quality by URL section</button></div>
 <table class="main" hidden><tr><th>Label</th><th>Articles</th><th>Agreement with a word model</th></tr>{hrows}</table>
-<p class="src">Sources: runs/harvest/{{inventory,place_reach,link_reach,score,inline_sim}}.json; runs/pulse/tools_to_training.json, train_ready_rows.json; lean/TrainReady.lean; playbook 00; PRD v0.2. <a href="../solver/index.html">Mob solver</a> · <a href="../state/index.html">Pulse state</a> · <a href="../gates/index.html">Gates</a></p>
+<p class="src">Sources: runs/harvest/{{inventory,place_reach,link_reach,score,inline_sim}}.json; runs/pulse/tools_to_training.json, train_ready_rows.json; lean/TrainReady.lean; playbook 00; PRD v0.2. <a href="../solver/index.html">BitMob Solver</a> · <a href="../state/index.html">Pulse state</a> · <a href="../gates/index.html">Gates</a></p>
 <script>
 document.addEventListener("click", function (ev) {{
   var b = ev.target.closest("button"); if (!b) return;

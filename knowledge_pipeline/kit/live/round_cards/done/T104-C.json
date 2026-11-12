@@ -1,0 +1,33 @@
+{
+ "id": "T104-C",
+ "task": "T104",
+ "part": "main loop: Area, teacher ceiling",
+ "field": "area",
+ "question": "Does local Clef choose the IPTC depth-1 Area more often right against the human level-2 labels than the embedding mapping, on MN-DS fresh2?",
+ "one_change": "let local Clef pick the Area with two typed choices instead of the embedding similarity",
+ "baseline": {
+  "model": "embedding mapping with the reader constraint",
+  "file": "runs/pulse/t100/embedding_fresh2.json",
+  "key": "embedding_exact_l2"
+ },
+ "prediction": {
+  "metric": "Clef exact level-2 match on fresh2",
+  "low": 0.28,
+  "high": 0.42,
+  "why": "a 30-item pilot gave 0.30 for Clef against 0.267 for the embedding on the same items, too few to tell them apart; LLM choice on level-1 reached 0.60 in the pilot and the one-guess LLM against human topic labels was 0.707 over 49 topics, so level-2 over 100 or more terms should sit lower; the go bar for training a student is Clef minus embedding of 0.05 or more with the paired interval above zero"
+ },
+ "command": "NPI=1113 OUT=runs/pulse/t104 /workspace/models/embed-zs/.venv/bin/python -u t104_clef_teacher.py",
+ "result": {
+  "file": "runs/pulse/t81/t104_clef_teacher.json",
+  "key": "clef_exact_l2"
+ },
+ "cap_minutes": 30,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "NPI=12 OUT=/tmp/claude-0/-workspace/a8722f6e-1e50-4cc3-a467-7e4ecd2c46b3/scratchpad/t104cs_$(date +%s) /workspace/models/embed-zs/.venv/bin/python -u t104_clef_teacher.py",
+  "cap_minutes": 8
+ }
+}

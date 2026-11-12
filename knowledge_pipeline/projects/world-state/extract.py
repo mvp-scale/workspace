@@ -1,5 +1,5 @@
 """extract: one record per article, written once, read by every head and by the training-set builder (owner direction 2026-11-07; extends analyze2's tools, does not replace them).
-Each item carries the tool, version and evidence span that produced it. Tools: source and links, boilerplate strip, scan spots, spaCy parse (sentence factuality, change-with-direction), spaCy entity types, places linked to GeoNames with an alias table, the Fact finder, the URL section, the BitMob Reader (main process).
+Each item carries the tool, version and evidence span that produced it. Tools: source and links, span rules (dates, years, durations, ages, number words), boilerplate strip, scan spots, spaCy parse (sentence factuality, change-with-direction), spaCy entity types, places linked to GeoNames with an alias table, the Fact finder, the URL section, the BitMob Domain (v6b) (main process).
     /workspace/models/embed-zs/.venv/bin/python extract.py [N]   -> runs/harvest/extract.jsonl, extract_topic_probs.npy"""
 import json, re, sys, time, collections
 from multiprocessing import Pool
@@ -18,8 +18,8 @@ COND = {"rising": ("up", "rise increase grow surge jump climb soar spike boost g
         "delayed": ("none", "delay postpone defer stall"), "disrupted": ("none", "disrupt halt suspend cancel shut block interrupt strand ground"), "expanded": ("up", "expand extend widen broaden")}
 LEX = {w: (c, d) for c, (d, ws) in COND.items() for w in ws.split()}
 def init():
-    global nlp, ctry, city, adm, BP, FL, G, HV
-    import spacy, scan_gate as G, facts_lib as FL, harvest as HV
+    global nlp, ctry, city, adm, BP, FL, G, HV, SR
+    import spacy, scan_gate as G, facts_lib as FL, harvest as HV, span_rules as SR
     nlp = spacy.load("en_core_web_sm"); ctry = {}; city = collections.defaultdict(dict); adm = collections.defaultdict(set); gd = "/workspace/data/geo/"
     for l in open(gd + "countryInfo.txt", encoding="utf-8"):
         if l[0] != "#": f = l.rstrip("\n").split("\t"); ctry[f[4]] = f[0]
@@ -81,6 +81,7 @@ def work(r):
     try: f = FL.facts_for(text, date + "T00:00:00Z" if date else None)[0]
     except Exception: f = []
     rec["facts"] = {"counts": dict(collections.Counter(x["kind"] + "_" + x["status"] for x in f)), "amounts": [x["text"] for x in f if x["kind"] == "amount" and x["status"] == "stated"][:8], "dates": [x["text"] for x in f if x["kind"] == "date" and x["status"] == "stated"][:5], "tool": "fact-finder"}
+    ms_ = SR.spans(text, date + "T00:00:00Z" if date else None); rec["more_spans"] = {"counts": dict(collections.Counter(x["kind"] for x in ms_)), "items": [[x["kind"], x["s"], x["e"], x["value"]] for x in ms_ if x["kind"] != "number_word" or x["value"] is not None][:60], "tool": "span-rules-v0"}
     rec["domain_label"] = ({"label": HV.SEC[sw], "tool": "url_section", "evidence": sw} if sw in HV.SEC else None); rec["ms"] = round((time.perf_counter() - t0) * 1000, 1)
     return rec
 if __name__ == "__main__":

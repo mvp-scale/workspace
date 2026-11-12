@@ -1,0 +1,36 @@
+{
+ "id": "T112-S",
+ "task": "T112",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do CPU students trained on 20,000 in-domain queue stories (headline plus teaser, Jev labels) read the engine's stories better than students trained on pool news?",
+ "one_change": "train on the T111 queue labels instead of the T108 pool labels, headline plus teaser view only",
+ "baseline": {
+  "model": "T105 heads cross-validated on the engine's own labels, headline plus teaser",
+  "file": "runs/pulse/t105/t105_engine_heads.json",
+  "key": "headline_teaser.direction.accuracy"
+ },
+ "prediction": {
+  "metric": "direction accuracy on the engine stories, headline view, largest training size",
+  "low": 0.64,
+  "high": 0.71,
+  "why": "T109 students on pool news gave 0.623 on this view (runs/pulse/t109/t109_students.json#headline_view_largest.direction_accuracy); the engine-label heads reach 0.692 on this view, the always-majority guess is 0.671; in-domain labels should close part of the gap; presence AUROC expected 0.74 to 0.80 against 0.710 on pool news; the 0.76 and 0.87 bars were set for the full-text view, which the queue does not hold"
+ },
+ "command": "SIZES=2000,6000,0 OUT=runs/pulse/t112 LABELS=runs/pulse/t111/labels.jsonl /workspace/kev/.venv/bin/python -u t112_students_queue.py",
+ "result": {
+  "file": "runs/pulse/t112/t112_students.json",
+  "key": "headline_view_largest.direction_accuracy"
+ },
+ "cap_minutes": 45,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "after": [
+  "T108-P"
+ ],
+ "smoke": {
+  "command": "SIZES=300 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t112s_$(date +%s) LABELS=runs/pulse/t111/labels.jsonl /workspace/kev/.venv/bin/python -u t112_students_queue.py",
+  "cap_minutes": 8
+ }
+}

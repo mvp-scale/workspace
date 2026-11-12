@@ -40,3 +40,9 @@ Run the World engine on a CPU reader instead of Clef on the GPU.
 - Probe runs go to `data/probe-runs-v2/`, never `data/bench/`.
 - Kill processes by verified PID.
 - Commit only when the user asks.
+
+## After a compaction
+- CLAUDE.md is re-read from disk after every compaction; the chat summary is not the record. The ledger is: `ledger board`, `ledger show <id>`, and `knowledge_pipeline/.ledger` (`node cp.mjs`).
+- First moves when the summary starts: read `GO.md`, run `python3 knowledge_pipeline/kit/live/health.py`, read the last ledger lines. Trust those over the summary.
+- Write decisions, corrections, predictions and run ids to the ledger when they happen. A fact that only lived in chat can be lost.
+- A good `/compact` focus line: "keep ledger task ids and state, unscored predictions, the running job and its runner, open owner decisions, standing rules".

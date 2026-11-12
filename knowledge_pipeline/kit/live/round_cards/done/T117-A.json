@@ -1,0 +1,36 @@
+{
+ "id": "T117-A",
+ "task": "T117",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How many queue labels share a headline with an engine story, and how far does the dial mix of the Jev labels sit from the engine's readings?",
+ "one_change": "count headline overlap and dial mix on the 31,239 queue labels; no model is trained",
+ "baseline": {
+  "model": "hosted Jev dial share on the engine stories (T110-J)",
+  "file": "runs/pulse/t110/t106_clef_dials.json",
+  "key": "labeller_says_dial_share"
+ },
+ "prediction": {
+  "metric": "largest gap in dial share between the Jev labels and the engine readings",
+  "low": 0.08,
+  "high": 0.14,
+  "why": "a smoke run of this script was run before this prediction was written (my error, written up at the ledger note for T117): it showed 19 shared headlines (0.0006 of the labels, an independent count by the Opus reviewer agrees) and a crime share of 0.152 for Jev against 0.044 for the engine; the figure scored here is the largest gap over all dials"
+ },
+ "command": "OUT=runs/pulse/t117 LABELS=runs/pulse/t114/labels_all.jsonl python3 t117_audit.py",
+ "result": {
+  "file": "runs/pulse/t117/t117_audit.json",
+  "key": "largest_dial_share_gap"
+ },
+ "cap_minutes": 10,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "after": [
+  "T115-S"
+ ],
+ "smoke": {
+  "command": "OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t117s_$(date +%s) LABELS=runs/pulse/t114/labels_all.jsonl python3 t117_audit.py",
+  "cap_minutes": 5
+ }
+}

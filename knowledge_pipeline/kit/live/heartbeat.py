@@ -88,6 +88,28 @@ def _procs():
         except Exception: pass
 
 
+def _ppid_chain(pid):
+    """Parent process ids of pid, nearest first (reads /proc)."""
+    out = []
+    try:
+        while pid > 1 and len(out) < 12:
+            pp = int(open(f"/proc/{pid}/stat").read().rsplit(")", 1)[1].split()[1]); out.append(pp); pid = pp
+    except Exception: pass
+    return out
+
+
+def _is_child_process(pid):
+    """A pool worker or a command run by a round card is part of its parent's job, not a separate unregistered job."""
+    for pp in _ppid_chain(pid):
+        try: a = open(f"/proc/{pp}/cmdline", "rb").read().replace(b"\0", b" ").decode("utf-8", "ignore")
+        except Exception: continue
+        if "run_round.py" in a: return True
+        try:
+            if os.readlink(f"/proc/{pp}/cwd").startswith(str(ROOT)) and ("python" in a.split(" ")[0] or "/python" in a.split(" ")[0]) and "poll_live" not in a: return True
+        except Exception: pass
+    return False
+
+
 def watch_untracked():
     """Any python or node process whose working directory is inside knowledge_pipeline and that has run for over 60 s, and that no heartbeat file names by pid, gets an automatic 'not registered by its starter' row; when it ends the row is closed."""
     known = {}
@@ -100,8 +122,14 @@ def watch_untracked():
         try: cwd = os.readlink(f"/proc/{pid}/cwd")
         except Exception: continue
         if not cwd.startswith(str(ROOT)): continue
+        if _is_child_process(pid):  # part of a registered round or of its parent job: no row of its own
+            drop(f"auto-{os.path.basename(next((a for a in args.split() if a.endswith(('.py', '.mjs', '.js', '.sh'))), 'process')).rsplit('.', 1)[0]}-{pid}"); continue
         live.add(pid)
-        if pid in known: continue
+        if pid in known:
+            if str(known[pid].get("job", "")).startswith("auto-"):  # keep the unregistered row honest: real uptime, and a process up over an hour is a service, not a job
+                up = f"{et // 86400} d {et % 86400 // 3600} h" if et >= 86400 else f"{et // 3600} h {et % 3600 // 60} min" if et >= 3600 else f"{et // 60} min"
+                beat(known[pid]["job"], progress=f"up {up}", service=(True if et >= 3600 else None), every_s=(None if et >= 3600 else 180))
+            continue
         script = next((a for a in args.split() if a.endswith((".py", ".mjs", ".js", ".sh"))), "process")
         job = f"auto-{os.path.basename(script).rsplit('.', 1)[0]}-{pid}"
         beat(job, pid=pid, where="[CPU]", task="?", state="running", progress=f"running {et // 60} min", last=f"UNREGISTERED: {args[:110]}", why="Started without a heartbeat; the starter should register it with why / success / next (GO.md rule: the page is the truth).", success="unknown (not registered)", next="unknown (not registered)", need="Nothing")

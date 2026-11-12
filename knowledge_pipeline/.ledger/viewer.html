@@ -45,6 +45,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .sec{margin-top:22px}
 .sec>h2{margin:0 0 10px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);display:flex;gap:10px;align-items:center}
 .sec>h2 .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:450}
+.tg{display:grid;gap:4px;margin-top:10px;width:100%}.tgh{font-size:12px;font-weight:600;color:var(--t2);padding:6px 6px;align-self:end;line-height:1.25}.tgh.c{text-align:center}.tgm{font-size:14px;font-weight:600;align-self:center;padding:0 6px}
+.tgc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer;font:inherit;color:inherit;padding:4px}.tgc b{font-size:22px;line-height:1}.tgc span{font-size:11px;color:var(--t2)}
+.tgc.ok{background:color-mix(in srgb,var(--good) 14%,var(--panel));color:var(--good)}.tgc.part{background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--warn)}.tgc.no{background:color-mix(in srgb,var(--stop) 14%,var(--panel));color:var(--stop)}.tgc.none{color:var(--quiet)}.tgc:hover,.tgc:focus-visible{outline:2px solid var(--t2)}
+.tgl{font-size:12px;color:var(--t2);white-space:pre-line;align-self:center;padding:0 6px;font-variant-numeric:tabular-nums}.tgd{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:20px}
+@media (max-width:900px){.tg{overflow-x:auto;display:grid;min-width:900px}}
+.tpanel{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-top:8px}.tpanel summary{padding:12px 16px;cursor:pointer;font-size:14px;display:flex;gap:12px;align-items:baseline}.tpanel summary span{color:var(--t2);font-size:13px}
+.tbody{padding:2px 18px 16px;max-width:1100px;font-size:14px;line-height:1.55}.tlist{margin:6px 0 0;padding:0;list-style:none}.tlist li{margin:0 0 9px;padding-left:2px}.tmodel{margin-top:14px}.tmodel>b{font-size:14px}
+.tt{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}.tt th{text-align:left;font-weight:600;color:var(--t2);padding:6px 10px 6px 0;border-bottom:1px solid var(--line)}.tt td{padding:7px 10px 7px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+.tcg{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}.tcurve .tleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:6px 0 2px}
+.tchips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}.tchip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--t2)}.tchip.task{font-weight:700;color:inherit}
+.tchip.live{color:var(--good);border-color:var(--good);font-weight:700;animation:p 2s infinite}.tchip.early{color:var(--warn);border-color:var(--warn)}.tchip.done{color:var(--good)}.tcurve.live{border-color:var(--good)}.tgroup{margin:16px 0 6px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
 .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px}
 .tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--raised);color:var(--t2);white-space:nowrap}
@@ -179,7 +190,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 <script>
 'use strict';
 const PULSE_MS = 30000, NS = 'http://www.w3.org/2000/svg';
-const SVGS = new Set(['svg', 'path', 'circle', 'rect', 'g', 'line', 'title']);
+const SVGS = new Set(['svg', 'path', 'circle', 'rect', 'g', 'line', 'title', 'polyline', 'text']);
 /* h(tag, attrs, ...children): builds elements; text goes in as text nodes only, never as markup. */
 function h(tag, a, ...kids) {
   const e = SVGS.has(tag) && tag !== 'title' ? document.createElementNS(NS, tag) : document.createElement(tag);
@@ -195,8 +206,8 @@ const set = (el, ...kids) => el.replaceChildren(...kids.flat(Infinity).filter((k
 const KIND = { wave: 'Phase opened', task: 'Task added', start: 'Started', step: 'Step done', done: 'Done', verdict: 'Verdict', block: 'Blocked', postmortem: 'Post-mortem', ceremony: 'Phase review',
   decision: 'Decision', focus: 'Focus', warning: 'Warning', note: 'Note', exception: 'Exception', drop: 'Dropped', opportunity: 'Opportunity' };
 const GROUPS = [['quiet', 'Waiting'], ['ready', 'Ready'], ['live', 'In progress'], ['need', 'Needs you'], ['good', 'Passed']];
-const ICON = { engine: 'M2 12.500l3.500-4 3 2.500L14 4M10.500 4H14v3.500', live: 'M2 8a6 6 0 1012 0A6 6 0 002 8zM8 5v3.500l2 1.500', story: 'M1.5 8h3l2-5 3 10 2-5h3', map: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z', work: 'M2 3h3v10H2zM6.5 3h3v6h-3zM11 3h3v8h-3z', quality: 'M8 1.5l5.5 2v4.2c0 3-2.2 5-5.5 6.8C4.700 12.700 2.500 10.700 2.500 7.700V3.500z', rules: 'M2.500 4h11M2.500 8h11M2.500 12h6' };
-const VIEWS = [['story', 'Story'], ['engine', 'Engine'], ['live', 'Live'], ['map', 'Map'], ['work', 'Work'], ['quality', 'Quality'], ['rules', 'Rules']];
+const ICON = { training: 'M2 13l3-5 3 2 3-6 3 3M2 14h12', engine: 'M2 12.500l3.500-4 3 2.500L14 4M10.500 4H14v3.500', live: 'M2 8a6 6 0 1012 0A6 6 0 002 8zM8 5v3.500l2 1.500', story: 'M1.5 8h3l2-5 3 10 2-5h3', map: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z', work: 'M2 3h3v10H2zM6.5 3h3v6h-3zM11 3h3v8h-3z', quality: 'M8 1.5l5.5 2v4.2c0 3-2.2 5-5.5 6.8C4.700 12.700 2.500 10.700 2.500 7.700V3.500z', rules: 'M2.500 4h11M2.500 8h11M2.500 12h6' };
+const VIEWS = [['story', 'Story'], ['engine', 'Engine'], ['live', 'Live'], ['map', 'Map'], ['work', 'Work'], ['training', 'Training'], ['quality', 'Quality'], ['rules', 'Rules']];
 
 let D = null, view = (location.hash || '#story').slice(1).split('/')[0], sheet = null, wave = null, shut = new Set(), last = '', ok = true, changedAt = 0;
 if (!VIEWS.some((v) => v[0] === view)) view = 'story';
@@ -244,7 +255,14 @@ const go = (v, w) => { view = v; if (w !== undefined) wave = w; sheet = null; lo
 const TERMINAL = new Set(['done', 'failed', 'stopped', 'lost']);
 const GL = { running: ['●', 'live'], queued: ['○', 'quiet'], done: ['✓', 'good'], failed: ['✕', 'stop'], stopped: ['■', 'quiet'], lost: ['?', 'warn'], idle: ['○', 'quiet'], stale: ['!', 'stop'] };
 const LIVE = { where: 'all', outcome: 'all', rows: null, total: null };
-const activeRuns = () => (D.live || []).filter((r) => !TERMINAL.has(r.state)).filter((r, _i, all) => !(/^batch-/.test(r.job) && all.some((o) => !/^(batch-|poller)/.test(o.job) && /API/.test(o.where || '')))).map((r) => { const mins = (Date.now() - new Date(r.updated).getTime()) / 60000; return { ...r, stale: mins > 10 }; })
+const fmtS = (n) => (n >= 3600 ? `${Math.round(n / 360) / 10} h` : n >= 120 ? `${Math.round(n / 60)} min` : `${n} s`);
+const expectOf = (r) => {  // each job states how often it should report (every_s) or that it is a service; idle and waiting rows are never stale
+  if (r.state === 'idle' || r.state === 'waiting') return { limit: null, text: 'finished or waiting: no update expected' };
+  if (r.service) return { limit: 15, text: 'service: always on, checked every poll' };
+  const e = Number(r.every_s); if (e > 0) return { limit: Math.max(10, (e * 2.5) / 60), text: `expects an update every ${fmtS(e)}` };
+  return { limit: 10, text: 'no expectation set: default 10 min' };
+};
+const activeRuns = () => (D.live || []).filter((r) => !TERMINAL.has(r.state) && r.job !== 'health').filter((r, _i, all) => !(/^batch-/.test(r.job) && all.some((o) => !/^(batch-|poller)/.test(o.job) && /API/.test(o.where || '')))).map((r) => { const mins = (Date.now() - new Date(r.updated).getTime()) / 60000; const ex = expectOf(r); return { ...r, stale: ex.limit != null && mins > ex.limit, expect: ex.text }; })
   .sort((a, b) => (b.stale - a.stale) || ((b.state === 'running') - (a.state === 'running')) || String(b.updated).localeCompare(String(a.updated)));
 const liveBadge = () => { const a = activeRuns(), bad = a.some((r) => r.stale || r.state === 'failed'); return a.length || bad ? h('span', { class: `b${bad ? ' hot' : ''}`, text: a.length }) : null; };
 const runRow = (r, hist) => {
@@ -252,7 +270,7 @@ const runRow = (r, hist) => {
   return h('button', { class: `lr${k === 'stale' ? ' stale' : ''}`, onclick: () => (r.task && T[r.task] ? open('task', r.task) : null) },
     h('span', { class: 'wh', text: r.where || '' }),
     h('span', { class: 'jb' }, h('span', { class: `gl t-${c}${k === 'running' ? ' on' : ''}`, text: g }), `${r.job} `, h('span', { class: 'muted', text: k === 'stale' ? 'NO UPDATE' : r.state })),
-    h('span', { class: 'ls', text: [r.progress, r.spent != null && r.spent !== '' ? `$${Number(r.spent).toFixed(2)}${r.cap ? '/$' + r.cap : ''}` : null, r.last].filter(Boolean).join(' · ') }),
+    h('span', { class: 'ls', text: [r.progress, r.spent != null && r.spent !== '' ? `$${Number(r.spent).toFixed(2)}${r.cap ? '/$' + r.cap : ''}` : null, r.last, !hist ? r.expect : null].filter(Boolean).join(' · ') }),
     h('span', { class: 'ag', text: ago(hist ? r.ended : r.updated) }));
 };
 const WHERE = { '[SESS]': 'this session', '[API]': 'Anthropic API', '[CON]': 'Console agent', '[KAG]': 'Kaggle', '[5090]': 'local GPU 5090', '[3090]': 'local GPU 3090', '[CPU]': 'local CPU', '[HOST]': 'third-party hosted' };
@@ -401,6 +419,73 @@ function work() {
 }
 
 /* ---------- Rules ---------- */
+let TR = null, trAt = 0;
+function trainingView() {
+  if (Date.now() - trAt > 60000) { trAt = Date.now(); fetch('./training', { cache: 'no-store' }).then((r) => r.json()).then((j) => { TR = j; if (view === 'training') draw(); }).catch(() => { if (!TR) { TR = { error: true }; if (view === 'training') draw(); } }); }
+  if (!TR) return h('div', { class: 'card empty', text: 'Loading training data.' });
+  if (TR.error) return h('div', { class: 'card empty', text: 'No training data yet. Run build_training.py in projects/world-state.' });
+  const A = TR.audit, ASYM = { ok: '✓', part: '◐', no: '✗', none: '–' }, ACOL = { ok: 'var(--good)', part: 'var(--warn)', no: 'var(--stop)', none: 'var(--quiet)' }, AWORD = { ok: 'shown', part: 'partly shown', no: 'tried, failed', none: 'not started' };
+  const tbl = (head, rows) => h('table', { class: 'tt' }, h('tr', null, head.map((t) => h('th', { text: t }))), rows.map((r) => h('tr', null, r.map((v) => h('td', { text: v == null ? '' : String(v) })))));
+  const panel = (title, sub, ...body) => h('details', { class: 'tpanel' }, h('summary', null, h('b', { text: title }), sub ? h('span', { text: sub }) : null), h('div', { class: 'tbody' }, body));
+  const list = (arr, mark) => h('ul', { class: 'tlist' }, arr.map((x) => h('li', { text: (mark ? mark + ' ' : '') + x })));
+  /* One chart for every training run: dev score 0 to 1 per epoch, one colour per measure, dashed vertical line at the epoch chosen on dev, optional dashed baseline. */
+  const curve = (title, sub, series, o) => {
+    const W = 520, H = 210, L = 38, B = 26, T = 10, R = 12, X = o.xmax, x = (e) => L + ((W - L - R) * e) / X, y = (s) => T + (H - T - B) * (1 - Math.min(1, Math.max(0, s)));
+    const faint = { fill: 'currentColor', 'fill-opacity': 0.6, 'font-size': 11 };
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((g) => [h('line', { x1: L, x2: W - R, y1: y(g), y2: y(g), stroke: 'currentColor', 'stroke-opacity': 0.12 }), h('text', { ...faint, x: 4, y: y(g) + 4, text: g.toFixed(2) })]);
+    const ticks = Array.from({ length: Math.floor(X / o.step) + 1 }, (_, i) => h('text', { ...faint, x: x(i * o.step) - 4, y: H - 8, text: i * o.step }));
+    const base = o.base != null ? [h('line', { x1: L, x2: W - R, y1: y(o.base), y2: y(o.base), stroke: 'currentColor', 'stroke-dasharray': '4 3', 'stroke-opacity': 0.5 }), h('text', { ...faint, x: W - R - 4, y: y(o.base) - 4, 'text-anchor': 'end', text: o.baseName })] : [];
+    const best = o.best != null ? [h('line', { x1: x(o.best), x2: x(o.best), y1: T, y2: H - B, stroke: 'currentColor', 'stroke-dasharray': '2 3', 'stroke-opacity': 0.55 }), h('text', { ...faint, x: x(o.best) + 4, y: T + 10, text: 'chosen' })] : [];
+    const lines = series.map((s) => h('polyline', { fill: 'none', stroke: s.color, 'stroke-width': 2, points: s.pts.map(([e, v]) => `${x(e)},${y(v)}`).join(' ') }));
+    return h('div', { class: 'card tcurve' + (o.active ? ' live' : '') }, h('div', { class: 'l', text: title }), h('div', { class: 'tchips' }, o.chips.map(([c, t]) => h('span', { class: 'tchip ' + c, text: t }))), h('div', { class: 'mt', text: sub }),
+      h('div', { class: 'tleg' }, series.map((s) => h('span', { style: `color:${s.color}`, text: '● ' + s.name })), o.base != null ? h('span', { text: '- - ' + o.baseName }) : null),
+      h('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': `${title}, dev score per epoch` }, grid, ticks, base, best, lines, h('text', { ...faint, x: W - R, y: H - 8, 'text-anchor': 'end', text: 'epoch' })),
+      h('div', { class: 'mt', text: o.foot }));
+  };
+  const COL = { topic: '#2b6cb0', story_type: '#2f855a', presence_f1: '#b7791f' }, NM = { topic: 'topic', story_type: 'story type', presence_f1: 'presence F1' }, BS = TR.baseline_sparse_sealed;
+  const NOWU = Date.parse(TR.built || '') || Date.now(), ageOf = (t) => { const m = Math.max(0, Math.round((NOWU - Date.parse(t)) / 60000)); return m < 90 ? `${m} min ago` : m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
+  const chips = (r, planned) => { const early = planned && r.reached_epoch < planned, st = r.active ? ['live', 'LIVE · refreshing'] : early ? ['early', `stopped early at epoch ${r.reached_epoch} of ${planned}`] : ['done', 'finished'];
+    return [['task', r.task], r.seed ? ['seed', 'seed ' + r.seed] : null, st, ['age', `updated ${r.updated.replace('T', ' ').replace('Z', '')} UTC · ${ageOf(r.updated)}`]].filter(Boolean); };
+  const byNew = (a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0) || b.updated.localeCompare(a.updated);
+  const encCards = [...TR.runs].sort(byNew).map((r) => { const b = r.points[r.best_index]; return curve(r.label, `${r.labels} labels${r.seed ? `, seed ${r.seed}` : ''} · planned ${r.planned_epochs} epochs`,
+    Object.keys(COL).map((k) => ({ color: COL[k], name: NM[k], pts: r.points.map((p) => [p.epoch, p[k]]) })), { xmax: Math.max(r.planned_epochs, ...r.points.map((p) => p.epoch)), step: 1, best: b.epoch, active: r.active, chips: chips(r, r.planned_epochs),
+      foot: `Stop: ${r.stop_reason} · chosen epoch ${b.epoch} · sealed: topic ${r.sealed.topic}, story type ${r.sealed.story_type}, presence F1 ${r.sealed.presence_f1} (old sparse heads ${BS.topic}, ${BS.story_type}, ${BS.presence_f1})` }); });
+  const KC = ['#2b6cb0', '#2f855a', '#b7791f'];
+  const kindCards = [...(TR.kinds_runs || [])].sort(byNew).map((k, i) => curve(`Condition per kind, seed ${k.seed}`, 'small head on the frozen encoder · dev micro-F1 every 5 epochs', [{ color: KC[i], name: 'dev micro-F1', pts: k.points.map((p) => [p.epoch, p.dev]) }],
+    { xmax: Math.max(...k.points.map((p) => p.epoch)), step: 10, best: k.points[k.best_index].epoch, active: k.active, chips: chips(k, null), base: k.dev_baseline_most_common_kind, baseName: 'most-common-kind baseline', foot: `Stop: ${k.stop} · best dev ${k.best_dev} · sealed micro-F1 ${k.sealed.micro_f1} (${k.sealed.n} items, read once)` }));
+  const areaCards = [...(TR.area_runs || [])].sort(byNew).map((k) => curve(`Area head, seed ${k.seed}`, 'dev agreement with its own pseudo-labels (not outside truth)', [{ color: '#805ad5', name: 'dev agreement', pts: k.points.map((p) => [p.epoch, p.dev]) }],
+    { xmax: Math.max(16, ...k.points.map((p) => p.epoch)), step: 2, best: k.best_epoch, active: k.active, chips: chips(k, null), foot: `Stop: ${k.stop} · chosen epoch ${k.best_epoch} · held-out MN-DS level 2 exact: fresh ${k.fresh.head} (mapping ${k.fresh.embedding}), fresh2 ${k.fresh2.head} (mapping ${k.fresh2.embedding})` }));
+  const kpi = (n, l, sub) => h('div', { class: 'card kpi' }, h('div', { class: 'big num', text: n }), h('div', { class: 'l', text: l }), sub ? h('div', { class: 'mt', text: sub }) : null);
+  const full = A ? A.rows.reduce((n, r) => n + (r.cells.every((c) => c.s === 'ok') ? 1 : 0), 0) : 0, steps = A ? A.rows.reduce((n, r) => n + r.cells.filter((c) => c.s === 'ok').length, 0) : 0, total = A ? A.rows.length * A.columns.length : 0;
+  const kpis2 = h('div', { class: 'kpis' }, kpi(`${full} of ${TR.models.length}`, 'models with every step shown'), kpi(`${steps} of ${total}`, 'steps shown', 'across all models'), kpi((TR.live || []).filter((j) => j.state === 'running').length, 'jobs running now'));
+  const live = h('div', { class: 'card' }, h('div', { class: 'l', text: 'Live now · refreshed every 3 minutes · data built ' + (TR.built || '').replace('T', ' ').slice(0, 16) + ' UTC' }),
+    (TR.live || []).length ? tbl(['Job', 'State', 'What', 'Updated'], TR.live.map((j) => [j.job, j.state || '', j.progress || '', (j.updated || '').slice(11, 16)])) : h('div', { class: 'mt', text: 'Nothing is running.' }));
+  const flow = h('div', { class: 'card' }, h('div', { class: 'l', text: "What's next, in order" }), tbl(['#', 'Step', 'State', 'Why', 'Needs'], (TR.next_flow || []).map((x) => [x.n, x.step, x.state, x.why, x.gate])));
+  const audit = A ? h('div', { class: 'card' }, h('div', { class: 'l', text: 'Trust check: every model against every stage of the method' }),
+    h('p', { class: 'mt', text: '✓ shown by a result file · ◐ shown but weak or not independent · ✗ tried and failed · – not started. Click a cell for its evidence.' }),
+    h('div', { class: 'tg', style: `grid-template-columns:minmax(190px,1.3fr) repeat(${A.columns.length},minmax(84px,1fr)) minmax(190px,1.3fr)` },
+      h('div', { class: 'tgh', text: 'Model' }), A.columns.map((t) => h('div', { class: 'tgh c', text: t })), h('div', { class: 'tgh', text: 'Last changed (UTC)' }),
+      A.rows.map((r) => [h('div', { class: 'tgm', text: r.model }),
+        r.cells.map((x, i) => h('button', { class: 'tgc ' + x.s, title: x.t, 'aria-label': `${r.model}, ${A.columns[i]}, ${AWORD[x.s]}`, onclick: () => { document.getElementById('tgd').textContent = `${r.model} · ${A.columns[i]} · ${AWORD[x.s]}: ${x.t}${x.file ? '  [' + x.file + ', ' + x.ts.replace('T', ' ') + ']' : ''}`; } }, h('b', { text: ASYM[x.s] }), h('span', { text: AWORD[x.s] }))),
+        h('div', { class: 'tgl', text: r.changed ? r.changed.ts.replace('T', ' ').replace('Z', '') + '\n' + r.changed.file : 'no result file yet' })])),
+    h('div', { id: 'tgd', class: 'tgd', text: 'Click a cell for its evidence and source file.' })) : null;
+  const actives = [...TR.runs, ...(TR.kinds_runs || []), ...(TR.area_runs || [])].filter((r) => r.active).length;
+  const curves = h('div', { class: 'sec' }, h('h2', { text: 'Training curves · dev score per epoch, dashed line = epoch chosen on dev' }),
+    h('p', { class: 'mt', text: `${actives ? actives + ' running now: its card says LIVE and redraws as the run reports' : 'No run is training now'} · one card per run, newest first · a new run adds a card, a live run updates its own` }),
+    h('div', { class: 'l tgroup', text: 'Encoder: topic, story type, presence · evaluated every half epoch' }), h('div', { class: 'tcg' }, encCards),
+    h('div', { class: 'l tgroup', text: 'Condition per kind · small head, evaluated every 5 epochs' }), h('div', { class: 'tcg' }, kindCards),
+    areaCards.length ? [h('div', { class: 'l tgroup', text: 'Area · head distilled from the IPTC term mapping, evaluated every epoch' }), h('div', { class: 'tcg' }, areaCards)] : null);
+  const eb = TR.entity_bakeoff && TR.entity_bakeoff.systems ? panel('Entity extractors', 'Few-NERD sample, type ignored, Wikipedia text', tbl(['System', 'Exact F1', 'Overlap F1'], Object.entries(TR.entity_bakeoff.systems).map(([k, s]) => [k, s.exact_f1 ?? 'install error', s.iou50_f1 ?? '']))) : null;
+  const reference = h('div', { class: 'sec' }, h('h2', { text: 'Reference · open a panel to read it' }),
+    A ? panel('What works', `${A.works.length} findings`, list(A.works, '✓')) : null, A ? panel("What doesn't work, or isn't proven", `${A.doesnt.length} findings`, list(A.doesnt, '✗')) : null,
+    A ? panel('Evidence behind each cell', 'one section per model', A.rows.map((r) => h('div', { class: 'tmodel' }, h('b', { text: r.model }), list(r.cells.map((x, i) => `${ASYM[x.s]} ${A.columns[i]}: ${x.t}${x.src ? '  [' + x.src + ']' : ''}`)))) ) : null,
+    panel('Every model: data, input, output, state', null, tbl(['Model', 'Data', 'Input to output', 'Status'], TR.models.map((m) => [m.model, m.data, `${m.inp} to ${m.out}`, m.status]))), eb,
+    panel('How to read this tab', null, h('p', { text: TR.note })));
+  const stu = TR.students && TR.students.length ? h('div', { class: 'sec' }, h('h2', { text: 'CPU students and heads on the engine stories' }),
+    h('p', { class: 'mt', text: 'Agreement with the engine stored reading on its 1,736 stories, never trained on a scored story (grouped folds for engine readings). Bars: presence AUROC 0.87, direction accuracy 0.76; majority guess for direction 0.671.' }),
+    tbl(['Task', 'What', 'Text view', 'Trained on', 'Presence AUROC', 'Direction accuracy', 'File'], TR.students.map((s) => [s.task, s.label, s.view, s.labels, s.presence_auroc ?? '', s.direction_accuracy ?? '', s.file]))) : null;
+  return [kpis2, audit ? h('div', { class: 'sec' }, audit) : null, h('div', { class: 'sec' }, live), h('div', { class: 'sec' }, flow), curves, stu, reference];
+}
 function rules() {
   const all = live(D.tasks), passed = all.filter((t) => tone(t) === 'good').length, failed = all.filter((t) => /^Failed/.test(t.label)).length;
   const W = D.warnings, totalW = W.reduce((a, w) => a + w.count, 0), max = Math.max(1, ...W.map((w) => w.count));
@@ -689,6 +774,28 @@ function ruleSheet(r) {
 function starSheet() { return [h('h2', { text: D.northStar.name || 'North star' }), Object.entries(D.northStar).filter(([k]) => k !== 'name').map(([k, v]) => kv(k.replace(/_/g, ' '), h('p', { text: String(v) })))]; }
 
 /* ---------- shell ---------- */
+function alarms() {
+  const out = [], T = D.tasks || [];
+  const stuck = T.filter((t) => t.status === 'in_progress' && (t.steps || []).length && t.steps.every((x) => x.done));
+  if (stuck.length) out.push(`${stuck.length} task${stuck.length > 1 ? 's' : ''} have every step done but are not closed: ${stuck.slice(0, 8).map((t) => t.id).join(', ')}`);
+  const gen = T.filter((t) => t.status !== 'completed' && t.status !== 'dropped' && t.capability === 'phase-review' && !/review|lesson|decision/i.test(t.title)); // review and decision work belongs there
+  if (gen.length) out.push(`${gen.length} open task${gen.length > 1 ? 's' : ''} filed under the generic phase-review capability, not a real one: ${gen.slice(0, 8).map((t) => t.id).join(', ')} (the ledger cannot move a task; it clears when they close, and new work is filed under its own capability)`);
+  const run = (D.live || []).filter((j) => j.state === 'running' && /UNREGISTERED|not registered/.test(String(j.last || '') + String(j.success || '')));
+  if (run.length) out.push(`${run.length} running job${run.length > 1 ? 's' : ''} without a heartbeat: ${run.map((j) => j.pid || j.job).join(', ')}`);
+  const old = activeRuns().filter((j) => j.stale);
+  if (old.length) out.push(`${old.length} running job${old.length > 1 ? 's' : ''} past the update time it promised: ${old.map((j) => j.job).join(', ')}`);
+  return out;
+}
+function healthLine() {
+  const hrow = (D.live || []).find((j) => j.job === 'health'); if (!hrow) return h('div', { class: 'card', style: 'margin-bottom:12px;border-left:3px solid var(--stop)' }, h('div', { class: 'mt', text: 'Health check is not reporting: the poller or kit/live/health.py is not running.' }));
+  const mins = (Date.now() - new Date(hrow.updated).getTime()) / 60000, late = mins > 10, col = late || hrow.level === 'bad' ? 'var(--stop)' : hrow.level === 'warn' ? 'var(--warn)' : 'var(--good)';
+  return h('div', { class: 'card', style: `margin-bottom:12px;border-left:3px solid ${col}` }, h('div', { class: 'l', text: `Health (checked ${late ? Math.round(mins) + ' min ago: OVERDUE' : 'just now'}, every 3 min)`, style: late ? 'color:var(--stop)' : '' }), h('div', { text: hrow.progress, style: 'font-weight:600' }), hrow.last && hrow.last !== 'no flags' ? h('div', { class: 'mt', text: hrow.last }) : null);
+}
+function alarmStrip() {
+  const a = alarms();
+  return a.length ? h('div', { class: 'card', style: 'border-left:3px solid var(--stop);margin-bottom:12px' }, h('div', { class: 'l', text: `Off the rails? ${a.length} thing${a.length > 1 ? 's' : ''} to look at` }), a.map((x) => h('div', { class: 'mt', text: x })))
+    : h('div', { class: 'card', style: 'margin-bottom:12px' }, h('div', { class: 'mt', text: 'Off the rails? Nothing flagged: no finished-but-open tasks, no generic filing, no job without a heartbeat.' }));
+}
 function draw() {
   if (!D) return;
   const needs = D.counts.needsYou, W = D.warnings.length;
@@ -702,7 +809,7 @@ function draw() {
   const sub = { live: 'What is running now, where, and what finished.', story: first(D.northStar.statement), map: 'Stage, domain, capability. Each square is a task.', work: `${live(D.tasks).length} tasks in ${D.waves.length} phases.`, engine: 'What the CPU engine can extract, how far it has come, and what we tried.', quality: 'Quality going in and coming out of each stage. A hollow square is not measured yet.', rules: 'What the ledger rules caught, and what is still defective.' }[view];
   set(document.getElementById('top'), h('h1', { text: view === 'story' ? D.name : VIEWS.find((v) => v[0] === view)[1] }),
     h('p', null, sub, view === 'story' && D.northStar.statement ? h('button', { class: 'link', text: 'North star', onclick: () => open('star') }) : null));
-  set(document.getElementById('view'), { story, engine: engineView, live: liveView, map: mapView, work, quality, rules }[view]());
+  { const body = { story, engine: engineView, live: liveView, map: mapView, work, training: trainingView, quality, rules }[view](); set(document.getElementById('view'), [healthLine(), alarmStrip(), body]); }
   const sh = document.getElementById('sheet'), sc = document.getElementById('scrim');
   const body = !sheet ? null : sheet.type === 'task' && T[sheet.id] ? taskSheet(T[sheet.id]) : sheet.type === 'cap' && CAP[sheet.id] ? capSheet(CAP[sheet.id]) : sheet.type === 'stage' && STG[sheet.id] ? stageSheet(STG[sheet.id])
     : sheet.type === 'phase' && PH[sheet.id] ? phaseSheet(PH[sheet.id]) : sheet.type === 'rule' ? ruleSheet(sheet.id) : sheet.type === 'gate' && GATE[sheet.id] ? gateSheet(GATE[sheet.id]) : sheet.type === 'star' ? starSheet() : null;

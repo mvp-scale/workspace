@@ -1,0 +1,33 @@
+{
+ "id": "T142-M",
+ "task": "T142",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How well does the Jev one-pass call 1 reproduce the outside gold on the whole MN-DS fresh2 set, so the decider can admit or reject Domain?",
+ "one_change": "read the whole MN-DS fresh2 gold set (1,352 stories) with call 1 only",
+ "baseline": {
+  "model": "chunked 328-question read, input tokens per story (T130)",
+  "file": "runs/pulse/t134/baseline_tokens.json",
+  "key": "tokens_per_story"
+ },
+ "prediction": {
+  "metric": "input tokens per story, call 1 only",
+  "low": 13000,
+  "high": 18000,
+  "why": "call 1 used 15,039 tokens a story in T135-F3 (recorded in the T135 reading note); 1,352 stories cost 0.85 USD by that figure, an estimate; the Domain choice matched MN-DS on 0.567 of 30 stories (runs/pulse/t135/t135_full_read.json is the latest run), the full set gives an interval; pass tests written before the run: P0 no errors and all answers typed; P2 at most 18,000 tokens a story; the decider then judges Domain on outside gold with its pre-set 0.80 bar; MN-DS rows are scoring only and stay out of training; decision D40"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=0 NL=0 NM=1352 NREP=0 CALL1_ONLY=1 CONC=8 OUT=/workspace/knowledge_pipeline/projects/world-state/runs/pulse/t142 ROWS=/workspace/data/newsreader/labels/mnds-gold-1352.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t142_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+ "result": {
+  "file": "runs/pulse/t142/t135_full_read.json",
+  "key": "tokens_per_story_total"
+ },
+ "cap_minutes": 40,
+ "noise": 3000,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=0 NL=0 NM=2 NREP=0 CALL1_ONLY=1 CONC=2 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t142s ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t142s.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t142s_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+  "cap_minutes": 10
+ }
+}

@@ -1,4 +1,4 @@
-"""Domain from several signals, scored on MN-DS as a ruler only (pre-registered L1045). S2 = BitMob Reader topic mapped to the 17 classes; S3 = hashed word model trained only on URL-labelled CC-News articles. Agreement = tool-gold.
+"""Domain from several signals, scored on MN-DS as a ruler only (pre-registered L1045). S2 = BitMob Domain (v6b) topic mapped to the 17 classes; S3 = hashed word model trained only on URL-labelled CC-News articles. Agreement = tool-gold.
     /workspace/models/embed-zs/.venv/bin/python domain_signals.py   -> runs/harvest/domain_signals.json"""
 import json, re, sys, time, numpy as np, collections
 sys.path.insert(0, "."); import analyze2 as A2

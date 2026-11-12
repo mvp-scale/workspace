@@ -1,0 +1,89 @@
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 10832.79it/s]
+[1mBertModel LOAD REPORT[0m from: BAAI/bge-small-en-v1.5
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+{
+ "supported_triples": 300,
+ "unique_keys": 299,
+ "keys_in_2plus_articles": 1,
+ "pairs_same_key": 1,
+ "unconstrained": {
+  "pairs": 1,
+  "same_term": 1.0,
+  "same_depth1_ancestor": 1.0,
+  "same_top_level": 1.0
+ },
+ "constrained_to_reader_domain": {
+  "pairs": 1,
+  "same_term": 1.0,
+  "same_depth1_ancestor": 1.0,
+  "same_top_level": 1.0
+ },
+ "baseline_random_pairs_unconstrained": {
+  "pairs": 1,
+  "same_term": 0.0,
+  "same_depth1_ancestor": 0.0,
+  "same_top_level": 0.0
+ },
+ "baseline_random_pairs_constrained": {
+  "pairs": 1,
+  "same_term": 0.0,
+  "same_depth1_ancestor": 0.0,
+  "same_top_level": 0.0
+ },
+ "reader_domain_available_share": 1.0,
+ "note": "Pairs of rows with the same triple key from different articles. Same-term etc. = both rows were assigned the same ontology term / depth-1 ancestor / top-level category. Constrained = candidates limited to the descendants of the top-level categories of the live reader's top-two topics for the row's article. Measures reproducibility of the assignment, not truth.",
+ "constrained_terms_with_5plus": 9,
+ "constrained_terms_with_10plus": 2
+}
+[('defendant', 12), ('border dispute', 11), ('arrest', 8), ('political prisoners and dissenters', 6), ('arson', 6), ('road incident', 6), ('sports management and ownership', 5), ('impeachment', 5), ('terrorist bombings', 5)]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 11136.01it/s]
+[1mBertModel LOAD REPORT[0m from: BAAI/bge-small-en-v1.5
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+{
+ "supported_triples": 168081,
+ "unique_keys": 65896,
+ "keys_in_2plus_articles": 27173,
+ "pairs_same_key": 133246,
+ "unconstrained": {
+  "pairs": 133246,
+  "same_term": 0.7575,
+  "same_depth1_ancestor": 0.8096,
+  "same_top_level": 0.8513
+ },
+ "constrained_to_reader_domain": {
+  "pairs": 133246,
+  "same_term": 0.7354,
+  "same_depth1_ancestor": 0.8023,
+  "same_top_level": 0.8679
+ },
+ "baseline_random_pairs_unconstrained": {
+  "pairs": 133235,
+  "same_term": 0.007,
+  "same_depth1_ancestor": 0.0531,
+  "same_top_level": 0.118
+ },
+ "baseline_random_pairs_constrained": {
+  "pairs": 133235,
+  "same_term": 0.0075,
+  "same_depth1_ancestor": 0.06,
+  "same_top_level": 0.1411
+ },
+ "reader_domain_available_share": 1.0,
+ "note": "Pairs of rows with the same triple key from different articles. Same-term etc. = both rows were assigned the same ontology term / depth-1 ancestor / top-level category. Constrained = candidates limited to the descendants of the top-level categories of the live reader's top-two topics for the row's article. Measures reproducibility of the assignment, not truth.",
+ "constrained_terms_with_5plus": 883,
+ "constrained_terms_with_10plus": 768
+}
+[('defendant', 6876), ('border dispute', 4039), ('arrest', 3824), ('road incident', 3641), ('witness', 3459), ('shootings', 2965), ('terrorist bombings', 2932), ('disinformation and misinformation', 2443), ('missing in action', 2368), ('baseball', 2219)]
+L1779 appended
+L1780 appended
+T99-A: HIT, NO GAIN, terms with 5 or more supported triples 883.000 vs 883.000

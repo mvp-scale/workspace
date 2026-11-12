@@ -540,3 +540,17 @@ knowledge-engine/
 ### Final recommendation
 
 The first two implementation experiments should run **in parallel**: (a) sparse CPU classifier versus the existing shared encoder on identical data, and (b) a bounded predicate-role solver fused with the existing Rust spot map. Meanwhile, formally specify the semantic observation contract and evidence merge semantics in Lean 4. Those results decide where computational complexity and verification effort will deliver genuine value.
+
+## 18. Addendum 2026-11-07: the consolidation, stated plainly
+
+Added at the owner's request. Sections 1 to 17 are unchanged. This section states the plan they describe.
+
+1. **Purpose.** One unified knowledge system. The World engine is one consumer. The same graph can also be used to build knowledge.
+2. **Shared core, two views.** The core is the cascade, fragments, anchors, merged edges with counts, and the section 9 promotion gates. The world-model view reads it as Macro Pulse (story type, topic, change and direction, size, traits, place, time). The knowledge view reads the same edges as depth: independent support and change over time. A new use is a new configuration, not a rebuild.
+3. **Two clocks.** The per-article cascade tags and extracts. A slower consolidation pass, run at checkpoints (for example every 10k articles), merges duplicates and promotes or splits Areas under the section 9 gates.
+4. **Duplicates are counts.** Repeated claims merge into one edge that keeps its supporting fragments. Strength is the number of independent publishers. Syndicated copies are detected so they do not count as independent.
+5. **Domain is the top-level profile.** It carries the Macro Pulse characteristics plus place and time. Domain, Area and Capability start from a core seed and grow through the roll-up.
+6. **Resources.** A resource (energy, food, water, minerals, labour, money; the seed list is an open owner decision) is an anchor kind. Relations link it to places, entities, processes and events. The Conditions head applies to it with direction. It rolls up into Areas like any anchor.
+7. **Novelty is a routing signal.** It sends unknowns to a review queue and does not create ontology on its own.
+8. **Labels are hierarchy-safe and versioned.** A split Area's children inherit the parent's label, and each label records the definition version that produced it.
+9. **Status.** Items 2 to 8 are not built. This section is the target; the ledger holds the evidence.

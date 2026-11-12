@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Topic shape test</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  main { max-width: 1180px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 4px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+  .box p { margin: 0 0 8px; color: var(--ink-2); font-size: 13px; }
+  .src { font: 12px var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.t th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line-2); }
+  table.t td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: right; font-family: var(--mono); }
+  .w { font-family: var(--mono); font-size: 12px; }
+  .bar { display: inline-block; height: 8px; background: var(--s1); border-radius: 3px; vertical-align: middle; }
+  .ex { color: var(--ink-3); font-size: 12px; }
+  .pill { display: inline-block; border: 1px solid var(--line-2); border-radius: 10px; padding: 0 8px; font-size: 12px; margin: 0 4px 2px 0; }
+  tr.click { cursor: pointer; } tr.click:hover td { background: var(--surface-2); } tr.detail td { background: var(--surface-2); padding: 10px 12px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; } .gh { font-weight: 600; font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
+  p.why { font-size: 13px; color: var(--ink-2); margin: 0 0 6px; } .art { margin-bottom: 9px; } .at { font-weight: 600; font-size: 13px; } .as { font-size: 12px; color: var(--ink-2); } .am { font: 11px var(--mono); color: var(--ink-3); }
+  button.more { margin-top: 8px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  .picker { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; } button.pk { text-align: left; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 5px 10px; cursor: pointer; font: 13px var(--sans); display: flex; gap: 10px; } button.pk[aria-pressed="true"] { border-color: var(--accent); background: var(--surface-2); } .kind { font: 11px var(--mono); color: var(--ink-3); min-width: 150px; }
+  .step { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; margin: 0 0 14px; } .sh { margin-bottom: 4px; } .sn { display: inline-block; width: 22px; height: 22px; border-radius: 11px; background: var(--accent); color: var(--accent-ink); text-align: center; font: 600 12px/22px var(--mono); margin-right: 8px; } p.sp { font-size: 13px; color: var(--ink-2); margin: 0 0 6px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 6px 0; }
+  .tabs { display: flex; gap: 6px; margin: 0 0 8px; } .tabs button { border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+</style></head><body><main id="app"></main>
+<script>
+(function () {
+  var app = document.getElementById("app");
+  function el(tag, props) {
+    var e = document.createElement(tag); props = props || {};
+    for (var k in props) { if (k === "text") e.textContent = props[k]; else if (k === "class") e.className = props[k]; else e.setAttribute(k, props[k]); }
+    for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null) continue; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); }
+    return e;
+  }
+  var pct = function (x) { return x == null ? "n/a" : Math.round(x * 100) + "%"; };
+  var f2 = function (x) { return x == null ? "n/a" : x.toFixed(2); };
+  function table(head, rows, numCols) {
+    var t = el("table", { class: "t" }), tr = el("tr");
+    head.forEach(function (h, i) { tr.appendChild(el("th", { text: h, class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" })); });
+    t.appendChild(el("thead", {}, tr)); var tb = el("tbody");
+    rows.forEach(function (r) { var row = el("tr"); r.forEach(function (c, i) { var td = el("td", { class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" }); if (c instanceof Node) td.appendChild(c); else td.textContent = c == null ? "" : String(c); row.appendChild(td); }); tb.appendChild(row); });
+    t.appendChild(tb); return t;
+  }
+  function box(title, intro, body, src) { return el("section", { class: "box" }, el("h2", { text: title }), intro ? el("p", { text: intro }) : null, body, src ? el("div", { class: "src", text: "source: " + src }) : null); }
+  fetch("data.json").then(function (r) { return r.json(); }).then(render).catch(function (e) { app.appendChild(el("p", { text: "Could not load data.json: " + e })); });
+
+  function render(D) {
+    var SRC = "runs/harvest/topic_shape.json", V = ["title", "first_sentence", "first_250_words", "whole_article"], VN = { title: "Title", first_sentence: "First sentence", first_250_words: "First 250 words", whole_article: "Whole article" };
+    app.appendChild(el("h1", { text: "Topic shape test" }));
+    app.appendChild(el("p", { class: "lead", text: D.articles + " articles. Four views of each article, embedded with " + D.embedding + ", reduced with " + D.reduction + ", grouped with HDBSCAN. Every number on this page is read from " + SRC + " when the page loads." }));
+
+    // 0. follow one article
+    var wbox = el("div"); app.appendChild(box("Follow one article through the pipeline", "Pick one article. Each step below shows what happens to that single article, with its own numbers. Nothing here is about a whole cluster until the last steps.", wbox));
+    fetch("walk.json").then(function (r) { return r.json(); }).then(function (W) {
+      var picker = el("div", { class: "picker" }), stage = el("div"), sel = 0;
+      var kindName = { "typical": "typical member", "edge": "edge member", "noise": "noise (no cluster)", "title and body in different clusters": "title and body differ" };
+      function step(n, title, body) { return el("div", { class: "step" }, el("div", { class: "sh" }, el("span", { class: "sn", text: String(n) }), el("b", { text: title })), body); }
+      function p(t) { return el("p", { class: "sp", text: t }); }
+      function draw(i) {
+        sel = i; stage.textContent = ""; var a = W.articles[i], e = a.embedding, b = a.broad, s = a.specific;
+        Array.prototype.forEach.call(picker.children, function (c, j) { c.setAttribute("aria-pressed", j === i ? "true" : "false"); });
+        stage.appendChild(step(1, "The article as we hold it", el("div", {}, p(a.domain + ", " + a.date + ". The article has " + a.total_words + " words after cleaning. Below are only its first 250 words, which is all the model reads."), el("div", { class: "at", text: a.title }), el("div", { class: "as", text: a.first_250_words }))));
+        stage.appendChild(step(2, "Four views are cut from it", el("div", {}, p("The same article is read four ways, so we can see whether its headline and its body agree."), table(["View", "What is taken", "Text"], [["Title", "the headline", a.title], ["First sentence", "up to the first full stop", a.first_sentence], ["First 250 words", "headline plus the start of the body (shown in step 1)", a.first_250_words.split(" ").length + " words"], ["Whole article", "up to 8 pieces of 250 words, averaged", a.chunks + " piece(s)"]]))));
+        stage.appendChild(step(3, "Meaning fingerprint", el("div", {},
+          p("The first-250-words view is turned into " + e.dims + " numbers by the embedding model. The first 8 are: " + e.first_values.join(", ") + ". A single number means nothing alone. The whole list is scaled to length " + e.length.toFixed(3) + ", and two articles are alike when their lists point the same way. That score is the similarity: 1.00 is the same text, near 0 is unrelated."),
+          p("For this article, a typical other article of the " + D.articles + " scores " + e.median_similarity_to_all.toFixed(2) + ". Its closest article scores " + e.max_similarity.toFixed(2) + ". The five closest are:"),
+          table(["Similarity", "Headline of the neighbour", "Cluster that neighbour ended up in"], e.nearest.map(function (n) { return [n.similarity.toFixed(2), n.title, n.cluster < 0 ? "none (noise)" : "cluster " + n.cluster + (n.cluster === b.cluster ? " (the same as this article)" : "")]; }), [0]))));
+        stage.appendChild(step(4, "Squeeze " + e.dims + " numbers into " + a.squeezed.length, el("div", {}, p("This article's squeezed position is " + a.squeezed.join(", ") + ". Squeezing keeps close articles close. Of this article's 15 nearest neighbours in the squeezed space, " + (b.cluster >= 0 ? a.umap_neighbours_same_cluster + " are in its own cluster" : a.umap_neighbours_noise + " are also noise") + "."))));
+        var lw = function (c) { return c.label_words.length ? table(["Label word", "In this article?", "In this cluster's articles", "In all other articles"], c.label_words.map(function (w) { return [w.word, w.in_this_article ? "yes" : "no", pct(w.in_cluster), pct(w.elsewhere)]; }), [2, 3]) : null; };
+        var nearSame = e.nearest.filter(function (n) { return n.cluster === b.cluster; }).length;
+        var own = table(["Word in this article", "Times in this article", "Articles (of " + D.articles + ") that contain it"], a.own_words.map(function (w) { return [w.word, w.times_in_this_article, w.articles_with_it]; }), [1, 2]);
+        var nameBox = el("div", { class: "namebox" }); nameBox.style.display = "none";
+        var nameBtn = el("button", { class: "more", text: "Show the generated name of this cluster (it describes the whole crowd, not this article)" });
+        nameBtn.addEventListener("click", function () { nameBox.style.display = nameBox.style.display === "none" ? "" : "none"; });
+        if (b.cluster >= 0) nameBox.appendChild(el("div", { class: "two" }, el("div", {}, el("b", { text: "Generated label words for the whole cluster of " + b.size }), p("Counted from all " + b.size + " articles: words common in them and rare elsewhere. Label: '" + b.label.join(" ") + "'. This article contains " + b.label_words.filter(function (w) { return w.in_this_article; }).length + " of the " + b.label_words.length + " in its first 250 words; the cluster is built from meaning, not these words."), lw(b)), el("div", {}, el("b", { text: "Our 49-topic list for the same " + b.size + " articles" }), p("Separate and older. Not used to form the cluster."), table(["Topic from our list", "Articles"], (b.our_list_says || []).map(function (t) { return [t[0], t[1]]; }), [1]))));
+        stage.appendChild(step(5, "Which crowd it falls in, and why", b.cluster < 0 ? el("div", {}, p("HDBSCAN put this article in no cluster (noise): its neighbours are not packed closely enough to form a crowd of the minimum size. Of its 15 nearest neighbours in the squeezed space, " + a.umap_neighbours_noise + " are also noise. Noise is the novelty pool."), p("Words from this article's own text that are rare elsewhere:"), own) :
+          el("div", {}, p("Result: cluster " + b.cluster + ", which holds " + b.size + " articles. Membership " + b.membership.toFixed(2) + " (1.00 = deep inside the crowd, near 0 = at its edge)."),
+            p("The evidence for it, nothing else: " + nearSame + " of this article's 5 closest articles (step 3) are in cluster " + b.cluster + ", and " + a.umap_neighbours_same_cluster + " of its 15 nearest neighbours in the squeezed space are. It is placed with the articles whose meaning is closest to its own."),
+            p("Words taken from this article's own text that are rare elsewhere, to show what it is about:"), own, nameBtn, nameBox)));
+        stage.appendChild(step(6, "The same article seen through each view", el("div", {}, p("Each view is clustered separately. If the headline lands in a different crowd than the body, they are about different things (or the headline is a site name)."),
+          table(["View", "Cluster it lands in (label)", "Membership", "Cluster size"], a.per_view.map(function (v) { return [VN[v.view], v.cluster < 0 ? "none (noise)" : "cluster " + v.cluster + ((v.label || []).length ? " '" + v.label.join(" ") + "'" : " (label not computed for this view)"), v.cluster < 0 ? "" : v.membership.toFixed(2), v.cluster_size == null ? "" : v.cluster_size]; }), [2, 3]))));
+        stage.appendChild(step(7, "Against what we already know about it", el("div", {}, p("Our current reader gave this article the topic '" + a.our_reader_topic + "'. Its URL section is " + (a.url_section ? "'" + a.url_section + "'" : "not recorded") + ". Headline-to-body similarity is " + a.title_body_similarity.toFixed(2) + " (the median for all articles is " + D.title_body_similarity.quantiles.p50 + ")."))));
+      }
+      W.articles.forEach(function (a, i) { var bt = el("button", { class: "pk", "aria-pressed": "false" }, el("span", { class: "kind", text: kindName[a.kind] || a.kind }), el("span", { text: a.title })); bt.addEventListener("click", function () { draw(i); }); picker.appendChild(bt); });
+      wbox.appendChild(picker); wbox.appendChild(stage); draw(0);
+      wbox.appendChild(el("div", { class: "src", text: "source: runs/harvest/topic_shape_walk.json (built by topic_shape_walkthrough.py from the cached embeddings; articles chosen to show typical, edge, noise and title-versus-body cases)" }));
+    }).catch(function (e) { wbox.appendChild(el("p", { text: "Could not load walk.json: " + e })); });
+
+    // 1. results per view
+    var rows = [];
+    V.forEach(function (v) { ["broad", "specific"].forEach(function (m) { var r = D.runs[v + "/" + m]; rows.push([VN[v], m, r.clusters, pct(r.noise_share), pct(r.purity_vs_url_section), f2(r.nmi_vs_url_section), pct(r.purity_vs_v6b_topic), f2(r.nmi_vs_v6b_topic), r.labelled_by_section]); }); });
+    app.appendChild(box("1. What each view gives", "Broad = the major areas. Specific = finer topics inside them. Noise = articles that fit no group (the novelty pool). Purity = how often a cluster's articles share one label (1.00 is perfect). Agreement scores (NMI, 0 to 1) are read in section 2.",
+      table(["View", "Level", "Clusters", "Noise", "Purity vs URL section", "NMI vs URL section", "Purity vs our reader topic", "NMI vs our reader topic", "Articles with a URL section"], rows, [2, 3, 4, 5, 6, 7, 8]),
+      SRC + "#runs.<view>/<level>"));
+    app.appendChild(el("p", { class: "src", text: "Settings were chosen per view by one rule: " + D.settings_chosen_by }));
+
+    // 2. cluster explorer with real articles
+    var wrap = el("div"), tabs = el("div", { class: "tabs" }), holder = el("div"), cur = "first_250_words/broad", showAll = false;
+    var keys = [["first_250_words/broad", "Major areas (first 250 words)"], ["first_250_words/specific", "Finer topics (first 250 words)"], ["title/broad", "Major areas (title only)"], ["whole_article/broad", "Major areas (whole article)"]];
+    function artBlock(title, list) {
+      var d = el("div", { class: "grp" }, el("div", { class: "gh", text: title }));
+      list.forEach(function (m) { d.appendChild(el("div", { class: "art" }, el("div", { class: "at", text: m.title || "(no title)" }), el("div", { class: "as", text: m.snippet }))); });
+      return d;
+    }
+    function detail(c) {
+      var d = el("div");
+      d.appendChild(el("p", { class: "why", text: "Why these " + c.size + " articles are together: their meaning vectors sit close to each other. The words below are only a label added afterwards. Each shows how many of this cluster's articles contain the word, against how many of all other articles do." }));
+      d.appendChild(table(["Word", "In this cluster", "In all other articles"], c.words_detail.slice(0, 6).map(function (w) { return [w.word, pct(w.in_cluster), pct(w.elsewhere)]; }), [1, 2]));
+      d.appendChild(el("div", { class: "cols" }, artBlock("Closest to the centre (5 articles)", c.members.central), artBlock("Furthest from the centre but still in (3 articles)", c.members.edge)));
+      return d;
+    }
+    function show(k) {
+      cur = k; holder.textContent = ""; var all = D.all_clusters[k], cl = showAll ? all : all.slice(0, 12), mx = Math.max.apply(null, all.map(function (c) { return c.size; }));
+      var t = el("table", { class: "t" }), hr = el("tr");
+      ["#", "Articles", "Distinctive words", "Our reader's topics for these articles", "URL section", "Example headline"].forEach(function (h, i) { hr.appendChild(el("th", { text: h, class: i < 2 ? "n" : "" })); });
+      t.appendChild(el("thead", {}, hr)); var tb = el("tbody");
+      cl.forEach(function (c, i) {
+        var tr = el("tr", { class: "click", title: "click to see the articles in this cluster" });
+        [i + 1, el("span", {}, el("span", { class: "bar", style: "width:" + Math.round(80 * c.size / mx) + "px" }), " " + c.size), el("span", { class: "w", text: c.words.slice(0, 7).join(" ") }),
+         c.v6b_topics.slice(0, 2).map(function (x) { return x[0] + " " + x[1]; }).join(", ") + " (top share " + pct(c.top_topic_share) + ")", c.url_sections.length ? c.url_sections.map(function (x) { return x[0] + " " + x[1]; }).join(", ") : "none labelled", el("span", { class: "ex", text: c.examples[0] })
+        ].forEach(function (v, j) { var td = el("td", { class: j < 2 ? "n" : "" }); if (v instanceof Node) td.appendChild(v); else td.textContent = String(v); tr.appendChild(td); });
+        var dr = el("tr", { class: "detail" }), dtd = el("td", { colspan: "6" }); dr.appendChild(dtd); dr.style.display = "none";
+        tr.addEventListener("click", function () {
+          if (dr.style.display === "none") { if (!dtd.firstChild) { dtd.appendChild(detail(c)); } dr.style.display = ""; } else dr.style.display = "none";
+        });
+        tb.appendChild(tr); tb.appendChild(dr);
+      });
+      t.appendChild(tb); holder.appendChild(t);
+      if (all.length > 12) { var more = el("button", { class: "more", text: showAll ? "Show top 12 only" : "Show all " + all.length + " clusters" }); more.addEventListener("click", function () { showAll = !showAll; show(cur); }); holder.appendChild(more); }
+      holder.appendChild(el("div", { class: "src", text: "source: " + SRC + "#all_clusters." + k + " (words = most distinctive terms, c-TF-IDF;)" }));
+      Array.prototype.forEach.call(tabs.children, function (b) { b.setAttribute("aria-pressed", b.dataset.k === k ? "true" : "false"); });
+    }
+    keys.forEach(function (kv) { var b = el("button", { text: kv[1], "data-k": kv[0], "aria-pressed": "false" }); b.addEventListener("click", function () { showAll = false; show(kv[0]); }); tabs.appendChild(b); });
+    wrap.appendChild(tabs); wrap.appendChild(holder);
+    app.appendChild(box("2. The clusters, with the actual articles", "Click a row to open it. You see the words that label it, how common each word is inside and outside the cluster, then articles from the centre and from the fuzzy edge.", wrap));
+    show(cur);
+
+    // 2b. dimensions and the 12-versus-4 question
+    var dimsBox = el("div"); app.appendChild(box("2b. Why 12 clusters at 5 dimensions but 4 at 10?", "Loading...", dimsBox));
+    fetch("dims.json").then(function (r) { return r.json(); }).then(function (M) {
+      dimsBox.parentNode.querySelector("p").textContent = "More dimensions did not make the clustering worse by itself. At one fixed setting (smallest cluster 60), the broad level flipped from " + M.clusters_at_5 + " clusters to " + M.clusters_at_10 + ", with " + M.big_blob_size_at_10 + " articles in a single blob. Below: where the " + M.clusters_at_5 + " clusters went.";
+      dimsBox.appendChild(table(["5-dim cluster (articles)", "Distinctive words", "Example headline", "Share that ended in the one blob at 10 dims"], M.where_5_dim_clusters_went.map(function (r) { return [r.size, el("span", { class: "w", text: (r.words || []).slice(0, 5).join(" ") }), el("span", { class: "ex", text: r.example || "" }), pct(r.share_into_big_blob_at_10)]; }), [0, 3]));
+      var merged = M.where_5_dim_clusters_went.filter(function (r) { return r.share_into_big_blob_at_10 >= 0.99; }).length;
+      dimsBox.appendChild(el("p", { text: merged + " of " + M.clusters_at_5 + " clusters fell completely into the one blob. HDBSCAN had to choose between several smaller clusters and one parent cluster that contains them, and at 10 dimensions it chose the parent. Re-tuning the setting at each size shows whether the clusters are really gone:" }));
+      var best = Math.max.apply(null, M.retune.map(function (r) { return r.nmi_section; }));
+      dimsBox.appendChild(table(["UMAP dimensions", "Smallest cluster", "Min samples", "Clusters", "Noise", "Largest cluster share", "Agreement with URL sections"], M.retune.map(function (r) { return [r.umap_dims, r.min_cluster_size, r.min_samples, r.clusters, pct(r.noise), pct(r.largest_share), f2(r.nmi_section) + (r.nmi_section === best ? "  (best)" : "")]; }), [0, 1, 2, 3, 4, 5, 6]));
+      dimsBox.appendChild(el("p", { text: "Reading: the clusters are not lost at 10 or 15 dimensions; the best agreement is at " + M.retune.filter(function (r) { return r.nmi_section === best; }).map(function (r) { return r.umap_dims + " dimensions, smallest cluster " + r.min_cluster_size + ", " + r.clusters + " clusters"; }).join("; ") + ". But the broad level is touchy: a small change in the setting can turn about a dozen clusters into one blob. Finer topics are stable at every size." }));
+      dimsBox.appendChild(el("div", { class: "src", text: "source: runs/harvest/topic_shape_dims_merge.json (first 250 words, bge-base, 40 UMAP neighbours, HDBSCAN eom)" }));
+    }).catch(function (e) { dimsBox.appendChild(el("p", { text: "Could not load dims.json: " + e })); });
+
+    // 3. what our topics miss, computed from the clusters
+    var ct = D.all_clusters["first_250_words/specific"], sport = ct.filter(function (c) { return c.url_sections.length && c.url_sections[0][0] === "sport"; }), tot = 0, cul = 0;
+    sport.forEach(function (c) { tot += c.size; c.v6b_topics.forEach(function (t) { if (t[0] === "culture_leisure") cul += t[1]; }); });
+    var split = ct.filter(function (c) { return c.top_topic_share < 0.40 && c.size >= 40; });
+    var miss = el("div");
+    miss.appendChild(el("p", { text: sport.length + " finer clusters have 'sport' as their top URL section; together " + tot + " articles. Our reader files " + cul + " of them (top-3 topics counted) under 'culture_leisure', because the 49 topics have no sport topic. The general embedding separates sport on its own, and splits it further (league and club football, basketball, golf and boxing). A Sport area is an obvious candidate." }));
+    miss.appendChild(el("p", { text: split.length + " finer clusters of at least 40 articles are split across several of our topics (no topic holds 40% of them). These are places where our topic list and the data disagree, not necessarily new topics." }));
+    miss.appendChild(table(["Articles", "Distinctive words", "Our reader's topics", "Example headline"], split.slice(0, 10).map(function (c) { return [c.size, el("span", { class: "w", text: c.words.slice(0, 6).join(" ") }), c.v6b_topics.slice(0, 3).map(function (t) { return t[0] + " " + t[1]; }).join(", "), el("span", { class: "ex", text: c.examples[0] })]; }), [0]));
+    var fmt = ct.filter(function (c) { return /brief|source|text|forecast|celsius|sunny/.test(c.words.slice(0, 6).join(" ")); });
+    if (fmt.length) miss.appendChild(el("p", { text: "Some clusters are about form, not topic. " + fmt.length + " finer cluster(s) are wire briefs or forecast tables (words: " + fmt.map(function (c) { return c.words.slice(0, 4).join(" "); }).join("; ") + "). A format flag is a separate head from topic." }));
+    app.appendChild(box("3. What our 49 topics miss or split", "Compared with the BitMob Domain (v6b) topic for the same articles.", miss, SRC + "#all_clusters.first_250_words/specific"));
+
+    // 4. title vs body
+    var ag = D.agreement, ar = Object.keys(ag).map(function (k) { return [k, ag[k].both_clustered, pct(ag[k].agree_share), pct(ag[k].either_noise_share)]; });
+    var tb = D.title_body_similarity, q = tb.quantiles;
+    var body = el("div");
+    body.appendChild(el("p", { text: "Agreement = among articles clustered at both levels, how many land in the matching cluster (each cluster is matched to the cluster it overlaps most). Views with different numbers of clusters will disagree partly for that reason." }));
+    body.appendChild(table(["Pair of views (level)", "Clustered in both", "Agree", "Noise in either"], ar, [1, 2, 3]));
+    body.appendChild(el("p", { text: "A cleaner change signal ignores clusters: " + tb.what + ". Median " + q.p50 + ", lowest 5% below " + q.p5 + ". The lowest cases:" }));
+    body.appendChild(table(["Similarity", "Title", "Start of the body"], tb.lowest.slice(0, 12).map(function (x) { return [x.sim, x.title, el("span", { class: "ex", text: x.snippet })]; }), [0]));
+    body.appendChild(el("p", { text: "What the lowest cases are: titles that are only a site name (for example a newspaper or radio station), and bodies that belong to a different story than the title. So title against body flags bad scrapes before it flags a real change of view." }));
+    app.appendChild(box("4. Title against body", null, body, SRC + "#agreement, #title_body_similarity"));
+
+    // 5. honesty
+    var lim = el("div");
+    ["The first run used PCA instead of UMAP and failed: broad mode collapsed to a few clusters and specific mode left most articles as noise. UMAP fixed it. The sweeps are in runs/harvest/topic_shape_sweep.json (PCA) and runs/harvest/topic_shape_umap_sweep.json (UMAP).",
+     "Settings were picked by agreement with our own reader's topics, so the reader-topic scores are optimistic. The URL-section scores were not used to choose settings and are the fairer figure, but only some articles have a URL section (see the last column of section 1).",
+     "Noise runs from " + pct(Math.min.apply(null, Object.keys(D.runs).map(function (k) { return D.runs[k].noise_share; }).filter(function (x) { return x > 0.05; }))) + " to " + pct(Math.max.apply(null, Object.keys(D.runs).map(function (k) { return D.runs[k].noise_share; }))) + " of articles across the runs above. Noise is the novelty pool, but it is also just articles that sit alone in their neighbourhood.",
+     "Clusters say which articles are alike, not why. Naming them, and judging whether a title-body difference is a change of view, needs a judge on a sample.",
+     "Embeddings ran on the 5090; clustering is CPU. umap-learn was installed in an isolated folder, not the shared environment."
+    ].forEach(function (t) { lim.appendChild(el("p", { text: t })); });
+    app.appendChild(box("5. What this does not show", null, lim));
+  }
+})();
+</script></body></html>

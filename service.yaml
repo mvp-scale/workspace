@@ -171,7 +171,7 @@ services:
 
   pulse-reader:
     kind: proc
-    desc: "BitMob Reader (was Pulse reader): serves the registered CPU engine (v6b-student) as POST /v1/pulse: story type, topic, condition, direction, size from one read"
+    desc: "BitMob Domain (v6b) (was Pulse reader): serves the registered CPU engine (v6b-student) as POST /v1/pulse: story type, topic, condition, direction, size from one read"
     panel: CPU only, no GPU
     port: 8023
     cmd: [models/embed-zs/.venv/bin/python, probes/pulse_reader.py]

@@ -1,0 +1,36 @@
+{
+ "id": "T113-E",
+ "task": "T113",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do students on a small embedding of the headline plus teaser read the engine's stories better than students on word counts, with the same 20,000 queue labels?",
+ "one_change": "replace word and character counts with the bge-small embedding (64 word pieces) as the student's input; same labels, same engine stories, same view",
+ "baseline": {
+  "model": "T112 students on word counts, same labels",
+  "file": "runs/pulse/t112/t112_students.json",
+  "key": "headline_view_largest.direction_accuracy"
+ },
+ "prediction": {
+  "metric": "direction accuracy on the engine stories, headline view, largest training size",
+  "low": 0.63,
+  "high": 0.7,
+  "why": "T112 word-count students gave 0.658 on this view (runs/pulse/t112/t112_students.json#headline_view_largest.direction_accuracy); an embedding generalises across wording, so presence AUROC is expected 0.72 to 0.79 against 0.7253 for word counts; direction may stay flat because the label is a small signal in the text"
+ },
+ "command": "SIZES=2000,6000,0 OUT=runs/pulse/t113 LABELS=runs/pulse/t111/labels.jsonl /workspace/models/embed-zs/.venv/bin/python -u t113_students_embed.py",
+ "result": {
+  "file": "runs/pulse/t113/t113_students.json",
+  "key": "headline_view_largest.direction_accuracy"
+ },
+ "cap_minutes": 30,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "after": [
+  "T108-P"
+ ],
+ "smoke": {
+  "command": "SIZES=300 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t113s_$(date +%s) LABELS=runs/pulse/t111/labels.jsonl /workspace/models/embed-zs/.venv/bin/python -u t113_students_embed.py",
+  "cap_minutes": 10
+ }
+}

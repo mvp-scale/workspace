@@ -39,5 +39,5 @@ for gi in pick:
         "old_reading": {"pieces": 64, "body_chars_seen": max(0, min(lastchar - len(t) - 2, len(b))), "body_share_seen": round(max(0, min(lastchar - len(t) - 2, len(b))) / max(len(b), 1), 3), "topic": [[S["topic_cl"][k], round(float(oldT[k]), 3)] for k in np.argsort(-oldT)[:2]]},
         "facts": fl, "parse_ran": res["evidence"]["parse_ran"], "decider": res["fields"], "ms": res["ms"]})
     print(g["id"], len(out[-1]["clean"]), "windows", len(wins), "facts", len(fl), res["ms"]["total_ms"].__round__(1) if isinstance(res["ms"]["total_ms"], float) else res["ms"], flush=True)
-json.dump({"model_note": "BitMob Reader v6b-student; windows as in analyze2.py (headline kept in every window)", "articles": out}, open("runs/pulse/trace_articles.json", "w"))
+json.dump({"model_note": "BitMob Domain v6b-student; windows as in analyze2.py (headline kept in every window)", "articles": out}, open("runs/pulse/trace_articles.json", "w"))
 print("saved", len(out))

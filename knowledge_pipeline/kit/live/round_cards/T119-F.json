@@ -1,0 +1,33 @@
+{
+ "id": "T119-F",
+ "task": "T119",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Does adding a bge-small embedding to word counts lift the engine-readings heads on the full-text view toward the 0.87 presence and 0.76 direction bars?",
+ "one_change": "add a bge-small embedding to the word counts on the full-text view",
+ "baseline": {
+  "model": "T105 heads on the engine's readings, first 1200 words, word counts, presence AUROC",
+  "file": "runs/pulse/t105/t105_engine_heads.json",
+  "key": "first_1200_words.presence.auroc"
+ },
+ "prediction": {
+  "metric": "presence AUROC on held-out engine stories, full-text view, counts plus embedding",
+  "low": 0.84,
+  "high": 0.89,
+  "why": "T105 gave 0.8556 for word counts alone on this view (runs/pulse/t105/t105_engine_heads.json); a 300-story scratch run of this script, made before this prediction and not scored, showed the embedding neither helps nor hurts at that size; direction accuracy expected 0.72 to 0.77 against 0.740; the bars are 0.87 and 0.76"
+ },
+ "command": "FOLDS=5 OUT=runs/pulse/t119 /workspace/models/embed-zs/.venv/bin/python -u t119_engine_full.py",
+ "result": {
+  "file": "runs/pulse/t119/t119_engine_full.json",
+  "key": "counts_plus_embedding.presence_auroc"
+ },
+ "cap_minutes": 45,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "FOLDS=2 LIMIT=200 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t119s_$(date +%s) /workspace/models/embed-zs/.venv/bin/python -u t119_engine_full.py",
+  "cap_minutes": 8
+ }
+}

@@ -1,0 +1,36 @@
+{
+ "id": "T122-L",
+ "task": "T122",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Corrected learning curve: does the all-readings presence AUROC reproduce T119, and what is the slope from 1,000 readings to all?",
+ "one_change": "repeat T120 with the T119 vocabulary settings, three random draws per size, and a bootstrap interval on the all-readings figures",
+ "baseline": {
+  "model": "T119 word-count heads trained on every Clef reading of the training folds",
+  "file": "runs/pulse/t119/t119_engine_full.json",
+  "key": "counts.presence_auroc"
+ },
+ "prediction": {
+  "metric": "presence AUROC with all training readings, mean of one draw",
+  "low": 0.84,
+  "high": 0.87,
+  "why": "T119 gave 0.8553 with these settings and folds (runs/pulse/t119/t119_engine_full.json); a 300-story scratch run before this prediction, not scored, gave the same 0.7764 as the T119 scratch run, so the setting matches; the curve and the 95 percent interval are the findings that decide the 5090 request, the card is scored on the all-readings value"
+ },
+ "command": "FOLDS=5 SIZES=300,600,1000,0 REPS=3 OUT=runs/pulse/t122 /workspace/kev/.venv/bin/python -u t122_curve_v2.py",
+ "result": {
+  "file": "runs/pulse/t122/t122_curve.json",
+  "key": "curve.0.presence_auroc"
+ },
+ "cap_minutes": 55,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "FOLDS=2 SIZES=100,0 REPS=2 LIMIT=300 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t122s_$(date +%s) /workspace/kev/.venv/bin/python -u t122_curve_v2.py",
+  "cap_minutes": 8
+ },
+ "after": [
+  "T121-S"
+ ]
+}

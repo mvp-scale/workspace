@@ -1,0 +1,3243 @@
+{
+ "v": "topic-shape-walk-v0",
+ "model": "BAAI/bge-base-en-v1.5 (untuned, 5090 for the embeddings)",
+ "reduction": "UMAP 5 dims, cosine, 40 neighbours, min_dist 0 (umap-learn 0.5.12 in an isolated folder)",
+ "articles": [
+  {
+   "idx": 9,
+   "kind": "typical",
+   "domain": "tpr.org",
+   "date": "date not recorded",
+   "title": "Charlottesville Violence Highlights Cities' Struggle To Balance Rights And Safety",
+   "first_sentence": "\"How do you reconcile public safety and the First Amendment?\" That's the question Charlottesville, Va., Mayor Mike Signer asked in an interview on Sunday.",
+   "first_250_words": "Charlottesville Violence Highlights Cities' Struggle To Balance Rights And Safety. \"How do you reconcile public safety and the First Amendment?\" That's the question Charlottesville, Va., Mayor Mike Signer asked in an interview on Sunday. And it's a question city and state governments are likely grappling with after the weekend's violence in Charlottesville. Around the country, white nationalists and other groups have protested efforts to remove statues and other symbols of the Confederacy. As counter-demonstrators arrive to protest the white nationalists, the resulting scenes are often tense and brimming with the potential for violence. State and local officials prepared for Saturday's protests in Charlottesville, which were known about for months. But in the wake of fierce brawling in the streets of the usually quiet college town, and then a driver plowing his car into a crowd of pedestrians, killing one and injuring 19, many are asking what Charlottesville authorities could have done differently\u2014and what could be done to prevent such violence in the future. City Permitting and Free Speech Virginia Gov. Terry McAuliffe told NPR's Morning Edition that local authorities had done what they could to head off the fighting that erupted, but that they were foiled by a federal judge's decision to allow the Unite The Right rally to go on in Charlottesville's Emancipation Park. Charlottesville tried to revoke the permit it had issued for the rally to be held in Emancipation Park, in order to move the protestors about a mile away to McIntire Park, which offered more open",
+   "total_words": 1412,
+   "chunks": 6,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.016,
+     -0.035,
+     -0.033,
+     -0.011,
+     -0.002,
+     -0.008,
+     0.046,
+     0.024
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "Charlottesville Violence Highlights Cities' Struggle To Balance Rights And Safety",
+      "similarity": 1.0,
+      "cluster": 5
+     },
+     {
+      "title": "Armed militia, clergy, more unite against white nationalists",
+      "similarity": 0.792,
+      "cluster": 5
+     },
+     {
+      "title": "Charlottesville Mayor Chides Trump, Names Victim of Car Ramming",
+      "similarity": 0.778,
+      "cluster": 5
+     },
+     {
+      "title": "Incident In Charlottesville Will Make Us Stronger, Gov. McAuliffe Says",
+      "similarity": 0.765,
+      "cluster": 5
+     },
+     {
+      "title": "'Everyone\u2019s hearts are aching': Cities hold vigils in wake of Charlottesville violence",
+      "similarity": 0.748,
+      "cluster": 5
+     }
+    ],
+    "median_similarity_to_all": 0.447,
+    "max_similarity": 1.0
+   },
+   "own_words": [
+    {
+     "word": "charlottesville",
+     "articles_with_it": 45,
+     "times_in_this_article": 7
+    },
+    {
+     "word": "emancipation",
+     "articles_with_it": 5,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "violence",
+     "articles_with_it": 72,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "nationalists",
+     "articles_with_it": 20,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "park",
+     "articles_with_it": 141,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "rally",
+     "articles_with_it": 74,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "question",
+     "articles_with_it": 104,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "reconcile",
+     "articles_with_it": 3,
+     "times_in_this_article": 1
+    }
+   ],
+   "squeezed": [
+    7.95,
+    3.49,
+    0.52,
+    6.67,
+    4.6
+   ],
+   "umap_neighbours_same_cluster": 15,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 5,
+    "membership": 1.0,
+    "size": 704,
+    "label": [
+     "trump",
+     "president",
+     "state",
+     "government",
+     "white"
+    ],
+    "label_words": [
+     {
+      "word": "trump",
+      "in_this_article": false,
+      "in_cluster": 0.371,
+      "elsewhere": 0.025
+     },
+     {
+      "word": "president",
+      "in_this_article": false,
+      "in_cluster": 0.496,
+      "elsewhere": 0.061
+     },
+     {
+      "word": "state",
+      "in_this_article": true,
+      "in_cluster": 0.253,
+      "elsewhere": 0.091
+     },
+     {
+      "word": "government",
+      "in_this_article": false,
+      "in_cluster": 0.243,
+      "elsewhere": 0.054
+     },
+     {
+      "word": "white",
+      "in_this_article": true,
+      "in_cluster": 0.183,
+      "elsewhere": 0.034
+     },
+     {
+      "word": "donald",
+      "in_this_article": false,
+      "in_cluster": 0.254,
+      "elsewhere": 0.016
+     }
+    ],
+    "our_list_says": [
+     [
+      "elections_politics",
+      182
+     ],
+     [
+      "diplomacy_treaties",
+      92
+     ],
+     [
+      "courts_rulings",
+      61
+     ]
+    ],
+    "our_list_top_share": 0.259
+   },
+   "specific": {
+    "cluster": 46,
+    "membership": 0.87,
+    "size": 54,
+    "label": [
+     "trump",
+     "white",
+     "charlottesville",
+     "president",
+     "violence"
+    ],
+    "label_words": [
+     {
+      "word": "trump",
+      "in_this_article": false,
+      "in_cluster": 0.722,
+      "elsewhere": 0.067
+     },
+     {
+      "word": "white",
+      "in_this_article": true,
+      "in_cluster": 0.704,
+      "elsewhere": 0.048
+     },
+     {
+      "word": "charlottesville",
+      "in_this_article": true,
+      "in_cluster": 0.556,
+      "elsewhere": 0.003
+     },
+     {
+      "word": "president",
+      "in_this_article": false,
+      "in_cluster": 0.648,
+      "elsewhere": 0.116
+     },
+     {
+      "word": "violence",
+      "in_this_article": true,
+      "in_cluster": 0.426,
+      "elsewhere": 0.01
+     },
+     {
+      "word": "rally",
+      "in_this_article": true,
+      "in_cluster": 0.407,
+      "elsewhere": 0.011
+     }
+    ],
+    "our_list_says": [
+     [
+      "elections_politics",
+      14
+     ],
+     [
+      "protest_movements",
+      9
+     ],
+     [
+      "civil_rights_discrimination",
+      9
+     ]
+    ],
+    "our_list_top_share": 0.259
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 14,
+     "membership": 1.0,
+     "label": [
+      "trump",
+      "president",
+      "white",
+      "donald",
+      "charlottesville"
+     ],
+     "cluster_size": 111
+    },
+    {
+     "view": "first_sentence",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 5,
+     "membership": 1.0,
+     "label": [
+      "trump",
+      "president",
+      "state",
+      "government",
+      "white"
+     ],
+     "cluster_size": 704
+    },
+    {
+     "view": "whole_article",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    }
+   ],
+   "our_reader_topic": "protest_movements",
+   "url_section": null,
+   "title_body_similarity": 0.838
+  },
+  {
+   "idx": 80,
+   "kind": "typical",
+   "domain": "www.taiwannews.com.tw",
+   "date": "2018-05-31",
+   "title": "German police: 1 dead, 2 injured in knife attack on train",
+   "first_sentence": "BERLIN (AP) \u2014 Police say one man has been killed and two people injured in a knife attack on a train in the northern German city of Flensburg.",
+   "first_250_words": "German police: 1 dead, 2 injured in knife attack on train. BERLIN (AP) \u2014 Police say one man has been killed and two people injured in a knife attack on a train in the northern German city of Flensburg. Federal police said in a statement the incident took place Wednesday at around 7 p.m. local time. They said the details of the attack were not clear yet, but that one of the injured was a 22-year-old female police officer. The statement said she appeared to have used her pistol, suggesting she may have killed the man. German daily Bild reported that following a dispute, one man attacked another man with a knife and then a police officer who was called to intervene. The German news agency dpa reported the Flensburg main train station had been evacuated and service to Flensburg had been interrupted temporarily.",
+   "total_words": 133,
+   "chunks": 1,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.048,
+     -0.022,
+     0.024,
+     -0.007,
+     -0.01,
+     -0.0,
+     0.076,
+     0.017
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "Wilkes-Barre police seek knife-wielding rapist",
+      "similarity": 0.634,
+      "cluster": 10
+     },
+     {
+      "title": "Man, 22, stabbed to death in north London",
+      "similarity": 0.633,
+      "cluster": 10
+     },
+     {
+      "title": "Dortmund football team bus blasts: what we know",
+      "similarity": 0.63,
+      "cluster": 2
+     },
+     {
+      "title": "Second man arrested in connection with London subway attack",
+      "similarity": 0.628,
+      "cluster": 10
+     },
+     {
+      "title": "Off-duty officer tackles stabbing suspect after hearing woman's cries for help",
+      "similarity": 0.619,
+      "cluster": 10
+     }
+    ],
+    "median_similarity_to_all": 0.398,
+    "max_similarity": 0.634
+   },
+   "own_words": [
+    {
+     "word": "knife",
+     "articles_with_it": 21,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "german",
+     "articles_with_it": 66,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "train",
+     "articles_with_it": 40,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "injured",
+     "articles_with_it": 111,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "attack",
+     "articles_with_it": 156,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "police",
+     "articles_with_it": 447,
+     "times_in_this_article": 5
+    },
+    {
+     "word": "man",
+     "articles_with_it": 433,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "officer",
+     "articles_with_it": 127,
+     "times_in_this_article": 2
+    }
+   ],
+   "squeezed": [
+    7.35,
+    4.22,
+    0.56,
+    7.1,
+    5.91
+   ],
+   "umap_neighbours_same_cluster": 15,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 10,
+    "membership": 1.0,
+    "size": 539,
+    "label": [
+     "police",
+     "man",
+     "old",
+     "officers",
+     "shooting"
+    ],
+    "label_words": [
+     {
+      "word": "police",
+      "in_this_article": true,
+      "in_cluster": 0.406,
+      "elsewhere": 0.051
+     },
+     {
+      "word": "man",
+      "in_this_article": true,
+      "in_cluster": 0.317,
+      "elsewhere": 0.059
+     },
+     {
+      "word": "old",
+      "in_this_article": true,
+      "in_cluster": 0.33,
+      "elsewhere": 0.1
+     },
+     {
+      "word": "officers",
+      "in_this_article": false,
+      "in_cluster": 0.156,
+      "elsewhere": 0.011
+     },
+     {
+      "word": "shooting",
+      "in_this_article": false,
+      "in_cluster": 0.135,
+      "elsewhere": 0.014
+     },
+     {
+      "word": "home",
+      "in_this_article": false,
+      "in_cluster": 0.18,
+      "elsewhere": 0.08
+     }
+    ],
+    "our_list_says": [
+     [
+      "crime_policing",
+      180
+     ],
+     [
+      "accidents_incidents",
+      85
+     ],
+     [
+      "natural_disasters",
+      61
+     ]
+    ],
+    "our_list_top_share": 0.334
+   },
+   "specific": {
+    "cluster": 56,
+    "membership": 1.0,
+    "size": 27,
+    "label": [
+     "police",
+     "man",
+     "old",
+     "arrested",
+     "charged"
+    ],
+    "label_words": [
+     {
+      "word": "police",
+      "in_this_article": true,
+      "in_cluster": 0.926,
+      "elsewhere": 0.085
+     },
+     {
+      "word": "man",
+      "in_this_article": true,
+      "in_cluster": 0.815,
+      "elsewhere": 0.083
+     },
+     {
+      "word": "old",
+      "in_this_article": true,
+      "in_cluster": 0.741,
+      "elsewhere": 0.121
+     },
+     {
+      "word": "arrested",
+      "in_this_article": false,
+      "in_cluster": 0.407,
+      "elsewhere": 0.024
+     },
+     {
+      "word": "charged",
+      "in_this_article": false,
+      "in_cluster": 0.259,
+      "elsewhere": 0.025
+     },
+     {
+      "word": "assault",
+      "in_this_article": false,
+      "in_cluster": 0.333,
+      "elsewhere": 0.012
+     }
+    ],
+    "our_list_says": [
+     [
+      "crime_policing",
+      24
+     ],
+     [
+      "courts_rulings",
+      1
+     ],
+     [
+      "terrorism_violence",
+      1
+     ]
+    ],
+    "our_list_top_share": 0.889
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 2,
+     "membership": 0.96,
+     "label": [
+      "police",
+      "man",
+      "old",
+      "shooting",
+      "suspect"
+     ],
+     "cluster_size": 337
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 1,
+     "membership": 0.71,
+     "label": [],
+     "cluster_size": 519
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 10,
+     "membership": 1.0,
+     "label": [
+      "police",
+      "man",
+      "old",
+      "officers",
+      "shooting"
+     ],
+     "cluster_size": 539
+    },
+    {
+     "view": "whole_article",
+     "cluster": 22,
+     "membership": 0.86,
+     "label": [
+      "police",
+      "man",
+      "old",
+      "officers",
+      "suspect"
+     ],
+     "cluster_size": 136
+    }
+   ],
+   "our_reader_topic": "crime_policing",
+   "url_section": null,
+   "title_body_similarity": 0.893
+  },
+  {
+   "idx": 14,
+   "kind": "typical",
+   "domain": "jezebel.com",
+   "date": "2017-04-17",
+   "title": "Coachella-Goers Can Be Part of A Star Is Born With Lady Gaga",
+   "first_sentence": "Image via Getty Lady Gaga will make the best use of her time at Coachella by shooting scenes there this week for the remake of A Star Is Born with Bradley Cooper.",
+   "first_250_words": "Coachella-Goers Can Be Part of A Star Is Born With Lady Gaga. Image via Getty Lady Gaga will make the best use of her time at Coachella by shooting scenes there this week for the remake of A Star Is Born with Bradley Cooper. Advertisement During her Coachella set on Sunday, Gaga debuted her new single \u201cThe Cure,\u201d a sparkle of a song that\u2019s more on the peppy synth side of pop than what we\u2019re used to from her. Days later, she\u2019ll be shooting scenes for the long-brewing remake of A Star Is Born, which Cooper is directing. Advertisement Regular people have been invited to participate as extras for concert scenes shooting on April 18 and 19, so as to take advantage of the sea of music lovers and flower crowns gathered in the dessert of Indio, California. Billboard reports: The solicitation for extras (which you can read here) invites Little Monsters to \u201cbe in the audience as Bradley Cooper and Lady Gaga films scenes on the actual Coachella stages. Help cheer and applaud their performances on camera... the scenes for these days will portray a Country Western music concert. All you Monsters that can attend should get decked out in your most comfortable denim & boots, throw on a Stetson (leave those pink Joanne hats at home) and come out to show your support!\u201d These future memories cost $10 per ticket and everyone\u2019s phones will reportedly be trapped in a Yondr pouch to prevent photo and video leaks while",
+   "total_words": 239,
+   "chunks": 1,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     0.022,
+     -0.024,
+     0.034,
+     0.044,
+     0.081,
+     0.003,
+     0.075,
+     0.032
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "100 Musicians Autograph Guitar for Planned Parenthood Raffle",
+      "similarity": 0.622,
+      "cluster": 11
+     },
+     {
+      "title": "Lorde's 'explosive' new song Homemade Dynamite 'could rival Royals'",
+      "similarity": 0.619,
+      "cluster": 11
+     },
+     {
+      "title": "Usher tries to fly under the radar - in camo! - amid STD scandal",
+      "similarity": 0.616,
+      "cluster": 11
+     },
+     {
+      "title": "Gwen Stefani on Fashion, Beauty, Love and Her Latest Deal with Revlon",
+      "similarity": 0.607,
+      "cluster": 11
+     },
+     {
+      "title": "Can\u2019t Beat Kennedy: Friday 10/6",
+      "similarity": 0.597,
+      "cluster": 11
+     }
+    ],
+    "median_similarity_to_all": 0.412,
+    "max_similarity": 0.622
+   },
+   "own_words": [
+    {
+     "word": "gaga",
+     "articles_with_it": 4,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "coachella",
+     "articles_with_it": 5,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "scenes",
+     "articles_with_it": 28,
+     "times_in_this_article": 5
+    },
+    {
+     "word": "cooper",
+     "articles_with_it": 17,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "extras",
+     "articles_with_it": 6,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "lady",
+     "articles_with_it": 52,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "bradley",
+     "articles_with_it": 17,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "born",
+     "articles_with_it": 77,
+     "times_in_this_article": 3
+    }
+   ],
+   "squeezed": [
+    8.07,
+    4.56,
+    2.15,
+    7.63,
+    4.79
+   ],
+   "umap_neighbours_same_cluster": 14,
+   "umap_neighbours_noise": 1,
+   "broad": {
+    "cluster": 11,
+    "membership": 1.0,
+    "size": 391,
+    "label": [
+     "music",
+     "love",
+     "film",
+     "star",
+     "movie"
+    ],
+    "label_words": [
+     {
+      "word": "music",
+      "in_this_article": true,
+      "in_cluster": 0.21,
+      "elsewhere": 0.013
+     },
+     {
+      "word": "love",
+      "in_this_article": false,
+      "in_cluster": 0.194,
+      "elsewhere": 0.024
+     },
+     {
+      "word": "film",
+      "in_this_article": false,
+      "in_cluster": 0.153,
+      "elsewhere": 0.009
+     },
+     {
+      "word": "star",
+      "in_this_article": true,
+      "in_cluster": 0.197,
+      "elsewhere": 0.03
+     },
+     {
+      "word": "movie",
+      "in_this_article": false,
+      "in_cluster": 0.115,
+      "elsewhere": 0.004
+     },
+     {
+      "word": "night",
+      "in_this_article": false,
+      "in_cluster": 0.171,
+      "elsewhere": 0.066
+     }
+    ],
+    "our_list_says": [
+     [
+      "culture_leisure",
+      374
+     ],
+     [
+      "consumer_retail",
+      4
+     ],
+     [
+      "mental_health_substances",
+      3
+     ]
+    ],
+    "our_list_top_share": 0.957
+   },
+   "specific": {
+    "cluster": 49,
+    "membership": 0.79,
+    "size": 108,
+    "label": [
+     "music",
+     "album",
+     "band",
+     "song",
+     "live"
+    ],
+    "label_words": [
+     {
+      "word": "music",
+      "in_this_article": true,
+      "in_cluster": 0.574,
+      "elsewhere": 0.016
+     },
+     {
+      "word": "album",
+      "in_this_article": false,
+      "in_cluster": 0.296,
+      "elsewhere": 0.002
+     },
+     {
+      "word": "band",
+      "in_this_article": false,
+      "in_cluster": 0.259,
+      "elsewhere": 0.005
+     },
+     {
+      "word": "song",
+      "in_this_article": true,
+      "in_cluster": 0.222,
+      "elsewhere": 0.004
+     },
+     {
+      "word": "live",
+      "in_this_article": false,
+      "in_cluster": 0.176,
+      "elsewhere": 0.04
+     },
+     {
+      "word": "festival",
+      "in_this_article": false,
+      "in_cluster": 0.185,
+      "elsewhere": 0.009
+     }
+    ],
+    "our_list_says": [
+     [
+      "culture_leisure",
+      104
+     ],
+     [
+      "consumer_retail",
+      2
+     ],
+     [
+      "mental_health_substances",
+      1
+     ]
+    ],
+    "our_list_top_share": 0.963
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 12,
+     "membership": 1.0,
+     "label": [
+      "film",
+      "movie",
+      "love",
+      "star",
+      "actor"
+     ],
+     "cluster_size": 205
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 11,
+     "membership": 1.0,
+     "label": [],
+     "cluster_size": 251
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 11,
+     "membership": 1.0,
+     "label": [
+      "music",
+      "love",
+      "film",
+      "star",
+      "movie"
+     ],
+     "cluster_size": 391
+    },
+    {
+     "view": "whole_article",
+     "cluster": 19,
+     "membership": 1.0,
+     "label": [
+      "album",
+      "music",
+      "song",
+      "singer",
+      "band"
+     ],
+     "cluster_size": 70
+    }
+   ],
+   "our_reader_topic": "culture_leisure",
+   "url_section": null,
+   "title_body_similarity": 0.827
+  },
+  {
+   "idx": 1729,
+   "kind": "typical",
+   "domain": "www.marketwired.com",
+   "date": "date not recorded",
+   "title": "MYOS RENS Technology Inc. Adopts Shareholder Rights Plan",
+   "first_sentence": "CEDAR KNOLLS, NJ--(Marketwired - Feb 14, 2017) - MYOS RENS Technology Inc. (the \"Company\") ( NASDAQ : MYOS) today announced that its Board of Directors (\"Board\") has adopted a shareholder rights plan (the \"Rights Plan\").",
+   "first_250_words": "MYOS RENS Technology Inc. Adopts Shareholder Rights Plan. CEDAR KNOLLS, NJ--(Marketwired - Feb 14, 2017) - MYOS RENS Technology Inc. (the \"Company\") ( NASDAQ : MYOS) today announced that its Board of Directors (\"Board\") has adopted a shareholder rights plan (the \"Rights Plan\"). The Board adopted the Rights Plan to ensure that the Board remains in the best position to perform its fiduciary duties and enable all of the Company's shareholders to receive fair and equal treatment. The Rights Plan is also designed to allow all of the Company's shareholders to realize the long-term value of their investment by reducing the likelihood that any person or group would gain control of the Company through open market accumulation without appropriately compensating its shareholders for such control or providing the Board sufficient time to make an informed judgment. The Company's commitment to driving shareholder value remains steadfast through a focused growth strategy of targeted clinical trials, launching new brands and establishing strategic partnerships. The Company believes the adoption of the Rights Plan will allow it to continue to execute its strategy. While the Company does not comment on specific discussions with shareholders, it welcomes all constructive input towards the goals of positioning the Company as a leading bio-nutrition focused company and enhancing shareholder value. The Rights Plan is similar to plans adopted by numerous publicly traded companies. It was not adopted in response to any specific takeover bid or other proposal to acquire control of the Company. Pursuant to the Rights Plan,",
+   "total_words": 852,
+   "chunks": 4,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.051,
+     -0.031,
+     -0.021,
+     -0.028,
+     0.052,
+     0.0,
+     -0.004,
+     0.017
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "BRIEF-Insys Therapeutics to restate some financial statements",
+      "similarity": 0.674,
+      "cluster": 9
+     },
+     {
+      "title": "BRIEF-TVS Motor says already begun manufacture, sale of BS IV compliant vehicles to dealers",
+      "similarity": 0.652,
+      "cluster": 9
+     },
+     {
+      "title": "BRIEF-Respiratorius: FDA grants Orphan Drug Designation for VAL001",
+      "similarity": 0.648,
+      "cluster": 9
+     },
+     {
+      "title": "BRIEF-Erne Ventures buys 49 pct of Telehorse for 0.3 mln zlotys",
+      "similarity": 0.643,
+      "cluster": 9
+     },
+     {
+      "title": "BRIEF-Eyeonid signs global dealership agreement with MM Ventures",
+      "similarity": 0.639,
+      "cluster": -1
+     }
+    ],
+    "median_similarity_to_all": 0.441,
+    "max_similarity": 0.674
+   },
+   "own_words": [
+    {
+     "word": "shareholder",
+     "articles_with_it": 15,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "adopted",
+     "articles_with_it": 26,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "shareholders",
+     "articles_with_it": 31,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "rights",
+     "articles_with_it": 159,
+     "times_in_this_article": 8
+    },
+    {
+     "word": "plan",
+     "articles_with_it": 190,
+     "times_in_this_article": 8
+    },
+    {
+     "word": "board",
+     "articles_with_it": 174,
+     "times_in_this_article": 5
+    },
+    {
+     "word": "company",
+     "articles_with_it": 543,
+     "times_in_this_article": 10
+    },
+    {
+     "word": "value",
+     "articles_with_it": 102,
+     "times_in_this_article": 3
+    }
+   ],
+   "squeezed": [
+    6.45,
+    0.73,
+    4.08,
+    6.81,
+    4.49
+   ],
+   "umap_neighbours_same_cluster": 15,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 9,
+    "membership": 1.0,
+    "size": 376,
+    "label": [
+     "brief",
+     "company",
+     "million",
+     "source",
+     "text"
+    ],
+    "label_words": [
+     {
+      "word": "brief",
+      "in_this_article": false,
+      "in_cluster": 0.79,
+      "elsewhere": 0.02
+     },
+     {
+      "word": "company",
+      "in_this_article": true,
+      "in_cluster": 0.556,
+      "elsewhere": 0.072
+     },
+     {
+      "word": "million",
+      "in_this_article": false,
+      "in_cluster": 0.29,
+      "elsewhere": 0.072
+     },
+     {
+      "word": "source",
+      "in_this_article": false,
+      "in_cluster": 0.449,
+      "elsewhere": 0.025
+     },
+     {
+      "word": "text",
+      "in_this_article": false,
+      "in_cluster": 0.42,
+      "elsewhere": 0.014
+     },
+     {
+      "word": "coverage",
+      "in_this_article": false,
+      "in_cluster": 0.378,
+      "elsewhere": 0.012
+     }
+    ],
+    "our_list_says": [
+     [
+      "business_corporate",
+      293
+     ],
+     [
+      "markets_investment",
+      20
+     ],
+     [
+      "interest_credit_banking",
+      16
+     ]
+    ],
+    "our_list_top_share": 0.779
+   },
+   "specific": {
+    "cluster": 32,
+    "membership": 1.0,
+    "size": 376,
+    "label": [
+     "brief",
+     "company",
+     "million",
+     "source",
+     "text"
+    ],
+    "label_words": [
+     {
+      "word": "brief",
+      "in_this_article": false,
+      "in_cluster": 0.79,
+      "elsewhere": 0.02
+     },
+     {
+      "word": "company",
+      "in_this_article": true,
+      "in_cluster": 0.556,
+      "elsewhere": 0.072
+     },
+     {
+      "word": "million",
+      "in_this_article": false,
+      "in_cluster": 0.29,
+      "elsewhere": 0.072
+     },
+     {
+      "word": "source",
+      "in_this_article": false,
+      "in_cluster": 0.449,
+      "elsewhere": 0.025
+     },
+     {
+      "word": "text",
+      "in_this_article": false,
+      "in_cluster": 0.42,
+      "elsewhere": 0.014
+     },
+     {
+      "word": "coverage",
+      "in_this_article": false,
+      "in_cluster": 0.378,
+      "elsewhere": 0.012
+     }
+    ],
+    "our_list_says": [
+     [
+      "business_corporate",
+      293
+     ],
+     [
+      "markets_investment",
+      20
+     ],
+     [
+      "interest_credit_banking",
+      16
+     ]
+    ],
+    "our_list_top_share": 0.779
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 0,
+     "membership": 0.48,
+     "label": [
+      "brief",
+      "company",
+      "million",
+      "source",
+      "text"
+     ],
+     "cluster_size": 380
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 4,
+     "membership": 1.0,
+     "label": [],
+     "cluster_size": 337
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 9,
+     "membership": 1.0,
+     "label": [
+      "brief",
+      "company",
+      "million",
+      "source",
+      "text"
+     ],
+     "cluster_size": 376
+    },
+    {
+     "view": "whole_article",
+     "cluster": 12,
+     "membership": 1.0,
+     "label": [
+      "million",
+      "company",
+      "text",
+      "source",
+      "brief"
+     ],
+     "cluster_size": 109
+    }
+   ],
+   "our_reader_topic": "business_corporate",
+   "url_section": null,
+   "title_body_similarity": 0.882
+  },
+  {
+   "idx": 1269,
+   "kind": "edge",
+   "domain": "www.leinsterleader.ie",
+   "date": "2017-08-14",
+   "title": "Kildare basketballers secure coveted Euro silver medal",
+   "first_sentence": "Kildare\u2019s Claire Melia and Sorcha Tiernan have cemented their place in Irish basketball history with a European silver medal.",
+   "first_250_words": "Kildare basketballers secure coveted Euro silver medal. Kildare\u2019s Claire Melia and Sorcha Tiernan have cemented their place in Irish basketball history with a European silver medal. Ireland\u2019s unbeaten streak at the FIBA U18 Women\u2019s European Championships finally came to an end in the final yesterday evening, as they lost out 67-43 to Germany. SEE ALSO: Kildare's Claire Melia and Sorcha Tiernan make history as Irish U18 basketballers reach European Championships final Promotion to Division A is still assured, as is the squad\u2019s status as Ireland\u2019s most successful ever basketball team, and they were given a standing ovation at the final buzzer by the capacity crowd who have supported them every step of the way through a superb tournament. \u201cIt\u2019s incredible,\" said Head Coach Tommy O'Mahony. \"Night after night we rolled from one game to the other, we didn\u2019t get a chance to figure out what we\u2019d just done. Tonight wasn\u2019t our night, but the girls have to realize what they\u2019ve done and how big it is in the whole scheme of things. It\u2019s hard to believe, we won\u2019t comprehend it for a few weeks I\u2019d say, but it\u2019s been great.\u201d It was the Germans\u2019 athleticism that caused problems early on, particularly through 6\u20193 power forward Nyara Sabally, who will join Oregon Ducks in Division I of the NCAA after the tournament. Louise Scannell helped to lift the siege with a massive three-pointer and Sabally soon hit the bench as foul trouble stunted her side\u2019s momentum. Ireland landed five free-throws from",
+   "total_words": 542,
+   "chunks": 3,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.061,
+     -0.037,
+     0.025,
+     -0.057,
+     0.017,
+     -0.053,
+     0.023,
+     0.032
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "Connacht U18 Girls Squad announced ahead of summer training programme",
+      "similarity": 0.664,
+      "cluster": 2
+     },
+     {
+      "title": "Fourth-quarter push carries Phoenix women to 57-47 win",
+      "similarity": 0.658,
+      "cluster": 0
+     },
+     {
+      "title": "Australia\u2019s Super7s team beat Japan to claim finals place in Brisbane",
+      "similarity": 0.638,
+      "cluster": 2
+     },
+     {
+      "title": "Students put pressure on top four with vital win in netball",
+      "similarity": 0.638,
+      "cluster": 0
+     },
+     {
+      "title": "IC softball sweeps doubleheader against Stevens",
+      "similarity": 0.636,
+      "cluster": 0
+     }
+    ],
+    "median_similarity_to_all": 0.43,
+    "max_similarity": 0.664
+   },
+   "own_words": [
+    {
+     "word": "kildare",
+     "articles_with_it": 4,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "medal",
+     "articles_with_it": 7,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "claire",
+     "articles_with_it": 11,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "ireland",
+     "articles_with_it": 49,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "championships",
+     "articles_with_it": 30,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "silver",
+     "articles_with_it": 33,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "irish",
+     "articles_with_it": 37,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "european",
+     "articles_with_it": 143,
+     "times_in_this_article": 3
+    }
+   ],
+   "squeezed": [
+    9.32,
+    5.2,
+    4.56,
+    7.4,
+    5.8
+   ],
+   "umap_neighbours_same_cluster": 15,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 0,
+    "membership": 0.4,
+    "size": 359,
+    "label": [
+     "game",
+     "points",
+     "season",
+     "team",
+     "win"
+    ],
+    "label_words": [
+     {
+      "word": "game",
+      "in_this_article": true,
+      "in_cluster": 0.535,
+      "elsewhere": 0.05
+     },
+     {
+      "word": "points",
+      "in_this_article": false,
+      "in_cluster": 0.248,
+      "elsewhere": 0.029
+     },
+     {
+      "word": "season",
+      "in_this_article": false,
+      "in_cluster": 0.418,
+      "elsewhere": 0.05
+     },
+     {
+      "word": "team",
+      "in_this_article": true,
+      "in_cluster": 0.343,
+      "elsewhere": 0.079
+     },
+     {
+      "word": "win",
+      "in_this_article": false,
+      "in_cluster": 0.298,
+      "elsewhere": 0.045
+     },
+     {
+      "word": "second",
+      "in_this_article": false,
+      "in_cluster": 0.284,
+      "elsewhere": 0.079
+     }
+    ],
+    "our_list_says": [
+     [
+      "culture_leisure",
+      354
+     ],
+     [
+      "protest_movements",
+      2
+     ],
+     [
+      "transport_infrastructure",
+      1
+     ]
+    ],
+    "our_list_top_share": 0.986
+   },
+   "specific": {
+    "cluster": -1,
+    "membership": 0.0,
+    "size": null,
+    "label": [],
+    "label_words": [],
+    "our_list_says": [],
+    "our_list_top_share": null
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 10,
+     "membership": 0.44,
+     "label": [
+      "league",
+      "cup",
+      "season",
+      "team",
+      "match"
+     ],
+     "cluster_size": 308
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 7,
+     "membership": 0.49,
+     "label": [],
+     "cluster_size": 288
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 0,
+     "membership": 0.4,
+     "label": [
+      "game",
+      "points",
+      "season",
+      "team",
+      "win"
+     ],
+     "cluster_size": 359
+    },
+    {
+     "view": "whole_article",
+     "cluster": 2,
+     "membership": 1.0,
+     "label": [
+      "rugby",
+      "players",
+      "match",
+      "cup",
+      "zealand"
+     ],
+     "cluster_size": 65
+    }
+   ],
+   "our_reader_topic": "culture_leisure",
+   "url_section": "sport",
+   "title_body_similarity": 0.749
+  },
+  {
+   "idx": 2670,
+   "kind": "edge",
+   "domain": "uk.reuters.com",
+   "date": "2017-08-13",
+   "title": "Soccer-Finnish championship results and standings",
+   "first_sentence": "Aug 13 (Gracenote) - Results and standings from the Finnish championship matches on Sunday Sunday, August 13 JJK 2 PS Kemi 1 Standings P W D L F A Pts 1 HJK Helsinki 21 13 7 1 49 9 46 ------------------------- 2 Lahti 21 8 11 2 28 15 35 3 KuPS 21 9 6 6 31 22 33 ------------------------- 4 VPS 21 8 9",
+   "first_250_words": "Soccer-Finnish championship results and standings. Aug 13 (Gracenote) - Results and standings from the Finnish championship matches on Sunday Sunday, August 13 JJK 2 PS Kemi 1 Standings P W D L F A Pts 1 HJK Helsinki 21 13 7 1 49 9 46 ------------------------- 2 Lahti 21 8 11 2 28 15 35 3 KuPS 21 9 6 6 31 22 33 ------------------------- 4 VPS 21 8 9 4 29 28 33 ------------------------- 5 Ilves 21 8 7 6 21 21 31 6 SJK 21 8 5 8 23 31 29 7 Inter Turku 21 7 6 8 32 27 27 8 IFK Mariehamn 21 6 9 6 29 32 27 9 RoPS Rovaniemi 21 7 4 10 26 34 25 10 PS Kemi 22 6 6 10 27 33 24 ------------------------- 11 HIFK 21 3 8 10 18 33 17 ------------------------- 12 JJK 22 2 6 14 18 46 12 1: Champions League preliminary round 2-3: Europa League preliminary round 4: Europa League depending on domestic cup 11: Relegation play-off 12: Relegation Next Fixtures (GMT): Monday, August 14 Inter Turku v SJK (1530) HJK Helsinki v RoPS Rovaniemi (1530) IFK Mariehamn v KuPS (1530) Ilves v HIFK (1530) VPS v Lahti (1530)",
+   "total_words": 200,
+   "chunks": 1,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.033,
+     -0.002,
+     0.001,
+     -0.022,
+     0.012,
+     -0.016,
+     0.028,
+     0.015
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "UPDATE 5-Soccer-Colombian championship liga aguila ii results and standings",
+      "similarity": 0.796,
+      "cluster": 2
+     },
+     {
+      "title": "Soccer-Austrian championship results and standings",
+      "similarity": 0.778,
+      "cluster": 2
+     },
+     {
+      "title": "UPDATE 5-Soccer-Japanese championship results and standings",
+      "similarity": 0.772,
+      "cluster": 2
+     },
+     {
+      "title": "Soccer-Romanian championship champions group results and standings",
+      "similarity": 0.769,
+      "cluster": 2
+     },
+     {
+      "title": "Soccer-Swedish championship results and standings",
+      "similarity": 0.768,
+      "cluster": 2
+     }
+    ],
+    "median_similarity_to_all": 0.422,
+    "max_similarity": 0.796
+   },
+   "own_words": [
+    {
+     "word": "helsinki",
+     "articles_with_it": 4,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "standings",
+     "articles_with_it": 24,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "finnish",
+     "articles_with_it": 5,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "europa",
+     "articles_with_it": 11,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "inter",
+     "articles_with_it": 15,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "relegation",
+     "articles_with_it": 16,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "preliminary",
+     "articles_with_it": 26,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "league",
+     "articles_with_it": 235,
+     "times_in_this_article": 3
+    }
+   ],
+   "squeezed": [
+    8.61,
+    5.25,
+    5.27,
+    6.95,
+    5.67
+   ],
+   "umap_neighbours_same_cluster": 15,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 2,
+    "membership": 0.38,
+    "size": 298,
+    "label": [
+     "league",
+     "cup",
+     "season",
+     "team",
+     "club"
+    ],
+    "label_words": [
+     {
+      "word": "league",
+      "in_this_article": true,
+      "in_cluster": 0.453,
+      "elsewhere": 0.021
+     },
+     {
+      "word": "cup",
+      "in_this_article": true,
+      "in_cluster": 0.275,
+      "elsewhere": 0.007
+     },
+     {
+      "word": "season",
+      "in_this_article": false,
+      "in_cluster": 0.372,
+      "elsewhere": 0.058
+     },
+     {
+      "word": "team",
+      "in_this_article": false,
+      "in_cluster": 0.393,
+      "elsewhere": 0.079
+     },
+     {
+      "word": "club",
+      "in_this_article": false,
+      "in_cluster": 0.285,
+      "elsewhere": 0.018
+     },
+     {
+      "word": "world",
+      "in_this_article": false,
+      "in_cluster": 0.218,
+      "elsewhere": 0.106
+     }
+    ],
+    "our_list_says": [
+     [
+      "culture_leisure",
+      293
+     ],
+     [
+      "pollution_nature",
+      1
+     ],
+     [
+      "accidents_incidents",
+      1
+     ]
+    ],
+    "our_list_top_share": 0.983
+   },
+   "specific": {
+    "cluster": 14,
+    "membership": 1.0,
+    "size": 16,
+    "label": [
+     "soccer",
+     "results",
+     "championship",
+     "standings",
+     "june"
+    ],
+    "label_words": [
+     {
+      "word": "soccer",
+      "in_this_article": true,
+      "in_cluster": 0.812,
+      "elsewhere": 0.008
+     },
+     {
+      "word": "results",
+      "in_this_article": true,
+      "in_cluster": 0.75,
+      "elsewhere": 0.026
+     },
+     {
+      "word": "championship",
+      "in_this_article": true,
+      "in_cluster": 0.688,
+      "elsewhere": 0.017
+     },
+     {
+      "word": "standings",
+      "in_this_article": true,
+      "in_cluster": 0.562,
+      "elsewhere": 0.003
+     },
+     {
+      "word": "june",
+      "in_this_article": false,
+      "in_cluster": 0.75,
+      "elsewhere": 0.069
+     },
+     {
+      "word": "atletico",
+      "in_this_article": false,
+      "in_cluster": 0.125,
+      "elsewhere": 0.001
+     }
+    ],
+    "our_list_says": [
+     [
+      "culture_leisure",
+      16
+     ]
+    ],
+    "our_list_top_share": 1.0
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 10,
+     "membership": 0.59,
+     "label": [
+      "league",
+      "cup",
+      "season",
+      "team",
+      "match"
+     ],
+     "cluster_size": 308
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 7,
+     "membership": 1.0,
+     "label": [],
+     "cluster_size": 288
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 2,
+     "membership": 0.38,
+     "label": [
+      "league",
+      "cup",
+      "season",
+      "team",
+      "club"
+     ],
+     "cluster_size": 298
+    },
+    {
+     "view": "whole_article",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    }
+   ],
+   "our_reader_topic": "culture_leisure",
+   "url_section": null,
+   "title_body_similarity": 0.879
+  },
+  {
+   "idx": 2261,
+   "kind": "edge",
+   "domain": "www.webnewswire.com",
+   "date": "2017-10-07",
+   "title": "ConverterVid Is the Best YouTube to MP3 Converter Out There",
+   "first_sentence": "ConverterVid is offering the most effective, user-friendly and genuinely comprehensive YouTube to MP3 converter out there.",
+   "first_250_words": "ConverterVid Is the Best YouTube to MP3 Converter Out There. ConverterVid is offering the most effective, user-friendly and genuinely comprehensive YouTube to MP3 converter out there. YouTube is without a doubt an incredible social platform that allows people from all over the world to really enjoy all sorts of videos of all kinds of genres. One way or the other, it is very easy to find any kind of clip \u2013 music, film, podcast \u2013 you just name it. And, of course, at times, we are eager to keep the music from YouTube videos, but it cannot be found anywhere else on the net. And does that necessarily imply that there is no other option out there? Of course, it does not \u2013 you are going to be able to use different software solutions in order to convert the necessary YouTube videos into audio. And while there are plenty of different converters that are quite readily available on the net, odds are, you are going to be off searching for the ideal option and the perfect combination of top quality and affordable prices. ConverterVid is a one of a kind YouTube MP3 converter that does come with plenty of different features that will easily satisfy even the most refined needs and requirements. Unlike the vast majority of different similar solutions, the given YouTube converter is offering the fastest way to make the most from your YouTube videos and will convert them to the MO3 format within the very least amount",
+   "total_words": 418,
+   "chunks": 2,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     0.02,
+     -0.034,
+     0.039,
+     0.034,
+     0.035,
+     -0.004,
+     0.041,
+     0.018
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "StreamTuner2 v2.2 Released For Internet Radio/Video Browser",
+      "similarity": 0.651,
+      "cluster": -1
+     },
+     {
+      "title": "The Best OTA Receivers You Can Buy",
+      "similarity": 0.584,
+      "cluster": 7
+     },
+     {
+      "title": "How fast a broadband connection do you need for Netflix?",
+      "similarity": 0.575,
+      "cluster": 7
+     },
+     {
+      "title": "New Video: Rich The Kid - Soak It Up",
+      "similarity": 0.566,
+      "cluster": 11
+     },
+     {
+      "title": "Antlion Audio Modmic Microphone Review",
+      "similarity": 0.55,
+      "cluster": 7
+     }
+    ],
+    "median_similarity_to_all": 0.368,
+    "max_similarity": 0.651
+   },
+   "own_words": [
+    {
+     "word": "youtube",
+     "articles_with_it": 22,
+     "times_in_this_article": 8
+    },
+    {
+     "word": "videos",
+     "articles_with_it": 50,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "convert",
+     "articles_with_it": 17,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "different",
+     "articles_with_it": 192,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "option",
+     "articles_with_it": 40,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "solutions",
+     "articles_with_it": 46,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "plenty",
+     "articles_with_it": 59,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "does",
+     "articles_with_it": 183,
+     "times_in_this_article": 3
+    }
+   ],
+   "squeezed": [
+    7.02,
+    2.74,
+    3.17,
+    7.69,
+    4.58
+   ],
+   "umap_neighbours_same_cluster": 12,
+   "umap_neighbours_noise": 3,
+   "broad": {
+    "cluster": 7,
+    "membership": 0.66,
+    "size": 167,
+    "label": [
+     "uber",
+     "amazon",
+     "apple",
+     "google",
+     "company"
+    ],
+    "label_words": [
+     {
+      "word": "uber",
+      "in_this_article": false,
+      "in_cluster": 0.096,
+      "elsewhere": 0.004
+     },
+     {
+      "word": "amazon",
+      "in_this_article": false,
+      "in_cluster": 0.114,
+      "elsewhere": 0.005
+     },
+     {
+      "word": "apple",
+      "in_this_article": false,
+      "in_cluster": 0.138,
+      "elsewhere": 0.006
+     },
+     {
+      "word": "google",
+      "in_this_article": false,
+      "in_cluster": 0.132,
+      "elsewhere": 0.02
+     },
+     {
+      "word": "company",
+      "in_this_article": false,
+      "in_cluster": 0.246,
+      "elsewhere": 0.104
+     },
+     {
+      "word": "car",
+      "in_this_article": false,
+      "in_cluster": 0.138,
+      "elsewhere": 0.035
+     }
+    ],
+    "our_list_says": [
+     [
+      "technology_consumer",
+      83
+     ],
+     [
+      "consumer_retail",
+      31
+     ],
+     [
+      "business_corporate",
+      17
+     ]
+    ],
+    "our_list_top_share": 0.497
+   },
+   "specific": {
+    "cluster": -1,
+    "membership": 0.0,
+    "size": null,
+    "label": [],
+    "label_words": [],
+    "our_list_says": [],
+    "our_list_top_share": null
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 5,
+     "membership": 0.81,
+     "label": [
+      "apple",
+      "google",
+      "data",
+      "iphone",
+      "device"
+     ],
+     "cluster_size": 185
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 12,
+     "membership": 0.92,
+     "label": [],
+     "cluster_size": 152
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 7,
+     "membership": 0.66,
+     "label": [
+      "uber",
+      "amazon",
+      "apple",
+      "google",
+      "company"
+     ],
+     "cluster_size": 167
+    },
+    {
+     "view": "whole_article",
+     "cluster": 17,
+     "membership": 1.0,
+     "label": [
+      "apple",
+      "best",
+      "data",
+      "business",
+      "company"
+     ],
+     "cluster_size": 165
+    }
+   ],
+   "our_reader_topic": "technology_consumer",
+   "url_section": null,
+   "title_body_similarity": 0.937
+  },
+  {
+   "idx": 1,
+   "kind": "noise",
+   "domain": "www.techrepublic.com",
+   "date": "2017-12-11",
+   "title": "How one AI company is bringing medical care to millions of rural Chinese residents",
+   "first_sentence": "China's population, which in 2016 had 793 million urban residents and 590 rural residents, is spread out over a land mass of 3.7 million square miles.",
+   "first_250_words": "How one AI company is bringing medical care to millions of rural Chinese residents. China's population, which in 2016 had 793 million urban residents and 590 rural residents, is spread out over a land mass of 3.7 million square miles. By 2010, 93% of the rural population had healthcare coverage, but providing rural medicine and timely healthcare to rural regions persist. This is where analytics can make a difference. \"We wanted to take analytics, artificial intelligence and deep learning technologies and use them to better understand different medical conditions, how to diagnose them, and how to treat them,\" said Kuan Chen, founder and CEO of Infervision, a Chinese artificial intelligence and deep learning company that specializes in medical image diagnosis. Analytics, artificial intelligence, and deep learning are put into play by analyzing medical images and reports on different pathological conditions, and then coming up with different models and sources of treatment and medical interventions based on common patterns that are assembled from studies of thousands of patients in China's urban hospitals. \"These models use deep learning to 'learn' from the data and continuously improve their diagnostic capabilities,\" said Chen. The first disease that Chen targeted was lung cancer, with the software being able to locate hard-to-detect or hidden nodules in the lungs that could prove to be cancerous. Now the task at hand is providing a similar diagnostic and medical intervention tool for strokes, which can especially be useful in rural areas where qualified medical practitioners are scarce. SEE: IT",
+   "total_words": 794,
+   "chunks": 4,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     0.004,
+     -0.048,
+     -0.007,
+     -0.033,
+     0.055,
+     0.001,
+     0.041,
+     0.022
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "An unbiased approach for sifting through big data",
+      "similarity": 0.662,
+      "cluster": -1
+     },
+     {
+      "title": "Number of Scottish medical students falls",
+      "similarity": 0.658,
+      "cluster": -1
+     },
+     {
+      "title": "Leading genetics study method may need reconsideration, significant distortions discovered",
+      "similarity": 0.653,
+      "cluster": 6
+     },
+     {
+      "title": "Thai jungle cameras reveal new breeding population of endangered tigers",
+      "similarity": 0.642,
+      "cluster": 10
+     },
+     {
+      "title": "Woman cryogenically frozen after dying of lung cancer as husband hopes she can be resurrected by future technology",
+      "similarity": 0.641,
+      "cluster": -1
+     }
+    ],
+    "median_similarity_to_all": 0.455,
+    "max_similarity": 0.662
+   },
+   "own_words": [
+    {
+     "word": "rural",
+     "articles_with_it": 30,
+     "times_in_this_article": 6
+    },
+    {
+     "word": "chen",
+     "articles_with_it": 7,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "analytics",
+     "articles_with_it": 10,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "medical",
+     "articles_with_it": 131,
+     "times_in_this_article": 7
+    },
+    {
+     "word": "artificial",
+     "articles_with_it": 21,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "learning",
+     "articles_with_it": 49,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "diagnostic",
+     "articles_with_it": 8,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "deep",
+     "articles_with_it": 83,
+     "times_in_this_article": 4
+    }
+   ],
+   "squeezed": [
+    7.06,
+    2.79,
+    2.33,
+    7.92,
+    5.08
+   ],
+   "umap_neighbours_same_cluster": 0,
+   "umap_neighbours_noise": 5,
+   "broad": {
+    "cluster": -1,
+    "membership": 0.0,
+    "size": null,
+    "label": [],
+    "label_words": [],
+    "our_list_says": [],
+    "our_list_top_share": null
+   },
+   "specific": {
+    "cluster": -1,
+    "membership": 0.0,
+    "size": null,
+    "label": [],
+    "label_words": [],
+    "our_list_says": [],
+    "our_list_top_share": null
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "first_sentence",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "first_250_words",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "whole_article",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    }
+   ],
+   "our_reader_topic": "health_care_system",
+   "url_section": null,
+   "title_body_similarity": 0.829
+  },
+  {
+   "idx": 3,
+   "kind": "noise",
+   "domain": "www.techrepublic.com",
+   "date": "2018-03-19",
+   "title": "Cambridge Analytica's Facebook game in politics was just the beginning, the enterprise was next",
+   "first_sentence": "Updated 3/18/2018: On March 17, 2018, Facebook announced that Cambridge Analytica was suspended for violating the company's standards and practices.",
+   "first_250_words": "Cambridge Analytica's Facebook game in politics was just the beginning, the enterprise was next. Updated 3/18/2018: On March 17, 2018, Facebook announced that Cambridge Analytica was suspended for violating the company's standards and practices. TechRepublic's Dan Patterson was one of the early reporters to write about Cambridge Analytica during the 2016 campaign. Patterson spoke with CBS News about how the data firm could have harvested so many Facebook profiles. The interview has been added to this article. SEE: How a Facebook app scraped millions of people's personal data | Video: Facebook data was misused to sway 2016 voters, reports says (CBS News) This article was originally published on March 13, 2017. TechRepublic recently reported on controversial tweets by former White House technology staffer Gerrit Lansing and former Trump campaign social media strategist Gary Coby alleging Cambridge Analytica overstated its role in the campaign and the capabilities of the firm's technology. Specifically the company was accused of taking credit for Trump's Facebook advertising strategy and his victories in Michigan and Florida. The tweets sparked a fiery debate about the role of big data in politics and vertical industries. Big data undeniably played a huge role during the 2016 presidential campaign, and after big elections political data innovations are often adopted by enterprise companies and SMBs. Some political technology firms\u2014particularly partisan startups like NGP VAN and Targeted Victory\u2014are now focused on local and regional races in the US. Other firms, like L2 and Cambridge Analytica, deploy their analytics product across enterprise verticals",
+   "total_words": 1302,
+   "chunks": 6,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.009,
+     -0.053,
+     0.037,
+     0.006,
+     0.048,
+     -0.059,
+     0.003,
+     0.051
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "Cambridge Analytica harvested data from millions of unsuspecting Facebook users",
+      "similarity": 0.798,
+      "cluster": -1
+     },
+     {
+      "title": "UK official to seek access to Cambridge Analytica's servers",
+      "similarity": 0.758,
+      "cluster": -1
+     },
+     {
+      "title": "Veracity of Facebook challenged in US, Europe",
+      "similarity": 0.75,
+      "cluster": -1
+     },
+     {
+      "title": "Cambridge Analytica caught on tape proposing blackmail, propaganda",
+      "similarity": 0.741,
+      "cluster": -1
+     },
+     {
+      "title": "Cambridge Analytica whistleblower arrives on Capitol Hill",
+      "similarity": 0.734,
+      "cluster": -1
+     }
+    ],
+    "median_similarity_to_all": 0.442,
+    "max_similarity": 0.798
+   },
+   "own_words": [
+    {
+     "word": "analytica",
+     "articles_with_it": 15,
+     "times_in_this_article": 5
+    },
+    {
+     "word": "cambridge",
+     "articles_with_it": 24,
+     "times_in_this_article": 5
+    },
+    {
+     "word": "enterprise",
+     "articles_with_it": 27,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "patterson",
+     "articles_with_it": 8,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "facebook",
+     "articles_with_it": 170,
+     "times_in_this_article": 6
+    },
+    {
+     "word": "data",
+     "articles_with_it": 191,
+     "times_in_this_article": 6
+    },
+    {
+     "word": "tweets",
+     "articles_with_it": 19,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "cbs",
+     "articles_with_it": 27,
+     "times_in_this_article": 2
+    }
+   ],
+   "squeezed": [
+    7.01,
+    2.81,
+    1.68,
+    7.3,
+    4.01
+   ],
+   "umap_neighbours_same_cluster": 0,
+   "umap_neighbours_noise": 15,
+   "broad": {
+    "cluster": -1,
+    "membership": 0.0,
+    "size": null,
+    "label": [],
+    "label_words": [],
+    "our_list_says": [],
+    "our_list_top_share": null
+   },
+   "specific": {
+    "cluster": 25,
+    "membership": 1.0,
+    "size": 35,
+    "label": [
+     "facebook",
+     "data",
+     "cambridge",
+     "analytica",
+     "users"
+    ],
+    "label_words": [
+     {
+      "word": "facebook",
+      "in_this_article": true,
+      "in_cluster": 0.571,
+      "elsewhere": 0.03
+     },
+     {
+      "word": "data",
+      "in_this_article": true,
+      "in_cluster": 0.6,
+      "elsewhere": 0.034
+     },
+     {
+      "word": "cambridge",
+      "in_this_article": true,
+      "in_cluster": 0.371,
+      "elsewhere": 0.002
+     },
+     {
+      "word": "analytica",
+      "in_this_article": true,
+      "in_cluster": 0.371,
+      "elsewhere": 0.0
+     },
+     {
+      "word": "users",
+      "in_this_article": false,
+      "in_cluster": 0.514,
+      "elsewhere": 0.016
+     },
+     {
+      "word": "information",
+      "in_this_article": false,
+      "in_cluster": 0.457,
+      "elsewhere": 0.061
+     }
+    ],
+    "our_list_says": [
+     [
+      "cyber_privacy",
+      23
+     ],
+     [
+      "media_information",
+      4
+     ],
+     [
+      "technology_consumer",
+      3
+     ]
+    ],
+    "our_list_top_share": 0.657
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "first_sentence",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "first_250_words",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "whole_article",
+     "cluster": 17,
+     "membership": 0.75,
+     "label": [
+      "apple",
+      "best",
+      "data",
+      "business",
+      "company"
+     ],
+     "cluster_size": 165
+    }
+   ],
+   "our_reader_topic": "cyber_privacy",
+   "url_section": null,
+   "title_body_similarity": 0.764
+  },
+  {
+   "idx": 6,
+   "kind": "noise",
+   "domain": "www.grandforksherald.com",
+   "date": "2017-02-14",
+   "title": "Judge spells out rules for courtroom attendance in Castile c...",
+   "first_sentence": "An order written by presiding Ramsey County District Judge William Leary addresses everything from what people may wear to what time they may arrive and leave the court proceedings in the case pending against Jeronimo Yanez.",
+   "first_250_words": "Judge spells out rules for courtroom attendance in Castile c.... An order written by presiding Ramsey County District Judge William Leary addresses everything from what people may wear to what time they may arrive and leave the court proceedings in the case pending against Jeronimo Yanez. Anyone who arrives at the courtroom after a hearing starts, for example, will be ordered to leave, the order says. And no one will be allowed to walk out of a hearing until the judge calls for a recess. Another rule restricts wearing any clothes or buttons or carrying signs that in any way \"refer to or call attention to (the case), the defendant, parties or witnesses,\" the order says. Spectators who can't find a seat in the courtroom will be asked to leave, and no congregating will be allowed in the hallway outside it. Further, \"blocking of or loitering in walkways, doorways, staircases, or near elevator access ... in any part of the (St. Paul City Hall and Ramsey County Courthouse),\" during proceedings will be prohibited. Enhanced regulations also will be enforced on cellphone use and other recording devices. The unusually strict set of rules was issued in the name of providing a \"fair and open process that recognizes the responsibility of the state, the rights of the Defendant and the public interest,\" the order states. Leary did not immediately respond Tuesday to a request for further explanation, nor did Ramsey County Chief Judge John Guthmann. Yanez was charged in November with one",
+   "total_words": 518,
+   "chunks": 3,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.046,
+     -0.021,
+     0.005,
+     -0.04,
+     0.05,
+     -0.04,
+     0.057,
+     -0.01
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "The Case to End Assembly Line Justice for Poor People in Harris County",
+      "similarity": 0.679,
+      "cluster": -1
+     },
+     {
+      "title": "US Supreme Court Weighing \"Unprecedented\" Request To Put Pennsylvania Redistricting Ruling On Hold",
+      "similarity": 0.667,
+      "cluster": 5
+     },
+     {
+      "title": "Court orders judge to free rapper Meek Mill on bail",
+      "similarity": 0.65,
+      "cluster": -1
+     },
+     {
+      "title": "U.S. court refuses to block Pennsylvania congressional redistricting",
+      "similarity": 0.648,
+      "cluster": 5
+     },
+     {
+      "title": "Charlottesville Suspect James Alex Fields Jr. Denied Bond at First Court Appearance",
+      "similarity": 0.637,
+      "cluster": -1
+     }
+    ],
+    "median_similarity_to_all": 0.439,
+    "max_similarity": 0.679
+   },
+   "own_words": [
+    {
+     "word": "ramsey",
+     "articles_with_it": 3,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "courtroom",
+     "articles_with_it": 6,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "defendant",
+     "articles_with_it": 8,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "proceedings",
+     "articles_with_it": 12,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "judge",
+     "articles_with_it": 109,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "order",
+     "articles_with_it": 180,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "leave",
+     "articles_with_it": 137,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "rules",
+     "articles_with_it": 74,
+     "times_in_this_article": 2
+    }
+   ],
+   "squeezed": [
+    7.82,
+    3.14,
+    0.83,
+    6.95,
+    5.08
+   ],
+   "umap_neighbours_same_cluster": 0,
+   "umap_neighbours_noise": 15,
+   "broad": {
+    "cluster": -1,
+    "membership": 0.0,
+    "size": null,
+    "label": [],
+    "label_words": [],
+    "our_list_says": [],
+    "our_list_top_share": null
+   },
+   "specific": {
+    "cluster": 19,
+    "membership": 1.0,
+    "size": 32,
+    "label": [
+     "law",
+     "kansas",
+     "drug",
+     "state",
+     "court"
+    ],
+    "label_words": [
+     {
+      "word": "law",
+      "in_this_article": false,
+      "in_cluster": 0.469,
+      "elsewhere": 0.04
+     },
+     {
+      "word": "kansas",
+      "in_this_article": false,
+      "in_cluster": 0.25,
+      "elsewhere": 0.006
+     },
+     {
+      "word": "drug",
+      "in_this_article": false,
+      "in_cluster": 0.281,
+      "elsewhere": 0.014
+     },
+     {
+      "word": "state",
+      "in_this_article": true,
+      "in_cluster": 0.375,
+      "elsewhere": 0.113
+     },
+     {
+      "word": "court",
+      "in_this_article": true,
+      "in_cluster": 0.312,
+      "elsewhere": 0.053
+     },
+     {
+      "word": "health",
+      "in_this_article": false,
+      "in_cluster": 0.344,
+      "elsewhere": 0.038
+     }
+    ],
+    "our_list_says": [
+     [
+      "courts_rulings",
+      15
+     ],
+     [
+      "legislation_regulation",
+      7
+     ],
+     [
+      "mental_health_substances",
+      3
+     ]
+    ],
+    "our_list_top_share": 0.469
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 1,
+     "membership": 0.61,
+     "label": [],
+     "cluster_size": 519
+    },
+    {
+     "view": "first_250_words",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "whole_article",
+     "cluster": 23,
+     "membership": 0.84,
+     "label": [
+      "police",
+      "shooting",
+      "man",
+      "shot",
+      "vegas"
+     ],
+     "cluster_size": 108
+    }
+   ],
+   "our_reader_topic": "courts_rulings",
+   "url_section": null,
+   "title_body_similarity": 0.803
+  },
+  {
+   "idx": 899,
+   "kind": "title and body in different clusters",
+   "domain": "www.beinsports.com",
+   "date": "2017-02-15",
+   "title": "Fabio Fognini And Bernard Tomic Make Early Exits",
+   "first_sentence": "Bernard Tomic made a shock first-round exit in Memphis as Fabio Fognini was beaten in Buenos Aires on Tuesday.",
+   "first_250_words": "Fabio Fognini And Bernard Tomic Make Early Exits. Bernard Tomic made a shock first-round exit in Memphis as Fabio Fognini was beaten in Buenos Aires on Tuesday. Australian fifth seed Tomic was stunningly beaten by Darian King 6-4 6-4 at the Memphis Open. Qualifier King became the first player from Barbados to win an ATP World Tour main-draw match in the Open Era, while Tomic now holds a 2-3 record this year. Also in Memphis, last year's runner-up Taylor Fritz battled past eighth seed Lu Yen-hsun 4-6 7-6 (7-4) 7-6 (9-7). American teenager Fritz saved three match points and came from 6-4 down in the third-set tie-break. Steve Darcis, the 2008 champion, was the only seed to advance, the Belgian overcoming Radu Albot 7-5 3-6 6-4. Ryan Harrison beat Konstantin Kravchuk 6-3 7-5, qualifier Matthew Ebden claimed a 6-7 (4-7) 6-3 6-1 win over Peter Polansky and Tim Smyczek recorded a 6-3 5-7 6-3 win against Frances Tiafoe in an all-American affair. At the Argentina Open, Italian seventh seed Fognini \u2013 the 2014 runner-up \u2013 went down to one-time champion Tommy Robredo 6-4 6-3. The only other two seeds in action on the clay in Buenos Aires, Albert Ramos-Vinolas and Joao Sousa, came through their openers. Sousa was too good for local Horacio Zeballos 6-2 7-6 (7-4) and Ramos-Vinolas battled past Guido Pella 6-7 (8-10) 6-4 7-6 (8-6). Alexandr Dolgopolov brought an early end to Janko Tipsarevic's tournament with a 6-3 6-3 victory. There were also wins for Diego Schwartzman,",
+   "total_words": 249,
+   "chunks": 1,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.038,
+     -0.083,
+     0.025,
+     -0.005,
+     0.047,
+     -0.039,
+     0.023,
+     0.04
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "Djokovic advances at Qatar Open after slow start",
+      "similarity": 0.706,
+      "cluster": 1
+     },
+     {
+      "title": "TEN--French Open Results",
+      "similarity": 0.695,
+      "cluster": 1
+     },
+     {
+      "title": "David Goffin, Marin Cilic reach semifinals at Japan Open",
+      "similarity": 0.687,
+      "cluster": 1
+     },
+     {
+      "title": "Federer's pullout from Cincinnati hands number one spot to Nadal",
+      "similarity": 0.679,
+      "cluster": 1
+     },
+     {
+      "title": "Davis Cup: Titleholder France even against the Netherlands",
+      "similarity": 0.676,
+      "cluster": 1
+     }
+    ],
+    "median_similarity_to_all": 0.439,
+    "max_similarity": 0.706
+   },
+   "own_words": [
+    {
+     "word": "seed",
+     "articles_with_it": 18,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "memphis",
+     "articles_with_it": 11,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "fabio",
+     "articles_with_it": 3,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "sousa",
+     "articles_with_it": 3,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "ramos",
+     "articles_with_it": 6,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "bernard",
+     "articles_with_it": 6,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "qualifier",
+     "articles_with_it": 7,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "buenos",
+     "articles_with_it": 9,
+     "times_in_this_article": 2
+    }
+   ],
+   "squeezed": [
+    8.5,
+    4.97,
+    4.58,
+    7.3,
+    5.6
+   ],
+   "umap_neighbours_same_cluster": 15,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 1,
+    "membership": 1.0,
+    "size": 66,
+    "label": [
+     "open",
+     "round",
+     "fight",
+     "mayweather",
+     "golf"
+    ],
+    "label_words": [
+     {
+      "word": "open",
+      "in_this_article": true,
+      "in_cluster": 0.439,
+      "elsewhere": 0.049
+     },
+     {
+      "word": "round",
+      "in_this_article": true,
+      "in_cluster": 0.47,
+      "elsewhere": 0.023
+     },
+     {
+      "word": "fight",
+      "in_this_article": false,
+      "in_cluster": 0.273,
+      "elsewhere": 0.018
+     },
+     {
+      "word": "mayweather",
+      "in_this_article": false,
+      "in_cluster": 0.091,
+      "elsewhere": 0.0
+     },
+     {
+      "word": "golf",
+      "in_this_article": false,
+      "in_cluster": 0.258,
+      "elsewhere": 0.006
+     },
+     {
+      "word": "match",
+      "in_this_article": true,
+      "in_cluster": 0.333,
+      "elsewhere": 0.024
+     }
+    ],
+    "our_list_says": [
+     [
+      "culture_leisure",
+      66
+     ]
+    ],
+    "our_list_top_share": 1.0
+   },
+   "specific": {
+    "cluster": 17,
+    "membership": 1.0,
+    "size": 22,
+    "label": [
+     "open",
+     "wimbledon",
+     "round",
+     "tournament",
+     "williams"
+    ],
+    "label_words": [
+     {
+      "word": "open",
+      "in_this_article": true,
+      "in_cluster": 0.773,
+      "elsewhere": 0.051
+     },
+     {
+      "word": "wimbledon",
+      "in_this_article": false,
+      "in_cluster": 0.364,
+      "elsewhere": 0.001
+     },
+     {
+      "word": "round",
+      "in_this_article": true,
+      "in_cluster": 0.545,
+      "elsewhere": 0.027
+     },
+     {
+      "word": "tournament",
+      "in_this_article": true,
+      "in_cluster": 0.545,
+      "elsewhere": 0.013
+     },
+     {
+      "word": "williams",
+      "in_this_article": false,
+      "in_cluster": 0.273,
+      "elsewhere": 0.012
+     },
+     {
+      "word": "seeded",
+      "in_this_article": false,
+      "in_cluster": 0.455,
+      "elsewhere": 0.0
+     }
+    ],
+    "our_list_says": [
+     [
+      "culture_leisure",
+      22
+     ]
+    ],
+    "our_list_top_share": 1.0
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 10,
+     "membership": 0.47,
+     "label": [
+      "league",
+      "cup",
+      "season",
+      "team",
+      "match"
+     ],
+     "cluster_size": 308
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 7,
+     "membership": 0.63,
+     "label": [],
+     "cluster_size": 288
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 1,
+     "membership": 1.0,
+     "label": [
+      "open",
+      "round",
+      "fight",
+      "mayweather",
+      "golf"
+     ],
+     "cluster_size": 66
+    },
+    {
+     "view": "whole_article",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    }
+   ],
+   "our_reader_topic": "culture_leisure",
+   "url_section": "sport",
+   "title_body_similarity": 0.754
+  },
+  {
+   "idx": 981,
+   "kind": "title and body in different clusters",
+   "domain": "www.digitaltrends.com",
+   "date": "2018-04-24",
+   "title": "Using A.I.-Based Brush, Removing Objects From Photos is No Biggie",
+   "first_sentence": "Share Photoshop\u2019s healing brush can use surrounding pixels to repair an image or remove an object \u2014 but what if the surrounding pixels don\u2019t have enough data to fill in those holes?",
+   "first_250_words": "Using A.I.-Based Brush, Removing Objects From Photos is No Biggie. Share Photoshop\u2019s healing brush can use surrounding pixels to repair an image or remove an object \u2014 but what if the surrounding pixels don\u2019t have enough data to fill in those holes? Researchers from Nvidia recently used artificial intelligence to help fill in those gaps to create a tool similar to the healing brush tool that is able to intelligently fill in missing pieces, a technique called image inpainting for irregular holes using partial convolutions \u2014 here\u2019s hoping Nvidia comes up with a nickname before making the tool widely accessible. Nvidia isn\u2019t the first to try to reinvent the healing brush using A.I., but the researchers say that earlier attempts left artifacts and blur. Rather than using full convolutional filter responses to those holes, Nvidia instead created a partial convolution method \u2014 in other words, the software creates a layer that renormalizes the pixels to create a more normal looking image without those artifacts. The new program also uses an automatically generated layer masks. Unlike the traditional healing brush tool that only uses surrounding pixels to determine what to fill in the gap with, Nvidia trained its tool using three different sets of images, resulting in thousands of images to train the tool with. The researchers randomly applied masks to intentionally remove sections of images to those groups of photos. By showing the computer both the before and after, the program could learn how to fill in some of those",
+   "total_words": 437,
+   "chunks": 2,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     0.045,
+     -0.036,
+     -0.028,
+     0.045,
+     0.035,
+     0.009,
+     0.023,
+     0.003
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "Tumors heat up",
+      "similarity": 0.629,
+      "cluster": 6
+     },
+     {
+      "title": "Making intricate images with bacterial communities",
+      "similarity": 0.599,
+      "cluster": 6
+     },
+     {
+      "title": "Cars That See Around Corners? Self-Driving Tech Gets Smarter",
+      "similarity": 0.591,
+      "cluster": 7
+     },
+     {
+      "title": "'Deepfakes': Porn Created by Artificial Intelligence Targets Hollywood Stars",
+      "similarity": 0.588,
+      "cluster": -1
+     },
+     {
+      "title": "How one AI company is bringing medical care to millions of rural Chinese residents",
+      "similarity": 0.574,
+      "cluster": -1
+     }
+    ],
+    "median_similarity_to_all": 0.386,
+    "max_similarity": 0.629
+   },
+   "own_words": [
+    {
+     "word": "pixels",
+     "articles_with_it": 3,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "brush",
+     "articles_with_it": 12,
+     "times_in_this_article": 5
+    },
+    {
+     "word": "healing",
+     "articles_with_it": 8,
+     "times_in_this_article": 4
+    },
+    {
+     "word": "tool",
+     "articles_with_it": 30,
+     "times_in_this_article": 6
+    },
+    {
+     "word": "holes",
+     "articles_with_it": 14,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "artifacts",
+     "articles_with_it": 6,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "layer",
+     "articles_with_it": 8,
+     "times_in_this_article": 2
+    },
+    {
+     "word": "masks",
+     "articles_with_it": 9,
+     "times_in_this_article": 2
+    }
+   ],
+   "squeezed": [
+    6.91,
+    2.63,
+    2.82,
+    7.98,
+    4.99
+   ],
+   "umap_neighbours_same_cluster": 12,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 6,
+    "membership": 0.95,
+    "size": 78,
+    "label": [
+     "study",
+     "researchers",
+     "health",
+     "life",
+     "exercise"
+    ],
+    "label_words": [
+     {
+      "word": "study",
+      "in_this_article": false,
+      "in_cluster": 0.359,
+      "elsewhere": 0.017
+     },
+     {
+      "word": "researchers",
+      "in_this_article": true,
+      "in_cluster": 0.308,
+      "elsewhere": 0.009
+     },
+     {
+      "word": "health",
+      "in_this_article": false,
+      "in_cluster": 0.205,
+      "elsewhere": 0.038
+     },
+     {
+      "word": "life",
+      "in_this_article": false,
+      "in_cluster": 0.244,
+      "elsewhere": 0.068
+     },
+     {
+      "word": "exercise",
+      "in_this_article": false,
+      "in_cluster": 0.09,
+      "elsewhere": 0.004
+     },
+     {
+      "word": "scientists",
+      "in_this_article": false,
+      "in_cluster": 0.205,
+      "elsewhere": 0.007
+     }
+    ],
+    "our_list_says": [
+     [
+      "research_space",
+      27
+     ],
+     [
+      "culture_leisure",
+      17
+     ],
+     [
+      "public_health",
+      15
+     ]
+    ],
+    "our_list_top_share": 0.346
+   },
+   "specific": {
+    "cluster": -1,
+    "membership": 0.0,
+    "size": null,
+    "label": [],
+    "label_words": [],
+    "our_list_says": [],
+    "our_list_top_share": null
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 5,
+     "membership": 0.66,
+     "label": [
+      "apple",
+      "google",
+      "data",
+      "iphone",
+      "device"
+     ],
+     "cluster_size": 185
+    },
+    {
+     "view": "first_sentence",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 6,
+     "membership": 0.95,
+     "label": [
+      "study",
+      "researchers",
+      "health",
+      "life",
+      "exercise"
+     ],
+     "cluster_size": 78
+    },
+    {
+     "view": "whole_article",
+     "cluster": -1,
+     "membership": 0.0,
+     "label": null,
+     "cluster_size": null
+    }
+   ],
+   "our_reader_topic": "technology_consumer",
+   "url_section": null,
+   "title_body_similarity": 0.681
+  },
+  {
+   "idx": 2576,
+   "kind": "title and body in different clusters",
+   "domain": "uk.reuters.com",
+   "date": "2017-04-23",
+   "title": "Overseas voters kick off crucial French presidential election",
+   "first_sentence": "A photo illustration shows a French voter card in front of pictures of the candidates for the French presidential election, April 22, 2017.",
+   "first_250_words": "Overseas voters kick off crucial French presidential election. A photo illustration shows a French voter card in front of pictures of the candidates for the French presidential election, April 22, 2017. REUTERS/Pascal Rossignol/Illustration A municipal employee prepares a polling station on the eve of the first round of the French presidential election in Tulle, France, April 22, 2017. REUTERS/Regis Duvignau Municipal employees prepare ballot boxes on the eve of the first round of the French presidential election at a polling station in Tulle, France, April 22, 2017. REUTERS/Regis Duvignau A municipal employee prepares ballot boxes on the eve of the first round of the French presidential election at a polling station in Tulle, France, April 22, 2017. REUTERS/Regis Duvignau PARIS/PAPEETE, French Polynesia French overseas territories and French residents in the United States and Canada began voting on Saturday in France's presidential election, a day before the main first-round of a poll that could change the global political landscape. Of nearly 47 million registered French voters, there are fewer than a million resident in far-flung places like French Polynesia in the South Pacific, and Guadeloupe, French Guiana and Martinique in the Caribbean. They vote early so as not to be influenced by the mainland results, due on Sunday evening at around 1800 GMT. The first round will send two of 11 candidates into a run-off vote in two weeks' time to pick a new president for France, a core member of the European Union and the NATO alliance, a permanent member",
+   "total_words": 752,
+   "chunks": 4,
+   "embedding": {
+    "dims": 768,
+    "first_values": [
+     -0.019,
+     -0.036,
+     0.013,
+     0.017,
+     0.021,
+     -0.035,
+     0.014,
+     0.025
+    ],
+    "length": 1.0,
+    "nearest": [
+     {
+      "title": "Markets look beyond bookies, pollsters for French election steer",
+      "similarity": 0.676,
+      "cluster": 4
+     },
+     {
+      "title": "INSTANT VIEW 2-Polls show Macron, Le Pen going through to French election run-off",
+      "similarity": 0.668,
+      "cluster": 4
+     },
+     {
+      "title": "Venezuela Prepares for Regional Elections",
+      "similarity": 0.659,
+      "cluster": 5
+     },
+     {
+      "title": "French vote widens gulf in U.S.-Europe stock volatility expectations",
+      "similarity": 0.65,
+      "cluster": 8
+     },
+     {
+      "title": "Zimbabwe Foreign Minister Backtracks on Allowing Diaspora Vote",
+      "similarity": 0.648,
+      "cluster": 5
+     }
+    ],
+    "median_similarity_to_all": 0.407,
+    "max_similarity": 0.676
+   },
+   "own_words": [
+    {
+     "word": "french",
+     "articles_with_it": 96,
+     "times_in_this_article": 12
+    },
+    {
+     "word": "regis",
+     "articles_with_it": 3,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "polling",
+     "articles_with_it": 6,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "municipal",
+     "articles_with_it": 19,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "presidential",
+     "articles_with_it": 101,
+     "times_in_this_article": 6
+    },
+    {
+     "word": "eve",
+     "articles_with_it": 21,
+     "times_in_this_article": 3
+    },
+    {
+     "word": "france",
+     "articles_with_it": 94,
+     "times_in_this_article": 5
+    },
+    {
+     "word": "election",
+     "articles_with_it": 180,
+     "times_in_this_article": 6
+    }
+   ],
+   "squeezed": [
+    6.97,
+    1.82,
+    1.97,
+    6.14,
+    4.38
+   ],
+   "umap_neighbours_same_cluster": 15,
+   "umap_neighbours_noise": 0,
+   "broad": {
+    "cluster": 4,
+    "membership": 1.0,
+    "size": 61,
+    "label": [
+     "brexit",
+     "government",
+     "election",
+     "european",
+     "french"
+    ],
+    "label_words": [
+     {
+      "word": "brexit",
+      "in_this_article": false,
+      "in_cluster": 0.328,
+      "elsewhere": 0.003
+     },
+     {
+      "word": "government",
+      "in_this_article": false,
+      "in_cluster": 0.41,
+      "elsewhere": 0.077
+     },
+     {
+      "word": "election",
+      "in_this_article": true,
+      "in_cluster": 0.361,
+      "elsewhere": 0.032
+     },
+     {
+      "word": "european",
+      "in_this_article": true,
+      "in_cluster": 0.426,
+      "elsewhere": 0.024
+     },
+     {
+      "word": "french",
+      "in_this_article": true,
+      "in_cluster": 0.213,
+      "elsewhere": 0.017
+     },
+     {
+      "word": "france",
+      "in_this_article": true,
+      "in_cluster": 0.164,
+      "elsewhere": 0.017
+     }
+    ],
+    "our_list_says": [
+     [
+      "elections_politics",
+      23
+     ],
+     [
+      "diplomacy_treaties",
+      11
+     ],
+     [
+      "public_budget_tax",
+      5
+     ]
+    ],
+    "our_list_top_share": 0.377
+   },
+   "specific": {
+    "cluster": 23,
+    "membership": 0.99,
+    "size": 61,
+    "label": [
+     "government",
+     "brexit",
+     "election",
+     "european",
+     "french"
+    ],
+    "label_words": [
+     {
+      "word": "government",
+      "in_this_article": false,
+      "in_cluster": 0.41,
+      "elsewhere": 0.077
+     },
+     {
+      "word": "brexit",
+      "in_this_article": false,
+      "in_cluster": 0.328,
+      "elsewhere": 0.003
+     },
+     {
+      "word": "election",
+      "in_this_article": true,
+      "in_cluster": 0.361,
+      "elsewhere": 0.032
+     },
+     {
+      "word": "european",
+      "in_this_article": true,
+      "in_cluster": 0.426,
+      "elsewhere": 0.024
+     },
+     {
+      "word": "french",
+      "in_this_article": true,
+      "in_cluster": 0.213,
+      "elsewhere": 0.017
+     },
+     {
+      "word": "france",
+      "in_this_article": true,
+      "in_cluster": 0.164,
+      "elsewhere": 0.017
+     }
+    ],
+    "our_list_says": [
+     [
+      "elections_politics",
+      23
+     ],
+     [
+      "diplomacy_treaties",
+      11
+     ],
+     [
+      "public_budget_tax",
+      5
+     ]
+    ],
+    "our_list_top_share": 0.377
+   },
+   "per_view": [
+    {
+     "view": "title",
+     "cluster": 8,
+     "membership": 0.48,
+     "label": [
+      "percent",
+      "china",
+      "bank",
+      "market",
+      "billion"
+     ],
+     "cluster_size": 197
+    },
+    {
+     "view": "first_sentence",
+     "cluster": 2,
+     "membership": 0.59,
+     "label": [],
+     "cluster_size": 287
+    },
+    {
+     "view": "first_250_words",
+     "cluster": 4,
+     "membership": 1.0,
+     "label": [
+      "brexit",
+      "government",
+      "election",
+      "european",
+      "french"
+     ],
+     "cluster_size": 61
+    },
+    {
+     "view": "whole_article",
+     "cluster": 8,
+     "membership": 1.0,
+     "label": [
+      "government",
+      "germany",
+      "party",
+      "china",
+      "president"
+     ],
+     "cluster_size": 78
+    }
+   ],
+   "our_reader_topic": "elections_politics",
+   "url_section": null,
+   "title_body_similarity": 0.83
+  }
+ ]
+}

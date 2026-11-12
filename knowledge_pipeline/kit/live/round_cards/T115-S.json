@@ -1,0 +1,36 @@
+{
+ "id": "T115-S",
+ "task": "T115",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do word-count students trained on all 31,133 queue labels read the engine's stories better than on the first 19,894 (T112)?",
+ "one_change": "train on 31,133 queue labels (T111 plus T114) instead of 20,000",
+ "baseline": {
+  "model": "T112 students on 19,894 queue labels, word counts",
+  "file": "runs/pulse/t112/t112_students.json",
+  "key": "headline_view_largest.direction_accuracy"
+ },
+ "prediction": {
+  "metric": "direction accuracy on the engine stories, headline view, largest training size",
+  "low": 0.64,
+  "high": 0.69,
+  "why": "T112 gave 0.658 at 19,894 labels and direction AUROC rose 0.6175, 0.6338, 0.6533 over 2,000, 6,000 and 19,894 labels (runs/pulse/t112/t112_students.json); 56 percent more labels should add little; presence AUROC expected 0.72 to 0.76; the engine-label heads reach 0.692 and 0.794; Jev labels agree with Clef's reading on presence 0.69 (runs/pulse/t110/t106_clef_dials.json), which limits the improvement"
+ },
+ "command": "SIZES=10000,0 OUT=runs/pulse/t115 LABELS=runs/pulse/t114/labels_all.jsonl /workspace/kev/.venv/bin/python -u t112_students_queue.py",
+ "result": {
+  "file": "runs/pulse/t115/t112_students.json",
+  "key": "headline_view_largest.direction_accuracy"
+ },
+ "cap_minutes": 55,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "after": [
+  "T108-P"
+ ],
+ "smoke": {
+  "command": "SIZES=300 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t115s_$(date +%s) LABELS=runs/pulse/t114/labels_all.jsonl /workspace/kev/.venv/bin/python -u t112_students_queue.py",
+  "cap_minutes": 8
+ }
+}

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What we learned</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 6px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+  .box p { margin: 0 0 8px; color: var(--ink-2); font-size: 13px; }
+  .q { font: 600 11px var(--mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 2px; }
+  .mean { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; margin: 8px 0; font-size: 13px; color: var(--ink); }
+  .src { font: 12px var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0 8px; }
+  table.t th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line-2); }
+  table.t td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: right; font-family: var(--mono); }
+  .row { display: grid; grid-template-columns: 230px 1fr 190px; gap: 10px; align-items: center; font-size: 13px; padding: 2px 0; } .row .nm { color: var(--ink-2); }
+  .track { background: var(--surface-2); border-radius: 4px; height: 12px; position: relative; } .fill { background: var(--s1); height: 12px; border-radius: 4px; } .fill.hi { background: var(--s3); } .fill.lo { background: var(--ink-3); } .base { position: absolute; top: -2px; width: 2px; height: 16px; background: var(--live); }
+  .val { font: 12px var(--mono); color: var(--ink-2); }
+  .links a { margin-right: 14px; font-size: 13px; }
+  @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+</style></head><body><main id="app"></main>
+<script>
+(function () {
+  var app = document.getElementById("app");
+  function el(tag, props) { var e = document.createElement(tag); props = props || {}; for (var k in props) { if (k === "text") e.textContent = props[k]; else if (k === "class") e.className = props[k]; else e.setAttribute(k, props[k]); } for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null) continue; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); } return e; }
+  var pct = function (x) { return Math.round(x * 100) + "%"; }, f3 = function (x) { return x.toFixed(3); }, f2 = function (x) { return x.toFixed(2); }, sgn = function (x) { return (x >= 0 ? "+" : "") + x.toFixed(3); };
+  function table(head, rows, numCols) { var t = el("table", { class: "t" }), tr = el("tr"); head.forEach(function (h, i) { tr.appendChild(el("th", { text: h, class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" })); }); t.appendChild(el("thead", {}, tr)); var tb = el("tbody"); rows.forEach(function (r) { var row = el("tr"); r.forEach(function (c, i) { var td = el("td", { class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" }); if (c instanceof Node) td.appendChild(c); else td.textContent = c == null ? "" : String(c); row.appendChild(td); }); tb.appendChild(row); }); t.appendChild(tb); return t; }
+  function bar(name, v, note, cls, base) { return el("div", { class: "row" }, el("div", { class: "nm", text: name }), el("div", { class: "track" }, el("div", { class: "fill " + (cls || ""), style: "width:" + Math.max(1, Math.round(v * 100)) + "%" }), base != null ? el("div", { class: "base", style: "left:" + Math.round(base * 100) + "%", title: "reference line" }) : null), el("div", { class: "val", text: note })); }
+  function card(question, headline, body, meaning, src) { return el("section", { class: "box" }, el("div", { class: "q", text: question }), el("h2", { text: headline }), body, meaning ? el("div", { class: "mean", text: meaning }) : null, src ? el("div", { class: "src", text: "source: " + src }) : null); }
+  fetch("data.json").then(function (r) { return r.json(); }).then(render).catch(function (e) { app.appendChild(el("p", { text: "Could not load data.json: " + e })); });
+  function render(D) {
+    var S = D.sources;
+    app.appendChild(el("h1", { text: "What we learned" }));
+    app.appendChild(el("p", { class: "lead", text: "Two days of tests on how to get better labels and better classifiers into the BitMob pipeline. Every number on this page is read from the result files when the page loads, and each card names its source file. Plain words first; the terms are defined below." }));
+    var T = el("div"); [
+      ["Teacher", "A strong model (here Sonnet) that labels articles so a small classifier can learn from them. Its labels are agreement targets, not truth."],
+      ["Human label", "A category chosen by a person. We use the MN-DS news set (16 categories, full articles), for scoring only. Nothing was trained on it."],
+      ["Agreement versus accuracy", "Agreement = two systems say the same thing. Accuracy = a system matches a human label. Agreement can be high when both are wrong."],
+      ["Within two guesses", "The reader gives its two best topics; it counts as right if either one matches the human category."],
+      ["Reader / dense / sparse", "The reader is our trained BitMob topic model (dense = it works on number-lists of meaning). Sparse = a simpler word-counting classifier (TF-IDF with logistic regression)."],
+      ["Headline plus teaser", "The headline and the first few words. This is all the text most of our labelled items contain."],
+      ["Gist", "A few sentences picked from an article by a fixed rule so that together they stand for the whole of it, within about 90 words."],
+      ["Triple", "Who did what to whom, read from a sentence's grammar: subject, relation, object."],
+      ["Trigger", "The word that marks an event in a sentence (for example the verb 'attacked')."],
+      ["Balanced accuracy", "The average of two rates: how often it says 'happened' when it did, and 'did not happen' when it did not. Always saying yes scores 0.50."],
+      ["95% range", "If the range for a difference includes zero, the difference could be chance. If it stays above zero, we count it as a real gain."]
+    ].forEach(function (d) { T.appendChild(el("p", {}, el("b", { text: d[0] + ": " }), d[1])); });
+    app.appendChild(card("Before you read", "Terms used on this page", T, null, null));
+
+    // 1 labels are short
+    var LL = D.label_length;
+    app.appendChild(card("1. How much text do our labels cover?", "Most labelled items are only a headline and a teaser: the median is " + LL.median_chars + " characters, and " + pct(LL.share_over_600_chars) + " are longer than 600.",
+      el("p", { text: LL.items.toLocaleString() + " labelled items were checked." }), "So the per-article tools we built (gist, themes, triples) do not reach those labels. They apply to full articles, which is where the human-labelled test set lives.", S.label_length));
+
+    // 2 label curve
+    var LC = D.label_curve.curves, tp = LC.topic.points, sp = LC.story.points, last = tp[tp.length - 1], prev = tp[tp.length - 2], sl = sp[sp.length - 1], sprev = sp[sp.length - 2], cb = el("div");
+    cb.appendChild(el("p", { class: "q", text: "Topic (49 classes): agreement with Sonnet on publishers the model never saw, by number of training items" }));
+    tp.forEach(function (p) { cb.appendChild(bar(p.train_items.toLocaleString() + " items", p.top1, f3(p.top1) + " (two guesses " + f3(p.top2) + ")")); });
+    cb.appendChild(el("p", { class: "q", text: "Story type (4 classes): accuracy against Sonnet; the red line is always answering '" + LC.story.always_most_common[0] + "'" }));
+    sp.forEach(function (p) { cb.appendChild(bar(p.train_items.toLocaleString() + " items", p.top1, f3(p.top1), "hi", LC.story.always_most_common[1])); });
+    app.appendChild(card("2. Would more labels help?", "Topic still improves with more labels (last doubling " + sgn(last.top1 - prev.top1) + "); story type does not (" + sgn(sl.top1 - sprev.top1) + ").", cb,
+      "Topic is worth more labels, with falling returns. Story type is held back by its definition or its features, not by label count. Always saying '" + LC.story.always_most_common[0] + "' already scores " + f3(LC.story.always_most_common[1]) + ".", S.label_curve + " (frozen embedding, " + D.label_curve.test_items + " test items from " + D.label_curve.test_domains + " unseen publishers)"));
+
+    // 3 structure test
+    var ST = D.structure.variants, order = [["V0_headline_plus_300_chars", "Headline plus teaser (today)"], ["V1_whole_article", "Whole article"], ["V2_gist", "Gist"], ["V3_opening_plus_coverage", "Opening sentence plus gist"], ["V5_theme_openers", "Theme openers"], ["V7_combined", "Combined"], ["V4_keyphrases", "Keyphrases"], ["V6_core_triples", "Triples only"]], b3 = el("div");
+    order.forEach(function (o) { var v = ST[o[0]]; b3.appendChild(bar(o[1], v.within_two, f3(v.within_two) + "  |  " + v.median_words_given + " words, " + v.median_reader_ms.toFixed(0) + " ms" + (v.diff_vs_V0 ? "  |  " + sgn(v.diff_vs_V0.diff) + " vs today" : ""), o[0] === "V0_headline_plus_300_chars" ? "lo" : (v.diff_vs_V0 && v.diff_vs_V0.low > 0 ? "hi" : ""))); });
+    var gain = ST.V2_gist.diff_vs_V0;
+    app.appendChild(card("3. What should the topic model be shown?", "The gist does as well as the whole article (" + f3(ST.V2_gist.within_two) + " against " + f3(ST.V1_whole_article.within_two) + ") from about " + Math.round(ST.V1_whole_article.median_words_given / ST.V2_gist.median_words_given) + " times fewer words.", b3,
+      "Both beat today's input by " + sgn(gain.diff) + " (95% range " + sgn(gain.low) + " to " + sgn(gain.high) + "). Green bars have a range that stays above zero. Keyphrases and triples alone add nothing for topic. The gain is small because headline plus teaser is already strong. Building the gist costs more time than reading the whole article, so its saving is for steps that pay per word.", S.structure + " (" + D.structure.articles + " human-labelled full articles; the topic model was not retrained)"));
+
+    // 4 other ideas
+    var SP = D.sparse.variants, PV = D.sparse.paired_vs_F0, EN = D.ensemble.results.V1, b4 = el("div");
+    b4.appendChild(table(["Idea", "On headline + teaser", "On whole article", "Change vs plain words (whole article), 95% range"], [
+      ["Plain words (sparse classifier)", f3(SP.F0_words.mnds_V0_within_two), f3(SP.F0_words.mnds_V1_within_two), "-"],
+      ["+ triples as extra features", f3(SP.F1_words_plus_triples.mnds_V0_within_two), f3(SP.F1_words_plus_triples.mnds_V1_within_two), sgn(PV.F1_words_plus_triples.V1.diff) + " (" + sgn(PV.F1_words_plus_triples.V1.low) + " to " + sgn(PV.F1_words_plus_triples.V1.high) + ")"],
+      ["+ thesaurus built from our own text", f3(SP.F2_words_plus_expansion.mnds_V0_within_two), f3(SP.F2_words_plus_expansion.mnds_V1_within_two), sgn(PV.F2_words_plus_expansion.V1.diff) + " (" + sgn(PV.F2_words_plus_expansion.V1.low) + " to " + sgn(PV.F2_words_plus_expansion.V1.high) + ")"],
+      ["Dense reader (reference)", f3(D.sparse.dense_reader_reference_mnds.V0), f3(D.sparse.dense_reader_reference_mnds.V1), "-"],
+      ["Dense and sparse averaged", "-", f3(EN.ensemble_dense_F3), sgn(EN.ensemble_dense_F3_minus_best_single[0]) + " vs the dense reader alone (" + sgn(EN.ensemble_dense_F3_minus_best_single[1]) + " to " + sgn(EN.ensemble_dense_F3_minus_best_single[2]) + ")"]
+    ], [1, 2]));
+    b4.appendChild(el("p", { text: "The thesaurus links words that appear in similar articles. Examples it learned: " + Object.keys(D.sparse.thesaurus_examples).map(function (w) { return w + " gives " + D.sparse.thesaurus_examples[w].slice(0, 4).join(", "); }).join("; ") + "." }));
+    var ex = PV.F2_words_plus_expansion.V0;
+    app.appendChild(card("4. Do a thesaurus, triple features or combining models help topic?", "Mostly no. The thesaurus helps only on short text (" + sgn(ex.diff) + " on headline plus teaser, range " + sgn(ex.low) + " to " + sgn(ex.high) + ").", b4,
+      "Its neighbours are associates from our feed, not synonyms: some are useful, some are noise. The plain sparse model is within " + f3(D.sparse.dense_reader_reference_mnds.V1 - SP.F0_words.mnds_V1_within_two) + " of the dense reader on whole articles and is far cheaper. The two models make the same mistakes, so averaging them gains nothing.", S.sparse + "; " + S.ensemble));
+
+    // 5 teacher
+    var TT = D.teacher_topic, TS = D.teacher_story, TK = D.tokens, b5 = el("div");
+    b5.appendChild(el("p", { class: "q", text: "Topic: Sonnet's label matches the human category (128 articles, blind passes)" }));
+    b5.appendChild(bar("Reading the full article", TT.human_match.full, f3(TT.human_match.full))); b5.appendChild(bar("Reading only the gist", TT.human_match.gist, f3(TT.human_match.gist), "hi")); b5.appendChild(bar("Reading only the first 600 characters", TT.human_match.first600, f3(TT.human_match.first600), "lo"));
+    b5.appendChild(el("p", { text: "Topic: the gist label equals the full-text label for " + pct(TT.agree_full_gist) + " of articles. Gist minus full text: " + sgn(TT.gist_minus_full[0]) + " (95% range " + sgn(TT.gist_minus_full[1]) + " to " + sgn(TT.gist_minus_full[2]) + ")." }));
+    b5.appendChild(el("p", { text: "Story type (" + TS.n + " articles): the gist label equals the full-text label for " + pct(TS.agreement) + "; of the " + TS.non_fact_full + " articles the full text called opinion, forecast or unclear, the gist gave the same label for " + TS.non_fact_same_in_gist + ". There is no human label for story type here, so this is agreement only." }));
+    b5.appendChild(el("p", { text: "Cost seen in this session: topic " + Math.round(TK.topic_full_text_four_agents / TK.topic_gist_one_agent * 10) / 10 + " times fewer tokens with the gist; story type " + Math.round(TK.story_full_text_two_agents / TK.story_gist_one_agent * 10) / 10 + " times fewer (agent overhead included)." }));
+    app.appendChild(card("5. Can the teacher read the gist instead of the whole article?", "Yes, for topic and story type: it reproduces the full-article labels and costs a fraction of the tokens.", b5,
+      "This is what makes labelling full articles affordable. Limits: one Sonnet sample per article, a topic-name list rather than the full codebook, and for story type no outside truth. A first attempt at the full-text pass was set aside because that agent read only the first 600 characters; it was rerun in small batches.", S.teacher_topic + "; " + S.teacher_story + "; tokens: " + TK.note));
+
+    // 6 gist for humans
+    var GH = D.gist_for_humans, b6 = el("div");
+    ["sonnet", "opus"].forEach(function (n) { var g = GH[n]; b6.appendChild(bar(n.charAt(0).toUpperCase() + n.slice(1) + ": gist preferred " + g.gist_preferred + ", first sentences " + g.first_sentences_preferred + ", tie " + g.tie, g.gist_preferred / g.articles, "mean score " + g.mean_score_gist.toFixed(2) + " against " + g.mean_score_first.toFixed(2))); });
+    app.appendChild(card("6. Is the gist a good summary for a person to read?", "No. Judges shown the gist and the opening sentences, blind, did not prefer the gist (" + GH.sonnet.gist_preferred + " and " + GH.opus.gist_preferred + " of " + GH.sonnet.articles + ").", b6,
+      "The gist is built to cover the whole article, which suits a classifier. It often misses the sentence that says what happened. Use it as classifier and teacher input, not as a reading summary.", S.gist_for_humans));
+
+    // 7 triples
+    var V1 = D.triples_v1, V2 = D.triples_v2, CB = D.carb.results, MT = D.maven_trigger, MF = D.maven_filter, TA = D.track_a, b7 = el("div");
+    b7.appendChild(table(["Check", "Result"], [
+      ["Judged fully correct, new extractor (Sonnet / Opus), first sample", pct(V1.sonnet.own.yes) + " / " + pct(V1.opus.own.yes)],
+      ["Judged fully correct, existing Fact finder (same sample)", pct(V1.sonnet.fact_finder.yes) + " / " + pct(V1.opus.fact_finder.yes)],
+      ["New extractor after fixes, fresh sample (Sonnet / Opus)", pct((V2.sonnet.yes || 0) / V2.n) + " / " + pct((V2.opus.yes || 0) / V2.n)],
+      ["Public benchmark CaRB, score of the new extractor / existing Fact finder (F1)", f2(CB[0].f1) + " / " + f2(CB[2].f1)],
+      ["Event triggers the triples find (verb of a triple, or head of subject/object)", pct(MT.trigger_recall.verb_or_argument_head)],
+      ["Share of the extractor's verbs that are real events, before / after dropping be and have", pct(MF.before.precision) + " / " + pct(MF.after_drop_be_and_have.precision)],
+      ["'Happened' head, balanced accuracy: alone / plus triple notes", f3(TA.head_with_window_features_reproduced) + " / " + f3(TA.head_with_window_plus_notes) + " (gain " + sgn(TA.gain_over_window_head) + ", range " + sgn(TA.gain_bootstrap_95_over_window_head[0]) + " to " + sgn(TA.gain_bootstrap_95_over_window_head[1]) + ")"]
+    ]));
+    app.appendChild(card("7. Can we read relationships out of text?", "Partly. The new extractor is clearly better than the existing one but only about " + pct(V1.sonnet.own.yes) + " of its triples are fully correct.", b7,
+      "Remaining errors come from the small grammar parser (wrong subject for an infinitive, arguments cut off, roles swapped). Better rules did not move accuracy; a stronger parser or a trained extraction model is the next lever. Triples are good at proposing event triggers for the condition path, and they add little to the 'happened' head, which already reads the words around the trigger.", S.triples_v1 + "; " + S.triples_v2 + "; " + S.carb + "; " + S.maven_trigger + "; " + S.maven_filter + "; " + S.track_a));
+
+    // 8 noise words
+    var SM = D.simplify, b8 = el("div");
+    b8.appendChild(table(["Version of each sentence", "Similarity to the original (0 to 1)", "Nearest sentence is from the same article"], [
+      ["Original sentence", "1.00", pct(SM.original_nearest_other_sentence_same_article)],
+      ["Noise words removed", f2(SM.variants.no_noise_words.mean_cosine_to_original), pct(SM.variants.no_noise_words.nearest_sentence_is_from_same_article)],
+      ["Noise words removed, negations kept", f2(SM.variants.no_noise_words_keep_negation.mean_cosine_to_original), pct(SM.variants.no_noise_words_keep_negation.nearest_sentence_is_from_same_article)],
+      ["Content words only", f2(SM.variants.content_words.mean_cosine_to_original), pct(SM.variants.content_words.nearest_sentence_is_from_same_article)],
+      ["Subject-verb-object core only", f2(SM.variants.core_triples.mean_cosine_to_original), pct(SM.variants.core_triples.nearest_sentence_is_from_same_article)]
+    ], [1, 2]));
+    app.appendChild(card("8. Does meaning survive when filler words are removed?", "Mostly: similarity stays near " + f2(SM.variants.no_noise_words.mean_cosine_to_original) + " (two random sentences score " + f2(SM.random_pair_cosine) + ").", b8,
+      "Except for one trap: the standard list of filler words includes 'not' and 'no'. " + SM.negation.sentences_with_negation + " sentences contain a negation and plain removal dropped it in " + SM.negation.negation_lost_no_noise_words + " of them. Keep negations. Cutting a sentence to subject, verb and object loses more.", S.simplify));
+
+    // 9 misses
+    var M = el("div"); [
+      "I expected the gist to read better to people than the opening sentences. It did not (card 6).",
+      "I expected triple accuracy of at least 60%. It is about 40%, and fixing known failure types did not move it (card 7).",
+      "I expected keyphrases, a combined text and a dense-plus-sparse average to add to topic. They did not (cards 3 and 4).",
+      "I expected the topic model to be near 0.65 at 4,000 labels. It was lower (card 2).",
+      "I expected running a support-or-contradict model on every sentence to be usable. It calls unrelated sentences contradictions; it has to be run only on the sentences closest to the claim.",
+      "I expected recall to beat precision on the public triple benchmark. It was the other way round.",
+      "One labelling agent read only the first 600 characters while reporting it had read the article. Each agent must now say whether it read in full, and batches are small.",
+      "A first version of the same-article check let a sentence match its own original and looked far better than it was. It was corrected before reporting."
+    ].forEach(function (t) { M.appendChild(el("p", { text: t })); });
+    app.appendChild(card("9. Where I was wrong", "The tests that missed my predictions are as useful as the ones that held.", M, "Each prediction was written in the ledger before its run (T42, L1063 to L1111).", null));
+
+    // 10 decisions
+    var Dd = table(["Decision", "What it unlocks", "Cost / resource"], [
+      ["Label full articles for training, giving the teacher the gist", "Track C. Topic still gains from more labels; the gist makes each label about a quarter of the tokens", "Teacher tokens (Sonnet), no GPU. Hosted spend is near its cap, so session tokens or a raised cap"],
+      ["Upload a training set for the heads", "Track D. Retrain topic and story heads on the new labels at the 10,000-article cadence", "Kaggle, two T4 GPUs, private dataset upload"],
+      ["Define 'condition' for full articles", "No outside human truth for condition on full articles exists yet. It needs a definition decision before more work", "Your decision"],
+      ["Stronger parser or trained triple model", "Triple quality is limited by the small parser", "CaRB (MIT) for scoring; teacher labels for training; Kaggle for a trained model"],
+      ["Better thesaurus source", "The static embedding model in the repo could give cleaner neighbours than our own text", "CPU, minutes"]
+    ]);
+    var L = el("div", { class: "links" }); [["Techniques on one article", "../article-techniques/index.html"], ["Four beats", "../article-beats/index.html"], ["Four levels", "../article-levels/index.html"], ["Sentences to relations", "../article-relations/index.html"], ["Topic shape (corpus clusters)", "../clusters/index.html"]].forEach(function (l) { L.appendChild(el("a", { href: l[1], text: l[0] })); });
+    app.appendChild(card("10. What to decide next", "Where the money and GPU time would go, in order.", Dd, "Nothing in the table has been started. The only GPU use in this work was one short embedding job on the 5090 for the corpus-clustering test; Kaggle has not been used.", null));
+    app.appendChild(card("The pages behind these results", "Open any of them to see the raw article and the working.", L, null, null));
+  }
+})();
+</script></body></html>

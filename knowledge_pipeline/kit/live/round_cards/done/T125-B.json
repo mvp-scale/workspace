@@ -1,0 +1,33 @@
+{
+ "id": "T125-B",
+ "task": "T125",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Is the loss from mixing Jev labels into the engine-readings training real, with paired intervals on the differences?",
+ "one_change": "rerun T116 with the same folds and save per-story predictions, adding paired bootstrap intervals",
+ "baseline": {
+  "model": "T116 mixed training, direction AUROC on held-out engine stories",
+  "file": "runs/pulse/t116/t116_mix.json",
+  "key": "mix.direction_auroc"
+ },
+ "prediction": {
+  "metric": "mixed-training direction AUROC on held-out engine stories (reproduction of T116)",
+  "low": 0.68,
+  "high": 0.7,
+  "why": "T116 gave 0.6904 with these folds and features (runs/pulse/t116/t116_mix.json), the script is the same plus the interval step; a 1,500-label smoke run before this prediction, not scored, showed the paired interval for the direction accuracy difference entirely below zero; expect the intervals for mixed minus engine-only presence AUROC and direction AUROC to lie below zero as well; this was added after MM3-0675 (STRONG consensus on the overnight plan)"
+ },
+ "command": "FOLDS=5 OUT=runs/pulse/t125 LABELS=runs/pulse/t114/labels_all.jsonl /workspace/kev/.venv/bin/python -u t125_paired.py",
+ "result": {
+  "file": "runs/pulse/t125/t125_mix.json",
+  "key": "mix.direction_auroc"
+ },
+ "cap_minutes": 30,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "FOLDS=2 LIMIT=1500 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t125s_$(date +%s) LABELS=runs/pulse/t114/labels_all.jsonl /workspace/kev/.venv/bin/python -u t125_paired.py",
+  "cap_minutes": 8
+ }
+}

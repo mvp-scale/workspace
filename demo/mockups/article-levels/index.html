@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>One article, four levels</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  main { max-width: 1180px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 4px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+  .box p { margin: 0 0 8px; color: var(--ink-2); font-size: 13px; }
+  .src { font: 12px var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.t th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line-2); }
+  table.t td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: right; font-family: var(--mono); }
+  .beat { border-left: 3px solid var(--line-2); padding: 2px 0 2px 12px; margin: 0 0 14px; } .beat h3 { font-size: 14px; margin: 0 0 2px; } .what { font-size: 12px; color: var(--ink-3); margin: 0 0 6px; }
+  .rawtext { font-size: 13px; color: var(--ink); white-space: pre-wrap; padding: 2px 0 6px; } .mark { font: 11px var(--mono); color: var(--accent); border-top: 1px dashed var(--accent); margin: 6px 0; padding-top: 2px; }
+  .cb { display: inline-block; min-width: 22px; text-align: center; border-radius: 11px; font: 600 11px/20px var(--mono); color: #fff; padding: 0 5px; } .cb.none { background: transparent; color: var(--ink-3); border: 1px dashed var(--line-2); }
+  .c0 { background: var(--s1); } .c1 { background: var(--s2); } .c2 { background: var(--s3); } .c3 { background: var(--s4); color: #14161a; } .c4 { background: var(--s5); } .c5 { background: var(--s6); } .c6 { background: #6f7683; } .c7 { background: #2a5bd7; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; align-items: center; } .tabs button { border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 4px 12px; cursor: pointer; font: inherit; } .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); } .tabs .lab { font-size: 12px; color: var(--ink-3); }
+  .sim { white-space: nowrap; font-family: var(--mono); font-size: 12px; } .sim .bar { display: inline-block; height: 7px; background: var(--s1); border-radius: 3px; vertical-align: middle; margin-right: 4px; } .sim.top .bar { background: var(--s2); } .sim.top { font-weight: 600; }
+  td.tx { font-size: 13px; } tr.in250 td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .m td { text-align: center; font-family: var(--mono); } .m th { text-align: center; }
+</style></head><body><main id="app"></main>
+<script>
+(function () {
+  var app = document.getElementById("app");
+  function el(tag, props) { var e = document.createElement(tag); props = props || {}; for (var k in props) { if (k === "text") e.textContent = props[k]; else if (k === "class") e.className = props[k]; else e.setAttribute(k, props[k]); } for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null) continue; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); } return e; }
+  var pct = function (x) { return Math.round(x * 100) + "%"; };
+  function box(title, intro, body, src) { return el("section", { class: "box" }, el("h2", { text: title }), intro ? el("p", { text: intro }) : null, body, src ? el("div", { class: "src", text: "source: " + src }) : null); }
+  var LET = "ABCDEFGHIJKLMNOP";
+  function badge(letter, tip) { return letter == null ? el("span", { class: "cb none", text: "-", title: "In no group" }) : el("span", { class: "cb c" + (LET.indexOf(letter) % 8), text: letter, title: tip || "" }); }
+  fetch("data.json").then(function (r) { return r.json(); }).then(render).catch(function (e) { app.appendChild(el("p", { text: "Could not load data.json: " + e })); });
+  function render(D) {
+    var SRC = "runs/harvest/article_levels.json", RW = D.raw, wc = function (t) { return t.split(/\s+/).filter(Boolean).length; }, cut = RW.slice_250_ends_at_char, t250 = RW.body.slice(0, cut), rest = RW.body.slice(cut);
+    var LN = { title: "Title", first_sentence: "First sentence", first_250_words: "First 250 words", full_article: "Full article" };
+    app.appendChild(el("h1", { text: "One article, four levels" }));
+    app.appendChild(el("p", { class: "lead", text: RW.title + ". Only this article's own text is used. Each level is turned into numbers by " + D.model + ". Similarity runs from 0 (unrelated) to 1 (the same meaning)." }));
+
+    // terms used on this page
+    var G = el("div"), defs = [
+      ["Level", "One of the four texts cut from the article: the title, the first sentence, the first 250 words, and the full article."],
+      ["Piece", "A paragraph or a sentence of the article. The tables below list every piece exactly as written. Pieces are numbered from 1 in the order they appear in the article."],
+      ["Similarity", "How close the meaning of two texts is, from 0 (unrelated) to 1 (the same meaning). It is the angle between their number lists. It says how alike two texts are. It does not say what the article is about, which way something is moving, or why it was written."],
+      ["Group (a letter)", "HDBSCAN looks at all pieces of one size (all paragraphs, or all sentences) and collects pieces whose meaning is packed closely together into a group. The letter is only a name: A is the largest group at that piece size, B the next largest, and so on. Paragraph groups and sentence groups come from two separate runs, so paragraph group A and sentence group A are not the same thing."],
+      ["Dash (-)", "The piece is in no group: it is not close enough to enough other pieces. HDBSCAN calls these noise."],
+      ["Colour", "Only tells groups apart. Same colour and letter means the same group. It carries no other meaning."],
+      ["Bar and number", "The similarity of the piece to that level. The five highest for a level are in orange."],
+      ["Blue edge on a row", "The piece starts inside the first 250 words."],
+      ["Gist", "A few sentences from the article chosen to stand for all of it. Chosen by a fixed rule (below), not by a model's opinion."],
+      ["Coverage", "How well a set of sentences stands for the article: for every sentence in the article, take its best similarity to any chosen sentence, then average over the article. 1.00 would mean every sentence has an identical twin among the chosen ones."],
+      ["Budget", "The most words the gist may use. Here 120, so the gist stays small enough for a model to read."]
+    ];
+    defs.forEach(function (d) { G.appendChild(el("p", {}, el("b", { text: d[0] + ": " }), d[1])); });
+    app.appendChild(box("Terms used on this page", "Each one is defined here once and applies everywhere below.", G));
+
+    // 1 raw text
+    var raw = el("div");
+    function beat(n, name, note, text) { return el("div", { class: "beat" }, el("h3", { text: "Level " + n + ": " + name + " (" + wc(text) + " words)" }), el("div", { class: "what", text: note }), el("div", { class: "rawtext", text: text })); }
+    raw.appendChild(beat(1, "Title", "The headline.", RW.title)); raw.appendChild(beat(2, "Headline / first sentence", "The first sentence of the body.", RW.first_sentence)); raw.appendChild(beat(3, "First 250 words", "Cut at word 250, which can fall inside a sentence.", t250));
+    var b4 = el("div", { class: "beat" }, el("h3", { text: "Level 4: Full article (" + RW.words_in_body + " words)" }), el("div", { class: "what", text: "The complete body, unchanged, with its paragraph breaks. The line marks where level 3 stops (" + wc(rest) + " words follow)." }));
+    b4.appendChild(el("div", { class: "rawtext", text: t250 })); b4.appendChild(el("div", { class: "mark", text: "=== level 3 (first 250 words) ends here ===" })); b4.appendChild(el("div", { class: "rawtext", text: rest })); raw.appendChild(b4);
+    app.appendChild(box("The four levels, raw", "Verbatim. Nothing generated.", raw, SRC + "#raw"));
+
+    // distilled: the gist
+    var gbox = el("div"), gintro = el("p", { text: "Loading..." }); app.appendChild(el("section", { class: "box" }, el("h2", { text: "Distilled: the gist of the article" }), gintro, gbox));
+    fetch("gist.json").then(function (r) { return r.json(); }).then(function (g) {
+      gintro.textContent = "The rule: start with nothing chosen. Repeatedly add the sentence that raises coverage the most, while the total stays within " + g.budget_words + " words and at most " + g.max_pieces + " sentences. Stop when nothing adds coverage. The result is the text you would hand to a classifier (for example the BitMob topic model) in place of the headline and the first words.";
+      var rows = g.pick_order.map(function (pn, k) { var item = g.gist.filter(function (x) { return x.piece === pn; })[0], st = g.steps[k]; return [String(k + 1), "sentence " + pn, item.words, item.inside_first_250_words ? "yes" : "no", st.gain, st.coverage_after.toFixed(2), item.text]; });
+      var t = el("table", { class: "t" }), h = el("tr"); ["Picked", "Where", "Words", "Inside the first 250 words", "Coverage added (out of " + (g.pieces * 1000) + ")", "Coverage after this pick", "The sentence, word for word"].forEach(function (x, i) { h.appendChild(el("th", { text: x, class: i > 0 && i < 6 && i !== 1 ? "n" : "" })); }); t.appendChild(el("thead", {}, h));
+      var tb = el("tbody"); rows.forEach(function (r) { var tr = el("tr"); r.forEach(function (c, i) { tr.appendChild(el("td", { class: i > 1 && i < 6 ? "n" : (i === 6 ? "tx" : ""), text: String(c) })); }); tb.appendChild(tr); }); t.appendChild(tb); gbox.appendChild(t);
+      gbox.appendChild(el("p", { class: "src", text: "Picked = the order the rule chose them. The first pick does most of the work; later picks add less each time." }));
+      gbox.appendChild(el("p", { text: "Compared with what a model reads today, the first " + g.first_pieces.length + " sentences (sentences " + g.first_pieces.join(", ") + "):" }));
+      var ct = el("table", { class: "t" }), ch = el("tr"); ["", "Gist", "First " + g.first_pieces.length + " sentences"].forEach(function (x, i) { ch.appendChild(el("th", { text: x, class: i ? "n" : "" })); }); ct.appendChild(el("thead", {}, ch));
+      var ctb = el("tbody"); [["Coverage of the whole article", g.coverage.gist.toFixed(3), g.coverage.first_pieces.toFixed(3)], ["Similarity of this text to the full article", g.similarity_to_full_article.gist.toFixed(3), g.similarity_to_full_article.first_pieces.toFixed(3)]].forEach(function (r) { var tr = el("tr"); r.forEach(function (c, i) { tr.appendChild(el("td", { class: i ? "n" : "", text: c })); }); ctb.appendChild(tr); }); ct.appendChild(ctb); gbox.appendChild(ct);
+      gbox.appendChild(el("p", { class: "src", text: "Checked two ways. Lean proves the rule never picks a sentence twice, never goes over the budget, never picks outside the article and never picks more than the limit (lean/GistSelect.lean). The same numbers were run through Lean and through the Python reference: " + (g.python_equals_lean ? "both chose the same sentences in the same order (" + g.lean_pick_order.join(", ") + ")." : "they DID NOT agree: Python " + g.pick_order.join(", ") + ", Lean " + (g.lean_pick_order || []).join(", ") + ".") }));
+      gbox.appendChild(el("p", { class: "src", text: "Not shown: that a classifier does better on the gist than on the headline and first words. That needs the topic model run on gist text against human labels, which has not been done." }));
+      gbox.appendChild(el("div", { class: "src", text: "source: runs/harvest/article_gist.json (gist.py), lean/GistSelect.lean" }));
+    }).catch(function (e) { gbox.appendChild(el("p", { text: "Could not load gist.json: " + e })); });
+
+    // 2 matrix
+    var mt = el("table", { class: "t m" }), hr = el("tr"); hr.appendChild(el("th", { text: "" })); D.beat_names.forEach(function (n) { hr.appendChild(el("th", { text: LN[n] })); }); mt.appendChild(hr);
+    D.beat_matrix.forEach(function (row, i) { var tr = el("tr"); tr.appendChild(el("th", { text: LN[D.beat_names[i]] })); row.forEach(function (v, j) { tr.appendChild(el("td", { text: i === j ? "-" : v.toFixed(2) })); }); mt.appendChild(tr); });
+    app.appendChild(box("How the four levels relate to each other", "Each level embedded whole. The full article is the average of " + D.full_article_vector.replace("mean of ", "") + ", because the model reads about 256 tokens at a time.", mt, SRC + "#beat_matrix"));
+
+    // 3 every piece against every level
+    var holder = el("div"), tabs = el("div", { class: "tabs" }), lvl = "paragraphs", key = "position";
+    function sortKeys() { return [["position", "Article order"]].concat(D.beat_names.map(function (n) { return [n, "Closest to: " + LN[n]]; })); }
+    function draw() {
+      holder.textContent = ""; tabs.textContent = "";
+      [["paragraphs", "Paragraphs"], ["sentences", "Sentences"]].forEach(function (x) { var b = el("button", { text: x[1], "aria-pressed": lvl === x[0] ? "true" : "false" }); b.addEventListener("click", function () { lvl = x[0]; draw(); }); tabs.appendChild(b); });
+      tabs.appendChild(el("span", { class: "lab", text: "  Sort:" }));
+      sortKeys().forEach(function (x) { var b = el("button", { text: x[1], "aria-pressed": key === x[0] ? "true" : "false" }); b.addEventListener("click", function () { key = x[0]; draw(); }); tabs.appendChild(b); });
+      var L = D[lvl], rows = L.rows.slice(), topSet = {}, tip = {}, one = lvl === "paragraphs" ? "paragraph" : "sentence";
+      L.group_table.forEach(function (g) { tip[g.letter] = "Group " + g.letter + ": " + g.n + " " + lvl + ", from " + one + " " + (g.first + 1) + " to " + (g.last + 1) + ". Most central: " + L.rows[g.central].text.slice(0, 90); });
+      var lg = el("table", { class: "t" }), lh = el("tr"); ["Group", "Pieces in it", "Where in the article", "Inside the first 250 words", "How alike its pieces are", "Most central piece, word for word"].forEach(function (x, i) { lh.appendChild(el("th", { text: x, class: i > 0 && i < 5 && i !== 2 ? "n" : "" })); }); lg.appendChild(el("thead", {}, lh));
+      var lb = el("tbody"); L.group_table.forEach(function (g) { var tr = el("tr"); var c0 = el("td"); c0.appendChild(badge(g.letter, tip[g.letter])); tr.appendChild(c0); tr.appendChild(el("td", { class: "n", text: String(g.n) })); tr.appendChild(el("td", { text: one + " " + (g.first + 1) + " to " + (g.last + 1) })); tr.appendChild(el("td", { class: "n", text: g.inside_first_250 + " of " + g.n })); tr.appendChild(el("td", { class: "n", text: g.within_similarity.toFixed(2) })); tr.appendChild(el("td", { class: "tx", text: L.rows[g.central].text })); lb.appendChild(tr); });
+      var none = L.rows.filter(function (r) { return r.letter == null; }).length; var tn = el("tr"); var c0n = el("td"); c0n.appendChild(badge(null)); tn.appendChild(c0n); tn.appendChild(el("td", { class: "n", text: String(none) })); tn.appendChild(el("td", { text: "spread through the article" })); tn.appendChild(el("td", { class: "n", text: L.rows.filter(function (r) { return r.letter == null && r.in_first_250; }).length + " of " + none })); tn.appendChild(el("td", { class: "n", text: "-" })); tn.appendChild(el("td", { class: "tx", text: "In no group (noise)." })); lb.appendChild(tn); lg.appendChild(lb);
+      holder.appendChild(el("p", { class: "src", text: "The groups at this piece size. How alike its pieces are = average similarity between the pieces inside the group. The most central piece is the one closest to the rest of its group." })); holder.appendChild(lg); holder.appendChild(el("p", { class: "src", text: "Every piece, with its group and its similarity to each level:" })); D.beat_names.forEach(function (n) { topSet[n] = {}; D.top5[lvl][n].forEach(function (i) { topSet[n][i] = true; }); });
+      if (key !== "position") rows.sort(function (a, b) { return b.sim[key] - a.sim[key]; });
+      var t = el("table", { class: "t" }), h = el("tr"); ["Piece no.", "Group", "Text, word for word"].concat(D.beat_names.map(function (n) { return "Similarity to " + LN[n].toLowerCase(); })).forEach(function (x, i) { h.appendChild(el("th", { text: x, class: i > 2 ? "n" : "" })); }); t.appendChild(el("thead", {}, h));
+      var tb = el("tbody"); rows.forEach(function (r) {
+        var tr = el("tr", { class: r.in_first_250 ? "in250" : "" }); tr.appendChild(el("td", { class: "n", text: String(r.i + 1) })); var g = el("td"); g.appendChild(badge(r.letter, tip[r.letter])); tr.appendChild(g); tr.appendChild(el("td", { class: "tx", text: r.text }));
+        D.beat_names.forEach(function (n) { var v = r.sim[n], td = el("td", { class: "n" }), sp = el("span", { class: "sim" + (topSet[n][r.i] ? " top" : "") }); sp.appendChild(el("span", { class: "bar", style: "width:" + Math.max(2, Math.round(60 * (v - 0.3) / 0.7)) + "px" })); sp.appendChild(document.createTextNode(v.toFixed(2))); td.appendChild(sp); tr.appendChild(td); });
+        tb.appendChild(tr);
+      }); t.appendChild(tb); holder.appendChild(t);
+      var ins = D.top5_inside_first_250[lvl];
+      holder.appendChild(el("p", { class: "src", text: L.rows.length + " " + lvl + ". HDBSCAN (smallest group 3, min samples 2) found " + L.groups + " group(s); " + pct(L.noise) + " are in no group. Orange numbers are the 5 pieces closest to that level. Of those 5, the number inside the first 250 words: " + D.beat_names.map(function (n) { return LN[n] + " " + ins[n]; }).join(", ") + ". A blue edge on a row means it lies inside the first 250 words." }));
+    }
+    holder.appendChild(el("div")); app.appendChild(box("Every piece of the article against every level", "Each paragraph or sentence is shown exactly as written, with how close it is to the title, the first sentence, the first 250 words and the full article. The circle is the group HDBSCAN gave the piece; a dash means no group.", el("div", {}, tabs, holder), SRC + "#paragraphs.rows, #sentences.rows, #top5"));
+    draw();
+  }
+})();
+</script></body></html>

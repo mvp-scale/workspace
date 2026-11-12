@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>One article, four beats</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 4px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+  .box p { margin: 0 0 8px; color: var(--ink-2); font-size: 13px; }
+  .src { font: 12px var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.t th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line-2); }
+  table.t td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: right; font-family: var(--mono); }
+  .w { font-family: var(--mono); font-size: 12px; }
+  .beat { border-left: 3px solid var(--line-2); padding: 2px 0 2px 12px; margin: 0 0 14px; } .beat h3 { font-size: 14px; margin: 0 0 2px; } .what { font-size: 12px; color: var(--ink-3); margin: 0 0 6px; }
+  .pc { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; border-bottom: 1px dotted var(--line); font-size: 13px; }
+  .pc .tx { flex: 1; } .pc .sm { font: 11px var(--mono); color: var(--ink-3); white-space: nowrap; }
+  .cb { display: inline-block; min-width: 22px; text-align: center; border-radius: 11px; font: 600 11px/20px var(--mono); color: #fff; padding: 0 5px; } .cb.none { background: transparent; color: var(--ink-3); border: 1px dashed var(--line-2); }
+  .c0 { background: var(--s1); } .c1 { background: var(--s2); } .c2 { background: var(--s3); } .c3 { background: var(--s4); color: #14161a; } .c4 { background: var(--s5); } .c5 { background: var(--s6); } .c6 { background: #6f7683; } .c7 { background: #2a5bd7; }
+  button.more { margin-top: 8px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  .rawtext { font-size: 13px; color: var(--ink); white-space: pre-wrap; padding: 2px 0 6px; } .mark { font: 11px var(--mono); color: var(--accent); border-top: 1px dashed var(--accent); margin: 6px 0; padding-top: 2px; }
+  .vs .cb { align-self: flex-start; flex: none; }
+  .strip { display: flex; flex-wrap: wrap; gap: 2px; } .sc { width: 22px; height: 22px; border-radius: 4px; text-align: center; font: 600 11px/22px var(--mono); color: #fff; } .sc.none { background: var(--surface-2); border: 1px solid var(--line-2); }
+  .grp { margin: 0 0 14px; } .gh { margin-bottom: 4px; font-size: 13px; } .vs { display: flex; gap: 8px; font-size: 13px; padding: 2px 0; border-bottom: 1px dotted var(--line); } .vs .sm { font: 11px var(--mono); color: var(--ink-3); min-width: 28px; }
+  .yes { color: var(--s3); font-weight: 600; } .no { color: var(--ink-3); }
+  .flowline { font-size: 14px; color: var(--ink); margin: 0 0 8px; }
+</style></head><body><main id="app"></main>
+<script>
+(function () {
+  var app = document.getElementById("app");
+  function el(tag, props) { var e = document.createElement(tag); props = props || {}; for (var k in props) { if (k === "text") e.textContent = props[k]; else if (k === "class") e.className = props[k]; else e.setAttribute(k, props[k]); } for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null) continue; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); } return e; }
+  var pct = function (x) { return Math.round(x * 100) + "%"; };
+  function table(head, rows, numCols) { var t = el("table", { class: "t" }), tr = el("tr"); head.forEach(function (h, i) { tr.appendChild(el("th", { text: h, class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" })); }); t.appendChild(el("thead", {}, tr)); var tb = el("tbody"); rows.forEach(function (r) { var row = el("tr"); r.forEach(function (c, i) { var td = el("td", { class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" }); if (c instanceof Node) td.appendChild(c); else td.textContent = c == null ? "" : String(c); row.appendChild(td); }); tb.appendChild(row); }); t.appendChild(tb); return t; }
+  function box(title, intro, body, src) { return el("section", { class: "box" }, el("h2", { text: title }), intro ? el("p", { text: intro }) : null, body, src ? el("div", { class: "src", text: "source: " + src }) : null); }
+  function badge(c) { return c == null ? el("span", { class: "cb none", text: "-" }) : el("span", { class: "cb c" + (c % 8), text: String(c) }); }
+  fetch("data.json").then(function (r) { return r.json(); }).then(render).catch(function (e) { app.appendChild(el("p", { text: "Could not load data.json: " + e })); });
+  function render(D) {
+    var SRC = "runs/harvest/article_beats.json", B = D.beats, names = { title: "Beat 1: Title", first_sentence: "Beat 2: First sentence", first_250_words: "Beat 3: First 250 words", whole_article: "Beat 4: Whole article" };
+    var cw = {}; D.concepts.forEach(function (c) { cw[c.id] = c.words.slice(0, 4).map(function (w) { return w.word; }).join(" "); });
+    app.appendChild(el("h1", { text: "One article, four beats" }));
+    app.appendChild(el("p", { class: "lead", text: D.title + " (" + D.domain + "). Only this article's own text is used. Each beat is cut into pieces, the pieces are turned into numbers by " + D.model + ", and HDBSCAN groups the pieces that are closest in meaning." }));
+
+    // the four beats as raw text, exactly as the source holds it (paragraph breaks kept)
+    var rawBox = el("div"), wc = function (t) { return t.split(/\s+/).filter(Boolean).length; }, RW = D.raw, cut = RW.slice_250_ends_at_char, t250 = RW.body.slice(0, cut), rest = RW.body.slice(cut);
+    function rawBeat(n, name, note, text) { return el("div", { class: "beat" }, el("h3", { text: "Beat " + n + ": " + name + " (" + wc(text) + " words)" }), el("div", { class: "what", text: note }), el("div", { class: "rawtext", text: text })); }
+    rawBox.appendChild(rawBeat(1, "Title", "The headline.", RW.title));
+    rawBox.appendChild(rawBeat(2, "Headline / first sentence", "The first sentence of the body.", RW.first_sentence));
+    rawBox.appendChild(rawBeat(3, "First 250 words", "The first 250 words of the body, cut at word 250 (the cut can fall inside a sentence).", t250));
+    var b4 = el("div", { class: "beat" }, el("h3", { text: "Beat 4: Full article (" + RW.words_in_body + " words)" }), el("div", { class: "what", text: "The complete body text, unchanged, with its paragraph breaks. The line below marks where beat 3 stops; everything after it is the text beyond the 250-word slice (" + wc(rest) + " words)." }));
+    b4.appendChild(el("div", { class: "rawtext", text: t250 })); b4.appendChild(el("div", { class: "mark", text: "=== beat 3 (first 250 words) ends here; the rest of the article follows (words 251 to " + RW.words_in_body + ") ===" })); b4.appendChild(el("div", { class: "rawtext", text: rest }));
+    rawBox.appendChild(b4);
+    app.appendChild(box("The article, raw, in its four beats", "Verbatim text, nothing generated, nothing left out. Beats 1 to 3 are cut from the start of beat 4.", rawBox, SRC + "#raw"));
+    var fullBeat = el("div", { class: "beat" }, el("h3", { text: "Sentence by sentence (" + D.all_sentences.length + " sentences)" }), el("div", { class: "what", text: "The same full article cut into sentences. The circle before each sentence is the group HDBSCAN gave it (a dash = no group). The lines mark where beats 2 and 3 end." }));
+    var last250 = B.first_250_words.pieces.length - 1;
+    D.all_sentences.forEach(function (sn, i) {
+      var p = B.whole_article.pieces[i];
+      fullBeat.appendChild(el("div", { class: "vs" }, badge(p.concept), el("span", { class: "sm", text: "#" + i }), el("span", { text: sn })));
+      if (i === 0) fullBeat.appendChild(el("div", { class: "mark", text: "end of beat 2 (first sentence)" }));
+      if (i === last250) fullBeat.appendChild(el("div", { class: "mark", text: "end of beat 3 (the sentences that fit in 250 words)" }));
+    });
+    app.appendChild(box("The full article with HDBSCAN groups", null, fullBeat, SRC + "#all_sentences, #beats.whole_article.pieces"));
+
+    // raw output first: the strip, then each group verbatim
+    var whole = B.whole_article.pieces, strip = el("div", { class: "strip" });
+    whole.forEach(function (p, i) { var cell = el("span", { class: "sc " + (p.concept == null ? "none" : "c" + (p.concept % 8)), title: "sentence " + i + ": " + p.text }); cell.textContent = p.concept == null ? "" : String(p.concept); strip.appendChild(cell); });
+    app.appendChild(box("The article from start to end", "One cell per sentence, in the order they appear. The number is the group HDBSCAN put that sentence in; an empty cell is a sentence in no group. Hover a cell to read the sentence.", strip, SRC + "#beats.whole_article.pieces"));
+    var gdiv = el("div");
+    D.concepts.forEach(function (c) {
+      var g = el("div", { class: "grp" }, el("div", { class: "gh" }, badge(c.id), el("b", { text: " Group " + c.id + ": " + c.n_sentences + " sentences" })));
+      c.sentences.forEach(function (i) { g.appendChild(el("div", { class: "vs" }, el("span", { class: "sm", text: "#" + i }), el("span", { text: D.all_sentences[i] }))); });
+      gdiv.appendChild(g);
+    });
+    var noise = []; whole.forEach(function (p, i) { if (p.concept == null) noise.push(i); });
+    var ng = el("div", { class: "grp" }, el("div", { class: "gh" }, badge(null), el("b", { text: " In no group: " + noise.length + " sentences" })));
+    var nshown = false, nlist = el("div"); function drawN() { nlist.textContent = ""; (nshown ? noise : noise.slice(0, 6)).forEach(function (i) { nlist.appendChild(el("div", { class: "vs" }, el("span", { class: "sm", text: "#" + i }), el("span", { text: D.all_sentences[i] }))); }); }
+    drawN(); ng.appendChild(nlist); var nb = el("button", { class: "more", text: "Show all " + noise.length }); nb.addEventListener("click", function () { nshown = !nshown; drawN(); nb.textContent = nshown ? "Show first 6 only" : "Show all " + noise.length; }); ng.appendChild(nb); gdiv.appendChild(ng);
+    app.appendChild(box("Every group, word for word", "These are the article's own sentences exactly as they are, collected by HDBSCAN into groups. Nothing is added: no names, no summaries.", gdiv, SRC + "#concepts[].sentences, #all_sentences"));
+
+    // flow summary
+    var mx = Math.max.apply(null, D.flow.map(function (r) { return r.beats_present; })), main = D.flow.filter(function (r) { return r.beats_present === mx; }), later = D.flow.filter(function (r) { return r.title.length === 0 && r.first_sentence.length === 0 && r.first_250_words === 0; });
+    var inBeats = function (r) { var o = []; if (r.title.length) o.push("title"); if (r.first_sentence.length) o.push("first sentence"); if (r.first_250_words > 0) o.push("first 250 words"); if (r.whole_article > 0) o.push("whole article"); return o; };
+    var fs = el("div");
+    fs.appendChild(el("p", { class: "flowline", text: "Main flow: " + main.map(function (r) { return "concept " + r.concept + " (" + cw[r.concept] + ") is in " + inBeats(r).join(", "); }).join("; ") + ". It is the concept present in the most beats (" + mx + " of 4), so the article is about this." }));
+    var fsPieces = B.first_sentence.pieces[0];
+    fs.appendChild(el("p", { text: "Variants: the first sentence matches " + (fsPieces.concept == null ? "no concept" : "concept " + fsPieces.concept) + " (closest similarity " + fsPieces.similarity.toFixed(2) + ", threshold " + D.placement_threshold.toFixed(2) + "). Concepts that appear only after the first 250 words: " + (later.length ? later.map(function (r) { return r.concept + " (" + cw[r.concept] + ")"; }).join("; ") : "none") + "." }));
+    app.appendChild(box("The pattern", null, fs, SRC + "#flow"));
+
+    // beats
+    var bb = el("div");
+    ["title", "first_sentence", "first_250_words", "whole_article"].forEach(function (k) {
+      var b = B[k], div = el("div", { class: "beat" }); div.appendChild(el("h3", { text: names[k] })); div.appendChild(el("div", { class: "what", text: "Pieces: " + b.what + ". " + (b.hdbscan ? "HDBSCAN on these " + b.pieces.length + " pieces (smallest group " + b.hdbscan.min_cluster_size + "): " + b.hdbscan.groups + " group(s), " + pct(b.hdbscan.noise) + " noise." : "Too few pieces to cluster, so each is placed against the whole-article concepts.") }));
+      var list = el("div"), full = k === "whole_article";
+      function draw(all) { list.textContent = ""; b.pieces.forEach(function (p) { if (full && !all && p.concept == null) return; list.appendChild(el("div", { class: "pc" }, badge(p.concept), el("span", { class: "tx", text: p.text }), el("span", { class: "sm", text: "similarity " + p.similarity.toFixed(2) + (p.own_group != null ? "  |  own group " + (p.own_group < 0 ? "none" : p.own_group) : "") }))); }); }
+      draw(!full); div.appendChild(list);
+      if (full) { var more = el("button", { class: "more", text: "Show all " + b.pieces.length + " sentences (including those in no concept)" }), shown = false; more.addEventListener("click", function () { shown = !shown; draw(shown); more.textContent = shown ? "Show only sentences placed in a concept" : "Show all " + b.pieces.length + " sentences (including those in no concept)"; }); div.appendChild(more); }
+      bb.appendChild(div);
+    });
+    app.appendChild(box("The four beats", "The number in the circle is the concept the piece falls in; a dash means it is not close enough to any concept. Similarity is how close the piece is to that concept's centre (1.00 is identical).", bb, SRC + "#beats"));
+
+    // concepts
+    var rows = D.concepts.map(function (c) {
+      var f = D.flow.filter(function (r) { return r.concept === c.id; })[0], yn = function (v) { return el("span", { class: v ? "yes" : "no", text: v ? "yes" : "no" }); };
+      return [badge(c.id), c.words.map(function (w) { return w.word + " " + w.times; }).join(", "), c.n_sentences, c.first + " to " + c.last, el("span", { text: c.exemplar }), yn(f.title.length > 0), yn(f.first_sentence.length > 0), f.first_250_words, f.whole_article];
+    });
+    app.appendChild(box("Generated summary of the groups (optional, added by us, not HDBSCAN output)", "The words are counted from these sentences only (word and how many times it appears in them). The span is the first and last sentence number in the article, so you can see where each concept lives.",
+      table(["Concept", "Own words", "Sentences", "Span", "Most central sentence", "In title", "In first sentence", "Sentences in first 250 words", "Sentences in whole"], rows, [2, 7, 8]), SRC + "#concepts, #flow"));
+
+    // stability
+    var sr = []; ["first_250_words", "whole_article"].forEach(function (k) { Object.keys(D.stability[k]).forEach(function (m) { var s = D.stability[k][m]; sr.push([names[k], m, s.groups, pct(s.noise), s.ari_vs_chosen.toFixed(2)]); }); });
+    app.appendChild(box("Does HDBSCAN give the same answer if its setting changes?", "Smallest group size changed from 2 to 5 on the same pieces. The last column compares each result with the one used above (1.00 = the same grouping, near 0 = unrelated).", table(["Beat", "Smallest group", "Groups found", "Noise", "Agreement with the grouping used"], sr, [1, 2, 3, 4]), SRC + "#stability"));
+    app.appendChild(box("Placement rule", null, el("p", { text: D.placement_rule + ". Threshold here: " + D.placement_threshold.toFixed(3) + "." }), SRC + "#placement_rule"));
+  }
+})();
+</script></body></html>

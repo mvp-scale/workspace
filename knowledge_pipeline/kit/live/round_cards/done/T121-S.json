@@ -1,0 +1,36 @@
+{
+ "id": "T121-S",
+ "task": "T121",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do confident engine-head labels on unlabelled queue stories help the heads read held-out engine stories?",
+ "one_change": "add confident pseudo-labels on 20,000 queue stories to the engine-readings training set",
+ "baseline": {
+  "model": "T116 engine-readings-only heads, headline plus teaser, direction AUROC",
+  "file": "runs/pulse/t116/t116_mix.json",
+  "key": "engine_only.direction_auroc"
+ },
+ "prediction": {
+  "metric": "direction AUROC on held-out engine stories after self-training",
+  "low": 0.72,
+  "high": 0.77,
+  "why": "the engine-only figure is 0.7437 on these folds (runs/pulse/t116/t116_mix.json); self-training seldom helps when the labeller is the same model, a scratch run on 800 stories before this prediction, not scored, moved presence AUROC by 0.008 and direction AUROC by 0.009; expect inside the noise floor"
+ },
+ "command": "FOLDS=5 NQ=20000 CONF=0.75 OUT=runs/pulse/t121 /workspace/kev/.venv/bin/python -u t121_selftrain.py",
+ "result": {
+  "file": "runs/pulse/t121/t121_selftrain.json",
+  "key": "self_trained.direction_auroc"
+ },
+ "cap_minutes": 50,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "FOLDS=2 NQ=1500 LIMIT=800 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t121s_$(date +%s) /workspace/kev/.venv/bin/python -u t121_selftrain.py",
+  "cap_minutes": 8
+ },
+ "after": [
+  "T120-L"
+ ]
+}

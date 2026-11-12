@@ -1,0 +1,33 @@
+{
+ "id": "T129-J",
+ "task": "T129",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How closely do hosted Jev's answers to the engine's 328 questions reproduce Clef's stored reading, on presence?",
+ "one_change": "use hosted Jev as the engine's reader on 100 stories that Clef already read",
+ "baseline": {
+  "model": "local Clef two-call dial labeller on the engine stories (T124-C)",
+  "file": "runs/pulse/t124/t106_clef_dials.json",
+  "key": "presence_agreement"
+ },
+ "prediction": {
+  "metric": "presence agreement of Jev's engine readings with Clef's stored readings",
+  "low": 0.7,
+  "high": 0.92,
+  "why": "the engine's comments say a different reader can shift the numbers (rules tuned on Winnow); the two-call labellers reached 0.6912 (T110) and 0.6941 (T124) on different questions; the engine's 328 questions are the real instrument; pass test written before the run: pass at 0.80 or more, fail below 0.74; my cost estimate 0.1 to 0.5 USD for 100 stories, the result prints the real cost; decision D34, hosted Jev, no GPU"
+ },
+ "command": "cd /workspace/probes/world-engine && N=100 CONC=6 WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t129_jev_engine.py",
+ "result": {
+  "file": "runs/pulse/t129/t129_jev_engine.json",
+  "key": "presence_agreement"
+ },
+ "cap_minutes": 25,
+ "noise": 0.04,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && N=3 CONC=3 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t129s_$(date +%s) WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t129_jev_engine.py",
+  "cap_minutes": 8
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "id": "T137-R",
+ "task": "T137",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Does the one-pass read hold up on 1,000 engine stories, and what do its raw answers give a per-dial calibration against Clef's stored readings?",
+ "one_change": "read 1,000 engine stories with every head on, for calibration and training data",
+ "baseline": {
+  "model": "chunked 328-question read, input tokens per story (T130)",
+  "file": "runs/pulse/t134/baseline_tokens.json",
+  "key": "tokens_per_story"
+ },
+ "prediction": {
+  "metric": "input tokens per story, all calls together",
+  "low": 21000,
+  "high": 26000,
+  "why": "T135-F3 used 23,609 tokens a story on 100 stories (runs/pulse/t135/t135_full_read.json) and cost 0.106 USD; 1,000 stories should cost about 1.1 USD by that figure and take a few minutes; pass tests written before the run: P0 no errors and all answers typed; P2 at most 35,000 tokens a story; calibration test (T136, CPU, after the read): per-dial thresholds fitted on four folds and scored on the fifth raise the agreement of the presence rule with the engine's reading from 0.59 (T136 on 100 stories) to at least 0.75; decision D38, a smaller step than the 10,000-story read, the owner's yes is needed because one pilot test failed (evidence exists)"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=1000 NL=0 NM=0 NREP=0 CONC=6 OUT=/workspace/knowledge_pipeline/projects/world-state/runs/pulse/t137 ROWS=/workspace/data/newsreader/labels/calibration-1000.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t137_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+ "result": {
+  "file": "runs/pulse/t137/t135_full_read.json",
+  "key": "tokens_per_story_total"
+ },
+ "cap_minutes": 40,
+ "noise": 3000,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 NE=2 NL=0 NM=0 NREP=0 CONC=2 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t137s ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t137s.jsonl REQ_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t137s_req.json /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t135_full_read.py",
+  "cap_minutes": 10
+ }
+}

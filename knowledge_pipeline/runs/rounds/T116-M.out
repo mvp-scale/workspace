@@ -1,0 +1,48 @@
+fold 0 9
+fold 1 20
+{
+ "jev_labels_used": 1500,
+ "engine_stories": 1736,
+ "folds": 2,
+ "direction_stories": 812,
+ "direction_majority": 0.6712,
+ "mix": {
+  "presence_auroc": 0.7619,
+  "direction_auroc": 0.6912,
+  "direction_accuracy": 0.6712
+ },
+ "engine_only": {
+  "presence_auroc": 0.7576,
+  "direction_auroc": 0.7207,
+  "direction_accuracy": 0.7057
+ },
+ "note": "Grouped cross-validation over the engine's 1736 stories; reference is Clef's stored reading (agreement, not accuracy). Compare T105 heads: presence AUROC 0.7936, direction AUROC 0.7221, direction accuracy 0.6921.",
+ "seconds": 20
+}
+fold 0 87
+fold 1 176
+fold 2 261
+fold 3 346
+fold 4 427
+{
+ "jev_labels_used": 30989,
+ "engine_stories": 1736,
+ "folds": 5,
+ "direction_stories": 812,
+ "direction_majority": 0.6712,
+ "mix": {
+  "presence_auroc": 0.7599,
+  "direction_auroc": 0.6904,
+  "direction_accuracy": 0.6712
+ },
+ "engine_only": {
+  "presence_auroc": 0.7879,
+  "direction_auroc": 0.7437,
+  "direction_accuracy": 0.7204
+ },
+ "note": "Grouped cross-validation over the engine's 1736 stories; reference is Clef's stored reading (agreement, not accuracy). Compare T105 heads: presence AUROC 0.7936, direction AUROC 0.7221, direction accuracy 0.6921.",
+ "seconds": 427
+}
+L1916 appended
+L1917 appended
+T116-M: HIT, WORSE, direction AUROC on held-out engine stories, mixed training 0.690 vs 0.722

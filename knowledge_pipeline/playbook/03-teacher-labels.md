@@ -33,6 +33,8 @@ teacher-vs-gold agreement, and spend recorded against the cap.
 
 ## CPU-first cascade before any LLM (owner method, adopted 2026-11-01; measured on 7,710 doubly-labelled items)
 
+Since 2026-11-07 the tools in this cascade are the BitMob tools and the order of operations is chapter 15: tools settle what the text proves, a BitMob model is called only for a head left open, and the teacher labels only what is left.
+
 Why: an LLM labeller is a subjective decider with run-to-run variance (re-asking changes about 14 percent of Haiku's condition answers). Repeatable CPU layers give independent signals, a router that shrinks the questions, and features the student reuses later. Order: segment -> cheap layers -> fuse -> ask an LLM only about what is left.
 
 | Layer | What it gives | Measured (agreement with the two-model consensus) |

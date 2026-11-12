@@ -70,12 +70,12 @@ def snapshot():
 
 KP = os.path.join(ROOT, "knowledge_pipeline")
 ORDER = ["[5090]", "[CPU]", "[KAG]", "[API]", "[CON]", "[HOST]"]
-NAMES = {"[5090]": "local GPU", "[CPU]": "local CPU", "[KAG]": "Kaggle GPU", "[API]": "hosted API", "[CON]": "Console", "[HOST]": "hosted model"}
+NAMES = {"[5090]": "local GPU", "[CPU]": "local CPU", "[KAG]": "Kaggle (GPU or CPU kernels)", "[API]": "hosted API", "[CON]": "Console", "[HOST]": "hosted model"}
 IGNORE = re.compile(r"claude|cursor|tmux|colab-mcp|tailscaled|node |hw\.py|bash$")
 
 
 def ts(v):
-    try: return calendar.timegm(time.strptime(v, "%Y-%m-%dT%H:%M:%SZ"))
+    try: return calendar.timegm(time.strptime(re.sub(r"\.\d+Z$", "Z", v), "%Y-%m-%dT%H:%M:%SZ"))  # accepts fractional seconds (ledger times carry milliseconds)
     except Exception: return None
 
 
@@ -132,6 +132,10 @@ def render(s):
     poll = next((j for j in act if j.get("job") == "poller"), None)
     pa = now - ts(poll["updated"]) if poll and ts(poll.get("updated", "")) else None
     out.append("")
+    try:
+        hrow = json.load(open("/workspace/knowledge_pipeline/runs-live/health.json")); hcol = {"ok": G, "warn": Y, "bad": R}.get(hrow.get("level"), "")
+        out.append(f"{B}HEALTH{Z}  {hcol}{hrow.get('progress', '?')}{Z}  {D}({ago(now - ts(hrow['updated']))} ago){Z}" + (f"\n        {D}{hrow['last']}{Z}" if hrow.get("last") and hrow["last"] != "no flags" else ""))
+    except Exception: out.append(f"{R}HEALTH  not reporting (poller or health.py is not running){Z}")
     out.append(f"{B}WORK BY LOCATION{Z}  {D}poller: " + (f"{'ok' if pa is not None and pa < 600 else R + 'STALE'}{D}, updated {ago(pa)} ago" if poll else f"{R}not running{D} (Kaggle/Console rows will be old)") + f"{Z}")
     # local processes: GPU users and busy CPU work, by location
     procs = {k: [] for k in ORDER}
@@ -150,9 +154,10 @@ def render(s):
         out.append(f"{B}{loc:<7}{NAMES[loc]}{Z}")
         for j in jobs:
             age = now - ts(j.get("updated", "")) if ts(j.get("updated", "")) else None
-            stale = f"{R} STALE {ago(age)}{Z}" if age is not None and age > 600 else ""
+            lim = None if j.get("state") in ("idle", "waiting") else 900 if j.get("service") else max(600, 2.5 * float(j["every_s"])) if j.get("every_s") else 600  # per-job update expectation (every_s, service, idle), same rule as the ledger viewer
+            stale = f"{R} STALE {ago(age)}{Z}" if age is not None and lim is not None and age > lim else ""
             sp = f"  ${j['spent']:.2f}" + (f"/${j['cap']:.0f}" if j.get("cap") else "") if j.get("spent") else ""
-            out.append(f"   {j.get('state', '?'):<8}{j.get('job', '?')[:28]:<29}{ago(now - ts(j['started'])) if ts(j.get('started', '')) else '?':>6} running{sp}  {D}{str(j.get('progress') or j.get('last') or '')[:48]}{Z}{stale}")
+            out.append(f"   {j.get('state', '?'):<8}{j.get('job', '?')[:28]:<29}{ago(now - ts(j['started'])) if ts(j.get('started', '')) else '?':>6} {'running' if j.get('state') == 'running' else 'NOT RUNNING (' + str(j.get('state', '?')) + ')'}{sp}  {D}{str(j.get('progress') or j.get('last') or '')[:48]}{Z}{stale}")
         for pid, what in procs[loc]:
             try: cmd = open(f"/proc/{pid}/cmdline").read().replace("\0", " ")
             except Exception: cmd = "?"
@@ -163,7 +168,7 @@ def render(s):
     day = [r for r in h if ts(r.get("ended", "")) and now - ts(r["ended"]) < 86400]
     spent = sum(r.get("spent") or 0 for r in day)
     out.append("")
-    out.append(f"{B}LAST 24 H{Z}  {len(day)} runs finished, ${spent:.2f} hosted spend   " + "  ".join(f"{k} {sum(1 for r in day if (r.get('where') or '').startswith(k))}" for k in ORDER if any((r.get('where') or '').startswith(k) for r in day)))
+    out.append(f"{B}LAST 24 H{Z}  {len(day)} runs finished, ${spent:.2f} hosted spend (hosted review runs are not counted)   " + "  ".join(f"{k} {sum(1 for r in day if (r.get('where') or '').startswith(k))}" for k in ORDER if any((r.get('where') or '').startswith(k) for r in day)))
     for r in reversed(recent):
         col = G if r.get("state") == "done" else R
         out.append(f"   {col}{r.get('state', '?'):<8}{Z}{(r.get('where') or '-'):<13}{r.get('job', '?')[:20]:<21}{ago(now - ts(r['ended'])):>5} ago  {D}{str(r.get('last') or '')[:60]}{Z}")

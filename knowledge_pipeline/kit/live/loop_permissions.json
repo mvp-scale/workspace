@@ -1,0 +1,31 @@
+{
+ "written": "2026-11-08",
+ "what": "What the Opus picker may start by itself and what waits for the owner's yes. Sources are the owner's standing rules; the picker reads this file before it writes a card.",
+ "free_to_run": [
+  "CPU-only local jobs, each capped at 60 minutes, with a PID-verified stop armed at launch",
+  "Reading result files, the ledger and the playbook",
+  "A ledger prediction before the run and a score note after (kit/live/run_round.py)",
+  "Editing pages already listed in knowledge_pipeline/services.md",
+  "Local Clef for MM3 verdicts and labelling (approved in /workspace/CLAUDE.md)"
+ ],
+ "needs_owner_yes": [
+  "Any hosted call that costs money (spend 67.7 of 70 USD at the last count; the owner reconciles)",
+  "Any job on the 5090 (local GPU)",
+  "Any Kaggle upload or job",
+  "Fable",
+  "Making pulse_reader the default; any network exposure",
+  "A new page (rule 2026-11-08: extend a listed page instead)",
+  "Deleting or overwriting data",
+  "Git commit",
+  "Starting or stopping services that are not ours",
+  "Training on or redistributing anchor data (MN-DS, MAVEN-FACT, CheckThat are scoring-only)"
+ ],
+ "card_rules": [
+  "One change per card",
+  "Prediction range written before the run",
+  "No human raters; truth comes from public datasets, and agreement between models is not accuracy",
+  "A weak or null result is recorded as a miss and routed, not hidden"
+ ],
+ "keyword_flags": ["kaggle", "gpu", "5090", "cuda", "hosted", "anthropic", "openai", "git commit", "rm -rf", "maven", "mn-ds", "checkthat"],
+ "sources": ["/workspace/CLAUDE.md", "memory: feedback_local_gpu_needs_permission, feedback_kaggle_first, feedback_one_hour_cap, feedback_no_hosted_in_tests, feedback_no_human_labels, feedback_services_md_no_new_pages", "knowledge_pipeline/playbook/15-bitmob-stack.md"]
+}

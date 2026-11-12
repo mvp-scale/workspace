@@ -1,0 +1,50 @@
+{
+ "ts": "2026-11-12T03:46:27Z",
+ "results": [
+  {
+   "check": "decider replays Lean vectors",
+   "status": "PASS",
+   "detail": "160 vectors"
+  },
+  {
+   "check": "jev label rows: schema and values",
+   "status": "PASS",
+   "detail": "1070 rows checked"
+  },
+  {
+   "check": "no leakage: training rows vs sealed set and outside gold",
+   "status": "PASS",
+   "detail": "1030 jev training ids, 0 overlap"
+  },
+  {
+   "check": "cards: done cards have their result file",
+   "status": "PASS",
+   "detail": "0 missing []"
+  },
+  {
+   "check": "cards: failed cards listed",
+   "status": "PASS",
+   "detail": "0 failed cards (path faults count here): []"
+  },
+  {
+   "check": "hosted spend by printed costs since T129",
+   "status": "PASS",
+   "detail": "5.30 USD over 10 result files since T129 (D38 cap 8 USD for these reads; the 2.29 USD of T111 and T114 came before and is extra)"
+  },
+  {
+   "check": "canary: latest full read inside its bounds",
+   "status": "PASS",
+   "detail": "runs/pulse/t137/t135_full_read.json"
+  },
+  {
+   "check": "ledger replays",
+   "status": "PASS",
+   "detail": "ledger replays: 2169 lines, 141 tasks, 41 warnings"
+  },
+  {
+   "check": "health line",
+   "status": "INFO",
+   "detail": "ACTIVE: no job running; the agent wrote to the ledger 8 min ago (task ?); between rounds | kaggle-kp-t67-ner-bakeoff queued 56 h 6 min and n"
+  }
+ ]
+}

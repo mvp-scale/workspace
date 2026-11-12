@@ -1,0 +1,33 @@
+{
+ "id": "T138-C",
+ "task": "T138",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Does local Clef accept the one-pass request (144 questions, then the dial details with a Score) and how closely do its answers match hosted Jev's?",
+ "one_change": "send the same one-pass requests to local Clef for 10 engine stories",
+ "baseline": {
+  "model": "hosted Jev re-reading the same stories (T135-F3 repeat check), mean absolute difference of the noul answers",
+  "file": "runs/pulse/t135/t135_full_read.json",
+  "key": "P7_repeat_mean_abs_diff"
+ },
+ "prediction": {
+  "metric": "mean absolute difference between Clef's and Jev's noul answers on the same request",
+  "low": 0.08,
+  "high": 0.25,
+  "why": "Jev re-reads itself within 0.0047 (runs/pulse/t135/t135_full_read.json); two different models agree on presence only 0.775 (runs/pulse/t130/t130_jev_engine.json), so a clear gap is expected; pass tests written before the run: the whole 144-question request is accepted by Clef, else I record the batch size it needs; Score type accepted; noul answers within 0.2 of Jev's on at least 0.70 of the pairs; choice answers equal on at least 0.60; no hosted call, local GPU, about 10 stories, a few minutes; needs the owner's yes for the local GPU (D32 and D33 covered other cards)"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 N=10 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t138_clef_parity.py",
+ "result": {
+  "file": "runs/pulse/t138/t138_clef_parity.json",
+  "key": "noul_mean_abs_diff_clef_vs_jev"
+ },
+ "cap_minutes": 25,
+ "noise": 0.03,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 N=1 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t138s /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t138_clef_parity.py",
+  "cap_minutes": 10
+ }
+}

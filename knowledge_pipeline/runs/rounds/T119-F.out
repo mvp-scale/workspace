@@ -1,0 +1,64 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 10386.59it/s]
+[1mBertModel LOAD REPORT[0m from: BAAI/bge-small-en-v1.5
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+fold 0 14
+fold 1 19
+{
+ "engine_stories": 200,
+ "folds": 2,
+ "direction_stories": 83,
+ "direction_majority": 0.6506,
+ "counts": {
+  "presence_auroc": 0.6654,
+  "direction_auroc": 0.7471,
+  "direction_accuracy": 0.6747
+ },
+ "counts_plus_embedding": {
+  "presence_auroc": 0.6785,
+  "direction_auroc": 0.7209,
+  "direction_accuracy": 0.7229
+ },
+ "note": "Grouped cross-validation over the engine stories; reference is Clef's stored reading (agreement, not accuracy). Compare T105 full view: presence AUROC 0.856, direction accuracy 0.740; bars 0.87 and 0.76.",
+ "seconds": 19
+}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 12709.04it/s]
+[1mBertModel LOAD REPORT[0m from: BAAI/bge-small-en-v1.5
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+fold 0 101
+fold 1 136
+fold 2 174
+fold 3 205
+fold 4 238
+{
+ "engine_stories": 1736,
+ "folds": 5,
+ "direction_stories": 812,
+ "direction_majority": 0.6712,
+ "counts": {
+  "presence_auroc": 0.8553,
+  "direction_auroc": 0.7885,
+  "direction_accuracy": 0.7389
+ },
+ "counts_plus_embedding": {
+  "presence_auroc": 0.8523,
+  "direction_auroc": 0.7841,
+  "direction_accuracy": 0.7389
+ },
+ "note": "Grouped cross-validation over the engine stories; reference is Clef's stored reading (agreement, not accuracy). Compare T105 full view: presence AUROC 0.856, direction accuracy 0.740; bars 0.87 and 0.76.",
+ "seconds": 238
+}
+L1935 appended
+L1936 appended
+T119-F: HIT, NO GAIN, presence AUROC on held-out engine stories, full-text view, counts plus embedding 0.852 vs 0.856

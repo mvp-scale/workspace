@@ -1,0 +1,33 @@
+{
+ "id": "T134-P2",
+ "task": "T134",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "With the Score criteria fixed (an ordered list, the cause of the 422 errors in T134-P), how many input tokens per story does the one-pass read use, and do calls 1 and 2 both work?",
+ "one_change": "rerun the T134 pilot with the Score criteria sent as an ordered list",
+ "baseline": {
+  "model": "chunked 328-question read, input tokens per story (T130)",
+  "file": "runs/pulse/t134/baseline_tokens.json",
+  "key": "tokens_per_story"
+ },
+ "prediction": {
+  "metric": "input tokens per story, mean of 40 stories, call 1 plus call 2",
+  "low": 15000,
+  "high": 22000,
+  "why": "T134-P gave 15,437 tokens for call 1 alone (runs/pulse/t134/t134_pilot.json) and its 20 errors were all HTTP 422 on call 2 because the Score criteria was a map; call 2 adds roughly 3 to 5 thousand tokens for the stories where a dial fires (about half of them); pass and fail tests as before: P0 all questions accepted in one request, P1 presence agreement with the chunked T130 reading at least 0.95, P2 total tokens per story at most 20,000, P3 evidence-exists 0.5 or more for at least 80 percent of fired dials, P5 unsure share 0.05 to 0.30; decision D37, the earlier run cost 0.019 USD, this one my estimate 0.03 USD"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 N=40 NP1=20 CONC=4 ROWS=/workspace/data/newsreader/labels/onepass-pilot-b.jsonl OUT=/workspace/knowledge_pipeline/projects/world-state/runs/pulse/t134b /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t134_onepass_pilot.py",
+ "result": {
+  "file": "runs/pulse/t134b/t134_pilot.json",
+  "key": "P2_tokens_per_story_mean"
+ },
+ "cap_minutes": 25,
+ "noise": 2000,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 N=2 NP1=2 CONC=2 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t134s ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t134s.jsonl /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t134_onepass_pilot.py",
+  "cap_minutes": 8
+ }
+}

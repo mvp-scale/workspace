@@ -1,0 +1,121 @@
+{
+ "note": "Field table for the Jev read as a source (teacher and head). Same schema as fields.json; kept apart so the Lean-checked router (route.py) is untouched. Every number is READ from the file named in 'src'. Judges follow fields.json: only outsideGold or validator can admit a field; agreement between models is not truth (claudeAgreement, none) and is never admitted.",
+ "thr_permille": 700,
+ "judges": {
+  "validator": "the text itself",
+  "outsideGold": "outside human labels (scoring only)",
+  "claudeAgreement": "model labels (agreement, not truth)",
+  "none": "no judge"
+ },
+ "fields": [
+  {
+   "layer": "read",
+   "field": "domain_iptc",
+   "extractor": {
+    "kind": "read",
+    "model": "jev",
+    "key": "domain_main"
+   },
+   "judge": "outsideGold",
+   "judge_name": "MN-DS fresh2 level 1 (IPTC top level), the whole gold set of 1,352 stories, scoring only",
+   "contract_confirmed": true,
+   "src": "runs/pulse/t142/t135_full_read.json",
+   "mode": "acc",
+   "n": "P4_n",
+   "acc": "P4_domain_top1_vs_mnds_l1",
+   "guess": {
+    "kind": "constant",
+    "permille": 59,
+    "why": "17 balanced categories in the gold sample: a constant guess is right 1 in 17"
+   },
+   "rare": null
+  },
+  {
+   "layer": "read",
+   "field": "area_topic",
+   "extractor": {
+    "kind": "read",
+    "model": "jev",
+    "key": "area_main"
+   },
+   "judge": "claudeAgreement",
+   "judge_name": "label-store topic from Sonnet (a teacher label, not truth)",
+   "contract_confirmed": true,
+   "src": "runs/pulse/t135/t135_full_read.json",
+   "mode": "acc",
+   "n": "area_overlap_n",
+   "acc": "area_main_vs_label_store_topic_exact",
+   "guess": {
+    "kind": "constant",
+    "permille": 50,
+    "why": "about 20 areas in play, commonest-answer share not measured, placeholder, judge is not admitted anyway"
+   },
+   "rare": null
+  },
+  {
+   "layer": "read",
+   "field": "story_type",
+   "extractor": {
+    "kind": "read",
+    "model": "jev",
+    "key": "function_*"
+   },
+   "judge": "outsideGold",
+   "judge_name": "CheckThat sentence subjectivity, scoring only (Jev run T-0027, balanced accuracy at 0.5; AUROC 0.836)",
+   "contract_confirmed": true,
+   "src": "runs/pulse/t148/summary.json",
+   "mode": "acc",
+   "n": "n",
+   "guess": {
+    "kind": "constant",
+    "permille": 500,
+    "why": "balanced accuracy of a coin on fact versus opinion"
+   },
+   "rare": null,
+   "acc": "balanced_accuracy_at_0_5"
+  },
+  {
+   "layer": "read",
+   "field": "condition_present",
+   "extractor": {
+    "kind": "read",
+    "model": "jev",
+    "key": "engine 328 questions"
+   },
+   "judge": "none",
+   "judge_name": "no outside truth for condition presence yet; Clef stored reading is a model (agreement 0.825 on 40 stories)",
+   "contract_confirmed": true,
+   "src": null,
+   "mode": null,
+   "n": null,
+   "guess": {
+    "kind": "constant",
+    "permille": 500,
+    "why": "placeholder"
+   },
+   "rare": null
+  },
+  {
+   "layer": "read",
+   "field": "evidence_fact",
+   "extractor": {
+    "kind": "read",
+    "model": "jev",
+    "key": "evidence_sentence"
+   },
+   "judge": "validator",
+   "judge_name": "BitMob span_rules: the chosen sentence contains a stated-fact span (date, year, duration, age, number word); a deterministic check, regex only",
+   "contract_confirmed": true,
+   "src": "runs/pulse/t140/t140_evidence_check.json",
+   "mode": "counts",
+   "n": "chosen_n",
+   "k": "chosen_with_span_k",
+   "guess": {
+    "kind": "constant",
+    "permille": 353,
+    "why": "share of all sentences in the same stories with a span (chance of a random sentence), measured in T140"
+   },
+   "rare": null
+  }
+ ]
+}

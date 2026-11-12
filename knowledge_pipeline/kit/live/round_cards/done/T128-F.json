@@ -1,0 +1,36 @@
+{
+ "id": "T128-F",
+ "task": "T128",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Does a bge-small encoder fine-tuned on the engine's readings read held-out engine stories better than the sparse heads on the same split?",
+ "one_change": "fine-tune bge-small on the engine readings in place of word-count heads, headline plus two sentences, grouped fold 0 held out",
+ "baseline": {
+  "model": "T116 engine-readings-only sparse heads, headline view, presence AUROC on all folds",
+  "file": "runs/pulse/t116/t116_mix.json",
+  "key": "engine_only.presence_auroc"
+ },
+ "prediction": {
+  "metric": "fine-tuned presence AUROC on grouped test fold 0, headline view",
+  "low": 0.74,
+  "high": 0.82,
+  "why": "the sparse heads gave 0.7879 on this view over all folds (runs/pulse/t116/t116_mix.json); the sparse heads on this fold are scored in the same run and are the comparison that counts; a 500-story one-epoch smoke run before this prediction, not scored, gave 0.46 for the encoder after one epoch on 290 training stories, which says nothing about the full run; pass test written before the run: the encoder exceeds the sparse heads on the same fold by more than the 0.02 noise floor on presence AUROC, otherwise report that fine-tuning at this label count does not help"
+ },
+ "command": "EPOCHS=6 OUT=runs/pulse/t128 /workspace/models/embed-zs/.venv/bin/python -u t128_finetune.py",
+ "result": {
+  "file": "runs/pulse/t128/t128_finetune.json",
+  "key": "finetuned.presence_auroc"
+ },
+ "cap_minutes": 50,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "THREADS=6 EPOCHS=1 LIMIT=500 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t128s_$(date +%s) /workspace/models/embed-zs/.venv/bin/python -u t128_finetune.py",
+  "cap_minutes": 8
+ },
+ "after": [
+  "T127-L"
+ ]
+}

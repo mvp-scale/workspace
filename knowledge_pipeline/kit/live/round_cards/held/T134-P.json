@@ -1,0 +1,33 @@
+{
+ "id": "T134-P",
+ "task": "T134",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How many input tokens per story does the one-pass multi-head read use, and does one request accept all the questions?",
+ "one_change": "read each story with a one-pass cascade (everything up front in one request, then the fired dials) in place of 17 calls of 20 questions",
+ "baseline": {
+  "model": "chunked 328-question read, input tokens per story (T130)",
+  "file": "runs/pulse/t134/baseline_tokens.json",
+  "key": "tokens_per_story"
+ },
+ "prediction": {
+  "metric": "input tokens per story, mean of 40 stories, call 1 plus call 2",
+  "low": 12000,
+  "high": 22000,
+  "why": "the chunked read used 27,339 tokens a story (runs/pulse/t134/baseline_tokens.json); call 1 is about 8.6 thousand by a chars-over-4 estimate and call 2 about 2.9 thousand per fired dial group, with about 2 to 3 dials firing; pass and fail tests written before the run: P0 one request accepts all 42 questions of call 1 and all 328 original questions, fail means halve the request; P1 presence agreement of the one-request 328 read with the chunked T130 readings at least 0.95 on 20 stories; P2 total tokens per story at most 20,000; P3 evidence-exists at 0.5 or more for at least 80 percent of fired dials; P5 share of the 39 condition answers between 0.3 and 0.7 from 0.05 to 0.30; P4 domain against an outside set is not run; decision D37, my cost estimate 0.05 USD, the result prints the real cost"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 N=40 NP1=20 CONC=4 OUT=/workspace/knowledge_pipeline/projects/world-state/runs/pulse/t134 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t134_onepass_pilot.py",
+ "result": {
+  "file": "runs/pulse/t134/t134_pilot.json",
+  "key": "P2_tokens_per_story_mean"
+ },
+ "cap_minutes": 25,
+ "noise": 2000,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 N=2 NP1=2 CONC=2 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t134s ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t134s.jsonl /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t134_onepass_pilot.py",
+  "cap_minutes": 8
+ }
+}

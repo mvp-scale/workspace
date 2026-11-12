@@ -1,0 +1,36 @@
+{
+ "id": "T126-E2",
+ "task": "T126",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How fast does the local engine read queue stories, so that chunk 2 of 2 (about 380 stories) fits under the 60 minute cap?",
+ "one_change": "run the engine on 380 more queue stories on the local GPU, written to a separate file",
+ "baseline": {
+  "model": "T124-C local Clef dial labeller speed on the engine stories",
+  "file": "runs/pulse/t124/t106_clef_dials.json",
+  "key": "stories_per_s"
+ },
+ "prediction": {
+  "metric": "engine stories read per minute",
+  "low": 9,
+  "high": 14,
+  "why": "the original teaching pass logged 12 stories per minute with 6 at a time (data/newsreader/labels/label.log); 8 at a time may be faster; chunk of 380 stories takes 30 to 40 minutes; decision D33; writes clef-q4km-ext.jsonl, not the 1736-story file"
+ },
+ "command": "cd /workspace/probes/world-engine && WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t126_engine_more.py 380 8",
+ "result": {
+  "file": "runs/pulse/t126/t126_engine_more.json",
+  "key": "stories_per_min"
+ },
+ "cap_minutes": 50,
+ "noise": 2,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && EXT_OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t126s2.jsonl SUMMARY=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t126s2.json WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t126_engine_more.py 4 4",
+  "cap_minutes": 8
+ },
+ "after": [
+  "T126-E1"
+ ]
+}

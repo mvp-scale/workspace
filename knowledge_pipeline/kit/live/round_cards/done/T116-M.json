@@ -1,0 +1,36 @@
+{
+ "id": "T116-M",
+ "task": "T116",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do students trained on the Jev labels plus the engine's own Clef readings read held-out engine stories as well as heads trained on the engine's readings alone?",
+ "one_change": "add the 31,000 Jev labels to the engine-label training set, same folds, same text view",
+ "baseline": {
+  "model": "T105 heads on the engine's own readings, headline plus teaser, direction AUROC",
+  "file": "runs/pulse/t105/t105_engine_heads.json",
+  "key": "headline_teaser.direction.auroc"
+ },
+ "prediction": {
+  "metric": "direction AUROC on held-out engine stories, mixed training",
+  "low": 0.66,
+  "high": 0.73,
+  "why": "T105 gave 0.7221 for direction with the engine's readings alone (runs/pulse/t105/t105_engine_heads.json); a smoke run on 1,500 Jev labels and 2 folds (my run, before this prediction, not scored) gave 0.691 mixed against 0.721 engine-only, so Jev direction labels look weaker than Clef's; presence AUROC expected 0.76 to 0.82 against 0.7936; the call is whether mixing helps, not whether it passes the bars"
+ },
+ "command": "FOLDS=5 OUT=runs/pulse/t116 LABELS=runs/pulse/t114/labels_all.jsonl /workspace/kev/.venv/bin/python -u t116_mix.py",
+ "result": {
+  "file": "runs/pulse/t116/t116_mix.json",
+  "key": "mix.direction_auroc"
+ },
+ "cap_minutes": 55,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "after": [
+  "T117-A"
+ ],
+ "smoke": {
+  "command": "FOLDS=2 LIMIT=1500 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t116s_$(date +%s) LABELS=runs/pulse/t114/labels_all.jsonl /workspace/kev/.venv/bin/python -u t116_mix.py",
+  "cap_minutes": 8
+ }
+}

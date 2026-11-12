@@ -1,0 +1,33 @@
+{
+ "id": "T114-J",
+ "task": "T114",
+ "part": "main loop: Condition and direction, next data",
+ "field": "condition",
+ "question": "Does hosted Jev give a dial label for about as many of the remaining queue stories as it did for the first 20,000 (T111)?",
+ "one_change": "label the 11,239 queue stories that are neither labelled yet nor engine stories, with the T111 labeller and view",
+ "baseline": {
+  "model": "hosted Jev on the first 20,000 queue stories (T111-J)",
+  "file": "runs/pulse/t111/t111_label_queue.json",
+  "key": "share_with_dial"
+ },
+ "prediction": {
+  "metric": "share of stories given a dial",
+  "low": 0.45,
+  "high": 0.58,
+  "why": "T111 gave 0.516 on 20,000 queue stories (runs/pulse/t111/t111_label_queue.json); same feeds, same labeller; errors expected under 1 percent; spend 0.4 USD or less under D29"
+ },
+ "command": "N=12000 OUT=runs/pulse/t114 /workspace/models/embed-zs/.venv/bin/python -u t114_label_rest.py",
+ "result": {
+  "file": "runs/pulse/t114/t114_label_rest.json",
+  "key": "share_with_dial"
+ },
+ "cap_minutes": 30,
+ "noise": 0.04,
+ "who": "S3",
+ "priority": 1,
+ "threads": 2,
+ "smoke": {
+  "command": "N=20 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t114s_$(date +%s) /workspace/models/embed-zs/.venv/bin/python -u t114_label_rest.py",
+  "cap_minutes": 8
+ }
+}

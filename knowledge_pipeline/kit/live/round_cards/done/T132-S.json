@@ -1,0 +1,33 @@
+{
+ "id": "T132-S",
+ "task": "T132",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "Do heads trained on Jev's engine readings read held-out engine stories as well as heads trained on Clef's readings, both scored against Clef's reading?",
+ "one_change": "train on Jev's engine readings in place of Clef's readings, same stories, folds and features",
+ "baseline": {
+  "model": "T122 heads trained on Clef's readings, all readings per fold, full text, presence AUROC",
+  "file": "runs/pulse/t122/t122_curve.json",
+  "key": "curve.0.presence_auroc"
+ },
+ "prediction": {
+  "metric": "presence AUROC of the Jev-trained heads scored against Clef's reading on held-out folds",
+  "low": 0.8,
+  "high": 0.86,
+  "why": "the Clef-trained heads gave 0.8553 on these stories and folds (runs/pulse/t122/t122_curve.json); Jev's readings agree with Clef's on presence 0.7748 over all stories (runs/pulse/t130/t130_jev_engine.json), so label noise should lower the Jev-trained figure; pass test written before the run: the paired 95 percent interval of Jev-trained minus Clef-trained presence AUROC lies above -0.02, otherwise Jev's readings are not a drop-in training source; no hosted call, CPU only"
+ },
+ "command": "OUT=runs/pulse/t132 /workspace/kev/.venv/bin/python -u t132_jev_label_train.py",
+ "result": {
+  "file": "runs/pulse/t132/t132_jev_label_train.json",
+  "key": "jev_trained.presence_auroc"
+ },
+ "cap_minutes": 30,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t132s_$(date +%s) /workspace/kev/.venv/bin/python -u t132_jev_label_train.py",
+  "cap_minutes": 25
+ }
+}

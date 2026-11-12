@@ -1,0 +1,38 @@
+stories 500: train 354 dev 34 test 112
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 12551.75it/s]
+[1mBertModel LOAD REPORT[0m from: BAAI/bge-small-en-v1.5
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+/workspace/knowledge_pipeline/projects/world-state/t128_finetune.py:53: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  loss = lp + ld; opt.zero_grad(); loss.backward(); opt.step(); sched.step(); tl += float(loss) * len(ids)
+{'epoch': 1, 'train_loss': 1.4361, 'dev_presence_auroc': 0.4743, 'dev_direction_auroc': 0.6786, 'test_presence_auroc': 0.4612} 13
+{"finetuned": {"presence_auroc": 0.4612, "direction_auroc": 0.6755, "direction_accuracy": 0.7292}, "sparse_same_split": {"presence_auroc": 0.6853, "direction_auroc": 0.814, "direction_accuracy": 0.7083}, "best_epoch_by_dev": 1, "seconds": 15}
+stories 2488: train 1780 dev 199 test 509
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 11530.29it/s]
+[1mBertModel LOAD REPORT[0m from: BAAI/bge-small-en-v1.5
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+/workspace/knowledge_pipeline/projects/world-state/t128_finetune.py:53: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  loss = lp + ld; opt.zero_grad(); loss.backward(); opt.step(); sched.step(); tl += float(loss) * len(ids)
+{'epoch': 1, 'train_loss': 1.3086, 'dev_presence_auroc': 0.7882, 'dev_direction_auroc': 0.6863, 'test_presence_auroc': 0.7482} 60
+{'epoch': 2, 'train_loss': 1.0406, 'dev_presence_auroc': 0.7963, 'dev_direction_auroc': 0.7111, 'test_presence_auroc': 0.7694} 121
+{'epoch': 3, 'train_loss': 0.7776, 'dev_presence_auroc': 0.7924, 'dev_direction_auroc': 0.7001, 'test_presence_auroc': 0.7661} 181
+{'epoch': 4, 'train_loss': 0.5034, 'dev_presence_auroc': 0.7932, 'dev_direction_auroc': 0.7209, 'test_presence_auroc': 0.767} 240
+{'epoch': 5, 'train_loss': 0.3222, 'dev_presence_auroc': 0.7869, 'dev_direction_auroc': 0.7157, 'test_presence_auroc': 0.7629} 298
+{'epoch': 6, 'train_loss': 0.2303, 'dev_presence_auroc': 0.7887, 'dev_direction_auroc': 0.7157, 'test_presence_auroc': 0.7609} 358
+{"finetuned": {"presence_auroc": 0.767, "direction_auroc": 0.7665, "direction_accuracy": 0.7149}, "sparse_same_split": {"presence_auroc": 0.7799, "direction_auroc": 0.7449, "direction_accuracy": 0.6694}, "best_epoch_by_dev": 4, "seconds": 363}
+L2047 appended
+L2057 appended
+T128-F: HIT, WORSE, fine-tuned presence AUROC on grouped test fold 0, headline view 0.767 vs 0.788

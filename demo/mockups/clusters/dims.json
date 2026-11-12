@@ -1,0 +1,352 @@
+{
+ "what": "first 250 words, bge-base, UMAP 40 neighbours, HDBSCAN eom",
+ "clusters_at_5": 12,
+ "clusters_at_10": 4,
+ "big_blob_size_at_10": 3868,
+ "where_5_dim_clusters_went": [
+  {
+   "id5": 0,
+   "size": 359,
+   "words": [
+    "game",
+    "points",
+    "season",
+    "team",
+    "win",
+    "second"
+   ],
+   "example": "Griffin's big third quarter helps Pistons top Kings 106-90",
+   "share_into_big_blob_at_10": 0.003,
+   "share_noise_at_10": 0.006
+  },
+  {
+   "id5": 1,
+   "size": 66,
+   "words": [
+    "open",
+    "round",
+    "fight",
+    "mayweather",
+    "golf",
+    "match"
+   ],
+   "example": "Tennis: Great Dane Wozniacki in solid form early in Paris",
+   "share_into_big_blob_at_10": 0.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 2,
+   "size": 298,
+   "words": [
+    "league",
+    "cup",
+    "season",
+    "team",
+    "club",
+    "world"
+   ],
+   "example": "Carli Lloyd signs for English women's champion Man City",
+   "share_into_big_blob_at_10": 0.003,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 3,
+   "size": 60,
+   "words": [
+    "council",
+    "city",
+    "building",
+    "business",
+    "homes",
+    "site"
+   ],
+   "example": "NOTL Bloom committee will blossom afterall",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 4,
+   "size": 61,
+   "words": [
+    "brexit",
+    "government",
+    "election",
+    "european",
+    "french",
+    "france"
+   ],
+   "example": "Topless feminists interrupt Le Pen's rally in Paris",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 5,
+   "size": 704,
+   "words": [
+    "trump",
+    "president",
+    "state",
+    "government",
+    "white",
+    "donald"
+   ],
+   "example": "Russian plane shot down",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 6,
+   "size": 78,
+   "words": [
+    "study",
+    "researchers",
+    "health",
+    "life",
+    "exercise",
+    "scientists"
+   ],
+   "example": "Pakistani student making waves in the world of physics",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 7,
+   "size": 167,
+   "words": [
+    "uber",
+    "amazon",
+    "apple",
+    "google",
+    "company",
+    "car"
+   ],
+   "example": "Microsoft SharePoint tip: Clean up OneDrive syncing to reduce confusion",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 8,
+   "size": 98,
+   "words": [
+    "percent",
+    "index",
+    "stocks",
+    "market",
+    "investors",
+    "rate"
+   ],
+   "example": "Markets Right Now: Health care companies lead stocks lower",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 9,
+   "size": 376,
+   "words": [
+    "brief",
+    "company",
+    "million",
+    "source",
+    "text",
+    "coverage"
+   ],
+   "example": "MYOS RENS Technology Inc. Adopts Shareholder Rights Plan",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  },
+  {
+   "id5": 10,
+   "size": 539,
+   "words": [
+    "police",
+    "man",
+    "old",
+    "officers",
+    "shooting",
+    "home"
+   ],
+   "example": "Cyclist, 61, shot in head while riding on west side",
+   "share_into_big_blob_at_10": 0.998,
+   "share_noise_at_10": 0.002
+  },
+  {
+   "id5": 11,
+   "size": 391,
+   "words": [
+    "music",
+    "love",
+    "film",
+    "star",
+    "movie",
+    "night"
+   ],
+   "example": "Cool Never Sounded So Hot: Award-Winning Jazz Singer Kathy Sanborn to Release Recollecting You",
+   "share_into_big_blob_at_10": 1.0,
+   "share_noise_at_10": 0.0
+  }
+ ],
+ "retune": [
+  {
+   "umap_dims": 5,
+   "min_cluster_size": 15,
+   "min_samples": 5,
+   "clusters": 69,
+   "noise": 0.386,
+   "largest_share": 0.057,
+   "nmi_section": 0.538
+  },
+  {
+   "umap_dims": 5,
+   "min_cluster_size": 15,
+   "min_samples": 10,
+   "clusters": 58,
+   "noise": 0.418,
+   "largest_share": 0.075,
+   "nmi_section": 0.545
+  },
+  {
+   "umap_dims": 5,
+   "min_cluster_size": 30,
+   "min_samples": 5,
+   "clusters": 33,
+   "noise": 0.287,
+   "largest_share": 0.1,
+   "nmi_section": 0.568
+  },
+  {
+   "umap_dims": 5,
+   "min_cluster_size": 30,
+   "min_samples": 10,
+   "clusters": 34,
+   "noise": 0.371,
+   "largest_share": 0.078,
+   "nmi_section": 0.579
+  },
+  {
+   "umap_dims": 5,
+   "min_cluster_size": 60,
+   "min_samples": 5,
+   "clusters": 18,
+   "noise": 0.313,
+   "largest_share": 0.1,
+   "nmi_section": 0.619
+  },
+  {
+   "umap_dims": 5,
+   "min_cluster_size": 60,
+   "min_samples": 10,
+   "clusters": 12,
+   "noise": 0.361,
+   "largest_share": 0.141,
+   "nmi_section": 0.616
+  },
+  {
+   "umap_dims": 10,
+   "min_cluster_size": 15,
+   "min_samples": 5,
+   "clusters": 68,
+   "noise": 0.34,
+   "largest_share": 0.074,
+   "nmi_section": 0.564
+  },
+  {
+   "umap_dims": 10,
+   "min_cluster_size": 15,
+   "min_samples": 10,
+   "clusters": 57,
+   "noise": 0.424,
+   "largest_share": 0.073,
+   "nmi_section": 0.536
+  },
+  {
+   "umap_dims": 10,
+   "min_cluster_size": 30,
+   "min_samples": 5,
+   "clusters": 38,
+   "noise": 0.351,
+   "largest_share": 0.081,
+   "nmi_section": 0.563
+  },
+  {
+   "umap_dims": 10,
+   "min_cluster_size": 30,
+   "min_samples": 10,
+   "clusters": 5,
+   "noise": 0.0,
+   "largest_share": 0.964,
+   "nmi_section": 0.011
+  },
+  {
+   "umap_dims": 10,
+   "min_cluster_size": 60,
+   "min_samples": 5,
+   "clusters": 4,
+   "noise": 0.066,
+   "largest_share": 0.778,
+   "nmi_section": 0.404
+  },
+  {
+   "umap_dims": 10,
+   "min_cluster_size": 60,
+   "min_samples": 10,
+   "clusters": 4,
+   "noise": 0.072,
+   "largest_share": 0.774,
+   "nmi_section": 0.403
+  },
+  {
+   "umap_dims": 15,
+   "min_cluster_size": 15,
+   "min_samples": 5,
+   "clusters": 69,
+   "noise": 0.343,
+   "largest_share": 0.059,
+   "nmi_section": 0.546
+  },
+  {
+   "umap_dims": 15,
+   "min_cluster_size": 15,
+   "min_samples": 10,
+   "clusters": 61,
+   "noise": 0.435,
+   "largest_share": 0.055,
+   "nmi_section": 0.542
+  },
+  {
+   "umap_dims": 15,
+   "min_cluster_size": 30,
+   "min_samples": 5,
+   "clusters": 5,
+   "noise": 0.0,
+   "largest_share": 0.964,
+   "nmi_section": 0.011
+  },
+  {
+   "umap_dims": 15,
+   "min_cluster_size": 30,
+   "min_samples": 10,
+   "clusters": 5,
+   "noise": 0.0,
+   "largest_share": 0.964,
+   "nmi_section": 0.011
+  },
+  {
+   "umap_dims": 15,
+   "min_cluster_size": 60,
+   "min_samples": 5,
+   "clusters": 15,
+   "noise": 0.376,
+   "largest_share": 0.117,
+   "nmi_section": 0.627
+  },
+  {
+   "umap_dims": 15,
+   "min_cluster_size": 60,
+   "min_samples": 10,
+   "clusters": 4,
+   "noise": 0.104,
+   "largest_share": 0.752,
+   "nmi_section": 0.406
+  }
+ ]
+}

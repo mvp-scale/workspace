@@ -1,0 +1,88 @@
+{
+ "v": "article-gist-v0",
+ "idx": 9,
+ "title": "Charlottesville Violence Highlights Cities' Struggle To Balance Rights And Safety",
+ "budget_words": 120,
+ "max_pieces": 4,
+ "model": "BAAI/bge-small-en-v1.5 (CPU)",
+ "pieces": 68,
+ "gist": [
+  {
+   "piece": 9,
+   "text": "Terry McAuliffe told NPR's Morning Edition that local authorities had done what they could to head off the fighting that erupted, but that they were foiled by a federal judge's decision to allow the Unite The Right rally to go on in Charlottesville's Emancipation Park.",
+   "words": 45,
+   "inside_first_250_words": true
+  },
+  {
+   "piece": 17,
+   "text": "The situation that occurred was preventable, and our lawsuit challenging the City to act constitutionally did not cause it. ...",
+   "words": 20,
+   "inside_first_250_words": false
+  },
+  {
+   "piece": 31,
+   "text": "But both protesters and counter-protesters criticized the police response.",
+   "words": 9,
+   "inside_first_250_words": false
+  },
+  {
+   "piece": 64,
+   "text": "Public protests can become especially complicated when people are carrying guns and dressed in full camouflage, as some did this weekend in Charlottesville.",
+   "words": 23,
+   "inside_first_250_words": false
+  }
+ ],
+ "pick_order": [
+  9,
+  17,
+  64,
+  31
+ ],
+ "steps": [
+  {
+   "piece": 9,
+   "words": 45,
+   "gain": 38975,
+   "coverage_after": 0.573
+  },
+  {
+   "piece": 17,
+   "words": 20,
+   "gain": 2004,
+   "coverage_after": 0.603
+  },
+  {
+   "piece": 64,
+   "words": 23,
+   "gain": 1514,
+   "coverage_after": 0.625
+  },
+  {
+   "piece": 31,
+   "words": 9,
+   "gain": 1112,
+   "coverage_after": 0.641
+  }
+ ],
+ "coverage": {
+  "gist": 0.641,
+  "first_pieces": 0.589
+ },
+ "first_pieces": [
+  1,
+  2,
+  3,
+  4
+ ],
+ "similarity_to_full_article": {
+  "gist": 0.909,
+  "first_pieces": 0.852
+ },
+ "lean_pick_order": [
+  9,
+  17,
+  64,
+  31
+ ],
+ "python_equals_lean": true
+}

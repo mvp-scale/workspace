@@ -1,0 +1,68 @@
+{
+ "stories": 100,
+ "answered": 100,
+ "answered_share": 1.0,
+ "agreement_all": 0.25,
+ "agreement_of_answered": 0.25,
+ "engine_type_counts": {
+  "fact": 22,
+  "unclear": 75,
+  "opinion": 3
+ },
+ "reader_counts": {
+  "fact": 87,
+  "opinion": 11,
+  "unclear": 2
+ },
+ "always_most_common_engine_type": 0.75,
+ "confusion_engine_to_reader": {
+  "unclear->fact": 67,
+  "fact->fact": 20,
+  "unclear->opinion": 6,
+  "opinion->opinion": 3,
+  "fact->opinion": 2,
+  "unclear->unclear": 2
+ },
+ "note": "Reference is Clef's stored gate through the engine's own type rule, so this is agreement with the engine as it runs today, not accuracy. Reader sees title plus first two sentences; the engine reads title plus up to 1200 words."
+}
+{
+ "stories": 1736,
+ "answered": 1734,
+ "answered_share": 0.9988,
+ "agreement_all": 0.4361,
+ "agreement_of_answered": 0.4366,
+ "engine_type_counts": {
+  "fact": 695,
+  "unclear": 950,
+  "opinion": 77,
+  "forecast": 14
+ },
+ "reader_counts": {
+  "fact": 1509,
+  "opinion": 185,
+  "unclear": 19,
+  "forecast": 21,
+  "(unanswered)": 2
+ },
+ "always_most_common_engine_type": 0.5472,
+ "confusion_engine_to_reader": {
+  "unclear->fact": 819,
+  "fact->fact": 670,
+  "unclear->opinion": 104,
+  "opinion->opinion": 60,
+  "fact->opinion": 21,
+  "unclear->unclear": 18,
+  "opinion->fact": 15,
+  "forecast->forecast": 9,
+  "unclear->forecast": 7,
+  "forecast->fact": 5,
+  "fact->forecast": 4,
+  "unclear->(unanswered)": 2,
+  "opinion->forecast": 1,
+  "opinion->unclear": 1
+ },
+ "note": "Reference is Clef's stored gate through the engine's own type rule, so this is agreement with the engine as it runs today, not accuracy. Reader sees title plus first two sentences; the engine reads title plus up to 1200 words."
+}
+L1797 appended
+L1798 appended
+T101-S: HIT, WORSE, agreement over every story 0.436 vs 0.553

@@ -102,3 +102,5 @@ Runner: `kit/live/run_round.py` takes a round card (question, one change, baseli
 - **Training linear heads on the GPU was 620 times faster than scikit-learn lbfgs** at the same accuracy (703 s vs 1.1 s, L288).
 - **Cap the encoder input by validation, not by the speed target**: 64 tokens cost nothing measurable and halved the tail (L309 to L312).
 - **Write the prediction before the run and the stop rule before the loop** (L206 to L317): of 25 prediction notes, 15 score notes record at least one miss (counted from the ledger), and the misses were the useful part.
+
+See also: the working-loop lessons (smoke test, row ownership, watchers, sealed-set checks) in `LESSONS_LEARNED.md`, section "Working loop, first round", and playbook 16.

@@ -15,4 +15,4 @@
 9. **Change control.** One change per round, a prediction on the ledger first, revert on a miss, never re-open another field because of it.
 
 ## What is not settled
-Soft-target training is unproven for presence (T27 steps 3 and 4). Topic confidence needs recalibration (calibration error about 0.09). No published source gives a go or no-go threshold for these rules; the lines marked ours are ours.
+Soft-target training for presence (T27, 2026-11-09, `runs/pulse/t27_soft.json`): 16 percent of items are contested among Sonnet, Haiku and Gemma; a head trained on the vote shares is better calibrated to the panel (Brier 0.037 against 0.043) but does not agree more with Sonnet gold (sealed agreement 0.91 for both) and finds fewer real cases at a threshold fixed on dev (recall 0.71-0.74 against 0.75-0.77). Not a clear gain; the presence anchor (MAVEN-FACT, one sided) is still unrun (T27 step 4). Topic confidence needs recalibration (calibration error about 0.09). No published source gives a go or no-go threshold for these rules; the lines marked ours are ours.

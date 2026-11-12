@@ -1,0 +1,33 @@
+{
+ "id": "T130-J",
+ "task": "T130",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "What is Jev's agreement with the stored engine reading on presence over all 1,736 stories?",
+ "one_change": "hosted Jev reads all 1,736 stored engine stories with the engine's 328 questions",
+ "baseline": {
+  "model": "hosted Jev engine reading on 100 stories (T129-J)",
+  "file": "runs/pulse/t129/t129_jev_engine.json",
+  "key": "presence_agreement"
+ },
+ "prediction": {
+  "metric": "presence agreement of Jev's engine readings with Clef's stored readings, all 1,736 stories",
+  "low": 0.74,
+  "high": 0.88,
+  "why": "T129 gave 0.81 on 100 stories (runs/pulse/t129/t129_jev_engine.json), interval roughly 0.73 to 0.89; all 1,736 stories give a tight figure; pass test written before the run: 0.80 or more passes, below 0.74 fails; my cost estimate 1.9 USD, the result prints the real cost; decision D35, no GPU"
+ },
+ "command": "cd /workspace/probes/world-engine && MODE=stored N=0 CONC=8 ROWS=/workspace/data/newsreader/labels/jev-engine-stored.jsonl OUT=/workspace/knowledge_pipeline/projects/world-state/runs/pulse/t130 WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t130_jev_engine_all.py",
+ "result": {
+  "file": "runs/pulse/t130/t130_jev_engine.json",
+  "key": "presence_agreement"
+ },
+ "cap_minutes": 40,
+ "noise": 0.04,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "cd /workspace/probes/world-engine && MODE=stored N=3 CONC=3 ROWS=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/T130-Js.jsonl OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/T130-Js WE_RULES=rules_v2 /workspace/kev/.venv/bin/python -I /workspace/knowledge_pipeline/projects/world-state/t130_jev_engine_all.py",
+  "cap_minutes": 8
+ }
+}

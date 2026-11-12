@@ -1,0 +1,33 @@
+{
+ "id": "T120-L",
+ "task": "T120",
+ "part": "main loop: Condition and direction, students",
+ "field": "condition",
+ "question": "How fast do the engine-readings heads improve as the number of Clef readings grows, and would more readings reach the 0.87 presence bar?",
+ "one_change": "train on 300, 600, 1000 and all Clef readings per fold; nothing else changes",
+ "baseline": {
+  "model": "T119 word-count heads trained on every Clef reading of the training folds",
+  "file": "runs/pulse/t119/t119_engine_full.json",
+  "key": "counts.presence_auroc"
+ },
+ "prediction": {
+  "metric": "presence AUROC at 300 training readings",
+  "low": 0.72,
+  "high": 0.8,
+  "why": "the full-size figure is 0.8553 (runs/pulse/t119/t119_engine_full.json); a 300-story scratch run of this script before this prediction, not scored, gave 0.78 at 150 readings on 150 test stories, too small to read; the answer wanted is the slope between 1000 and all readings, which decides whether the 5090 labelling request is worth making"
+ },
+ "command": "FOLDS=5 SIZES=300,600,1000,0 OUT=runs/pulse/t120 /workspace/kev/.venv/bin/python -u t120_curve.py",
+ "result": {
+  "file": "runs/pulse/t120/t120_curve.json",
+  "key": "curve.300.presence_auroc"
+ },
+ "cap_minutes": 40,
+ "noise": 0.02,
+ "who": "S3",
+ "priority": 1,
+ "threads": 8,
+ "smoke": {
+  "command": "FOLDS=2 SIZES=100,0 LIMIT=300 OUT=/tmp/claude-0/-workspace/d4b0cb1c-0a5d-4e2c-8056-bf2674982a64/scratchpad/t120s_$(date +%s) /workspace/kev/.venv/bin/python -u t120_curve.py",
+  "cap_minutes": 8
+ }
+}

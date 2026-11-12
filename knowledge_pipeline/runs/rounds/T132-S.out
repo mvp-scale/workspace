@@ -1,0 +1,79 @@
+fold 0 40
+fold 1 78
+fold 2 119
+fold 3 148
+fold 4 172
+{
+ "stories": 1736,
+ "folds": 5,
+ "direction_stories_by_clef": 812,
+ "direction_majority": 0.6712,
+ "jev_vs_clef_presence_label_agreement": 0.7748,
+ "clef_trained": {
+  "presence_auroc": 0.8553,
+  "direction_auroc": 0.7885,
+  "direction_accuracy": 0.7389
+ },
+ "jev_trained": {
+  "presence_auroc": 0.8023,
+  "direction_auroc": 0.7692,
+  "direction_accuracy": 0.7241
+ },
+ "paired_95_interval_jev_minus_clef_trained": {
+  "presence_auroc": [
+   -0.0676,
+   -0.0391
+  ],
+  "direction_auroc": [
+   -0.0411,
+   0.0025
+  ],
+  "direction_accuracy": [
+   -0.0406,
+   0.0111
+  ]
+ },
+ "note": "Both heads scored against Clef's stored reading on held-out folds; train labels differ only in who read the story. Agreement, not accuracy.",
+ "seconds": 178
+}
+fold 0 38
+fold 1 78
+fold 2 114
+fold 3 145
+fold 4 176
+{
+ "stories": 1736,
+ "folds": 5,
+ "direction_stories_by_clef": 812,
+ "direction_majority": 0.6712,
+ "jev_vs_clef_presence_label_agreement": 0.7748,
+ "clef_trained": {
+  "presence_auroc": 0.8553,
+  "direction_auroc": 0.7885,
+  "direction_accuracy": 0.7389
+ },
+ "jev_trained": {
+  "presence_auroc": 0.8023,
+  "direction_auroc": 0.7692,
+  "direction_accuracy": 0.7241
+ },
+ "paired_95_interval_jev_minus_clef_trained": {
+  "presence_auroc": [
+   -0.0676,
+   -0.0391
+  ],
+  "direction_auroc": [
+   -0.0411,
+   0.0025
+  ],
+  "direction_accuracy": [
+   -0.0406,
+   0.0111
+  ]
+ },
+ "note": "Both heads scored against Clef's stored reading on held-out folds; train labels differ only in who read the story. Agreement, not accuracy.",
+ "seconds": 182
+}
+L2061 appended
+L2066 appended
+T132-S: HIT, WORSE, presence AUROC of the Jev-trained heads scored against Clef's reading on held-out folds 0.802 vs 0.855

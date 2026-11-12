@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sentences to relations</title>
+<link rel="stylesheet" href="../mock.css">
+<style>
+  main { max-width: 1240px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 4px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+  .box p { margin: 0 0 8px; color: var(--ink-2); font-size: 13px; }
+  .src { font: 12px var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0 8px; }
+  table.t th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line-2); }
+  table.t td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: right; font-family: var(--mono); }
+  .picker { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; } button.pk { text-align: left; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 5px 10px; cursor: pointer; font: 13px var(--sans); } button.pk[aria-pressed="true"] { border-color: var(--accent); background: var(--surface-2); }
+  button.more { margin: 6px 0; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  .rawtext { font-size: 13px; color: var(--ink); white-space: pre-wrap; padding: 2px 0 6px; }
+  .lab { font: 11px var(--mono); color: var(--ink-3); } .tx { font-size: 13px; } .w { font: 12px var(--mono); }
+  .tag { display: inline-block; border: 1px solid var(--line-2); border-radius: 8px; padding: 0 6px; font: 11px var(--mono); margin-left: 4px; color: var(--ink-2); } .tag.neg { border-color: var(--live); color: var(--live); }
+  .step { padding: 3px 0 3px 12px; border-left: 3px solid var(--accent); margin: 0 0 4px; font-size: 13px; } .chain { margin: 0 0 12px; }
+  svg text { font: 11px var(--sans); fill: var(--ink); } svg .vl { font: 10px var(--mono); fill: var(--ink-3); } svg line { stroke: var(--line-2); stroke-width: 1.2; } svg circle { fill: var(--surface-2); stroke: var(--accent); stroke-width: 1.5; }
+  .warn { font-size: 13px; color: var(--ink); border-left: 3px solid var(--s4); padding: 2px 0 2px 10px; margin: 6px 0; }
+</style></head><body><main id="app"></main>
+<script>
+(function () {
+  var app = document.getElementById("app");
+  function el(tag, props) { var e = document.createElement(tag); props = props || {}; for (var k in props) { if (k === "text") e.textContent = props[k]; else if (k === "class") e.className = props[k]; else e.setAttribute(k, props[k]); } for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null) continue; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); } return e; }
+  function svg(tag, props) { var e = document.createElementNS("http://www.w3.org/2000/svg", tag); props = props || {}; for (var k in props) { if (k === "text") e.textContent = props[k]; else e.setAttribute(k, props[k]); } for (var i = 2; i < arguments.length; i++) if (arguments[i]) e.appendChild(arguments[i]); return e; }
+  var pct = function (x) { return Math.round(x * 100) + "%"; }, f2 = function (x) { return x == null ? "-" : x.toFixed(2); };
+  function table(head, rows, numCols) { var t = el("table", { class: "t" }), tr = el("tr"); head.forEach(function (h, i) { tr.appendChild(el("th", { text: h, class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" })); }); t.appendChild(el("thead", {}, tr)); var tb = el("tbody"); rows.forEach(function (r) { var row = el("tr"); r.forEach(function (c, i) { var td = el("td", { class: numCols && numCols.indexOf(i) >= 0 ? "n" : "" }); if (c instanceof Node) td.appendChild(c); else td.textContent = c == null ? "" : String(c); row.appendChild(td); }); tb.appendChild(row); }); t.appendChild(tb); return t; }
+  function box(title, intro, body, src) { return el("section", { class: "box" }, el("h2", { text: title }), intro ? el("p", { text: intro }) : null, body, src ? el("div", { class: "src", text: "source: " + src }) : null); }
+  Promise.all([fetch("relations.json").then(function (r) { return r.json(); }), fetch("simplify.json").then(function (r) { return r.json(); }), fetch("../article-techniques/data.json").then(function (r) { return r.json(); }), fetch("judged.json").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })]).then(function (x) { render(x[0], x[1], x[2], x[3]); }).catch(function (e) { app.appendChild(el("p", { text: "Could not load the data: " + e })); });
+  function render(R, SM, TQ, JD) {
+    var rawBy = {}; TQ.articles.forEach(function (a) { rawBy[a.idx] = a.raw; });
+    app.appendChild(el("h1", { text: "From sentences to relations" }));
+    app.appendChild(el("p", { class: "lead", text: "Two questions on one article at a time. First: if the filler words are removed from a sentence, does its meaning survive? Second: can each sentence be broken into who did what to whom, chained across the article, and drawn as a map? Parser: " + R.parser + ". Embedding model: " + SM.model + "." }));
+    var G = el("div"); [
+      ["Noise words", "The small words most sentences share (the, a, of, to, is, and, not...). The list is spaCy's own stop-word list. 'not' and 'no' are on that list, so removing noise words also removes negation."],
+      ["Content words", "Only the nouns, proper nouns, verbs, adjectives and numbers of a sentence."],
+      ["Core triple", "Subject, relation, object: who did what to whom, read from the sentence's grammar. A sentence can hold several (one per verb, and one per name in 'A and B did X')."],
+      ["Notes on a triple", "NOT = the sentence negates it. modal = could, will, plans to... attributed = somebody said it (the person named). passive flipped = 'X was sued by Y' is stored as Y sued X."],
+      ["Chain", "Triples linked in order: the object of one is the subject of the next (same entity, within 2 sentences), or one sits inside another as reported speech ('X said that Y did Z')."],
+      ["Entity and alias", "A name or noun phrase an action is about. A bare surname is merged with the full name ending in it, within the same article (McAuliffe and Terry McAuliffe). Pronouns are kept as written and left out of the map, since nothing here links them to a name."],
+      ["Similarity to original", "How close a simplified sentence is in meaning to the full sentence, 0 to 1. Two random sentences from these articles score about " + f2(SM.random_pair_cosine) + "."]
+    ].forEach(function (d) { G.appendChild(el("p", {}, el("b", { text: d[0] + ": " }), d[1])); });
+    app.appendChild(box("Terms used on this page", "Defined once, apply everywhere below.", G));
+
+    // overall simplification
+    var vn = { no_noise_words: "Noise words removed", no_noise_words_keep_negation: "Noise words removed, negations kept", content_words: "Content words only", core_triples: "Core triples only" };
+    var rows = Object.keys(vn).map(function (k) { var v = SM.variants[k]; return [vn[k], f2(v.mean_cosine_to_original), pct(v.own_sentence_first), pct(v.nearest_sentence_is_from_same_article), v.sentences_scored]; });
+    var sb = el("div");
+    sb.appendChild(table(["Version of each sentence", "Similarity to the original", "Finds its own original first (among the article's sentences)", "Nearest sentence is from the same article", "Sentences"], rows, [1, 2, 3, 4]));
+    sb.appendChild(el("p", { text: "For reference: a full original sentence's nearest other sentence is from the same article " + pct(SM.original_nearest_other_sentence_same_article) + " of the time. Same-article is the fairer test; finding its own original is easy for any version that keeps the sentence's key words. " + SM.negation.sentences_with_negation + " sentences contain a negation; plain noise-word removal drops it in " + SM.negation.negation_lost_no_noise_words + " of them, the keep-negation version in " + SM.negation.negation_lost_keep_negation + "." }));
+    app.appendChild(box("Does meaning survive simplifying? All " + SM.sentences + " sentences of the 9 articles", null, sb, "runs/harvest/relations/simplify.json"));
+
+    var picker = el("div", { class: "picker" }), stage = el("div");
+    R.articles.forEach(function (a, i) { var b = el("button", { class: "pk", "aria-pressed": "false", text: (i + 1) + ". " + a.title }); b.addEventListener("click", function () { draw(i); }); picker.appendChild(b); });
+    app.appendChild(box("Pick an article", null, picker)); app.appendChild(stage);
+
+    function draw(i) {
+      stage.textContent = ""; Array.prototype.forEach.call(picker.children, function (b, j) { b.setAttribute("aria-pressed", j === i ? "true" : "false"); });
+      var a = R.articles[i], sm = SM.per_article[i], st = a.stats;
+      stage.appendChild(box(a.title, a.domain + ". The article exactly as held, with its paragraph breaks.", el("div", { class: "rawtext", text: rawBy[a.idx] || a.sentences.join(" ") }), "runs/harvest/article_techniques.json#articles[].raw"));
+
+      // sentence by sentence simplification
+      var sbody = el("div"), shown = false, holder = el("div");
+      function drawS() { holder.textContent = ""; var rows = sm.rows.filter(function (r) { return shown || r.i <= 12; }).map(function (r) { return [String(r.i), r.original, el("span", {}, r.no_noise_words, el("br"), el("span", { class: "lab", text: "similarity " + f2(r.cos_no_noise_words) })), el("span", {}, r.content_words, el("br"), el("span", { class: "lab", text: "similarity " + f2(r.cos_content_words) })), el("span", {}, r.core_triples || "(no triple)", el("br"), el("span", { class: "lab", text: "similarity " + f2(r.cos_core_triples) }))]; }); holder.appendChild(table(["Sentence", "Original", "Noise words removed", "Content words only", "Core triples only"], rows, [0])); }
+      drawS(); sbody.appendChild(holder);
+      var mb = el("button", { class: "more", text: "Show all " + sm.rows.length + " sentences" }); mb.addEventListener("click", function () { shown = !shown; mb.textContent = shown ? "Show the first 12 only" : "Show all " + sm.rows.length + " sentences"; drawS(); }); sbody.appendChild(mb);
+      stage.appendChild(box("Each sentence, simplified", "Every cell is made from the original sentence only. Similarity is to the original sentence.", sbody, "runs/harvest/relations/simplify.json#per_article[" + i + "]"));
+
+      // triples
+      var T = a.triples.filter(function (t) { return t.s && t.o && !t.s_pronoun; }), allShown = false, th = el("div"), tholder = el("div");
+      function drawT() { tholder.textContent = ""; var list = allShown ? a.triples : T; tholder.appendChild(table(["Sentence", "Subject", "Relation", "Object", "Notes", "From the sentence, word for word"], list.slice(0, allShown ? 400 : 60).map(function (t) { var notes = el("span"); if (t.neg) notes.appendChild(el("span", { class: "tag neg", text: "NOT" })); t.modal.forEach(function (m) { notes.appendChild(el("span", { class: "tag", text: m })); }); var at = t.attrib || t.said_by; if (at) notes.appendChild(el("span", { class: "tag", text: "attributed: " + at })); if (t.passive) notes.appendChild(el("span", { class: "tag", text: "passive flipped" })); if (t.s_pronoun) notes.appendChild(el("span", { class: "tag", text: "pronoun subject" })); return [String(t.sent + 1), t.s || "(not stated)", t.p, t.o || "-", notes, el("span", { class: "lab", text: t.evidence })]; }), [0])); }
+      th.appendChild(el("p", { text: st.triples + " triples from " + st.sentences + " sentences. " + st.sentences_with_subject_and_object + " sentences have a named subject and an object. Negated: " + st.negated + ". With a modal: " + st.modal + ". Attributed to a speaker: " + st.attributed + ". Passive flipped: " + st.passive + ". Subject is a pronoun: " + st.pronoun_subjects + "." }));
+      drawT(); th.appendChild(tholder); var tb = el("button", { class: "more", text: "Show all " + a.triples.length + " triples (including pronoun subjects and missing objects)" }); tb.addEventListener("click", function () { allShown = !allShown; tb.textContent = allShown ? "Show only triples with a named subject and an object" : "Show all " + a.triples.length + " triples (including pronoun subjects and missing objects)"; drawT(); }); th.appendChild(tb);
+      stage.appendChild(box("Who did what to whom", "Showing triples with a named subject and an object (first 60). The last column is the stretch of the sentence the triple was read from.", th, "runs/harvest/relations/relations.json#articles[" + i + "].triples"));
+
+      // chains
+      var byId = {}; a.triples.forEach(function (t) { byId[t.id] = t; }); var ch = el("div");
+      if (!a.chains.length) ch.appendChild(el("p", { text: "No chains found." }));
+      a.chains.slice(0, 5).forEach(function (c, k) { var d = el("div", { class: "chain" }, el("div", { class: "lab", text: "Chain " + (k + 1) + ": " + c.length + " linked triples" })); c.forEach(function (id, n) { var t = byId[id]; d.appendChild(el("div", { class: "step" }, (n + 1) + ". " + (t.s || "?") + "  >  " + (t.neg ? "NOT " : "") + t.p + "  >  " + (t.o || "(reported clause)") + "   (sentence " + (t.sent + 1) + ")")); }); ch.appendChild(d); });
+      stage.appendChild(box("Chains", "Triples linked in order across the article. The longest first. " + st.chains + " chains in total, " + st.chains_of_3_or_more + " with three or more links.", ch, "runs/harvest/relations/relations.json#articles[" + i + "].chains"));
+
+      // relationship map
+      var N = a.nodes.slice(0, 12), keys = {}; N.forEach(function (n, k) { keys[n.key] = k; }); var E = a.edges.filter(function (e) { return keys[e.from] != null && keys[e.to] != null && e.from !== e.to; });
+      var W = 720, H = 460, cx = W / 2, cy = H / 2, rad = 170, pos = N.map(function (n, k) { var ang = (2 * Math.PI * k) / Math.max(N.length, 1) - Math.PI / 2; return [cx + rad * Math.cos(ang) * 1.25, cy + rad * Math.sin(ang)]; });
+      var s = svg("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", role: "img", "aria-label": "Relationship map" });
+      E.forEach(function (e) { var p = pos[keys[e.from]], q = pos[keys[e.to]]; s.appendChild(svg("line", { x1: p[0], y1: p[1], x2: q[0], y2: q[1] })); var v = Object.keys(e.verbs)[0]; s.appendChild(svg("text", { x: (p[0] + q[0]) / 2, y: (p[1] + q[1]) / 2, class: "vl", "text-anchor": "middle", text: v })); });
+      N.forEach(function (n, k) { s.appendChild(svg("circle", { cx: pos[k][0], cy: pos[k][1], r: 5 + Math.min(10, n.degree) })); s.appendChild(svg("text", { x: pos[k][0], y: pos[k][1] - 12 - Math.min(10, n.degree), "text-anchor": "middle", text: n.label.slice(0, 28) })); });
+      var mapBox = el("div"); mapBox.appendChild(s);
+      mapBox.appendChild(el("p", { text: "The " + N.length + " most connected of " + a.nodes.length + " entities, with the relations between them (a line is at least one triple; the word is the relation). Bigger circle = more triples. The full list of relations is below." }));
+      var ed = a.edges.slice().sort(function (p, q) { return q.count - p.count; }).slice(0, 25), lab = {}; a.nodes.forEach(function (n) { lab[n.key] = n.label; });
+      mapBox.appendChild(table(["From", "Relation (times)", "To", "Triples"], ed.map(function (e) { return [lab[e.from] || e.from, Object.keys(e.verbs).map(function (v) { return v + " (" + e.verbs[v] + ")"; }).join(", "), lab[e.to] || e.to, e.count]; }), [3]));
+      stage.appendChild(box("Relationship map", "Only entities that are named in both roles of a triple appear; pronouns are left out.", mapBox, "runs/harvest/relations/relations.json#articles[" + i + "].nodes, .edges"));
+
+      // compared with the existing Fact finder
+      var cmp = el("div"); cmp.appendChild(table(["", "This extractor", "Existing Fact finder"], [["Triples from this article", st.triples, st.fact_finder_triples], ["Marked 'stated' by the Fact finder's own checks", "-", st.fact_finder_stated + " of " + st.fact_finder_triples], ["Keeps NOT / modal / attribution / passive flip", "yes", "no"]], [1, 2]));
+      if (JD) { var j = JD; cmp.appendChild(el("p", { class: "warn", text: "Blind judging of " + j.n_each + " triples from each extractor by Sonnet and Opus (they were not told which was which). Correct = the sentence really states it. Own extractor: Sonnet " + pct(j.sonnet.own.yes) + " correct, " + pct(j.sonnet.own.partly) + " partly; Opus " + pct(j.opus.own.yes) + " correct, " + pct(j.opus.own.partly) + " partly. Fact finder: Sonnet " + pct(j.sonnet.fact_finder.yes) + " correct, " + pct(j.sonnet.fact_finder.partly) + " partly; Opus " + pct(j.opus.fact_finder.yes) + " correct, " + pct(j.opus.fact_finder.partly) + " partly. Informative: own " + pct(j.sonnet.own.informative) + " / " + pct(j.opus.own.informative) + " (Sonnet / Opus), Fact finder " + pct(j.sonnet.fact_finder.informative) + " / " + pct(j.opus.fact_finder.informative) + ". Judges agree on the correct / partly / wrong label for " + pct(j.agreement) + " of the 60 triples. These numbers are for all nine articles together, not this article." })); }
+      stage.appendChild(box("Compared with the existing Fact finder", "The Fact finder (facts_lib.py) already extracts one subject-verb-object per verb. Counts are for this article.", cmp, "runs/harvest/relations/relations.json#articles[" + i + "].stats"));
+    }
+    draw(0);
+  }
+})();
+</script></body></html>
