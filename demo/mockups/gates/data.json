@@ -27064,20 +27064,20 @@
   },
   {
    "head": "Area",
-   "tools_settled": "not built",
+   "tools_settled": "organic Area not built; the live topic head carries the seed list (Domain row); topic vocabularies per seed topic in runs/pulse/t219/t219_frames.json (ledger L2470)",
    "model_answered": "name only, nothing trained",
    "model_right": "not built",
    "left": "no model",
-   "judge": "none",
+   "judge": "none yet; MN-DS as scoring-only needs the owner yes (ledger L2462)",
    "src": "runs/pulse/head_coverage.json#Area"
   },
   {
    "head": "Capability",
-   "tools_settled": "not built",
-   "model_answered": "name only, nothing trained",
+   "tools_settled": "2300.0%",
+   "model_answered": "no model trained: rows are pseudo-labels, owner decision open (ledger L2477)",
    "model_right": "not built",
    "left": "no model",
-   "judge": "none",
+   "judge": "none: no outside truth exists for it (ledger L2462); recurrence over time and a reading of the pairs only",
    "src": "runs/pulse/head_coverage.json#Capability"
   },
   {
@@ -27088,6 +27088,42 @@
    "left": "no model",
    "judge": "none",
    "src": "runs/pulse/head_coverage.json#Novelty"
+  },
+  {
+   "head": "Function (opinion or fact, CheckThat)",
+   "tools_settled": "no tool alone separates opinion from fact",
+   "model_answered": "56.6%",
+   "model_right": "78.9% (balanced accuracy against human labels on the rows it answers (v6b student, 35% coverage); the teacher scores 0.792 on the same rows, hybrid loses 0.003)",
+   "left": "43.4%",
+   "judge": "CheckThat human labels on 2,076 sentences; teacher Jev (AUC 0.868); answer-when-sure rule: at most 0.25% false positives and 5% misses against the teacher label",
+   "src": "runs/pulse/head_coverage.json#Function (opinion or fact, CheckThat)"
+  },
+  {
+   "head": "Place (region, 8 options)",
+   "tools_settled": "not measured",
+   "model_answered": "63.0%",
+   "model_right": "93.5% (1,000 queue stories the student was not fitted on; of 414 the text judge can decide, it answers 260 and agrees on 93.5% (95% interval 90.4 to 96.5%); on the decidable ones it defers it is 44.2%; majority class 21.5%. Judge reads the same country-name cues, so a proxy. Earlier in-sample-line figure: 0.914 on 499 stories (t199))",
+   "left": "37.0%",
+   "judge": "teacher Jev place_region on 1,600 queue stories; text-derived judge (country and city names in the text, t167) on 745 decidable stories. The judge reads the same text as the student, so it is a proxy and partly circular",
+   "src": "runs/pulse/head_coverage.json#Place (region, 8 options)"
+  },
+  {
+   "head": "Engine questions (328 keys, vs Clef)",
+   "tools_settled": "not measured",
+   "model_answered": "32.7%",
+   "model_right": "agreement with Clef only: pooled true-positive rate 0.932 and false-positive rate 0.0013 (time split), 0.935 and 0.0012 (publisher split) on held-out stories; no human truth for these questions",
+   "left": "67.3%",
+   "judge": "Clef's own answers (agreement, not human truth) on 8,545 stories read as the engine reads them (title plus description); one logistic head per key on the v6b embedding, yes-line fitted at false-positive quota 0.0010 on out-of-fold training scores",
+   "src": "runs/pulse/head_coverage.json#Engine questions (328 keys, vs Clef)"
+  },
+  {
+   "head": "Clef attributes, 15 with at least 200 positives",
+   "tools_settled": "not measured",
+   "model_answered": "38.2%",
+   "model_right": "no human truth for these questions; agreement with Clef is held at true-positive rate 0.95 by the rule; jointly, a story has on average 5.7 of the 15 answered and only 0.04% have all 15 (t190_joint_coverage.json)",
+   "left": "61.8%",
+   "judge": "Clef's own answers on 2,488 stories (agreement, not human truth)",
+   "src": "runs/pulse/head_coverage.json#Clef attributes, 15 with at least 200 positives"
   }
  ],
  "rounds": [
@@ -27381,7 +27417,7 @@
    "Advisor decides"
   ],
   "lap_done": 1,
-  "health": "Since the loop started (ledger L1117): 539 notes, 17 predictions written before a run, 25 notes that record a miss. Every round on this page has its prediction and its score.",
+  "health": "Since the loop started (ledger L1117): 1384 notes, 144 predictions written before a run, 85 notes that record a miss. Every round on this page has its prediction and its score.",
   "lap2": [
    {
     "status": "done: 1,482 of 2,000 selected, misses recorded",

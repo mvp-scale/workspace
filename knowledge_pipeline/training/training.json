@@ -1,5 +1,5 @@
 {
- "built": "2026-11-12T04:10:23Z",
+ "built": "2026-11-16T04:40:23Z",
  "note": "Scores are agreement with Sonnet labels on the sealed set (1,499 items), not outside truth. Noise across seeds: about 0.009 topic, 0.007 story type, 0.019 presence F1.",
  "baseline_sparse_sealed": {
   "topic": 0.7532,
@@ -103,6 +103,26 @@
    "curve": "dev accuracy every 5 epochs, 3 seeds (heademb_size_s*.json)",
    "v1": "dev accuracy 0.638-0.641 vs majority-level 0.507; dev split only, the sealed set has no size labels",
    "status": "v1 candidate on dev only, not adopted"
+  },
+  {
+   "model": "Function (opinion or fact)",
+   "data": "21,671 Jev-labelled sentences (19,595 queue + 2,076 CheckThat), about 0.30 USD",
+   "inp": "sentence embeddings (v6b + bge-small + e5-small)",
+   "out": "subjective yes/no, answers only when sure",
+   "trainer": "logistic head per encoder set",
+   "curve": "coverage vs training rows (t186)",
+   "v1": "answers 57% of reads at TPR 0.95 and FPR 0.0025 vs Jev; hybrid matches Jev against CheckThat human labels",
+   "status": "candidate, answer-when-sure; not adopted"
+  },
+  {
+   "model": "Clef attributes (15 with 200+ positives)",
+   "data": "2,488 stories, Clef's 328 answers each",
+   "inp": "v6b story embedding",
+   "out": "one yes/no per attribute, answers only when sure",
+   "trainer": "logistic head per attribute",
+   "curve": "none yet",
+   "v1": "mean coverage 38% (24 to 68%), FPR tail noisy",
+   "status": "measured, agreement with Clef only"
   }
  ],
  "runs": [
@@ -463,64 +483,220 @@
    }
   }
  },
- "live": [
-  {
-   "job": "kaggle-kp-t67-ner-bakeoff",
-   "state": "queued",
-   "progress": "kp t67 ner bakeoff",
-   "updated": "2026-11-12T04:07:23Z",
-   "last": "coreygorman/kp-t67-ner-bakeoff has status \"KernelWorkerStatus.QUEUED\""
-  }
- ],
+ "live": [],
  "next_flow": [
   {
    "n": 1,
-   "step": "T83: paired interval on the T82 rerank gain (+4.3 points)",
+   "step": "Measure what a question costs Clef: time for 1, 82, 164 and 328 questions on 20 stories",
    "state": "done",
-   "why": "Says whether the gain is real or noise.",
-   "gate": "none, CPU"
+   "why": "Time is per question: about 10 ms each, about 0.06 s to read a story (164 questions 1.86 s median); a CPU that answers a share f of questions cuts Clef's time by about f (L2387). 328 in one request failed (size limit, not investigated).",
+   "gate": "owner"
   },
   {
    "n": 2,
-   "step": "Area: train the first model on supported triples and mapped terms, with a dev curve",
-   "state": "ready (CPU)",
-   "why": "Area has no trained model; a weak v1 still fills the row.",
+   "step": "Function (opinion or fact): answer-when-sure, random split, time-shifted split, human-label check",
+   "state": "done",
+   "why": "CPU answers 46% (v6b) to 57% (three encoders) of reads at TPR 0.95 and FPR 0.0025 vs Jev; hybrid keeps human-label accuracy (L2254 to L2267).",
    "gate": "none"
   },
   {
    "n": 3,
-   "step": "Capability and Novelty: write exact inputs and outputs, then the same steps as Area",
-   "state": "ready (CPU)",
-   "why": "Both rows have only a partial definition.",
-   "gate": "none"
+   "step": "Learning curve: coverage vs training rows",
+   "state": "done",
+   "why": "Coverage still rises with rows: 27% at 1,000, 41% at 4,000, 49% at 8,000, 57% at 15,700 (three encoders, newest stories as test; L2269). More rows are not a dead end for this lever.",
+   "gate": "none, CPU"
   },
   {
    "n": 4,
-   "step": "Understanding (triples): trained head with a leakage check",
-   "state": "ready (CPU)",
-   "why": "Extractor results exist (T73 to T82); no head is trained.",
+   "step": "More labels: 35,351 more sentences labelled (0.535 USD), curve extended to 51,000 rows",
+   "state": "done",
+   "why": "Coverage 57% to 62% (three encoders) and flattening: +0.049 for 3.2x the rows, v6b alone stuck at 50%. Labels are a slow lever (L2276).",
    "gate": "none"
   },
   {
    "n": 5,
-   "step": "Encoder run for the rows with no encoder run: Area, Capability, Novelty, Understanding (claims/triples)",
-   "state": "ready (CPU)",
-   "why": "Same recipe as T60: dev-chosen epoch, sealed set read once, curve shown here.",
+   "step": "Condition presence: answer-when-sure on 19,000 to 25,000 stories per teacher",
+   "state": "done",
+   "why": "CPU answers 47 to 68 percent of reads at the tolerance, but the three teachers disagree (87 to 92 percent) so the reference is the real gap (L2280).",
    "gate": "none"
   },
   {
    "n": 6,
-   "step": "Local Clef as a teacher for the IPTC term mapping",
-   "state": "needs owner yes",
-   "why": "Uses the 5090 as a labeller; the one lever left on the 30% level-2 match.",
-   "gate": "owner"
+   "step": "Condition presence against Clef (the engine's own reader) and a time-shifted split",
+   "state": "done",
+   "why": "CPU answers 22.5% (random) and 18.6% (newest stories) of reads against Clef, vs 47 to 68% against other teachers: carry the Clef number (L2369).",
+   "gate": "none"
   },
   {
    "n": 7,
-   "step": "Adopt a new encoder on the Engine card",
-   "state": "needs owner yes",
-   "why": "Engine change (step 5 of the method).",
+   "step": "Place student with answer-when-sure",
+   "state": "done",
+   "why": "CPU answers 63% of Place reads at 0.951 agreement with Jev (worst split 0.926); on the 499 decidable stories it answers it matches Jev vs the text judge, 0.914 each. Judge reads the same text, so proxy (T148-C, t199).",
+   "gate": "none"
+  },
+  {
+   "n": 8,
+   "step": "Small neural head on the joined embeddings",
+   "state": "done",
+   "why": "Worse than the linear head (52% vs 62% coverage); the linear head is not the limit (L2278).",
+   "gate": "none"
+  },
+  {
+   "n": 9,
+   "step": "Feed-ordered split (new news sources) for the Function student",
+   "state": "done",
+   "why": "Held-out feeds: 48.2% coverage at TPR 0.951, FPR 0.0033 (time shift gave 56.8%); feed shift costs about 9 points and the false-positive rate drifts just over the line (T148-D, t201).",
+   "gate": "none"
+  },
+  {
+   "n": 10,
+   "step": "Factuality: about 15,000 more Jev event reads, then answer-when-sure",
+   "state": "ready (hosted, about 0.3 USD inside D43)",
+   "why": "The MAVEN tail is too thin to measure at 0.25% false positives.",
+   "gate": "none, inside the 2.5 USD cap"
+  },
+  {
+   "n": 11,
+   "step": "Per-question triage of the 313 rare Clef attributes",
+   "state": "done",
+   "why": "Quota 0.0010: 169 of 232 tested keys hold TPR 0.90 and FPR 0.0025 on held-out halves; the CPU answers 19.7% of all 328 questions inside that tolerance, same coverage as quota 0.0025 (27.5%) but now valid (T148-H, t205). At quota 0.0025 only 16 keys (1.8%) held it (T148-G).",
    "gate": "owner"
+  },
+  {
+   "n": 12,
+   "step": "Offline engine replay with CPU answers substituted",
+   "state": "done",
+   "why": "NER place names decide 33.3% of 1,600 stories (regex 46.6%) at 0.880 agreement with Jev (regex 0.882); where both decide they agree 98.9%. The name table limits Place, not the tagger; either method decides 51.6%. NER adds no Place accuracy; its value is typed entities for identity (T148-F, t203).",
+   "gate": "none"
+  },
+  {
+   "n": 13,
+   "step": "Adopt answer-when-sure on the Engine card",
+   "state": "done",
+   "why": "On stories it did not train on the CPU answers 10.5% (newest 30% by date) and 9.6% (held-out feeds) of the 328 questions inside the tolerance, against 19.7% on random halves; pooled TPR 0.926, FPR 0.0010 and 0.0017 (T148-I, t206). Use 9.6% as the carried number.",
+   "gate": "owner"
+  },
+  {
+   "n": 22,
+   "step": "Function: false-positive margin on held-out feeds",
+   "state": "done",
+   "why": "Yes-line fitted at quota 0.0015: coverage 47.1% at false positives 0.0023 (inside 0.0025), one point below the 48.2% at quota 0.0025 (T148-E, t202). Use 0.0015 when the rule is deployed.",
+   "gate": "none",
+   "was_n": 10
+  },
+  {
+   "n": 23,
+   "step": "Per-key triage of the 328 engine keys: which keys the CPU can answer when sure",
+   "state": "done",
+   "why": "Quota 0.0010: 169 of 232 tested keys hold TPR 0.90 and FPR 0.0025 on held-out halves; the CPU answers 19.7% of all 328 questions inside that tolerance, same coverage as quota 0.0025 (27.5%) but now valid (T148-H, t205). At quota 0.0025 only 16 keys (1.8%) held it (T148-G).",
+   "gate": "none",
+   "was_n": 11
+  },
+  {
+   "n": 16,
+   "step": "Turn spaCy NER on as a measured BitMob tool: typed PERSON, ORG, GPE per story; test NER-typed place names against Jev place_region on the 1,600 stories vs the regex judge and the Place student",
+   "state": "done",
+   "why": "NER place names decide 33.3% of 1,600 stories (regex 46.6%) at 0.880 agreement with Jev (regex 0.882); where both decide they agree 98.9%. The name table limits Place, not the tagger; either method decides 51.6%. NER adds no Place accuracy; its value is typed entities for identity (T148-F, t203).",
+   "gate": "none"
+  },
+  {
+   "n": 24,
+   "step": "Per-key triage on a time-shifted and a feed-ordered split, plus the 96 keys with under 10 positives",
+   "state": "done",
+   "why": "On stories it did not train on the CPU answers 10.5% (newest 30% by date) and 9.6% (held-out feeds) of the 328 questions inside the tolerance, against 19.7% on random halves; pooled TPR 0.926, FPR 0.0010 and 0.0017 (T148-I, t206). Use 9.6% as the carried number.",
+   "gate": "none",
+   "was_n": 13
+  },
+  {
+   "n": 14,
+   "step": "Learning curve for the per-key triage: tolerance saving vs training stories (25, 50, 75, 100 percent of the older 70%)",
+   "state": "done",
+   "why": "Tolerance-meeting share on newer stories rises with training stories: 4.2% at 435, 6.7% at 870, 7.2% at 1,305, 10.5% at 1,741 (gain 2.5 then 3.8 points per doubling; not flattening). Mostly more keys pass (53 to 111 of 196); all-key coverage barely moves (18% to 23%). Extrapolating about 3 points per doubling gives roughly 18% at 10,000 stories (estimate, noisy) (T148-J, t207).",
+   "gate": "none"
+  },
+  {
+   "n": 15,
+   "step": "Fix the clock-time amount rule in the Fact finder with a measured test (check_analyze2.py reference set)",
+   "state": "done",
+   "why": "Clock-time exclusion added to the Fact finder (facts_lib.py and stated_facts.py): 49 of 500 articles (19 of 200 golden) lose 149 clock-time amounts, 0 other differences; check_analyze2 passes after the 47 clock-time amounts were removed from the golden reference (backup in the session scratchpad) (t208).",
+   "gate": "none"
+  },
+  {
+   "n": 17,
+   "step": "P0a: per-key triage on the 8,545 further Clef-labelled stories (state text = the engine's own title plus description), time and feed splits",
+   "state": "done",
+   "why": "On the engine's own input (title plus description), 8,545 further Clef-labelled stories: 174 of 286 tested keys hold tolerance on the newest 30% by day (32.7% of the 328 questions) and 184 of 287 on held-out publishers (35.8%); pooled TPR 0.932 and 0.935, FPR 0.0013 and 0.0012. Was 9.6% on the 2,488 full-article stories (T148-K, t209).",
+   "gate": "none"
+  },
+  {
+   "n": 18,
+   "step": "P0c: offline engine replay with a per-key router (CPU answers when the key's line is passed, otherwise Clef's stored answer) scored with the existing replay harness against F-0020",
+   "state": "done (fails)",
+   "why": "[CORRECTED L2448: measured against the bare Step 1 noise band, not tolerance (d) of D-0004/F-0020; not an F-0020 result] Engine-level replay of the per-key router on 800 held-out stories: 7.8% of engine outputs inside the Step 1 noise band (median 3.1 times the band, max 31.7); all-CPU 3.9%. The router answers 58.9% of cells but adds 0.35 false and 0.43 missed fires per story against Clef's 3.56; per-key tolerance does not add up across keys (T148-M, t211).",
+   "gate": "none"
+  },
+  {
+   "n": 19,
+   "step": "Sweep the router's lines (false-positive and miss quotas, no-only mode) in the engine replay to find the answered share at which outputs stay inside the band",
+   "state": "done (no setting passes)",
+   "why": "[CORRECTED L2448: measured against the bare Step 1 noise band, not tolerance (d) of D-0004/F-0020; not an F-0020 result] Ten answer-line settings in the engine replay: best 30.6% of outputs inside the Step 1 band at 38.2% of cells answered (false-positive quota 0.0001, miss quota 0.002); no setting reaches half. Missed fires per story floor at about 0.10 and false fires at 0.07 against Clef's 3.56 (T148-N, t212).",
+   "gate": "none"
+  },
+  {
+   "n": 20,
+   "step": "Calibrate the band: replay Clef's own single-wording reading against its two-wording reading (the harness supports wording 0 or 1 alone)",
+   "state": "done",
+   "why": "[CORRECTED L2448: measured against the bare Step 1 noise band, not tolerance (d) of D-0004/F-0020; not an F-0020 result] Clef against itself: single wording 0 alone vs the two-wording reading puts 0.0% of outputs in the band (median 44.6x), wording 1 alone 11.1% (median 13.7x); 0.42 to 0.56 of 0.69 fired (dial, direction) keys per story differ. The band is stricter than Clef's own wording variability; the best CPU router setting (30.6% in band, median 2.4x) is closer to Clef's reading than Clef's own single wording. Owner decision raised on restating the engine tolerance (T148-O, t213).",
+   "gate": "none"
+  },
+  {
+   "n": 21,
+   "step": "Re-score the existing router against tolerance (d): per output, the median over Clef's 3 wording pairs of the replay difference floored at the noise band, pass when the largest drift to tolerance ratio over all outputs is at most 1 (sensitivity_report.py:151, step2_labels.py:51-58), on the 880 Step 1 stories with the third wording",
+   "state": "done: scored at ledger L2457 (T148-Q, runs/pulse/t215/t215_router_tolerance_d.json); the no_only router passes tolerance (d) at 39.1% of cells answered, the baseline setting fails (ratio 1.50)",
+   "why": "The recorded yardstick (D-0004, F-0020); the replays t211 to t214 used the bare noise band instead. Authorised by D-0038 and P-0023; prediction goes in first (independent review, L2448).",
+   "gate": "none"
+  },
+  {
+   "n": 25,
+   "step": "Trust grid true: add Place, Factuality, Time, Evidence span rows and tonight's Area, Capability, Place results to flow_audit; models-at-v1 out of N on the Training tab",
+   "state": "done: scored at ledger L2487 (T148-G1); grid has 15 rows, models at v1 0 of 15; next: the 22 older cells without a result file",
+   "why": "Plan 10-step (ledger L2485) step 1",
+   "gate": "none"
+  },
+  {
+   "n": 26,
+   "step": "Register Capability extractor and Area topic vocabularies as named BitMob tools (point, definition, measured value, honest status)",
+   "state": "done in code and tested on a second instance (ledger L2512); the live bench needs the owner's restart approval to show it",
+   "why": "Plan step 2; BitMob toolchain naming rule",
+   "gate": "owner approval to restart :18770"
+  },
+  {
+   "n": 27,
+   "step": "Settle one Area seed list (49 topics, IPTC 17, or 93 in the label store) by agreement with engine, label store and MN-DS; decision line for the owner to confirm",
+   "state": "done: ledger L2488; Area seed = engine 49 topics, Domain = IPTC 17 roll-up (D39 L2068); 1,267 stray label rows (0.7%, gemma/qwen/other) excluded; no owner question left",
+   "why": "Plan step 3",
+   "gate": "none"
+  },
+  {
+   "n": 28,
+   "step": "Area promotion gate (playbook section 9): independent publishers, topic-concentrated, not generic, reproducible across publisher halves",
+   "state": "done: scored at ledger L2494 (T148-A1); 114 promoted Area sub-area candidates in runs/pulse/t227/area_candidates.jsonl, stable across publisher halves (0.342 vs random 0.361)",
+   "why": "Plan step 4",
+   "gate": "none"
+  },
+  {
+   "n": 29,
+   "step": "Capability stability on older vs newer stories; map top pairs onto an open verb-frame resource only if already on disk",
+   "state": "ready",
+   "why": "Plan step 5",
+   "gate": "download needs the owner"
+  },
+  {
+   "n": 30,
+   "step": "G4 alignment v1: merge triples across the 9,811 same-event pairs into edges with independent-publisher counts; beat a same-lemma baseline",
+   "state": "done: baseline L2490, within-event matcher L2492; G4 v1 = exact-key alignment inside an event (1,739 edges in runs/pulse/t226/g4_edges_exact.jsonl); matcher not adopted (gain 1.066, bar 1.10); recall is the open problem",
+   "why": "Plan step 9; playbook section 18 item 9",
+   "gate": "none"
   }
  ],
  "kinds_runs": [
@@ -972,6 +1148,652 @@
    "file": "runs/pulse/t125/t125_mix.json"
   }
  ],
+ "selective": [
+  {
+   "head": "Function (opinion or fact)",
+   "input": "v6b student embedding",
+   "trained_on": "21,671 Jev-labelled sentences",
+   "coverage": 0.458,
+   "tpr": 0.95,
+   "fpr": 0.0026,
+   "fpr_worst": 0.0042,
+   "updated": "2026-11-12T19:02Z",
+   "file": "runs/pulse/t179/t184_combined_encoders_selective.json"
+  },
+  {
+   "head": "Function (opinion or fact)",
+   "input": "bge-small embedding",
+   "trained_on": "21,671 Jev-labelled sentences",
+   "coverage": 0.491,
+   "tpr": 0.95,
+   "fpr": 0.0026,
+   "fpr_worst": 0.0045,
+   "updated": "2026-11-12T19:02Z",
+   "file": "runs/pulse/t179/t184_combined_encoders_selective.json"
+  },
+  {
+   "head": "Function (opinion or fact)",
+   "input": "e5-small embedding",
+   "trained_on": "21,671 Jev-labelled sentences",
+   "coverage": 0.539,
+   "tpr": 0.95,
+   "fpr": 0.0026,
+   "fpr_worst": 0.0038,
+   "updated": "2026-11-12T19:02Z",
+   "file": "runs/pulse/t179/t184_combined_encoders_selective.json"
+  },
+  {
+   "head": "Function (opinion or fact)",
+   "input": "all three embeddings joined",
+   "trained_on": "21,671 Jev-labelled sentences",
+   "coverage": 0.566,
+   "tpr": 0.95,
+   "fpr": 0.0025,
+   "fpr_worst": 0.0047,
+   "updated": "2026-11-12T19:02Z",
+   "file": "runs/pulse/t179/t184_combined_encoders_selective.json"
+  },
+  {
+   "head": "Function (opinion or fact), time-shifted test",
+   "input": "v6b student embedding",
+   "trained_on": "stories up to 2026-11-02; tested on the newer 30%",
+   "coverage": 0.476,
+   "tpr": 0.944,
+   "fpr": 0.0024,
+   "fpr_worst": "",
+   "updated": "2026-11-12T19:19Z",
+   "file": "runs/pulse/t179/t185_time_shift.json"
+  },
+  {
+   "head": "Function (opinion or fact), time-shifted test",
+   "input": "all three embeddings joined",
+   "trained_on": "stories up to 2026-11-02; tested on the newer 30%",
+   "coverage": 0.568,
+   "tpr": 0.948,
+   "fpr": 0.0011,
+   "fpr_worst": "",
+   "updated": "2026-11-12T19:19Z",
+   "file": "runs/pulse/t179/t185_time_shift.json"
+  },
+  {
+   "head": "Condition present",
+   "input": "e5-small embedding (cached)",
+   "trained_on": "25,465 stories labelled by haiku (16% positive); random splits",
+   "coverage": 0.465,
+   "tpr": 0.95,
+   "fpr": 0.0025,
+   "fpr_worst": 0.0035,
+   "updated": "2026-11-12T20:02Z",
+   "file": "runs/pulse/t179/t189_condition_selective.json"
+  },
+  {
+   "head": "Condition present",
+   "input": "e5-small embedding (cached)",
+   "trained_on": "19,437 stories labelled by sonnet (12% positive); random splits",
+   "coverage": 0.535,
+   "tpr": 0.949,
+   "fpr": 0.0026,
+   "fpr_worst": 0.0044,
+   "updated": "2026-11-12T20:02Z",
+   "file": "runs/pulse/t179/t189_condition_selective.json"
+  },
+  {
+   "head": "Condition present",
+   "input": "e5-small embedding (cached)",
+   "trained_on": "25,456 stories labelled by gemma (5% positive); random splits",
+   "coverage": 0.683,
+   "tpr": 0.95,
+   "fpr": 0.0025,
+   "fpr_worst": 0.0038,
+   "updated": "2026-11-12T20:02Z",
+   "file": "runs/pulse/t179/t189_condition_selective.json"
+  },
+  {
+   "head": "Condition present, against Clef (the engine's reader)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 Clef-read stories (47.6% positive); random half-splits",
+   "coverage": 0.225,
+   "tpr": 0.948,
+   "fpr": 0.0029,
+   "fpr_worst": 0.0077,
+   "updated": "2026-11-12T21:10Z",
+   "file": "runs/pulse/t179/t192_presence_vs_clef.json"
+  },
+  {
+   "head": "Condition present, against Clef, time-shifted",
+   "input": "v6b story embedding",
+   "trained_on": "1,741 stories up to 2026-10-29; tested on the newest 747",
+   "coverage": 0.186,
+   "tpr": 0.928,
+   "fpr": 0.0,
+   "fpr_worst": "",
+   "updated": "2026-11-12T21:10Z",
+   "file": "runs/pulse/t179/t192_presence_vs_clef.json"
+  },
+  {
+   "head": "a|prices|up|1|0 (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 204 positives",
+   "coverage": 0.57,
+   "tpr": 0.951,
+   "fpr": 0.0026,
+   "fpr_worst": 0.007,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "a|social_division|up|1|0 (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 215 positives",
+   "coverage": 0.273,
+   "tpr": 0.951,
+   "fpr": 0.0026,
+   "fpr_worst": 0.0062,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "a|trust_institutions|up|1|0 (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 239 positives",
+   "coverage": 0.501,
+   "tpr": 0.948,
+   "fpr": 0.0024,
+   "fpr_worst": 0.0071,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "a|trust_institutions|down|0|1 (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 306 positives",
+   "coverage": 0.353,
+   "tpr": 0.949,
+   "fpr": 0.0023,
+   "fpr_worst": 0.0064,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "a|trust_institutions|down|1|1 (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 224 positives",
+   "coverage": 0.307,
+   "tpr": 0.948,
+   "fpr": 0.0026,
+   "fpr_worst": 0.0097,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "a|news_overload|down|0|0 (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 788 positives",
+   "coverage": 0.255,
+   "tpr": 0.948,
+   "fpr": 0.0035,
+   "fpr_worst": 0.0153,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "a|news_overload|down|0|1 (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 221 positives",
+   "coverage": 0.392,
+   "tpr": 0.949,
+   "fpr": 0.0027,
+   "fpr_worst": 0.0088,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "g|happened (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 568 positives",
+   "coverage": 0.42,
+   "tpr": 0.947,
+   "fpr": 0.0033,
+   "fpr_worst": 0.0084,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "g|announced (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 575 positives",
+   "coverage": 0.281,
+   "tpr": 0.948,
+   "fpr": 0.0033,
+   "fpr_worst": 0.0105,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "s|national (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 600 positives",
+   "coverage": 0.424,
+   "tpr": 0.95,
+   "fpr": 0.0028,
+   "fpr_worst": 0.0096,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "s|local (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 242 positives",
+   "coverage": 0.405,
+   "tpr": 0.941,
+   "fpr": 0.0025,
+   "fpr_worst": 0.0062,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "s|new (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 875 positives",
+   "coverage": 0.261,
+   "tpr": 0.949,
+   "fpr": 0.0033,
+   "fpr_worst": 0.0112,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "x|us_focus (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 643 positives",
+   "coverage": 0.678,
+   "tpr": 0.948,
+   "fpr": 0.0034,
+   "fpr_worst": 0.0098,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "x|foreign_focus (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 877 positives",
+   "coverage": 0.368,
+   "tpr": 0.95,
+   "fpr": 0.0032,
+   "fpr_worst": 0.0111,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  },
+  {
+   "head": "x|recent (Clef answer)",
+   "input": "v6b story embedding",
+   "trained_on": "2,488 stories, 1420 positives",
+   "coverage": 0.24,
+   "tpr": 0.95,
+   "fpr": 0.0038,
+   "fpr_worst": 0.0129,
+   "updated": "2026-11-12T19:00Z",
+   "file": "runs/pulse/t182/t182_attribute_selective.json"
+  }
+ ],
+ "learning_curves": [
+  {
+   "head": "Function (opinion or fact)",
+   "test": "newest 30% of stories (5955 sentences), trained on stories up to 2026-11-02",
+   "points": [
+    {
+     "rows": 1001,
+     "v6b": {
+      "coverage": 0.272,
+      "eff_tpr": 0.941,
+      "eff_fpr": 0.0029
+     },
+     "joined": {
+      "coverage": 0.269,
+      "eff_tpr": 0.947,
+      "eff_fpr": 0.002
+     }
+    },
+    {
+     "rows": 2001,
+     "v6b": {
+      "coverage": 0.351,
+      "eff_tpr": 0.935,
+      "eff_fpr": 0.0
+     },
+     "joined": {
+      "coverage": 0.391,
+      "eff_tpr": 0.93,
+      "eff_fpr": 0.0
+     }
+    },
+    {
+     "rows": 4001,
+     "v6b": {
+      "coverage": 0.362,
+      "eff_tpr": 0.949,
+      "eff_fpr": 0.002
+     },
+     "joined": {
+      "coverage": 0.407,
+      "eff_tpr": 0.955,
+      "eff_fpr": 0.0018
+     }
+    },
+    {
+     "rows": 8000,
+     "v6b": {
+      "coverage": 0.419,
+      "eff_tpr": 0.947,
+      "eff_fpr": 0.0013
+     },
+     "joined": {
+      "coverage": 0.487,
+      "eff_tpr": 0.957,
+      "eff_fpr": 0.0011
+     }
+    },
+    {
+     "rows": 15716,
+     "v6b": {
+      "coverage": 0.476,
+      "eff_tpr": 0.944,
+      "eff_fpr": 0.0024
+     },
+     "joined": {
+      "coverage": 0.568,
+      "eff_tpr": 0.948,
+      "eff_fpr": 0.0011
+     }
+    },
+    {
+     "rows": 25716,
+     "v6b": {
+      "coverage": 0.493,
+      "eff_tpr": 0.932,
+      "eff_fpr": 0.0011
+     },
+     "joined": {
+      "coverage": 0.589,
+      "eff_tpr": 0.947,
+      "eff_fpr": 0.0013
+     }
+    },
+    {
+     "rows": 35716,
+     "v6b": {
+      "coverage": 0.495,
+      "eff_tpr": 0.938,
+      "eff_fpr": 0.0011
+     },
+     "joined": {
+      "coverage": 0.598,
+      "eff_tpr": 0.95,
+      "eff_fpr": 0.0009
+     }
+    },
+    {
+     "rows": 51067,
+     "v6b": {
+      "coverage": 0.497,
+      "eff_tpr": 0.933,
+      "eff_fpr": 0.0011
+     },
+     "joined": {
+      "coverage": 0.617,
+      "eff_tpr": 0.945,
+      "eff_fpr": 0.0013
+     }
+    }
+   ],
+   "updated": "2026-11-12T19:25Z",
+   "file": "runs/pulse/t179/t186_learning_curve.json"
+  }
+ ],
+ "recent_results": [
+  {
+   "file": "runs/pulse/t233/t233_knn_norm.json",
+   "updated": "2026-11-13T16:43Z",
+   "summary": "items: 24866; reference: 17406; queries: 7460; k: 20; tau: 0.05"
+  },
+  {
+   "file": "runs/pulse/t233/items.json",
+   "updated": "2026-11-13T16:43Z",
+   "summary": "parts: ids, labels"
+  },
+  {
+   "file": "runs/pulse/t232h_k480/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "hybrid: True; k: 480; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+  },
+  {
+   "file": "runs/pulse/t232h_k240/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "hybrid: True; k: 240; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+  },
+  {
+   "file": "runs/pulse/t232h_k120/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "hybrid: True; k: 120; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+  },
+  {
+   "file": "runs/pulse/t232h_k60/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "hybrid: True; k: 60; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+  },
+  {
+   "file": "runs/pulse/t232h_k30/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "hybrid: True; k: 30; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+  },
+  {
+   "file": "runs/pulse/t232_k480/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "k: 480; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+  },
+  {
+   "file": "runs/pulse/t232_k240/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "k: 240; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+  },
+  {
+   "file": "runs/pulse/t232_k120/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "k: 120; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+  },
+  {
+   "file": "runs/pulse/t232_k60/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "k: 60; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+  },
+  {
+   "file": "runs/pulse/t232_k30/t232_router_coverage.json",
+   "updated": "2026-11-13T13:37Z",
+   "summary": "k: 30; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+  },
+  {
+   "file": "runs/pulse/t232/t232_router_coverage.json",
+   "updated": "2026-11-13T13:36Z",
+   "summary": "k: 60; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+  },
+  {
+   "file": "runs/pulse/t231x_depth1/t231_conditioned.json",
+   "updated": "2026-11-13T13:36Z",
+   "summary": "triples: 131464; boilerplate_pairs_dropped: 7; level: depth1; difference_conditioned_minus_global: -0.1345448748605133"
+  },
+  {
+   "file": "runs/pulse/t231x_top/t231_conditioned.json",
+   "updated": "2026-11-13T13:36Z",
+   "summary": "triples: 131464; boilerplate_pairs_dropped: 7; level: top; difference_conditioned_minus_global: -0.09863307424283034"
+  },
+  {
+   "file": "runs/pulse/t231/t231_conditioned.json",
+   "updated": "2026-11-13T13:35Z",
+   "summary": "triples: 131464; boilerplate_pairs_dropped: 7; difference_conditioned_minus_global: -0.1345448748605133"
+  },
+  {
+   "file": "runs/pulse/t230/capability_tiers.json",
+   "updated": "2026-11-13T13:27Z",
+   "summary": "min_days: 3; listed_older: 98; listed_newer: 111; recurring_both_periods: 26; t222_pairs: 371"
+  },
+  {
+   "file": "runs/pulse/t229_d12/t229_days.json",
+   "updated": "2026-11-13T13:26Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0"
+  },
+  {
+   "file": "runs/pulse/t229_d8/t229_days.json",
+   "updated": "2026-11-13T13:26Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.00010638297872340425"
+  },
+  {
+   "file": "runs/pulse/t229_d6/t229_days.json",
+   "updated": "2026-11-13T13:26Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0007303370786516854"
+  },
+  {
+   "file": "runs/pulse/t229_d5/t229_days.json",
+   "updated": "2026-11-13T13:26Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0007264957264957266"
+  },
+  {
+   "file": "runs/pulse/t229_d4/t229_days.json",
+   "updated": "2026-11-13T13:25Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0011970764220252973"
+  },
+  {
+   "file": "runs/pulse/t229_d3/t229_days.json",
+   "updated": "2026-11-13T13:25Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0016766808246141097"
+  },
+  {
+   "file": "runs/pulse/t229/t229_days.json",
+   "updated": "2026-11-13T13:25Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0002127659574468085"
+  },
+  {
+   "file": "runs/pulse/t228/t228_timesplit.json",
+   "updated": "2026-11-13T13:24Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0016877431818890381"
+  },
+  {
+   "file": "runs/pulse/t227/t227_gate.json",
+   "updated": "2026-11-13T13:13Z",
+   "summary": "promoted: 114; promoted_topics: 24; topics_with_3plus: 10"
+  },
+  {
+   "file": "runs/pulse/t226/t226_g4_event.json",
+   "updated": "2026-11-13T12:36Z",
+   "summary": "events: 2192; articles: 6796; articles_with_body: 6796; triples: 73276; tau: 0.85"
+  },
+  {
+   "file": "runs/pulse/t225/t225_g4_baseline.json",
+   "updated": "2026-11-13T12:27Z",
+   "summary": "triples: 168081; distinct_keys: 65896; keys_per_triple: 0.39204907157858415; share_2plus_articles: 0.4123619036056817; share_2plus_publishers: 0.3798106106592206"
+  },
+  {
+   "file": "runs/pulse/t224/t224_carb_action.json",
+   "updated": "2026-11-13T07:37Z",
+   "summary": "gold_total: 2713; gold_action: 1135; share_action: 0.4183560633984519; sentences_with_action_gold: 479; scorer: in-house CaRB-style token overlap, not t"
+  },
+  {
+   "file": "runs/pulse/t223/t223_place_fresh.json",
+   "updated": "2026-11-13T07:04Z",
+   "summary": "stories: 1000; excluded_trained_ids: 1600; line: 0.5529077649116516; answered_share: 0.645; decidable: 414"
+  },
+  {
+   "file": "runs/pulse/t167/t167_place_judge.json",
+   "updated": "2026-11-13T07:04Z",
+   "summary": "stories_with_body: 1600; decidable: 745; accuracy: 0.882; jev_global_share_of_decidable: 0.04"
+  },
+  {
+   "file": "runs/pulse/t222/t222_summary.json",
+   "updated": "2026-11-13T06:52Z",
+   "summary": "rows: 16564; pairs_before_noise_exclusion: 378; pairs_kept: 371; pairs_with_fewer_than_3_publishers: 0; rows_per_pair_median: 30"
+  },
+  {
+   "file": "runs/pulse/t221/t221_splithalf.json",
+   "updated": "2026-11-13T06:51Z",
+   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0018110794448064555"
+  },
+  {
+   "file": "runs/pulse/t220/t220_pmi.json",
+   "updated": "2026-11-13T06:50Z",
+   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+  },
+  {
+   "file": "runs/pulse/t219/t219_frames.json",
+   "updated": "2026-11-13T06:44Z",
+   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+  },
+  {
+   "file": "runs/pulse/t218/t218_filtered.json",
+   "updated": "2026-11-13T06:32Z",
+   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+  },
+  {
+   "file": "runs/pulse/t217/t217_reuse.json",
+   "updated": "2026-11-13T06:26Z",
+   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+  },
+  {
+   "file": "runs/pulse/t216/t216_lanes.json",
+   "updated": "2026-11-13T06:20Z",
+   "summary": "pairs: 100; text_seen: headline plus teaser"
+  },
+  {
+   "file": "runs/pulse/t215/t215_router_tolerance_d.json",
+   "updated": "2026-11-13T05:53Z",
+   "summary": "stories: 880; band_median_points: 0.0217; ratio_d_max_baseline_setting: 1.501; seconds: 613"
+  },
+  {
+   "file": "runs/pulse/t215/f0020_reference.json",
+   "updated": "2026-11-13T05:40Z",
+   "summary": "source: data/step1/jointfine-d.json key '0.9|0.0; ratio_to_tolerance_d: 1.0003513565766504"
+  }
+ ],
+ "selective_vs_human": {
+  "n": 2076,
+  "coverage": 0.353,
+  "student_on_answered": 0.789,
+  "teacher_on_same_rows": 0.792,
+  "teacher_alone_all": 0.749,
+  "hybrid_all": 0.746,
+  "updated": "2026-11-12T19:01Z",
+  "file": "runs/pulse/t179/t183_hybrid_vs_gold.json"
+ },
+ "teacher_scores": [
+  {
+   "head": "Domain (17 IPTC)",
+   "score": "Jev 0.56-0.60 and 0.572 with a per-option offset (L2219); errors spread, politics over-pull; wording and calibration are not levers",
+   "cpu_reader": "no: below bar 0.80; teacher stays"
+  },
+  {
+   "head": "Story type / Function",
+   "score": "Jev with the subjectivity wording: AUC 0.868 (0.851-0.884), balanced accuracy 0.82-0.83 on the CheckThat test split with a line fitted on dev (L2226, L2228); CPU student AUC 0.74-0.77, balanced accuracy 0.68 (L2230-L2245)",
+   "cpu_reader": "Jev side yes; CPU student no (0.68 vs 0.82); teacher stays"
+  },
+  {
+   "head": "Factuality",
+   "score": "CPU student (embedding + logistic on Jev 'happened', grouped 5-fold CV, 1,818 events): AUC 0.67-0.76 vs gold, balanced accuracy 0.61-0.64 vs bar 0.80 (L2249); teacher Jev AUC 0.874",
+   "cpu_reader": "no: student 0.61-0.64 vs bar 0.80; teacher stays"
+  },
+  {
+   "head": "Place / Region",
+   "score": "text-derived judge (GeoNames country mentions): Jev place_region accuracy 0.882 on 745 decidable stories (L2215); proxy, no CPU head trained yet",
+   "cpu_reader": "teacher scored; CPU head not built"
+  },
+  {
+   "head": "Time (recent)",
+   "score": "strict publish-date truth: Jev AUC 0.607 (0.569-0.647), reworded with the date 0.594, CPU head 0.517 (L2209, L2211, L2235); no trustworthy truth",
+   "cpu_reader": "no judge: stop spending"
+  },
+  {
+   "head": "Novelty",
+   "score": "coverage test on 91 MN-DS stories: as worded AUROC 0.51 (the question never saw the area list); with area names in the question AUROC 0.784 but 'known' on 87% even with the true area removed (L2222, L2225)",
+   "cpu_reader": "weak judge: not usable as pass/fail"
+  }
+ ],
  "audit": {
   "columns": [
    "Data",
@@ -984,6 +1806,9 @@
    "Outside truth",
    "Self-improving loop",
    "Repeats",
+   "Teacher vs outside truth",
+   "CPU coverage at tolerance",
+   "Holds on newer data",
    "v1"
   ],
   "rows": [
@@ -1058,14 +1883,31 @@
      },
      {
       "s": "part",
+      "t": "Sonnet teacher; MN-DS human topic labels top-2 about 0.78 to 0.80 (earlier result); Jev's 17-subject read scores only 0.56 to 0.60 vs the 0.80 bar (T149, T168)",
+      "src": "t168/t168_domain_offset.json",
+      "ts": "2026-11-12T08:40Z",
+      "file": "t168_domain_offset.json"
+     },
+     {
+      "s": "none",
+      "t": "not measured: answer-when-sure not run for this head",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "random splits only",
+      "src": null
+     },
+     {
+      "s": "part",
       "t": "trained, not adopted: it does not beat the live head",
       "src": "model_rollout.json"
      }
     ],
     "changed": {
-     "ts": "2026-11-12T03:49Z",
-     "file": "label_store",
-     "col": 0
+     "ts": "2026-11-12T08:40Z",
+     "file": "t168_domain_offset.json",
+     "col": 10
     }
    },
    {
@@ -1136,6 +1978,21 @@
       "src": "finetune_cpu2.json, finetune3_r0-r2.json",
       "ts": "2026-11-09T10:07Z",
       "file": "finetune3_r2.json"
+     },
+     {
+      "s": "none",
+      "t": "no outside set matches the four story types",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured: answer-when-sure not run for this head",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "random splits only",
+      "src": null
      },
      {
       "s": "part",
@@ -1214,6 +2071,27 @@
      },
      {
       "s": "part",
+      "t": "SENTiVENT: agreement with Clef AUROC 0.82, not truth; the three teachers disagree with each other (agreement 0.87 to 0.92, positive rate 5% to 21%)",
+      "src": "t179/t189_condition_selective.json",
+      "ts": "2026-11-12T20:02Z",
+      "file": "t189_condition_selective.json"
+     },
+     {
+      "s": "part",
+      "t": "against Clef, the engine reader: 22.5% (random splits) and 18.6% (newest 30% of stories) at TPR 0.95; against Haiku, Sonnet, Gemma labels 47 to 68% (rare positives); the reference reader changes the answer 2 to 3 times",
+      "src": "t179/t192_presence_vs_clef.json",
+      "ts": "2026-11-12T21:10Z",
+      "file": "t192_presence_vs_clef.json"
+     },
+     {
+      "s": "part",
+      "t": "against Clef only, about 10 days of shift: coverage 18.6%, FPR 0 on 399 negatives; teacher-labelled sets have no dates",
+      "src": "t179/t192_presence_vs_clef.json",
+      "ts": "2026-11-12T21:10Z",
+      "file": "t192_presence_vs_clef.json"
+     },
+     {
+      "s": "part",
       "t": "weak: F1 about 0.66, always-yes scores 0.20",
       "src": "lap2_checks.json#m3_condition_head",
       "ts": "2026-11-08T23:53Z",
@@ -1221,9 +2099,9 @@
      }
     ],
     "changed": {
-     "ts": "2026-11-09T10:07Z",
-     "file": "finetune3_r2.json",
-     "col": 9
+     "ts": "2026-11-12T21:10Z",
+     "file": "t192_presence_vs_clef.json",
+     "col": 11
     }
    },
    {
@@ -1265,8 +2143,8 @@
       "file": "heademb_kinds_s7.json"
      },
      {
-      "s": "none",
-      "t": "no live per-kind head compared",
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
       "src": null
      },
      {
@@ -1290,6 +2168,21 @@
       "s": "ok",
       "t": "3 seeds: sealed spread 0.013, dev spread 0.005; rerun of seed 7 reproduced the earlier 0.819",
       "src": "heademb_kinds_s*.json"
+     },
+     {
+      "s": "none",
+      "t": "no outside set for kinds",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured: answer-when-sure not run for this head",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "random splits only",
+      "src": null
      },
      {
       "s": "part",
@@ -1333,13 +2226,13 @@
       "file": "t84_area_head.json"
      },
      {
-      "s": "none",
-      "t": "not started",
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
       "src": null
      },
      {
-      "s": "none",
-      "t": "not started",
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
       "src": null
      },
      {
@@ -1365,29 +2258,84 @@
       "src": null
      },
      {
+      "s": "part",
+      "t": "MN-DS two-guess 0.755, indirect (through the topic-to-IPTC map)",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "none",
+      "t": "no trained model yet",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "no trained model yet",
+      "src": null
+     },
+     {
       "s": "none",
       "t": "not started",
       "src": null
      }
     ],
     "changed": {
-     "ts": "2026-11-10T16:16Z",
-     "file": "t84_area_head.json",
-     "col": 2
+     "ts": "2026-11-12T16:04Z",
+     "file": "head_table.json",
+     "col": 10
     }
    },
    {
     "model": "Capability",
     "cells": [
      {
+      "s": "part",
+      "t": "16,564 candidate rows from 371 verb-object pairs held in 3+ Areas (full-article triples); pseudo-labels from our own extractor, no outside labels",
+      "src": "t222/t222_summary.json",
+      "ts": "2026-11-13T06:52Z",
+      "file": "t222_summary.json"
+     },
+     {
+      "s": "ok",
+      "t": "full-article triples -> a verb-object pair seen in 3+ Areas -> capability id with its evidence sentence",
+      "src": "t222/t222_summary.json",
+      "ts": "2026-11-13T06:52Z",
+      "file": "t222_summary.json"
+     },
+     {
       "s": "none",
-      "t": "waits on Area",
+      "t": "no model trained: the extractor and its list only; owner decision open on training a head on pseudo-labels",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
       "src": null
      },
      {
       "s": "part",
-      "t": "same route one level down",
-      "src": "model_rollout.json"
+      "t": "each triple was already kept because 2+ publishers anywhere in the corpus back it, and Areas were assigned on all articles, so the halves are not fully independent",
+      "src": "t221/t221_splithalf.json",
+      "ts": "2026-11-13T06:51Z",
+      "file": "t221_splithalf.json"
+     },
+     {
+      "s": "none",
+      "t": "no outside truth exists for Capability; only stability across publishers and a reading of the top pairs (my reading: about 33 of the top 40 real concepts)",
+      "src": "t221/t221_splithalf.json",
+      "ts": "2026-11-13T06:51Z",
+      "file": "t221_splithalf.json"
      },
      {
       "s": "none",
@@ -1395,47 +2343,40 @@
       "src": null
      },
      {
+      "s": "part",
+      "t": "publisher halves share 0.44 of the top 100 pairs, but they share events; split by date the lists share only 0.11 (article counts) and 0.37 (distinct days, 29 and 19 pairs); 23 of the 371 pairs recur in both periods, 348 are candidates only",
+      "src": "t230/capability_tiers.json",
+      "ts": "2026-11-13T13:27Z",
+      "file": "capability_tiers.json"
+     },
+     {
       "s": "none",
-      "t": "not started",
+      "t": "no outside truth; seed list awaits the owner",
       "src": null
      },
      {
       "s": "none",
-      "t": "not started",
+      "t": "no trained model yet",
       "src": null
      },
      {
       "s": "none",
-      "t": "not started",
+      "t": "no trained model yet",
       "src": null
      },
      {
       "s": "none",
-      "t": "not started",
-      "src": null
-     },
-     {
-      "s": "none",
-      "t": "not started",
-      "src": null
-     },
-     {
-      "s": "none",
-      "t": "not started",
-      "src": null
-     },
-     {
-      "s": "none",
-      "t": "not started",
-      "src": null
-     },
-     {
-      "s": "none",
-      "t": "not started",
-      "src": null
+      "t": "extractor list exists, no model and no outside score",
+      "src": "t222/t222_summary.json",
+      "ts": "2026-11-13T06:52Z",
+      "file": "t222_summary.json"
      }
     ],
-    "changed": null
+    "changed": {
+     "ts": "2026-11-13T13:27Z",
+     "file": "capability_tiers.json",
+     "col": 9
+    }
    },
    {
     "model": "Novelty",
@@ -1465,13 +2406,13 @@
       "src": null
      },
      {
-      "s": "none",
-      "t": "not started",
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
       "src": null
      },
      {
-      "s": "none",
-      "t": "not started",
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
       "src": null
      },
      {
@@ -1497,15 +2438,32 @@
       "src": null
      },
      {
+      "s": "part",
+      "t": "coverage test on 91 MN-DS stories: probability separates removed-area stories at AUROC 0.78, but the yes/no says 'known' for 87% even with the area removed: weak",
+      "src": "t169/t169b_novelty_listed.json",
+      "ts": "2026-11-12T08:56Z",
+      "file": "t169b_novelty_listed.json"
+     },
+     {
+      "s": "none",
+      "t": "no trained model yet",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "no trained model yet",
+      "src": null
+     },
+     {
       "s": "none",
       "t": "not started",
       "src": null
      }
     ],
     "changed": {
-     "ts": "2026-11-10T16:34Z",
-     "file": "t85_novelty.json",
-     "col": 0
+     "ts": "2026-11-12T08:56Z",
+     "file": "t169b_novelty_listed.json",
+     "col": 10
     }
    },
    {
@@ -1539,8 +2497,8 @@
       "src": "ledger L1092, L1096"
      },
      {
-      "s": "none",
-      "t": "not started",
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
       "src": null
      },
      {
@@ -1566,15 +2524,32 @@
       "src": null
      },
      {
+      "s": "part",
+      "t": "CaRB overlap F1 0.40 (precision 0.56, recall 0.31); no bar set",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "none",
+      "t": "no trained head yet",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "no trained head yet",
+      "src": null
+     },
+     {
       "s": "none",
       "t": "not started",
       "src": null
      }
     ],
     "changed": {
-     "ts": "2026-11-09T18:20Z",
-     "file": "ner_bakeoff.json",
-     "col": 7
+     "ts": "2026-11-12T16:04Z",
+     "file": "head_table.json",
+     "col": 10
     }
    },
    {
@@ -1612,8 +2587,8 @@
       "src": "heademb_size_s*.json"
      },
      {
-      "s": "none",
-      "t": "no live size head compared",
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
       "src": null
      },
      {
@@ -1641,6 +2616,21 @@
       "src": "heademb_size_s*.json"
      },
      {
+      "s": "none",
+      "t": "no outside set for size levels",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured: answer-when-sure not run for this head",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "random splits only",
+      "src": null
+     },
+     {
       "s": "part",
       "t": "v1 candidate on dev only; agreement with Sonnet",
       "src": "model_rollout.json"
@@ -1651,25 +2641,584 @@
      "file": "heademb_size_s7.json",
      "col": 2
     }
+   },
+   {
+    "model": "Place (region, 8 options)",
+    "cells": [
+     {
+      "s": "ok",
+      "t": "1,600 queue stories with a Jev place_region label",
+      "src": "t182/t182_selective_place.json",
+      "ts": "2026-11-12T22:21Z",
+      "file": "t182_selective_place.json"
+     },
+     {
+      "s": "ok",
+      "t": "title + body start (e5-small, 128 tokens) -> 1 of 8 regions with an answer line",
+      "src": "t199/t199_place_vs_judge.json",
+      "ts": "2026-11-12T22:21Z",
+      "file": "t199_place_vs_judge.json"
+     },
+     {
+      "s": "ok",
+      "t": "linear head on e5-small vectors, saved as runs/pulse/t200/place_student.pkl",
+      "src": "t182/t182_selective_place.json",
+      "ts": "2026-11-12T22:21Z",
+      "file": "t182_selective_place.json"
+     },
+     {
+      "s": "none",
+      "t": "no learning curve run",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "tested on 1,000 stories outside the 1,600 it was fitted on",
+      "src": "t223/t223_place_fresh.json",
+      "ts": "2026-11-13T07:04Z",
+      "file": "t223_place_fresh.json"
+     },
+     {
+      "s": "part",
+      "t": "text place judge (country names in the text; the student reads the same cues, so a proxy): 93.5% on the 260 decidable stories it answers, 95% interval 90.4 to 96.5",
+      "src": "t223/t223_place_fresh.json",
+      "ts": "2026-11-13T07:04Z",
+      "file": "t223_place_fresh.json"
+     },
+     {
+      "s": "none",
+      "t": "no self-improving loop yet",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "10 random half-splits: mean coverage 0.63 at agreement 0.95 with Jev",
+      "src": "t182/t182_selective_place.json",
+      "ts": "2026-11-12T22:21Z",
+      "file": "t182_selective_place.json"
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "answers 64.5% of fresh stories; proxy truth only; no registry name yet",
+      "src": "t223/t223_place_fresh.json",
+      "ts": "2026-11-13T07:04Z",
+      "file": "t223_place_fresh.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-13T07:04Z",
+     "file": "t223_place_fresh.json",
+     "col": 6
+    }
+   },
+   {
+    "model": "Factuality (happened)",
+    "cells": [
+     {
+      "s": "part",
+      "t": "1,818 MAVEN-FACT events labelled by Jev; the human gold training split is held back (anchor rule, ledger L1648)",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "ok",
+      "t": "sentence with the event word marked -> happened yes or no",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "no",
+      "t": "CPU student trained on Jev labels: AUC 0.67 to 0.76 and balanced accuracy 0.61 to 0.64 against human gold; bar 0.80 not met (ledger L2249)",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "none",
+      "t": "no curve yet",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "grouped by document, 5-fold",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "ok",
+      "t": "MAVEN-FACT human gold (scoring)",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "none",
+      "t": "no self-improving loop yet",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "no repeat run",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "no",
+      "t": "student fails its bar; the teacher stays (Jev AUC 0.874)",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-12T16:04Z",
+     "file": "head_table.json",
+     "col": 0
+    }
+   },
+   {
+    "model": "Time (recent)",
+    "cells": [
+     {
+      "s": "part",
+      "t": "Jev 'recent' labels; strict publish-date truth gives Jev AUC 0.607 (the older 0.799 was inflated)",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "part",
+      "t": "date expressions and the publish date -> recent yes or no; restating Time as stated dates awaits the owner",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "no",
+      "t": "CPU head AUC 0.517 against strict date truth",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "none",
+      "t": "no curve yet",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "no",
+      "t": "no trustworthy judge: the teacher is near chance against the strict date truth",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "no v1; stop spending until Time is restated as stated dates",
+      "src": null
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-12T16:04Z",
+     "file": "head_table.json",
+     "col": 0
+    }
+   },
+   {
+    "model": "Evidence span",
+    "cells": [
+     {
+      "s": "part",
+      "t": "70 items",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "part",
+      "t": "chosen sentence -> the sentence that carries the evidence",
+      "src": "t151/head_table.json",
+      "ts": "2026-11-12T16:04Z",
+      "file": "head_table.json"
+     },
+     {
+      "s": "none",
+      "t": "no trained head",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "SENTiVENT trigger spans could score it; the card gate holds cards naming it (owner)",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not started",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "not measured",
+      "src": null
+     },
+     {
+      "s": "none",
+      "t": "too few items; no v1",
+      "src": null
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-12T16:04Z",
+     "file": "head_table.json",
+     "col": 0
+    }
+   },
+   {
+    "model": "Function (opinion or fact)",
+    "cells": [
+     {
+      "s": "ok",
+      "t": "21,671 sentences labelled by Jev (19,595 queue + 2,076 CheckThat); Jev vs CheckThat human labels AUC 0.868",
+      "src": "t170/t170_function_subjective.json, t172/t172_rows.jsonl",
+      "ts": "2026-11-12T09:03Z",
+      "file": "t172_rows.jsonl"
+     },
+     {
+      "s": "ok",
+      "t": "sentence -> subjective yes/no; one question worded like the labellers' definition (L2224)",
+      "src": "t170/t170_function_subjective.json",
+      "ts": "2026-11-12T08:57Z",
+      "file": "t170_function_subjective.json"
+     },
+     {
+      "s": "ok",
+      "t": "logistic head on v6b + bge-small + e5-small embeddings; answers only when sure",
+      "src": "t179/t184_combined_encoders_selective.json",
+      "ts": "2026-11-12T19:02Z",
+      "file": "t184_combined_encoders_selective.json"
+     },
+     {
+      "s": "ok",
+      "t": "coverage against training rows, newest stories as test",
+      "src": "t179/t186_learning_curve.json",
+      "ts": "2026-11-12T19:25Z",
+      "file": "t186_learning_curve.json"
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "grouped by story; time-shifted test on the newest 30% of stories (Nov 2 to 5): coverage 0.568 at TPR 0.948, FPR 0.0011",
+      "src": "t179/t185_time_shift.json",
+      "ts": "2026-11-12T19:19Z",
+      "file": "t185_time_shift.json"
+     },
+     {
+      "s": "part",
+      "t": "CheckThat human labels: answers 35% of sentences at the teacher's accuracy (0.789 vs 0.792, hybrid loses 0.003); the student alone is only 0.68 balanced accuracy, so it is not a replacement",
+      "src": "t179/t183_hybrid_vs_gold.json",
+      "ts": "2026-11-12T19:01Z",
+      "file": "t183_hybrid_vs_gold.json"
+     },
+     {
+      "s": "none",
+      "t": "no self-improving loop yet",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "10 random half-splits: coverage 0.566, worst split 0.544; false-positive tail up to 0.0047",
+      "src": "t179/t184_combined_encoders_selective.json",
+      "ts": "2026-11-12T19:02Z",
+      "file": "t184_combined_encoders_selective.json"
+     },
+     {
+      "s": "ok",
+      "t": "Jev vs CheckThat human labels: AUC 0.868; balanced accuracy 0.82 to 0.83 on the test split with a line fitted on dev",
+      "src": "t170/t170_function_subjective.json",
+      "ts": "2026-11-12T08:57Z",
+      "file": "t170_function_subjective.json"
+     },
+     {
+      "s": "ok",
+      "t": "CPU answers 56.8% of reads at true-positive rate 0.948 and false positives 0.0011 against the teacher (three encoders, 15,716 training rows, still rising with more rows)",
+      "src": "t179/t185_time_shift.json",
+      "ts": "2026-11-12T19:19Z",
+      "file": "t185_time_shift.json"
+     },
+     {
+      "s": "ok",
+      "t": "newest 30% of stories (Nov 2 to 5), never seen in training",
+      "src": "t179/t185_time_shift.json",
+      "ts": "2026-11-12T19:19Z",
+      "file": "t185_time_shift.json"
+     },
+     {
+      "s": "part",
+      "t": "candidate for answer-when-sure; not adopted; the engine change needs the owner",
+      "src": "model_rollout.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-12T19:25Z",
+     "file": "t186_learning_curve.json",
+     "col": 3
+    }
+   },
+   {
+    "model": "Clef attributes (15 with 200+ positives)",
+    "cells": [
+     {
+      "s": "part",
+      "t": "2,488 stories with Clef's 328 answers each; only 15 attributes have 200+ positives (median 14)",
+      "src": "t182/t182_attribute_selective.json",
+      "ts": "2026-11-12T19:00Z",
+      "file": "t182_attribute_selective.json"
+     },
+     {
+      "s": "ok",
+      "t": "story -> one attribute yes/no",
+      "src": "model_rollout.json"
+     },
+     {
+      "s": "ok",
+      "t": "logistic head per attribute on the v6b story embedding; answers only when sure",
+      "src": "t182/t182_attribute_selective.json",
+      "ts": "2026-11-12T19:00Z",
+      "file": "t182_attribute_selective.json"
+     },
+     {
+      "s": "none",
+      "t": "no curve yet",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no earlier head to beat",
+      "src": null
+     },
+     {
+      "s": "na",
+      "t": "not applicable: there is no live head to beat",
+      "src": null
+     },
+     {
+      "s": "ok",
+      "t": "grouped by story; thresholds fitted on one half, tested on the other",
+      "src": "t182/t182_attribute_selective.json",
+      "ts": "2026-11-12T19:00Z",
+      "file": "t182_attribute_selective.json"
+     },
+     {
+      "s": "part",
+      "t": "agreement with Clef only; no human truth for these questions",
+      "src": "t182/t182_attribute_selective.json",
+      "ts": "2026-11-12T19:00Z",
+      "file": "t182_attribute_selective.json"
+     },
+     {
+      "s": "none",
+      "t": "no self-improving loop yet",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "10 half-splits: coverage 0.24 to 0.68, mean 0.38; worst false-positive split up to 0.015 (few negatives allowed per attribute)",
+      "src": "t182/t182_attribute_selective.json",
+      "ts": "2026-11-12T19:00Z",
+      "file": "t182_attribute_selective.json"
+     },
+     {
+      "s": "none",
+      "t": "no human truth for these questions",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "mean 38% over 15 attributes (range 24 to 68%); false-positive tails noisy (worst split up to 0.015)",
+      "src": "t182/t182_attribute_selective.json",
+      "ts": "2026-11-12T19:00Z",
+      "file": "t182_attribute_selective.json"
+     },
+     {
+      "s": "none",
+      "t": "random half-splits only",
+      "src": null
+     },
+     {
+      "s": "part",
+      "t": "measured; the other 313 attributes need a bigger read of the full instrument",
+      "src": "model_rollout.json"
+     }
+    ],
+    "changed": {
+     "ts": "2026-11-12T19:00Z",
+     "file": "t182_attribute_selective.json",
+     "col": 0
+    }
    }
   ],
   "works": [
    "Sealed set is clean: only 1 of 1,499 items has a near-twin in training (MM3-0631 also passed the leakage group on the T56 fine-tune; MM3-0632 on the head factory).",
    "Training is repeatable: 4 encoder runs land within 0.009 topic and 0.007 story type of each other, the same size as seed noise.",
    "The encoder beats the old sparse heads on topic and story type by more than noise. The per-kind Condition head (T69) holds up: sealed 0.81-0.83 against 0.10 for the most-common-kind baseline, across 3 seeds.",
-   "The Condition (present) head, with its threshold lowered until dev recall reached 0.80, scores on the sealed set: precision 0.57 (0.50 to 0.63), recall 0.79, agreement 0.911 against 0.891 for always-no (T37; agreement with Sonnet). Adding an event-trigger filter does not help. Every step is recorded: 17 of 17 predictions have a score note (progress.json); the Training tab and live rows refresh from the poller every 3 minutes."
+   "The Condition (present) head, with its threshold lowered until dev recall reached 0.80, scores on the sealed set: precision 0.57 (0.50 to 0.63), recall 0.79, agreement 0.911 against 0.891 for always-no (T37; agreement with Sonnet). Adding an event-trigger filter does not help. Every step is recorded: 17 of 17 predictions have a score note (progress.json); the Training tab and live rows refresh from the poller every 3 minutes.",
+   "Answer when sure holds for Function (opinion or fact): on stories the model never saw, including the newest 30% by date, the CPU answers 47 to 57 percent of reads at true-positive rate 0.95 and false positives 0.0011 to 0.0027 against the teacher label, and on CheckThat human labels the hybrid (CPU where sure, teacher elsewhere) loses 0.003 against the teacher alone (T148, L2254 to L2267)."
   ],
   "doesnt": [
    "The new encoder does NOT clearly beat the head that is live (v6b-student): against Sonnet the paired differences are within noise, and against MN-DS human labels it is 1.4 points worse on one set and 1.1 better on the other. Adopting it buys nothing on these scores.",
    "All encoder scores are agreement with Sonnet, not outside truth. Topic now has an outside check for both engines (MN-DS human labels, about 78-80% top-2); story type, condition, per-kind and size do not.",
    "Condition is weak (F1 about 0.66) and its gain over the old head is not established.",
    "Area, Capability, Novelty and Understanding have no trained model. The triple route is measured but limited by the entity extractor (T73 to T82 measured it on CPU; no model is trained yet).",
-   "Two MM3 splits are open: T56 question 9 (resume order) and T49 questions 5-6 (reporting). My code reading says yes on all three; the local reader says no. A second reviewer needs your yes (hosted)."
+   "Two MM3 splits are open: T56 question 9 (resume order) and T49 questions 5-6 (reporting). My code reading says yes on all three; the local reader says no. A second reviewer needs your yes (hosted).",
+   "A CPU student cannot replace the teacher outright: as a full replacement the Function student catches 20 percent of positives at the tolerance's false-positive rate (target 90 to 95 percent) and reaches 0.68 balanced accuracy against human labels. Ten times more Jev rows, word patterns, soft labels and a bigger encoder (Qwen3, slower and worse) did not lift accuracy; combining small encoders lifts coverage, not accuracy (L2242 to L2264). The 313 rarer Clef attributes cannot be measured with the data we have."
   ],
   "noise": {
    "topic": 0.009,
    "story_type": 0.007,
    "presence_f1": 0.019
+  },
+  "v1_count": {
+   "models": 15,
+   "ok": 0,
+   "part": 8,
+   "no": 1,
+   "none": 6
   }
  }
 }

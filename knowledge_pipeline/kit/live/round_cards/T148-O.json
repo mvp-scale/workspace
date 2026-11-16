@@ -1,0 +1,33 @@
+{
+ "id": "T148-O",
+ "task": "T148",
+ "part": "plan P0c calibration: Clef against itself in the engine replay",
+ "field": "engine outputs",
+ "question": "What share of the engine's outputs stay inside the Step 1 noise band when Clef's reading from one question wording alone is replayed against its two-wording reading?",
+ "one_change": "replace the CPU router's readings with Clef's single-wording readings in the same replay",
+ "baseline": {
+  "model": "best router setting in the sweep, share of engine outputs within the band",
+  "file": "runs/pulse/t212/t212_router_sweep.json",
+  "key": "best_band_share"
+ },
+ "prediction": {
+  "metric": "share_within_band_wording0: share of engine outputs whose absolute difference between Clef's wording-0 reading and Clef's two-wording reading is at most the Step 1 noise band, 800 held-out stories",
+  "low": 0.2,
+  "high": 0.8,
+  "why": "the best CPU router setting reached 30.6 percent in band with about 0.17 differing fired keys per story against 3.56 fired keys (computed, t212); the two wordings of one Clef read differ in more fired keys than that, because the engine averages them and a key fires only above 0.65 (computed rule in classify.py); so Clef against itself may land near or below the CPU router, and the interval is wide because this is the first measurement (estimate)"
+ },
+ "command": "R=800 OUT=runs/pulse/t213 /workspace/kev/.venv/bin/python -u t213_clef_vs_itself.py",
+ "result": {
+  "file": "runs/pulse/t213/t213_clef_vs_itself.json",
+  "key": "share_within_band_wording0"
+ },
+ "cap_minutes": 25,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "R=40 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t213s /workspace/kev/.venv/bin/python -u t213_clef_vs_itself.py",
+  "cap_minutes": 8
+ }
+}

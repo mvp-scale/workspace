@@ -1,0 +1,33 @@
+{
+ "id": "T148-I",
+ "task": "T148",
+ "part": "main loop: per-key triage on shifted splits",
+ "field": "engine keys",
+ "question": "Do the per-key answer-when-sure lines still hold the tolerance when the test stories are the newest 30% by date, or come from whole feeds held out of training?",
+ "one_change": "test on the newest 30% of stories and on held-out feeds instead of random grouped halves",
+ "baseline": {
+  "model": "per-key triage on random grouped halves, quota 0.0010, tolerance-meeting share of 328 questions",
+  "file": "runs/pulse/t205/t204_per_key_triage.json",
+  "key": "tolerance_saving"
+ },
+ "prediction": {
+  "metric": "tolerance_saving_worst: the lower of the time-split and feed-split shares of 328 questions answered by keys that hold held-out FPR at most 0.0025 and TPR at least 0.90",
+  "low": 0.05,
+  "high": 0.15,
+  "why": "random halves gave 0.197 with false positives 0.0016 (computed); the Function rule lost 9 points of coverage and drifted over its false-positive line on held-out feeds (computed); each shifted split tests 747 and 763 stories (computed in the smoke run), so keys with few positives pass or fail by chance and some keys drop out of the tested set; the quota 0.0010 margin should keep most false positives under 0.0025 (estimate)"
+ },
+ "command": "OUT=runs/pulse/t206 /workspace/models/embed-zs/.venv/bin/python -u t206_per_key_shift.py",
+ "result": {
+  "file": "runs/pulse/t206/t206_per_key_shift.json",
+  "key": "tolerance_saving_worst"
+ },
+ "cap_minutes": 25,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "N=5 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t206s /workspace/models/embed-zs/.venv/bin/python -u t206_per_key_shift.py",
+  "cap_minutes": 5
+ }
+}

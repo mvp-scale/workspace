@@ -1,0 +1,17 @@
+time 0 5 4
+feed 0 5 4
+{"stories": 2488, "keys_total": 328, "fit_fp_quota": 0.001, "splits": {"time": {"train_stories": 1741, "test_stories": 747, "keys_tested": 5, "keys_pass": 5, "tolerance_saving": 0.002, "all_keys_coverage_share": 0.002, "micro_fpr": 0.0005, "micro_tpr": 1.0}, "feed": {"train_stories": 1725, "test_stories": 763, "keys_tested": 5, "keys_pass": 3, "tolerance_saving": 0.004, "all_keys_coverage_share": 0.007, "micro_fpr": 0.0011, "micro_tpr": 0.918}}, "tolerance_saving_worst": 0.002, "seconds": 4}
+time 0 196 4
+time 40 196 5
+time 80 196 6
+time 120 196 7
+time 160 196 9
+feed 0 197 10
+feed 40 197 11
+feed 80 197 12
+feed 120 197 13
+feed 160 197 14
+{"stories": 2488, "keys_total": 328, "fit_fp_quota": 0.001, "splits": {"time": {"train_stories": 1741, "test_stories": 747, "keys_tested": 196, "keys_pass": 111, "tolerance_saving": 0.105, "all_keys_coverage_share": 0.228, "micro_fpr": 0.001, "micro_tpr": 0.926}, "feed": {"train_stories": 1725, "test_stories": 763, "keys_tested": 197, "keys_pass": 95, "tolerance_saving": 0.096, "all_keys_coverage_share": 0.235, "micro_fpr": 0.0017, "micro_tpr": 0.926}}, "tolerance_saving_worst": 0.096, "seconds": 15}
+L2420 appended
+L2422 appended
+T148-I: HIT, WORSE, tolerance_saving_worst: the lower of the time-split and feed-split shares of 328 questions answered by keys that hold held-out FPR at most 0.0025 and TPR at least 0.90 0.096 vs 0.197

@@ -672,6 +672,18 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status); self.send_header("Content-Type", "application/json"); self.send_header("X-Request-Id", rid)
         self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
 
+    def _sim(self, method):  # the simulation bench (knowledge_pipeline/simulation, :18770) shown on this port: its page and an /api pass-through; local only, it handles article text
+        if not self._local(): return self._send(403, {"error": "The simulation opens only on this machine."})
+        path, _, query = self.path.partition("?")
+        if path.startswith("/sim-api/"):
+            body = self.rfile.read(int(self.headers.get("Content-Length", 0))) if method == "POST" else None
+            req = urllib.request.Request("http://127.0.0.1:18770/api/" + path[len("/sim-api/"):] + ("?" + query if query else ""), data=body, method=method, headers={"Content-Type": "application/json"})
+            try:
+                with urllib.request.urlopen(req, timeout=300) as r: return self._send(r.status, r.read(), r.headers.get("Content-Type", "application/json"))
+            except urllib.error.HTTPError as e: return self._send(e.code, e.read(), "application/json")
+            except OSError: return self._send(502, {"error": "The simulation bench is not running on :18770. Start it from knowledge_pipeline: /workspace/models/embed-zs/.venv/bin/python simulation/server.py"})
+        return self._send(200, (HERE.parent / "knowledge_pipeline" / "simulation" / "index.html").read_bytes().replace(b'"/api/', b'"/sim-api/'), "text/html; charset=utf-8")
+
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/") or "/"
         if path == "/v1/models": return self._api(outside_api.get_models)
@@ -695,6 +707,8 @@ class Handler(BaseHTTPRequestHandler):
                     a = json.loads(l); ans[a["id"] + "|" + a["atom"]] = a["answer"]
             items = [{**{k: it[k] for k in ("id", "title", "source", "text")}, "atoms": [{"atom": a["atom"], "question": a["question"]} for a in it["atoms"]]} for it in d["items"]]   # never which side said what
             return self._send(200, {"items": items, "answers": ans})
+        if path in ("/docs/notes/sim", "/docs/notes/sim/", "/docs/notes/sim/index.html") or path.startswith("/sim-api/"):
+            return self._sim("GET")
         if path == "/mockups" or path.startswith("/mockups/"):  # the static mock-ups (they had their own server on :8110)
             f = (HERE / path.lstrip("/")).resolve()
             if f.is_dir(): f = f / "index.html"
@@ -882,6 +896,7 @@ class Handler(BaseHTTPRequestHandler):
         self._stream(events)
 
     def do_POST(self):
+        if self.path.startswith("/sim-api/"): return self._sim("POST")
         if self.path.split("?")[0] in ("/v1/systemone", "/v1/audio/transcriptions"):
             bad = outside_api.auth(self)                       # before reading the body: a refused caller cannot make us read 100 MB
             if bad: self.close_connection = True; return self._api(lambda: bad, checked=True)

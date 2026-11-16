@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge record pipeline</title>
+<meta name="description" content="The knowledge pipeline as one layered record: extracted once, reused by every stage and by the next article; outputs derived from the layers; cascade, tests and build order.">
+<style>
+:root{--bg:#f7f7f5;--panel:#ffffff;--ink:#1d1d1b;--muted:#5c5c57;--line:#dcdcd6;--today:#6b6b66;--todaybg:#f0f0ec;--target:#1f5f8b;--targetbg:#e9f1f7;--gap:#8a5a12;--gapbg:#f8efe0;--ok:#2f7d4f;--warn:#a1621a;--bad:#a63a3a;--tool:#5a6d7a;--model:#1f5f8b;--other:#7a5a8a;--store:#6b7a3a;--layer:#3a6b6b;--new:#8a5a12}
+:root:not([data-theme="light"]){color-scheme:light dark}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15161a;--panel:#1d1f24;--ink:#e8e8e3;--muted:#a3a39c;--line:#33363d;--today:#a3a39c;--todaybg:#23252b;--target:#7fb3d9;--targetbg:#1b2a36;--gap:#d9a55a;--gapbg:#2b2419;--ok:#6fc08f;--warn:#d9a55a;--bad:#e07a7a;--tool:#9fb0bc;--model:#7fb3d9;--other:#b596c4;--store:#b7c47a;--layer:#7fb9b9;--new:#d9a55a}}
+:root[data-theme="dark"]{--bg:#15161a;--panel:#1d1f24;--ink:#e8e8e3;--muted:#a3a39c;--line:#33363d;--today:#a3a39c;--todaybg:#23252b;--target:#7fb3d9;--targetbg:#1b2a36;--gap:#d9a55a;--gapbg:#2b2419;--ok:#6fc08f;--warn:#d9a55a;--bad:#e07a7a;--tool:#9fb0bc;--model:#7fb3d9;--other:#b596c4;--store:#b7c47a;--layer:#7fb9b9;--new:#d9a55a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header,main{max-width:1180px;margin:0 auto;padding:0 16px}
+header{padding-top:20px}
+h1{font-size:22px;margin:0 0 4px;font-weight:600}
+h2{font-size:18px;margin:0 0 6px;font-weight:600}
+h3{font-size:15px;margin:0 0 4px;font-weight:600}
+p{margin:6px 0}
+.lead{color:var(--muted);max-width:920px}
+section{margin:30px 0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 12px}
+button[aria-pressed="true"]{border-color:var(--target);background:var(--targetbg);color:var(--target)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+.cmp{display:none}
+body[data-view="compare"] .cmp{display:block}
+body[data-view="compare"] span.cmp,body[data-view="compare"] td.cmp,body[data-view="compare"] th.cmp{display:table-cell}
+body[data-view="compare"] span.cmp{display:inline}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 8px;font-size:12.5px;line-height:20px;margin:2px 3px 2px 0;background:var(--panel);white-space:nowrap}
+.chip.tool{border-color:var(--tool);color:var(--tool)}
+.chip.model{border-color:var(--model);color:var(--model)}
+.chip.lookup{border-color:var(--other);color:var(--other)}
+.chip.other{border-color:var(--other);color:var(--other)}
+.chip.store{border-color:var(--store);color:var(--store)}
+.chip.layer{border-color:var(--layer);color:var(--layer)}
+.chip.new{border-style:dashed}
+.chip:hover{text-decoration:underline;cursor:help}
+.st{font-size:11.5px;border-radius:4px;padding:0 5px;margin-right:4px;color:#fff}
+.st.works{background:var(--ok)}.st.partly{background:var(--warn)}.st.no{background:var(--bad)}
+.layers{display:grid;gap:8px}
+.lyr{display:grid;grid-template-columns:70px 1fr;gap:10px;border:1px solid var(--line);border-left:5px solid var(--layer);border-radius:8px;padding:10px 12px;background:var(--panel)}
+.lyr .lid{font-weight:700;color:var(--layer)}
+.lyr .lid small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.arrow{text-align:center;color:var(--muted);font-size:12px;margin:-4px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:5px 7px;vertical-align:top;text-align:left}
+th{background:var(--todaybg);font-weight:600}
+.scroll{overflow-x:auto}
+.matrix td{min-width:92px;font-size:12.5px}
+.matrix td.hit{background:var(--targetbg)}
+.matrix th.rowh{position:sticky;left:0;background:var(--todaybg);z-index:1}
+.loop{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}
+.loop .panel{margin:0}
+.loop .panel h3{color:var(--store)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:12px 14px;margin:0}
+.card h3 span.axis{font-weight:400;color:var(--muted);font-size:12.5px}
+.today{color:var(--today)}
+.badge{display:inline-block;font-size:11px;border-radius:4px;padding:0 5px;margin-right:4px}
+.badge.t{background:var(--todaybg);color:var(--today)}
+.badge.g{background:var(--targetbg);color:var(--target)}
+.gapline{color:var(--gap);background:var(--gapbg);border-radius:6px;padding:4px 8px;margin-top:6px;font-size:13.5px}
+.ex td.tg{background:var(--targetbg)}
+.ex td.td{background:var(--todaybg);color:var(--today)}
+.steps{counter-reset:s;list-style:none;padding:0;margin:0}
+.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:8px;border-top:1px solid var(--line);padding:8px 0}
+.steps li::before{content:counter(s);font-weight:700;color:var(--target);font-size:18px}
+.steps li:first-child{border-top:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+#tip{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;font-size:13.5px;display:none;max-height:40vh;overflow:auto;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+#tip b{color:var(--target)}
+#tip button{float:right}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin:10px 0}
+.flow .box{flex:1 1 150px;border:1px solid var(--line);border-top:4px solid var(--target);border-radius:8px;background:var(--panel);padding:8px 10px;font-size:13.5px}
+.flow .box b{display:block;color:var(--target);margin-bottom:2px}
+.flow .ar{align-self:center;color:var(--muted);font-size:18px}
+.pl td:first-child{font-weight:700;color:var(--target);white-space:nowrap}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.two .panel{margin:0}
+footer{color:var(--muted);font-size:12.5px;padding:24px 0 60px}
+@media (max-width:600px){.lyr{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.kv dt{margin-top:4px}}
+</style>
+</head>
+<body data-view="target">
+<header>
+<h1>The knowledge pipeline as one record</h1>
+<p class="lead">Every article becomes one <b>knowledge record</b>: a stack of layers over one clean text, each layer written once by one named element and read by every later element and by the next article. The outputs of axis A (what it is about: Domain, Area, Subarea, Capability), axis B (what it says and does: Function, Condition, Claims, Evidence, Place, Time, Novelty) and the World engine keys are <b>derived from the layers</b>, never recomputed per output. Click any name for its point, definition and measure.</p>
+<div class="ctl" role="group" aria-label="View">
+ <button type="button" id="v-target" aria-pressed="true">Target state</button>
+ <button type="button" id="v-compare" aria-pressed="false">Compare with today</button>
+ <button type="button" id="theme">Theme: system</button>
+</div>
+<p class="lead small">Vocabulary, used exactly: a <b>BitMob model</b> is a small CPU classifier answering one question (BitMob Domain, Function, Condition, Area, Capability, Novelty; plus the Place student). A <b>BitTool</b> is a fixed-rule program, never a classifier. A <b>lookup</b> is a table match. The <b>Fuser</b> combines votes into one calibrated proposal per head; the <b>Decider</b> (Lean-verified, unchanged) turns it into answer, provisional or abstain; the <b>Router</b> orders who answers. The <b>teacher</b> labels offline only. Dashed names are <b>proposed new</b> elements. No LLM runs at read time; everything is CPU.</p>
+<p class="lead small cmp">Compare view: grey TODAY values are read from files (projects/world-state/runs/pulse/golden/articles.jsonl and the generator listed in README.txt); blue TARGET values are a hand-written specification, produced by no model. Status badges: works, partly, not built. UNVERIFIED marks a claim this page could not check in a file.</p>
+</header>
+<main>
+<section id="plan"><h2>0. Phase plan: extend what exists, in seven phases</h2>
+<p class="lead">Nothing is rewritten. The spine stays <code>analyze2.py</code> (playbook 00). Each phase has a bar written before the run and starts only when the one before it is done. Tracked as ledger tasks T149 to T155 (http://localhost:18766, Work tab). <b>Critical path:</b> P0 &rarr; P1 &rarr; P2 &rarr; P3 &rarr; P4 &rarr; P6, with P5 reading the record from P1 on (it could start after P1; the ledger chains it after P4 for simplicity).</p>
+<p class="small muted"><b>Confidence</b> is my judgement, not a probability. High: code and data exist and the same kind of step has worked here. Medium: code exists, the bar is untried. Low: it depends on data or a decision we do not have. <b>Blast radius</b> is what the change can touch and how to undo it.</p>
+<div class="scroll"><table class="pl"><tr><th>Phase</th><th>Does</th><th>Depends on</th><th>Blast radius</th><th>Top risk</th><th>Confidence</th><th>Waits on you</th></tr>
+<tr><td>P0<br>T149</td><td>Measure baselines: whole article vs first 300 characters; router under tolerance (d); time per element</td><td>880 Step 1 stories (local); the tolerance (d) code in <code>sensitivity_report.py</code> with its input <code>self3.npz</code> (present); the bench</td><td>None. Read-only; writes a new results folder only</td><td>No whole-article truth is local: MN-DS items are 342 characters median, 504 at most. Without a teacher label on whole articles we can measure consistency, not accuracy</td><td><b>High</b> for router and timing. <b>Low</b> for whole-article accuracy</td><td>Truth source for whole articles; spend cap</td></tr>
+<tr><td>P1<br>T150</td><td>Fix the Validator check; keep window vectors; per-item span, tool, version, provenance</td><td>P0 (frozen replay of the 230 bench stories)</td><td><code>facts_lib.py</code> has 14 importers, <code>analyze2.py</code> about 18 (bench, harvest, training builders, threshold scripts). Item shape changes. Both files are already uncommitted, so there is no clean revert: copy them before editing</td><td>The fixed check may never fail on real data (spans come from the same string), so only the injected-bad-span test proves it. Stored vectors add size, not yet measured</td><td><b>Medium-High</b></td><td>A go</td></tr>
+<tr><td>P2<br>T151</td><td>Evidence bundles: change, direction, size, sentence, factuality</td><td>P1 fields; Change lexicon; Fact extractors (run only if a story has a digit or date word); Factuality tagger (partly working); Condition</td><td>Adds a field. The consumers listed under P1 must tolerate it (not yet checked). Revert: drop the field</td><td>Low coverage: Condition fires on 12 of 230 stories; stories without numbers get no size; every dial-to-resource link is a hand-set guess</td><td><b>Medium</b> on correctness, <b>Low</b> on coverage</td><td>None</td></tr>
+<tr><td>P3<br>T152</td><td>Answers cite their bundles; answer-or-abstain cut-off from held-out stories</td><td>P2; stories not trained on; a truth set</td><td>Changes which stories are answered vs sent to the teacher, so label volume and engine outputs move. <code>decider.py</code> rules (Lean-verified) are not changed. Revert: restore the old cut-off</td><td>Precision 0.90 may leave little coverage (Domain today: 68% first guess against an 80% bar). It is measured against Sonnet labels, which is agreement, not truth</td><td><b>Medium-Low</b></td><td>Which goal governs; MN-DS scoring yes</td></tr>
+<tr><td>P4<br>T153</td><td>Reference lookup; Ontology matcher after an alias audit</td><td>P3 (needs the equal-coverage comparison); MN-DS yes; a Wikidata subset download (not authorised)</td><td>Optional inputs, removable. Nothing else touched. The label store is 180,889 rows, so load time and memory are unmeasured</td><td>The lookup's top-1 is 0.695 against Sonnet on 300 characters and may not add 0.03; alias coverage of our news is unknown</td><td><b>Low-Medium</b>. The test is built to reject</td><td>MN-DS yes; the download</td></tr>
+<tr><td>P5<br>T154</td><td>Across articles: alignment and recurrence from the stored record; entity rungs only on a measured gap</td><td>P1 record; the journal, which is not built (records must be stored to be reread); the same-event pair list</td><td>Offline scripts. No live change</td><td>The journal is a hidden build. A wrong merge poisons later stages. Typed mentions need NER, which is off</td><td><b>Medium</b> for alignment, <b>Low</b> for entity rungs</td><td>None</td></tr>
+<tr><td>P6<br>T155</td><td>Promote ontology candidates</td><td>P4 and P5; 10,000 processed articles (230 on the bench now; cost per article comes from P0); playbook 00 section 9 gates</td><td>A new ontology version. Every row carries <code>ontology_version</code>, so scores must be re-run. Revert by version</td><td>Wrong concepts get promoted. "No human raters" conflicts with review, and what replaces it is undecided</td><td><b>Low</b></td><td>The promotion rule</td></tr></table></div>
+
+<h3>Cross-cutting risks</h3>
+<div class="scroll"><table><tr><th>Risk</th><th>Hits</th><th>What we do about it</th></tr>
+<tr><td>Truth gap: most bars are agreement with a teacher; outside truth we hold is short text</td><td>P0, P3, P4</td><td>Label every score "agreement" or "outside truth"; settle the whole-article truth source in P0</td></tr>
+<tr><td>No clean revert: about 180 uncommitted files, including <code>facts_lib.py</code></td><td>P1 on</td><td>Copy any file to scratch before editing it; commit only when you ask</td></tr>
+<tr><td>Wide fan-out: 14 importers of <code>facts_lib.py</code>, about 18 of <code>analyze2.py</code></td><td>P1, P2</td><td>Add fields, never rename or remove; run <code>check_analyze2.py</code> and the 230-story replay before and after</td></tr>
+<tr><td>Goal undecided: the bars could be set for the wrong target</td><td>P3</td><td>You decide before P3 starts</td></tr>
+<tr><td>Low evidence coverage</td><td>P2, P3</td><td>Report coverage beside every score; abstain instead of guessing</td></tr>
+<tr><td>Promotion without human review</td><td>P6</td><td>Decide the rule before P6; until then candidates stay candidates</td></tr></table></div>
+<p class="small"><b>Not measured yet, so treated as unknown:</b> size of the stored vectors; whether the 18 consumers tolerate extra fields; Wikidata subset size and alias coverage; the earlier "42 of 77 ms" timing.</p>
+<p class="small"><b>Need from you:</b> which goal governs; yes or no on MN-DS, CheckThat and MAVEN as scoring only; the spend cap (the two ledgers disagree); the truth source for whole articles; a go on P0 and P1.</p>
+<p class="muted small">The sections below are the detailed target design. The element cards still list the Entity linker, Ontology matcher and Fuser; read them as conditional.</p>
+</section>
+<section id="record"><h2>1. The record: eight layers, each written once</h2>
+<p class="lead">Read bottom-up: text and metadata, tokens and sentences, mentions, linked entities, relations and events, claims, the article profile, the cross-article graph. Each layer says who writes it, the one-time computation, who reads it, and how it is built and tested.</p>
+<div id="layers" class="layers"></div></section>
+<section id="matrix"><h2>2. The reuse matrix: producer by consumer</h2>
+<p class="lead">Rows are the layers that produce information; columns are the elements and outputs that read it. A filled cell says what is read. Every output reads several rows; no output recomputes a row.</p>
+<div class="scroll" id="matrixbox"></div></section>
+<section id="loop"><h2>3. The cross-article loop: what accumulates and feeds the next article</h2>
+<p class="lead">The journal is the memory. Each table below grows with every article and is read by a named layer of the next one, so article N+1 is cheaper (duplicates exit, candidates are narrowed) and better (aliases, priors, counts).</p>
+<div class="loop" id="loopbox"></div></section>
+<section id="outputs"><h2>4. Every output derived from the layers</h2>
+<p class="lead">Each card names the layers it reads, the derivation rule, how it is tested, and the four golden stories. TARGET is the specification; TODAY (compare view) is the value stored in the files.</p>
+<div class="cards" id="outbox"></div></section>
+<section id="cascade"><h2>5. The cascade with early exit</h2>
+<p class="lead">Cheap first. The BitTools always run (evidence is never skipped); the encoder runs once and only when a head is still open; the teacher sees only what the Decider withheld. The BitTools are also <b>labelling functions</b>: cheap votes that the Fuser weighs per head on held-out splits (publisher, event and time), Snorkel style.</p>
+<ol class="steps" id="cascbox"></ol></section>
+<section id="tests"><h2>6. Measured tests per layer</h2>
+<p class="lead">Bars are set before a run. Public sets are scoring only, never training. Agreement with a teacher is not accuracy and is named as agreement.</p>
+<div class="scroll" id="testbox"></div></section>
+<section id="build"><h2>7. Build order: the shared record first, then the heads</h2>
+<ol class="steps" id="buildbox"></ol></section>
+<section id="merge" class="cmp"><h2>8. Cut or merged from the previous page</h2><div id="mergebox" class="panel"></div></section>
+<section id="decisions"><h2>9. Owner decisions</h2><div id="decbox" class="panel"></div></section>
+<section id="fit"><h2>10. Patterns used, and what does not fit a CPU, no-LLM target</h2><div id="fitbox" class="panel"></div></section>
+<footer id="foot"></footer>
+</main>
+<div id="tip" role="dialog" aria-live="polite"></div>
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+var D=window.TARGET_DATA||{stories:[]};
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function add(p,c){p.appendChild(c);return c}
+function $(i){return document.getElementById(i)}
+// theme and view
+var th=$("theme"),root=document.documentElement,modes=["system","light","dark"],mi=0;
+try{var sv=localStorage.getItem("ts-theme");if(sv&&modes.indexOf(sv)>=0)mi=modes.indexOf(sv)}catch(e){}
+function applyTheme(){var m=modes[mi];if(m==="system")root.removeAttribute("data-theme");else root.setAttribute("data-theme",m);th.textContent="Theme: "+m;try{localStorage.setItem("ts-theme",m)}catch(e){}}
+th.addEventListener("click",function(){mi=(mi+1)%3;applyTheme()});applyTheme();
+function setView(v){document.body.setAttribute("data-view",v);$("v-target").setAttribute("aria-pressed",String(v==="target"));$("v-compare").setAttribute("aria-pressed",String(v==="compare"))}
+$("v-target").addEventListener("click",function(){setView("target")});$("v-compare").addEventListener("click",function(){setView("compare")});
+
+// ---------- registry: every name used on the page ----------
+// k: tool | model | lookup | other | store | layer ; nw: proposed new ; st today: works | partly | no
+var R={
+"Source and link capture":{k:"tool",st:"partly",pt:"Capture the page as it arrived.",df:"Publisher id, URL and its path section, published date, description, links with their place, content hash.",ms:"Differential test: fields identical to the stored harvest record (extract.py source block).",td:"extract.py (harvest only); the live chain reads title, body, date."},
+"Boilerplate strip":{k:"tool",st:"partly",pt:"Remove a publisher's repeated lines.",df:"A line repeated in 5+ articles of one publisher is removed; its span is kept as transformation history.",ms:"Removed share per publisher; zero removals of lines that appear in one article only.",td:"extract.py:47 (harvest). The bench drops lines under 6 words instead (server.py:49)."},
+"Clean":{k:"tool",st:"works",pt:"One text, stable offsets.",df:"White space collapsed; every later element reports offsets into this text and nothing else.",ms:"Every stored span resolves to its text (100%).",td:"analyze2.py and server.py each normalise again; three texts exist per story."},
+"Near-duplicate cache":{k:"tool",nw:true,st:"no",pt:"Exit early on a copy.",df:"Content hash plus 5-word shingle set compared with the journal; a Jaccard of 0.30 or more over the opening 1,500 characters is a copy (the t226 rule) and adds a publisher count to the known record instead of a new read.",ms:"Zero output change on non-duplicates; skip share per feed, reported.",td:"Not in the chain. engine_reader caches 64 by sha1; t226 used the shingle rule offline."},
+"Windows":{k:"tool",st:"works",pt:"Slices for the encoder.",df:"Up to 12 slices of 64 word pieces, the headline at the start of each, cut on token offsets of the clean text.",ms:"Share of body read per story is printed with every read (L2524).",td:"analyze2.py:19-27; each slice is also cut at 1,200 characters (line 21), a hidden second cut."},
+"Parse":{k:"tool",st:"works",pt:"One syntactic reading of the text.",df:"spaCy en_core_web_sm (MIT), one pass with entity types on: tokens, lemma, part of speech, tense morphology, dependency tree, sentences, entity types.",ms:"Differential test on the golden set; time per story.",td:"Parsed three times per story (analyze2.py:53 via facts_lib.py:34; server.py:92; server.py:57); facts_lib loads it with entity types off (line 9)."},
+"Sentence splitter":{k:"tool",st:"partly",pt:"Sentence spans.",df:"End at . ! ? followed by a capital, digit or quote; reconciled with the Parse sentence boundaries, one list kept.",ms:"Lean differential vectors; agreement with the Parse boundaries.",td:"scan_gate.scan returns sentences by regex; the Parse makes a second list; the bench uses both."},
+"Scan":{k:"tool",st:"works",pt:"Fixed patterns in one pass.",df:"Spots [start, end, class] for quote, money, percent, quantity, date, attribution, negation, modal, change word, event word, capitalised name; Span rules' classes (age, duration, relative time, number word) folded in.",ms:"MAVEN trigger recall for the event class (scoring only); Independent counter coverage.",td:"scan_gate.py; runs four times per story on the bench; Span rules are a separate second pass never merged."},
+"Date resolver":{k:"tool",st:"works",pt:"A calendar value for a date spot.",df:"Weekday = most recent on or before the article date; yesterday, today, tomorrow as offsets; month and day take the article's year or the previous one; relative weeks stay relative.",ms:"Lean differential vectors; reads-back check of the Validator.",td:"scan_gate.resolve; span_rules.py resolves dates a second time."},
+"Span rules":{k:"tool",st:"partly",pt:"Relative time, age, duration, number word spans.",df:"Merged into Scan as classes; retired as a separate pass.",ms:"Value test: facts gained with and without it.",td:"span_rules.py runs in analyze2.py:53 and server.py:92; no head reads it."},
+"Independent counter":{k:"tool",st:"works",pt:"A second simple count to measure the extractors.",df:"Counts digit runs, date words and capitalised runs by a separate rule; written to the record as coverage.",ms:"Coverage share per kind, per article.",td:"facts_lib.facts_for returns it; used by summarise() only."},
+"Entity linker":{k:"tool",nw:true,st:"no",pt:"Turn a name mention into a stable entity id.",df:"Candidate generation from an alias dictionary (entity table of the journal, GeoNames, ontology labels, the engine's 100 countries, Parse entity type as a filter); disambiguation by context (a country named in the article, co-mentioned types) and prior (recurrence count, publisher country); in-document coreference by string and alias only (McDonald's = Chicago-based McDonald's); pronouns stay unresolved and never carry a claim alone.",ms:"Same-entity agreement across publishers inside t226 same-event groups (bar 0.90 on exact names); alias-gap share of missed pairs (Wikidata asked only if 30% or more).",td:"Not built. Triples carry strings (facts_lib.py:67-73); spo_chains computes string keys."},
+"Place linker":{k:"tool",st:"partly",pt:"A country for every place entity.",df:"First match wins: alias, country name, region of one country, city of one country, city whose country is named, city in the publisher's country, largest city. Dateline position excluded from story place. Writes into the Entity linker's entity ids.",ms:"Agreement with the Jev place labels on the 1,600 stories (0.882 on the 46.6% the regex decides, t203) and with the Place student; abstain share.",td:"extract.py:75-78 (harvest only). The live bench uses the Place student (torch, e5-small) instead."},
+"Fact extractors":{k:"tool",st:"works",pt:"Facts and event frames from one sentence.",df:"Amounts (number with currency, percent, magnitude or number word; clock times, years, road and reference numbers excluded), dates, names and one frame per verb (spo_chains: coordinated subjects and objects, passive flipped, preposition kept, negation, modality and attribution as notes) with subject and object entity ids.",ms:"CaRB F1 (today 0.402, scoring only); amount precision on the golden set.",td:"facts_lib.py (one triple per verb, strings); spo_chains.py exists but runs only offline (t226)."},
+"Binder":{k:"tool",st:"works",pt:"What an amount counts.",df:"Walk the tree past up to two function words to a noun; up to four steps to the governing verb; through 'in', 'of' and appositions.",ms:"Bound share of stated amounts on the golden set.",td:"facts_lib.head_of; '$450 billion ... in market capitalization' left unbound (story 126)."},
+"Validator":{k:"tool",st:"partly",pt:"Does the text say it?",df:"Four checks: literal (span equals the stored text), reads back, bound, one sentence. All four = stated; binding missing = unbound; else invalid. Stated is not true.",ms:"Lean differential vectors; 100% of stated facts pass literal on replay.",td:"Literal check is text[s:e] == text[s:e] (facts_lib.py:43), always true."},
+"Factuality tagger":{k:"tool",st:"partly",pt:"How a sentence holds its content.",df:"First match wins per sentence: question, reported, denied, request, decision, planned, predicted, asserted, unknown; applied to every frame of the sentence.",ms:"CheckThat subjectivity balanced accuracy (scoring only; 0.743 today for Function).",td:"extract.py:51-62 (harvest only). Not in the live chain; BitMob Function does not read it."},
+"Change lexicon":{k:"tool",st:"partly",pt:"What is changing and which way.",df:"Change words tied through the tree to the thing that changes; condition (rising, falling, delayed, disrupted, expanded), direction, negation; a frame whose sentence is predicted or denied asserts no condition.",ms:"Precision on the golden set by reading; SENTiVENT economic events (scoring only).",td:"extract.py:63-69 (harvest only); the live field 'change' is 'not run' (analyze2.py)."},
+"Ontology matcher":{k:"tool",st:"no",pt:"Which ontology terms appear in the text.",df:"One pass of the ontology node labels and aliases over the clean text; items {node id, level, span}; headline hits kept apart from body hits.",ms:"Hits per story; Domain precision gain at equal coverage when added to the Fuser (MN-DS).",td:"Not built (proposed on the previous page, wave 5)."},
+"Domain evidence scorer":{k:"tool",st:"no",pt:"A Domain share from matched terms.",df:"Idf-weighted node hits rolled up through every parent of the multi-parent graph; a share per Domain with its supporting spans.",ms:"Precision at equal coverage on MN-DS when fused.",td:"Not built."},
+"Topic-to-Domain map":{k:"lookup",st:"partly",pt:"From 49 topics to the Domain layer.",df:"Every listed parent of a topic receives its share (multi-parent), so all 17 seed classes are reachable; calibrated against Jev's 17-way reads on 1,000 stories (L2515).",ms:"17 of 17 reachable on a synthetic probe; agreement with the 17-way reads within 0.01 of first-parent.",td:"First listed parent only (server.py:102): 13 of 17 reachable (data.json reach, L2514)."},
+"Reference lookup":{k:"lookup",st:"no",pt:"What do labelled neighbours say?",df:"A kNN vote over the label store on the shared v6b vector; one labelling function for Area and Domain, not the answer (t233: normalising the vote did not beat a fixed cutoff, L2518).",ms:"AUROC and coverage at precision 0.90 against the held-out label store.",td:"t233 experiment only, with a separate bge-small encoder."},
+"Capability matcher":{k:"lookup",st:"partly",pt:"A known Capability or a candidate pair.",df:"The frame's (predicate, object entity) matched against the candidate list conditioned on the accepted Domain (26% more established pairs recovered than a global list, L2508), with event and publisher counts from the journal.",ms:"Recall of established pairs on the newer half (0.217 at K=60, t232).",td:"String pair match against 371 pairs (server.py:94-95); 23 recur in both periods (t230)."},
+"BitMob Domain":{k:"model",st:"partly",pt:"What broad sector is this about?",df:"The v6b network reads the 12 slices once; the slice vectors and their mean are written to the record and reused by every head; its topic and story-type probabilities are two votes among the Fuser's inputs.",ms:"Top-2 topic against MN-DS human labels (scoring only); agreement with Sonnet 0.922 (L2458).",td:"analyze2.py Reader; vectors discarded after softmax (line 27); trained on about 155 word pieces, served on 12 windows (L2519, L2522)."},
+"BitMob Function":{k:"model",st:"partly",pt:"What is this item doing?",df:"fact, forecast, opinion or unclear: fused from the Factuality tag shares (request, decision, reported) and the story-type head on the shared vector.",ms:"CheckThat subjectivity balanced accuracy (0.743 today, scoring only).",td:"The story-type head of v6b; sentence-level experiment answers 57% of reads at tolerance (head_coverage.json)."},
+"BitMob Condition":{k:"model",st:"partly",pt:"What is changing, and which way?",df:"Reads the Change lexicon frames first (a validated frame answers with strength rule); the head on the shared vector answers only the open cases; direction from the frame.",ms:"Presence F1 against Sonnet (0.66 today, agreement); SENTiVENT direction precision (scoring only).",td:"Separate encoder call on text[:1200] cut to 64 pieces (expert1_runtime.py:66-68); fires on 12 of 230 bench stories."},
+"BitMob Area":{k:"model",st:"no",pt:"Which Area of the ontology?",df:"One or more Areas: fused from the topic head on the shared vector, the Ontology matcher hits, entity types, URL section and the Reference lookup vote; Subarea is the deepest matched node under the accepted Area.",ms:"Exact and top-2 against MN-DS (scoring only).",td:"No model; the 49 topics stand in. Area exact 0.23 on MN-DS (review claim, UNVERIFIED here)."},
+"BitMob Capability":{k:"model",st:"partly",pt:"Which known Capability, or candidate?",df:"Reads the Capability matcher's match on the event frames; the model ranks candidates by the shared vector only when the list match is ambiguous.",ms:"Stability across publisher halves (top-100 Jaccard 0.439, L2475) and time halves (0.371 by distinct days, L2498); no outside truth yet.",td:"List match, no model, no outside truth."},
+"BitMob Novelty":{k:"model",st:"no",pt:"Known, emerging or unsupported?",df:"A routing signal from residuals: an entity with recurrence 0 is emerging; a claim with no G4 edge and no independent publisher is unsupported; a known Area and Capability pattern is known. Never changes the ontology.",ms:"Share routed to review; precision of 'unsupported' on CheckThat claims (scoring only).",td:"Not built; test judge AUROC 0.47-0.55, near chance."},
+"Place student":{k:"model",st:"partly",pt:"A region when the linker abstains.",df:"Fallback only: a head on the shared vector (replacing the separate e5-small encoder after a measured check) answering one of 8 regions above its line.",ms:"0.935 agreement with Jev on the 64.5% it answers (L2479, proxy judge).",td:"Separate torch encoder on text[:1500] (server.py:33,104); not registered under a BitMob name."},
+"Fuser":{k:"other",st:"no",pt:"One calibrated proposal per head.",df:"Combines the labelling functions (URL section, publisher and section prior, ontology hits, entity types, Change frames, Factuality shares, Reference lookup vote) with the head probabilities; weights learned per head on splits by publisher, event and time; emits top-3, margin, probability.",ms:"Precision at equal coverage on MN-DS (+0.03 bar); calibration error on held-out.",td:"Not built."},
+"Decider":{k:"other",st:"works",pt:"Answer, provisional or abstain.",df:"Lean-verified rules (decider.py = lean/Decide.lean): marker, source, validated, confidence, gates-agree; a harvest code per outcome. Unchanged.",ms:"Replays rust_decider/vectors.txt (100%).",td:"Works; today no field reaches ANSWER (field_table.json markers), so harvest is DISCARD for every head."},
+"Router":{k:"other",st:"no",pt:"Who answers each head, in what order.",df:"Tools first on every article; a validated tool answer is never sent to a model or the teacher; sparse before encoder; teacher only for what the Decider withheld.",ms:"Lean BitMobFlow.lean order; share of heads answered per stage.",td:"No router code; analyze2 runs the encoder (line 51) before the tools (line 53)."},
+"Journal":{k:"store",st:"no",pt:"Persist the record with provenance.",df:"Append of the record with source, hash, element versions and every span; replay-safe.",ms:"100% valid spans on the 230 bench stories; a replay adds no duplicate.",td:"The bench previews only and writes nothing (server.py:195)."},
+"G4 align":{k:"other",st:"partly",pt:"Same entity, same claim, across articles.",df:"Exact-key edges inside a same-event group on entity ids and predicate lemma (v1, L2492); independent publishers counted after copies are merged; conflicts kept as edges.",ms:"Share of claims with a partner (6.6% baseline); precision of merges by reading 40.",td:"Offline on body[:1500] with string keys (t226_g4_event.py)."},
+"G5 evolve":{k:"other",st:"no",pt:"Grow the ontology from residuals.",df:"At the 10,000-article checkpoint: Capability candidates and sub-area clusters that pass the playbook 00 section 9 gates become versioned nodes; children inherit labels.",ms:"Promotion precision by reading; duplicate concepts.",td:"Not built; the 371 candidate pairs are the only residual list."},
+"G6 educate":{k:"other",st:"no",pt:"Short answers with sources.",df:"Reads claims, edges and counts; selects evidence first; a local model may only narrate selected evidence.",ms:"Every answer cites a journal span (100%).",td:"Not built."},
+"World engine adapter":{k:"other",st:"no",pt:"Engine keys from the record.",df:"g| from Function, s| and x|recent from Time and Place scope, a|dial|dir from Condition frames, c and y| from Area, region and country from Place: yes, no or abstain per key, read from the record only.",ms:"Share of the 180 engine outputs inside tolerance (d) on the 880 Step 1 stories (66.7% today, L2457).",td:"No edge; the engine runs its own five e5-base readers on title and description (engine_reader.py)."},
+"Teacher":{k:"other",st:"partly",pt:"Labels for the abstain queue, offline.",df:"Hosted or local model labelling only what the Decider withheld; never at read time; never marked proved.",ms:"Agreement between two families; cost printed per batch.",td:"180,889 label rows exist (label store); no live queue."},
+"Knowledge record":{k:"other",nw:true,st:"no",pt:"The one object every element reads and writes.",df:"Stand-off layers over one clean text (like a spaCy Doc or a UIMA CAS): each layer a list of spans with attributes; written once, read many; serialised to the journal.",ms:"Every stored span resolves; no element parses, scans or encodes twice (checked by a call counter).",td:"Not built; analyze2, server.py and extract.py each hold their own partial dicts."},
+"entity table":{k:"store",st:"no",pt:"Known entities with ids.",df:"Grows from every linked mention; feeds candidate generation.",ms:"Entities per 1,000 articles; share of mentions linked.",td:"Not built."},
+"alias table":{k:"store",st:"no",pt:"Surface forms per entity.",df:"Grows from co-referring mentions; closes the alias gap found at G4.",ms:"Alias-gap share of missed same-event pairs.",td:"A fixed alias dictionary of 60 forms in extract.py."},
+"recurrence counts":{k:"store",st:"no",pt:"How often an entity, pair or node recurs.",df:"Per entity, Capability pair and ontology node: articles, publishers, distinct days.",ms:"Used as the prior; its gain measured on the Entity linker and Novelty.",td:"t230 counts distinct days for 371 pairs offline."},
+"publisher prior":{k:"store",st:"no",pt:"What a publisher usually writes about.",df:"Domain and Area distribution per publisher and per URL section, from the journal.",ms:"Gain at equal coverage when added to the Fuser; must not dominate (weight capped).",td:"URL section computed in extract.py, unused by Domain."},
+"label store":{k:"store",st:"works",pt:"Every label with strength, version, publisher.",df:"180,889 teacher rows today (counted); the Reference lookup reads it as the kNN reference; retraining reads it at every 10,000 articles.",ms:"Rows per family; outside-truth score per retrain.",td:"runs/label_store/labels.jsonl; used only by training rounds."},
+"G4 edges":{k:"store",st:"partly",pt:"Claims aligned across articles.",df:"Edges with independent-publisher counts and conflict marks; Novelty and G6 read them.",ms:"Share of claims with a partner.",td:"runs/pulse/t226 only."},
+"Capability candidates":{k:"store",st:"partly",pt:"Recurring verb-object pairs.",df:"Candidate rows with evidence sentence and provenance, tiered by recurrence; conditioned lists per Domain.",ms:"Recall of established pairs on newer articles.",td:"371 pairs (t222), 23 recurring (t230)."},
+"L0":{k:"layer"},"L1":{k:"layer"},"L2":{k:"layer"},"L3":{k:"layer"},"L4":{k:"layer"},"L5":{k:"layer"},"L6":{k:"layer"},"L7":{k:"layer"}
+};
+var LAYERS=[
+{id:"L0",n:"Text and metadata",w:["Source and link capture","Boilerplate strip","Clean","Near-duplicate cache"],once:"Clean text with stable offsets; publisher id, URL section, published date, description, links; content hash and shingle set; the boilerplate hit list.",r:["L1","L3","Fuser","World engine adapter","Journal"],how:"Written from the harvest record; tested by a differential run against the stored harvest and by the dup-skip share.",tdn:"Three normalisations per story (extract.py, analyze2.py, server.py); no hash check before work."},
+{id:"L1",n:"Tokens and sentences",w:["Parse","Sentence splitter","Windows"],once:"One spaCy pass with entity types on: tokens, lemma, part of speech, tense morphology, dependency tree, sentence spans; 12 encoder slices on token offsets.",r:["Scan","Fact extractors","Binder","Validator","Factuality tagger","Change lexicon","Entity linker","BitMob Domain"],how:"One call, counted; golden facts identical to the three-parse version.",tdn:"Three parses, four scans, two span-rule passes per story (server.py:57,92,177; analyze2.py:53)."},
+{id:"L2",n:"Mentions",w:["Scan","Date resolver","Independent counter"],once:"Typed mention spans: name with its Parse entity type, money, percent, quantity, date (resolved), quote, attribution, negation, modal, change word, event word; coverage counts.",r:["Entity linker","Fact extractors","Factuality tagger","Change lexicon","Fuser","Decider"],how:"Scan classes plus Parse entity types reconciled on spans; MAVEN trigger recall for the event class (scoring only).",tdn:"Entity types are computed (server.py:58) and ignored: names come from a capitalised-word regex ('Man', 'Around' in story 11)."},
+{id:"L3",n:"Linked entities",w:["Entity linker","Place linker"],once:"Mention to entity id: alias-dictionary candidates, context and prior disambiguation, in-document string coreference; places carry a country id and how they matched.",r:["Fact extractors","Capability matcher","BitMob Novelty","G4 align","World engine adapter","Fuser"],how:"Entity and alias tables from the journal plus GeoNames and ontology labels; agreement across publishers inside same-event groups.",tdn:"Not built. Triples carry strings; McDonald's appears five times in story 164 as five unrelated names."},
+{id:"L4",n:"Relations and events",w:["Fact extractors","Binder","Change lexicon"],once:"Event frames: predicate lemma, subject and object entity ids and spans, passive flipped, negation, modality, attribution, tense, bound amounts with their noun, event time from the Date resolver.",r:["Validator","BitMob Condition","Capability matcher","BitMob Capability","G4 align"],how:"spo_chains replaces the one-triple-per-verb arm; CaRB F1 not below 0.402 (scoring only); SENTiVENT for economic events.",tdn:"facts_lib triples with strings; spo_chains offline only; Change lexicon harvest only."},
+{id:"L5",n:"Claims",w:["Validator","Factuality tagger"],once:"Claim = validated frame + factuality (asserted, reported, planned, predicted, denied, request, decision) + evidence span + attributed source entity.",r:["BitMob Function","BitMob Condition","BitMob Novelty","Decider","G4 align","G6 educate","World engine adapter"],how:"Validator status and sentence tag applied to L4 frames; CheckThat for the Function derivation; Lean vectors for the Validator.",tdn:"Factuality tags exist in extract.py and feed nothing; the Validator literal check is a tautology (facts_lib.py:43)."},
+{id:"L6",n:"Article profile",w:["BitMob Domain","Ontology matcher","Domain evidence scorer","Fuser","Decider","Router"],once:"The shared v6b vector per slice and mean; ontology node hits with spans; labelling-function votes; one calibrated proposal and one outcome per head; axis A, axis B and the engine keys derived here.",r:["World engine adapter","Journal","G4 align","G5 evolve","G6 educate"],how:"One encoder pass, vectors stored; heads are linear on the vector (as the 328-key heads of t209); MN-DS at equal coverage; tolerance (d) replay for the engine.",tdn:"Three encoders on three cuts (v6b 12 windows, Condition 64 pieces, Place e5-small 1,500 chars); vectors discarded after softmax (analyze2.py:27)."},
+{id:"L7",n:"Cross-article graph",w:["Journal","G4 align","G5 evolve","G6 educate"],once:"Entity and alias tables, recurrence counts, publisher and section priors, label store, G4 edges with independent counts, Capability candidate counts, promoted nodes.",r:["Near-duplicate cache","Entity linker","Reference lookup","Capability matcher","Fuser","BitMob Novelty"],how:"Append at journal time; consolidation at the 10,000-article checkpoint (two clocks); replay safety and provenance 100%.",tdn:"Journal writes nothing (server.py:195); label store used only by training rounds; G4 edges offline (t226)."}
+];
+var OUT_COLS=["Domain","Area","Subarea","Capability","Function","Condition","Claims","Evidence","Place","Time","Novelty","Engine keys","G4 align","G5 / G6"];
+var MATRIX={
+"L0":{"Domain":"URL section, publisher prior","Area":"URL section","Function":"opinion section","Place":"publisher country prior","Time":"published date","Novelty":"hash: copy or new","Engine keys":"published date, x|recent","G4 align":"hash, shingles","G5 / G6":"source provenance"},
+"L1":{"Domain":"slices for the one encoder pass","Area":"same slices","Function":"tense, modals per sentence","Condition":"tree for the changing thing","Claims":"tree, tense","Evidence":"sentence spans","Time":"tense","Engine keys":"via the heads"},
+"L2":{"Domain":"entity-type mix as a vote","Area":"entity-type mix","Capability":"event-word spots","Function":"attribution, modal, quote counts","Condition":"change-word spots","Claims":"negation, modal, attribution cues","Evidence":"quote spots","Place":"name mentions typed GPE","Time":"date spots, resolved","Novelty":"coverage counts"},
+"L3":{"Domain":"entity types and recurrence","Area":"entity ids as ontology anchors","Subarea":"entity ids under the Area","Capability":"object entity id","Claims":"subject and object ids","Place":"country ids, dateline excluded","Novelty":"recurrence 0 = emerging","Engine keys":"region, country","G4 align":"entity ids for exact keys","G5 / G6":"anchors"},
+"L4":{"Capability":"predicate + object pairs","Condition":"change frames, direction, negation","Claims":"frames","Evidence":"frame spans","Time":"event time per frame","Engine keys":"a|dial|dir from frames","G4 align":"predicate lemma","G5 / G6":"recurring frames"},
+"L5":{"Function":"factuality tag shares","Condition":"guard: predicted or denied = none","Claims":"the claims","Evidence":"the evidence spans","Novelty":"unsupported claims","Engine keys":"g|happened, g|announced, g|forecast","G4 align":"validated claims only","G5 / G6":"claims with sources"},
+"L6":{"Domain":"fused proposal, outcome","Area":"fused proposal, outcome","Subarea":"deepest ontology hit under the Area","Capability":"vector only when ambiguous","Function":"story-type head on the shared vector","Condition":"Condition head on the shared vector","Place":"Place student on the shared vector (fallback)","Novelty":"Reference lookup vote","Engine keys":"c, y| from Area; all outcomes","G4 align":"Domain to scope candidates","G5 / G6":"profile per article"},
+"L7":{"Domain":"publisher prior, kNN vote","Area":"kNN vote on the label store","Subarea":"promoted nodes","Capability":"candidate list conditioned on Domain, counts","Place":"alias table","Novelty":"G4 edges, independent counts","Engine keys":"nothing (per-article)","G4 align":"existing edges","G5 / G6":"all tables"}
+};
+var LOOP=[
+{s:"entity table",grows:"every linked mention (L3)",feeds:"L3 candidate generation of the next article; G4 exact keys"},
+{s:"alias table",grows:"co-referring mentions and matcher merges (L3, G4)",feeds:"L3 recall: the 1.066x matcher gain of L2492 becomes exact-key gain"},
+{s:"recurrence counts",grows:"articles, publishers, distinct days per entity, pair and node (L7)",feeds:"L3 disambiguation prior; Novelty (emerging = count 0); Capability tiers"},
+{s:"publisher prior",grows:"Domain and Area outcomes per publisher and URL section (L6)",feeds:"Fuser vote for Domain and Area, weight capped"},
+{s:"label store",grows:"teacher labels of the abstain queue; proved tool facts (Decider harvest)",feeds:"Reference lookup (kNN on the shared vector); retrain at every 10,000 articles"},
+{s:"G4 edges",grows:"claims aligned inside same-event groups (L5, L7)",feeds:"Novelty (unsupported = no edge); G6 answers; conflict marks"},
+{s:"Capability candidates",grows:"recurring (predicate, object entity) pairs with evidence (L4)",feeds:"Capability matcher lists per Domain; G5 promotion at checkpoints"},
+{s:"Journal",grows:"one record per article with hash and shingles (L0 to L6)",feeds:"Near-duplicate cache: a copy exits at step 0 and adds a publisher count"}
+];
+var OUTPUTS=[
+{n:"Domain",ax:"A",key:"Domain",reads:["L0","L2","L3","L6","L7"],rule:"Fuser over: topic head on the shared vector through the Topic-to-Domain map (multi-parent), Ontology matcher hits via the Domain evidence scorer, URL section and publisher prior, entity-type mix, Reference lookup vote. Decider gives top-3, margin, status. Domain is the top-level profile: it carries place and time from Place and Time.",test:"MN-DS top-2 at equal coverage (scoring only); 17 of 17 reachable; abstain share reported.",td:"first-parent roll-up, no status (server.py:102); 13 of 17 reachable"},
+{n:"Area",ax:"A",key:"Area",reads:["L0","L2","L3","L6","L7"],rule:"Same fusion one level down: topic head probabilities, ontology hits at Area level, entity anchors, URL section, kNN vote. Multi-label; the 49 topics are the seed, promoted nodes join by version.",test:"MN-DS exact and top-2 (scoring only).",td:"the topic head's top-2 with the Decider at 0.70"},
+{n:"Subarea",ax:"A",key:"Subarea",reads:["L3","L6","L7"],rule:"The deepest Ontology matcher node under the accepted Area, with its span; entity ids under the Area as anchors; promoted sub-area clusters (t227) by version.",test:"Hits per story; stability across publisher halves (t227 Jaccard).",td:"no stored value"},
+{n:"Capability",ax:"A",key:"Capability",reads:["L3","L4","L6","L7"],rule:"Event frames (predicate, object entity id), pronoun subjects excluded, matched by the Capability matcher against the candidate list conditioned on the accepted Domain; counts from the journal give the tier; the model ranks only ambiguous matches.",test:"Recall of established pairs on newer articles (0.217 at K=60 today); stability across halves.",td:"no stored value (string pair match on the bench)"},
+{n:"Function",ax:"B",key:"Function",reads:["L1","L2","L5","L6"],rule:"Factuality tag shares over the claims (reported, request, decision, predicted) fused with the story-type head on the shared vector and the opinion-section flag; multilabel with an embedded request kept.",test:"CheckThat subjectivity balanced accuracy, at least 0.743 (scoring only).",td:"story-type head only",todayFn:function(t){return t.story[0].name+" "+pct(t.story[0].p)+", "+t.story_decider}},
+{n:"Condition",ax:"B",key:"Condition",reads:["L1","L2","L4","L5","L6"],rule:"Change frames first (word, thing, direction, negation); a frame in a predicted or denied sentence asserts no condition; the Condition head on the shared vector answers only open cases; size from bound amounts.",test:"Golden-set reading; SENTiVENT direction precision (scoring only); presence agreement with Sonnet reported as agreement.",td:"separate encoder on 64 pieces; 'change' field not run",todayFn:function(t){return t.scan_change.length?t.scan_change.map(function(c){return "change word '"+t.text.slice(c[0],c[1])+"'"}).join(", ")+" (spot only; no head reads it)":"no change spot"}},
+{n:"Claims",ax:"B",key:"Claims",reads:["L3","L4","L5"],rule:"Every validated frame with factuality, attribution entity and evidence span, as is. One layer, one list; nothing re-extracted.",test:"CaRB F1 not below 0.402 (scoring only); validity share on replay.",td:"facts_lib triples: strings, one per verb",todayFn:function(t){var tr=t.facts.filter(function(f){return f.kind==="triple"});var st=tr.filter(function(f){return f.status==="stated"}).length;return tr.length+" verb triples ("+st+" stated): "+tr.slice(0,5).map(function(f){return f.text}).join(", ")}},
+{n:"Evidence",ax:"B",key:"Evidence",reads:["L1","L2","L5"],rule:"The spans of the claims used by each outcome, plus quote spots; no separate evidence arm per output.",test:"100% of spans resolve to the clean text.",td:"quote spots counted for display",todayFn:function(t){return t.scan_quotes+" quote spot(s); facts: "+Object.keys(t.fact_counts).map(function(k){return k+" "+t.fact_counts[k]}).join(", ")}},
+{n:"Place",ax:"B",key:"Place",reads:["L0","L2","L3","L6"],rule:"Country ids of the GPE entities from the Entity linker and Place linker, dateline excluded by position, publisher country as prior; the Place student on the shared vector only when the linker abstains.",test:"Agreement with Jev place labels on 1,600 stories (proxy); abstain share; linker-alone bar 0.90 on decidable stories.",td:"Place student on a separate encoder; result not stored in data.json"},
+{n:"Time",ax:"B",key:"Time",reads:["L0","L2","L4"],rule:"Event time per frame from the Date resolver; published date from L0; relative phrases stay relative; no second date parser.",test:"Lean vectors for the resolver; reads-back share.",td:"Scan date spots resolved",todayFn:function(t){return t.scan_dates.length?t.scan_dates.map(function(d){return "'"+t.text.slice(d[0],d[1])+"' = "+d[3]}).join("; "):"no date spot"}},
+{n:"Novelty",ax:"B",key:"Novelty",reads:["L3","L5","L7"],rule:"Residual signal: entity recurrence 0 = emerging; a claim with no G4 edge and one publisher = unsupported; else known. Routes to review, never to the ontology.",test:"Share routed; precision of 'unsupported' on CheckThat check-worthy claims (scoring only).",td:"no stored value"},
+{n:"World engine adapter",ax:"C",key:"World engine adapter",reads:["L0","L3","L5","L6"],rule:"Keys read from the record: g| from Function, s| and x|recent from Place scope and Time, a|dial|dir from Condition frames, c and y| from Area, region and country from Place. Abstain where the record abstains.",test:"Share of 180 outputs inside tolerance (d) on the 880 Step 1 stories, at least 66.7% (L2457).",td:"no edge; engine reads title and description with its own readers"}
+];
+var CASCADE=[
+{t:"Hash and shingles against the journal",who:["Near-duplicate cache","Journal"],cost:"under 1 ms",exit:"A copy of a known record adds a publisher count and exits."},
+{t:"BitTools write L0 to L5",who:["Clean","Parse","Scan","Date resolver","Entity linker","Place linker","Fact extractors","Binder","Validator","Factuality tagger","Change lexicon","Ontology matcher"],cost:"about 42 of 77 ms median at 8 threads (fable review's reading of timing_analyze2.json; not re-read here)",exit:"Never skipped: evidence is always produced. A validated frame answers Condition, Time, Claims with strength proved or rule."},
+{t:"Fuser over the labelling functions and the sparse heads",who:["Fuser","Topic-to-Domain map","Domain evidence scorer","Reference lookup","Router"],cost:"0.1 ms for the sparse heads (analyze2.py:36-48)",exit:"A head whose margin clears its calibrated bar is answered without the encoder."},
+{t:"One encoder pass, vectors stored",who:["BitMob Domain","Windows"],cost:"about 33 ms for 12 slices",exit:"Runs only if any head is still open; every open head (Domain, Area, Function, Condition, Place student, the 328 engine keys) reads the same vector."},
+{t:"Decider, journal, adapter",who:["Decider","Journal","World engine adapter"],cost:"under 1 ms",exit:"Abstentions go to the label queue; the teacher labels them offline; proved tool facts become training labels."}
+];
+var TESTS=[
+["L0 to L1","golden 230 stories; Lean differential vectors","facts identical after the single parse; solver time","100% identical; time down 30%","in-house"],
+["L2 Mentions","MAVEN event triggers","recall of the Scan event class on triggers","set after a 200-sentence pilot","scoring only"],
+["L3 Linked entities","t226 same-event groups (6,796 articles)","same-entity agreement across publishers; alias-gap share of misses","0.90 on exact names; Wikidata asked only if 30% or more of misses are alias form","in-house; outside set is an owner decision"],
+["L4 Relations and events","CaRB; SENTiVENT","triple F1 (0.402 today); economic event-frame precision","F1 not below 0.402; SENTiVENT bar after pilot","scoring only"],
+["L5 Claims and Function","CheckThat subjectivity","balanced accuracy of the fused Function","at least 0.743","scoring only"],
+["L6 Domain and Area","MN-DS","top-2 precision at equal coverage; reachability; per-head loss against the old chain","+0.03; 17 of 17; no head loses more than 0.01","scoring only"],
+["L7 Journal and G4","replay of the 230 stories; t226 groups","valid spans; duplicates on replay; share of claims with a partner (6.6% baseline)","100%; 0; above 6.6%","in-house"],
+["Engine keys","880 Step 1 stories, tolerance (d)","share of the 180 outputs inside tolerance","at least 66.7% from the record alone","in-house replay"]
+];
+var BUILD=[
+{t:"The record object and one parse",d:"analyze2 and the bench read and write one Knowledge record; Parse, Scan, Sentence splitter run once; Span rules merged into Scan.",bar:"golden facts identical; solver time down 30%; call counter shows one parse.",who:"free"},
+{t:"Mentions to linked entities",d:"Entity linker with entity and alias tables; Place linker wired; Parse entity types used for names.",bar:"0.90 same-entity agreement inside same-event groups; names like 'Around' gone from the golden set.",who:"free"},
+{t:"Event frames and claims",d:"spo_chains replaces the triple arm; Factuality tagger and Change lexicon wired; Validator literal check fixed; claims carry entity ids.",bar:"CaRB F1 not below 0.402; Condition field carries a rule answer on the golden stories with change words.",who:"free"},
+{t:"One encoder pass, vectors stored",d:"BitMob Domain writes the slice vectors; Condition, Function, Place student, the 328 engine heads and the Reference lookup read them; bge-small and e5-small leave the chain after the check.",bar:"no head loses more than 0.01 agreement; two encoders fewer.",who:"free"},
+{t:"Fuser with labelling functions",d:"URL section, publisher prior, ontology hits, entity types, Change frames, Factuality shares, kNN vote and head probabilities fused per head; multi-parent Topic-to-Domain map.",bar:"+0.03 precision at equal coverage on MN-DS; 17 of 17 reachable.",who:"free"},
+{t:"Journal and cross-article tables",d:"Append with provenance; entity, alias, recurrence, publisher-prior tables; G4 exact-key edges inside events; Near-duplicate cache.",bar:"100% valid spans; zero duplicates on replay; partner share above 6.6%.",who:"free"},
+{t:"World engine adapter",d:"Keys emitted from the record; replay against tolerance (d).",bar:"at least 66.7% of outputs inside tolerance.",who:"build free; the engine switch needs the owner's yes"},
+{t:"Teacher on the abstain queue, retrain at 10,000",d:"Hosted labelling of what the Decider withheld; retrain the heads on the shared vector; score on outside truth.",bar:"one retrain writes a scored result to the ledger.",who:"owner's yes (hosted calls)"}
+];
+var MERGE=[
+"12 per-output tool chains -> one record and the reuse matrix (section 2). Parse was named 39 times on the previous page, Fuser 20, Ontology matcher 11, Reference lookup 8.",
+"12 evidence arms -> one Claims layer (L5); Evidence is its span set.",
+"Span rules -> classes of Scan (one pass); retired as a separate pass.",
+"Reference lookup -> one labelling function of the Fuser on the shared vector (no separate encoder).",
+"Capability matcher -> the Capability derivation, list conditioned on the accepted Domain.",
+"Place student -> fallback behind the Place linker on the shared vector; its own encoder leaves the chain after the check.",
+"Second and third Parse, second to fourth Scan, second Span-rule pass -> removed (server.py:57,92,177; analyze2.py:53).",
+"Kept with the same name and contract: Decider, Router, Journal, G4 align, G5 evolve, G6 educate, World engine adapter, every BitMob model.",
+"Proposed new, each with point, definition and measure in the registry: Knowledge record, Entity linker, Near-duplicate cache."
+];
+var DEC=[
+"Switch the engine to the record-fed adapter once step 7 meets 66.7% inside tolerance: recommended yes, hybrid (Clef for the rest) first.",
+"Hosted teacher for the abstain queue (step 8): recommended yes with a printed cost cap per batch.",
+"Wikidata alias subset download: recommended wait for the L3 alias-gap audit (ask only if 30% or more of misses are alias form).",
+"An outside entity-linking set (for example AIDA-CoNLL over Reuters, needs a download): recommended ask after step 2 if in-house agreement is inconclusive.",
+"Retire the Place student if the linker alone reaches 0.90 on decidable stories: recommended yes.",
+"Accept the three proposed new names (Knowledge record, Entity linker, Near-duplicate cache): recommended yes."
+];
+var FIT=[
+["Used","Stand-off annotation over one text (UIMA CAS, GATE, spaCy Doc); labelling functions combined by a learned fuser (Snorkel); classifier cascade with calibrated early exit; one shared encoder with many linear heads (as t209 already does for 328 keys); entity linking as alias-dictionary candidates plus commonness and context (DBpedia Spotlight, TagMe); Open IE with passive flipping and MinIE-style notes (spo_chains); FactBank factuality values; MinHash-style shingle dedup; two clocks (per-article sync, consolidation async)."],
+["Does not fit","Neural coreference (torch models, unmeasured gain): pronouns stay as written and carry no claim alone. Joint neural extraction (REBEL, SpERT, GLiNER): T73 showed no gain. Full Wikidata linking (BLINK, ReFinED): too heavy; an alias subset only after the audit. Transformer parser: slower, no gain shown. Dense graph embeddings and run-time LLM arbitration: excluded by rule. DenStream before a bounded micro-cluster baseline (playbook 00 section 9)."]
+];
+
+// ---------- helpers ----------
+function pct(p){return Math.round(p*100)+"%"}
+var tip=$("tip");
+function showTip(name){var r=R[name];if(!r)return;tip.textContent="";var x=add(tip,el("button",null,"close"));x.type="button";x.addEventListener("click",function(){tip.style.display="none"});
+ add(tip,el("b",null,name+(r.nw?" (proposed new)":"")+" — "+kindName(r.k)));
+ if(r.pt){add(tip,el("div",null,"Point: "+r.pt))}if(r.df){add(tip,el("div",null,"Definition: "+r.df))}if(r.ms){add(tip,el("div",null,"Measure: "+r.ms))}
+ if(r.td){var d=add(tip,el("div","cmp"));add(d,el("span","st "+r.st,stName(r.st)));add(d,document.createTextNode("Today: "+r.td))}
+ tip.style.display="block"}
+function kindName(k){return {tool:"BitTool",model:"BitMob model",lookup:"lookup",other:"element",store:"table in the journal",layer:"layer"}[k]||k}
+function stName(s){return s==="works"?"works":s==="partly"?"partly":"not built"}
+function chip(name){var r=R[name];var c=el("span","chip "+(r?r.k:"undefined")+(r&&r.nw?" new":""));if(!r){c.textContent=name+" (undefined)";return c}
+ if(r.k==="layer"){var L=LAYERS.filter(function(l){return l.id===name})[0];c.textContent=name+" "+(L?L.n:"");return c}
+ var s=add(c,el("span","cmp"));add(s,el("span","st "+r.st,stName(r.st)));add(c,document.createTextNode(name));c.title="click for point, definition, measure";c.addEventListener("click",function(){showTip(name)});return c}
+function chips(p,names){names.forEach(function(n){add(p,chip(n))})}
+
+// ---------- 1. layers ----------
+var lb=$("layers");
+LAYERS.slice().reverse().forEach(function(L,i){var box=add(lb,el("div","lyr"));var lid=add(box,el("div","lid",L.id));add(lid,el("small",null,i===0?"most abstract":i===LAYERS.length-1?"the text":""));
+ var body=add(box,el("div"));add(body,el("h3",null,L.n));var kv=add(body,el("dl","kv"));
+ add(kv,el("dt",null,"Written once by"));var w=add(kv,el("dd"));chips(w,L.w);
+ add(kv,el("dt",null,"Holds"));add(kv,el("dd",null,L.once));
+ add(kv,el("dt",null,"Read by"));var rd=add(kv,el("dd"));chips(rd,L.r);
+ add(kv,el("dt",null,"Built and tested"));add(kv,el("dd",null,L.how));
+ var t=add(kv,el("dt","cmp",""));t.textContent="Today";var td=add(kv,el("dd","cmp"));add(td,el("span","today",L.tdn));
+ if(i<LAYERS.length-1)add(lb,el("div","arrow","▲ reads everything below"))});
+
+// ---------- 2. matrix ----------
+var mt=add($("matrixbox"),el("table","matrix"));var hd=add(add(mt,el("thead")),el("tr"));add(hd,el("th","rowh","Producer ↓ · Consumer →"));OUT_COLS.forEach(function(c){add(hd,el("th",null,c))});
+var tb=add(mt,el("tbody"));LAYERS.forEach(function(L){var tr=add(tb,el("tr"));var h=add(tr,el("th","rowh",L.id+" "+L.n));OUT_COLS.forEach(function(c){var v=(MATRIX[L.id]||{})[c];add(tr,el("td",v?"hit":"",v||""))})});
+add($("matrixbox"),el("p","small muted","Reading the matrix: Domain reads five rows (L0 metadata, L2 mention types, L3 entities, L6 fused heads, L7 priors) and recomputes none. Claims and Evidence are one layer (L5) read by Function, Condition, Novelty and the engine; no output owns a private evidence arm."));
+
+// ---------- 3. loop ----------
+var lp=$("loopbox");LOOP.forEach(function(x){var p=add(lp,el("div","panel"));var h=add(p,el("h3"));add(h,chip(x.s));add(p,el("div","small","Grows from: "+x.grows));add(p,el("div","small","Feeds next article: "+x.feeds))});
+add($("loop"),el("p","small muted","Two clocks: the per-article pass appends; a consolidation pass at every 10,000 articles merges duplicates, recounts, and promotes or splits Areas under the playbook 00 section 9 gates. Duplicates are counts: strength is the number of independent publishers, syndicated copies excluded."));
+
+// ---------- 4. outputs ----------
+var ob=$("outbox");var stories=D.stories||[];
+function targetFor(s,key){var it=(s.target&&s.target.items||[]).filter(function(i){return i.layer===key})[0];if(!it)return null;
+ if(it.blend)return it.blend.map(function(b){return b[0]+" "+b[1]+"%"}).join(", ")+(it.status?" ("+it.status+(it.margin!=null?", margin "+it.margin:"")+")":"");
+ var v=it.value||"";if(Array.isArray(v))v=v.map(function(b){return b[0]+" "+b[1]+"%"}).join(", ");return v+(it.status&&it.status!=="answer"?" ("+it.status+")":"")}
+function todayFor(o,s){var t=s.today;if(!t)return "no stored value";
+ if(o.n==="Domain")return t.domain_first_parent[0].name+" "+pct(t.domain_first_parent[0].p)+" (first parent; split-parent: "+t.domain_split_parent[0].name+" "+pct(t.domain_split_parent[0].p)+"); no status";
+ if(o.n==="Area")return t.topic_top2_stored.join(" / ")+" "+pct(t.topic_top2_sum)+", "+t.topic_decider;
+ if(o.todayFn)return o.todayFn(t);return "no stored value"}
+OUTPUTS.forEach(function(o){var c=add(ob,el("div","card"));var h=add(c,el("h3",null,o.n+" "));add(h,el("span","axis",o.ax==="A"?"axis A, what it is about":o.ax==="B"?"axis B, what it says and does":"axis C, how answers are produced"));
+ var kv=add(c,el("dl","kv"));add(kv,el("dt",null,"Reads"));var rd=add(kv,el("dd"));chips(rd,o.reads);add(kv,el("dt",null,"Derived by"));add(kv,el("dd",null,o.rule));add(kv,el("dt",null,"Tested"));add(kv,el("dd",null,o.test));
+ var tdt=add(kv,el("dt","cmp","Today"));var tdd=add(kv,el("dd","cmp"));add(tdd,el("span","today",o.td));
+ var tbl=add(c,el("table","ex"));var hr=add(add(tbl,el("thead")),el("tr"));add(hr,el("th",null,"Story"));add(hr,el("th","cmp","TODAY (stored)"));add(hr,el("th",null,"TARGET (specification)"));
+ var bd=add(tbl,el("tbody"));stories.forEach(function(s){var tr=add(bd,el("tr"));var ttl=(s.today&&s.today.title)||("story "+(s.today&&s.today.id));add(tr,el("td",null,ttl.length>44?ttl.slice(0,42)+"…":ttl));add(tr,el("td","td cmp",todayFor(o,s)));var tg=targetFor(s,o.key);add(tr,el("td","tg",tg||"—"))})});
+add($("outputs"),el("p","small muted","Shared compute behind every card: one tokenisation and parse, one sentence split, one Scan, one Ontology matcher pass, one encoder pass whose vectors every head reads. The TARGET values are the hand-written specification of the previous page, kept; percentages there are illustrative blends, not measurements."));
+
+// ---------- 5. cascade ----------
+var cb=$("cascbox");CASCADE.forEach(function(s){var li=add(cb,el("li"));var d=add(li,el("div"));add(d,el("h3",null,s.t));var w=add(d,el("div"));chips(w,s.who);add(d,el("div","small","Cost: "+s.cost));add(d,el("div","small","Exit or rule: "+s.exit))});
+var ws=add($("cascade"),el("div","panel"));add(ws,el("h3",null,"The BitTools as labelling functions"));add(ws,el("p","small","Each cheap rule votes for a head: URL section and publisher prior → Domain; Ontology matcher hits → Domain, Area, Subarea; entity-type mix (ORG with MONEY → economy) → Domain; Change frames → Condition; Factuality shares → Function; Reference lookup vote → Area; the head probabilities are two more votes. The Fuser learns the weights per head on held-out splits by publisher, event and time and emits a calibrated probability; the Decider is unchanged. A tool vote never becomes 'proved': only a validated fact does."));
+
+// ---------- 6. tests ----------
+var tt=add($("testbox"),el("table"));var th2=add(add(tt,el("thead")),el("tr"));["Layer","Set","Metric","Pass bar (set before the run)","Use"].forEach(function(x){add(th2,el("th",null,x))});var tb2=add(tt,el("tbody"));TESTS.forEach(function(r){var tr=add(tb2,el("tr"));r.forEach(function(x){add(tr,el("td",null,x))})});
+
+// ---------- 7. build ----------
+var bb=$("buildbox");BUILD.forEach(function(b){var li=add(bb,el("li"));var d=add(li,el("div"));add(d,el("h3",null,b.t));add(d,el("div","small",b.d));add(d,el("div","small","Bar: "+b.bar));var w=add(d,el("div","small"));add(w,el("span","badge "+(b.who==="free"?"g":"t"),b.who))});
+
+// ---------- 8-10 ----------
+var mb=$("mergebox");MERGE.forEach(function(m){add(mb,el("p","small",m))});
+var db=$("decbox");DEC.forEach(function(m){add(db,el("p","small",m))});
+var fb=$("fitbox");FIT.forEach(function(f){var p=add(fb,el("p","small"));add(p,el("b",null,f[0]+": "));add(p,document.createTextNode(f[1]))});
+$("foot").textContent="Static page, no network, no model runs. Story data: data.js (TODAY from projects/world-state/runs/pulse/golden/articles.jsonl and specs/topic_to_iptc_v1.json; TARGET hand-written). Design report: scratchpad fable_knowledge_pipeline_design.md. Line references name the live code (analyze2.py, facts_lib.py, extract.py, simulation/server.py, expert1_runtime.py) and the ledger (Lnnnn). Owner rules kept: every score says what text the reader sees; the evidence set, not one signal; no human raters; outside truth is scoring only.";
+})();
+</script>
+</body>
+</html>

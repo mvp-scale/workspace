@@ -1,0 +1,14 @@
+TASK T138: Clef parity on the one-pass read
+ACTION UNDER REVIEW (2026-11-12): re-labelled ready to blocked (L2311, L2312)
+STATUS NOW: blocked
+WHY THE TASK EXISTS: Owner idea 2026-11-11: run the same request on local Clef for 10 stories to get parity, redundancy and limits. Held: needs the local GPU yes.
+ACCEPTANCE:
+  - Request size and Score accepted or not, per-head agreement with Jev on 10 stories
+STEPS: [ ] Run the 10 stories on Clef; [ ] Read agreement and limits
+
+LEDGER LINES FOR THIS TASK (oldest first, text cut at 900 characters):
+L2093 2026-11-11T22:58 task by S3: Clef parity on the one-pass read
+L2311 2026-11-12T20:09 start by S?: T138 started
+L2312 2026-11-12T20:09 block by S?: Held on the owner: Clef parity needs the local GPU model, and the owner stopped Clef on 2026-11-12 (GPU now free). Start Clef only with the owner's yes (./service.sh start clef-flash-q4km). The start line only moves it to a state the ledger lets me block from; no work was done. Re-labelled from ready to blocked in the Work tab review.
+
+OTHER LEDGER LINES CITED BY THE CLOSING OR REVIEW TEXT (raw, cut at 1500 characters):

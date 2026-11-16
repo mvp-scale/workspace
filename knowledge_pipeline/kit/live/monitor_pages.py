@@ -32,15 +32,15 @@ g = get("http://localhost:8100/mockups/gates/index.html")
 if g is None: out.append("DOWN  Reading gates: page does not answer")
 else:
     dj = "/workspace/demo/mockups/gates/data.json"; t_data = os.path.getmtime(dj)
-    SKIP = ("preplan.json", "opus_review.json", "decisions_open.json", "model_rollout.json")  # plans and reviews are not results; they change no board number
-    newest = max((os.path.getmtime(f), f) for f in glob.glob(W + "runs/pulse/*.json") + glob.glob(W + "runs/harvest/toolchain_measure/*.json") if os.path.basename(f) not in SKIP)
+    SKIP = ("preplan.json", "opus_review.json", "decisions_open.json", "model_rollout.json", "next_steps.json")  # plans and reviews are not results; they change no board number
+    newest = max((os.path.getmtime(f), f) for f in glob.glob(W + "runs/pulse/*.json") + glob.glob(W + "runs/pulse/*/t1[7-9]*.json") + glob.glob(W + "runs/harvest/toolchain_measure/*.json") if os.path.basename(f) not in SKIP)   # subfolder results of T170 onward count too (2026-11-12)
     stale = newest[0] > t_data + 5
     out.append(("STALE " if stale else "OK    ") + f"Reading gates: data.json built {time.strftime('%H:%M', time.localtime(t_data))}; newest result file {os.path.basename(newest[1])} at {time.strftime('%H:%M', time.localtime(newest[0]))}" + (" (rerun gates_heads.py)" if stale else ""))
 # Page expectations (2026-11-09): every page states when it must be rebuilt. 'results' pages are stale when a result file is newer; 'frozen' pages are not expected to change.
 PY = "/workspace/models/embed-zs/.venv/bin/python"
 PAGES = [("solver", "solver_shape_page.py", "python3"), ("bitmobs", "bitmob_map_page.py", PY), ("state", "pulse_state_page.py", "python3"), ("learned", "learned_page_data.py", PY)]
 FROZEN = {"article-beats": "superseded by the triple work", "article-levels": "superseded", "article-techniques": "superseded", "article-relations": "superseded by T62-T66", "clusters": "superseded, kept not extended", "decider": "fixed test vectors", "training-curve": "throwaway, replaced by the Training tab"}
-res = [f for f in glob.glob(W + "runs/pulse/*.json") if os.path.basename(f) not in ("preplan.json", "opus_review.json", "decisions_open.json", "model_rollout.json")]
+res = [f for f in glob.glob(W + "runs/pulse/*.json") if os.path.basename(f) not in ("preplan.json", "opus_review.json", "decisions_open.json", "model_rollout.json", "next_steps.json")]
 newest_res = max(os.path.getmtime(f) for f in res) if res else 0
 for name, builder, py in PAGES:
     d = "/workspace/demo/mockups/" + name; fs = glob.glob(d + "/*")
@@ -48,6 +48,15 @@ for name, builder, py in PAGES:
     built = max(os.path.getmtime(f) for f in fs); st = newest_res > built + 5
     out.append(("STALE " if st else "OK    ") + f"{name} page (rebuilds on new results): built {time.strftime('%m-%d %H:%M', time.localtime(built))}" + (f"; rebuild: cd projects/world-state && {py} {builder}" if st else ""))
 out.append("OK    frozen pages, not expected to change: " + ", ".join(FROZEN))
+# Training tab (added 2026-11-12, owner: the page must show real information): training.json is rebuilt by the poller every 180 s; compare it with the newest result file anywhere under runs/pulse/ including subfolders, and check the viewer serves it.
+try:
+    tj = "/workspace/knowledge_pipeline/training/training.json"; t_tr = os.path.getmtime(tj)
+    allres = [f for f in glob.glob(W + "runs/pulse/*/*.json") + glob.glob(W + "runs/pulse/*.json") if os.path.getsize(f) < 50_000_000]
+    nf = max((os.path.getmtime(f), f) for f in allres)
+    served = json.loads(urllib.request.urlopen("http://localhost:18766/training", timeout=5).read()).get("built", "?")
+    behind = nf[0] > t_tr + 400
+    print(("STALE " if behind else "OK    ") + f"Training tab: training.json built {time.strftime('%H:%M', time.localtime(t_tr))}, served built {served}; newest result {os.path.relpath(nf[1], W)} at {time.strftime('%H:%M', time.localtime(nf[0]))}" + ("; the poller has not rebuilt it: run python3 build_training.py in projects/world-state and check poll_live.py is running" if behind else ""))
+except Exception as e: print("STALE Training tab: could not check (" + type(e).__name__ + "): is the ledger viewer on :18766 up?")
 print("\n".join(out))
 # The Training tab and loop heartbeats are refreshed by one caller only: the poller runs tick.py (which runs loop_beat.py and health.py) every 180 s. This script only reports page freshness.
 

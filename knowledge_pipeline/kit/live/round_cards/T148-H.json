@@ -1,0 +1,33 @@
+{
+ "id": "T148-H",
+ "task": "T148",
+ "part": "main loop: per-key triage with a false-positive margin",
+ "field": "engine keys",
+ "question": "How many engine keys meet the tolerance (true-positive rate at least 0.90, false-positive rate at most 0.0025) on held-out halves when the yes-line is fitted at a stricter quota?",
+ "one_change": "fit each key's yes-line at false-positive quota 0.0010 instead of 0.0025",
+ "baseline": {
+  "model": "per-key triage at quota 0.0025: keys meeting the tolerance on held-out halves, share of 328 questions",
+  "file": "runs/pulse/t204/t204_per_key_triage.json",
+  "key": "tolerance_check.tolerance_tpr90_fpr0025_saving"
+ },
+ "prediction": {
+  "metric": "tolerance_saving: sum of coverage over keys meeting TPR at least 0.90 and FPR at most 0.0025 on held-out halves, divided by 328",
+  "low": 0.06,
+  "high": 0.16,
+  "why": "at quota 0.0025 only 16 keys met the tolerance (saving 0.018) because held-out false positives ran at 0.0032 on average; on Function a stricter quota cut the held-out rate by a third for one point of coverage, so most of the 148 keys that miss by a little should pass, at a lower coverage"
+ },
+ "command": "FPQ=0.0010 OUT=runs/pulse/t205 /workspace/models/embed-zs/.venv/bin/python -u t204_per_key_triage.py",
+ "result": {
+  "file": "runs/pulse/t205/t204_per_key_triage.json",
+  "key": "tolerance_saving"
+ },
+ "cap_minutes": 20,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "N=5 FPQ=0.0010 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t205s /workspace/models/embed-zs/.venv/bin/python -u t204_per_key_triage.py",
+  "cap_minutes": 5
+ }
+}

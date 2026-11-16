@@ -1,0 +1,115 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pipeline simulation</title>
+<style>
+:root{--bg:#f6f6f3;--fg:#1c1c1a;--mut:#6b6b66;--card:#fff;--line:#dcdcd5;--ok:#1d7a46;--warn:#a86400;--no:#8a8a84;--bad:#b3261e;--acc:#2456c4;--bar:#bcd0f5;--hl1:#cfe0ff;--hl2:#d6f0dc;--hl3:#ffe7b8}
+@media(prefers-color-scheme:dark){:root{--bg:#161614;--fg:#ecece6;--mut:#a0a09a;--card:#21211e;--line:#38382f;--ok:#58c487;--warn:#e0a040;--no:#8a8a84;--bad:#f2867e;--acc:#7aa2ff;--bar:#2c4474;--hl1:#26406e;--hl2:#1f4a30;--hl3:#5a4318}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}main{width:80%;margin:0 auto;padding:16px 0}@media(max-width:800px){main{width:94%}}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:16px;margin:24px 0 6px}h3{font-size:13px;margin:0 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}.sub,.mut{color:var(--mut)}.sub{margin:0 0 12px}.mut{font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}select,input,textarea,button{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+select{flex:1;min-width:220px}textarea{width:100%;box-sizing:border-box;min-height:90px}button{cursor:pointer;background:var(--acc);color:#fff;border:0}button.alt{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}.box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px}
+.item{display:flex;align-items:center;gap:8px;margin:3px 0}.item .n{flex:0 0 46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.item .b{flex:1;height:10px;background:var(--line);border-radius:5px;overflow:hidden}.item .b i{display:block;height:100%;background:var(--bar)}.item.first .b i{background:var(--acc)}.item .p{flex:0 0 38px;text-align:right}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--card)}td,th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600}
+.tag{font-size:11px;padding:0 6px;border-radius:9px;border:1px solid currentColor;white-space:nowrap}.ok{color:var(--ok)}.warn{color:var(--warn)}.no{color:var(--no)}.bad{color:var(--bad)}
+.bar{display:flex;height:20px;border-radius:5px;overflow:hidden;border:1px solid var(--line);margin:6px 0}.bar div{display:flex;align-items:center;padding-left:6px;font-size:11px;color:#fff;white-space:nowrap;overflow:hidden}
+.txt{white-space:pre-wrap;max-height:260px;overflow:auto;font-size:13px}mark.a{background:var(--hl1);color:inherit}mark.b{background:var(--hl2);color:inherit}mark.c{background:var(--hl3);color:inherit}
+details{margin:8px 0}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:6px 0}.filters label{display:flex;flex-direction:column;font-size:11px;color:var(--mut)}.filters select,.filters input{padding:4px 6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.chips button{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:12px}.chips button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#list{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}#list table{font-size:13px}#list tr{cursor:pointer}#list tr:hover td{background:var(--bg)}#list tr.sel td{background:var(--hl1)}#list th{position:sticky;top:0;background:var(--card)}
+td.y{color:var(--ok)}td.n{color:var(--no)}summary{cursor:pointer;color:var(--mut)}.headline{font-size:17px;font-weight:600;margin:0 0 8px}
+</style></head><body><main>
+<h1>Pipeline simulation</h1><p class="sub">Put one article through the BitMob models and tools, see what comes out in plain terms, which model produced it and how well that model tested, and how the pipeline would use it. CPU only. No engine, Clef, Jev or GPU is called.</p>
+<h2 style="margin-top:8px">Choose an article</h2>
+<div class="chips" id="chips"></div>
+<div class="filters"><label>Search<input id="f_q" placeholder="words in the title"></label><label>Set<select id="f_set"><option value="">All</option><option>Golden set</option><option>Queue sample</option></select></label>
+<label>Domain<select id="f_dom"><option value="">Any</option></select></label><label>Area<select id="f_area"><option value="">Any</option></select></label>
+<label>Area result<select id="f_a"><option value="">Any</option><option value="y">Answered</option><option value="n">Deferred</option></select></label>
+<label>Type result<select id="f_t"><option value="">Any</option><option value="y">Answered</option><option value="n">Deferred</option></select></label>
+<label>Condition<select id="f_c"><option value="">Any</option><option value="y">Answered (present or none)</option><option value="present">Present</option><option value="none">None present</option><option value="n">Deferred</option></select></label>
+<label>Place result<select id="f_p"><option value="">Any</option><option value="y">Answered</option><option value="n">Deferred</option></select></label>
+<label>Length<select id="f_len"><option value="">Any</option><option value="s">Short (under 500 words)</option><option value="m">Medium</option><option value="l">Long (over 1,100)</option></select></label></div>
+<div class="row"><span class="mut" id="count"></span><button class="alt" id="rand">Random match</button><button class="alt" id="all">Time all matching</button><label class="mut"><input type="checkbox" id="sparse"> BitMob Domain sparse in front of the v6b network</label></div>
+<div id="list"></div>
+<div class="mut" style="margin-top:4px">Every article runs through every model that runs here. The columns show where each model was sure enough to answer (value and confidence) or deferred (–). Click a row to load and run it.</div>
+<div class="row" style="margin-top:10px"><input id="title" placeholder="Title" style="flex:1;min-width:240px"><input id="date" placeholder="Date YYYY-MM-DD (optional)" style="width:190px"></div>
+<div class="row"><button id="run">Run this text</button><span class="mut">or paste your own title and body</span></div><textarea id="body" placeholder="Article body"></textarea><div id="status" class="mut" style="margin:6px 0"></div>
+<div id="result" hidden>
+<h2>1. What the models say about this story</h2><p class="headline" id="headline"></p><div id="coverage" class="box"></div><div class="grid" id="cards"></div>
+<h2>2. BitMob tools</h2><div class="mut">The rule-based collection, in the order they run: no training, each output points at its place in the text. The last column says whether analyze2 already uses it. The models in section 5 run after.</div><div id="toolsflow"></div>
+<h2>3. What the tools found</h2><div class="grid" id="depth"></div>
+<details><summary>Show the article with the finds highlighted</summary><div class="mut"><mark class="a">time and number spans</mark> <mark class="b">amounts, dates</mark> <mark class="c">names, triple verbs</mark></div><div class="box txt" id="txt"></div></details>
+<h2>4. Claims and evidence, sentence by sentence</h2><div class="mut">One row per sentence, built from what the Scan, Fact finder and parse already extracted. Type: reported if the sentence has an attribution (said, according to) or a quote; predicted if it has a modal (will, expected to); otherwise asserted. Cues are the Scan spot classes found in it. Evidence counts how many of figures, entity, date, source and extracted claim it carries (0 to 5). A view over existing tool output; not tested against human labels.</div>
+<div class="chips" id="cchips"></div><div id="claims"></div>
+<h2>5. BitMob models</h2><div class="mut">ON = it ran on this article and produced the output shown. OFF = not configured or not loaded, so it produces nothing. One network, BitMob Domain v6b, produces the Domain, Area, Function and Condition outputs. Place is separate. Tools are in section 2. "Passes" compares it to its test bar.</div><div id="models"></div>
+<h2>6. How the pipeline uses this</h2><div id="use"></div><div id="emap" style="margin-top:8px"></div>
+<h2>7. What ran and how long</h2><div id="g0" class="mut"></div><div id="bar" class="bar"></div><div class="mut" id="timenote"></div>
+</div>
+<h2>Timing run</h2><div id="timing" class="mut">Not run yet.</div>
+</main><script>
+const $=id=>document.getElementById(id);
+function el(tag,attrs,...kids){const n=document.createElement(tag);for(const k in(attrs||{}))n.setAttribute(k,attrs[k]);for(const c of kids)n.append(c);return n}
+function table(head,rows){const t=el("table",{},el("tr",{},...head.map(h=>el("th",{},h))));for(const r of rows)t.append(el("tr",{},...r.map(c=>el("td",{},c instanceof Node?c:String(c==null?"":c)))));return t}
+const tag=(t,c)=>el("span",{class:"tag "+c},t);let ARTS=[];
+async function j(u,o){const r=await fetch(u,o);const d=await r.json();if(!r.ok)throw new Error(d.error||r.status);return d}
+function bars(list){const w=el("div",{});list.forEach((x,i)=>w.append(el("div",{class:"item"+(i===0?" first":"")},el("span",{class:"n",title:x.name},x.name),el("span",{class:"b"},el("i",{style:"width:"+x.pct+"%"})),el("span",{class:"p"},x.pct+"%"))));return w}
+function card(title,by,answered,list,note,trust,tc){return el("div",{class:"box"},el("h3",{},title),el("div",{class:"item"},tag(answered?"above confidence line":"below line: deferred",answered?"ok":"warn"),el("span",{class:"mut"},by)),bars(list),note?el("div",{class:"mut"},note):"",trust?el("div",{class:"item"},tag(trust,tc||"warn")):"")}
+const ST0={working:"ok","working, candidate front step":"ok","working, no admissible judge":"warn","experiment, saved today":"warn","experiment, not loaded here":"warn","not passing":"bad","no judge, stopped":"no","weak judge":"no","not built":"no","tool, no bar set":"warn"};
+function CONDWARN(){const b=ARTS.filter(a=>a.badge);const biz=b.filter(a=>a.badge.domain==="economy, business and finance");return "UNPROVEN and rarely fires: present on "+b.filter(a=>a.badge.cond_present).length+" of "+b.length+" articles, "+biz.filter(a=>a.badge.cond_present).length+" of "+biz.length+" business ones. Do not read \"none present\" as a finding."}
+function render(o){
+  $("result").hidden=false;const s=o.story;$("headline").textContent=s.headline||"(no headline)";
+  const CV=$("coverage");CV.replaceChildren(el("h3",{},"Text each model read (article: "+o.coverage.article_chars+" characters)"),table(["Model","Read","Share","Rule"],o.coverage.rows.map(r=>[r.model,r.read+" of "+r.total+" characters",r.pct+"%",r.rule])),el("p",{class:"mut",style:o.coverage.warn?"color:#b3261e;font-weight:600":""},o.coverage.warn||"Every model read the whole article."));
+  const C=$("cards");C.replaceChildren(
+    card("Domain","rolled up from Area",s.domain.answered,s.domain.top,"Domain is the Area's parent class (17 broad classes), not a separate model.","partly proven: 68% right on the first guess vs human labels","warn"),
+    card("Area (49 topics)","BitMob Domain v6b",s.area.answered,s.area.top,s.area.note||("Read from: "+s.area.basis),"partly proven: 80% within two guesses vs human labels","warn"),
+    card("Region","Place student (experiment)",s.region.answered,s.region.top,s.region.note||("Answers only above "+s.region.line_pct+"%."),"experiment: checked only against Jev and a text proxy","warn"),
+    card("Story type","BitMob Domain v6b",s.type.answered,s.type.top,null,"proven only against the labeller, not against humans","warn"));
+  const c=s.condition,cb=el("div",{class:"box"},el("h3",{},"Condition (something rising, falling, disrupted…)"),el("div",{class:"item"},tag(c.status==="answered"?"answered":"deferred",c.status==="answered"?"ok":"warn"),el("span",{class:"mut"},"BitMob Condition (via Domain v6b)")),el("div",{class:"item"},tag(CONDWARN(),"bad")));
+  if(c.which)cb.append(el("div",{},c.which.join(" / ")+" ("+c.which_pct+"%), direction "+c.direction+", size "+c.size));else cb.append(el("div",{},c.present===false&&c.status==="answered"?"None present ("+c.present_pct+"% sure).":"Unsure whether any condition is present."));C.append(cb);
+  $("toolsflow").replaceChildren(table(["Tool","What it produced on this article","ms","Wired into analyze2?"],o.tools.map(t=>[t.step,t.in_out,t.ms==null?"":t.ms,t.wired])));CL=o.claims;renderClaims();
+  const D=$("depth");D.replaceChildren(
+    el("div",{class:"box"},el("h3",{},"Who (named mentions)"),s.entities.length?table(["Name","Mentions","Role"],s.entities.map(e=>[e.name,e.mentions,e.roles])):el("div",{class:"mut"},"No names found.")),
+    el("div",{class:"box"},el("h3",{},"What happened (subject, verb, object)"),s.actions.length?table(["Subject","Verb","Object"],s.actions.map(a=>[a.subject,a.verb,a.object])):el("div",{class:"mut"},"No triples found."),el("div",{class:"mut"},"Triple extraction scores F1 0.40 on a public test; read these as leads, not facts.")),
+    el("div",{class:"box"},el("h3",{},"How much (figures, % and $ first)"),s.numbers.length?table(["Figure","Unit","About","Verb"],s.numbers.map(n=>[n.text,n.unit,n.noun,n.verb])):el("div",{class:"mut"},"No amounts stated."),s.timeparts.length?el("div",{class:"mut"},"Not amounts, kept apart: clock and date parts the tool read as numbers: "+s.timeparts.map(n=>n.text+" "+n.noun).join(", ")):""),
+    el("div",{class:"box"},el("h3",{},"When"),(s.dates.length?table(["Said","Date","Status"],s.dates.map(d=>[d.text,d.date,d.status])):el("div",{class:"mut"},"No dates resolved.")),s.times.length?el("div",{class:"mut"},s.times.map(t=>t.text+" ("+t.kind+")").join(", ")):""));
+  const marks=[];for(const x of o.spans)marks.push({s:x.s,e:x.e,c:"a",t:x.k});for(const x of o.facts)marks.push({s:x.s,e:x.e,c:(x.k==="amount"||x.k==="date")?"b":"c",t:x.k});
+  marks.sort((a,b)=>a.s-b.s||b.e-a.e);const t=$("txt");t.replaceChildren();let pos=0;for(const m of marks){if(m.s<pos||m.e<=m.s)continue;t.append(o.text.slice(pos,m.s));t.append(el("mark",{class:m.c,title:m.t},o.text.slice(m.s,m.e)));pos=m.e}t.append(o.text.slice(pos));
+  $("models").replaceChildren(table(["Model or tool","","Output on this article","Passes its test?","Why","ms"],o.table.map(m=>[m.name,tag(m.on,m.on==="ON"?"ok":"no"),m.output,tag(m.passes,m.passes==="Yes"?"ok":(m.passes==="No"?"bad":"no")),m.why,m.ms==null?"":m.ms])));
+  $("use").replaceChildren(table(["Pipeline step","Built?","What it does with this story"],o.use.map(u=>[u.step,u.built,u.what])));
+  $("emap").replaceChildren(table(["Field","Feeds this world-engine question family"],o.engine_map.map(m=>[m[1],m[2]])),el("div",{class:"mut"},"From newsreader/bitmob/reader/engine_reader.py (D-0037). The engine's reader uses a different set of models than this pipeline today, and this bench does not call the engine."));
+  const T=o.ms,tot=T.total_ms||1,cols={reader_ms:"#2456c4",solver_ms:"#1d7a46",span_rules_ms:"#a86400",decider_ms:"#7a3fb0"},bar=$("bar");bar.replaceChildren();
+  for(const k in cols)if(T[k]>0.05)bar.append(el("div",{style:"background:"+cols[k]+";width:"+Math.max(6,100*T[k]/tot)+"%"},k.replace("_ms","")+" "+T[k].toFixed(0)+" ms"));
+  $("g0").textContent="G0: "+o.g0.words+" words read, hash "+o.g0.sha1+(o.g0.date?", date "+o.g0.date:", no date given");$("timenote").textContent="Pipeline total "+tot.toFixed(0)+" ms. Place and condition heads add "+(o.place_ms+o.pulse_ms).toFixed(0)+" ms.";
+  $("status").textContent="Done."}
+async function run(){$("status").textContent="Running…";try{render(await j("/api/run",{method:"POST",body:JSON.stringify({title:$("title").value,body:$("body").value,date:$("date").value,sparse:$("sparse").checked})}))}catch(e){$("status").textContent="Error: "+e.message}}
+let CL=[],CF="score";let SEL=null;const F={};
+function match(a){const b=a.badge;if(F.set&&a.group!==F.set)return false;if(F.q&&!a.title.toLowerCase().includes(F.q.toLowerCase()))return false;
+  if(F.len){const w=a.words;if(F.len==="s"&&w>=500)return false;if(F.len==="m"&&(w<500||w>1100))return false;if(F.len==="l"&&w<=1100)return false}
+  if(!b)return !(F.dom||F.area||F.a||F.t||F.c||F.p);
+  if(F.dom&&b.domain!==F.dom)return false;if(F.area&&b.area_name!==F.area)return false;
+  const yn=(v,k)=>!v||((v==="y")===!!k);if(!yn(F.a,b.area)||!yn(F.t,b.type)||!yn(F.p,b.region))return false;
+  if(F.c==="y"&&!b.cond)return false;if(F.c==="present"&&!b.cond_present)return false;if(F.c==="none"&&!(b.cond&&!b.cond_present))return false;if(F.c==="n"&&b.cond)return false;return true}
+function cell(ok,name,pct){return el("td",{class:ok?"y":"n"},ok?(name+" "+pct+"%"):"–")}
+function renderList(){const rows=ARTS.filter(match);$("count").textContent=rows.length+" of "+ARTS.length+" articles match";
+  const L=$("list");L.replaceChildren();const t=el("table",{},el("tr",{},...["Title","Domain","Area","Story type","Condition","Place","Words"].map(x=>el("th",{},x))));
+  for(const a of rows.slice(0,150)){const b=a.badge;const tr=el("tr",{class:SEL===a.id?"sel":""},el("td",{title:a.title},a.title.slice(0,64)+(a.group==="Golden set"?" ★":"")));
+    if(b){tr.append(el("td",{},b.domain),cell(b.area,b.area_name,b.area_pct),cell(b.type,b.type_name,b.type_pct),cell(b.cond,b.cond_name,""),cell(b.region,b.region_name,b.region_pct))}else tr.append(el("td",{colspan:5,class:"mut"},"still computing…"));
+    tr.append(el("td",{},a.words));tr.onclick=()=>choose(a.id);t.append(tr)}
+  L.append(t);if(rows.length>150)L.append(el("div",{class:"mut",style:"padding:6px"},"Showing the first 150; narrow the filters."))}
+async function choose(id){SEL=id;const a=await j("/api/article?id="+encodeURIComponent(id));$("title").value=a.title;$("body").value=a.body;$("date").value=a.date||"";renderList();run()}
+function renderClaims(){const w=$("claims");w.replaceChildren();let r=CL.slice();
+  if(CF==="figures")r=r.filter(c=>c.figures.length);else if(CF==="reported")r=r.filter(c=>c.factuality==="reported"||c.source);else if(CF==="predicted")r=r.filter(c=>c.factuality==="predicted"||c.factuality==="denied");
+  if(CF!=="doc")r.sort((a,b)=>b.evidence_score-a.evidence_score||a.span[0]-b.span[0]);else r.sort((a,b)=>a.span[0]-b.span[0]);
+  w.append(el("div",{class:"mut"},r.length+" of "+CL.length+" sentences shown"),table(["Sentence","Type","Source","Cues","Figures","Entities","Claim (Fact finder)","Evidence"],r.slice(0,40).map(c=>[c.sentence,tag(c.factuality+(c.negated?" · negated":""),c.factuality==="asserted"?"no":"warn"),c.source||"",c.cues.join(", "),c.figures.join(", "),c.entities.join(", "),c.claims.join("; "),c.evidence_score+"/5"])))}
+const PRESETS=[["All four answer",{a:"y",t:"y",c:"y",p:"y"}],["Area answers, Place defers",{a:"y",p:"n"}],["Condition present",{c:"present"}],["Area defers",{a:"n"}],["Type defers",{t:"n"}],["Golden set only",{set:"Golden set"}],["Clear filters",{}]];
+function setF(o){const ids={q:"f_q",set:"f_set",dom:"f_dom",area:"f_area",a:"f_a",t:"f_t",c:"f_c",p:"f_p",len:"f_len"};for(const k in ids){const v=(o[k]==="n!"?"":o[k])||"";$(ids[k]).value=v;F[k]=v}
+  if(o.c==="n!"){}renderList()}
+function bind(){for(const [k,id] of Object.entries({q:"f_q",set:"f_set",dom:"f_dom",area:"f_area",a:"f_a",t:"f_t",c:"f_c",p:"f_p",len:"f_len"})){$(id).oninput=()=>{F[k]=$(id).value;renderList()}}}
+async function timeAll(){const rows=ARTS.filter(match);if(!rows.length)return;const ms=[];$("timing").textContent="Running…";for(let i=0;i<rows.length;i++){const a=await j("/api/article?id="+encodeURIComponent(rows[i].id));const o=await j("/api/run",{method:"POST",body:JSON.stringify({title:a.title,body:a.body,date:a.date||"",sparse:$("sparse").checked})});ms.push(o.ms.total_ms+o.place_ms+o.pulse_ms);$("timing").textContent="Running… "+(i+1)+"/"+rows.length}
+  ms.sort((a,b)=>a-b);const q=p=>ms[Math.min(ms.length-1,Math.floor(p*ms.length))];$("timing").textContent=ms.length+" matching articles, every model that runs here: median "+q(.5).toFixed(0)+" ms, 95th percentile "+q(.95).toFixed(0)+" ms, max "+ms[ms.length-1].toFixed(0)+" ms."}
+(async()=>{ARTS=await j("/api/articles");
+  const fill=(id,vals)=>{const s=$(id);for(const v of [...new Set(vals)].filter(Boolean).sort())s.append(el("option",{value:v},v))};
+  fill("f_dom",ARTS.map(a=>a.badge&&a.badge.domain));fill("f_area",ARTS.map(a=>a.badge&&a.badge.area_name));
+  const ch=$("chips");for(const [n,o] of PRESETS){const b=el("button",{},n);b.onclick=()=>{for(const x of ch.children)x.classList.remove("on");b.classList.add("on");setF(o)};ch.append(b)}
+  const cc=$("cchips");for(const [n,v] of [["Strongest evidence first","score"],["Document order","doc"],["With figures","figures"],["Reported or attributed","reported"],["Predicted or denied","predicted"]]){const b=el("button",{},n);b.onclick=()=>{for(const x of cc.children)x.classList.remove("on");b.classList.add("on");CF=v;renderClaims()};cc.append(b)}
+  bind();$("run").onclick=run;$("all").onclick=timeAll;$("rand").onclick=()=>{const r=ARTS.filter(match);if(r.length)choose(r[Math.floor(Math.random()*r.length)].id)};renderList()})().catch(e=>$("status").textContent="Error: "+e.message);
+</script></body></html>

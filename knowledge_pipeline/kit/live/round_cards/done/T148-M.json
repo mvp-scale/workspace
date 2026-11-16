@@ -1,0 +1,33 @@
+{
+ "id": "T148-M",
+ "task": "T148",
+ "part": "plan P0c: engine-level replay of the per-key router",
+ "field": "engine outputs",
+ "question": "When the per-key router (CPU answers when sure at false-positive quota 0.0010, Clef's own reading otherwise) feeds the World engine's own arithmetic, what share of the engine's outputs stay inside the Step 1 noise band compared with an all-Clef replay of the same held-out stories?",
+ "one_change": "replay the held-out stories with the router's readings instead of Clef's readings alone",
+ "baseline": {
+  "model": "T35 replay, CPU keys for the head-only dials at the best threshold, share of outputs within the band",
+  "file": "runs/pulse/dial_engine_replay.json",
+  "key": "clef_keys_with_head_only.share_outputs_within_band"
+ },
+ "prediction": {
+  "metric": "share_within_band_router: share of engine outputs whose absolute difference from the all-Clef replay is at most the Step 1 noise band (95th percentile of pairwise noisy replays of Clef's own readings), 800 held-out stories",
+  "low": 0.05,
+  "high": 0.45,
+  "why": "the T35 replay of CPU keys without a Clef fallback put 0 to 17 percent of outputs inside the band (computed); the router keeps Clef's reading on the keys it defers and answers the rest at false-positive 0.0013 and true-positive 0.93 per key (computed, t209); with 328 keys per story that is about 0.4 spurious firings per story against 0.3 true ones (estimate), so a wide interval is stated and the low end allows for a fail"
+ },
+ "command": "R=800 OUT=runs/pulse/t211 /workspace/kev/.venv/bin/python -u t211_router_replay.py",
+ "result": {
+  "file": "runs/pulse/t211/t211_router_replay.json",
+  "key": "share_within_band_router"
+ },
+ "cap_minutes": 40,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "N=20 R=60 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t211s /workspace/kev/.venv/bin/python -u t211_router_replay.py",
+  "cap_minutes": 8
+ }
+}

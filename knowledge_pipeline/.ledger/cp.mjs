@@ -155,7 +155,7 @@ function say(st, t, staleIds) {
   if (staleIds.includes(t.id)) return { tone: 'warn', label: 'Stalled', detail: `no update since ${t.lastTs.slice(0, 10)}` };
   if (s === 'in_progress') return { tone: 'live', label: 'In progress', detail: t.steps.length ? `${t.step} of ${t.steps.length} steps done` : 'no steps set' };
   if (s === 'blocked') return { tone: 'stop', label: 'Blocked', detail: t.blockedBy ?? '' };
-  if (s === 'completed') return { tone: 'warn', label: 'Auto-review', detail: 'done; the reviewer ensemble judges it, nothing for you' };
+  if (s === 'completed') return { tone: 'quiet', label: 'Auto-review', detail: 'done; the reviewer ensemble judges it, nothing for you' };
   if (s === 'passed') return { tone: 'good', label: 'Passed', detail: '' };
   if (s === 'retry') return { tone: 'stop', label: 'Failed, retrying', detail: '' };
   if (s === 'failed') return { tone: 'stop', label: 'Failed', detail: '' };
@@ -200,12 +200,11 @@ export function view(project, now = new Date().toISOString()) {
     contract: c?.version ?? null, lines: st.n, built: now,
     northStar: c?.northStar ?? {},
     counts: { passed: all.filter((t) => t.status === 'passed').length, live: all.filter((t) => t.status === 'in_progress').length,
-      needsYou: all.filter((t) => ['blocked'].includes(t.status)).length, ready: order.length, total: all.length },
+      needsYou: all.filter((t) => ['blocked'].includes(t.status)).length, awaitingReview: all.filter((t) => t.status === 'completed').length, ready: order.length, total: all.length },
     attention: [
-      ...all.filter((t) => t.status === 'blocked').map((t) => ({ id: t.id, why: `Blocked: ${t.detail}` })),
-      ...all.filter((t) => t.status === 'completed').map((t) => ({ id: t.id, why: 'Done; automatic review pending' })),
+      ...all.filter((t) => t.status === 'blocked').map((t) => ({ id: t.id, why: /^NEEDS YOU/.test(t.detail) ? t.detail : `Needs you: ${t.detail}` })),   // 2026-11-12 owner: 'needs you' must hold only calls to action. Done tasks awaiting the automatic review (counts.awaitingReview) are not an owner action and no longer listed here.
       ...staleIds.map((id) => ({ id, why: `Stalled: ${byId[id].detail}` })),
-      ...readyToEnforce(st).map((r) => ({ rule: r.rule, why: `${r.rule} has warned on ${r.runs} tasks: ready to enforce` })),
+      ...((rs) => rs.length ? [{ rule: rs[0].rule, why: `Decide: ${rs.length} rule${rs.length > 1 ? 's have' : ' has'} warned often enough to enforce: ${rs.map((r) => `${r.rule} (${r.runs} tasks)`).join(', ')}. Say 'enforce <rule>' for each you want the ledger to refuse; the rest stay warnings.` }] : [])(readyToEnforce(st)),
       ...Object.keys(st.waves).filter((w) => waveStatus(st, w) === 'completed').map((w) => ({ wave: w, why: `Wave ${w} is complete: hold its ceremony` })),
     ],
     journey: (c?.journey.stages ?? []).map((s) => ({ id: s.id, name: s.name, question: s.question, goal: s.goal,

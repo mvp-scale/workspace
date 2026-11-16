@@ -1,0 +1,33 @@
+{
+ "id": "T148-E",
+ "task": "T148",
+ "part": "main loop: Function, false-positive margin",
+ "field": "function",
+ "question": "Does fitting the Function yes-line at a stricter false-positive quota bring the held-out-feed false-positive rate to the 0.0025 target, and what coverage does that cost?",
+ "one_change": "fit the yes-line at quota 0.0015 instead of 0.0025 on out-of-fold scores (same feed-ordered split, same three encoders)",
+ "baseline": {
+  "model": "Function student, feed-ordered split, quota 0.0025",
+  "file": "runs/pulse/t201/t201_feed_shift.json",
+  "key": "variants.v6b+bge+e5.coverage"
+ },
+ "prediction": {
+  "metric": "held-out-feed coverage with the yes-line fitted at false-positive quota 0.0015",
+  "low": 0.38,
+  "high": 0.46,
+  "why": "T201 at quota 0.0025 gave coverage 0.482 and false positives 0.0033 on held-out feeds; a stricter yes-line should push the false-positive rate under 0.0025 and cost two to nine points of coverage; the sweep also reports quotas 0.0020 and 0.0010"
+ },
+ "command": "/workspace/models/embed-zs/.venv/bin/python -I t202_fp_margin.py",
+ "result": {
+  "file": "runs/pulse/t202/t202_fp_margin.json",
+  "key": "coverage_at_quota_0015"
+ },
+ "cap_minutes": 15,
+ "noise": 0.05,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "/workspace/models/embed-zs/.venv/bin/python -I t202_fp_margin.py",
+  "cap_minutes": 5
+ }
+}

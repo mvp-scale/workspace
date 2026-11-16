@@ -1,0 +1,22 @@
+clean check 0.0 8
+embedded 880 20
+heads 0 12 27
+{'mode': 'both', 'fp_quota': 0.001, 'miss_quota': 0.05, 'answered_cell_share': 0.027, 'ratio_d_max': 0.053, 'ratio_d_median': 0.0, 'share_outputs_within_d': 1.0, 'passes_d': True, 'bare_band_ratio_median': 0.0, 'bare_band_share_within': 0.867} 52
+{'mode': 'both', 'fp_quota': 0.0001, 'miss_quota': 0.002, 'answered_cell_share': 0.016, 'ratio_d_max': 0.049, 'ratio_d_median': 0.0, 'share_outputs_within_d': 1.0, 'passes_d': True, 'bare_band_ratio_median': 0.0, 'bare_band_share_within': 0.867} 56
+{'mode': 'no_only', 'fp_quota': 0.001, 'miss_quota': 0.002, 'answered_cell_share': 0.016, 'ratio_d_max': 0.046, 'ratio_d_median': 0.0, 'share_outputs_within_d': 1.0, 'passes_d': True, 'bare_band_ratio_median': 0.0, 'bare_band_share_within': 0.872} 60
+{"stories": 880, "clean_replay_max_abs_diff_vs_saved_self3": 0.0, "tolerance_d_points_quantiles_5_50_95": [0.1815, 1.1295, 3.6092], "band_median_points": 0.0217, "clef_wordings_vs_clean_under_d": {"w0": {"ratio_max": 3.013, "share_outputs_within": 0.733}, "w1": {"ratio_max": 4.011, "share_outputs_within": 0.722}, "w2": {"ratio_max": 5.011, "share_outputs_within": 0.228}}, "ratio_d_max_baseline_setting": 0.053, "seconds": 60}
+clean check 0.0 7
+embedded 880 20
+heads 0 303 26
+heads 60 303 140
+heads 120 303 255
+heads 180 303 375
+heads 240 303 491
+heads 300 303 603
+{'mode': 'both', 'fp_quota': 0.001, 'miss_quota': 0.05, 'answered_cell_share': 0.651, 'ratio_d_max': 1.501, 'ratio_d_median': 0.7324, 'share_outputs_within_d': 0.667, 'passes_d': False, 'bare_band_ratio_median': 43.219, 'bare_band_share_within': 0.0} 607
+{'mode': 'both', 'fp_quota': 0.0001, 'miss_quota': 0.002, 'answered_cell_share': 0.392, 'ratio_d_max': 1.003, 'ratio_d_median': 0.3595, 'share_outputs_within_d': 0.994, 'passes_d': False, 'bare_band_ratio_median': 20.71, 'bare_band_share_within': 0.067} 610
+{'mode': 'no_only', 'fp_quota': 0.001, 'miss_quota': 0.002, 'answered_cell_share': 0.391, 'ratio_d_max': 0.814, 'ratio_d_median': 0.3884, 'share_outputs_within_d': 1.0, 'passes_d': True, 'bare_band_ratio_median': 19.793, 'bare_band_share_within': 0.039} 613
+{"stories": 880, "clean_replay_max_abs_diff_vs_saved_self3": 0.0, "tolerance_d_points_quantiles_5_50_95": [0.1815, 1.1295, 3.6092], "band_median_points": 0.0217, "clef_wordings_vs_clean_under_d": {"w0": {"ratio_max": 3.013, "share_outputs_within": 0.733}, "w1": {"ratio_max": 4.011, "share_outputs_within": 0.722}, "w2": {"ratio_max": 5.011, "share_outputs_within": 0.228}}, "ratio_d_max_baseline_setting": 1.501, "seconds": 613}
+L2455 appended
+L2456 appended
+T148-Q: HIT, GAIN, ratio_d_max_baseline_setting: the largest ratio of the router replay's difference from the clean replay to tolerance (d) over the 180 engine outputs, router at false-positive quota 0.0010 and miss quota 0.05; the router passes when it is at most 1 1.501 vs 1.000

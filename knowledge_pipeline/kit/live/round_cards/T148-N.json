@@ -1,0 +1,33 @@
+{
+ "id": "T148-N",
+ "task": "T148",
+ "part": "plan P0c follow-up: sweep the router's lines in the engine replay",
+ "field": "engine outputs",
+ "question": "At what share of cells answered by the CPU do the engine's outputs stay inside the Step 1 noise band when the false-positive and miss quotas are tightened, or when the CPU answers only a sure NO?",
+ "one_change": "sweep ten answer-line settings on the same heads and the same 800 held-out stories instead of one setting",
+ "baseline": {
+  "model": "router at quota 0.0010 and miss quota 0.05, share of engine outputs within the band",
+  "file": "runs/pulse/t211/t211_router_replay.json",
+  "key": "share_within_band_router"
+ },
+ "prediction": {
+  "metric": "best_answered_share_at_band_ge_0_5: the largest answered share of cells among the ten settings that keep at least half of the engine outputs inside the Step 1 noise band (0 if none does)",
+  "low": 0.0,
+  "high": 0.3,
+  "why": "the one setting run so far answered 58.9 percent of cells and kept 7.8 percent of outputs inside the band (computed, t211), with 0.43 missed and 0.35 false fires per story against 3.56 true fires (computed); a no-only router removes false fires, and a miss quota of 0.005 to 0.002 should cut missed fires several-fold at the cost of coverage (estimate); whether half of the outputs get inside the band at any setting is open, so the interval starts at 0"
+ },
+ "command": "R=800 OUT=runs/pulse/t212 /workspace/kev/.venv/bin/python -u t212_router_sweep.py",
+ "result": {
+  "file": "runs/pulse/t212/t212_router_sweep.json",
+  "key": "best_answered_share_at_band_ge_0_5"
+ },
+ "cap_minutes": 40,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "N=15 R=60 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t212s /workspace/kev/.venv/bin/python -u t212_router_sweep.py",
+  "cap_minutes": 8
+ }
+}

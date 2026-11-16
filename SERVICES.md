@@ -74,3 +74,11 @@ Start and stop: `./service.sh up | reset | down`, `./service.sh start <name>`. K
 |---|---|---|
 | https://api.typesafe.ai | Hosted Jev API (code and questions only for reviews; costs money; needs a yes) | not checked |
 | https://www.kaggle.com/code/coreygorman/kp-t67-ner-bakeoff | Kaggle kernel kp-t67-ner-bakeoff (queued) | not checked |
+
+
+
+
+[S?] http://localhost:18770/
+
+It's running now, and I restarted it a few minutes ago to pick up the clock-time fix. If it ever stops, restart it with:
+/workspace/models/embed-zs/.venv/bin/python /workspace/knowledge_pipeline/simulation/server.py

@@ -9,6 +9,7 @@ from heartbeat import beat, record, drop, prune, watch_pids, watch_untracked
 VAULT = pathlib.Path("/workspace/secrets/vault.env")
 
 
+KAGGLE_OFF = pathlib.Path(__file__).resolve().parent / "kaggle_poll.off"
 def kaggle_env():
     """Kaggle API token from the environment, else the first ~/.kaggle/*.token file (never printed). No interactive login."""
     import os
@@ -62,7 +63,7 @@ def poll():
         if b.get("processing_status") == "ended": drop(job)
         else: beat(job, where="[API]", state="running", progress=f"{c.get('succeeded', 0)} ok / {c.get('processing', 0)} waiting / {c.get('errored', 0)} err", last="Message Batch in flight")
     try:
-        r = subprocess.run(["kaggle", "kernels", "list", "--mine", "--search", "kp-", "--csv"], capture_output=True, text=True, timeout=60, env=kaggle_env())
+        r = subprocess.run(["kaggle", "kernels", "list", "--mine", "--search", "kp-", "--csv"], capture_output=True, text=True, timeout=60, env=kaggle_env()) if not KAGGLE_OFF.exists() else subprocess.CompletedProcess([], 0, "", "")   # off switch: no Kaggle call while kaggle_poll.off exists (owner 2026-11-12)
         csv = r.stdout.splitlines(); csv = csv[next((i for i, l in enumerate(csv) if l.startswith("ref,")), len(csv)):]   # the CLI prints version warnings first
         r.stdout = "\n".join(csv)
         if r.returncode == 0 and not r.stdout.startswith("ref,"):                  # logged in, no kp-* kernels yet: nothing to show

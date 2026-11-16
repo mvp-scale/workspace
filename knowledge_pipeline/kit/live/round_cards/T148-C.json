@@ -1,0 +1,33 @@
+{
+ "id": "T148-C",
+ "task": "T148",
+ "part": "main loop: Place, answer-when-sure",
+ "field": "place",
+ "question": "Does a CPU Place student (e5-small, linear head) answer a share of the 8-option place_region reads at 95 percent agreement with Jev, on about 1,600 queue stories with body?",
+ "one_change": "train a linear head on e5-small embeddings of title plus body start against Jev place_region; answer only above a probability line fitted on a random half",
+ "baseline": {
+  "model": "Function student answer-when-sure, three encoders, same tolerance idea",
+  "file": "runs/pulse/t179/t181_selective_function.json",
+  "key": "mean_coverage"
+ },
+ "prediction": {
+  "metric": "mean coverage on the held-out half at agreement with Jev of at least 0.95, 10 half-splits",
+  "low": 0.25,
+  "high": 0.6,
+  "why": "Place is topical with strong country-name cues and Jev is 0.88 accurate vs the text judge; Function reached 0.46 to 0.57 with a binary label, eight options lower it but name cues raise it; sample is only 1,600 so the spread is wide"
+ },
+ "command": "OUT=runs/pulse/t182 /workspace/models/embed-zs/.venv/bin/python -u t182_selective_place.py",
+ "result": {
+  "file": "runs/pulse/t182/t182_selective_place.json",
+  "key": "mean_coverage"
+ },
+ "cap_minutes": 20,
+ "noise": 0.05,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "SMALL=1 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t182s /workspace/models/embed-zs/.venv/bin/python -u t182_selective_place.py",
+  "cap_minutes": 5
+ }
+}

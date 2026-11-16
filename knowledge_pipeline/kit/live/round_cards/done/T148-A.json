@@ -1,0 +1,33 @@
+{
+ "id": "T148-A",
+ "task": "T148",
+ "part": "main loop: Topic, label source",
+ "field": "topic",
+ "question": "Does adding more Jev topic rows (all 2,560 instead of none) lower the topic abstain share of the sparse topic head on 1,000 held-out queue stories?",
+ "one_change": "train the sparse topic head on the Sonnet rows plus all 2,560 Jev topic rows instead of the Sonnet rows alone",
+ "baseline": {
+  "model": "sparse topic head on the Sonnet rows alone, T144 queue held-out topic abstain share",
+  "file": "runs/pulse/t144/t144_eval.json",
+  "key": "variants.C_sonnet_all.queue_held_out_topic_abstain"
+ },
+ "prediction": {
+  "metric": "topic abstain share (top-two mass under 0.70) on 1,000 held-out queue stories, head trained with all 2,560 Jev rows",
+  "low": 0.068,
+  "high": 0.086,
+  "why": "T144 recorded a topic abstain share of 0.087 with no Jev rows and 0.078 with 1,600 rows on the same 1,000 stories; the expected value with 2,560 rows is near 0.075, with a spread of 0.01 from the story sample"
+ },
+ "command": "OUT=runs/pulse/t160 /workspace/models/embed-zs/.venv/bin/python -u t160_topic_curve.py",
+ "result": {
+  "file": "runs/pulse/t160/t160_topic_curve.json",
+  "key": "topic_abstain_at_all_rows"
+ },
+ "cap_minutes": 20,
+ "noise": 0.015,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "SMALL=1 OUT=/tmp/claude-0/-workspace/30ac81db-dc49-4c3c-80e1-9c864e6ca801/scratchpad/t160s /workspace/models/embed-zs/.venv/bin/python -u t160_topic_curve.py",
+  "cap_minutes": 5
+ }
+}

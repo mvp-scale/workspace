@@ -12,7 +12,7 @@ def http(u, t=4):
 def mins(x): return int(x // 60)
 def dur(x): m = mins(x); return f"{m // 60} h {m % 60} min" if m >= 120 else f"{m} min"
 # core pieces
-core = {"ledger viewer": "http://localhost:18766/data", "console": "http://localhost:8100/", "Clef": "http://localhost:8018/health", "pulse reader": "http://localhost:8023/health"}
+core = {"ledger viewer": "http://localhost:18766/data", "console": "http://localhost:8100/"}   # Clef (:8018) and the pulse reader (:8023) are on demand since the owner stopped them 2026-11-12; start them with ./service.sh start <name> when a card needs them
 down = [n for n, u in core.items() if http(u) is None]
 poller = subprocess.run(["pgrep", "-f", "poll_live.py"], capture_output=True, text=True).stdout.strip() != ""
 if not poller: down.append("poller")

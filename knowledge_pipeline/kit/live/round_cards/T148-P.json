@@ -1,0 +1,33 @@
+{
+ "id": "T148-P",
+ "task": "T148",
+ "part": "plan P0c calibration, clean version: Clef wording 0 against Clef wording 1",
+ "field": "engine outputs",
+ "question": "What share of the engine's outputs stay inside the Step 1 noise band when Clef's reading from question wording 0 is replayed against its reading from wording 1, two equally good readings of the same story?",
+ "one_change": "compare Clef wording 0 alone with Clef wording 1 alone instead of one wording with the two-wording average",
+ "baseline": {
+  "model": "Clef wording 0 alone against the two-wording reading, share of outputs within the band",
+  "file": "runs/pulse/t213/t213_clef_vs_itself.json",
+  "key": "share_within_band_wording0"
+ },
+ "prediction": {
+  "metric": "share_within_band_w0_vs_w1: share of engine outputs whose absolute difference between the wording-0 replay and the wording-1 replay is at most the Step 1 noise band, 800 held-out stories",
+  "low": 0.0,
+  "high": 0.15,
+  "why": "each single wording against the average gave 0.0 and 11.1 percent in band (computed, t213); the average contains each wording, so two single wordings against each other should agree less (estimate); an interval from 0 to 0.15 states that the share is expected to be low"
+ },
+ "command": "R=800 OUT=runs/pulse/t214 /workspace/kev/.venv/bin/python -u t214_clef_wordings.py",
+ "result": {
+  "file": "runs/pulse/t214/t214_clef_wordings.json",
+  "key": "share_within_band_w0_vs_w1"
+ },
+ "cap_minutes": 25,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "R=40 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t214s /workspace/kev/.venv/bin/python -u t214_clef_wordings.py",
+  "cap_minutes": 8
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "id": "T148-F",
+ "task": "T148",
+ "part": "main loop: Place, spaCy NER as a tool",
+ "field": "place",
+ "question": "Does spaCy NER (typed GPE and LOC entities) decide a story's region as often and as accurately as the regex name judge, measured against Jev's place_region on 1,600 queue stories?",
+ "one_change": "swap the regex name scan for spaCy NER place entities, name table unchanged",
+ "baseline": {
+  "model": "regex place-name judge (t167) accuracy against Jev on its 745 decidable stories",
+  "file": "runs/pulse/t167/t167_place_judge.json",
+  "key": "accuracy"
+ },
+ "prediction": {
+  "metric": "NER judge accuracy against Jev on the stories NER decides",
+  "low": 0.84,
+  "high": 0.92,
+  "why": "the regex judge scored 0.882 on 745 of 1,600 stories using the same name table; NER only changes which spans count as places, so accuracy should stay near that, and NER should decide a similar share (0.40 to 0.55) because the table, not the tagger, limits linking"
+ },
+ "command": "/workspace/models/embed-zs/.venv/bin/python -u t203_ner_place.py",
+ "result": {
+  "file": "runs/pulse/t203/t203_ner_place.json",
+  "key": "ner_accuracy_vs_jev"
+ },
+ "cap_minutes": 15,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "/workspace/models/embed-zs/.venv/bin/python -u t203_ner_place.py",
+  "cap_minutes": 10
+ }
+}

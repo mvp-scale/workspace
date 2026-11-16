@@ -1,0 +1,57 @@
+heads 0 20 12
+replay stories 60
+band median 0.012637312805882144 51
+{
+ "stories_replayed": 60,
+ "keys_with_heads": 20,
+ "fit_fp_quota": 0.001,
+ "band_median_points": 0.0126,
+ "answered_cell_share": 0.051,
+ "false_fires_per_story": 0.033,
+ "missed_fires_per_story": 0.0,
+ "clef_fired_attribute_keys_per_story": 3.817,
+ "router_with_clef_fallback": {
+  "ratio_max": 0.0,
+  "ratio_median": 0.0,
+  "share_outputs_within_band": 1.0
+ },
+ "cpu_only_no_fallback": {
+  "ratio_max": 86.912,
+  "ratio_median": 29.526,
+  "share_outputs_within_band": 0.006
+ },
+ "seconds": 52,
+ "share_within_band_router": 1.0
+}
+heads 0 286 11
+heads 60 286 128
+heads 120 286 244
+heads 180 286 359
+heads 240 286 473
+replay stories 800
+band median 0.01942236877889808 587
+{
+ "stories_replayed": 800,
+ "keys_with_heads": 286,
+ "fit_fp_quota": 0.001,
+ "band_median_points": 0.0194,
+ "answered_cell_share": 0.589,
+ "false_fires_per_story": 0.346,
+ "missed_fires_per_story": 0.429,
+ "clef_fired_attribute_keys_per_story": 3.56,
+ "router_with_clef_fallback": {
+  "ratio_max": 31.747,
+  "ratio_median": 3.114,
+  "share_outputs_within_band": 0.078
+ },
+ "cpu_only_no_fallback": {
+  "ratio_max": 81.022,
+  "ratio_median": 21.379,
+  "share_outputs_within_band": 0.039
+ },
+ "seconds": 591,
+ "share_within_band_router": 0.078
+}
+L2433 appended
+L2434 appended
+T148-M: HIT, WORSE, share_within_band_router: share of engine outputs whose absolute difference from the all-Clef replay is at most the Step 1 noise band (95th percentile of pairwise noisy replays of Clef's own readings), 800 held-out stories 0.078 vs 0.167

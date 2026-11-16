@@ -1,0 +1,33 @@
+{
+ "id": "T148-G",
+ "task": "T148",
+ "part": "main loop: per-key triage of the engine's 328 questions",
+ "field": "engine keys",
+ "question": "What share of the engine's 328 yes/no questions could the CPU answer when sure, key by key, against Clef's answers on 2,488 stories?",
+ "one_change": "run the answer-when-sure rule once per engine key with at least 10 positives instead of only the 15 keys with at least 200",
+ "baseline": {
+  "model": "answer-when-sure on the 15 attributes with at least 200 positives, mean coverage",
+  "file": "runs/pulse/t182/t182_attribute_selective.json",
+  "key": "summary.mean_coverage"
+ },
+ "prediction": {
+  "metric": "engine_share_answered_conservative: sum of per-key coverage over keys with at least 10 positives, divided by all 328 keys (untested keys count as not answered)",
+  "low": 0.15,
+  "high": 0.32,
+  "why": "a 5-key smoke run gave coverage 0.47 on the one key with 30 or more positives and 0.21 on the four keys with 10 to 29; 125 keys have 30 or more positives and 107 have 10 to 29, so about (125 x 0.4 + 107 x 0.2) / 328 is 0.22, and 96 keys with under 10 positives are counted as zero"
+ },
+ "command": "OUT=runs/pulse/t204 /workspace/models/embed-zs/.venv/bin/python -u t204_per_key_triage.py",
+ "result": {
+  "file": "runs/pulse/t204/t204_per_key_triage.json",
+  "key": "engine_share_answered_conservative"
+ },
+ "cap_minutes": 20,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "N=5 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t204s /workspace/models/embed-zs/.venv/bin/python -u t204_per_key_triage.py",
+  "cap_minutes": 5
+ }
+}

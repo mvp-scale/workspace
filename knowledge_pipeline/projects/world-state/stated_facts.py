@@ -10,6 +10,7 @@ MAGS = {"thousand": 1e3, "million": 1e6, "billion": 1e9, "trillion": 1e12, "bn":
 NUMRX = re.compile(r"(?P<cur>US\$|\$|€|£)?\s?(?P<num>\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?:\s?(?P<mag>thousand|million|billion|trillion|bn)\b)?(?:\s?(?P<pct>%|per ?cent\b|percent\b))?", re.I)
 WORDRX = re.compile(r"\b(?P<w>two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozens?|hundreds?)\b", re.I)
 IND_NUM = re.compile(r"(?<![\w.,])(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?![\w])"); IND_DATE = re.compile(r"\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|yesterday|today|tomorrow|(?:last|this|next) (?:week|month|year)|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,4}(?:st|nd|rd|th)?)")
+CLOCK = re.compile(r"\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\s?(?:(?:[ap]\.?m\.?(?=\W|$))\s?)?(?:(?:EST|EDT|CST|CDT|MST|MDT|PST|PDT|GMT|UTC|BST|CET|ET|PT)\b)|\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\s?[ap]\.?m\.?(?=\W|$)|(?<=\bat )(?:[01]?\d|2[0-3]):[0-5]\d\b|\b(?:1[0-2]|0?[1-9])\s?[ap]\.?m\.?(?=\W|$)|\b(?:[01]\d|2[0-3])[0-5]\d\s?(?:GMT|UTC)\b", re.I)  # clock times are not amounts (T208, step 15)
 YEAR = re.compile(r"^(19|20)\d\d$")
 def parse_num(m):
     s = m.group("num").replace(",", ""); v = float(s)
@@ -31,9 +32,10 @@ def one_sentence(sp): return len({t.sent.start for t in sp}) == 1
 def facts_for(text, anchor):
     doc = nlp(text); spots, _ = G.scan(text, anchor or "2026-01-01T00:00:00Z"); out = []; used = []
     dspans = [(x[0], x[1]) for x in spots if x[2] == "date"]
+    cspans = [m.span() for m in CLOCK.finditer(text)]
     for m in NUMRX.finditer(text):
         s, e = m.span()
-        if any(a_ < e and s < b_ for a_, b_ in dspans): continue
+        if any(a_ < e and s < b_ for a_, b_ in dspans + cspans): continue
         if not m.group("cur") and not m.group("mag") and not m.group("pct") and YEAR.match(m.group("num")): continue
         used.append((s, e)); v = parse_num(m); sp, noun, verb = head_of(doc, s, e)
         c = {"literal": text[s:e] == text[s:e], "reads_back": abs(v - parse_num(NUMRX.fullmatch(text[s:e].strip()) or m)) < 1e-6, "bound": bool(noun or verb), "one_sentence": bool(sp is not None and one_sentence(sp))}

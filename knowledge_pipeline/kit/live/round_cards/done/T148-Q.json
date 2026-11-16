@@ -1,0 +1,33 @@
+{
+ "id": "T148-Q",
+ "task": "T148",
+ "part": "method order: router against the recorded tolerance (d)",
+ "field": "engine outputs",
+ "question": "Under the recorded tolerance (d) of D-0004 and F-0020, does the per-key router keep the engine's outputs inside tolerance on the 880 Step 1 stories?",
+ "one_change": "score the router against tolerance (d) with the Step 1 arrays instead of the bare noise band",
+ "baseline": {
+  "model": "F-0020 all-keys reference point, true-positive rate 0.9 with false-positive rate 0.0025 per key, ratio to tolerance (d)",
+  "file": "runs/pulse/t215/f0020_reference.json",
+  "key": "ratio_to_tolerance_d"
+ },
+ "prediction": {
+  "metric": "ratio_d_max_baseline_setting: the largest ratio of the router replay's difference from the clean replay to tolerance (d) over the 180 engine outputs, router at false-positive quota 0.0010 and miss quota 0.05; the router passes when it is at most 1",
+  "low": 0.4,
+  "high": 6.0,
+  "why": "Clef's own wordings 0, 1 and 2 land at ratio 3.0, 4.0 and 5.0 under tolerance (d) against the clean replay (computed, smoke run, 880 stories); the F-0020 reference point sits at 1.0004 (computed, data/step1/jointfine-d.json); the router differs from the clean reading by 0.35 false and 0.43 missed fires per story (computed, t211); the interval is wide because this is the first reading of the router under (d) (estimate)"
+ },
+ "command": "OUT=runs/pulse/t215 /workspace/models/embed-zs/.venv/bin/python -u t215_router_tolerance_d.py",
+ "result": {
+  "file": "runs/pulse/t215/t215_router_tolerance_d.json",
+  "key": "ratio_d_max_baseline_setting"
+ },
+ "cap_minutes": 40,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "N=12 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t215s /workspace/models/embed-zs/.venv/bin/python -u t215_router_tolerance_d.py",
+  "cap_minutes": 8
+ }
+}

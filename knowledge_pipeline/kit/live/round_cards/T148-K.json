@@ -1,0 +1,33 @@
+{
+ "id": "T148-K",
+ "task": "T148",
+ "part": "main loop: per-key triage on the 8,545 further Clef-labelled state-text stories",
+ "field": "engine keys",
+ "question": "With 8,545 more Clef-labelled stories read as the engine reads them (title plus description), what share of the 328 engine questions does the CPU answer inside tolerance on newer stories and on feeds held out of training?",
+ "one_change": "train and test the per-key heads on the 8,545 state-text stories instead of the 2,488 full-article stories",
+ "baseline": {
+  "model": "per-key triage on the 2,488 full-article stories, lower of the time and feed splits",
+  "file": "runs/pulse/t206/t206_per_key_shift.json",
+  "key": "tolerance_saving_worst"
+ },
+ "prediction": {
+  "metric": "tolerance_saving_worst: the lower of the time-split and feed-split shares of 328 questions answered by keys that hold held-out FPR at most 0.0025 and TPR at least 0.90",
+  "low": 0.08,
+  "high": 0.2,
+  "why": "the learning curve rose about 3 points per doubling of training stories (computed, t207) and this set has about 6,000 training stories against 1,741 (computed), which points to roughly 15 percent (estimate); the state text has a median of 233 characters against about 3,000 for a full article (computed), so some keys may separate worse (estimate); the lower end allows for that"
+ },
+ "command": "OUT=runs/pulse/t209 /workspace/models/embed-zs/.venv/bin/python -u t209_triage_state_text.py",
+ "result": {
+  "file": "runs/pulse/t209/t209_triage_state_text.json",
+  "key": "tolerance_saving_worst"
+ },
+ "cap_minutes": 45,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "N=5 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t209s /workspace/models/embed-zs/.venv/bin/python -u t209_triage_state_text.py",
+  "cap_minutes": 5
+ }
+}

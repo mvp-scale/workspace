@@ -1,0 +1,33 @@
+{
+ "id": "T148-B",
+ "task": "T148",
+ "part": "main loop: Topic, label volume",
+ "field": "topic",
+ "question": "Does cutting the Sonnet topic rows from 36,062 to 9,000 raise the topic abstain share of the sparse topic head on 1,000 held-out queue stories?",
+ "one_change": "train the sparse topic head on a random 9,000 of the Sonnet rows instead of all 36,062, no Jev rows",
+ "baseline": {
+  "model": "sparse topic head on all Sonnet rows, T144 queue held-out topic abstain share",
+  "file": "runs/pulse/t144/t144_eval.json",
+  "key": "variants.C_sonnet_all.queue_held_out_topic_abstain"
+ },
+ "prediction": {
+  "metric": "topic abstain share (top-two mass under 0.70) on 1,000 held-out queue stories, head trained on 9,000 Sonnet rows",
+  "low": 0.07,
+  "high": 0.11,
+  "why": "T144 recorded 0.087 on all 36,062 rows; a 200-story smoke run of this card, seen before writing the range, gave 0.080 at 9,000 rows and 0.085 at 36,062; the expected value at 9,000 rows on 1,000 stories is near 0.09 with a spread of 0.01 from the story sample"
+ },
+ "command": "OUT=runs/pulse/t161 /workspace/models/embed-zs/.venv/bin/python -u t161_sonnet_curve.py",
+ "result": {
+  "file": "runs/pulse/t161/t161_sonnet_curve.json",
+  "key": "topic_abstain_at_9000"
+ },
+ "cap_minutes": 20,
+ "noise": 0.015,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "SMALL=1 OUT=/tmp/claude-0/-workspace/30ac81db-dc49-4c3c-80e1-9c864e6ca801/scratchpad/t161s2 /workspace/models/embed-zs/.venv/bin/python -u t161_sonnet_curve.py",
+  "cap_minutes": 5
+ }
+}

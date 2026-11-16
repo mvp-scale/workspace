@@ -1,0 +1,33 @@
+{
+ "id": "T148-L",
+ "task": "T148",
+ "part": "plan P0b: save the sentence-level Function head",
+ "field": "function",
+ "question": "When the sentence-level Function head is trained on 51,000 Jev-labelled sentences and saved, does the hybrid (head answers when sure, Jev otherwise) score within 0.02 of Jev alone on the CheckThat human test split?",
+ "one_change": "train once on all labelled sentences with the CheckThat test split held out, and score the hybrid on that split",
+ "baseline": {
+  "model": "Jev alone, balanced accuracy against the CheckThat human gold on the test split",
+  "file": "runs/pulse/t179/t183_hybrid_vs_gold.json",
+  "key": "teacher_bal_acc_on_answered"
+ },
+ "prediction": {
+  "metric": "hybrid_minus_teacher: balanced accuracy of the hybrid minus that of Jev alone, both against the CheckThat human gold on the held-out test split",
+  "low": -0.025,
+  "high": 0.015,
+  "why": "the earlier single-student hybrid lost 0.003 against the human gold on the rows it answered (computed, t183); the quota here is stricter at 0.0010 (computed setting), so the head answers fewer rows and the hybrid should stay close to Jev (estimate); the test split has 1,000-odd sentences, so a difference of 0.02 is within sampling noise (estimate)"
+ },
+ "command": "OUT=runs/pulse/t210 /workspace/models/embed-zs/.venv/bin/python -u t210_save_function_head.py",
+ "result": {
+  "file": "runs/pulse/t210/t210_function_head.json",
+  "key": "hybrid_minus_teacher"
+ },
+ "cap_minutes": 40,
+ "noise": 0.03,
+ "who": "S?",
+ "priority": 2,
+ "threads": 6,
+ "smoke": {
+  "command": "N=3000 OUT=/tmp/claude-0/-workspace/19770ec2-e8e3-4cda-ac4c-13d9f8ab7c81/scratchpad/t210s /workspace/models/embed-zs/.venv/bin/python -u t210_save_function_head.py",
+  "cap_minutes": 5
+ }
+}

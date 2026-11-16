@@ -1,0 +1,23 @@
+TASK T127: Engine heads curve with the extra readings
+ACTION UNDER REVIEW (2026-11-12): closed as done (L2302)
+STATUS NOW: completed
+WHY THE TASK EXISTS: T126 adds about 750 engine readings; rerun the curve to see whether presence reaches the 0.87 bar.
+ACCEPTANCE:
+  - All-readings presence AUROC and direction accuracy with 95 percent intervals on the larger engine set
+STEPS: [x] Run the curve; [x] Read against the bars
+
+LEDGER LINES FOR THIS TASK (oldest first, text cut at 900 characters):
+L1995 2026-11-11T20:46 task by S3: Engine heads curve with the extra readings
+L2011 2026-11-11T21:41 note by S3: PREDICTION T127-L (main loop: Condition and direction, students; field condition): Do the extra engine readings lift the all-readings presence AUROC toward the 0.87 bar, with an interval? One change: add the T126 extension readings to the engine stories used for training and held-out scoring. Baseline = T122 curve with all 1,388 readings per fold 0.855 (src: runs/pulse/t122/t122_curve.json#curve.0.presence_auroc). Expect presence AUROC with all training readings, full-text view, grouped 5-fold between 0.86 and 0.885 (T122 gave 0.8553 at 1,388 readings and the curve rises 0.012 over the last 388 (runs/pulse/t122/t122_curve.json); the 750 added stories make 2,000 readings per fold by my count; my extrapolation (ledger L1973, an estimate, not measured) puts presence at 0.867 there; the test set also changes, so the figure is not a paired comparison with T122). Noise floor +-0.02. Command: F
+L2040 2026-11-11T21:59 note by S3: SCORE T127-L (L2011): MISS. presence AUROC with all training readings, full-text view, grouped 5-fold = 0.845 (src: runs/pulse/t127/t127_curve.json#curve.0.presence_auroc) (predicted 0.86 to 0.885). Against T122 curve with all 1,388 readings per fold 0.855 (src: runs/pulse/t122/t122_curve.json#curve.0.presence_auroc): difference -0.010, noise floor 0.02: NO GAIN. Ran 1103 s.
+L2282 2026-11-12T20:07 start by S?: T127 started
+L2292 2026-11-12T20:08 step by S?: T127 step 
+L2293 2026-11-12T20:08 warning by cp: T127 has no step 0
+L2294 2026-11-12T20:08 step by S?: T127 step 
+L2295 2026-11-12T20:08 warning by cp: T127 has no step 0
+L2300 2026-11-12T20:08 step by S?: T127 step 1
+L2301 2026-11-12T20:08 step by S?: T127 step 2
+L2302 2026-11-12T20:08 done by S?: Scored: all-readings presence AUROC 0.845 against the 0.87 bar, a miss (SCORE L2040 of prediction L2011); the question the task asked is answered, so it is closed as done, not as a pass. Closed 2026-11-12 in the Work tab review the owner asked for.  EVIDENCE: [{"type": "file", "ref": "knowledge_pipeline/projects/world-state/runs/pulse/t127/t127_curve.json"}]
+
+OTHER LEDGER LINES CITED BY THE CLOSING OR REVIEW TEXT (raw, cut at 1500 characters):
+L1973 2026-11-11T09:49 note task T125 by S3: MM3 FULL ANALYSIS 2026-11-11 (owner yes D31, three hosted MM3 calls in total with MM3-0673, budget untouched at 5.00 USD): MM3-0674 (drill on evidence, consensus SPLIT): ledger ids on S1 to S3 0.89, comparator stated 0.90, embedding no-effect claim lacked same-fold figures 0.13, 0.87 bar not next to S1 to S3 0.02, R1 intervals compared with both bars 0.94, learning-curve figures given 0.86, readings needed to reach a bar not stated 0.02, other levers ruled out with figures 0.41, route keep-plan 0.73. Fixes made in pipeline_flows_v2.txt: the readings-needed estimate (my extrapolation from four points: presence about 2,100 readings in total, direction accuracy about 4,200 to 5,500, noisy), same-fold embedding figures, tests and deciders for each next step, the caution that the two-call Clef dial labeller is not the engine's 328-question reading. MM3-0675 (class, standard depth, 22 questions, consensus STRONG, escalate false) on v2: claims pass, rigor pass, waste pass (hosted before free 0.08, labeller mix-up 0.02), steps pass (concrete 0.69, test 0.70, decider 0.86), night pass (cap 0.97, stop rule 0.95), flow unsure (one stage per flow 0.60, cheapest check first 0.52), decisions: route pilot-first 0.76, tonight as-planned 0.76, avoidable work some 0.34 unsure. Reading (mine): the plan is on track; the one thing MM3 asks for is that nothing larger than the Clef pilot runs before the pilot, which the plan already says: pilot T124-C on the 1736 engine stories, about 4 minutes on 

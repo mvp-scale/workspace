@@ -38,6 +38,7 @@ The knowledge pipeline viewer (http://localhost:18766) is derived from the ledge
 | How an article is read | http://localhost:8100/mockups/bitmobs/index.html | The BitMob map: tools and models per head | `bitmob_map_page.py` | inline |
 | Pulse state | http://localhost:8100/mockups/state/index.html | Pulse fields and their state | `pulse_state_page.py` | inline |
 | Decider demo | http://localhost:8100/mockups/decider/index.html | The Lean/Rust decider on test vectors | `decider_mockup_data.py` | `decider/data.json` |
+| Target state (what each element should output, beside today's output) | http://localhost:8100/mockups/target-state/index.html | One chained system of named BitMob models and BitTools, depth and breadth per layer, four real stories with today's stored output next to a labelled TARGET specification, and the build path. First draft 2026-11-14, not yet reviewed | written by hand (Fable agent), data from `runs/pulse/golden/articles.jsonl` | `target-state/data.json`, `data.js` |
 
 ## What we learned
 
@@ -49,6 +50,7 @@ The knowledge pipeline viewer (http://localhost:18766) is derived from the ledge
 
 | Page | URL | What it shows | Built by | Data |
 |---|---|---|---|---|
+| Simulation bench (one article through the chain) | http://localhost:8100/docs/notes/sim/index.html | Console route to the bench on :18770 (local only; `/sim-api/*` passes through). Start the bench: `/workspace/models/embed-zs/.venv/bin/python knowledge_pipeline/simulation/server.py` | `simulation/server.py` | inline |
 | One article, four beats | http://localhost:8100/mockups/article-beats/ | Title, first sentence, first 250 words, full text, raw | `article_beats.py` | `data.json` |
 | One article, four levels | http://localhost:8100/mockups/article-levels/ | Lettered groups across the four levels, plus the gist | `article_levels.py`, `gist.py` | `data.json`, `gist.json` |
 | Techniques on one article | http://localhost:8100/mockups/article-techniques/ | Keyphrases, themes, coverage, NLI on 9 articles | `article_techniques.py` | `data.json` |
@@ -90,3 +92,6 @@ Every row on the Live tab states how often it should report, and the page only c
 
 ## Health check (2026-11-09)
 `kit/live/health.py` runs every poll (3 min, called from `tick.py`) and writes the heartbeat row `health`, shown as the first line on every ledger tab and at the top of `tools/hw.py`. Verdict: BROKEN (poller, ledger viewer, console, Clef or pulse reader not answering) > WORKING (a job is running and reporting on time) > WAITING (nothing running; names the Kaggle queue age and the owner-blocked tasks) > IDLE (nothing running and nothing waited on: start the next piece). Flags: a kernel queued over an hour, a running job past its promised update time, failed jobs in 24 h, disk under 50 GB, no ledger write for 30 min while nothing runs. History: `projects/world-state/runs/health_history.jsonl`. Tested on fake rows for all six paths. If the line itself is missing or marked OVERDUE, the poller or health.py is not running.
+
+## Simulation bench (2026-11-12)
+`simulation/` is a throwaway test bench, not a console page: `/workspace/models/embed-zs/.venv/bin/python simulation/server.py` serves http://localhost:18770/ (CPU only, no hosted calls). Pick one of 230 articles (200 golden, 30 queue) or paste your own, run analyze2, see each field's answer, source, time and its measured score from `head_coverage.json`; a button times all articles. Stop it by its verified PID.

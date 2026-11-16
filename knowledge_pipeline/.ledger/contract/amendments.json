@@ -1,0 +1,13 @@
+{
+  "about": "Living list of changes to the knowledge pipeline contract since v1.0 (released 2026-10-30, hash-checked, never edited). Each item is a decision or rule already in force but not yet written into a released version. The owner releases v1.1 with `node cp.mjs release` after a contract/v1.1 folder is drafted from these. kit/live/contract_check.py flags any process decision after reviewed_through that is not recorded here.",
+  "released": "1.0",
+  "reviewed_through": "L2380",
+  "pending_for_v1_1": [
+    {"id": "A1", "decision": "D44 (L2327)", "change": "Closing rule: a task is closed only on evidence cited in the ledger or a file and checked against the raw ledger lines; takeover of a task held by another agent is allowed only with the owner's authorisation (D44) and the ledger enforces it (D46)."},
+    {"id": "A2", "decision": "D44, D45", "change": "Needs-you holds only owner calls to action: each states the question, the options, the agent's recommendation and what it unlocks; its block line starts with NEEDS YOU. Waiting on another task or on a result is not needs-you."},
+    {"id": "A3", "decision": "D44", "change": "Finished tasks without a verdict are counted apart (awaitingReview) and never listed as owner actions; the Work board shows only active work and one finished history, newest first, marking judged versus not judged."},
+    {"id": "A4", "decision": "D46, D47, D48 (L2371 to L2373)", "change": "Rules promoted to enforce by the v1.0 promotion rule: not-owner, step-order, acceptance-too-long."},
+    {"id": "A5", "decision": "L2326, L2366", "change": "Before any note says an owner question is open, grep the whole ledger for decision lines on the topic: decision lines carry no task id and do not show in a task's history."},
+    {"id": "A6", "decision": "D45", "change": "Session start: run kit/live/session_start.py first and report its outstanding list; run kit/live/needs_you_audit.py and kit/live/contract_check.py before listing anything to the owner."}
+  ]
+}

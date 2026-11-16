@@ -47,7 +47,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .sec>h2 .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:450}
 .tg{display:grid;gap:4px;margin-top:10px;width:100%}.tgh{font-size:12px;font-weight:600;color:var(--t2);padding:6px 6px;align-self:end;line-height:1.25}.tgh.c{text-align:center}.tgm{font-size:14px;font-weight:600;align-self:center;padding:0 6px}
 .tgc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer;font:inherit;color:inherit;padding:4px}.tgc b{font-size:22px;line-height:1}.tgc span{font-size:11px;color:var(--t2)}
-.tgc.ok{background:color-mix(in srgb,var(--good) 14%,var(--panel));color:var(--good)}.tgc.part{background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--warn)}.tgc.no{background:color-mix(in srgb,var(--stop) 14%,var(--panel));color:var(--stop)}.tgc.none{color:var(--quiet)}.tgc:hover,.tgc:focus-visible{outline:2px solid var(--t2)}
+.tgc.ok{background:color-mix(in srgb,var(--good) 14%,var(--panel));color:var(--good)}.tgc.part{background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--warn)}.tgc.no{background:color-mix(in srgb,var(--stop) 14%,var(--panel));color:var(--stop)}.tgc.none{color:var(--quiet)}.tgc.na{color:var(--quiet);opacity:.45}.tgc.tnew{box-shadow:0 0 0 2px var(--accent)}.tgc:hover,.tgc:focus-visible{outline:2px solid var(--t2)}
 .tgl{font-size:12px;color:var(--t2);white-space:pre-line;align-self:center;padding:0 6px;font-variant-numeric:tabular-nums}.tgd{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:20px}
 @media (max-width:900px){.tg{overflow-x:auto;display:grid;min-width:900px}}
 .tpanel{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-top:8px}.tpanel summary{padding:12px 16px;cursor:pointer;font-size:14px;display:flex;gap:12px;align-items:baseline}.tpanel summary span{color:var(--t2);font-size:13px}
@@ -121,7 +121,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .chip{padding:4px 11px;border-radius:99px;border:1px solid var(--line);color:var(--t2);font-size:12px;background:var(--panel)}
 .chip.on{background:var(--t1);color:var(--bg);border-color:var(--t1)}
-.board{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:10px;overflow-x:auto;align-items:start}
+.board{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:14px;overflow-x:auto;align-items:start;min-height:540px;padding-bottom:8px}.hist{margin-top:48px;padding-top:20px;border-top:1px solid var(--line)}
 .col>h3{margin:0 0 8px;font-size:12px;color:var(--t2);font-weight:600;display:flex;gap:8px;align-items:center}
 .col>h3 i{width:8px;height:8px;border-radius:50%;background:var(--c)}
 .col>h3 span{margin-left:auto;color:var(--t3)}
@@ -177,7 +177,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .rail{order:2;flex-direction:row;padding:6px;border-right:0;border-top:1px solid var(--line);justify-content:space-around}
   .brand,.rail .foot{display:none}.nav span:not(.b){font-size:12px}.nav{flex-direction:column;gap:2px;padding:6px 10px}.nav .b{display:none}
   .gh,.gr{grid-template-columns:90px 1fr 1fr}.gh span:nth-child(n+4),.gr>:nth-child(n+4){display:none}
-  .top,.view{padding-left:16px;padding-right:16px}.cap{grid-template-columns:1fr auto}.cap .heatbar,.cap .rt{display:none}.board{grid-template-columns:repeat(5,230px)}}
+  .top,.view{padding-left:16px;padding-right:16px}.cap{grid-template-columns:1fr auto}.cap .heatbar,.cap .rt{display:none}.board{grid-template-columns:repeat(4,240px)}}
 </style>
 </head>
 <body>
@@ -205,18 +205,18 @@ function h(tag, a, ...kids) {
 const set = (el, ...kids) => el.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false));
 const KIND = { wave: 'Phase opened', task: 'Task added', start: 'Started', step: 'Step done', done: 'Done', verdict: 'Verdict', block: 'Blocked', postmortem: 'Post-mortem', ceremony: 'Phase review',
   decision: 'Decision', focus: 'Focus', warning: 'Warning', note: 'Note', exception: 'Exception', drop: 'Dropped', opportunity: 'Opportunity' };
-const GROUPS = [['quiet', 'Waiting'], ['ready', 'Ready'], ['live', 'In progress'], ['need', 'Needs you'], ['good', 'Passed']];
+const GROUPS = [['quiet', 'Waiting'], ['ready', 'Ready'], ['live', 'In progress'], ['need', 'Needs you'], ['good', 'Passed'], ['done', 'Done, no verdict yet · nothing for you']];
 const ICON = { training: 'M2 13l3-5 3 2 3-6 3 3M2 14h12', engine: 'M2 12.500l3.500-4 3 2.500L14 4M10.500 4H14v3.500', live: 'M2 8a6 6 0 1012 0A6 6 0 002 8zM8 5v3.500l2 1.500', story: 'M1.5 8h3l2-5 3 10 2-5h3', map: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z', work: 'M2 3h3v10H2zM6.5 3h3v6h-3zM11 3h3v8h-3z', quality: 'M8 1.5l5.5 2v4.2c0 3-2.2 5-5.5 6.8C4.700 12.700 2.500 10.700 2.500 7.700V3.500z', rules: 'M2.500 4h11M2.500 8h11M2.500 12h6' };
 const VIEWS = [['story', 'Story'], ['engine', 'Engine'], ['live', 'Live'], ['map', 'Map'], ['work', 'Work'], ['training', 'Training'], ['quality', 'Quality'], ['rules', 'Rules']];
 
-let D = null, view = (location.hash || '#story').slice(1).split('/')[0], sheet = null, wave = null, shut = new Set(), last = '', ok = true, changedAt = 0;
+let D = null, view = (location.hash || '#story').slice(1).split('/')[0], sheet = null, wave = null, showDone = false, shut = new Set(), last = '', ok = true, changedAt = 0;
 if (!VIEWS.some((v) => v[0] === view)) view = 'story';
 let T = {}, CAP = {}, DOM = {}, STG = {}, GATE = {}, PH = {}, PHT = {};
 
 const tone = (t) => (t.label === 'Dropped' ? 'drop' : t.tone);
-const grp = (t) => { const x = tone(t); return x === 'stop' || x === 'warn' ? 'need' : x; };
+const grp = (t) => { if (t.status === 'completed') return 'done'; const x = tone(t); return x === 'stop' || x === 'warn' ? 'need' : x; };   // 2026-11-12 owner: finished tasks awaiting the automatic review are not an owner action; own column
 const live = (list) => list.filter((t) => tone(t) !== 'drop');
-function counts(list) { const c = { good: 0, live: 0, need: 0, ready: 0, quiet: 0, total: 0 }; for (const t of live(list)) { c[grp(t)]++; c.total++; } return c; }
+function counts(list) { const c = { good: 0, live: 0, need: 0, ready: 0, quiet: 0, done: 0, total: 0 }; for (const t of live(list)) { c[grp(t)]++; c.total++; } return c; }
 const ago = (ts) => { const s = Math.max(0, (Date.now() - new Date(ts).getTime()) / 1000); return s < 90 ? 'just now' : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
 const first = (s) => (s || '').split(/(?<=[.;])\s/)[0];
 const pctOf = (n, d) => (d ? Math.round((100 * n) / d) : 0);
@@ -232,7 +232,7 @@ const currentStage = () => (D.journey.find((s) => { const c = counts(tasksIn('st
 /* ---------- small parts ---------- */
 const seg = (c) => {
   if (!c.total) return h('div', { class: 'seg' });
-  return h('div', { class: 'seg' }, [['good', 'good'], ['live', 'live'], ['need', 'warn'], ['ready', 'ready'], ['quiet', 'quiet']].map(([k, v]) => c[k] ? h('i', { style: `width:${(100 * c[k]) / c.total}%;background:var(--${v})` }) : null));
+  return h('div', { class: 'seg' }, [['good', 'good'], ['live', 'live'], ['need', 'warn'], ['ready', 'ready'], ['quiet', 'quiet'], ['done', 'quiet']].map(([k, v]) => c[k] ? h('i', { style: `width:${(100 * c[k]) / c.total}%;background:var(--${v})` }) : null));
 };
 const pill = (t) => h('span', { class: `pill t-${tone(t)}`, text: t.label });
 const squares = (list) => h('div', { class: 'sq' }, list.length ? list.map((t) => h('i', { class: `t-${tone(t)}`, title: `${t.id} ${t.title}: ${t.label}` })) : h('i', { class: 'none', title: 'no tasks yet' }));
@@ -406,16 +406,25 @@ function work() {
   const filt = h('div', { class: 'filters' }, h('button', { class: `chip${wave === null ? ' on' : ''}`, text: 'All', onclick: () => go('work', null) }),
     D.waves.map((w) => h('button', { class: `chip${wave === w.id ? ' on' : ''}`, text: `${w.id} ${w.title}`, onclick: () => go('work', w.id) })));
   const list = live(D.tasks).filter((t) => wave === null || t.wave === wave);
-  const cols = GROUPS.map(([g, label]) => {
+  const card = (t) => h('button', { class: `tc t-${tone(t)}`, onclick: () => open('task', t.id) },
+    h('div', { class: 'ti', text: `${t.id}  ${t.title}` }),
+    h('div', { class: 'ft' }, t.capability && CAP[t.capability] ? h('span', { class: 'tag', text: CAP[t.capability].name }) : null,
+      t.steps.length ? h('div', { class: 'heatbar' }, h('i', { style: `width:${pctOf(t.steps.filter((x) => x.done).length, t.steps.length)}%;background:var(--c)` })) : null,
+      t.who ? h('span', { class: 'mt', text: t.who }) : null));
+  /* 2026-11-12 owner: the board shows only active work. Passed and Done are both finished (Passed = judged, Done = no verdict yet), so they live in one history strip at the bottom, newest first. */
+  const cols = GROUPS.filter(([g]) => g !== 'good' && g !== 'done').map(([g, label]) => {
     const ts = list.filter((t) => grp(t) === g).sort((a, b) => (g === 'ready' ? (a.next - b.next) : 0) || a.id.localeCompare(b.id, undefined, { numeric: true }));
     return h('div', { class: `col t-${g === 'need' ? 'warn' : g}` }, h('h3', null, h('i'), label, h('span', { class: 'num', text: ts.length })),
-      ts.length ? ts.map((t) => h('button', { class: `tc t-${tone(t)}`, onclick: () => open('task', t.id) },
-        h('div', { class: 'ti', text: `${t.id}  ${t.title}` }),
-        h('div', { class: 'ft' }, t.capability && CAP[t.capability] ? h('span', { class: 'tag', text: CAP[t.capability].name }) : null,
-          t.steps.length ? h('div', { class: 'heatbar' }, h('i', { style: `width:${pctOf(t.steps.filter((x) => x.done).length, t.steps.length)}%;background:var(--c)` })) : null,
-          t.who ? h('span', { class: 'mt', text: t.who }) : null))) : h('div', { class: 'empty', text: '—' }));
+      ts.length ? ts.map(card) : h('div', { class: 'empty', text: '—' }));
   });
-  return [filt, h('div', { class: 'board' }, cols)];
+  const fin = list.filter((t) => t.status === 'passed' || t.status === 'completed').sort((p, q) => String(q.last).localeCompare(String(p.last)));
+  const nPass = fin.filter((t) => t.status === 'passed').length, shown = showDone ? fin : fin.slice(0, 10);
+  const history = h('div', { class: 'sec hist' }, h('div', { class: 'sec-row' }, h('h2', { text: `Finished, newest first (${fin.length})` }),
+      h('span', { class: 'mt', text: `${nPass} judged and passed · ${fin.length - nPass} finished with no verdict yet (nothing for you)` })),
+    shown.map((t) => h('button', { class: 'item', onclick: () => open('task', t.id) }, h('span', { class: 'id', text: t.id }),
+      h('span', null, h('div', { class: 'ti', text: t.title }), h('div', { class: 'mt', text: `${String(t.last).slice(0, 10)} · ${t.status === 'passed' ? 'Passed: judged' : 'Done: no verdict yet'}` })))),
+    fin.length > 10 ? h('button', { class: 'link', style: 'color:var(--accent);padding:8px 4px', text: showDone ? 'Show fewer' : `Show all ${fin.length}`, onclick: () => { showDone = !showDone; draw(); } }) : null);
+  return [filt, h('div', { class: 'board' }, cols), history];
 }
 
 /* ---------- Rules ---------- */
@@ -424,7 +433,7 @@ function trainingView() {
   if (Date.now() - trAt > 60000) { trAt = Date.now(); fetch('./training', { cache: 'no-store' }).then((r) => r.json()).then((j) => { TR = j; if (view === 'training') draw(); }).catch(() => { if (!TR) { TR = { error: true }; if (view === 'training') draw(); } }); }
   if (!TR) return h('div', { class: 'card empty', text: 'Loading training data.' });
   if (TR.error) return h('div', { class: 'card empty', text: 'No training data yet. Run build_training.py in projects/world-state.' });
-  const A = TR.audit, ASYM = { ok: '✓', part: '◐', no: '✗', none: '–' }, ACOL = { ok: 'var(--good)', part: 'var(--warn)', no: 'var(--stop)', none: 'var(--quiet)' }, AWORD = { ok: 'shown', part: 'partly shown', no: 'tried, failed', none: 'not started' };
+  const A = TR.audit, ASYM = { ok: '✓', part: '◐', no: '✗', none: '–', na: '·' }, ACOL = { ok: 'var(--good)', part: 'var(--warn)', no: 'var(--stop)', none: 'var(--quiet)', na: 'var(--quiet)' }, AWORD = { ok: 'shown', part: 'partly shown', no: 'tried, failed', none: 'not started', na: 'not applicable' };
   const tbl = (head, rows) => h('table', { class: 'tt' }, h('tr', null, head.map((t) => h('th', { text: t }))), rows.map((r) => h('tr', null, r.map((v) => h('td', { text: v == null ? '' : String(v) })))));
   const panel = (title, sub, ...body) => h('details', { class: 'tpanel' }, h('summary', null, h('b', { text: title }), sub ? h('span', { text: sub }) : null), h('div', { class: 'tbody' }, body));
   const list = (arr, mark) => h('ul', { class: 'tlist' }, arr.map((x) => h('li', { text: (mark ? mark + ' ' : '') + x })));
@@ -439,7 +448,7 @@ function trainingView() {
     const lines = series.map((s) => h('polyline', { fill: 'none', stroke: s.color, 'stroke-width': 2, points: s.pts.map(([e, v]) => `${x(e)},${y(v)}`).join(' ') }));
     return h('div', { class: 'card tcurve' + (o.active ? ' live' : '') }, h('div', { class: 'l', text: title }), h('div', { class: 'tchips' }, o.chips.map(([c, t]) => h('span', { class: 'tchip ' + c, text: t }))), h('div', { class: 'mt', text: sub }),
       h('div', { class: 'tleg' }, series.map((s) => h('span', { style: `color:${s.color}`, text: '● ' + s.name })), o.base != null ? h('span', { text: '- - ' + o.baseName }) : null),
-      h('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': `${title}, dev score per epoch` }, grid, ticks, base, best, lines, h('text', { ...faint, x: W - R, y: H - 8, 'text-anchor': 'end', text: 'epoch' })),
+      h('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': `${title}, dev score per epoch` }, grid, ticks, base, best, lines, h('text', { ...faint, x: W - R, y: H - 8, 'text-anchor': 'end', text: o.xlabel || 'epoch' })),
       h('div', { class: 'mt', text: o.foot }));
   };
   const COL = { topic: '#2b6cb0', story_type: '#2f855a', presence_f1: '#b7791f' }, NM = { topic: 'topic', story_type: 'story type', presence_f1: 'presence F1' }, BS = TR.baseline_sparse_sealed;
@@ -462,19 +471,30 @@ function trainingView() {
     (TR.live || []).length ? tbl(['Job', 'State', 'What', 'Updated'], TR.live.map((j) => [j.job, j.state || '', j.progress || '', (j.updated || '').slice(11, 16)])) : h('div', { class: 'mt', text: 'Nothing is running.' }));
   const flow = h('div', { class: 'card' }, h('div', { class: 'l', text: "What's next, in order" }), tbl(['#', 'Step', 'State', 'Why', 'Needs'], (TR.next_flow || []).map((x) => [x.n, x.step, x.state, x.why, x.gate])));
   const audit = A ? h('div', { class: 'card' }, h('div', { class: 'l', text: 'Trust check: every model against every stage of the method' }),
-    h('p', { class: 'mt', text: '✓ shown by a result file · ◐ shown but weak or not independent · ✗ tried and failed · – not started. Click a cell for its evidence.' }),
+    A.v1_count ? h('p', { class: 'mt', text: `Models at v1: ${A.v1_count.ok} of ${A.v1_count.models} (${A.v1_count.part} partly there, ${A.v1_count.no} tried and failed, ${A.v1_count.none} not started).` }) : null,
+    h('p', { class: 'mt', text: '✓ shown by a result file · ◐ shown but weak or not independent · ✗ tried and failed · – not started (a gap) · · not applicable (nothing to compare against). Blue outline = changed in the last 24 hours. Click a cell for its evidence.' }),
+    h('p', { class: 'mt', text: 'Gaps, most first: ' + [...A.rows].map((r) => ({ m: r.model, n: r.cells.filter((x) => x.s === 'none').length, k: r.cells.filter((x) => x.s !== 'na').length })).sort((a, b) => b.n - a.n).slice(0, 5).map((g) => `${g.m} ${g.n} of ${g.k} not started`).join(' · ') + '. Stages with no ✓ in any model yet: ' + (A.columns.filter((c, i) => A.rows.every((r) => r.cells[i].s !== 'ok')).join(', ') || 'none') + '.' }),
     h('div', { class: 'tg', style: `grid-template-columns:minmax(190px,1.3fr) repeat(${A.columns.length},minmax(84px,1fr)) minmax(190px,1.3fr)` },
       h('div', { class: 'tgh', text: 'Model' }), A.columns.map((t) => h('div', { class: 'tgh c', text: t })), h('div', { class: 'tgh', text: 'Last changed (UTC)' }),
       A.rows.map((r) => [h('div', { class: 'tgm', text: r.model }),
-        r.cells.map((x, i) => h('button', { class: 'tgc ' + x.s, title: x.t, 'aria-label': `${r.model}, ${A.columns[i]}, ${AWORD[x.s]}`, onclick: () => { document.getElementById('tgd').textContent = `${r.model} · ${A.columns[i]} · ${AWORD[x.s]}: ${x.t}${x.file ? '  [' + x.file + ', ' + x.ts.replace('T', ' ') + ']' : ''}`; } }, h('b', { text: ASYM[x.s] }), h('span', { text: AWORD[x.s] }))),
+        r.cells.map((x, i) => h('button', { class: 'tgc ' + x.s + (x.ts && Date.parse(x.ts) > NOWU - 864e5 ? ' tnew' : ''), title: x.t, 'aria-label': `${r.model}, ${A.columns[i]}, ${AWORD[x.s]}`, onclick: () => { document.getElementById('tgd').textContent = `${r.model} · ${A.columns[i]} · ${AWORD[x.s]}: ${x.t}${x.file ? '  [' + x.file + ', ' + x.ts.replace('T', ' ') + ']' : ''}`; } }, h('b', { text: ASYM[x.s] }), h('span', { text: AWORD[x.s] }))),
         h('div', { class: 'tgl', text: r.changed ? r.changed.ts.replace('T', ' ').replace('Z', '') + '\n' + r.changed.file : 'no result file yet' })])),
     h('div', { id: 'tgd', class: 'tgd', text: 'Click a cell for its evidence and source file.' })) : null;
   const actives = [...TR.runs, ...(TR.kinds_runs || []), ...(TR.area_runs || [])].filter((r) => r.active).length;
-  const curves = h('div', { class: 'sec' }, h('h2', { text: 'Training curves · dev score per epoch, dashed line = epoch chosen on dev' }),
-    h('p', { class: 'mt', text: `${actives ? actives + ' running now: its card says LIVE and redraws as the run reports' : 'No run is training now'} · one card per run, newest first · a new run adds a card, a live run updates its own` }),
-    h('div', { class: 'l tgroup', text: 'Encoder: topic, story type, presence · evaluated every half epoch' }), h('div', { class: 'tcg' }, encCards),
-    h('div', { class: 'l tgroup', text: 'Condition per kind · small head, evaluated every 5 epochs' }), h('div', { class: 'tcg' }, kindCards),
-    areaCards.length ? [h('div', { class: 'l tgroup', text: 'Area · head distilled from the IPTC term mapping, evaluated every epoch' }), h('div', { class: 'tcg' }, areaCards)] : null);
+  const pct = (x) => (x == null ? '' : (x * 100).toFixed(1) + '%');
+  const lcList = [...(TR.learning_curves || [])].sort((p, q) => q.updated.localeCompare(p.updated));
+  const lcCards = lcList.map((L) => { const P = L.points, last = P[P.length - 1];
+    return curve(`${L.head}: share of reads the CPU answers`, `test: ${L.test} · false positives held near 0.25%, misses near 5% against the teacher label`, [{ color: '#2b6cb0', name: 'v6b embedding', pts: P.map((p) => [p.rows / 1000, p.v6b.coverage]) }, { color: '#2f855a', name: 'three encoders joined', pts: P.map((p) => [p.rows / 1000, p.joined.coverage]) }],
+      { xmax: Math.ceil(last.rows / 1000 / 2) * 2, step: 2, xlabel: 'training rows (thousands)', active: false, chips: chips({ task: 'T148', updated: L.updated }, null), foot: `At ${last.rows.toLocaleString()} rows: v6b ${pct(last.v6b.coverage)} (true-positive rate ${last.v6b.eff_tpr}, false positives ${last.v6b.eff_fpr}), joined ${pct(last.joined.coverage)} (${last.joined.eff_tpr}, ${last.joined.eff_fpr}) · ${L.file}` }); });
+  const encList = [...TR.runs].sort(byNew), kindList = [...(TR.kinds_runs || [])].sort(byNew), areaList = [...(TR.area_runs || [])].sort(byNew);
+  const tagc = (fam, list, cards) => cards.map((n, i) => ({ u: list[i].updated || '', act: !!list[i].active, fam, n }));
+  const allCards = [...tagc('Answer when sure: coverage against training rows (CPU student, no epochs)', lcList, lcCards), ...tagc('Encoder: topic, story type, presence (evaluated every half epoch)', encList, encCards), ...tagc('Condition per kind (small head, evaluated every 5 epochs)', kindList, kindCards), ...tagc('Area (head distilled from the IPTC term mapping, evaluated every epoch)', areaList, areaCards)].sort((p, q) => (q.act ? 1 : 0) - (p.act ? 1 : 0) || q.u.localeCompare(p.u));
+  const isRecent = (c) => c.act || Date.parse(c.u) > NOWU - 864e5, recentCards = allCards.filter(isRecent), olderCards = allCards.filter((c) => !isRecent(c));
+  const cardOf = (c) => h('div', {}, h('div', { class: 'l', style: 'margin:0 0 4px', text: c.fam }), c.n);
+  const curves = h('div', { class: 'sec' }, h('h2', { text: 'Training curves · newest first' }),
+    h('p', { class: 'mt', text: `${actives ? actives + ' running now: its card says LIVE and redraws as the run reports' : 'No run is training now'} · every curve from every family in one list, most recently updated first; each card says which family it belongs to and when it last changed` }),
+    h('div', { class: 'l tgroup', text: `Changed in the last 24 hours (${recentCards.length})` }), recentCards.length ? h('div', { class: 'tcg' }, recentCards.map(cardOf)) : h('div', { class: 'mt', text: 'No curve changed in the last 24 hours.' }),
+    olderCards.length ? [h('div', { class: 'l tgroup', text: `Earlier (${olderCards.length})` }), h('div', { class: 'tcg' }, olderCards.map(cardOf))] : null);
   const eb = TR.entity_bakeoff && TR.entity_bakeoff.systems ? panel('Entity extractors', 'Few-NERD sample, type ignored, Wikipedia text', tbl(['System', 'Exact F1', 'Overlap F1'], Object.entries(TR.entity_bakeoff.systems).map(([k, s]) => [k, s.exact_f1 ?? 'install error', s.iou50_f1 ?? '']))) : null;
   const reference = h('div', { class: 'sec' }, h('h2', { text: 'Reference · open a panel to read it' }),
     A ? panel('What works', `${A.works.length} findings`, list(A.works, '✓')) : null, A ? panel("What doesn't work, or isn't proven", `${A.doesnt.length} findings`, list(A.doesnt, '✗')) : null,
@@ -484,7 +504,14 @@ function trainingView() {
   const stu = TR.students && TR.students.length ? h('div', { class: 'sec' }, h('h2', { text: 'CPU students and heads on the engine stories' }),
     h('p', { class: 'mt', text: 'Agreement with the engine stored reading on its 1,736 stories, never trained on a scored story (grouped folds for engine readings). Bars: presence AUROC 0.87, direction accuracy 0.76; majority guess for direction 0.671.' }),
     tbl(['Task', 'What', 'Text view', 'Trained on', 'Presence AUROC', 'Direction accuracy', 'File'], TR.students.map((s) => [s.task, s.label, s.view, s.labels, s.presence_auroc ?? '', s.direction_accuracy ?? '', s.file]))) : null;
-  return [kpis2, audit ? h('div', { class: 'sec' }, audit) : null, h('div', { class: 'sec' }, live), h('div', { class: 'sec' }, flow), curves, stu, reference];
+  const SV = TR.selective_vs_human;
+  const sel = TR.selective && TR.selective.length ? h('div', { class: 'sec' }, h('h2', { text: 'Answer when sure: how much reading the CPU can take off the teacher' }),
+    h('p', { class: 'mt', text: 'The CPU student answers only when it is confident and sends the rest to the teacher (Jev or Clef). Coverage is the share of reads the CPU answers. The rule is fixed in advance: at most 0.25% false positives and 5% misses against the teacher label, thresholds fitted on one half of the stories and tested on the other. Target (Step 1 tolerance): true-positive rate 0.90 to 0.95 at false-positive rate 0.001 to 0.0025. Measured against the teacher label, not against human truth.' }),
+    tbl(['Head', 'Student input', 'Trained on', 'Coverage', 'True-positive rate', 'False positives', 'Worst split', 'File'], TR.selective.map((r) => [r.head, r.input, r.trained_on, pct(r.coverage), r.tpr, r.fpr, r.fpr_worst, r.file])),
+    SV ? h('p', { class: 'mt', text: `Against human labels (CheckThat, ${SV.n} sentences): the CPU answers ${pct(SV.coverage)} of them; on those its balanced accuracy is ${SV.student_on_answered} and the teacher's on the same sentences ${SV.teacher_on_same_rows}. Teacher alone ${SV.teacher_alone_all}, hybrid (CPU where sure, teacher elsewhere) ${SV.hybrid_all}. File ${SV.file}.` }) : null,
+    TR.recent_results && TR.recent_results.length ? tbl(['Result file (newest first, last 4 days)', 'Updated (UTC)', 'First values'], TR.recent_results.map((r) => [r.file, r.updated, r.summary])) : null,
+    TR.teacher_scores && TR.teacher_scores.length ? tbl(['Head', 'Latest result against public truth (2026-11-12)', 'Can the CPU reader replace the teacher?'], TR.teacher_scores.map((r) => [r.head, r.score, r.cpu_reader])) : null) : null;
+  return [kpis2, audit ? h('div', { class: 'sec' }, audit) : null, h('div', { class: 'sec' }, live), h('div', { class: 'sec' }, flow), curves, sel, stu, reference];
 }
 function rules() {
   const all = live(D.tasks), passed = all.filter((t) => tone(t) === 'good').length, failed = all.filter((t) => /^Failed/.test(t.label)).length;

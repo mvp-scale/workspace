@@ -1,0 +1,33 @@
+{
+ "id": "T148-D",
+ "task": "T148",
+ "part": "main loop: Function, feed-ordered split",
+ "field": "function",
+ "question": "Does the Function student (three encoders joined) keep its answer-when-sure coverage when whole news feeds are held out of training?",
+ "one_change": "hold out whole feeds (about 30% of queue stories) instead of the newest 30% by date; same rule, same encoders",
+ "baseline": {
+  "model": "Function student, three encoders joined, time-shifted split (newest 30% of stories)",
+  "file": "runs/pulse/t179/t185_time_shift.json",
+  "key": "variants.v6b+bge+e5.coverage"
+ },
+ "prediction": {
+  "metric": "coverage on held-out feeds at the tolerance (true-positive rate near 0.95, false positives at most 0.0025 of negatives), three encoders joined",
+  "low": 0.35,
+  "high": 0.6,
+  "why": "the time-shifted test held 0.568 and random folds gave 0.57; source style differs more across feeds than across days, so a modest drop is likely, but the sentences are short and feed-neutral"
+ },
+ "command": "/workspace/models/embed-zs/.venv/bin/python -I t201_feed_shift.py",
+ "result": {
+  "file": "runs/pulse/t201/t201_feed_shift.json",
+  "key": "variants.v6b+bge+e5.coverage"
+ },
+ "cap_minutes": 15,
+ "noise": 0.05,
+ "who": "S?",
+ "priority": 1,
+ "threads": 6,
+ "smoke": {
+  "command": "/workspace/models/embed-zs/.venv/bin/python -I t201_feed_shift.py",
+  "cap_minutes": 5
+ }
+}
