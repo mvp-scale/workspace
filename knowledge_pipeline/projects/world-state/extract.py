@@ -43,12 +43,9 @@ def place_country(name, dom, explicit):
     tl = TLD.get(dom.rsplit(".", 1)[-1]); 
     if tl in cs: return tl, "city, publisher country"
     return max(cs, key=cs.get), "city, largest"
-def work(r):
-    t0 = time.perf_counter(); dom = r["domain"] or ""; bad = set(BP.get(dom, [])); raw = (r["text"] or ""); lines = raw.split("\n"); kept = [l for l in lines if re.sub(r"\s+", " ", l).strip() not in bad]; removed = len(lines) - len(kept)
-    body = re.sub(r"\s+", " ", " ".join(kept)).strip()[:12000]; title = re.sub(r"\s+", " ", r["title"] or ""); text = title + ". " + body; date = (r["date"] or "")[:10] or None
-    segs = [s.lower() for s in urlparse(r["url"] or "").path.split("/") if s]; sw = next((s for s in segs[:-1] if s in HV.SEC or s in HV.FN), None)
-    rec = {"v": V, "row": r["row"], "source": {"url": r["url"], "domain": dom, "date": date, "description": r["description"], "links_in_text": LINK.findall(raw)[:20], "section": sw, "tool": "source-v0"}, "clean": {"boilerplate_lines_removed": removed, "chars": len(text), "tool": "boilerplate-v0"}, "text": text}
-    d = nlp(text); sents = list(d.sents); fx = []; ch = []; sc = collections.Counter()
+def sentence_tags(doc):
+    """Pure function (T151 P2a, moved unchanged from work()): one pass over a parsed doc. Returns (fx, ch, sc): fx = [[start_char, end_char, factuality tag]] per sentence, ch = change-lexicon hits {condition, direction, word, thing, span, negated} (not capped), sc = Counter of tags. Reads only the tables above; the caller owns the parse."""
+    fx = []; ch = []; sc = collections.Counter(); sents = list(doc.sents)
     for s in sents:
         toks = [t for t in s]; lem = {t.lemma_.lower() for t in toks}; low = s.text.lower(); root = s.root
         rootneg = any(c.dep_ == "neg" for c in root.children); modal = {t.lower_ for t in toks if t.tag_ == "MD"}; past = root.tag_ in ("VBD", "VBN"); subj = any(c.dep_ in ("nsubj", "nsubjpass") for c in root.children)
@@ -70,6 +67,13 @@ def work(r):
                     if c.dep_ in ("nsubj", "nsubjpass", "dobj"): thing = c
                     elif c.dep_ == "prep" and c.lower_ in ("in", "of"): thing = next((g for g in c.children if g.dep_ == "pobj"), thing)
                 if thing is not None: ch.append({"condition": LEX[lm][0], "direction": LEX[lm][1], "word": t.text, "thing": thing.lemma_.lower(), "span": [t.idx, t.idx + len(t.text)], "negated": any(c.dep_ == "neg" for c in t.children)})
+    return fx, ch, sc
+def work(r):
+    t0 = time.perf_counter(); dom = r["domain"] or ""; bad = set(BP.get(dom, [])); raw = (r["text"] or ""); lines = raw.split("\n"); kept = [l for l in lines if re.sub(r"\s+", " ", l).strip() not in bad]; removed = len(lines) - len(kept)
+    body = re.sub(r"\s+", " ", " ".join(kept)).strip()[:12000]; title = re.sub(r"\s+", " ", r["title"] or ""); text = title + ". " + body; date = (r["date"] or "")[:10] or None
+    segs = [s.lower() for s in urlparse(r["url"] or "").path.split("/") if s]; sw = next((s for s in segs[:-1] if s in HV.SEC or s in HV.FN), None)
+    rec = {"v": V, "row": r["row"], "source": {"url": r["url"], "domain": dom, "date": date, "description": r["description"], "links_in_text": LINK.findall(raw)[:20], "section": sw, "tool": "source-v0"}, "clean": {"boilerplate_lines_removed": removed, "chars": len(text), "tool": "boilerplate-v0"}, "text": text}
+    d = nlp(text); fx, ch, sc = sentence_tags(d)
     rec["function"] = {"sentences": fx, "counts": dict(sc), "opinion_section": sw in ("opinion", "opinions", "editorial", "comment", "commentary", "blog", "blogs"), "tool": "factuality-rules-v1"}
     rec["conditions"] = {"items": ch[:20], "tool": "change-lexicon-v0"}
     ents = [(x.text.strip(), x.label_, x.start_char, x.end_char) for x in d.ents]; rec["entities"] = {"counts": dict(collections.Counter(e[1] for e in ents)), "items": [[a, b, c, e_] for a, b, c, e_ in ents if b in ("ORG", "PERSON", "NORP", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW")][:30], "tool": "spacy-ner-v0"}
