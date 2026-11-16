@@ -12,7 +12,8 @@
 :root[data-theme="dark"]{--bg:#15161a;--panel:#1d1f24;--ink:#e8e8e3;--muted:#a3a39c;--line:#33363d;--today:#a3a39c;--todaybg:#23252b;--target:#7fb3d9;--targetbg:#1b2a36;--gap:#d9a55a;--gapbg:#2b2419;--ok:#6fc08f;--warn:#d9a55a;--bad:#e07a7a;--tool:#9fb0bc;--model:#7fb3d9;--other:#b596c4;--store:#b7c47a;--layer:#7fb9b9;--new:#d9a55a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header,main{max-width:1180px;margin:0 auto;padding:0 16px}
+header,main{width:80%;max-width:none;margin:0 auto;padding:0}
+@media (max-width:900px){header,main{width:auto;padding:0 16px}}
 header{padding-top:20px}
 h1{font-size:22px;margin:0 0 4px;font-weight:600}
 h2{font-size:18px;margin:0 0 6px;font-weight:600}
@@ -83,6 +84,23 @@ th{background:var(--todaybg);font-weight:600}
 .pl td:first-child{font-weight:700;color:var(--target);white-space:nowrap}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
 .two .panel{margin:0}
+:root{--onst:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--onst:#111}}
+:root[data-theme="dark"]{--onst:#111}
+.legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;font-size:13px}
+.stt{display:inline-block;border-radius:5px;padding:1px 9px;font-weight:700;font-size:12.5px;color:var(--onst);white-space:nowrap}
+.stt.later{background:var(--warn)}.stt.pass{background:var(--ok)}.stt.run{background:var(--target)}.stt.wait{background:var(--today)}.stt.block{background:var(--bad)}
+.strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:10px 0}
+.strip div{border-radius:8px;padding:8px 10px;color:var(--onst);font-weight:700;font-size:13.5px;line-height:1.3}
+.strip div small{display:block;font-weight:400;font-size:12px}
+.strip .pass{background:var(--ok)}.strip .run{background:var(--target)}.strip .wait{background:var(--today)}.strip .block{background:var(--bad)}
+.pl tr.p-pass td{background:color-mix(in srgb,var(--ok) 13%,var(--panel))}
+.pl tr.p-run td{background:color-mix(in srgb,var(--target) 14%,var(--panel))}
+.pl tr.p-wait td{background:var(--panel)}
+.pl tr.p-block td{background:color-mix(in srgb,var(--bad) 10%,var(--panel))}
+.pl td:first-child{border-left:6px solid var(--line)}
+.pl tr.p-pass td:first-child{border-left-color:var(--ok)}.pl tr.p-run td:first-child{border-left-color:var(--target)}.pl tr.p-block td:first-child{border-left-color:var(--bad)}.pl tr.p-wait td:first-child{border-left-color:var(--today)}
+@media (max-width:900px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 footer{color:var(--muted);font-size:12.5px;padding:24px 0 60px}
 @media (max-width:600px){.lyr{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.kv dt{margin-top:4px}}
 </style>
@@ -90,6 +108,7 @@ footer{color:var(--muted);font-size:12.5px;padding:24px 0 60px}
 <body data-view="target">
 <header>
 <h1>The knowledge pipeline as one record</h1>
+<details class="small"><summary>About this page</summary>
 <p class="lead">Every article becomes one <b>knowledge record</b>: a stack of layers over one clean text, each layer written once by one named element and read by every later element and by the next article. The outputs of axis A (what it is about: Domain, Area, Subarea, Capability), axis B (what it says and does: Function, Condition, Claims, Evidence, Place, Time, Novelty) and the World engine keys are <b>derived from the layers</b>, never recomputed per output. Click any name for its point, definition and measure.</p>
 <div class="ctl" role="group" aria-label="View">
  <button type="button" id="v-target" aria-pressed="true">Target state</button>
@@ -97,35 +116,45 @@ footer{color:var(--muted);font-size:12.5px;padding:24px 0 60px}
  <button type="button" id="theme">Theme: system</button>
 </div>
 <p class="lead small">Vocabulary, used exactly: a <b>BitMob model</b> is a small CPU classifier answering one question (BitMob Domain, Function, Condition, Area, Capability, Novelty; plus the Place student). A <b>BitTool</b> is a fixed-rule program, never a classifier. A <b>lookup</b> is a table match. The <b>Fuser</b> combines votes into one calibrated proposal per head; the <b>Decider</b> (Lean-verified, unchanged) turns it into answer, provisional or abstain; the <b>Router</b> orders who answers. The <b>teacher</b> labels offline only. Dashed names are <b>proposed new</b> elements. No LLM runs at read time; everything is CPU.</p>
+</details>
 <p class="lead small cmp">Compare view: grey TODAY values are read from files (projects/world-state/runs/pulse/golden/articles.jsonl and the generator listed in README.txt); blue TARGET values are a hand-written specification, produced by no model. Status badges: works, partly, not built. UNVERIFIED marks a claim this page could not check in a file.</p>
 </header>
 <main>
-<section id="plan"><h2>0. Phase plan: extend what exists, in seven phases</h2>
-<p class="lead">Nothing is rewritten. The spine stays <code>analyze2.py</code> (playbook 00). Each phase has a bar written before the run and starts only when the one before it is done. Tracked as ledger tasks T149 to T155 (http://localhost:18766, Work tab). <b>Critical path:</b> P0 &rarr; P1 &rarr; P2 &rarr; P3 &rarr; P4 &rarr; P6, with P5 reading the record from P1 on (it could start after P1; the ledger chains it after P4 for simplicity).</p>
-<p class="small muted"><b>Confidence</b> is my judgement, not a probability. High: code and data exist and the same kind of step has worked here. Medium: code exists, the bar is untried. Low: it depends on data or a decision we do not have. <b>Blast radius</b> is what the change can touch and how to undo it.</p>
-<div class="scroll"><table class="pl"><tr><th>Phase</th><th>Does</th><th>Depends on</th><th>Blast radius</th><th>Top risk</th><th>Confidence</th><th>Waits on you</th><th>Status 2026-11-16</th></tr>
-<tr><td>P0<br>T149</td><td>Measure baselines: whole article vs first 300 characters; router under tolerance (d); time per element</td><td>880 Step 1 stories (local); the tolerance (d) code in <code>sensitivity_report.py</code> with its input <code>self3.npz</code> (present); the bench</td><td>None. Read-only; writes a new results folder only</td><td>No whole-article truth is local: MN-DS items are 342 characters median, 504 at most. Without a teacher label on whole articles we can measure consistency, not accuracy</td><td><b>High</b> for router and timing. <b>Low</b> for whole-article accuracy</td><td>Truth source for whole articles; spend cap</td><td class="small"><b>Measured; one decision left.</b> Router under tolerance (d): 66.7% of outputs inside, max ratio 1.50, so it does not pass. Timing at quiet load: analyze2 median 78 ms, 74% of stories under 100 ms. Domain top-1 changes only 7.5% from 300 characters to the normal read (consistency, not accuracy). Waiting on you: accept consistency as the P0 result, or name a whole-article truth source.</td></tr>
-<tr><td>P1<br>T150</td><td>Fix the Validator check; keep window vectors; per-item span, tool, version, provenance</td><td>P0 (frozen replay of the 230 bench stories)</td><td><code>facts_lib.py</code> has 14 importers, <code>analyze2.py</code> 20 (bench, harvest, training builders, threshold scripts). Item shape changes. Both files are clean at the latest commit (<code>c664896</code>), so <code>git checkout</code> reverts them. <code>facts_lib.py</code> is a generated copy of <code>stated_facts.py</code>: edit <code>stated_facts.py</code> (line 41) and regenerate, or the two drift</td><td>The fixed check may never fail on real data (spans come from the same string), so it can only work as a separate check against the source text, and the injected-bad-span test is what proves it. Stored vectors add size, not yet measured</td><td><b>Medium-High</b></td><td>A go</td><td class="small">Waiting on P0. Validation harness built and self-tested on small data (below). Baseline freeze of the 230 stories not yet taken.</td></tr>
-<tr><td>P2<br>T151</td><td>Evidence bundles: change, direction, size, sentence, factuality</td><td>P1 fields; Change lexicon; Fact extractors (run only if a story has a digit or date word); Factuality tagger (partly working); Condition. <b>Change lexicon and Factuality tagger run only in the harvest script (<code>extract.py</code>); <code>analyze2.py</code> says "change: not run". Condition runs only in the bench with its own encoder.</b> Wiring them in is the real work of P2</td><td>Adds a field. The consumers listed under P1 must tolerate it (not yet checked). Revert: drop the field</td><td>Low coverage: Condition said present on 12 of 230 stories in the 2026-11-12 bench check (a ledger note, no stored run, so re-measure); stories without numbers get no size; every dial-to-resource link is a hand-set guess</td><td><b>Medium</b> on correctness, <b>Low</b> on coverage</td><td>None</td><td class="small">Waiting.</td></tr>
-<tr><td>P3<br>T152</td><td>Answers cite their bundles; answer-or-abstain cut-off from held-out stories</td><td>P2; stories not trained on; a truth set</td><td>Changes which stories are answered vs sent to the teacher, so label volume and engine outputs move. <code>decider.py</code> rules (Lean-verified) are not changed. Revert: restore the old cut-off</td><td>Precision 0.90 may leave little coverage (Domain today: 68% first guess against an 80% bar). It is measured against Sonnet labels, which is agreement, not truth</td><td><b>Medium-Low</b></td><td>Which goal governs; MN-DS scoring yes</td><td class="small">Waiting. Blocked on a truth-set decision.</td></tr>
-<tr><td>P4<br>T153</td><td>Reference lookup; Ontology matcher after an alias audit</td><td>P3 (needs the equal-coverage comparison); MN-DS yes; a Wikidata subset download (not authorised)</td><td>Optional inputs, removable. Nothing else touched. The label store is 180,889 rows, so load time and memory are unmeasured</td><td>The lookup's top-1 is 0.695 against Sonnet on 300 characters and may not add 0.03; alias coverage of our news is unknown</td><td><b>Low-Medium</b>. The test is built to reject</td><td>MN-DS yes; the download</td><td class="small">Waiting.</td></tr>
-<tr><td>P5<br>T154</td><td>Across articles: alignment and recurrence from the stored record; entity rungs only on a measured gap</td><td>P1 record; the journal, which is not built (records must be stored to be reread); the same-event pair list</td><td>Offline scripts. No live change</td><td>The journal is a hidden build. A wrong merge poisons later stages. Typed mentions need NER, which is off</td><td><b>Medium</b> for alignment, <b>Low</b> for entity rungs</td><td>None</td><td class="small">Waiting.</td></tr>
-<tr><td>P6<br>T155</td><td>Promote ontology candidates</td><td>P4 and P5; 10,000 processed articles (230 on the bench now; cost per article comes from P0); playbook 00 section 9 gates</td><td>A new ontology version. Every row carries <code>ontology_version</code>, so scores must be re-run. Revert by version</td><td>Wrong concepts get promoted. "No human raters" conflicts with review, and what replaces it is undecided</td><td><b>Low</b></td><td>The promotion rule</td><td class="small">Waiting.</td></tr></table></div>
-
+<section id="plan"><h2>0. Phase plan</h2>
+<p class="small muted">Extend, never rewrite. A bar is written before each run. Status updated by hand 2026-11-16; the live record is the ledger viewer (:18766, Work tab).</p>
+<div class="legend"><span class="stt pass">PASSED</span><span class="stt run">RUNNING</span><span class="stt wait">WAITING</span><span class="stt block">BLOCKED on you</span></div>
+<div class="strip"><div class="pass">P0<small>Baselines</small></div><div class="pass">P1<small>Spine</small></div><div class="pass">P2<small>Evidence bundles</small></div><div class="block">P3<small>Answers cite evidence</small></div><div class="wait">P4<small>Inputs earn place</small></div><div class="wait">P5<small>Across articles</small></div><div class="wait">P6<small>Grow ontology</small></div></div>
+<h3>Questions for you</h3>
+<div class="scroll"><table class="pl"><tr><th>Q</th><th>Blocks</th><th>Question</th><th>Why it matters</th><th>Answer</th></tr>
+<tr class="p-block"><td><span class="stt block">Q1<br>NOW</span></td><td>Blocks P3</td><td>May I use <b>MN-DS</b> as scoring-only truth for Domain precision? (1,600 local items with human topic labels, short text, median 342 characters. Never trained on.)</td><td>Without it P3 can only measure agreement with Sonnet labels, not accuracy.</td><td><b>Yes / No</b></td></tr>
+<tr class="p-block"><td><span class="stt block">Q2<br>NOW</span></td><td>Blocks P3 bar</td><td>Which goal decides what <b>correct</b> means: engine fidelity to Clef, or accuracy on outside truth? In your words.</td><td>Sets the P3 bar and what P4 must beat. The record does not reconcile the two.</td><td><b>Your words</b></td></tr>
+<tr class="p-wait"><td><span class="stt later">Q3<br>LATER</span></td><td>Blocks P4</td><td>May I download a <b>Wikidata subset</b> (CC0) for the alias audit?</td><td>Entity and ontology term list. No download is authorised today.</td><td><b>Yes / No</b></td></tr>
+<tr class="p-wait"><td><span class="stt later">Q4<br>LATER</span></td><td>Blocks P6</td><td>What replaces <b>human review</b> when promoting an ontology candidate?</td><td>No human raters is a standing rule; P6 needs a review path.</td><td><b>Your words</b></td></tr>
+<tr class="p-wait"><td><span class="stt wait">Q5<br>ANY TIME</span></td><td>Blocks nothing</td><td>Confirm two proposals: the <b>provenance mapping</b> (Observed, Resolved, External, Inferred, Candidate) and how the <b>Condition head's classes map to the lexicon's change words</b>.</td><td>P1 uses the mapping as a proposal; P2 lists both mappings and does not merge them.</td><td><b>Confirm / change</b></td></tr>
+<tr class="p-wait"><td><span class="stt wait">Q6<br>ANY TIME</span></td><td>Blocks nothing</td><td><b>Spend cap:</b> the two ledgers disagree, about 2.5 vs 10 USD. Which stands?</td><td>Matters only if a hosted model labels whole articles.</td><td><b>One number</b></td></tr>
+<tr class="p-wait"><td><span class="stt wait">Q7<br>OPTIONAL</span></td><td>Scores P2 quality</td><td>May I use <b>SENTiVENT</b> as scoring-only truth for change direction?</td><td>Bundle size and direction quality are unscored; a 10-bundle read found about half wrong or doubtful.</td><td><b>Yes / No</b></td></tr>
+</table></div>
+<h3>Phases</h3>
+<div class="scroll"><table class="pl"><tr><th>Phase</th><th>Status</th><th>Done when</th><th>Depends on</th><th>Blast radius</th><th>Top risk</th><th>Confidence</th><th>Waits on you</th><th>Evidence</th></tr>
+<tr class="p-pass"><td>P0<br>T149</td><td><span class="stt pass">PASSED</span></td><td>3 baselines in ledger</td><td>880 stories, bench</td><td>None (read-only)</td><td>Accuracy unmeasurable: no truth set (accepted)</td><td>High</td><td>None</td><td>L2579</td></tr>
+<tr class="p-pass"><td>P1<br>T150</td><td><span class="stt pass">PASSED</span></td><td>230 replay 0 changed; bad spans 100% flagged</td><td>P0</td><td>14 + 20 importers; add-only; <code>git checkout</code> reverts</td><td>Check cannot fail in place; works consumer-side</td><td>High</td><td>Q5 (optional)</td><td>L2594 &middot; <code>d50b688</code></td></tr>
+<tr class="p-pass"><td>P2<br>T151</td><td><span class="stt pass">PASSED</span></td><td>Bundles = lexicon hits 100%; replay 0 changed</td><td>P1; Change lexicon, Factuality tagger (harvest script only today)</td><td>Adds a field for ~20 consumers</td><td>Sizes weak: about half wrong in a 10-bundle read; no truth set</td><td>Medium; sizes Low</td><td>Q5 (optional)</td><td>L2606 &middot; <code>fb0851d</code></td></tr>
+<tr class="p-block"><td>P3<br>T152</td><td><span class="stt block">WAITING<br>blocked: Q1, Q2</span></td><td>Precision 0.90 held-out, 30+ answered</td><td>P2; a truth set</td><td>Changes which stories go to the teacher</td><td>0.90 may leave little coverage</td><td>Medium-Low</td><td><b>Q1, Q2</b></td><td>&mdash;</td></tr>
+<tr class="p-wait"><td>P4<br>T153</td><td><span class="stt wait">WAITING</span></td><td>Each input +0.03 precision at equal coverage, or cut</td><td>P3; MN-DS yes; Wikidata download</td><td>Optional inputs, removable</td><td>Reference lookup may add nothing</td><td>Low-Medium</td><td>Q1, Q3</td><td>&mdash;</td></tr>
+<tr class="p-wait"><td>P5<br>T154</td><td><span class="stt wait">WAITING</span></td><td>Same merges as <code>t226</code> from stored record</td><td>P1 record; journal (not built)</td><td>Offline scripts</td><td>Journal is a hidden build; wrong merges</td><td>Medium; entities Low</td><td>None</td><td>&mdash;</td></tr>
+<tr class="p-wait"><td>P6<br>T155</td><td><span class="stt wait">WAITING</span></td><td>Candidates pass playbook 00 &sect;9 gates</td><td>P4, P5; 10,000 articles</td><td>New ontology version</td><td>Wrong concepts promoted; no human review</td><td>Low</td><td>Q4</td><td>&mdash;</td></tr>
+</table></div>
 <h3>Cross-cutting risks</h3>
-<div class="scroll"><table><tr><th>Risk</th><th>Hits</th><th>What we do about it</th></tr>
-<tr><td>Truth gap: most bars are agreement with a teacher; outside truth we hold is short text</td><td>P0, P3, P4</td><td>Label every score "agreement" or "outside truth"; settle the whole-article truth source in P0</td></tr>
-<tr><td>Edits drift or flip results: <code>facts_lib.py</code> is generated from <code>stated_facts.py</code>; the bench shares one Analyzer across threads; item status is computed as all(checks)</td><td>P1 on</td><td>Edit <code>stated_facts.py</code> and regenerate; new detail from a new function, not an attribute; new fields never go inside "checks"; take copies anyway; commit only when you ask</td></tr>
-<tr><td>Wide fan-out: 14 importers of <code>facts_lib.py</code>, 20 of <code>analyze2.py</code></td><td>P1, P2</td><td>Add fields, never rename or remove; run <code>check_analyze2.py</code> and the 230-story replay before and after</td></tr>
-<tr><td>Goal undecided: the bars could be set for the wrong target</td><td>P3</td><td>You decide before P3 starts</td></tr>
-<tr><td>Low evidence coverage</td><td>P2, P3</td><td>Report coverage beside every score; abstain instead of guessing</td></tr>
-<tr><td>Promotion without human review</td><td>P6</td><td>Decide the rule before P6; until then candidates stay candidates</td></tr></table></div>
-<h3>Validation, built</h3>
-<p class="small">Six modules in <code>projects/world-state/validate/</code>, none of which edits pipeline code: <code>freeze_replay.py</code> (freeze the 230 stories, then diff after a change), <code>inject_spans.py</code> (at least 200 wrong spans must be flagged), <code>consumer_compat.py</code> (57 risky sites in 23 files found for add-only changes), <code>p2_bundle_check.py</code>, <code>p3_threshold_check.py</code> and <code>validate_phase.py P0..P3</code>, which prints PASS, FAIL or NOT RUN per acceptance criterion with its evidence file. Self-tested on 3 stories or synthetic data only: the injected-span test flagged 7,613 of 7,613 mutants with 0 false alarms, so it can fail but has not yet been run on P1 code. <b>Gaps:</b> "none is read by a later layer" has no test yet; the frozen baseline must be taken on unchanged code first. MM3 reviews the P1 diff after P1, as a second reader and not as proof.</p>
-<p class="small"><b>From the planner for P1 to P3 (checked against the code):</b> P1 adds fields by extending the existing per-item format in <code>pool_build.py</code>, keeps <code>read()</code> unchanged and adds a new <code>read_detail()</code>; its bar is zero changes on the frozen replay and 100% of at least 200 injected bad spans flagged. P2 changes bundles only, so Decider outcomes do not move. P3 leaves <code>decider.py</code> alone and makes the cut-off a per-field threshold. <b>Decisions for you:</b> the provenance mapping; whether "change" moves from not run to answered (it changes label volume); whether lexicon-vs-Condition agreement feeds the Decider's existing agreement input; how Condition class names map to the lexicon's change words; and P3 is blocked until a truth set is allowed, because every candidate (MN-DS, CheckThat, SENTiVENT) is scoring-only.</p>
-<p class="small"><b>Not measured yet, so treated as unknown:</b> size of the stored vectors; whether the 20 consumers tolerate extra fields; Wikidata subset size and alias coverage; the earlier "42 of 77 ms" timing.</p>
-<p class="small"><b>Need from you:</b> which goal governs; yes or no on MN-DS, CheckThat and MAVEN as scoring only; the spend cap (the two ledgers disagree); the truth source for whole articles; a go on P0 and P1.</p>
-<p class="muted small">The sections below are the detailed target design. The element cards still list the Entity linker, Ontology matcher and Fuser; read them as conditional.</p>
+<div class="scroll"><table><tr><th>Risk</th><th>Hits</th><th>Control</th></tr>
+<tr><td>Truth gap: scores are agreement, not truth</td><td>P0, P3, P4</td><td>Label every score; pick a truth source</td></tr>
+<tr><td>Generated copy: <code>facts_lib.py</code> comes from <code>stated_facts.py</code></td><td>P1 on</td><td>Edit <code>stated_facts.py</code>, regenerate</td></tr>
+<tr><td>Fan-out: 14 importers of <code>facts_lib.py</code>, 20 of <code>analyze2.py</code></td><td>P1, P2</td><td>Add-only; replay + <code>check_analyze2</code></td></tr>
+<tr><td>Goal undecided</td><td>P3</td><td>You decide before P3</td></tr>
+<tr><td>Low evidence coverage</td><td>P2, P3</td><td>Report beside every score; abstain</td></tr>
+<tr><td>Promotion without human review</td><td>P6</td><td>Decide the rule first</td></tr>
+</table></div>
+<p class="small"><b>Validation:</b> <code>projects/world-state/validate/</code> (replay, injected spans, consumer scan, P2 and P3 checks, <code>validate_phase.py P0..P3</code>). MM3 reads each diff as a second reader, not proof.</p>
+<p class="small"><b>Unmeasured:</b> stored-vector size; Condition coverage (ledger note only); Wikidata size and alias coverage.</p>
 </section>
 <section id="record"><h2>1. The record: eight layers, each written once</h2>
 <p class="lead">Read bottom-up: text and metadata, tokens and sentences, mentions, linked entities, relations and events, claims, the article profile, the cross-article graph. Each layer says who writes it, the one-time computation, who reads it, and how it is built and tested.</p>
