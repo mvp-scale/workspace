@@ -40,7 +40,9 @@ def p1c1():
     ok = rc == 0 and bad == 0; return ("PASS" if ok else "FAIL"), "diff exit %d (%s); frozen facts that do not resolve to their text: %d of %d" % (rc, out[-1][:160] if out else "", bad, n), str(OUTD / "replay_diff.json")
 def p1c2():
     if not has("facts_lib.py", "check_literal"): return "NOT RUN", "needs P1 code (check_literal absent in facts_lib.py); first clause would run inject_spans.py --checker facts_lib:check_literal; second clause ('none is read by a later layer') has no test yet", str(OUTD / "inject_spans.json")
-    rc, out = sh(["validate/inject_spans.py", "--stories", "20", "--checker", "facts_lib:check_literal"]); return "NOT RUN", "first clause %s (%s); second clause ('none is read by a later layer') has no test yet, so the criterion cannot be PASS" % ("PASS" if rc == 0 else "FAIL", out[0][:160] if out else ""), str(OUTD / "inject_spans.json")
+    rc, out = sh(["validate/inject_spans.py", "--stories", "20", "--checker", "facts_lib:check_literal"])   # clause 1: injected wrong spans flagged
+    rc2, out2 = sh(["validate/p1_consumer_check.py"])   # clause 2: a flagged item is absent from what pool_build and analyze2 pass on (P1 step 4)
+    st = "PASS" if rc == 0 and rc2 == 0 else "FAIL"; return st, "clause 1 %s (%s); clause 2 %s (%s)" % ("PASS" if rc == 0 else "FAIL", out[0][:120] if out else "", "PASS" if rc2 == 0 else "FAIL", out2[-1][:80] if out2 else ""), str(OUTD / "inject_spans.json")
 def p2c1():
     f = OUTD / "p2_bundles.jsonl"
     if not has("analyze2.py", "bundles"): return "NOT RUN", "needs P2 code (no 'bundles' in analyze2.py)", str(f)

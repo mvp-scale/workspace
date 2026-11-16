@@ -16,19 +16,31 @@ class Reader:
         self.tkt = Tokenizer.from_file(S["tok_path"]); self.tkt.enable_truncation(max_length=max_pieces); self.tkt.no_padding()
         so = ort.SessionOptions(); so.intra_op_num_threads = threads; so.inter_op_num_threads = 1
         self.sess = ort.InferenceSession(S["onnx_path"], so, providers=["CPUExecutionProvider"]); self.tW, self.tb, self.sW, self.sb = S["t_W"].T, S["t_b"], S["s_W"].T, S["s_b"]
-    def windows(self, title, body):
+    def window_spans(self, title, body):
+        r"""Offsets (a, b) of each window in b = re.sub(r"\s+", " ", body); windows() cuts b[a:b]. Pure function of its arguments."""
         b = re.sub(r"\s+", " ", body); off = [o for o in self.tk.encode(b).offsets if o[1] > o[0]]
         k = self.max_pieces - (len(self.tk.encode(re.sub(r"\s+", " ", title) + ". ").ids) if self.fit else 0); k = max(k, 8); out = []
         for i in range(0, len(off), k):
-            seg = off[i:i + k]; out.append(b[seg[0][0]:seg[-1][1]])
+            seg = off[i:i + k]; out.append((seg[0][0], seg[-1][1]))
             if len(out) >= self.cap: break
-        return out or [b]
-    def read(self, title, body):
-        t = re.sub(r"\s+", " ", title); W = [t + ". " + w for w in self.windows(title, body)]; enc = self.tkt.encode_batch([w[:1200] for w in W]); L = max(len(x.ids) for x in enc)
+        return out or [(0, len(b))]
+    def windows(self, title, body):
+        b = re.sub(r"\s+", " ", body); return [b[x:y] for x, y in self.window_spans(title, body)]
+    def _forward(self, title, body):
+        t = re.sub(r"\s+", " ", title); spans = self.window_spans(title, body); b = re.sub(r"\s+", " ", body); W = [t + ". " + b[x:y] for x, y in spans]; enc = self.tkt.encode_batch([w[:1200] for w in W]); L = max(len(x.ids) for x in enc)
         ids = np.zeros((len(enc), L), dtype=np.int64); m = np.zeros((len(enc), L), dtype=np.int64)
         for i, x in enumerate(enc): ids[i, :len(x.ids)] = x.ids; m[i, :len(x.ids)] = 1
-        V = self.sess.run(None, {"input_ids": ids, "attention_mask": m})[0]
-        return softmax(V @ self.tW + self.tb).mean(0), softmax(V @ self.sW + self.sb).mean(0), len(W)
+        return self.sess.run(None, {"input_ids": ids, "attention_mask": m})[0], spans
+    def read(self, title, body):
+        V, spans = self._forward(title, body)
+        return softmax(V @ self.tW + self.tb).mean(0), softmax(V @ self.sW + self.sb).mean(0), len(spans)
+    def read_detail(self, title, body, keep_vectors=False):
+        r"""Same pass as read(), with the working kept (T150 P1c). Returns {pt, ps, nw, offsets, offsets_text, pt_w, ps_w[, V]}. pt, ps, nw equal read()'s three values. offsets are in re.sub(r"\s+", " ", body); offsets_text are in the analysis text re.sub(r"\s+", " ", title + ". " + body). pt_w and ps_w are per-window probabilities (rows = windows); their mean over rows is pt and ps. V (window vectors) only when keep_vectors=True. Stateless, so safe on the shared Analyzer."""
+        V, spans = self._forward(title, body); pt_w = softmax(V @ self.tW + self.tb); ps_w = softmax(V @ self.sW + self.sb)
+        pre = len(re.sub(r"\s+", " ", title)) + 2 - (1 if re.sub(r"\s+", " ", body).startswith(" ") else 0)
+        d = {"pt": pt_w.mean(0), "ps": ps_w.mean(0), "nw": len(spans), "offsets": [list(x) for x in spans], "offsets_text": [[x + pre, y + pre] for x, y in spans], "pt_w": pt_w, "ps_w": ps_w}
+        if keep_vectors: d["V"] = V
+        return d
 NUM_OR_DATE = re.compile(r"\d|\b(?:two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozens?|hundreds?|yesterday|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", re.I)
 class Analyzer:
     def __init__(self, S, field_table, thr=700, sparse=None, **kw):
@@ -48,10 +60,11 @@ class Analyzer:
         return None
     def analyze(self, title, body, date=None):
         T = {}; t0 = time.perf_counter(); sr = self.sparse_read(title, body) if self.sparse else None
-        if sr is None: pt, ps, nw = self.reader.read(title, body); o2 = np.argsort(-pt)[:2]
+        wd = None
+        if sr is None: det = self.reader.read_detail(title, body); pt, ps, nw = det["pt"], det["ps"], det["nw"]; o2 = np.argsort(-pt)[:2]; wd = {"n": nw, "offsets": det["offsets_text"], "topic_top2": [[[int(k), round(float(r[k]), 6)] for k in np.argsort(-r)[:2]] for r in det["pt_w"]], "story_top2": [[[int(k), round(float(r[k]), 6)] for k in np.argsort(-r)[:2]] for r in det["ps_w"]]}
         T["reader_ms"] = (time.perf_counter() - t0) * 1000
-        t1 = time.perf_counter(); text = re.sub(r"\s+", " ", title + ". " + body)[:12000]; parsed = bool(NUM_OR_DATE.search(text)); facts = FL.facts_for(text, (date + "T00:00:00Z") if date else None)[0] if parsed else []
-        T["solver_ms"] = (time.perf_counter() - t1) * 1000; t1b = time.perf_counter(); sp_ = SR.spans(text, (date + "T00:00:00Z") if date else None); T["span_rules_ms"] = (time.perf_counter() - t1b) * 1000; am = [f for f in facts if f["kind"] == "amount" and f["status"] == "stated"]; dt = [f for f in facts if f["kind"] == "date" and f["status"] == "stated"]
+        t1 = time.perf_counter(); text = re.sub(r"\s+", " ", title + ". " + body)[:12000]; parsed = bool(NUM_OR_DATE.search(text)); facts = FL.facts_for(text, (date + "T00:00:00Z") if date else None)[0] if parsed else []; facts, held_f = FL.quarantine(facts, text)  # a fact whose span no longer holds its text is held back before any layer reads it (T150)
+        T["solver_ms"] = (time.perf_counter() - t1) * 1000; t1b = time.perf_counter(); sp_ = SR.spans(text, (date + "T00:00:00Z") if date else None); sp_, held_s = FL.quarantine(sp_, text); T["span_rules_ms"] = (time.perf_counter() - t1b) * 1000; am = [f for f in facts if f["kind"] == "amount" and f["status"] == "stated"]; dt = [f for f in facts if f["kind"] == "date" and f["status"] == "stated"]
         if sr is not None: nw = 0; st_ = Proposal(D.Source.TRAINED_HEAD, sr[1], True, str(sr[0]), "sparse head, encoder skipped"); tp_ = Proposal(D.Source.TRAINED_HEAD, sr[3], True, sr[2], "sparse head, encoder skipped")
         else: st_ = Proposal(D.Source.TRAINED_HEAD, float(ps.max()), True, self.S["story_cl"][int(ps.argmax())], f"reader, {nw} windows"); tp_ = Proposal(D.Source.TRAINED_HEAD, float(pt[o2].sum()), True, " / ".join(self.S["topic_cl"][k] for k in o2), f"reader, {nw} windows")
         P = {"story_type": st_,
@@ -64,4 +77,4 @@ class Analyzer:
             o = D.decide(self.FT[k]["marker"], p.source, p.validated, int(1000 * p.confidence), self.thr, True)
             res[k] = {"outcome": o.name, "answer": p.answer if o >= D.Outcome.ANSWER_PROVISIONAL else None, "proposed": p.answer, "confidence": p.confidence if p.source == D.Source.TRAINED_HEAD else None, "how": p.how}
         T["decider_ms"] = (time.perf_counter() - t2) * 1000; T["total_ms"] = sum(T.values())
-        return {"fields": res, "evidence": {"stated_amounts": [f["text"] for f in am[:8]], "stated_dates": [f["text"] for f in dt[:5]], "windows": nw, "encoder_skipped": sr is not None, "parse_ran": parsed, "span_rules": {"counts": dict(__import__("collections").Counter(x["kind"] for x in sp_)), "items": [[x["kind"], x["s"], x["e"], x["value"]] for x in sp_ if x["kind"] != "number_word" or x["value"] is not None][:60], "tool": "span-rules-v0"}}, "ms": {k: round(v, 3) for k, v in T.items()}}
+        return {"fields": res, "evidence": {"stated_amounts": [f["text"] for f in am[:8]], "stated_dates": [f["text"] for f in dt[:5]], "windows": nw, "windows_detail": wd if wd is not None else {"n": 0, "offsets": [], "sparse_path": True}, "quarantined": [{"kind": x.get("kind"), "s": (x["span"][0] if "span" in x else x.get("s")), "e": (x["span"][1] if "span" in x else x.get("e")), "why": x.get("why")} for x in held_f + held_s], "encoder_skipped": sr is not None, "parse_ran": parsed, "span_rules": {"counts": dict(__import__("collections").Counter(x["kind"] for x in sp_)), "items": [[x["kind"], x["s"], x["e"], x["value"]] for x in sp_ if x["kind"] != "number_word" or x["value"] is not None][:60], "tool": "span-rules-v0"}}, "ms": {k: round(v, 3) for k, v in T.items()}}

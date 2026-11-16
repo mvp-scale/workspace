@@ -29,10 +29,29 @@ def head_of(doc, s, e):
         t = t.head
     return sp, noun, verb
 def one_sentence(sp): return len({t.sent.start for t in sp}) == 1
+FACT_TOOL, FACT_VERSION = "fact-finder", "facts-v1"
+def _span(it): return (it["span"][0], it["span"][1]) if "span" in it else (it["s"], it["e"])
+def check_literal(items, text):
+    """Consumer-side literal check (P1, T150). Compares each item's STORED text with text[s:e] of the SOURCE text the caller holds; returns [{"i": index, "why": ...}] for each item that fails (empty list = all pass). Items may use s/e (fact extractors) or span=[s,e] (pool items).
+    Why it lives here and not in facts_for: the 'literal' key inside facts_for compares text[s:e] with text[s:e], because the item text is cut from the same slice, so it cannot fail there. It is kept as it was so no status changes. A real check needs the item AND a text the caller holds, so consumers (analyze2, pool_build) call this and hold back what it flags."""
+    bad = []
+    for i, it in enumerate(items):
+        try: s, e = _span(it)
+        except Exception: bad.append({"i": i, "why": "no span"}); continue
+        if not (isinstance(s, int) and isinstance(e, int) and 0 <= s < e <= len(text)): bad.append({"i": i, "why": "span out of range"})
+        elif it.get("text") != text[s:e]: bad.append({"i": i, "why": "stored text differs from slice"})
+    return bad
+def quarantine(items, text):
+    """Split items into (kept, held). Held items are copies with status 'quarantined' (status_was keeps the old one, why says the reason); 'quarantined' is a status value only, never a key inside 'checks', so all(checks.values()) is unchanged. A layer that calls this passes on only `kept`. An unflagged list comes back as an equal list (same item objects)."""
+    bad = {b["i"]: b["why"] for b in check_literal(items, text)}
+    if not bad: return list(items), []
+    kept = [it for i, it in enumerate(items) if i not in bad]; held = [{**items[i], "status": "quarantined", "status_was": items[i].get("status"), "why": w} for i, w in sorted(bad.items())]
+    return kept, held
 def facts_for(text, anchor):
     doc = nlp(text); spots, _ = G.scan(text, anchor or "2026-01-01T00:00:00Z"); out = []; used = []
     dspans = [(x[0], x[1]) for x in spots if x[2] == "date"]
     cspans = [m.span() for m in CLOCK.finditer(text)]
+    # NOTE: every 'literal': True / text[s:e] == text[s:e] below cannot fail (the item text is cut from the same slice); the real check is check_literal(items, text), called by consumers
     for m in NUMRX.finditer(text):
         s, e = m.span()
         if any(a_ < e and s < b_ for a_, b_ in dspans + cspans): continue
@@ -73,6 +92,7 @@ def facts_for(text, anchor):
         spans = [(x.left_edge.idx, x.idx + len(x.text)) for x in (subj, obj) if x is not None] + [(t.idx, t.idx + len(t.text))]; lo = min(a for a, b in spans); hi = max(b for a, b in spans); sent = t.sent
         out.append({"kind": "triple", "s": t.idx, "e": t.idx + len(t.text), "text": t.text, "value": [subj.text if subj else None, t.lemma_, obj.text if obj else None], "unit": "", "noun": None, "verb": t.lemma_, "checks": {"literal": True, "reads_back": True, "bound": bool(subj and obj), "one_sentence": lo >= sent.start_char and hi <= sent.end_char}})
     for f in out:
+        f["tool"], f["version"], f["span"], f["provenance"] = FACT_TOOL, FACT_VERSION, [f["s"], f["e"]], "Observed"  # add-only fields, never inside checks; provenance is the proposed default (Observed = cut from the document span), awaiting owner confirmation
         c = f["checks"]; f["status"] = "stated" if all(c.values()) else ("unbound" if (c["literal"] and c["reads_back"] and c["one_sentence"] and not c["bound"]) else "invalid")
     ind = {"amount_runs": [m.span() for m in IND_NUM.finditer(text) if not YEAR.match(m.group(0)) and not any(a_ < m.end() and m.start() < b_ for a_, b_ in [x.span() for x in IND_DATE.finditer(text)])], "date_runs": [m.span() for m in IND_DATE.finditer(text)], "name": 0}; ind["amount"] = len(ind["amount_runs"]); ind["date"] = len(ind["date_runs"])
     runs = []; cur = None
