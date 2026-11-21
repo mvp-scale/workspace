@@ -3,9 +3,9 @@
 Inputs: the window's trace folder (chain.jsonl; default = the newest runs-*/trace under demo/mockups/structure-live), the slow clock's slow.jsonl when it is there (<trace>/slow.jsonl; accepted, not required), and the G4 stores (default runs/g4/store.jsonl + archive, plus <trace>/g4/store.jsonl, <trace parent>/g4/store.jsonl and $LT_V4_G4_DIR/store.jsonl when they exist). Missing inputs are skipped and listed.
 Outputs (default folder <trace>/slow_consolidate/), each sealed with a sha256 of its body (no clock inside), manifest = slow_consolidate_run.json:
   consolidated.json   consolidate.py (merge_assertions, independent publishers, IsA) with the three layers of playbook 00 section 8 kept as three separate top-level keys:
-                      observations = immutable pointers (journal refs: item id, publisher, day, journal kind, story root, chain seq, slow stages present), no merging
+                      observations = immutable pointers (journal refs: item id, publisher, day, journal kind, story root, chain seq, slow stages present), no merging; plus per observation `decider_change` {proposed, outcome, provisional} resolved from the slow clock's change proposal (the chain line itself says "not run, pending slow clock" and stays as it is; decider.py is not touched; a proposal that is not validated gives outcome ABSTAIN with the proposal shown; null when the item has no slow record) and `capabilities` [ids] from the chain's capability_list stage
                       edges        = assertions (merged by G4 key, independent publishers `strength`, `fragments_n`, plus a `decay` field per edge: weight 0.5^(age_days / half-life), half-life one 7-day window, PROVISIONAL)
-                      concepts     = IPTC nodes the assertions sit on, WordNet known-term filter counts, ours: candidates (consolidate.py), the evolve.py RESIDUAL / PROVISIONAL nodes (summary; full file evolved.json)
+                      concepts     = IPTC nodes the assertions sit on (each assertion edge carries its `iptc` placement and its `capabilities` ids), the capability graph Domain > Area > Capability (concepts.capabilities, PROVISIONAL, nothing promoted), WordNet known-term filter counts, ours: candidates (consolidate.py), the evolve.py RESIDUAL / PROVISIONAL nodes (summary; full file evolved.json)
   evolved.json        evolve.py over the same inputs (residual clusters, gates, versioned labels); nothing above PROVISIONAL
   resource_state.json ledger_split.py ResourceState (V, dV, N, C, U per resource, country, day) from the chain, ticks in ticks.jsonl
   truth.json          resource_truth.py snapshot + event-peak and identity scores against saved public snapshots. Reported, never gating: nothing reads a pass or fail from it to stop or start another stage
@@ -27,14 +27,33 @@ def newest_trace():
     c = [p for p in glob.glob(LIVE + "/runs-*/trace/chain.jsonl") if os.path.getsize(p)]; return os.path.dirname(max(c, key=os.path.getmtime)) if c else None
 # ---------- inputs ----------
 def read_chain_meta(path):
-    """chain.jsonl -> {item id: {kind, of_seq, seq}} for the observation layer (journal.classify result the chain recorded)"""
-    m = {}
+    """chain.jsonl -> {item id: {kind, of_seq, seq, caps}} for the observation layer (journal.classify result the chain recorded, capability_list stage)"""
+    import consolidate as C; m = {}
     for ln in open(path, encoding="utf-8"):
         if not ln.strip(): continue
         o = json.loads(ln); l = json.loads(o["line"])
         if l.get("state") != "traced": continue
-        d = (l.get("journal") or {}).get("dup") or {}; m[l["id"]] = {"kind": d.get("kind"), "of_seq": d.get("of_seq"), "seq": l.get("seq")}
+        d = (l.get("journal") or {}).get("dup") or {}; m[l["id"]] = {"kind": d.get("kind"), "of_seq": d.get("of_seq"), "seq": l.get("seq"), "caps": C.chain_caps(l)}
     return m
+def read_slow_changes(path):
+    """slow.jsonl -> {item id: the slow clock's `change` record} (the last line of an id wins); {} when the file is missing"""
+    out = {}
+    if not path or not os.path.exists(path): return out
+    for ln in open(path, encoding="utf-8"):
+        if not ln.strip(): continue
+        try: o = json.loads(ln)
+        except ValueError: continue
+        if isinstance(o.get("line"), str):
+            try: o = json.loads(o["line"])
+            except ValueError: continue
+        if o.get("id") is not None and isinstance(o.get("change"), dict): out[o["id"]] = o["change"]
+    return out
+def decider_change(c):
+    """the slow clock's change record -> the consolidated record's field {proposed, outcome, provisional}. Only a validated proposal can answer (provisionally); otherwise ABSTAIN with the proposal still shown. None when there is no slow record."""
+    if not isinstance(c, dict): return None
+    p = c.get("proposed"); d = c.get("decider_outcome")   # copy the Lean-checked decider's own outcome; never decide here (Opus gate, wf_c8fee42c-e95)
+    o = d if d else ("ANSWER_PROVISIONAL" if (p and c.get("validated") is True) else "ABSTAIN")
+    return {"proposed": p, "outcome": o, "harvest": c.get("decider_harvest"), "provisional": True}
 def read_slow(path):
     """slow.jsonl (one JSON object per line, optionally wrapped like chain.jsonl as {"line": "<json>"}) -> ({id: sorted stage names with a non-null output}, {stage: count}, lines)"""
     per = collections.defaultdict(set); n = 0
@@ -79,23 +98,23 @@ def decay(e, as_of):
     if e["days"] and as_of: age = (datetime.date.fromisoformat(as_of) - datetime.date.fromisoformat(e["days"][-1][:10])).days; d["age_days"] = age; d["weight"] = round(0.5 ** (age / HALF_LIFE_DAYS), 4)
     else: d["age_days"] = None; d["weight"] = None
     return d
-def observations(items, meta, ST, slow):
-    """immutable pointers, one per traced item of the window: nothing merged, nothing scored"""
+def observations(items, meta, ST, slow, changes=None):
+    """immutable pointers, one per traced item of the window: nothing merged, nothing scored (decider_change and capabilities are the slow clock's and the chain's own records, copied)"""
     out = []
     for it in sorted({i["id"]: i for i in items}.values(), key=lambda i: (i.get("day") or "", i["id"])):
         m = meta.get(it["id"]) or {}
-        out.append({"id": it["id"], "publisher": it["source"], "day": it["day"], "journal": {"kind": m.get("kind"), "of_seq": m.get("of_seq")}, "story": ST.root.get(it["id"], it["id"]), "ref": {"file": os.path.basename(it["file"]), "seq": it.get("seq")}, "slow": slow.get(it["id"], []), "status": STATUS})
+        out.append({"id": it["id"], "publisher": it["source"], "day": it["day"], "journal": {"kind": m.get("kind"), "of_seq": m.get("of_seq")}, "story": ST.root.get(it["id"], it["id"]), "ref": {"file": os.path.basename(it["file"]), "seq": it.get("seq")}, "slow": slow.get(it["id"], []), "decider_change": decider_change((changes or {}).get(it["id"])), "capabilities": [c["id"] for c in m.get("caps") or []], "status": STATUS})
     return out
-def build_layers(items, meta, stores, ticks, slow, iptc, evo):
+def build_layers(items, meta, stores, ticks, slow, iptc, evo, changes=None):
     import consolidate as C
     body = C.consolidate(items, stores, ticks, iptc); ST = C.Stories(list(items), stores)
     days = sorted({d for e in body["edges"] for d in e["days"]} | {i["day"] for i in items if i.get("day")}); as_of = days[-1] if days else None
     for e in body["edges"]: e["decay"] = decay(e, as_of); e["status"] = STATUS
-    obs = observations(items, meta, ST, slow); nodes = collections.Counter(n for e in body["edges"] if e["kind"] == "assertion" for n in [iptc_node(e.get("iptc"))] if n)
+    obs = observations(items, meta, ST, slow, changes); nodes = collections.Counter(n for e in body["edges"] if e["kind"] == "assertion" for n in [iptc_node(e.get("iptc"))] if n)
     for c in body["candidates"]: c.setdefault("status", STATUS)
     body["observations"] = obs
     body["concepts"] = {"status": STATUS, "iptc": {"edges_per_node": dict(sorted(nodes.items())), "nodes_used": len(nodes), "pack": "iptc/medtop.json (read-only)"}, "wordnet": {"known_terms_filtered": body["candidate_counts"].get("known (IPTC or WordNet)", 0), "pack": "wordnet index.noun (read-only)"},
-                        "ours": body["candidates"], "evolve": {"file": "evolved.json", "sha256": evo["sha256"], "counts": evo["counts"], "nodes": [{k: n[k] for k in ("id", "label", "stage", "status", "gates_failed", "is_a")} for n in evo["nodes"]]}}
+                        "capabilities": body.pop("capabilities"), "ours": body["candidates"], "evolve": {"file": "evolved.json", "sha256": evo["sha256"], "counts": evo["counts"], "nodes": [{k: n[k] for k in ("id", "label", "stage", "status", "gates_failed", "is_a")} for n in evo["nodes"]]}}
     body["layers"] = {"model": "playbook 00 section 8", "observations": {"key": "observations", "n": len(obs), "role": "immutable pointers (journal refs), not merged"}, "assertions": {"key": "edges", "n": len(body["edges"]), "role": "merged by key, independent-publisher count, decay field"},
                       "concepts": {"key": "concepts", "role": "IPTC / WordNet nodes + residual and PROVISIONAL candidates (evolve.py)"}}
     body["decay_rule"] = {"half_life_days": HALF_LIFE_DAYS, "as_of": as_of, "formula": "weight = 0.5 ** (age_days / half_life_days)", "status": STATUS + " (the half-life is a guess; nothing is dropped or ranked by it here)"}
@@ -106,12 +125,12 @@ def educate_index(cons, state_path, seed=None):
     state = json.load(open(state_path)) if state_path and os.path.exists(state_path) else {}; IX = E.Index(cons, state, E.load_seed(seed or E.SEED))
     rc = collections.Counter(e["subj"][9:] for e in cons["edges"] if e["kind"] == "resource"); cc = collections.Counter(e["obj"][8:] for e in cons["edges"] if e["kind"] == "resource")
     ec = collections.Counter(); [ec.update([x]) for e in cons["edges"] if e["kind"] == "assertion" for x in (e["subj"], e["obj"]) if x in IX.labels]
-    qs = [r for r, _ in sorted(rc.items(), key=lambda kv: (-kv[1], kv[0]))[:3]] + [c for c, _ in sorted(cc.items(), key=lambda kv: (-kv[1], kv[0]))[:3] if len(c) == 2] + [IX.labels[k] for k, _ in sorted(ec.items(), key=lambda kv: (-kv[1], kv[0]))[:3]] + ["no such thing in the stores"]
+    qs = [r for r, _ in sorted(rc.items(), key=lambda kv: (-kv[1], kv[0]))[:3]] + [c for c, _ in sorted(cc.items(), key=lambda kv: (-kv[1], kv[0]))[:3] if len(c) == 2] + [IX.labels[k] for k, _ in sorted(ec.items(), key=lambda kv: (-kv[1], kv[0]))[:3]] + [n["label"] for n in sorted((cons["concepts"].get("capabilities") or {}).get("nodes", []), key=lambda n: (-n["articles"], n["id"]))[:2]] + ["no such thing in the stores"]
     samples = []
     for q in qs:
         a = E.answer(IX, q); samples.append({"question": q, "resolved": a.get("resolved"), "statements": a["statements"], "abstain": a.get("abstain"), "text": E.as_text(a)[:1500], "refs": sum(len(s["refs"]) for sec in a["sections"].values() for s in sec)})
     return {"version": E.VERSION + "-index", "status": STATUS, "weights": E.WEIGHTS, "consolidated_sha256": cons["sha256"], "state_sha256": state.get("sha256"),
-            "resolves": {"resources": IX.res, "countries": IX.countries, "entities_n": len(IX.labels), "entities_top": [IX.labels[k] for k, _ in sorted(ec.items(), key=lambda kv: (-kv[1], kv[0]))[:200]]},
+            "resolves": {"resources": IX.res, "countries": IX.countries, "capabilities": sorted(n["label"] for n in IX.caps.values()), "entities_n": len(IX.labels), "entities_top": [IX.labels[k] for k, _ in sorted(ec.items(), key=lambda kv: (-kv[1], kv[0]))[:200]]},
             "edges": {"assertion": sum(e["kind"] == "assertion" for e in cons["edges"]), "resource": sum(e["kind"] == "resource" for e in cons["edges"])}, "samples": samples, "answers_with_statements": sum(1 for s in samples if s["statements"])}
 def truth(trace, out_snap):
     """resource_truth snapshot + the two scores. Reported, never gating. Any failure is recorded as unmeasured, not raised."""
@@ -135,7 +154,7 @@ def main(a):
     import consolidate as C, evolve as EV
     chain = os.path.join(trace, "chain.jsonl"); items = C.load_trace(chain); meta = read_chain_meta(chain)
     jr = os.path.join(ROOT, "runs", "journal", "journal.jsonl"); jitems = C.load_journal(jr); items_all = items + jitems
-    slow_path = opt("--slow") or os.path.join(trace, "slow.jsonl"); slow, scount, slines = read_slow(slow_path)
+    slow_path = opt("--slow") or os.path.join(trace, "slow.jsonl"); slow, scount, slines = read_slow(slow_path); changes = read_slow_changes(slow_path)
     g4p, g4missing = find_g4(a, trace); stores = [C.load_g4(p) for p in g4p]
     with tempfile.TemporaryDirectory(prefix="slow-consolidate-") as work:
         st, tk, stline = tick_state(trace, work); outs = {}; shutil.copyfile(tk, os.path.join(out, "ticks.jsonl"))
@@ -145,7 +164,7 @@ def main(a):
         iptc = C.load_iptc()
         prev = json.load(open(opt("--prev"))) if opt("--prev") else None
         evo = EV.seal(EV.evolve(items_all, stores, ticks, iptc, prev)); evo["status"] = STATUS; evo = EV.seal(evo); outs["evolved"] = write(os.path.join(out, "evolved.json"), evo); outs["evolved"]["counts"] = evo["counts"]
-        cons = seal(build_layers(items_all, meta, stores, ticks, {**slow}, iptc, evo)); outs["consolidated"] = write(os.path.join(out, "consolidated.json"), cons)
+        cons = seal(build_layers(items_all, meta, stores, ticks, {**slow}, iptc, evo, changes)); outs["consolidated"] = write(os.path.join(out, "consolidated.json"), cons)
         outs["consolidated"]["counts"] = cons["counts"]; outs["consolidated"]["layers"] = {"observations": len(cons["observations"]), "assertions": len(cons["edges"]), "concepts_ours": len(cons["concepts"]["ours"]), "concepts_evolve_nodes": len(cons["concepts"]["evolve"]["nodes"])}
         # truth: snapshot into the output folder (not the shared /workspace/data/anchors/truth file); scores reported only
         tr = seal(truth(trace, os.path.join(out, "resource_snapshot.json"))); outs["truth"] = write(os.path.join(out, "truth.json"), tr)

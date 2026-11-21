@@ -6,12 +6,13 @@ For each pipeline component it records three ticks, a runs_in value and a qualit
   quality     : {score, bar, src (ledger ids), state}: the score and the bar are read from the ledger line by regex (a line that does not match is not claimed, state unmeasured). state = met (a bar is recorded and met) | PROVISIONAL (below the bar, no bar, or the output is marked PROVISIONAL; never a blocker, owner directive L2901) | unmeasured.
 Also: the 12-step plan from ledger L2802 with state and done-check, the NEEDS YOU lines from session_start.py with the plan steps they unlock, and any card in kit/live/round_cards/started/.
 Completeness: every gate row of playbook section 2 (G0, G1, G2, G3a, G3b, G4, G5, G6) must be covered by a checklist row; the script exits 1 if one is not.
-    /workspace/models/embed-zs/.venv/bin/python simulation/check-alignment.py [--no-durable] [--watch SECONDS] [--out path]
+    /workspace/models/embed-zs/.venv/bin/python simulation/check-alignment.py [--no-durable] [--watch SECONDS] [--out path] [--window <window or trace dir>]
+--window reads that one window instead of the newest (used by check-flow.py on a scratch copy of the fixtures). An empty window (no traced line) is never read as a run: the newest window by modification time being empty is flagged (window.newest_empty) and the script exits 1; the evidence is then read from the newest window that has traced lines. A chain stage counts as run only when it has state 'ran' on at least one traced line ('empty' is not ran).
 CPU only, no hosted calls, touches no service."""
 import sys, os, re, ast, json, glob, time, subprocess, datetime, argparse, pathlib, tempfile
 HERE = pathlib.Path(__file__).resolve().parent; KP = HERE.parent; WS = KP / "projects" / "world-state"; PB = KP / "playbook" / "00-knowledge-pipeline-v1.md"
 LT = WS / "live_trace.py"; LT4 = WS / "live_trace_v4.py"; SC = WS / "slow_clock.py"; SCON = WS / "slow_consolidate.py"; CODE = [LT, LT4, SC, SCON]; SL = KP.parent / "demo" / "mockups" / "structure-live"; RU = HERE / "raw-units.py"; G4 = HERE / "g4-align.py"; LEDGER = KP / ".ledger" / "ledger.jsonl"; DEMO = KP.parent / "demo"
-ap = argparse.ArgumentParser(); ap.add_argument("--out", default=str(DEMO / "mockups" / "knowledge-raw" / "status.json")); ap.add_argument("--no-durable", action="store_true"); ap.add_argument("--watch", type=int, default=0); a = ap.parse_args()
+ap = argparse.ArgumentParser(); ap.add_argument("--out", default=str(DEMO / "mockups" / "knowledge-raw" / "status.json")); ap.add_argument("--no-durable", action="store_true"); ap.add_argument("--watch", type=int, default=0); ap.add_argument("--window", default=None); a = ap.parse_args()
 def rel(p): p = pathlib.Path(p).resolve(); return str(p.relative_to(KP.parent)) if KP.parent in p.parents else str(p)
 def grep(path, pat, flags=re.I):
     try: return [(i + 1, l) for i, l in enumerate(open(path, errors="replace")) if re.search(pat, l, flags)]
@@ -32,13 +33,40 @@ SLOWK = ("claims", "direction", "change", "function_p", "factuality_p", "identit
 def jload(p):
     try: return json.load(open(p, encoding="utf-8"))
     except Exception: return None
+def traced_count(cf):
+    """number of traced lines in one chain.jsonl (0 for an empty or unreadable file)"""
+    n = 0
+    try:
+        for ln in open(cf, encoding="utf-8"):
+            if not ln.strip(): continue
+            try: n += json.loads(json.loads(ln)["line"]).get("state") == "traced"
+            except Exception: continue
+    except OSError: return 0
+    return n
 def window():
-    """evidence from the newest end-to-end run: the newest runs-*/trace/chain.jsonl that has lines.
+    """evidence from one end-to-end run. Default: the newest runs-*/trace/chain.jsonl (by mtime) that has traced lines; an empty newer window is not hidden: it is named in w['newest_empty'] and the script exits 1.
+    --window <dir>: exactly that window (the folder holding trace/, or the trace folder); no traced line = w['newest_empty'] set to it.
     chain: {stage: {state: n}} over traced lines, plus virtual @journal_kind / @rerank; slow: {key: {state: n}} from trace/slow.jsonl; files: trace/slow_consolidate/*.json (sha256, status); run: run.json"""
-    cands = [p for p in glob.glob(str(SL / "runs-*" / "trace" / "chain.jsonl")) if os.path.getsize(p)]
-    w = {"dir": None, "trace": None, "traced": 0, "chain": {}, "dates": None, "change_not_run": None, "slow_lines": 0, "slow": {}, "files": {}, "run": {}, "mtime": None}
-    if not cands: return w
-    cf = max(cands, key=os.path.getmtime); tr = os.path.dirname(cf); w.update(dir=os.path.basename(os.path.dirname(tr)), trace=tr, mtime=datetime.datetime.fromtimestamp(os.path.getmtime(cf)).isoformat(timespec="seconds"))
+    w = {"dir": None, "trace": None, "traced": 0, "chain": {}, "dates": None, "change_not_run": None, "slow_lines": 0, "slow": {}, "files": {}, "run": {}, "mtime": None, "newest_empty": None}
+    nm = lambda cf: os.path.basename(os.path.dirname(os.path.dirname(cf)))
+    if a.window:
+        wd = os.path.abspath(a.window); cf = os.path.join(wd, "chain.jsonl") if os.path.exists(os.path.join(wd, "chain.jsonl")) else os.path.join(wd, "trace", "chain.jsonl")
+        if not os.path.exists(cf): w["newest_empty"] = {"dir": os.path.basename(wd.rstrip("/")), "why": "no chain.jsonl in the window folder"}; return w
+        if not traced_count(cf): w["newest_empty"] = {"dir": nm(cf), "why": "chain.jsonl has no traced line (%d bytes)" % os.path.getsize(cf)}
+    else:
+        allc = sorted(glob.glob(str(SL / "runs-*" / "trace" / "chain.jsonl")), key=os.path.getmtime, reverse=True)
+        if not allc: return w
+        cf = None
+        def wstate(p):   # runner's window.json state; only a completed window ('done', or a legacy window without window.json) is evidence; stopped/refused/partial are listed in w['skipped']
+            try: return json.load(open(os.path.join(os.path.dirname(os.path.dirname(p)), "window.json"))).get("state")
+            except Exception: return None
+        w["skipped"] = []
+        for p in allc:
+            if wstate(p) not in (None, "done"): w["skipped"].append({"dir": nm(p), "state": wstate(p)}); continue
+            if traced_count(p): cf = p; break
+        if allc and (cf is None or cf != allc[0]) and not any(k["dir"] == nm(allc[0]) for k in w["skipped"]): w["newest_empty"] = {"dir": nm(allc[0]), "why": "newest window has no traced line (%d bytes); evidence read from %s" % (os.path.getsize(allc[0]), nm(cf) if cf else "no window with traced lines")}
+        if cf is None: return w
+    tr = os.path.dirname(cf); w.update(dir=nm(cf), trace=tr, mtime=datetime.datetime.fromtimestamp(os.path.getmtime(cf)).isoformat(timespec="seconds"))
     run = jload(os.path.join(tr, "run.json")) or {}; w["run"] = run
     chain = {}; jk = 0; d = [0, 0]; cnr = 0; n = 0
     for ln in open(cf, encoding="utf-8"):
@@ -78,7 +106,8 @@ def place(win, comp):
     """(places, evidence) for one component (label, chain stage, slow key, slow file): where its output is present in the newest run"""
     label, stage, sk, sf = comp; pl = []; ev = []
     if stage:
-        c = win["chain"].get(stage, {}); k = c.get("ran", 0) + c.get("empty", 0)
+        c = win["chain"].get(stage, {}); k = c.get("ran", 0)   # empty is not ran
+        if c and not k: ev.append("%s: chain stage never ran on %d traced lines (%s)" % (label, win["traced"], ", ".join("%s %d" % (x, y) for x, y in sorted(c.items()))))
         if k: pl.append("chain"); ev.append("%s: chain %d of %d traced lines (%s)" % (label, k, win["traced"], ", ".join("%s %d" % (a, b) for a, b in sorted(c.items()))))
     if sk:
         c = win["slow"].get(sk, {}); k = sum(c.values())
@@ -133,7 +162,7 @@ def build():
         fl = r.get("flag")
         if fl and fl in DON:
             ev.append("flag LT_V4_%s default %s (live_trace_v4.py:%s)" % (fl.upper(), "on" if DON[fl] else "off", DON_LN) + ("" if "chain" in places else ("; the newest run (%s) was traced %s" % (win["dir"], "with this flag on" if (v4.get("flags") or {}).get(fl) else "before the flag was on" if not v4 else "with this flag off"))))
-        if not win["dir"]: ev.append("no run folder with a chain.jsonl found")
+        if not win["dir"]: ev.append("no run folder with a chain.jsonl found" if not win["newest_empty"] else "window empty: " + win["newest_empty"]["why"])
         s_ = "yes" if len(got) == len(res) else ("part" if got else "no")
         if s_ == "no" and r.get("page"):
             pg = [(f, grep(f, p)) for f, p in r["page"]]; pg = [(f, h) for f, h in pg if h]
@@ -329,15 +358,15 @@ def build():
     qb_ = lambda rs: {k: sum(r["quality"]["state"] == k for r in rs) for k in ("met", "PROVISIONAL", "unmeasured")}
     counts = {"core": {"n": len(core), "aligned": sum(r["aligned"]["s"] == "yes" for r in core), "implemented": sum(r["implemented"]["s"] == "yes" for r in core), "live": sum(r["used"]["s"] == "yes" for r in core), "runs": rb_(core), "quality": qb_(core)},
               "all": {"n": len(out), "aligned": sum(r["aligned"]["s"] == "yes" for r in out), "implemented": sum(r["implemented"]["s"] == "yes" for r in out), "live": sum(r["used"]["s"] == "yes" for r in out), "runs": rb_(out), "quality": qb_(out)}}
-    wsum = {"dir": win["dir"], "trace": rel(win["trace"]) if win["trace"] else None, "chain_mtime": win["mtime"], "traced": win["traced"], "stages_in_chain": {k: dict(v) for k, v in sorted(win["chain"].items())}, "slow_jsonl_lines": win["slow_lines"], "slow_keys": {k: dict(v) for k, v in sorted(win["slow"].items())}, "slow_consolidate_files": {k: {"sha256_12": v["sha"], "status": v["status"]} for k, v in sorted(win["files"].items())}, "run_state": win["run"].get("state"), "v4_flags_used": (win["run"].get("v4") or {}).get("flags"), "default_on": DON, "code_files": [rel(f) for f in CODE if f.exists()]}
+    wsum = {"dir": win["dir"], "newest_empty": win["newest_empty"], "window_arg": a.window, "trace": rel(win["trace"]) if win["trace"] else None, "chain_mtime": win["mtime"], "traced": win["traced"], "stages_in_chain": {k: dict(v) for k, v in sorted(win["chain"].items())}, "slow_jsonl_lines": win["slow_lines"], "slow_keys": {k: dict(v) for k, v in sorted(win["slow"].items())}, "slow_consolidate_files": {k: {"sha256_12": v["sha"], "status": v["status"]} for k, v in sorted(win["files"].items())}, "run_state": win["run"].get("state"), "v4_flags_used": (win["run"].get("v4") or {}).get("flags"), "default_on": DON, "code_files": [rel(f) for f in CODE if f.exists()]}
     return {"generated_at": datetime.datetime.now().isoformat(timespec="seconds"), "ledger_last": max(ledger, key=lambda i: int(i[1:])), "playbook": rel(PB), "live_trace": rel(LT), "window": wsum, "rows": out, "counts": counts, "gate_coverage": cov, "durable_check": dur,
             "plan": {"source": "ledger L2802", "steps": steps, "running": running, "last_card": last_card}, "needs_you": needs, "story": story}
 def run():
     d = build(); tmp = a.out + ".tmp"; open(tmp, "w").write(json.dumps(d, indent=1, ensure_ascii=False)); os.replace(tmp, a.out)
-    c = d["counts"]; print("wrote %s | newest run %s | core: %d of %d run, %d implemented, %d aligned | runs_in %s | quality %s | all: %d of %d run | gates missing: %s" % (a.out, d["window"]["dir"], c["core"]["live"], c["core"]["n"], c["core"]["implemented"], c["core"]["aligned"], c["core"]["runs"], c["core"]["quality"], c["all"]["live"], c["all"]["n"], d["gate_coverage"]["missing"] or "none"))
+    c = d["counts"]; print("wrote %s | newest run %s%s | core: %d of %d run, %d implemented, %d aligned | runs_in %s | quality %s | all: %d of %d run | gates missing: %s" % (a.out, d["window"]["dir"], (" (traced %d)" % d["window"]["traced"]) + ((" | WINDOW EMPTY: " + d["window"]["newest_empty"]["why"]) if d["window"]["newest_empty"] else ""), c["core"]["live"], c["core"]["n"], c["core"]["implemented"], c["core"]["aligned"], c["core"]["runs"], c["core"]["quality"], c["all"]["live"], c["all"]["n"], d["gate_coverage"]["missing"] or "none"))
     return d
 if __name__ == "__main__":
     while True:
         d = run()
-        if not a.watch: sys.exit(1 if d["gate_coverage"]["missing"] else 0)
+        if not a.watch: sys.exit(1 if d["gate_coverage"]["missing"] or d["window"]["newest_empty"] else 0)
         time.sleep(a.watch)

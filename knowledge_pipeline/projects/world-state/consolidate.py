@@ -27,15 +27,32 @@ def window(day):
     try: return datetime.date.fromisoformat(day[:10]).toordinal() // WINDOW_DAYS
     except (TypeError, ValueError): return None
 # ---------- loaders: each gives plain dicts, nothing is written ----------
+def cap_id(label): return "cap:" + re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
+def chain_stage(l, name):
+    for s in l.get("stages") or []:
+        if s.get("name") == name: return s
+    return {}
+def chain_caps(l):
+    """one chain line -> its capability_list stage as [{id, label, kind}] (recurring first); [] when the stage found none. Ids are slugs of the verb-object label: an id, not a promotion."""
+    o = chain_stage(l, "capability_list").get("out") or {}; out = []; seen = set()
+    for kind in ("recurring", "candidate"):
+        for lab in o.get(kind) or []:
+            if cap_id(lab) not in seen: seen.add(cap_id(lab)); out.append({"id": cap_id(lab), "label": lab, "kind": kind})
+    return out
+def chain_place(l):
+    """one chain line -> (domain, area) as the chain's own roll-up and area head named them (top answer, only when the stage ran), else None"""
+    d = chain_stage(l, "domain_rollup"); a = chain_stage(l, "area_function"); t = ((d.get("out") or {}).get("top") or [[None]])[0][0] if d.get("state") == "ran" else None
+    u = (((a.get("out") or {}).get("topic") or [[None]])[0][0]) if a.get("state") == "ran" else None
+    return t, u
 def load_trace(path):
-    """live-trace chain.jsonl (or its folder) -> items [{id, source, day, keys, seq, file}]"""
+    """live-trace chain.jsonl (or its folder) -> items [{id, source, day, keys, seq, file, caps, domain, area}]"""
     p = os.path.join(path, "chain.jsonl") if os.path.isdir(path) else path; out = []
     if not os.path.exists(p): return out
     for ln in open(p, encoding="utf-8"):
         if not ln.strip(): continue
         l = json.loads(json.loads(ln)["line"])
         if l.get("state") != "traced": continue
-        jr = l.get("journal") or {}; out.append({"id": l["id"], "source": l.get("source") or "", "day": (l.get("published") or "")[:10] or None, "keys": jr.get("story_key") or {}, "seq": l.get("seq"), "file": p})
+        jr = l.get("journal") or {}; dom, area = chain_place(l); out.append({"id": l["id"], "source": l.get("source") or "", "day": (l.get("published") or "")[:10] or None, "keys": jr.get("story_key") or {}, "seq": l.get("seq"), "file": p, "caps": chain_caps(l), "domain": dom, "area": area})
     return out
 def load_journal(path):
     out = []
@@ -133,7 +150,8 @@ def merge_assertions(stores, ST):
     for S in stores:
         for aid, r in S["asr"].items():
             if r.get("kind") != "claim": continue
-            e = E.setdefault(h(r["key"]), {"id": h(r["key"]), "kind": "assertion", "key": r["key"], "subj": r["subj"], "pred": r["pred"], "obj": r["obj"], "obj_text": r.get("obj_text"), "iptc": r.get("iptc"), "frag": {}, "lineage": set()})
+            e = E.setdefault(h(r["key"]), {"id": h(r["key"]), "kind": "assertion", "key": r["key"], "subj": r["subj"], "pred": r["pred"], "obj": r["obj"], "obj_text": r.get("obj_text"), "iptc": None, "frag": {}, "lineage": set()})
+            if r.get("iptc") and (e["iptc"] is None or canon(r["iptc"]) < canon(e["iptc"])): e["iptc"] = r["iptc"]   # the same key in several stores: the smallest canonical form wins, so store order changes nothing
             e["lineage"].add((S["file"], "g4-store", aid))
             for ev in r["evid"]:
                 k = (ev["art"], ev.get("sent") or ""); e["frag"].setdefault(k, {"art": ev["art"], "pub": ev["pub"], "day": ST.day(ev["art"]), "sent": ev.get("sent"), "spans": ev.get("spans"), "polarity": (ev.get("attrs") or {}).get("polarity"), "direction": (ev.get("attrs") or {}).get("direction"), "source": S["file"]})
@@ -152,9 +170,26 @@ def finish(E, ST):
     for k in sorted(E):
         e = E[k]; fr = sorted(e["frag"].values(), key=lambda f: (f["day"] or "", f["art"], f["sent"] or "")); n, st, pubs = ST.strength([(f["art"], f["pub"]) for f in fr])
         days = sorted({f["day"] for f in fr if f["day"]}); wins = sorted({window(d) for d in days} - {None})
-        out.append({"id": e["id"], "kind": e["kind"], "key": e["key"], "subj": e["subj"], "pred": e["pred"], "obj": e["obj"], "strength": n, "stories": st, "fragments_n": len(fr), "publishers": pubs, "days": days, "windows": len(wins),
+        out.append({"id": e["id"], "kind": e["kind"], "key": e["key"], "subj": e["subj"], "pred": e["pred"], "obj": e["obj"], "iptc": e.get("iptc"), "strength": n, "stories": st, "fragments_n": len(fr), "publishers": pubs, "days": days, "windows": len(wins),
                     "fragments": fr, "lineage": [{"file": f, "kind": kd, "ref": r} for f, kd, r in sorted(e["lineage"])]})
+        if e["kind"] == "assertion": out[-1]["capabilities"] = sorted({c["id"] for f in fr for c in (getattr(ST, "by", {}).get(f["art"]) or {}).get("caps") or []})   # defect 6: capability ids of the articles that support the edge (association, nothing promoted)
     return out
+def capability_layer(ST, edges=()):
+    """playbook 00 sections 8 and 9: Domain > Area > Capability as a typed graph, not a tree (a capability sits under every area its articles had). Built from the chain's capability_list (t230 / t222 verb-object lists), so every node is PROVISIONAL; nothing here promotes one."""
+    N = {}
+    for a, it in sorted(ST.by.items()):
+        for c in it.get("caps") or []:
+            n = N.setdefault(c["id"], {"label": c["label"], "kinds": set(), "arts": {}, "dom": collections.Counter(), "area": collections.Counter(), "pl": collections.Counter()})
+            n["kinds"].add(c["kind"]); n["arts"][a] = it["source"]; n["pl"][(it.get("domain"), it.get("area"))] += 1
+            if it.get("domain"): n["dom"][it["domain"]] += 1
+            if it.get("area"): n["area"][it["area"]] += 1
+    ec = collections.Counter(i for e in edges for i in (e.get("capabilities") or [])); nodes = []; pl = []
+    for i in sorted(N):
+        n = N[i]; st, stories, pubs = ST.strength(sorted(n["arts"].items()))
+        nodes.append({"id": i, "label": n["label"], "kind": "recurring" if "recurring" in n["kinds"] else "candidate", "status": "PROVISIONAL", "articles": len(n["arts"]), "strength": st, "stories": stories, "publishers": pubs, "edges": ec[i], "domains": dict(sorted(n["dom"].items())), "areas": dict(sorted(n["area"].items())), "items": [[a, p, getattr(ST, "by", {}).get(a, {}).get("day")] for a, p in sorted(n["arts"].items())]})
+        pl += [{"domain": d, "area": ar, "capability": i, "articles": k} for (d, ar), k in sorted(n["pl"].items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1])))]
+    return {"status": "PROVISIONAL", "model": "Domain > Area > Capability (playbook 00 sections 8-9); placements are co-occurrence in an article, a typed graph, not an is_a tree", "promotion": "none (no promote step, no human review; ids come from the verb-object lists, not from learning)",
+            "counts": {"capabilities": len(nodes), "recurring": sum(n["kind"] == "recurring" for n in nodes), "candidate": sum(n["kind"] == "candidate" for n in nodes), "articles_with_capability": len({a for n in N.values() for a in n["arts"]}), "placements": len(pl)}, "nodes": nodes, "placements": pl}
 def candidates(stores, ST, iptc_labels, wn, iptc_par):
     """concept entities from every G4 store, merged by (type, canonical name): recurrence by windows and independent publishers, then the distinctness check. Returns (candidate list, counts, the is_a graph)."""
     C = {}
@@ -181,7 +216,7 @@ def consolidate(items=(), stores=(), ticks=(), iptc=None):
     body = {"version": VERSION, "rule": {"window_days": WINDOW_DAYS, "min_windows": MIN_WINDOWS, "min_publishers": MIN_PUBLISHERS, "promotion": "none (candidates stay PROVISIONAL; no promote step, no human review)"},
             "inputs": {"items": len(ST.by), "stores": sorted({S["file"] for S in stores}), "tick_rows": len({(t["file"], t["id"]) for t in ticks})},
             "stories": {"items": len(ST.root), "stories": len(stories), "copies": len(ST.root) - len(stories)},
-            "edges": edges, "candidates": cands, "candidate_counts": cc, "is_a": {"nodes": len(g.par), "ours": sum(1 for n in g.par if n.startswith("ours:")), "acyclic": g.acyclic(), "refused": len(g.refused)},
+            "edges": edges, "capabilities": capability_layer(ST, edges), "candidates": cands, "candidate_counts": cc, "is_a": {"nodes": len(g.par), "ours": sum(1 for n in g.par if n.startswith("ours:")), "acyclic": g.acyclic(), "refused": len(g.refused)},
             "counts": {"edges": len(edges), "assertion_edges": sum(e["kind"] == "assertion" for e in edges), "resource_edges": sum(e["kind"] == "resource" for e in edges), "multi_publisher_edges": sum(e["strength"] >= 2 for e in edges), "fragments": sum(e["fragments_n"] for e in edges), "candidates": len(cands)}}
     return body
 def seal(body):

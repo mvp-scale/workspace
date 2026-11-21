@@ -3,6 +3,7 @@ Steps, in order, each in its own process, each logged to <window>/logs/<step>.lo
   1 live     live_trace.py  START/DURATION/POLL/PAGE_DIR=<window>        -> <window>/trace/chain.jsonl (+ a/, run.json)
   2 slow     slow_clock.py <window>                                      -> <window>/trace/slow.jsonl, slow_run.json, g4/
   3 consol   slow_consolidate.py --trace <window>/trace                  -> <window>/trace/slow_consolidate/{consolidated,evolved,resource_state,truth,educate_index}.json
+  0 gate     simulation/check-flow.py (fixture proof of the chained flow, ~2 min): exit non-zero = no window starts, window.json state "refused" with the failing lines
   4 align    simulation/check-alignment.py                               -> demo/mockups/knowledge-raw/status.json (or --status-out)
 Window = demo/mockups/structure-live/runs-e2e-<n> (new each run; live_trace refuses a folder that already holds a chain). Manifest <window>/window.json (steps, pids, state), heartbeat runs-live/chain-window-<n>.json (job shows on the ledger viewer Live tab), ONE ledger note on T158 at the end.
 Hard cap 60 minutes for the whole run (--duration-min default 40, at most 50): a deadline is fixed at launch; slow gets what is left minus 8 minutes for consol and align. A step past its limit, or the runner past the deadline, is stopped by VERIFIED PID: /proc/<pid>/cmdline must name the step's script (and the window, when /proc/<pid>/environ or the cmdline holds it), then SIGTERM, 120 s grace, then SIGKILL. SIGTERM/SIGINT on the runner stops the current step the same way and still writes the manifest, the heartbeat end and the ledger note.
@@ -75,6 +76,15 @@ def stop_window(w):
     if not pid or not verified(pid, "chain_windows.py") or lock_holder() != pid: print("runner pid %s is not this window's chain_windows.py (state %s): nothing to stop" % (pid, m.get("state"))); return 0 if m.get("state") not in ("running",) else 1
     os.kill(pid, signal.SIGTERM); print("SIGTERM sent to verified runner pid %d; it stops its current step by verified pid and writes the manifest" % pid); return 0
 
+def run_gate(win):
+    """run simulation/check-flow.py before anything else; returns rc, seconds, the failing lines and the output tail (never raises)"""
+    t0 = time.time()
+    try:
+        r = subprocess.run([PY, str(SIM / "check-flow.py")], cwd=str(KP), capture_output=True, text=True, timeout=600, env=dict(os.environ, PYTHONHASHSEED="0")); rc = r.returncode; out = (r.stdout + r.stderr)
+    except Exception as e: rc = 99; out = "gate did not run: %s: %s" % (type(e).__name__, e)
+    lines = [l.rstrip() for l in out.splitlines() if l.strip()]
+    os.makedirs(win / "logs", exist_ok=True); open(win / "logs" / "gate.log", "w").write(out)
+    return {"cmd": "simulation/check-flow.py", "rc": rc, "seconds": round(time.time() - t0, 1), "failing": [l[:200] for l in lines if "FAIL" in l.upper()][:12], "tail": [l[:200] for l in lines[-8:]]}
 def on_signal(sig, fr): STOP["flag"] = True
 
 def run_step(M, win, name, script_name, cmd, env, limit_s, cwd, deadline, beat):
@@ -108,7 +118,8 @@ def outputs(win, status_out, t_launch):
                 if json.loads(json.loads(ln)["line"]).get("state") == "traced": n += 1
             except Exception: pass
         o["traced"] = n
-    o["complete"] = bool(o["chain.jsonl"]) and bool(o["slow.jsonl"] is not None and (o["slow.jsonl"] > 0 or o["traced"] == 0)) and o["consolidated.json"] and o["resource_state.json"]
+    o["slow_cut"] = bool(o["traced"] and o["slow.jsonl"] is not None and o["slow.jsonl"] < o["traced"])   # --limit-slow (or the cap) left traced articles without a slow record: window is partial
+    o["complete"] = bool(o["chain.jsonl"]) and bool(o["slow.jsonl"] is not None and (o["slow.jsonl"] > 0 or o["traced"] == 0)) and o["consolidated.json"] and o["resource_state.json"] and not o["slow_cut"]
     return o
 
 def main():
@@ -126,7 +137,16 @@ def main():
     t_launch = time.time(); deadline = t_launch + CAP_S; job = "chain-window-%d" % n; tr = win / "trace"
     status_out = a.status_out or str(KP.parent / "demo" / "mockups" / "knowledge-raw" / "status.json")
     LOCK.parent.mkdir(exist_ok=True); LOCK.write_text(str(os.getpid()))
-    M = {"version": VERSION, "window": str(win), "n": n, "pid": os.getpid(), "cmd": "chain_windows.py", "started": now_iso(), "cap_s": CAP_S, "deadline_epoch": deadline, "duration_min": a.duration_min, "start_ago_min": a.start_ago_min, "state": "running", "steps": [], "current": None, "status_out": status_out}
+    atomic(win / "window.json", {"version": VERSION, "window": str(win), "n": n, "pid": os.getpid(), "state": "gate", "started": now_iso()})
+    gate = run_gate(win)
+    if gate["rc"] != 0:   # the chained flow is not proven on the fixtures: no window starts
+        M = {"version": VERSION, "window": str(win), "n": n, "pid": os.getpid(), "cmd": "chain_windows.py", "started": now_iso(), "state": "refused", "steps": [], "gate": gate,
+             "problems": ["check-flow.py exit %s: %s" % (gate["rc"], "; ".join(gate["failing"]) or "see gate.tail")]}
+        atomic(win / "window.json", M)
+        try: LOCK.unlink()
+        except OSError: pass
+        print(json.dumps({"window": str(win), "state": "refused", "gate": gate}, indent=1)); sys.exit(2)
+    M = {"version": VERSION, "window": str(win), "n": n, "pid": os.getpid(), "cmd": "chain_windows.py", "started": now_iso(), "cap_s": CAP_S, "deadline_epoch": deadline, "duration_min": a.duration_min, "start_ago_min": a.start_ago_min, "state": "running", "steps": [], "current": None, "status_out": status_out, "gate": gate}
     atomic(win / "window.json", M)
     for s in (signal.SIGTERM, signal.SIGINT): signal.signal(s, on_signal)
     def beat(step, secs):
@@ -149,6 +169,7 @@ def main():
         M["outputs"] = outputs(win, status_out, t_launch); bad = [s["name"] for s in M["steps"] if s["state"] != "done"]
         final = "stopped" if STOP["flag"] else ("done" if M["outputs"]["complete"] and not bad else "partial")
         M["problems"] = ["%s: %s" % (s["name"], s["state"]) for s in M["steps"] if s["state"] != "done"]
+        if M["outputs"]["slow_cut"]: M["problems"].append("slow: cut, %s slow records for %s traced articles" % (M["outputs"]["slow.jsonl"], M["outputs"]["traced"]))
     except BaseException as e:
         M["error"] = "%s: %s" % (type(e).__name__, str(e)[:300])
         if CUR["p"] is not None: M["stop_on_error"] = stop_pid(CUR["p"], CUR["marker"], CUR["window"])

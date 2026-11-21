@@ -2,7 +2,7 @@
 Throwaway test bench, CPU only, no hosted calls, no GPU. Not part of the console.
 Run: /workspace/models/embed-zs/.venv/bin/python simulation/server.py   (from knowledge_pipeline)  then open http://localhost:18770/
 GET /api/articles -> dropdown list; GET /api/article?id=... ; POST /api/run {title, body, date, sparse} -> gate-by-gate read (G0 normalize, G1 spans, G2 facts, G3 cascade, decider, journal record, engine map); GET /api/heads -> measured scores per head.
-Raw mode: GET /api/raw/sample?n=5&window=24h|any -> n random queue articles through live_trace.Chain.trace (CPU), knowledge units, merge rule v0 (unmeasured) into an in-memory graph; GET or POST /api/raw/reset clears the graph. Code in raw-units.py."""
+Raw mode: GET /api/raw/sample?n=5&window=24h|any[&src=window|trace:<dir>] -> n random queue articles through live_trace.Chain.trace (CPU), knowledge units, merge rule v0 (unmeasured) into an in-memory graph; GET or POST /api/raw/reset clears the graph. Code in raw-units.py."""
 import json, os, random, re, sqlite3, sys, pathlib, time, hashlib, collections
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = pathlib.Path(__file__).resolve().parent; WS = HERE.parent / "projects" / "world-state"; os.chdir(WS); sys.path.insert(0, str(WS))
@@ -234,6 +234,8 @@ def raw():   # Raw mode (raw-units.py): lazy, so the bench starts as before; the
     if _RAW is None:
         import importlib.util; sp = importlib.util.spec_from_file_location("raw_units", str(HERE / "raw-units.py")); _RAW = importlib.util.module_from_spec(sp); sp.loader.exec_module(_RAW)
     return _RAW
+def src_ok(path):   # a trace: src may name any window dir under /workspace or /tmp (the bench is bound to 127.0.0.1; it only reads chain.jsonl, a/, slow.jsonl, slow_consolidate/)
+    rp = os.path.realpath(path if os.path.isabs(path) else os.path.join("/workspace/demo/mockups/structure-live", path)); return rp.startswith("/workspace/") or rp.startswith("/tmp/")
 class H(BaseHTTPRequestHandler):
     def send(self, code, body, ctype="application/json"):
         b = body if isinstance(body, bytes) else json.dumps(body).encode(); self.send_response(code); self.send_header("Content-Type", ctype); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
@@ -245,7 +247,15 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/heads": return self.send(200, heads())
         if p == "/api/raw/sample":   # ?n=5&window=24h|any&pick=articles|story : n random queue articles through live_trace.Chain.trace, units, merge rule v0
             from urllib.parse import parse_qs; a = parse_qs(q)
-            try: return self.send(200, raw().sample(int((a.get("n") or ["5"])[0]), (a.get("window") or ["any"])[0], (a.get("pick") or ["articles"])[0], (a.get("id") or [None])[0]))
+            src = (a.get("src") or [None])[0]   # src=window (newest pipeline window with traced > 0) | trace:<window dir> | queue / absent = the live queue as before
+            if src and src.startswith("trace:") and not src_ok(src[6:]): return self.send(400, {"error": "trace path must be under /workspace or /tmp"})
+            try: return self.send(200, raw().sample(int((a.get("n") or ["5"])[0]), (a.get("window") or ["any"])[0], (a.get("pick") or ["articles"])[0], (a.get("id") or [None])[0], src))
+            except ValueError as e: return self.send(404, {"error": str(e)})
+            except Exception as e: return self.send(500, {"error": repr(e)})
+        if p == "/api/raw/window":   # ?src=window|trace:<dir> : which pipeline window the page would read (name, traced n, slow and consolidated counts); {exists: false} when none
+            from urllib.parse import parse_qs; a = parse_qs(q); src = (a.get("src") or ["window"])[0]
+            if src.startswith("trace:") and not src_ok(src[6:]): return self.send(400, {"error": "trace path must be under /workspace or /tmp"})
+            try: return self.send(200, raw().window_info(src))
             except Exception as e: return self.send(500, {"error": repr(e)})
         if p == "/api/raw/reset": return self.send(200, raw().reset())
         if p == "/api/raw/ticker": return self.send(200, raw().ticker())

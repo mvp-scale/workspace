@@ -6,7 +6,7 @@ Answer (playbook 00 section 10): what it is / what is changing / why / known / u
   publishers_n: independent publishers (edge strength) for a statement about one edge, otherwise the number of distinct publisher names over the cited fragments (publishers_basis says which)
   weights     : every fragment counts 1.0, equal. PROVISIONAL: the weighting is an owner decision (T178, pending). No weighted score is computed; ranking is by independent publishers, then fragments, then id.
 A question that matches nothing gets one templated abstain line and no statements. The one statement kind that is not a count over fragments, the seed definition of a resource, points at its seed-file row (kind seed-row) and says PROVISIONAL (resources.csv, status guess).
-Question resolution is deterministic string matching: a resource id or seed name, an upper-case ISO country code (or iso:XX / country:XX), an entity label (longest match). Country names are not mapped (no stored name table)."""
+Question resolution is deterministic string matching: a resource id or seed name, an upper-case ISO country code (or iso:XX / country:XX), an entity label or a capability label (longest match; capabilities come from concepts.capabilities of the consolidated body: Domain > Area > Capability, PROVISIONAL, nothing promoted). Country names are not mapped (no stored name table)."""
 import os, sys, re, json, glob, csv, hashlib, collections
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 ROOT = os.path.dirname(os.path.dirname(HERE)); SEED = "/workspace/probes/persona/rules_v2/resources.csv"
@@ -35,6 +35,10 @@ TEMPLATES = {
     "adj.none": "{label}: no neighbouring item in the stored edges.",
     "label.pair": "{resource} in {country}",
     "abstain": "No stored edge matches the question {question}.",
+    "is.capability": "{label}: capability {id} ({kind} in the verb-object list), seen in {articles} source items from {pubs} distinct publishers over {stories} stories; {edges} stored assertion edges link to it. PROVISIONAL, not promoted.",
+    "cap.where": "{label}: sits under areas {areas} and domains {domains} as named by the chain's own roll-up (association by co-occurrence in an article, not an is_a link).",
+    "cap.once": "{label}: dated at most one day among its source items.",
+    "cap.unvalidated": "{label}: listed by a fixed verb-object list (t230, t222), not learned or validated; status PROVISIONAL, there is no promote step.",
 }
 SUFFIX = " [refs {refs_total}; {publishers_n} {basis}; weights equal PROVISIONAL (T178)]"
 def render(tpl, slots): return TEMPLATES[tpl].format(**slots)
@@ -60,6 +64,7 @@ def build_body(a):
 class Index:
     def __init__(self, body, state=None, seed=None):
         self.body = body; self.state = state or {}; self.seed = seed or {}; self.edges = body["edges"]
+        self.caps = {n["id"]: n for n in ((body.get("concepts") or {}).get("capabilities") or body.get("capabilities") or {}).get("nodes", [])}   # Domain > Area > Capability nodes (PROVISIONAL), by id
         self.res = sorted({e["subj"][9:] for e in self.edges if e["kind"] == "resource"} | set(self.seed))
         self.countries = sorted({e["obj"][8:] for e in self.edges if e["kind"] == "resource"} | {x[4:] for e in self.edges if e["kind"] == "assertion" for x in (e["subj"], e["obj"]) if x and x.startswith("iso:")})
         self.labels = {}   # entity key (type:label) -> label, assertion ends only
@@ -87,6 +92,10 @@ class Index:
             if len(l) < 3: continue
             if k.lower() in ql or re.search(r"(?<![a-z0-9])" + re.escape(l) + r"(?![a-z0-9])", ql):
                 if best is None or len(l) > len(best[1]): best = (k, l)
+        cbest = None
+        for i, n in sorted(self.caps.items()):
+            if re.search(r"(?<![a-z0-9])" + re.escape(n["label"].lower()) + r"(?![a-z0-9])", ql) and (cbest is None or len(n["label"]) > len(cbest["label"])): cbest = n
+        if cbest and (best is None or len(cbest["label"]) > len(best[1])): return {"kind": "capability", "label": cbest["label"], "capability": cbest["id"]}
         if best: return {"kind": "entity", "label": best[1], "entity": best[0]}
         return None
     def select(self, t):
@@ -94,6 +103,7 @@ class Index:
         if t["kind"] == "resource-country": return [e for e in E if e["kind"] == "resource" and e["subj"] == "resource:" + t["resource"] and e["obj"] == "country:" + t["country"]]
         if t["kind"] == "resource": return [e for e in E if e["kind"] == "resource" and e["subj"] == "resource:" + t["resource"]]
         if t["kind"] == "country": return [e for e in E if (e["kind"] == "resource" and e["obj"] == "country:" + t["country"]) or (e["kind"] == "assertion" and "iso:" + t["country"] in (e["subj"], e["obj"]))]
+        if t["kind"] == "capability": return [e for e in E if e["kind"] == "assertion" and t["capability"] in (e.get("capabilities") or [])]
         return [e for e in E if e["kind"] == "assertion" and t["entity"] in (e["subj"], e["obj"])]
     def states(self, t):
         S = self.state.get("states") or []
@@ -115,9 +125,28 @@ def sfrags(rows):
     for s in rows:
         for ev in s.get("evidence") or []: out.append({"art": ev["id"], "sent": None, "spans": [ev["span"]] if ev.get("span") else [], "pub": ev.get("publisher"), "day": s["day"], "source": "resource-state"})
     return out
+def capability_answer(IX, t, q):
+    """a question that names a capability: the node (Domain > Area > Capability, PROVISIONAL) and the stored assertion edges linked to it; same sections, same templates, same pointers"""
+    n = IX.caps[t["capability"]]; E = IX.select(t); sec = {s: [] for s in SECTIONS}; label = n["label"]
+    F = [{"art": a, "sent": None, "spans": [], "pub": p, "day": d, "source": "capability_list"} for a, p, d in n.get("items", [])]
+    sec["what_it_is"].append(stm("what_it_is", "is.capability", {"label": label, "id": n["id"], "kind": n["kind"], "articles": n["articles"], "pubs": len(n["publishers"]), "stories": n["stories"], "edges": len(E)}, F, indep=n["strength"]))
+    sec["what_it_is"].append(stm("what_it_is", "cap.where", {"label": label, "areas": ", ".join(n["areas"]) or "-", "domains": ", ".join(n["domains"]) or "-"}, F))
+    days = sorted({f["day"] for f in F if f["day"]})
+    sec["what_is_changing"].append(stm("what_is_changing", "chg.window", {"label": label, "first": days[0], "last": days[-1], "windows": len({__import__("datetime").date.fromisoformat(d[:10]).toordinal() // 7 for d in days}), "window_days": 7}, F) if len(days) > 1 else stm("what_is_changing", "cap.once", {"label": label}, F))
+    for e in sorted(E, key=ekey)[:3]: sec["why"].append(stm("why", "why.assert", {"subj": lab(e["subj"]), "pred": e["pred"], "obj": lab(e["obj"]), "stories": e["stories"], "strength": e["strength"], "sent": (e["fragments"][0].get("sent") or "")[:240]}, e["fragments"], indep=e["strength"]))
+    multi = sorted([e for e in E if e["strength"] >= 2], key=ekey)[:TOPN]
+    for e in multi: sec["known"].append(stm("known", "known.edge", {"key": e["key"], "strength": e["strength"], "names": ", ".join(e["publishers"][:4]) + ("" if len(e["publishers"]) <= 4 else ", +%d" % (len(e["publishers"]) - 4)), "stories": e["stories"]}, e["fragments"], indep=e["strength"]))
+    if not multi: sec["known"].append(stm("known", "known.none", {"edges": len(E), "label": label}, frags_of(E) or F))
+    if E: sec["uncertain"].append(stm("uncertain", "unc.single", {"single": sum(e["strength"] <= 1 for e in E), "edges": len(E), "label": label}, frags_of([e for e in E if e["strength"] <= 1]) or frags_of(E)))
+    sec["uncertain"].append(stm("uncertain", "cap.unvalidated", {"label": label}, F))
+    sib = sorted([m for i, m in IX.caps.items() if i != n["id"] and set(m["areas"]) & set(n["areas"])], key=lambda m: (-m["articles"], m["id"]))[:TOPN]
+    for k, m in enumerate(sib, 1): sec["adjacent"].append(stm("adjacent", "adj.item", {"rank": k, "label": m["label"], "kind": "capability", "edges": m["edges"], "frags": m["articles"], "pubs": len(m["publishers"])}, [{"art": a, "sent": None, "spans": [], "pub": p, "day": d, "source": "capability_list"} for a, p, d in m.get("items", [])]))
+    if not sib: sec["adjacent"].append(stm("adjacent", "adj.none", {"label": label}, F))
+    return {"version": VERSION, "question": q, "resolved": t, "weights": WEIGHTS, "sections": sec, "statements": sum(len(v) for v in sec.values()), "source": {"consolidated_sha256": IX.body.get("sha256"), "state_sha256": IX.state.get("sha256"), "seed": None}}
 def answer(IX, q):
     t = IX.resolve(q)
     if not t: return {"version": VERSION, "question": q, "resolved": None, "weights": WEIGHTS, "sections": {s: [] for s in SECTIONS}, "abstain": render("abstain", {"question": json.dumps(q)}), "statements": 0}
+    if t["kind"] == "capability": return capability_answer(IX, t, q)
     E = IX.select(t); S = IX.states(t); label = t["label"]; F = frags_of(E); sec = {s: [] for s in SECTIONS}
     if not E: return {"version": VERSION, "question": q, "resolved": t, "weights": WEIGHTS, "sections": sec, "abstain": render("abstain", {"question": json.dumps(q)}), "statements": 0}
     days = sorted({f["day"] for f in F if f["day"]}); wins = sorted({(__import__("datetime").date.fromisoformat(d[:10]).toordinal() // 7) for d in days})
