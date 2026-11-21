@@ -1,7 +1,8 @@
 """Simulation: run one article through the BitMob pipeline (analyze2) by hand and see each tool's output, time and measured score.
 Throwaway test bench, CPU only, no hosted calls, no GPU. Not part of the console.
 Run: /workspace/models/embed-zs/.venv/bin/python simulation/server.py   (from knowledge_pipeline)  then open http://localhost:18770/
-GET /api/articles -> dropdown list; GET /api/article?id=... ; POST /api/run {title, body, date, sparse} -> gate-by-gate read (G0 normalize, G1 spans, G2 facts, G3 cascade, decider, journal record, engine map); GET /api/heads -> measured scores per head."""
+GET /api/articles -> dropdown list; GET /api/article?id=... ; POST /api/run {title, body, date, sparse} -> gate-by-gate read (G0 normalize, G1 spans, G2 facts, G3 cascade, decider, journal record, engine map); GET /api/heads -> measured scores per head.
+Raw mode: GET /api/raw/sample?n=5&window=24h|any -> n random queue articles through live_trace.Chain.trace (CPU), knowledge units, merge rule v0 (unmeasured) into an in-memory graph; GET or POST /api/raw/reset clears the graph. Code in raw-units.py."""
 import json, os, random, re, sqlite3, sys, pathlib, time, hashlib, collections
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = pathlib.Path(__file__).resolve().parent; WS = HERE.parent / "projects" / "world-state"; os.chdir(WS); sys.path.insert(0, str(WS))
@@ -29,6 +30,9 @@ ENGINE_MAP = [  # which engine question family each field feeds: from newsreader
 import pickle, datetime
 import spacy
 NLP = spacy.load("en_core_web_sm")
+try:
+    import pack_view as PV; PACKV = PV.PackView(NLP)   # section 8: IPTC + WordNet placement and word families, add-only (2026-11-18)
+except Exception as _e: PACKV = None; print("pack view off:", _e)
 from sentence_transformers import SentenceTransformer
 PLACE = pickle.load(open("runs/pulse/t200/place_student.pkl", "rb")); PLACE_ENC = SentenceTransformer("intfloat/e5-small-v2", device="cpu"); PLACE_ENC.max_seq_length = 128
 _tiers = json.load(open("runs/pulse/t230/capability_tiers.json")); CAP_REC = {tuple(x.split(" ", 1)) for x in _tiers["recurring_pairs"] if " " in x and x not in ("injure other", "speak condition", "update inbox")}
@@ -205,7 +209,11 @@ def run_article(d):
         {"model": "BitMob tools: Fact finder, span rules, Capability match", "read": min(12000, _full), "total": _full, "pct": _pct(min(12000, _full), _full), "rule": "cleaned text up to 12,000 characters"},
         {"model": "Place student (region)", "read": min(1500, _pl), "total": _pl, "pct": _pct(min(1500, _pl), _pl), "rule": "first 1,500 characters of title plus body"}]}
     COVER["warn"] = ("Not every model read the whole article: " + "; ".join("%s read %d%%" % (r["model"].split(":")[0].split(" (")[0], r["pct"]) for r in COVER["rows"] if r["pct"] < 100) + ". Text after each cut is not used by that model.") if any(r["pct"] < 100 for r in COVER["rows"]) else ""
-    return {"coverage": COVER, "ms": T, "story": story, "models": models, "table": table, "tools": tools, "claims": claims, "clean": cl, "claims_ms": round(claims_ms, 1), "use": use, "engine_map": ENGINE_MAP, "text": text, "g0": {"characters": len(text), "words": len(text.split()), "sha1": hashlib.sha1(text.encode()).hexdigest()[:16], "date": date},
+    pk = None
+    if PACKV is not None:
+        try: pk = PACKV.view(text, (story["domain"]["top"] or [{}])[0].get("name"), acts)
+        except Exception as _e: pk = {"error": str(_e)}
+    return {"pack": pk, "coverage": COVER, "ms": T, "story": story, "models": models, "table": table, "tools": tools, "claims": claims, "clean": cl, "claims_ms": round(claims_ms, 1), "use": use, "engine_map": ENGINE_MAP, "text": text, "g0": {"characters": len(text), "words": len(text.split()), "sha1": hashlib.sha1(text.encode()).hexdigest()[:16], "date": date},
             "spans": [{"s": x["s"], "e": x["e"], "k": x["kind"]} for x in spans], "facts": [{"s": x["s"], "e": x["e"], "k": x["kind"]} for x in facts if x["kind"] in ("amount", "date", "name", "triple")], "pulse_ms": round(pulse_ms, 1), "place_ms": round(place_ms, 1)}
 
 def badge(r):
@@ -220,6 +228,12 @@ def fill_badges():
         try: v["badge"] = badge(run_article({"title": v["title"], "body": v["body"], "date": v.get("date")}))
         except Exception as e: v["badge"] = None
     print("badges ready", flush=True)
+_RAW = None
+def raw():   # Raw mode (raw-units.py): lazy, so the bench starts as before; the live_trace chain loads on the first pull
+    global _RAW
+    if _RAW is None:
+        import importlib.util; sp = importlib.util.spec_from_file_location("raw_units", str(HERE / "raw-units.py")); _RAW = importlib.util.module_from_spec(sp); sp.loader.exec_module(_RAW)
+    return _RAW
 class H(BaseHTTPRequestHandler):
     def send(self, code, body, ctype="application/json"):
         b = body if isinstance(body, bytes) else json.dumps(body).encode(); self.send_response(code); self.send_header("Content-Type", ctype); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
@@ -229,8 +243,15 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/articles": return self.send(200, [{"id": k, "group": v["group"], "title": v["title"][:110], "words": len(v["body"].split()), "badge": v.get("badge")} for k, v in ART.items()])
         if p == "/api/article": a = ART.get(q.replace("id=", "")); return self.send(200 if a else 404, a or {"error": "no such article"})
         if p == "/api/heads": return self.send(200, heads())
+        if p == "/api/raw/sample":   # ?n=5&window=24h|any&pick=articles|story : n random queue articles through live_trace.Chain.trace, units, merge rule v0
+            from urllib.parse import parse_qs; a = parse_qs(q)
+            try: return self.send(200, raw().sample(int((a.get("n") or ["5"])[0]), (a.get("window") or ["any"])[0], (a.get("pick") or ["articles"])[0], (a.get("id") or [None])[0]))
+            except Exception as e: return self.send(500, {"error": repr(e)})
+        if p == "/api/raw/reset": return self.send(200, raw().reset())
+        if p == "/api/raw/ticker": return self.send(200, raw().ticker())
         self.send(404, {"error": "not found"})
     def do_POST(self):
+        if self.path == "/api/raw/reset": return self.send(200, raw().reset())
         if self.path != "/api/run": return self.send(404, {"error": "not found"})
         d = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}"); t, b = (d.get("title") or "").strip(), (d.get("body") or "").strip()
         if not b: return self.send(400, {"error": "body is empty"})

@@ -1,0 +1,9 @@
+{"id": "T158-F4", "task": "T158", "part": "forward test of the frozen topic re-ranker on live news", "field": "topic",
+ "question": "On news that arrived after the freeze, what is the pooled change in publisher-section agreement from the landing alone to the frozen re-ranker?",
+ "one_change": "trace the next window of post-freeze queue articles with the frozen pipeline and pool it with the earlier windows",
+ "baseline": {"model": "pooled forward windows so far", "file": "runs/pulse/topic_loop/forward/results.json", "key": "change_pts"},
+ "prediction": {"metric": "change_pts: pooled re-ranker minus landing agreement with the publisher section, points", "low": 4.0, "high": 15.0, "why": "live run v7 measured 8.6 points on 489 articles (runs/pulse/topic_loop/r1/live_wire_v7.json); forward windows 1-2 measured 9.3 on 43 articles (runs/pulse/topic_loop/forward/results.json)"},
+ "command": "/workspace/models/embed-zs/.venv/bin/python forward_test.py --minutes 25",
+ "result": {"file": "runs/pulse/topic_loop/forward/results.json", "key": "change_pts"},
+ "cap_minutes": 40, "noise": 3.0, "who": "S3", "priority": 2, "threads": 4,
+ "smoke": {"command": "/workspace/models/embed-zs/.venv/bin/python -m py_compile forward_test.py", "cap_minutes": 2}}

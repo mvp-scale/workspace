@@ -17,9 +17,19 @@ details{margin:8px 0}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.chips button{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:12px}.chips button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 #list{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}#list table{font-size:13px}#list tr{cursor:pointer}#list tr:hover td{background:var(--bg)}#list tr.sel td{background:var(--hl1)}#list th{position:sticky;top:0;background:var(--card)}
 td.y{color:var(--ok)}td.n{color:var(--no)}summary{cursor:pointer;color:var(--mut)}.headline{font-size:17px;font-weight:600;margin:0 0 8px}
+body.streaming #chooser{display:none}
 </style></head><body><main>
 <h1>Pipeline simulation</h1><p class="sub">Put one article through the BitMob models and tools, see what comes out in plain terms, which model produced it and how well that model tested, and how the pipeline would use it. CPU only. No engine, Clef, Jev or GPU is called.</p>
-<h2 style="margin-top:8px">Choose an article</h2>
+<h2 style="margin-top:8px">The funnel: what happens to every article</h2><div id="funnel" class="box"><div class="mut">Loading the latest run\u2026</div></div>
+<h2 style="margin-top:8px">Scoreboard: each funnel step against outside truth</h2><div id="scoreboard" class="box"><div class="mut">Loading\u2026</div></div>
+<h2 style="margin-top:8px">Stream real news articles through it</h2>
+<div class="mut">Watch real articles go through the same engine one after another. Each one fills the sections below as it is read. Click a row to look back at an earlier article.</div>
+<div class="row" style="margin-top:6px"><select id="s_mode" style="flex:0 0 auto;min-width:260px"><option value="replay">Replay of real articles from the last few hours</option><option value="live">Live run (new articles as the news reader finds them)</option></select><select id="s_speed" style="flex:0 0 auto;min-width:150px;max-width:190px"><option value="2000">Fast (2 s each)</option><option value="5000" selected>Normal (5 s each)</option><option value="10000">Slow (10 s each)</option></select><button id="s_start">Start streaming</button><button class="alt" id="s_pause" hidden>Pause</button><button class="alt" id="s_stop" hidden>Stop</button><span class="mut" id="s_status"></span></div>
+<div id="s_tally" class="mut" style="margin:4px 0"></div>
+<div id="s_ledger" class="box" style="margin:8px 0"></div>
+<div style="max-height:330px;overflow:auto"><table id="s_strip"></table></div>
+<div id="chooser">
+<h2 style="margin-top:14px">Or choose one article</h2>
 <div class="chips" id="chips"></div>
 <div class="filters"><label>Search<input id="f_q" placeholder="words in the title"></label><label>Set<select id="f_set"><option value="">All</option><option>Golden set</option><option>Queue sample</option></select></label>
 <label>Domain<select id="f_dom"><option value="">Any</option></select></label><label>Area<select id="f_area"><option value="">Any</option></select></label>
@@ -33,6 +43,7 @@ td.y{color:var(--ok)}td.n{color:var(--no)}summary{cursor:pointer;color:var(--mut
 <div class="mut" style="margin-top:4px">Every article runs through every model that runs here. The columns show where each model was sure enough to answer (value and confidence) or deferred (–). Click a row to load and run it.</div>
 <div class="row" style="margin-top:10px"><input id="title" placeholder="Title" style="flex:1;min-width:240px"><input id="date" placeholder="Date YYYY-MM-DD (optional)" style="width:190px"></div>
 <div class="row"><button id="run">Run this text</button><span class="mut">or paste your own title and body</span></div><textarea id="body" placeholder="Article body"></textarea><div id="status" class="mut" style="margin:6px 0"></div>
+</div>
 <div id="result" hidden>
 <h2>1. What the models say about this story</h2><p class="headline" id="headline"></p><div id="coverage" class="box"></div><div class="grid" id="cards"></div>
 <h2>2. BitMob tools</h2><div class="mut">The rule-based collection, in the order they run: no training, each output points at its place in the text. The last column says whether analyze2 already uses it. The models in section 5 run after.</div><div id="toolsflow"></div>
@@ -112,4 +123,232 @@ async function timeAll(){const rows=ARTS.filter(match);if(!rows.length)return;co
   const ch=$("chips");for(const [n,o] of PRESETS){const b=el("button",{},n);b.onclick=()=>{for(const x of ch.children)x.classList.remove("on");b.classList.add("on");setF(o)};ch.append(b)}
   const cc=$("cchips");for(const [n,v] of [["Strongest evidence first","score"],["Document order","doc"],["With figures","figures"],["Reported or attributed","reported"],["Predicted or denied","predicted"]]){const b=el("button",{},n);b.onclick=()=>{for(const x of cc.children)x.classList.remove("on");b.classList.add("on");CF=v;renderClaims()};cc.append(b)}
   bind();$("run").onclick=run;$("all").onclick=timeAll;$("rand").onclick=()=>{const r=ARTS.filter(match);if(r.length)choose(r[Math.floor(Math.random()*r.length)].id)};renderList()})().catch(e=>$("status").textContent="Error: "+e.message);
+
+/* ---- Stream mode (added 2026-11-18): run real articles through this same engine, one after another ---- */
+const ST={on:false,pause:false,seq:null,cache:{},order:[],tally:{n:0,area:0,type:0,region:0,cond:0,mism:0,ms:0},timer:null};
+const FEEDS={replay:"/mockups/structure-live/trace-demo/",live:"/mockups/structure-live/trace/"};
+const sbase=()=>FEEDS[$("s_mode").value];
+async function sget(p){const r=await fetch(sbase()+p,{cache:"no-store"});if(!r.ok)throw new Error(p+" "+r.status);return r.json()}
+const SSTOP=new Set("that with this from have after over will says about into they their what when been more than were your could would also just amid under between while there".split(" "));
+function swords(s){return (String(s||"").toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!SSTOP.has(w))}
+function titleBodyMismatch(title,text){if(!title||text.length<300)return false;const body=text.indexOf(title)===0?text.slice(title.length):text,tw=[...new Set(swords(title))],bw=new Set(swords(body));if(tw.length<3)return false;return tw.filter(w=>bw.has(w)).length/tw.length<0.25}
+function sstatus(t){$("s_status").textContent=t}
+function renderTally(){const t=ST.tally,n=Math.max(1,t.n),p=x=>Math.round(100*x/n)+"%";$("s_tally").textContent=t.n?("So far "+t.n+" articles. Topic answered for "+p(t.area)+", kind of story "+p(t.type)+", region "+p(t.region)+". A world condition was found in "+t.cond+" of them. Headline and text look like different stories in "+t.mism+". Average "+Math.round(t.ms/n)+" ms each."):""}
+function renderStrip(){const w=$("s_strip");w.replaceChildren();ST.order.slice().reverse().slice(0,14).forEach(seq=>{const c=ST.cache[seq],s=c.o.story,d=(s.domain.top||[])[0],ty=(s.type.top||[])[0];
+  const tr=el("tr",{style:"cursor:pointer"},el("td",{},"#"+seq),el("td",{},(c.a.title||"").slice(0,78)),el("td",{},d?d.name+" "+d.pct+"%":"?"),el("td",{},ty?ty.name:"?"),el("td",{},s.condition&&s.condition.present===true?"condition":(s.condition&&s.condition.status==="answered"?"none":"unsure")),el("td",{},c.mism?tag("headline and text differ","bad"):""));
+  tr.onclick=()=>{ST.pause=true;$("s_pause").textContent="Resume";showStream(seq)};w.append(tr)});}
+function renderExt8(rec,a){
+  if(!$("ext8")){$("result").append(el("h2",{},"8. Experiment: the article's words on a news-topic tree (IPTC + WordNet)"),el("div",{id:"ext8",class:"box"}))}
+  const b=$("ext8");b.replaceChildren();const sp=rec&&rec.stages_full&&rec.stages_full.structure_pack;
+  if(!sp){b.append("The experiment did not run for this article.");return}
+  const pk=(a.stages||[]).find(x=>x.name==="structure_pack"),o=pk&&pk.out&&typeof pk.out==="object"?pk.out:{};
+  b.append(el("div",{},"Each word it can place gets a spot on the news-topic tree. This is an experiment: it guessed the topic '"+(o.l1_guess||"?")+"', placed "+(o.n_placed||0)+" of "+(o.n_terms||0)+" nouns, and many placements are the wrong meaning of the word (ledger T156, T157)."));
+  const seen={},rows=[];(sp.placed_spans||[]).forEach(x=>{const k=String(x.word).toLowerCase();if(!seen[k]){seen[k]=1;rows.push(x)}});rows.sort((x,y)=>(y.in_topic===true)-(x.in_topic===true));
+  if(rows.length)b.append(table(["Word","How it was matched","Place on the tree","Under the guessed topic?"],rows.slice(0,8).map(x=>[x.word,x.hop==="exact"?"the word is a topic":(x.hop==="side"?"synonym ("+x.via+")":"one step up ("+x.via+")"),String(x.path).split(" > ").join(" › "),x.in_topic===true?"yes (meaning not checked)":"no"])));
+  else b.append(el("div",{class:"mut"},"No words were placed."));
+}
+function showStream(seq){const c=ST.cache[seq];if(!c)return;render(c.o);if(c.o.pack===undefined)renderExt8(c.rec,c.a);$("headline").textContent="#"+seq+"  "+($("headline").textContent||"");}
+async function streamLoop(){
+  if(!ST.on)return;
+  const delay=+$("s_speed").value;
+  if(ST.pause){ST.timer=setTimeout(streamLoop,400);return}
+  let cur=null;
+  try{
+    const run=await sget("run.json"),traced=run.counts.traced;ST.run=run;
+    if(ST.seq===null)ST.seq=$("s_mode").value==="replay"?Math.max(0,traced-60):0;
+    if(ST.seq>=traced){sstatus($("s_mode").value==="live"&&run.state!=="running"?"The live run is not running. Choose the replay, or start a live run.":"Waiting for the next article...");ST.timer=setTimeout(streamLoop,4000);return}
+    const seq=ST.seq;cur=seq;const rec=await sget("a/"+seq+".json"),a=rec.article_line,title=a.title||"",text=rec.text||"",body=text.indexOf(title)===0?text.slice(title.length).replace(/^[\s.#]+/,""):text;
+    sstatus("Reading #"+seq+"...");
+    const o=await j("/api/run",{method:"POST",body:JSON.stringify({title:title,body:body.slice(0,12000),date:(a.published||"").slice(0,10),sparse:false})});
+    const mism=titleBodyMismatch(title,text);ST.cache[seq]={o,rec,a,mism};ST.order.push(seq);
+    const t=ST.tally,s=o.story;t.n++;t.area+=s.area.answered?1:0;t.type+=s.type.answered?1:0;t.region+=s.region.answered?1:0;t.cond+=(s.condition&&s.condition.present===true)?1:0;t.mism+=mism?1:0;t.ms+=(o.ms&&o.ms.total_ms)||0;
+    if(!ST.pause){showStream(seq)}
+    renderStrip();renderTally();ledgerStream(rec);ST.seq=seq+1;sstatus("Streaming ("+(traced-ST.seq)+" more waiting)");
+  }catch(e){if(cur!==null){ST.seq=cur+1;sstatus("Skipped #"+cur+": "+(/body is empty/.test(e.message)?"headline only, nothing to read":e.message))}else sstatus("Error: "+e.message)}
+  ST.timer=setTimeout(streamLoop,delay);
+}
+$("s_start").onclick=()=>{if(ST.on)return;ST.on=true;ST.pause=false;ST.seq=null;ST.cache={};ST.order=[];LS.stream=null;ST.tally={n:0,area:0,type:0,region:0,cond:0,mism:0,ms:0};document.body.classList.add("streaming");$("s_pause").textContent="Pause";$("s_start").hidden=true;$("s_stop").hidden=false;$("s_pause").hidden=false;$("s_strip").replaceChildren();streamLoop()};
+$("s_pause").onclick=()=>{ST.pause=!ST.pause;$("s_pause").textContent=ST.pause?"Resume":"Pause"};
+$("s_stop").onclick=()=>{ST.on=false;clearTimeout(ST.timer);document.body.classList.remove("streaming");$("s_start").hidden=false;$("s_stop").hidden=true;$("s_pause").hidden=true;sstatus("Stopped.")};
+
+
+/* ---- Field-test experiments shown beside each article (added 2026-11-18; offline, add-only, not part of the pipeline) ---- */
+const FUNC9=new Set("what when where which who whom whose why how that this these those there here then than some any many much more most other another each every either neither both all one two three first second last next new no not yes simply however also just only even still such very can could would should will shall may might must do does did is are was were be been being have has had to of in on at by for from with without about into over under after before between through during published updated comments points password article url read more share home news".split(" "));
+const LAB9=new Set("article url comments points published password username email login".split(" "));
+const NAT9=new Set("british american french german russian chinese indian japanese korean spanish italian canadian australian mexican brazilian african european asian western eastern northern southern israeli palestinian iranian iraqi syrian ukrainian turkish saudi egyptian polish dutch swiss swedish norwegian danish finnish greek irish scottish welsh english crimean arab muslim christian jewish hindu".split(" "));
+function cleanName(n){n=String(n).trim().replace(/[\u2019']s$/,"");const parts=n.split(/\s+and\s+/).filter(Boolean),out=(parts.length>1&&parts.every(p=>/^[A-Z]/.test(p)))?parts:[n];return out.filter(p=>{const t=p.split(/\s+/);if(t.length===1){const l=t[0].toLowerCase();if(FUNC9.has(l)||LAB9.has(l)||NAT9.has(l))return false}if(/^(article|comments) url$/i.test(p))return false;return p.length>=2}).map(p=>p.replace(/[\u2019']$/,""))}
+let MV9=null;async function missingVocab(){if(MV9)return MV9;try{MV9=await (await fetch("/mockups/structure-live/iptc_missing_vocab.json")).json()}catch(e){MV9={}}return MV9}
+function renderPackBox(pk){
+  const b=$("ext8");b.replaceChildren();
+  if(!pk||pk.error){b.append("The placement did not run for this article"+(pk&&pk.error?" ("+pk.error+")":"")+".");return}
+  const HOW={exact:"the word is a topic",side:"synonym",up:"one step up"};
+  b.append(el("div",{},"Topic the pipeline chose: "+(pk.guess||"unknown")+". Of "+pk.n_terms+" nouns, "+pk.n_placed+" could be placed on the IPTC topic tree ("+(Object.entries(pk.hops||{}).map(([k,v])=>(HOW[k]||k)+" "+v).join(", ")||"none")+"), and "+pk.in_topic+" of those sit under that topic. This is an experiment; many placements are the wrong meaning of the word (ledger T156, T157)."));
+  const lifts=pk.lifts||[];
+  if(lifts.length)b.append(table(["Word","How it was matched","Place on the tree","Under the chosen topic?"],lifts.slice(0,10).map(x=>[x.word,x.how==="exact"?HOW.exact:x.how==="side"?"synonym ("+x.via+")":"one step up ("+x.via+")",String(x.path).split(" > ").join(" \u203a "),x.in_topic?"yes (meaning not checked)":"no"])));
+  if((pk.unplaced||[]).length)b.append(el("div",{class:"mut",style:"margin-top:4px"},"Not placed ("+pk.unplaced.length+"): "+pk.unplaced.slice(0,24).join(", ")));
+  const pl=pk.places||[];
+  if(pl.length){const real=pl.filter(x=>!x.not_place),junk=pl.filter(x=>x.not_place);
+   b.append(el("h3",{style:"margin-top:10px"},"Places: which country, what kind of place, what it is part of"));
+   if(real.length)b.append(table(["Place as written","Country","How the country was found","Is a","Part of (WordNet)"],real.map(x=>[x.name+(x.mentions>1?" ("+x.mentions+")":""),x.country||"not found",x.how||"",x.is_a||"",x.wordnet_other_place?"WordNet's first meaning is another place ("+x.part_of.slice(0,2).join(" \u203a ")+"), so not used":(x.part_of||[]).join(" \u203a ")])));
+   if(junk.length)b.append(el("div",{class:"mut"},"Tagged as places by the parser, but neither GeoNames nor WordNet knows them as places, so they are marked 'not a place': "+junk.map(x=>x.name).join(", ")));
+   b.append(el("div",{class:"mut"},"New on 2026-11-18 (ledger L2710). Over all 2,739 replay articles: linked places rose from 12,882 to 13,278 of 18,564, 'Florida' now goes to the US instead of a Cuban city (71 times), and 4,295 names such as 'AI' and 'Nvidia' are marked as not places. WordNet uses the meaning that matches GeoNames ('Delaware' the state, not the river). Where both name a country they agree on 10,751 of 10,881 (98.8%); that is agreement between two tools, not accuracy. Most of the rest are GeoNames picking a same-named town abroad (Westminster, Manchester); WordNet (2006) places the West Bank and Gaza under Israel, so its chain is shown but the country comes from GeoNames."))}
+  const sg=pk.singletons||[];
+  b.append(el("h3",{style:"margin-top:10px"},"Words that sit in no claim: what WordNet says about them"));
+  if(sg.length)b.append(table(["Word","Same meaning as","Is a kind of","Related forms","Entails or causes"],sg.map(x=>[x.word+(x.mentions>1?" ("+x.mentions+")":"")+" ["+x.pos+"]",(x.synonyms||[]).join(", "),(x.parents||[]).join(" \u203a "),(x.related_forms||[]).join(", "),[].concat((x.entails||[]).map(y=>"entails "+y),(x.causes||[]).map(y=>"causes "+y)).join(", ")])),el("div",{class:"mut"},"Caution: WordNet's first meaning is used, and it is sometimes the wrong one (for example 'meet' as run into someone)."));
+  else b.append(el("div",{class:"mut"},"Every noun and verb in this article is part of a claim, or WordNet has nothing on it."));
+}
+function renderCascade(pk){
+  if(!$("ext8b"))$("ext8").after(el("h2",{},"8b. Word cascade: each word's neighbours, its path up, and the groups the words meet in"),el("div",{id:"ext8b",class:"box"}));
+  const b=$("ext8b");b.replaceChildren();const c=pk&&pk.cascade;
+  if(!c){b.append(el("div",{class:"mut"},"The cascade runs in the bench, so it shows for an article you choose or paste. The replay stream was recorded before it existed."));return}
+  b.append(el("div",{class:"mut"},"Each word the tools pull out goes sideways to its neighbours (same meaning, or the same parent), then up its parents, and lands in a group. Words that land in the same group meet there. Groups come from three places: WordNet's topic domain (for example law), the IPTC news-topic tree (layer 1 is the top, such as politics), and for places the chain of what they are part of (layer 1 is the hemisphere). Only groups with two or more members are shown."));
+  const TREE={"WordNet topic domain":"WordNet topic group","IPTC topic":"IPTC news topic","place":"Place"};
+  b.append(el("h3",{style:"margin-top:8px"},"Where the words meet"));
+  b.append((c.groups||[]).length?table(["Group","From","Layer","Members that meet there"],c.groups.map(g=>[g.group,TREE[g.tree]||g.tree,g.layer==="group"?"topic group":String(g.layer),g.members.join(", ")])):el("div",{},"No group with two or more members in this article."));
+  b.append(el("h3",{style:"margin-top:10px"},"Where the words' parent chains cross (meeting point)"));
+  b.append(el("div",{class:"mut"},"Each word climbs up to 4 parents; a verb climbs from its event noun (sue \u2192 lawsuit). Two words meet at the lowest parent they share. Layer = steps from the top of WordNet ('entity' is 0); parents above layer 5 are too general to count."));
+  b.append((c.meet||[]).length?table(["Meet at","Layer","Steps up","Words that meet there"],c.meet.slice(0,12).map(g=>[g.group,String(g.layer),String(g.steps_up),g.members.join(", ")])):el("div",{},"No two words meet below layer 5 in this article."));
+  const evs=(c.words||[]).filter(w=>(w.event_nouns||[]).length).slice(0,10);
+  if(evs.length){b.append(el("h3",{style:"margin-top:10px"},"Verb \u2192 event noun (a candidate, not the event type)"));b.append(table(["Verb","Event nouns"],evs.map(w=>[w.word,w.event_nouns.join(", ")])))}
+  const ws=(c.words||[]).filter(w=>w.sideways.length||w.up.length).slice(0,15);
+  b.append(el("h3",{style:"margin-top:10px"},"Each word: sideways, up, group"));
+  if(ws.length)b.append(table(["Word","Meaning used","Sideways (neighbours)","Up (parents)","Group","IPTC news topic"],ws.map(w=>[w.word+(w.mentions>1?" ("+w.mentions+")":"")+" ["+w.pos+"]",w.sense===1?"usual":"meaning "+w.sense+" (joins a group)",w.sideways.slice(0,6).join(", "),w.up.join(" \u203a "),w.group||"",(w.iptc||[]).join(" \u203a ")])));
+  if((c.names_without_climb||[]).length)b.append(el("div",{class:"mut",style:"margin-top:4px"},"People and organisations cannot climb yet ("+c.names_without_climb.length+"): "+c.names_without_climb.join(", ")+". They need a source that knows names, such as Wikidata joined to IPTC and WordNet by ID."));
+  b.append(el("h3",{style:"margin-top:10px"},"Does it work? Measured on 600 MN-DS articles (ledger L2716\u2013L2717)"));
+  b.append(table(["Question","Cascade","Embedding (bge-small), same number of pairs","Verdict"],[
+   ["Do groups form?","On 533 of 600 articles (89%); 240 of 300 replay articles","\u2014","Yes"],
+   ["Same story? Two articles share a name and a meeting group","59% same topic, but only 3.4% of name-sharing pairs","86%","Embedding wins"],
+   ["Same story, stricter groups (layer 7)","59% on 65 pairs","95%","Embedding wins"],
+   ["Topic vote from WordNet topic groups","14.7%","\u2014","Fails (exact IPTC label vote: 46.7%)"],
+   ["Meaning chosen from the article's words","Switches on 29% of words; not yet checked against truth","\u2014","Unproven"],
+   ["Named reason: parent, group, layer","Yes, every link has a named, checkable step","No: a number only","Cascade's real value"]]));
+  b.append(el("div",{class:"mut",style:"margin-top:4px"},"Why: WordNet groups words by kind (a lawsuit is a proceeding), not by situation (lawsuit, court, judge, plaintiff). News sameness is situational. The situational structure is FrameNet/VerbNet (what happened, with roles) and Wikidata (who); WordNet stays the explanation layer."));
+}
+function renderLanding(pk){
+  if(!$("ext8c"))($("ext8b")||$("ext8")).after(el("h2",{},"8c. Where the article lands on the IPTC tree (embedding landing)"),el("div",{id:"ext8c",class:"box"}));
+  const b=$("ext8c");b.replaceChildren();const L=pk&&pk.landing;
+  if(!L){b.append(el("div",{class:"mut"},"Runs in the bench: pick or paste an article above."));return}
+  const lk=(u,t)=>u?el("a",{href:u,target:"_blank",rel:"noopener"},t):"";
+  b.append(el("div",{class:"mut"},"Source: IPTC Media Topics (published by IPTC, CC BY 4.0, release 2026-09-30, file data/ontology_src/iptc/medtop.json). Each of the "+L.n_cards+" active topics is one card: its label, its definition and its parent path, embedded once with bge-small. The article and each of its sentences land on the nearest card at any depth. Everything after the landing comes from the IPTC file: the path up (vertical), the siblings under the same parent (horizontal), the children, and the Wikidata link. Codes link to IPTC's own page."));
+  b.append(el("h3",{style:"margin-top:8px"},"The whole article: 5 nearest topics"));
+  b.append(table(["IPTC code","Topic","Layer","Path up (vertical)","IPTC definition","Siblings (horizontal)","Wikidata","Score"],L.article.map(r=>[lk(r.iptc_url,r.qcode),r.label,String(r.layer),r.path.join(" \u203a "),r.definition,r.siblings.join(", "),r.wikidata[0]?lk(r.wikidata[0].replace("entity","wiki"),r.wikidata[0].split("/").pop()):"",r.score.toFixed(3)])));
+  b.append(el("h3",{style:"margin-top:10px"},"Each sentence: where it lands ("+L.n_sentences+" sentences)"));
+  b.append(table(["IPTC code","Topic","Path up","Sentences","Example sentence"],L.sentences.map(r=>[lk(r.iptc_url,r.qcode),r.label,r.path.join(" \u203a "),String(r.n_sentences),r.sentences[0]||""])));
+  const wm={};(pk.lifts||[]).forEach(x=>{const t=(x.path||[])[0];if(t)wm[t]=(wm[t]||0)+1});const ws=Object.entries(wm).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  b.append(el("h3",{style:"margin-top:10px"},"Top level: word matching vs landing"));
+  b.append(table(["Method","Top-level answer"],[["Word matching (each word's exact IPTC label, section 8)",ws.map(([t,n])=>t+" ("+n+" words)").join("; ")||"none"],["Landing: whole article",L.article[0]?L.article[0].path[0]:""],["Landing: sentence vote",(L.sentence_top_vote||[]).map(([t,n])=>t+" ("+n+")").join("; ")]]));
+  b.append(el("h3",{style:"margin-top:10px"},"Measured against MN-DS human topic labels, matched by IPTC code (ledger L2718\u2013L2731)"));
+  b.append(table(["Method","Right top-level topic","Verdict"],[["Exact-label word vote (today)","46.7%","baseline"],["Landing on the 17 top-level cards only","42.5%","worse"],["Landing at any depth (this section)","56.1% on all 1,676 (56.2% on 1,352 more); level 2: 32.7%","Below the 60% / 40% bars (field test L2721)"],["Landing + Wikidata alternative names on the cards","51.5%","Fail (\u22122.2), not used"],["Always the most common topic","8.2%","floor"]]));
+}
+async function addExperiments(o){
+  if(!$("ext8")){$("result").append(el("h2",{},"8. Experiment: the article's words on a news-topic tree (IPTC + WordNet)"),el("div",{id:"ext8",class:"box"}))}
+  if(o.pack!==undefined)renderPackBox(o.pack);
+  else if(!ST.on&&!$("ext8").firstChild)$("ext8").append(el("div",{class:"mut"},"No output here for an article you pick or paste by hand. The IPTC + WordNet placement runs outside this page, so today it only appears in stream mode (press Start streaming above). To make it work for any article it has to run inside the bench: one restart when nothing else is running. See the integration plan on the plan page."));
+  renderCascade(o.pack);
+  renderLanding(o.pack);
+  if(!$("ext9")){$("result").append(el("h2",{},"9. Experiment: cleaning the names (field test, step 2)"),el("div",{id:"ext9",class:"box"}),el("h2",{},"10. Experiment: the four Domains our Areas do not cover (field test, step 1)"),el("div",{id:"ext10",class:"box"}))}
+  const e9=$("ext9");e9.replaceChildren();const names=((o.story&&o.story.entities)||[]).map(x=>x.name),rows=[];let dropped=0,split=0;
+  names.forEach(n=>{const c=cleanName(n);if(!c.length){dropped++;rows.push([n,"dropped (not a name)"])}else if(c.length>1){split++;rows.push([n,c.join("  +  ")+"  (split)"])}else if(c[0]!==n)rows.push([n,c[0]])});
+  e9.append(el("div",{class:"mut"},"Simple fixed rules: strip a trailing 's, split 'X and Y', drop common words, field labels and nationality adjectives. On a 60-name read they removed 5 of 14 junk names and lost no real name; the rest of the junk needs a real name check, such as Wikidata (ledger L2700)."));
+  e9.append(rows.length?table(["Name as extracted","After cleaning"],rows):el("div",{},names.length+" names; the rules changed none of them."));
+  const e10=$("ext10");e10.replaceChildren();const V=await missingVocab(),text=String(o.text||"").toLowerCase().replace(/[^a-z0-9' ]/g," "),H={};
+  for(const m of Object.keys(V)){H[m]=V[m].filter(p=>new RegExp("\\b"+p.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"s?\\b").test(" "+text+" "))}
+  const ranked=Object.keys(H).sort((a,b)=>H[b].length-H[a].length),best=ranked[0],second=ranked[1]?H[ranked[1]].length:0,dom=((o.story.domain.top||[])[0]||{});
+  const routed=best&&H[best].length>=2&&H[best].length-second>=1;
+  e10.append(el("div",{class:"mut"},"Our Areas cover 13 of the 17 Domains. Sport, weather, lifestyle and leisure, and human interest have no Area. This adds a label match in front: two or more IPTC labels of one of those four, and at least one more than the others. On 419 MN-DS items it lifted strict Domain accuracy from 47.0% to 51.6% with IPTC labels alone, Adding Wikidata labels and aliases reached 53.9%, only +2.4 points over IPTC alone and below the +3 bar, while wrong re-routing rose from 1.5% to 4.3%, so the Wikidata aliases failed (ledger L2698 and the Wikidata step after it). The list used below still contains them."));
+  e10.append(el("div",{},"The Domain model chose: "+(dom.name||"?")+" ("+(dom.pct||0)+"%). The label match "+(routed?"would route this article to '"+best+"'":"would not change it")+"."));
+  e10.append(table(["Domain without an Area","Labels found in this article"],ranked.map(m=>[m,H[m].length?H[m].slice(0,8).join(", "):"none"])));
+const GAPS=[
+ ["Placed on retired IPTC topics","Bug","995 of 6,519 placements (15.3%) land on a topic IPTC retired","bond \u2192 bonds (retired); candidacy \u2192 political campaigns (retired); tea \u2192 beverage (retired)","Skip retired topics. On 600 MN-DS articles, the exact-label topic vote rose from 44.4% to 46.7% (+2.3); the vote over all three steps rose from 36.3% to 37.9%. A correctness fix, but under the +3 bar alone","Fix"],
+ ["Names sent to the topic tree","Bug","3,755 of 24,231 terms (15.5%) are names, and they count as 'unplaced'","christoph waltz; bering sea; tmf associates","Send them to name typing instead. The topic vote does not change (\u22120.6 points); the 'unplaced' count stops being inflated","Fix"],
+ ["Place names: what they are and what they are part of","Missing","Not done before. 610 of 940 place names (65%) get a WordNet chain","Brighton is a city, part of England \u203a United Kingdom; Palm Beach is a town, part of Florida \u203a United States","Where both answer, WordNet's country agrees with the GeoNames place linker on 10,757 of 11,031 places (97.5%; agreement between two tools, not accuracy)","Build"],
+ ["Place linker: wrong country","Bug","Florida \u2192 Cuba 71 times: a Cuban city called Florida beats the US state","Florida: GeoNames CU, WordNet US; Dublin: GeoNames US, WordNet IE; Westminster: GeoNames US, WordNet GB","On 274 disagreements, WordNet is right on Florida, Dublin and Westminster but wrong on Cairo, Melbourne and Birmingham (it picks the US town). Use WordNet only as a tie-break when GeoNames guessed by 'largest city'","Fix"],
+ ["Place linker: not places, and missed spellings","Bug","5,682 of 18,564 place items unlinked; 740 are 'AI' and 438 'Nvidia' (the parser tagged them as places); 52 are all-caps datelines","LONDON, WASHINGTON, PARIS unlinked; AI and Nvidia as places","Fold the case and look up again: +52. WordNet 'part of': +291 (New England \u2192 US, The Hague \u2192 NL, Kashmir \u2192 IN). Drop names that neither GeoNames nor WordNet knows as a place","Fix"],
+ ["Adjectives to their noun","Small","249 of 5,945 adjectives (4%) reach a topic","diplomatic \u2192 diplomacy; financial \u2192 finance; but american \u2192 qur'an and temporal \u2192 temple","Mostly right, small. Only with an exact label","Try"],
+ ["More steps up the tree (2\u20133 parents)","Rejected","1,410 new placements","sun \u2192 adult education; mother \u2192 senior citizens; blow \u2192 political movements","Mostly wrong when read. Do not build","Stop"],
+ ["Verb to its noun (elect \u2192 election)","Rejected","2,851 placements","withdraw \u2192 recession; imply \u2192 importing; look \u2192 witness","Mostly wrong when read, which matches the earlier verb-class result (23%). Do not build","Stop"]];
+if(!$("ext11")){$("result").append(el("h2",{},"11. Gaps in the expansion, measured on the replay articles"),el("div",{id:"ext11",class:"box"}));
+ $("ext11").append(el("div",{class:"mut"},"Measured on 2026-11-18. The topic-tree rows use 305 of the replay articles (every 9th). The place rows use all 2,739. Topic scores are against the MN-DS labels (600 articles). There are no truth labels for the replay articles, so those numbers are counts, plus examples read by hand. Script and output are in the session scratchpad, gaps/census.py and gaps/places.py."),
+  table(["Gap","Kind","Measured","Examples","What it does","Decision"],GAPS))}
+}
+const FUN={v7:["trace-v7","Latest run: trace v7 (topic re-ranker wired, live-trace-v3)"],v6:["trace-v6","Earlier run: trace v6 (landing alone, live-trace-v2)"]};let FSEL="v7";
+async function renderFunnel(){
+  const b=$("funnel"),base="/mockups/structure-live/"+FUN[FSEL][0]+"/",sel=el("select",{style:"min-width:300px;margin-bottom:6px"},...Object.entries(FUN).map(([k,v])=>{const o=el("option",{value:k},v[1]);if(k===FSEL)o.setAttribute("selected","selected");return o}));sel.onchange=()=>{FSEL=sel.value;renderFunnel()};let F;try{F=await (await fetch(base+"funnel.json",{cache:"no-store"})).json()}catch(e){b.replaceChildren(sel,el("div",{class:"mut"},"No funnel file for this run yet: run the live trace, then funnel_view.py <trace>."));renderScoreboard(base);return}
+  b.replaceChildren(sel);const a=F.as_of||{},lv=a.label_version||{};
+  b.append(el("div",{class:"mut"},"Every article goes down the same seven steps. Counts are from the latest live run of the pipeline: "+a.traced+" real news articles (run "+(a.run_id||"?")+", IPTC "+String(lv.iptc_release||"").slice(0,10)+", built "+a.built_at+"). Steps marked \u2018not built\u2019 show what they will do."));
+  const bar=(p)=>{const o=el("span",{style:"display:inline-block;height:8px;margin-right:6px;vertical-align:middle;background:currentColor;opacity:.45;width:"+Math.max(1,Math.round(Number(p)||0))+"px"});return o};
+  const rows=F.stages.map(s=>{const r=el("div",{});(s.rows||[]).forEach(x=>{const d=el("div",{});d.append(bar(x[2]),String(x[0])+": "+x[1]+" ("+x[2]+"%)");r.append(d)});if(s.note)r.append(el("div",{class:"mut"},s.note));return[s.step,s.plain,s.built?"built":"not built yet",r]});
+  b.append(table(["Step","What it does","Status","This run"],rows));
+  (F.examples||[]).forEach((e,i)=>{b.append(el("h3",{style:"margin-top:12px"},(i===0?"An article that passes: ":"An article that goes to Learn: ")+e.title+" ("+e.source+", #"+e.seq+")"));b.append(el("div",{class:"mut"},e.excerpt+"\u2026"));b.append(table(["Step","What happened"],e.steps))});
+  renderScoreboard(base);
+}
+async function renderScoreboard(base){const b=$("scoreboard");if(!b)return;let S;try{S=await (await fetch(base+"scoreboard.json",{cache:"no-store"})).json()}catch(e){b.replaceChildren(el("div",{class:"mut"},"No scoreboard file for this run: funnel_view.py <trace> writes it."));return}
+  const cls={met:"ok",below:"bad","check failed":"bad"};
+  b.replaceChildren(el("div",{class:"mut"},"One row per funnel step. A score is measured against outside truth (a public human-labelled set, or checks written down before the first run) and is read from the step's result file, never typed. Not started means no result file exists. Built "+S.built_at+" for run "+(S.run_id||"?")+"."),
+    table(["Step","Truth set","Current score","Bar","Last round","Next lever","Status"],S.rows.map(r=>[r.step,r.truth_set,r.score,r.bar,r.last_round,r.next_lever,tag(r.status,cls[r.status]||"no")])))}
+renderFunnel();
+const _render0=render;render=function(o){_render0(o);addExperiments(o).catch(e=>console.log("experiments",e.message))};
+
+/* ---- Resource ledger v0 (plan v2 step 5, owner design L2707, 2026-11-19). Same rules as projects/world-state/ledger_split.py (test_ledger_parity.cjs compares them). Draft wording, owner to confirm (R7). ---- */
+const LG={TALK:0.2,FW:{fact:1,forecast:0.5,opinion:0.3,unclear:0.5},SIGN:1,BIG:2,BIGS:["major","severe","extreme"],DECAY_AT:1,WARM_AT:2,MIN_N:5,FLOOR:0.05,CONF:2/3,DW:{ANSWER_L1:1,EVIDENCE_ONLY:0.5,ABSTAIN:0.25}};
+const LFOL={v7:"/mockups/structure-live/trace-v7/",v6:"/mockups/structure-live/trace-v6/",v2:"/mockups/structure-live/trace-v2/",v1:"/mockups/structure-live/trace-demo/"},LS={spec:null,stream:null,shown:null,src:"v7",busy:false};
+async function lgSpec(){if(!LS.spec){const r=await fetch("/mockups/structure-live/ledger-v0/iptc_condition_v0.json",{cache:"no-store"});if(!r.ok)throw new Error("link table "+r.status);LS.spec=await r.json()}return LS.spec}
+function lgNew(sp){const L={sp,cres:{},up:{},byCode:{},hl:{},res:{},tick:0,seq:null,seen:{},kinds:{},indep:0,items:0,routes:{},unl:{},l2n:{},dirs:0,run:null};
+  sp.rows.forEach(r=>{L.cres[r.condition]=r.resource;if(!(r.resource in L.up))L.up[r.resource]=r.up_means;r.iptc.forEach(x=>(L.byCode[x.code]=L.byCode[x.code]||[]).push(r.condition))});
+  sp.resources.forEach(r=>{if(r.half_life_ticks){L.hl[r.id]=r.half_life_ticks;L.res[r.id]={n:0,att:0,pos:0,neg:0,pn:0,nn:0,last:0,t0:0,pubs:new Set(),feed:{},seq:null}}});return L}
+const lgStage=(l,n)=>(l.stages||[]).find(s=>s.name===n);
+const lgName=(L,c)=>L.sp.names[String(c).split(":")[1]]||c;
+function lgInd(L,l){const d=l.journal&&l.journal.dup;if(d)return[!(d.kind==="copy"||d.kind==="republished"),d.kind];const w=String(l.title||"").toLowerCase().split(/\s+/).filter(Boolean).join(" "),so=l.source||"";   // no journal: title key only (5 words or more)
+  if(w.split(" ").length<5)return[true,"no_key"];const S=L.seen[w];if(!S){L.seen[w]=new Set([so]);return[true,"first"]}const k=S.has(so)?"republished":"copy";S.add(so);return[false,k]}
+function lgDec(L,r,T){const s=L.res[r],k=Math.pow(0.5,(T-s.t0)/L.hl[r]);s.att*=k;s.pos*=k;s.neg*=k;s.t0=T}
+function lgAdd(L,l){if(!l||l.state!=="traced")return;L.items++;const [ind,kind]=lgInd(L,l);L.kinds[kind]=(L.kinds[kind]||0)+1;if(!ind)return;
+  const T=++L.tick;L.seq=l.seq;L.indep++;const af=lgStage(l,"area_function"),st=((af&&af.out)||{}).story_type||[],fw=LG.FW[st.length?st[0][0]:"unclear"]??LG.FW.unclear;
+  const ls=lgStage(l,"topic_landing"),dt=((l.decider||{}).topic||{}).outcome||"";let conds=[],feed=null,route="none",w=1,dec=null;
+  if(ls&&(ls.state==="ran"||ls.state==="abstain")&&ls.out&&ls.out.l1_code){const o=ls.out,code=o.l1_code;route="iptc";dec=o.decision;w=LG.DW[dec]??1;conds=L.byCode[code]||[];const b=String((o.rerank&&o.rerank.node)||(o.best&&o.best.qcode)||code).split(":")[1],l2=L.sp.l2_of[b]||b;feed=L.sp.names[l2]||lgName(L,code);L.l2n[l2]=(L.l2n[l2]||0)+1;if(!conds.length){const n=lgName(L,code);L.unl[n]=(L.unl[n]||0)+1}}
+  else if(af&&dt.startsWith("ANSWER")&&(af.out.topic||[]).length){const t=af.out.topic[0][0],bt=L.sp.by_topic[t];route="area";conds=(bt&&bt.conditions)||[];feed=(bt&&bt.name)||t;if(!conds.length)L.unl[feed]=(L.unl[feed]||0)+1}
+  L.routes[route]=(L.routes[route]||0)+1;
+  const Rt=[...new Set(conds.map(c=>L.cres[c]))].sort(),ev={},mk=r=>ev[r]||(ev[r]=[0,0,0,new Set()]);Rt.forEach(r=>{const e=mk(r);e[0]+=LG.TALK*fw*w/Rt.length;e[3].add(feed)});
+  const cs=lgStage(l,"condition"),co=(cs&&cs.out)||{};
+  if(dec!=="ABSTAIN"&&cs&&cs.state==="ran"&&co.present===true&&(co.direction==="up"||co.direction==="down")&&co.which&&co.which.length){L.dirs++;const sg=co.direction==="up"?1:-1,mg=LG.SIGN*w*(LG.BIGS.includes(co.size)?LG.BIG:1);
+    co.which.forEach(c=>{const r=L.cres[c];if(r&&L.res[r]){const e=mk(r);e[sg>0?1:2]+=mg;e[3].add("condition: "+c.replace(/_/g," "))}})}
+  Object.keys(ev).sort().forEach(r=>{const s=L.res[r],e=ev[r];lgDec(L,r,T);s.att+=e[0]+e[1]+e[2];s.pos+=e[1];s.neg+=e[2];s.pn+=e[1]>0?1:0;s.nn+=e[2]>0?1:0;s.n++;s.last=T;s.seq=l.seq;s.pubs.add(l.source||"");e[3].forEach(x=>{s.feed[x]=(s.feed[x]||0)+1})})}
+function lgState(L,r,T){const s=L.res[r];if(s.n===0)return["untouched",0,0];lgDec(L,r,T);const idle=T-s.last,h=L.hl[r],v=s.att,sg=s.pos+s.neg,net=s.pos-s.neg;
+  if(v<LG.FLOOR)return["untouched",v,net];if(idle>LG.WARM_AT*h)return["warming",v,net];if(idle>LG.DECAY_AT*h)return["decaying",v,net];
+  if(sg>v-sg&&sg>0){if(s.pos>0&&s.neg>0&&Math.max(s.pos,s.neg)/sg<=LG.CONF)return["conflicted",v,net];return[net>0?"moving up":"moving down",v,net]}
+  return[s.n>=LG.MIN_N?"talked about":"warming",v,net]}
+function lgRows(L){const T=L.tick,rm={};L.sp.resources.forEach(r=>rm[r.id]=r);const rv=(L.run&&L.run.label_version)||{},sv=L.sp.label_version,lv={iptc_release:sv.iptc_release,table:sv.table,spec:L.sp.version,cards:rv.cards||null},stale=!!rv.iptc_release&&rv.iptc_release!==sv.iptc_release,asof={run_id:L.run?L.run.run_id:null,seq:L.seq,tick:T,label_version:lv};
+  return Object.keys(L.res).map(r=>{const s=L.res[r],[stt,v,net]=lgState(L,r,T);return{resource:r,name:rm[r].name,group:rm[r].group,state:stt,value:v,net,items:s.n,publishers:s.pubs.size,up_n:s.pn,down_n:s.nn,up_means:L.up[r]||null,half_life_ticks:L.hl[r],feeds:Object.entries(s.feed).sort((a,b)=>b[1]-a[1]).slice(0,3),last_seq:s.seq,status:"guess",as_of:asof,label_version:lv,stale}}).sort((a,b)=>b.value-a.value||(a.resource<b.resource?-1:1))}
+function lgWords(r){if(r.state==="moving up")return r.up_means==="strain"?"more strain (worse)":"building up";if(r.state==="moving down")return r.up_means==="strain"?"less strain (better)":"running down";if(r.state==="conflicted")return"disputed: "+r.up_n+" up, "+r.down_n+" down";return""}
+function lgCls(r){const w=r.up_means==="strain";return{"untouched":"no","warming":"no","talked about":"ok","moving up":w?"bad":"ok","moving down":w?"ok":"bad","conflicted":"warn","decaying":"no"}[r.state]||"no"}
+const LGHEAD="A running tally of the world's resources (things a society depends on, such as fresh water, public finances or trust), kept from the news articles read so far. An article that reaches a resource adds a small step for being talked about; a larger step, up or down, when the article says the resource's condition is rising or falling; and a doubled step when the change is described as large (the engine's major or above). Steps fade as later articles arrive. The links from topics to resources are the world engine's own guesses, not measurements, and the topic behind each article is right about 56 times in 100 at the top level (step 1 check), so read the values as a rough mix of what the news is about, not as readings of the resources.";
+const LGSTEPS=[["Talked about","+0.2 x function weight (fact 1.0, forecast 0.5, opinion 0.3, unclear 0.5), split over the resources the article reaches","owner design L2707; sizes are our guess"],["Stated positive or negative","+1.0 or -1.0 on the resource of each condition the Condition head names (only when it answered with a direction)","owner design L2707"],["Substantial change","x2, with its direction, when the condition size is 'large': read as the engine's 'major' or above (its scale is minor, notable, major, severe, extreme; the trace only holds the first three)","owner design L2707 says large; our reading, owner to confirm"],["Fading","per article counted: x 0.5^(1/half-life); half-life = mean of the resource's engine conditions (water 200, land 400, ...)","engine half-lives (guess)"],["Weighted by the topic decision","every step above is multiplied by how sure the topic landing was: answer 1.0, evidence only 0.5, abstain 0.25; an abstained article never sets a direction (its condition step is dropped)","spec 2.2, owner yes L2744"],["Not counted","copies from other publishers and republished items: no step, no tick","journal rule, or title key when the trace has no journal"],["States","untouched; warming (under 5 articles); talked about (5 or more); moving up or down (signed step larger than the talk); disputed (neither direction over two thirds of the signed step); decaying (idle over one half-life); back to warming after two half-lives; untouched under 0.05 (checked first)","build spec 2.4 gives the names, not the timing: the timing is our reading, owner to confirm; no resource in the real run is decaying or disputed yet, so the rules are checked on a made-up stream (ledger_split.py --selftest)"]];
+function renderLedger(L,note){const b=$("s_ledger");if(!b)return;b.replaceChildren();LS.shown=L;
+  const src=el("select",{id:"l_src",style:"flex:0 0 auto;min-width:250px"},...[["stream","Follow the stream above"],["v7","Recorded run: latest trace folder v7 (re-ranked topic answers)"],["v6","Recorded run: earlier trace folder v6 (landing alone)"],["v2","Recorded run: earlier v2 trace folder (IPTC route)"],["v1","Recorded run: v1 replay folder (Area route, legacy)"]].map(([v,t])=>{const o=el("option",{value:v},t);if(v===LS.src)o.setAttribute("selected","selected");return o})),go=el("button",{class:"alt",id:"l_go"},"Build from folder");
+  src.onchange=()=>{LS.src=src.value;renderLedger(LS.src==="stream"?LS.stream:null,LS.src==="stream"?"":"Press Build from folder to count the recorded run.")};go.onclick=()=>lgFolder(LS.src);
+  b.append(el("h3",{},"Resource ledger (draft)"),el("div",{class:"mut"},LGHEAD),el("div",{class:"mut",style:"font-weight:600"},"Draft wording, owner to confirm (R7)."),el("div",{class:"row",style:"margin-top:6px"},src,go,el("span",{class:"mut",id:"l_st"},note||"")));
+  if(!L){b.append(el("div",{class:"mut"},LS.spec?"Nothing counted yet.":"Loading the link table…"));return}
+  const rows=lgRows(L),a=rows[0]?rows[0].as_of:{},lv=a.label_version||{},run=L.run||{},old=run.state==="running"&&run.now_epoch&&(Date.now()/1000-run.now_epoch)>60;
+  b.append(el("div",{class:"mut",style:"margin:4px 0"}));
+  b.lastChild.textContent="As of article #"+(L.seq===null?"-":L.seq)+" ("+L.tick+" counted of "+L.items+" read; copies not counted: "+(L.items-L.indep)+"), run "+(a.run_id||"none")+", labels "+String(lv.iptc_release||"").slice(0,10)+"/"+String(lv.cards||"?").slice(0,8)+", link table "+(lv.spec||"?")+". Topic route per article: "+(Object.entries(L.routes).map(([k,v])=>({iptc:"IPTC landing",area:"Area topic (legacy)",none:"no topic read"}[k]||k)+" "+v).join(", ")||"none yet")+"."+(rows[0]&&rows[0].stale?" STALE: this run's labels differ from the link table's.":"")+(old?" Greyed: the run has not written for over 60 seconds.":"");
+  const wrap=el("div",{style:"overflow:auto;max-height:460px"+(old?";opacity:.55":"")});
+  wrap.append(table(["Resource","Group","State","Value","Net move","Articles (publishers)","Fed mostly by","Last"],rows.map(r=>{const u=r.items===0;return[el("span",{class:u?"mut":"",title:"as of #"+r.as_of.seq+", run "+r.as_of.run_id+", labels "+String(r.label_version.iptc_release).slice(0,10)+"/"+String(r.label_version.cards||"?").slice(0,8)},r.name),r.group,u?el("span",{class:"mut"},"no mention yet"):el("span",{},tag(r.state,lgCls(r)),r.items<LG.MIN_N&&r.state!=="untouched"?el("span",{class:"mut"}," (thin: "+r.items+")"):"",lgWords(r)?el("span",{class:"mut"}," "+lgWords(r)):""),u?"":r.value.toFixed(2),u?"":(r.up_n||r.down_n?"▲"+r.up_n+" ▼"+r.down_n+" ("+(r.net>=0?"+":"")+r.net.toFixed(2)+")":"none"),u?"":r.items+" ("+r.publishers+")",u?"":r.feeds.map(f=>f[0]+" "+f[1]).join("; "),u?"":"#"+r.last_seq]})));
+  b.append(wrap,el("div",{class:"mut",style:"margin-top:4px"},"▲ or ▼ counts articles where the Condition head said the condition behind the resource is rising or falling. For a 'strain' link, rising means more strain on the resource, which is worse for it; for a 'build' link, rising means the resource is building up."));
+  const unl=Object.entries(L.unl).sort((a,b)=>b[1]-a[1]),l2=Object.entries(L.l2n).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  b.append(el("details",{},el("summary",{},"Topics with no resource link ("+unl.length+")"),unl.length?table(["Topic","Articles"],unl.map(([k,v])=>[k,v])):el("div",{class:"mut"},"None: every level-1 IPTC topic has a derived link. The most-reached level-2 topics below borrow their level-1 link; each is a candidate for an add-only link of its own (a guess, ledger Q4 still open)."),l2.length?table(["Most-reached level-2 topic (no link of its own)","Articles"],l2.map(([k,v])=>[L.sp.names[k]||k,v])):""));
+  b.append(el("details",{},el("summary",{},"How the steps are set (constants used on this page)"),table(["Step","Size","Where it comes from"],LGSTEPS)));
+  lgSplit(b)}
+async function lgSplit(b){const sh=LS.src==="stream"?null:LS.src;if(!sh)return;try{const j=await (await fetch(LFOL[sh]+"ledger.json",{cache:"no-store"})).json(),s=j.split_half;if(!s)return;
+  const ck=s.m4_checks||[],nf=ck.filter(x=>x.result==="FAIL").length;
+  b.append(el("div",{class:"mut",style:"margin-top:6px"},"Split-half check (ledger_split.py, run "+(j.as_of&&j.as_of.run_id)+", "+s.items+" counted articles, "+s.windows+" windows), against the ranges written down before the first run: "+(ck.length?nf+" of "+ck.length+" checks FAILED.":"prediction not recorded in this file.")));
+  ck.forEach(x=>b.append(el("div",{class:x.result==="FAIL"?"bad":"mut",style:"margin-left:12px"},x.result+": "+x.check+" - predicted "+x.predicted+", measured "+x.measured)));
+  b.append(el("div",{class:"mut",style:"margin-top:4px"},"What the numbers say: two halves of the publishers give the same overall mix of resources (rank agreement "+s.whole_stream+", against "+s.whole_label_shuffle_mean_p95[0]+" with the labels shuffled, 95th percentile "+s.whole_label_shuffle_mean_p95[1]+"), but a random publisher split gives just as much ("+s.whole_random_publisher_split_mean_p95[0]+", 95th percentile "+s.whole_random_publisher_split_mean_p95[1]+"), so this is a stable mix of topics, not agreement about the resources; the change between windows does not agree (median "+s.change_median+", a random publisher split gives up to "+s.change_random_split_mean_p95[1]+"). So the ledger shows what the news talks about, not trends in the resources. Agreement between halves shows consistency, not truth."))}catch(e){}}
+async function lgFolder(k){if(LS.busy)return;LS.busy=true;const st=t=>{const s=$("l_st");if(s)s.textContent=t};
+  try{const sp=await lgSpec(),base=LFOL[k],run=await (await fetch(base+"run.json",{cache:"no-store"})).json(),L=lgNew(sp);L.run=run;st("Reading "+base+"chain.jsonl ...");
+    const r=await fetch(base+"chain.jsonl",{cache:"no-store"});if(!r.ok)throw new Error("chain.jsonl "+r.status);const rd=r.body.getReader(),dc=new TextDecoder();let buf="",n=0;
+    const one=ln=>{if(!ln.trim())return;try{lgAdd(L,JSON.parse(JSON.parse(ln).line))}catch(e){}n++;if(n%500===0)st("Counted "+n+" lines ...")};
+    for(;;){const x=await rd.read();if(x.done)break;buf+=dc.decode(x.value,{stream:true});let i;while((i=buf.indexOf("\n"))>=0){one(buf.slice(0,i));buf=buf.slice(i+1)}}one(buf);
+    renderLedger(L,"Built from "+base+" ("+n+" lines).")}catch(e){st("Error: "+e.message)}finally{LS.busy=false}}
+async function ledgerStream(rec){try{const sp=await lgSpec();if(!LS.stream||LS.stream.sp!==sp)LS.stream=lgNew(sp);LS.stream.run=ST.run||null;lgAdd(LS.stream,rec.article_line);if(LS.src==="stream")renderLedger(LS.stream,"")}catch(e){const s=$("l_st");if(s)s.textContent="Ledger error: "+e.message}}
+lgSpec().then(sp=>{renderLedger(lgNew(sp),"");if(LS.src!=="stream")lgFolder(LS.src)}).catch(e=>renderLedger(null,"Link table not loaded: "+e.message));
+
 </script></body></html>

@@ -1,0 +1,473 @@
+{
+ "version": "mnds_name_to_code_v1",
+ "iptc_release": "2026-09-30T12:00:00+00:00",
+ "rules": [
+  "Level 1: exact current label, plus IPTC top concepts renamed with the code kept (politics -> medtop:11000000 'politics and government', modified 2025-03-31; religion and belief -> medtop:12000000 'religion', modified 2021-12-21).",
+  "Level 2: exact current or retired label whose top concept equals the item's level-1 code; anything else is 'unmatched' and is reported, never hand-mapped.",
+  "Build the table: python3 mnds_codes.py  -> specs/mnds_name_to_code_v1.json"
+ ],
+ "l1": {
+  "arts, culture, entertainment and media": "medtop:01000000",
+  "crime, law and justice": "medtop:02000000",
+  "disaster, accident and emergency incident": "medtop:03000000",
+  "economy, business and finance": "medtop:04000000",
+  "education": "medtop:05000000",
+  "environment": "medtop:06000000",
+  "health": "medtop:07000000",
+  "human interest": "medtop:08000000",
+  "labour": "medtop:09000000",
+  "lifestyle and leisure": "medtop:10000000",
+  "politics and government": "medtop:11000000",
+  "religion": "medtop:12000000",
+  "science and technology": "medtop:13000000",
+  "society": "medtop:14000000",
+  "sport": "medtop:15000000",
+  "conflict, war and peace": "medtop:16000000",
+  "weather": "medtop:17000000",
+  "politics": "medtop:11000000",
+  "religion and belief": "medtop:12000000"
+ },
+ "l2": {
+  "arts, culture, entertainment and media | arts and entertainment": {
+   "code": "medtop:20000002",
+   "status": "current"
+  },
+  "arts, culture, entertainment and media | culture": {
+   "code": "medtop:20000038",
+   "status": "current"
+  },
+  "arts, culture, entertainment and media | mass media": {
+   "code": "medtop:20000045",
+   "status": "current"
+  },
+  "conflict, war and peace | act of terror": {
+   "code": "medtop:20000053",
+   "status": "current"
+  },
+  "conflict, war and peace | armed conflict": {
+   "code": "medtop:20000056",
+   "status": "current"
+  },
+  "conflict, war and peace | civil unrest": {
+   "code": "medtop:20000065",
+   "status": "current"
+  },
+  "conflict, war and peace | coup d'etat": {
+   "code": "medtop:20000070",
+   "status": "current"
+  },
+  "conflict, war and peace | massacre": {
+   "code": "medtop:20000071",
+   "status": "current"
+  },
+  "conflict, war and peace | peace process": {
+   "code": "medtop:20000073",
+   "status": "current"
+  },
+  "conflict, war and peace | post-war reconstruction": {
+   "code": "medtop:20000077",
+   "status": "current"
+  },
+  "conflict, war and peace | prisoners of war": {
+   "code": "medtop:20000080",
+   "status": "current"
+  },
+  "crime, law and justice | crime": {
+   "code": "medtop:20000082",
+   "status": "current"
+  },
+  "crime, law and justice | judiciary": {
+   "code": "medtop:20000106",
+   "status": "current"
+  },
+  "crime, law and justice | justice": {
+   "code": "medtop:20000119",
+   "status": "retired"
+  },
+  "crime, law and justice | law": {
+   "code": "medtop:20000121",
+   "status": "current"
+  },
+  "crime, law and justice | law enforcement": {
+   "code": "medtop:20000129",
+   "status": "current"
+  },
+  "disaster, accident and emergency incident | accident and emergency incident": {
+   "code": "medtop:20000139",
+   "status": "current"
+  },
+  "disaster, accident and emergency incident | disaster": {
+   "code": "medtop:20000148",
+   "status": "current"
+  },
+  "disaster, accident and emergency incident | emergency incident": {
+   "code": "medtop:20000160",
+   "status": "retired"
+  },
+  "disaster, accident and emergency incident | emergency planning": {
+   "code": "medtop:20000167",
+   "status": "retired"
+  },
+  "disaster, accident and emergency incident | emergency response": {
+   "code": "medtop:20000168",
+   "status": "current"
+  },
+  "economy, business and finance | business information": {
+   "code": "medtop:20000170",
+   "status": "current"
+  },
+  "economy, business and finance | economic sector": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "economy, business and finance | economy": {
+   "code": "medtop:20000344",
+   "status": "current"
+  },
+  "economy, business and finance | market and exchange": {
+   "code": "medtop:20000385",
+   "status": "current"
+  },
+  "education | parent organisation": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "education | religious education": {
+   "code": "medtop:20000399",
+   "status": "current"
+  },
+  "education | school": {
+   "code": "medtop:20000400",
+   "status": "current"
+  },
+  "education | social learning": {
+   "code": "medtop:20000410",
+   "status": "current"
+  },
+  "education | teaching and learning": {
+   "code": "medtop:20000411",
+   "status": "retired"
+  },
+  "education | vocational education": {
+   "code": "medtop:20001216",
+   "status": "current"
+  },
+  "environment | climate change": {
+   "code": "medtop:20000418",
+   "status": "current"
+  },
+  "environment | conservation": {
+   "code": "medtop:20000420",
+   "status": "current"
+  },
+  "environment | environmental politics": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "environment | environmental pollution": {
+   "code": "medtop:20000424",
+   "status": "current"
+  },
+  "environment | natural resources": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "environment | nature": {
+   "code": "medtop:20000441",
+   "status": "current"
+  },
+  "health | diseases and conditions": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "health | health facility": {
+   "code": "medtop:20000461",
+   "status": "current"
+  },
+  "health | health organisations": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "health | health treatment": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "health | healthcare policy": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "health | medical profession": {
+   "code": "medtop:20000485",
+   "status": "current"
+  },
+  "health | non-human diseases": {
+   "code": "medtop:20000493",
+   "status": "retired"
+  },
+  "human interest | accomplishment": {
+   "code": "medtop:20000497",
+   "status": "retired"
+  },
+  "human interest | animal": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "human interest | anniversary": {
+   "code": "medtop:20001237",
+   "status": "current"
+  },
+  "human interest | ceremony": {
+   "code": "medtop:20000501",
+   "status": "current"
+  },
+  "human interest | people": {
+   "code": "medtop:20000502",
+   "status": "retired"
+  },
+  "human interest | plant": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "labour | employment": {
+   "code": "medtop:20000509",
+   "status": "current"
+  },
+  "labour | employment legislation": {
+   "code": "medtop:20000521",
+   "status": "current"
+  },
+  "labour | labour market": {
+   "code": "medtop:20000523",
+   "status": "current"
+  },
+  "labour | labour relations": {
+   "code": "medtop:20000524",
+   "status": "current"
+  },
+  "labour | retirement": {
+   "code": "medtop:20000531",
+   "status": "current"
+  },
+  "labour | unemployment": {
+   "code": "medtop:20000533",
+   "status": "current"
+  },
+  "labour | unions": {
+   "code": "medtop:20000536",
+   "status": "current"
+  },
+  "lifestyle and leisure | exercise and fitness": {
+   "code": "medtop:20001239",
+   "status": "current"
+  },
+  "lifestyle and leisure | leisure": {
+   "code": "medtop:20000538",
+   "status": "current"
+  },
+  "lifestyle and leisure | lifestyle": {
+   "code": "medtop:20000565",
+   "status": "current"
+  },
+  "politics | election": {
+   "code": "medtop:20000574",
+   "status": "current"
+  },
+  "politics | fundamental rights": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "politics | government": {
+   "code": "medtop:20000593",
+   "status": "current"
+  },
+  "politics | government policy": {
+   "code": "medtop:20000621",
+   "status": "current"
+  },
+  "politics | international relations": {
+   "code": "medtop:20000638",
+   "status": "current"
+  },
+  "politics | non-governmental organisation": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "politics | political crisis": {
+   "code": "medtop:20000647",
+   "status": "retired"
+  },
+  "politics | political dissent": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "politics | political process": {
+   "code": "medtop:20000649",
+   "status": "retired"
+  },
+  "religion and belief | interreligious dialogue": {
+   "code": "medtop:20000687",
+   "status": "retired"
+  },
+  "religion and belief | religious belief": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "religion and belief | religious conflict": {
+   "code": "medtop:20000688",
+   "status": "current"
+  },
+  "religion and belief | religious event": {
+   "code": "medtop:20000689",
+   "status": "retired"
+  },
+  "religion and belief | religious facilities": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "religion and belief | religious institutions and state relations": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "religion and belief | religious leader": {
+   "code": "medtop:20000703",
+   "status": "current"
+  },
+  "religion and belief | religious text": {
+   "code": "medtop:20000705",
+   "status": "current"
+  },
+  "science and technology | biomedical science": {
+   "code": "medtop:20000710",
+   "status": "current"
+  },
+  "science and technology | mathematics": {
+   "code": "medtop:20000715",
+   "status": "current"
+  },
+  "science and technology | natural science": {
+   "code": "medtop:20000717",
+   "status": "current"
+  },
+  "science and technology | scientific institution": {
+   "code": "medtop:20000741",
+   "status": "current"
+  },
+  "science and technology | scientific research": {
+   "code": "medtop:20000735",
+   "status": "current"
+  },
+  "science and technology | scientific standards": {
+   "code": "medtop:20000755",
+   "status": "current"
+  },
+  "science and technology | social sciences": {
+   "code": "medtop:20000742",
+   "status": "current"
+  },
+  "science and technology | technology and engineering": {
+   "code": "medtop:20000756",
+   "status": "current"
+  },
+  "society | communities": {
+   "code": "medtop:20000768",
+   "status": "current"
+  },
+  "society | demographics": {
+   "code": "medtop:20000770",
+   "status": "current"
+  },
+  "society | discrimination": {
+   "code": "medtop:20000775",
+   "status": "current"
+  },
+  "society | emigration": {
+   "code": "medtop:20000772",
+   "status": "current"
+  },
+  "society | family": {
+   "code": "medtop:20000780",
+   "status": "current"
+  },
+  "society | immigration": {
+   "code": "medtop:20000771",
+   "status": "current"
+  },
+  "society | mankind": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "society | social condition": {
+   "code": "medtop:20000799",
+   "status": "current"
+  },
+  "society | social problem": {
+   "code": "medtop:20000802",
+   "status": "current"
+  },
+  "society | values": {
+   "code": "medtop:20000808",
+   "status": "current"
+  },
+  "society | welfare": {
+   "code": "medtop:20000817",
+   "status": "current"
+  },
+  "sport | bodybuilding": {
+   "code": "medtop:20001240",
+   "status": "current"
+  },
+  "sport | competition discipline": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "sport | disciplinary action in sport": {
+   "code": "medtop:20001103",
+   "status": "current"
+  },
+  "sport | drug use in sport": {
+   "code": "medtop:20001104",
+   "status": "current"
+  },
+  "sport | sport event": {
+   "code": "medtop:20001108",
+   "status": "current"
+  },
+  "sport | sport industry": {
+   "code": "medtop:20001124",
+   "status": "current"
+  },
+  "sport | sport organisation": {
+   "code": "medtop:20001125",
+   "status": "current"
+  },
+  "sport | sport venue": {
+   "code": "medtop:20001126",
+   "status": "current"
+  },
+  "sport | transfer": {
+   "code": null,
+   "status": "unmatched"
+  },
+  "weather | weather forecast": {
+   "code": "medtop:20001128",
+   "status": "current"
+  },
+  "weather | weather phenomena": {
+   "code": "medtop:20001129",
+   "status": "current"
+  },
+  "weather | weather statistic": {
+   "code": "medtop:20001130",
+   "status": "current"
+  },
+  "weather | weather warning": {
+   "code": "medtop:20001131",
+   "status": "current"
+  }
+ },
+ "l2_counts": {
+  "current": 79,
+  "retired": 11,
+  "unmatched": 19
+ }
+}

@@ -1,0 +1,3221 @@
+{
+ "version": "iptc_condition_v0",
+ "status": "derived from the engine's guess (reference): the engine's topic links were hand-set and never fitted. Not a published crosswalk.",
+ "label_version": {
+  "iptc_release": "2026-09-30T12:00:00+00:00",
+  "table": "mnds_name_to_code_v1"
+ },
+ "derived_from": {
+  "ontology": {
+   "file": "/workspace/exports/world-engine-ontology-rules_v2.json",
+   "ruleset": "rules_v2",
+   "git_commit": "d6c334a",
+   "sha256": "5beb83a83e0bd88f877934ad81e7d50979ffdc72d73881b9101c9ed2850f127e"
+  },
+  "topic_to_iptc": {
+   "file": "specs/topic_to_iptc_v1.json",
+   "sha256": "3fe0294c03325380aace0b1dd9a62c80c9208b20b3d4af9830b771304861cd22"
+  },
+  "name_to_code": {
+   "file": "specs/mnds_name_to_code_v1.json",
+   "sha256": "92f5a78942e29927db0e2726d920965800485afe4236e5cff7257853207c34b3"
+  }
+ },
+ "rule": "condition <- engine topic_condition <- topic -> topic_to_iptc_v1 names -> mnds_name_to_code_v1 level-1 codes; every IPTC name the topic lists is used (lenient), primary_topics counts topics where it is the first name",
+ "rows": [
+  {
+   "condition": "air_pollution",
+   "name": "Air pollution",
+   "resource": "atmosphere_climate",
+   "up_means": "strain",
+   "half_life_ticks": 150.0,
+   "iptc": [
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "energy_power",
+      "pollution_nature"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "energy_power"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "asset_values",
+   "name": "Asset values",
+   "resource": "asset_wealth",
+   "up_means": "build",
+   "half_life_ticks": 200.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "housing_rents",
+      "markets_investment"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "housing_rents"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "biodiversity_loss",
+   "name": "Biodiversity loss",
+   "resource": "biodiversity",
+   "up_means": "strain",
+   "half_life_ticks": 500.0,
+   "iptc": [
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "pollution_nature"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 1,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "borrowing_cost",
+   "name": "Borrowing cost and credit access",
+   "resource": "monetary_credit",
+   "up_means": "strain",
+   "half_life_ticks": 150.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "interest_credit_banking"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 1,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "care_strain",
+   "name": "Care strain",
+   "resource": "care_capacity",
+   "up_means": "strain",
+   "half_life_ticks": 100.0,
+   "iptc": [
+    {
+     "code": "medtop:07000000",
+     "name": "health",
+     "topics": [
+      "health_care_system",
+      "medicines_science",
+      "public_health"
+     ],
+     "primary_topics": 3
+    },
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "medicines_science"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "civil_liberties",
+   "name": "Civil liberties",
+   "resource": "legitimacy",
+   "up_means": "build",
+   "half_life_ticks": 400.0,
+   "iptc": [
+    {
+     "code": "medtop:02000000",
+     "name": "crime, law and justice",
+     "topics": [
+      "courts_rulings",
+      "cyber_privacy"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "civil_rights_discrimination",
+      "legislation_regulation"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "cyber_privacy"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "civil_rights_discrimination"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 4,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "civil_unrest",
+   "name": "Civil unrest",
+   "resource": "state_capacity",
+   "up_means": "strain",
+   "half_life_ticks": 60.0,
+   "iptc": [
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "elections_politics",
+      "protest_movements"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:09000000",
+     "name": "labour",
+     "topics": [
+      "labour_disputes"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "protest_movements"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "climate_stress",
+   "name": "Climate stress",
+   "resource": "atmosphere_climate",
+   "up_means": "strain",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "climate_change",
+      "natural_disasters"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:03000000",
+     "name": "disaster, accident and emergency incident",
+     "topics": [
+      "natural_disasters"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:17000000",
+     "name": "weather",
+     "topics": [
+      "natural_disasters"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "community",
+   "name": "Community strength",
+   "resource": "community_ties",
+   "up_means": "build",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:01000000",
+     "name": "arts, culture, entertainment and media",
+     "topics": [
+      "culture_leisure"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:12000000",
+     "name": "religion and belief",
+     "topics": [
+      "religion_identity"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "family_demographics"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:08000000",
+     "name": "human interest",
+     "topics": [
+      "family_demographics"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:10000000",
+     "name": "lifestyle and leisure",
+     "topics": [
+      "culture_leisure"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:15000000",
+     "name": "sport",
+     "topics": [
+      "culture_leisure"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "crime",
+   "name": "Crime",
+   "resource": "state_capacity",
+   "up_means": "strain",
+   "half_life_ticks": 100.0,
+   "iptc": [
+    {
+     "code": "medtop:02000000",
+     "name": "crime, law and justice",
+     "topics": [
+      "crime_policing"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 1,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "cyber_insecurity",
+   "name": "Cyber insecurity",
+   "resource": "computing_capacity",
+   "up_means": "strain",
+   "half_life_ticks": 100.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "business_corporate"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "cyber_privacy"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:02000000",
+     "name": "crime, law and justice",
+     "topics": [
+      "cyber_privacy"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "disruption",
+   "name": "Disruption of services",
+   "resource": "built_infrastructure",
+   "up_means": "strain",
+   "half_life_ticks": 80.0,
+   "iptc": [
+    {
+     "code": "medtop:03000000",
+     "name": "disaster, accident and emergency incident",
+     "topics": [
+      "accidents_incidents",
+      "natural_disasters"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "transport_infrastructure"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:09000000",
+     "name": "labour",
+     "topics": [
+      "labour_disputes"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "cyber_privacy"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:02000000",
+     "name": "crime, law and justice",
+     "topics": [
+      "cyber_privacy"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "natural_disasters"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "transport_infrastructure"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:17000000",
+     "name": "weather",
+     "topics": [
+      "natural_disasters"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 5,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "energy_fuel",
+   "name": "Energy cost and supply",
+   "resource": "primary_energy",
+   "up_means": "strain",
+   "half_life_ticks": 100.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "energy_power",
+      "sanctions_aid"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:16000000",
+     "name": "conflict, war and peace",
+     "topics": [
+      "sanctions_aid",
+      "war_conflict"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "sanctions_aid"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "energy_power"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "fiscal_strain",
+   "name": "Fiscal strain",
+   "resource": "public_finances",
+   "up_means": "strain",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "public_budget_tax"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "retirement_pensions"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:16000000",
+     "name": "conflict, war and peace",
+     "topics": [
+      "defence_weapons"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "defence_weapons",
+      "public_budget_tax"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:09000000",
+     "name": "labour",
+     "topics": [
+      "retirement_pensions"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "food_insecurity",
+   "name": "Food insecurity",
+   "resource": "food_stock",
+   "up_means": "strain",
+   "half_life_ticks": 150.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "food_agriculture"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "social_welfare_poverty"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:16000000",
+     "name": "conflict, war and peace",
+     "topics": [
+      "war_conflict"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "food_agriculture"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "health_risk",
+   "name": "Health risk",
+   "resource": "population_health",
+   "up_means": "strain",
+   "half_life_ticks": 150.0,
+   "iptc": [
+    {
+     "code": "medtop:07000000",
+     "name": "health",
+     "topics": [
+      "medicines_science",
+      "public_health"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:03000000",
+     "name": "disaster, accident and emergency incident",
+     "topics": [
+      "accidents_incidents"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "consumer_retail"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "climate_change"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:10000000",
+     "name": "lifestyle and leisure",
+     "topics": [
+      "consumer_retail"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "medicines_science"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 5,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "housing_cost",
+   "name": "Housing cost",
+   "resource": "housing_stock",
+   "up_means": "strain",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "housing_rents",
+      "interest_credit_banking"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "housing_rents"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "industrial_output",
+   "name": "Industrial output",
+   "resource": "productive_capital",
+   "up_means": "build",
+   "half_life_ticks": 150.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "business_corporate",
+      "macro_growth_recession",
+      "trade_tariffs"
+     ],
+     "primary_topics": 3
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "trade_tariffs"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "inequality",
+   "name": "Economic inequality",
+   "resource": "asset_wealth",
+   "up_means": "strain",
+   "half_life_ticks": 500.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "public_budget_tax"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "social_welfare_poverty"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "public_budget_tax"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "information_reliability",
+   "name": "Information reliability",
+   "resource": "knowledge",
+   "up_means": "build",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "ai_automation",
+      "research_space"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:01000000",
+     "name": "arts, culture, entertainment and media",
+     "topics": [
+      "media_information"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "infrastructure_condition",
+   "name": "Infrastructure condition",
+   "resource": "built_infrastructure",
+   "up_means": "build",
+   "half_life_ticks": 500.0,
+   "iptc": [
+    {
+     "code": "medtop:03000000",
+     "name": "disaster, accident and emergency incident",
+     "topics": [
+      "natural_disasters"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "transport_infrastructure"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "natural_disasters"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "transport_infrastructure"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:17000000",
+     "name": "weather",
+     "topics": [
+      "natural_disasters"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "job_security",
+   "name": "Job security",
+   "resource": "labour_force",
+   "up_means": "build",
+   "half_life_ticks": 200.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "macro_growth_recession"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:09000000",
+     "name": "labour",
+     "topics": [
+      "work_labour"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "ai_automation"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "land_degradation",
+   "name": "Land degradation",
+   "resource": "land_soil",
+   "up_means": "strain",
+   "half_life_ticks": 400.0,
+   "iptc": [
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "food_agriculture",
+      "pollution_nature"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "food_agriculture"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "market_volatility",
+   "name": "Market volatility",
+   "resource": "asset_wealth",
+   "up_means": "strain",
+   "half_life_ticks": 60.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "markets_investment"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 1,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "mental_distress",
+   "name": "Mental distress",
+   "resource": "population_health",
+   "up_means": "strain",
+   "half_life_ticks": 250.0,
+   "iptc": [
+    {
+     "code": "medtop:07000000",
+     "name": "health",
+     "topics": [
+      "mental_health_substances"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 1,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "migration_flow",
+   "name": "Migration flow",
+   "resource": "population",
+   "up_means": "build",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "family_demographics",
+      "migration_refugees"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:08000000",
+     "name": "human interest",
+     "topics": [
+      "family_demographics"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "migration_refugees"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "mineral_scarcity",
+   "name": "Mineral and material scarcity",
+   "resource": "minerals_materials",
+   "up_means": "strain",
+   "half_life_ticks": 250.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "mining_materials",
+      "sanctions_aid",
+      "trade_tariffs"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "sanctions_aid",
+      "trade_tariffs"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "mining_materials"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:16000000",
+     "name": "conflict, war and peace",
+     "topics": [
+      "sanctions_aid"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "news_overload",
+   "name": "News overload",
+   "resource": "attention",
+   "up_means": "strain",
+   "half_life_ticks": 20.0,
+   "iptc": [],
+   "n_topics": 0,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "pay_growth",
+   "name": "Pay growth",
+   "resource": "labour_force",
+   "up_means": "build",
+   "half_life_ticks": 250.0,
+   "iptc": [
+    {
+     "code": "medtop:09000000",
+     "name": "labour",
+     "topics": [
+      "labour_disputes",
+      "work_labour"
+     ],
+     "primary_topics": 2
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "prices",
+   "name": "Prices",
+   "resource": "monetary_credit",
+   "up_means": "strain",
+   "half_life_ticks": 150.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "consumer_retail",
+      "energy_power",
+      "food_agriculture",
+      "inflation_prices"
+     ],
+     "primary_topics": 4
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "energy_power",
+      "food_agriculture"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:10000000",
+     "name": "lifestyle and leisure",
+     "topics": [
+      "consumer_retail"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 4,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "private_debt",
+   "name": "Private debt",
+   "resource": "asset_wealth",
+   "up_means": "strain",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "interest_credit_banking"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "social_welfare_poverty"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "public_service_quality",
+   "name": "Public service quality",
+   "resource": "state_capacity",
+   "up_means": "build",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "governance_corruption",
+      "public_budget_tax"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "public_budget_tax"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:05000000",
+     "name": "education",
+     "topics": [
+      "education_schools"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:07000000",
+     "name": "health",
+     "topics": [
+      "health_care_system"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:02000000",
+     "name": "crime, law and justice",
+     "topics": [
+      "governance_corruption"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 4,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "skills_level",
+   "name": "Skills and education level",
+   "resource": "skills",
+   "up_means": "build",
+   "half_life_ticks": 225.0,
+   "iptc": [
+    {
+     "code": "medtop:05000000",
+     "name": "education",
+     "topics": [
+      "education_schools"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:09000000",
+     "name": "labour",
+     "topics": [
+      "work_labour"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "social_division",
+   "name": "Social division",
+   "resource": "social_trust",
+   "up_means": "strain",
+   "half_life_ticks": 400.0,
+   "iptc": [
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "civil_rights_discrimination",
+      "migration_refugees"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "civil_rights_discrimination",
+      "elections_politics",
+      "migration_refugees"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:12000000",
+     "name": "religion and belief",
+     "topics": [
+      "religion_identity"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 4,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "supply_chain_strain",
+   "name": "Supply chain strain",
+   "resource": "supply_networks",
+   "up_means": "strain",
+   "half_life_ticks": 100.0,
+   "iptc": [
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "mining_materials",
+      "sanctions_aid",
+      "trade_tariffs",
+      "transport_infrastructure"
+     ],
+     "primary_topics": 3
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "sanctions_aid",
+      "trade_tariffs"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "mining_materials"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:14000000",
+     "name": "society",
+     "topics": [
+      "transport_infrastructure"
+     ],
+     "primary_topics": 0
+    },
+    {
+     "code": "medtop:16000000",
+     "name": "conflict, war and peace",
+     "topics": [
+      "sanctions_aid"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 4,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "tech_adoption",
+   "name": "Technology adoption",
+   "resource": "computing_capacity",
+   "up_means": "build",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:13000000",
+     "name": "science and technology",
+     "topics": [
+      "ai_automation",
+      "research_space",
+      "technology_consumer"
+     ],
+     "primary_topics": 3
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "trust_institutions",
+   "name": "Trust in institutions",
+   "resource": "legitimacy",
+   "up_means": "build",
+   "half_life_ticks": 300.0,
+   "iptc": [
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "elections_politics",
+      "governance_corruption"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:02000000",
+     "name": "crime, law and justice",
+     "topics": [
+      "courts_rulings",
+      "governance_corruption"
+     ],
+     "primary_topics": 1
+    }
+   ],
+   "n_topics": 3,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "war_terror",
+   "name": "War and terror",
+   "resource": "state_capacity",
+   "up_means": "strain",
+   "half_life_ticks": 150.0,
+   "iptc": [
+    {
+     "code": "medtop:16000000",
+     "name": "conflict, war and peace",
+     "topics": [
+      "defence_weapons",
+      "diplomacy_treaties",
+      "terrorism_violence",
+      "war_conflict"
+     ],
+     "primary_topics": 3
+    },
+    {
+     "code": "medtop:11000000",
+     "name": "politics",
+     "topics": [
+      "defence_weapons",
+      "diplomacy_treaties"
+     ],
+     "primary_topics": 1
+    },
+    {
+     "code": "medtop:02000000",
+     "name": "crime, law and justice",
+     "topics": [
+      "terrorism_violence"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 4,
+   "status": "derived from the engine's guess, reference"
+  },
+  {
+   "condition": "water_stress",
+   "name": "Water stress",
+   "resource": "water",
+   "up_means": "strain",
+   "half_life_ticks": 200.0,
+   "iptc": [
+    {
+     "code": "medtop:06000000",
+     "name": "environment",
+     "topics": [
+      "climate_change",
+      "water_utilities"
+     ],
+     "primary_topics": 2
+    },
+    {
+     "code": "medtop:04000000",
+     "name": "economy, business and finance",
+     "topics": [
+      "water_utilities"
+     ],
+     "primary_topics": 0
+    }
+   ],
+   "n_topics": 2,
+   "status": "derived from the engine's guess, reference"
+  }
+ ],
+ "resources": [
+  {
+   "id": "water",
+   "name": "Freshwater",
+   "group": "natural",
+   "conditions": [
+    "water_stress"
+   ],
+   "half_life_ticks": 200.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "land_soil",
+   "name": "Land and soil",
+   "group": "natural",
+   "conditions": [
+    "land_degradation"
+   ],
+   "half_life_ticks": 400.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "biodiversity",
+   "name": "Ecosystems and wildlife",
+   "group": "natural",
+   "conditions": [
+    "biodiversity_loss"
+   ],
+   "half_life_ticks": 500.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "atmosphere_climate",
+   "name": "Air and climate",
+   "group": "natural",
+   "conditions": [
+    "air_pollution",
+    "climate_stress"
+   ],
+   "half_life_ticks": 225.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "primary_energy",
+   "name": "Energy sources (fuels, sun, wind, water)",
+   "group": "natural",
+   "conditions": [
+    "energy_fuel"
+   ],
+   "half_life_ticks": 100.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "minerals_materials",
+   "name": "Minerals and materials",
+   "group": "natural",
+   "conditions": [
+    "mineral_scarcity"
+   ],
+   "half_life_ticks": 250.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "food_stock",
+   "name": "Food supply",
+   "group": "natural",
+   "conditions": [
+    "food_insecurity"
+   ],
+   "half_life_ticks": 150.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "built_infrastructure",
+   "name": "Built infrastructure",
+   "group": "produced",
+   "conditions": [
+    "disruption",
+    "infrastructure_condition"
+   ],
+   "half_life_ticks": 290.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "housing_stock",
+   "name": "Housing stock",
+   "group": "produced",
+   "conditions": [
+    "housing_cost"
+   ],
+   "half_life_ticks": 300.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "productive_capital",
+   "name": "Productive capital",
+   "group": "produced",
+   "conditions": [
+    "industrial_output"
+   ],
+   "half_life_ticks": 150.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "computing_capacity",
+   "name": "Computing and networks",
+   "group": "produced",
+   "conditions": [
+    "cyber_insecurity",
+    "tech_adoption"
+   ],
+   "half_life_ticks": 200.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "supply_networks",
+   "name": "Trade and supply links",
+   "group": "produced",
+   "conditions": [
+    "supply_chain_strain"
+   ],
+   "half_life_ticks": 100.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "monetary_credit",
+   "name": "Money and credit",
+   "group": "financial",
+   "conditions": [
+    "borrowing_cost",
+    "prices"
+   ],
+   "half_life_ticks": 150.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "asset_wealth",
+   "name": "Wealth and assets",
+   "group": "financial",
+   "conditions": [
+    "asset_values",
+    "inequality",
+    "market_volatility",
+    "private_debt"
+   ],
+   "half_life_ticks": 265.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "public_finances",
+   "name": "Public finances",
+   "group": "financial",
+   "conditions": [
+    "fiscal_strain"
+   ],
+   "half_life_ticks": 300.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "population",
+   "name": "Population",
+   "group": "human",
+   "conditions": [
+    "migration_flow"
+   ],
+   "half_life_ticks": 300.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "population_health",
+   "name": "Population health",
+   "group": "human",
+   "conditions": [
+    "health_risk",
+    "mental_distress"
+   ],
+   "half_life_ticks": 200.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "care_capacity",
+   "name": "Care capacity",
+   "group": "human",
+   "conditions": [
+    "care_strain"
+   ],
+   "half_life_ticks": 100.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "skills",
+   "name": "Skills and education",
+   "group": "human",
+   "conditions": [
+    "skills_level"
+   ],
+   "half_life_ticks": 225.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "labour_force",
+   "name": "Labour",
+   "group": "human",
+   "conditions": [
+    "job_security",
+    "pay_growth"
+   ],
+   "half_life_ticks": 225.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "social_trust",
+   "name": "Social trust and cohesion",
+   "group": "social",
+   "conditions": [
+    "social_division"
+   ],
+   "half_life_ticks": 400.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "community_ties",
+   "name": "Community ties",
+   "group": "social",
+   "conditions": [
+    "community"
+   ],
+   "half_life_ticks": 300.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "legitimacy",
+   "name": "Legitimacy",
+   "group": "institutional",
+   "conditions": [
+    "civil_liberties",
+    "trust_institutions"
+   ],
+   "half_life_ticks": 350.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "state_capacity",
+   "name": "State capacity and public safety",
+   "group": "institutional",
+   "conditions": [
+    "civil_unrest",
+    "crime",
+    "public_service_quality",
+    "war_terror"
+   ],
+   "half_life_ticks": 152.5,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "knowledge",
+   "name": "Knowledge and information",
+   "group": "knowledge",
+   "conditions": [
+    "information_reliability"
+   ],
+   "half_life_ticks": 300.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  },
+  {
+   "id": "attention",
+   "name": "Time and attention",
+   "group": "knowledge",
+   "conditions": [
+    "news_overload"
+   ],
+   "half_life_ticks": 20.0,
+   "status": "guess (engine half-lives, mean over its conditions)"
+  }
+ ],
+ "l2_refinements": [],
+ "l2_refinements_note": "add-only rows ('ours, guess', with a changeNote) go here; none in v0 (ledger Q4 open: nothing is promoted)",
+ "by_topic": {
+  "accidents_incidents": {
+   "name": "Accidents and incidents",
+   "conditions": [
+    "disruption",
+    "health_risk"
+   ]
+  },
+  "ai_automation": {
+   "name": "AI and automation",
+   "conditions": [
+    "information_reliability",
+    "job_security",
+    "tech_adoption"
+   ]
+  },
+  "business_corporate": {
+   "name": "Business and companies",
+   "conditions": [
+    "cyber_insecurity",
+    "industrial_output"
+   ]
+  },
+  "civil_rights_discrimination": {
+   "name": "Civil rights and discrimination",
+   "conditions": [
+    "civil_liberties",
+    "social_division"
+   ]
+  },
+  "climate_change": {
+   "name": "Climate change",
+   "conditions": [
+    "climate_stress",
+    "health_risk",
+    "water_stress"
+   ]
+  },
+  "consumer_retail": {
+   "name": "Consumer goods and retail",
+   "conditions": [
+    "health_risk",
+    "prices"
+   ]
+  },
+  "courts_rulings": {
+   "name": "Courts and legal rulings",
+   "conditions": [
+    "civil_liberties",
+    "trust_institutions"
+   ]
+  },
+  "crime_policing": {
+   "name": "Crime and policing",
+   "conditions": [
+    "crime"
+   ]
+  },
+  "culture_leisure": {
+   "name": "Culture, sport and leisure",
+   "conditions": [
+    "community"
+   ]
+  },
+  "cyber_privacy": {
+   "name": "Cyber security and privacy",
+   "conditions": [
+    "civil_liberties",
+    "cyber_insecurity",
+    "disruption"
+   ]
+  },
+  "defence_weapons": {
+   "name": "Defence and weapons",
+   "conditions": [
+    "fiscal_strain",
+    "war_terror"
+   ]
+  },
+  "diplomacy_treaties": {
+   "name": "Diplomacy and treaties",
+   "conditions": [
+    "war_terror"
+   ]
+  },
+  "education_schools": {
+   "name": "Schools and universities",
+   "conditions": [
+    "public_service_quality",
+    "skills_level"
+   ]
+  },
+  "elections_politics": {
+   "name": "Elections and political parties",
+   "conditions": [
+    "civil_unrest",
+    "social_division",
+    "trust_institutions"
+   ]
+  },
+  "energy_power": {
+   "name": "Energy and fuel",
+   "conditions": [
+    "air_pollution",
+    "energy_fuel",
+    "prices"
+   ]
+  },
+  "family_demographics": {
+   "name": "Family and demographics",
+   "conditions": [
+    "community",
+    "migration_flow"
+   ]
+  },
+  "food_agriculture": {
+   "name": "Food and farming",
+   "conditions": [
+    "food_insecurity",
+    "land_degradation",
+    "prices"
+   ]
+  },
+  "governance_corruption": {
+   "name": "Government performance and corruption",
+   "conditions": [
+    "public_service_quality",
+    "trust_institutions"
+   ]
+  },
+  "health_care_system": {
+   "name": "Health care services",
+   "conditions": [
+    "care_strain",
+    "public_service_quality"
+   ]
+  },
+  "housing_rents": {
+   "name": "Housing and rents",
+   "conditions": [
+    "asset_values",
+    "housing_cost"
+   ]
+  },
+  "inflation_prices": {
+   "name": "Inflation and living costs",
+   "conditions": [
+    "prices"
+   ]
+  },
+  "interest_credit_banking": {
+   "name": "Interest rates, credit and banks",
+   "conditions": [
+    "borrowing_cost",
+    "housing_cost",
+    "private_debt"
+   ]
+  },
+  "labour_disputes": {
+   "name": "Unions and strikes",
+   "conditions": [
+    "civil_unrest",
+    "disruption",
+    "pay_growth"
+   ]
+  },
+  "legislation_regulation": {
+   "name": "Laws and regulation",
+   "conditions": [
+    "civil_liberties"
+   ]
+  },
+  "macro_growth_recession": {
+   "name": "Growth and recession",
+   "conditions": [
+    "industrial_output",
+    "job_security"
+   ]
+  },
+  "markets_investment": {
+   "name": "Markets and investing",
+   "conditions": [
+    "asset_values",
+    "market_volatility"
+   ]
+  },
+  "media_information": {
+   "name": "Media and information",
+   "conditions": [
+    "information_reliability"
+   ]
+  },
+  "medicines_science": {
+   "name": "Medicines and treatments",
+   "conditions": [
+    "care_strain",
+    "health_risk"
+   ]
+  },
+  "mental_health_substances": {
+   "name": "Mental health and substance use",
+   "conditions": [
+    "mental_distress"
+   ]
+  },
+  "migration_refugees": {
+   "name": "Migration and refugees",
+   "conditions": [
+    "migration_flow",
+    "social_division"
+   ]
+  },
+  "mining_materials": {
+   "name": "Minerals and materials",
+   "conditions": [
+    "mineral_scarcity",
+    "supply_chain_strain"
+   ]
+  },
+  "natural_disasters": {
+   "name": "Disasters and extreme weather",
+   "conditions": [
+    "climate_stress",
+    "disruption",
+    "infrastructure_condition"
+   ]
+  },
+  "other": {
+   "name": "Other",
+   "conditions": []
+  },
+  "pollution_nature": {
+   "name": "Pollution and nature",
+   "conditions": [
+    "air_pollution",
+    "biodiversity_loss",
+    "land_degradation"
+   ]
+  },
+  "protest_movements": {
+   "name": "Protests and social movements",
+   "conditions": [
+    "civil_unrest"
+   ]
+  },
+  "public_budget_tax": {
+   "name": "Taxes and public budgets",
+   "conditions": [
+    "fiscal_strain",
+    "inequality",
+    "public_service_quality"
+   ]
+  },
+  "public_health": {
+   "name": "Disease and public health",
+   "conditions": [
+    "care_strain",
+    "health_risk"
+   ]
+  },
+  "religion_identity": {
+   "name": "Religion and identity",
+   "conditions": [
+    "community",
+    "social_division"
+   ]
+  },
+  "research_space": {
+   "name": "Science and space",
+   "conditions": [
+    "information_reliability",
+    "tech_adoption"
+   ]
+  },
+  "retirement_pensions": {
+   "name": "Retirement and pensions",
+   "conditions": [
+    "fiscal_strain"
+   ]
+  },
+  "sanctions_aid": {
+   "name": "Sanctions and aid",
+   "conditions": [
+    "energy_fuel",
+    "mineral_scarcity",
+    "supply_chain_strain"
+   ]
+  },
+  "social_welfare_poverty": {
+   "name": "Welfare, poverty and inequality",
+   "conditions": [
+    "food_insecurity",
+    "inequality",
+    "private_debt"
+   ]
+  },
+  "technology_consumer": {
+   "name": "Digital technology and consumer tech",
+   "conditions": [
+    "tech_adoption"
+   ]
+  },
+  "terrorism_violence": {
+   "name": "Terrorism and political violence",
+   "conditions": [
+    "war_terror"
+   ]
+  },
+  "trade_tariffs": {
+   "name": "Trade and supply chains",
+   "conditions": [
+    "industrial_output",
+    "mineral_scarcity",
+    "supply_chain_strain"
+   ]
+  },
+  "transport_infrastructure": {
+   "name": "Transport and infrastructure",
+   "conditions": [
+    "disruption",
+    "infrastructure_condition",
+    "supply_chain_strain"
+   ]
+  },
+  "war_conflict": {
+   "name": "War and armed conflict",
+   "conditions": [
+    "energy_fuel",
+    "food_insecurity",
+    "war_terror"
+   ]
+  },
+  "water_utilities": {
+   "name": "Water and utilities",
+   "conditions": [
+    "water_stress"
+   ]
+  },
+  "work_labour": {
+   "name": "Jobs and wages",
+   "conditions": [
+    "job_security",
+    "pay_growth",
+    "skills_level"
+   ]
+  }
+ },
+ "unlinked_l1": [],
+ "unmatched_names": [],
+ "names": {
+  "01000000": "arts, culture, entertainment and media",
+  "02000000": "crime, law and justice",
+  "03000000": "disaster, accident and emergency incident",
+  "04000000": "economy, business and finance",
+  "05000000": "education",
+  "06000000": "environment",
+  "07000000": "health",
+  "08000000": "human interest",
+  "09000000": "labour",
+  "10000000": "lifestyle and leisure",
+  "11000000": "politics and government",
+  "12000000": "religion",
+  "13000000": "science and technology",
+  "14000000": "society",
+  "15000000": "sport",
+  "16000000": "conflict, war and peace",
+  "17000000": "weather",
+  "20000002": "arts and entertainment",
+  "20000038": "culture",
+  "20000045": "mass media",
+  "20000053": "act of terror",
+  "20000056": "armed conflict",
+  "20000065": "civil unrest",
+  "20000070": "coup d'etat",
+  "20000071": "massacre",
+  "20000073": "peace process",
+  "20000077": "post-war reconstruction",
+  "20000082": "crime",
+  "20000106": "judiciary",
+  "20000121": "law",
+  "20000129": "law enforcement",
+  "20000139": "accident and emergency incident",
+  "20000148": "disaster",
+  "20000168": "emergency response",
+  "20000170": "business information",
+  "20000209": "products and services",
+  "20000344": "economy",
+  "20000349": "business enterprise",
+  "20000385": "market and exchange",
+  "20000398": "parents group",
+  "20000399": "religious education",
+  "20000400": "school",
+  "20000410": "social learning",
+  "20000412": "curriculum",
+  "20000413": "educational testing and examinations",
+  "20000414": "entrance examination",
+  "20000415": "students",
+  "20000416": "teachers",
+  "20000418": "climate change",
+  "20000420": "conservation",
+  "20000424": "environmental pollution",
+  "20000430": "natural resource",
+  "20000441": "nature",
+  "20000446": "disease and condition",
+  "20000461": "health facility",
+  "20000463": "health organisation",
+  "20000464": "health treatment and procedure",
+  "20000480": "government health care",
+  "20000483": "health insurance",
+  "20000484": "private health care",
+  "20000485": "medical profession",
+  "20000498": "award and prize",
+  "20000499": "record and achievement",
+  "20000501": "ceremony",
+  "20000503": "human mishap",
+  "20000504": "high society",
+  "20000505": "celebrity",
+  "20000509": "employment",
+  "20000521": "employment legislation",
+  "20000523": "labour market",
+  "20000524": "labour relations",
+  "20000531": "retirement",
+  "20000533": "unemployment",
+  "20000536": "unions",
+  "20000538": "leisure",
+  "20000565": "lifestyle",
+  "20000574": "election",
+  "20000587": "fundamental rights",
+  "20000593": "government",
+  "20000621": "government policy",
+  "20000638": "international relations",
+  "20000646": "non-governmental organisation (ngo)",
+  "20000648": "political prisoners and dissenters",
+  "20000657": "belief systems",
+  "20000688": "religious conflict",
+  "20000690": "religious festival and holiday",
+  "20000696": "religious ritual",
+  "20000697": "religious facility",
+  "20000702": "relations between religion and government",
+  "20000703": "religious leader",
+  "20000705": "religious text",
+  "20000710": "biomedical science",
+  "20000715": "mathematics",
+  "20000717": "natural science",
+  "20000735": "scientific research",
+  "20000741": "scientific institution",
+  "20000742": "social sciences",
+  "20000755": "scientific standards",
+  "20000756": "technology and engineering",
+  "20000768": "communities",
+  "20000770": "demographics",
+  "20000771": "immigration",
+  "20000772": "emigration",
+  "20000775": "discrimination",
+  "20000780": "family",
+  "20000788": "demographic group",
+  "20000799": "social condition",
+  "20000802": "social problem",
+  "20000808": "values",
+  "20000817": "welfare",
+  "20000822": "competitive sport",
+  "20001103": "disciplinary action in sport",
+  "20001104": "drug use in sport",
+  "20001108": "sport event",
+  "20001124": "sport industry",
+  "20001125": "sport organisation",
+  "20001126": "sport venue",
+  "20001128": "weather forecast",
+  "20001129": "weather phenomena",
+  "20001130": "weather statistic",
+  "20001131": "weather warning",
+  "20001148": "sports transaction",
+  "20001216": "vocational education",
+  "20001217": "educational grading",
+  "20001237": "anniversary",
+  "20001238": "birthday",
+  "20001301": "sport achievement",
+  "20001323": "sports coaching",
+  "20001324": "sports management and ownership",
+  "20001325": "sports officiating",
+  "20001337": "online and remote learning",
+  "20001339": "wellness",
+  "20001358": "public health",
+  "20001361": "cyber warfare",
+  "20001373": "diversity, equity and inclusion",
+  "20001374": "sustainability",
+  "20001377": "war victims"
+ },
+ "l2_of": {
+  "01000000": "01000000",
+  "02000000": "02000000",
+  "03000000": "03000000",
+  "04000000": "04000000",
+  "05000000": "05000000",
+  "06000000": "06000000",
+  "07000000": "07000000",
+  "08000000": "08000000",
+  "09000000": "09000000",
+  "10000000": "10000000",
+  "11000000": "11000000",
+  "12000000": "12000000",
+  "13000000": "13000000",
+  "14000000": "14000000",
+  "15000000": "15000000",
+  "16000000": "16000000",
+  "17000000": "17000000",
+  "20000002": "20000002",
+  "20000003": "20000002",
+  "20000004": "20000002",
+  "20000005": "20000002",
+  "20000006": "20000002",
+  "20000007": "20000002",
+  "20000008": "20000002",
+  "20000009": "20000002",
+  "20000010": "20000002",
+  "20000011": "20000002",
+  "20000012": "20000002",
+  "20000013": "20000002",
+  "20000014": "20000002",
+  "20000015": "20000002",
+  "20000016": "20000002",
+  "20000017": "20000002",
+  "20000018": "20000002",
+  "20000019": "20000002",
+  "20000020": "20000002",
+  "20000021": "20000002",
+  "20000022": "20000002",
+  "20000023": "20000002",
+  "20000024": "20000002",
+  "20000025": "20000002",
+  "20000026": "20000002",
+  "20000027": "20000002",
+  "20000028": "20000002",
+  "20000029": "20000002",
+  "20000031": "20000002",
+  "20000032": "20000002",
+  "20000033": "20000002",
+  "20000034": "20000002",
+  "20000035": "20000002",
+  "20000036": "20000002",
+  "20000037": "20000002",
+  "20000038": "20000038",
+  "20000039": "20000038",
+  "20000040": "20000038",
+  "20000041": "20000038",
+  "20000042": "20000038",
+  "20000043": "20000038",
+  "20000044": "20000038",
+  "20000045": "20000045",
+  "20000046": "20000045",
+  "20000047": "20000045",
+  "20000048": "20000045",
+  "20000049": "20000045",
+  "20000050": "20000045",
+  "20000051": "20000045",
+  "20000053": "20000053",
+  "20000054": "20000053",
+  "20000055": "20000053",
+  "20000056": "20000056",
+  "20000057": "20000056",
+  "20000058": "20000056",
+  "20000059": "20000073",
+  "20000060": "20000056",
+  "20000061": "20001377",
+  "20000062": "20000056",
+  "20000063": "20000056",
+  "20000065": "20000065",
+  "20000066": "20000065",
+  "20000067": "20000065",
+  "20000068": "20000065",
+  "20000069": "20000065",
+  "20000070": "20000070",
+  "20000071": "20000071",
+  "20000072": "20000082",
+  "20000073": "20000073",
+  "20000074": "20000073",
+  "20000075": "20000073",
+  "20000076": "20000073",
+  "20000077": "20000077",
+  "20000078": "20000073",
+  "20000079": "20000077",
+  "20000080": "20001377",
+  "20000082": "20000082",
+  "20000083": "20000082",
+  "20000084": "20000082",
+  "20000085": "20000082",
+  "20000086": "20000082",
+  "20000087": "20000082",
+  "20000088": "20000082",
+  "20000089": "20000082",
+  "20000090": "20000082",
+  "20000091": "20000082",
+  "20000092": "20000082",
+  "20000093": "20000082",
+  "20000094": "20000082",
+  "20000095": "20000082",
+  "20000096": "20000082",
+  "20000097": "20000082",
+  "20000098": "20000082",
+  "20000099": "20000082",
+  "20000100": "20000082",
+  "20000101": "20000082",
+  "20000102": "20000082",
+  "20000103": "20000082",
+  "20000104": "20000082",
+  "20000105": "20000082",
+  "20000106": "20000106",
+  "20000107": "20000106",
+  "20000108": "20000106",
+  "20000110": "20000106",
+  "20000111": "20000106",
+  "20000112": "20000106",
+  "20000114": "20000106",
+  "20000116": "20000106",
+  "20000117": "20000106",
+  "20000118": "20000106",
+  "20000120": "20000587",
+  "20000121": "20000121",
+  "20000122": "20000121",
+  "20000123": "20000121",
+  "20000124": "20000121",
+  "20000125": "20000121",
+  "20000126": "20000121",
+  "20000127": "20000121",
+  "20000128": "20000121",
+  "20000129": "20000129",
+  "20000130": "20000129",
+  "20000131": "20000129",
+  "20000132": "20000129",
+  "20000133": "20000129",
+  "20000134": "20000106",
+  "20000135": "20000106",
+  "20000136": "20000106",
+  "20000137": "20000106",
+  "20000139": "20000139",
+  "20000140": "20000139",
+  "20000141": "20000139",
+  "20000142": "20000139",
+  "20000143": "20000139",
+  "20000144": "20000139",
+  "20000145": "20000139",
+  "20000146": "20000139",
+  "20000147": "20000139",
+  "20000148": "20000148",
+  "20000149": "20000148",
+  "20000150": "20000148",
+  "20000151": "20000148",
+  "20000152": "20000148",
+  "20000153": "20000148",
+  "20000154": "20000148",
+  "20000155": "20000148",
+  "20000156": "20000148",
+  "20000157": "20000148",
+  "20000158": "20000148",
+  "20000159": "20000148",
+  "20000161": "20000139",
+  "20000168": "20000168",
+  "20000170": "20000170",
+  "20000174": "20000170",
+  "20000175": "20000170",
+  "20000176": "20000170",
+  "20000177": "20000170",
+  "20000178": "20000170",
+  "20000180": "20000170",
+  "20000181": "20000170",
+  "20000182": "20000170",
+  "20000183": "20000170",
+  "20000185": "20000170",
+  "20000186": "20000170",
+  "20000187": "20000170",
+  "20000188": "20000170",
+  "20000189": "20000170",
+  "20000190": "20000170",
+  "20000192": "20000170",
+  "20000193": "20000170",
+  "20000194": "20000170",
+  "20000195": "20000170",
+  "20000196": "20000170",
+  "20000197": "20000170",
+  "20000198": "20000170",
+  "20000199": "20000170",
+  "20000200": "20000170",
+  "20000201": "20000170",
+  "20000203": "20000170",
+  "20000204": "20000170",
+  "20000205": "20000170",
+  "20000206": "20000170",
+  "20000207": "20000170",
+  "20000208": "20000170",
+  "20000209": "20000209",
+  "20000210": "20000209",
+  "20000213": "20000209",
+  "20000214": "20000209",
+  "20000217": "20000209",
+  "20000218": "20000209",
+  "20000223": "20000209",
+  "20000224": "20000209",
+  "20000225": "20000209",
+  "20000226": "20000209",
+  "20000228": "20000209",
+  "20000230": "20000209",
+  "20000231": "20000209",
+  "20000233": "20000209",
+  "20000234": "20000209",
+  "20000235": "20000209",
+  "20000242": "20000038",
+  "20000243": "20000209",
+  "20000245": "20000209",
+  "20000246": "20000209",
+  "20000247": "20000209",
+  "20000249": "20000209",
+  "20000252": "20000209",
+  "20000253": "20000209",
+  "20000254": "20000209",
+  "20000255": "20000209",
+  "20000256": "20000209",
+  "20000257": "20000209",
+  "20000258": "20000209",
+  "20000259": "20000209",
+  "20000260": "20000209",
+  "20000263": "20000209",
+  "20000265": "20000209",
+  "20000268": "20000209",
+  "20000269": "20000209",
+  "20000270": "20000209",
+  "20000272": "20000209",
+  "20000273": "20000209",
+  "20000274": "20000209",
+  "20000275": "20000209",
+  "20000276": "20000209",
+  "20000278": "20000209",
+  "20000279": "20000209",
+  "20000280": "20000209",
+  "20000282": "20000209",
+  "20000283": "20000170",
+  "20000284": "20000170",
+  "20000287": "20000209",
+  "20000290": "20000209",
+  "20000291": "20000209",
+  "20000292": "20000209",
+  "20000294": "20000209",
+  "20000295": "20000209",
+  "20000296": "20000209",
+  "20000297": "20000209",
+  "20000298": "20000209",
+  "20000299": "20000209",
+  "20000302": "20000209",
+  "20000303": "20000209",
+  "20000304": "20000209",
+  "20000305": "20000209",
+  "20000306": "20000209",
+  "20000307": "20000209",
+  "20000308": "20000209",
+  "20000312": "20000209",
+  "20000313": "20000209",
+  "20000314": "20000209",
+  "20000315": "20000209",
+  "20000316": "20000209",
+  "20000317": "20000209",
+  "20000318": "20000209",
+  "20000324": "20000209",
+  "20000325": "20000209",
+  "20000330": "20000209",
+  "20000331": "20000209",
+  "20000332": "20000209",
+  "20000333": "20000209",
+  "20000334": "20000209",
+  "20000335": "20000209",
+  "20000336": "20000209",
+  "20000337": "20000209",
+  "20000338": "20000209",
+  "20000339": "20000509",
+  "20000340": "20000209",
+  "20000341": "20000209",
+  "20000343": "20000209",
+  "20000344": "20000344",
+  "20000345": "20000621",
+  "20000346": "20000344",
+  "20000349": "20000349",
+  "20000350": "20000344",
+  "20000352": "20000344",
+  "20000355": "20000344",
+  "20000356": "20000344",
+  "20000357": "20000344",
+  "20000359": "20000344",
+  "20000360": "20000344",
+  "20000361": "20000344",
+  "20000362": "20000344",
+  "20000363": "20000344",
+  "20000364": "20000344",
+  "20000365": "20000344",
+  "20000366": "20000344",
+  "20000368": "20000344",
+  "20000369": "20000344",
+  "20000370": "20000344",
+  "20000371": "20000344",
+  "20000372": "20000344",
+  "20000373": "20000344",
+  "20000374": "20000344",
+  "20000375": "20000344",
+  "20000376": "20000344",
+  "20000377": "20000344",
+  "20000379": "20000344",
+  "20000380": "20000344",
+  "20000381": "20000344",
+  "20000383": "20000344",
+  "20000384": "20000344",
+  "20000385": "20000385",
+  "20000386": "20000385",
+  "20000387": "20000385",
+  "20000388": "20000385",
+  "20000390": "20000385",
+  "20000391": "20000385",
+  "20000392": "20000385",
+  "20000393": "20000209",
+  "20000395": "20000170",
+  "20000396": "20000170",
+  "20000398": "20000398",
+  "20000399": "20000399",
+  "20000400": "20000400",
+  "20000401": "20000400",
+  "20000403": "20000400",
+  "20000404": "20000400",
+  "20000405": "20000400",
+  "20000408": "20000400",
+  "20000409": "20000400",
+  "20000410": "20000410",
+  "20000412": "20000412",
+  "20000413": "20000413",
+  "20000414": "20000414",
+  "20000415": "20000415",
+  "20000416": "20000416",
+  "20000418": "20000418",
+  "20000420": "20000420",
+  "20000422": "20000420",
+  "20000423": "20000621",
+  "20000424": "20000424",
+  "20000425": "20000424",
+  "20000426": "20000424",
+  "20000427": "20000424",
+  "20000428": "20000424",
+  "20000429": "20000424",
+  "20000430": "20000430",
+  "20000433": "20000441",
+  "20000434": "20000441",
+  "20000438": "20000441",
+  "20000439": "20000441",
+  "20000440": "20000441",
+  "20000441": "20000441",
+  "20000442": "20000441",
+  "20000443": "20000441",
+  "20000444": "20000441",
+  "20000446": "20000446",
+  "20000447": "20000446",
+  "20000448": "20000446",
+  "20000449": "20000446",
+  "20000451": "20000446",
+  "20000452": "20000446",
+  "20000454": "20000446",
+  "20000456": "20000446",
+  "20000457": "20000446",
+  "20000458": "20000446",
+  "20000459": "20000446",
+  "20000460": "20000446",
+  "20000461": "20000461",
+  "20000462": "20000461",
+  "20000463": "20000463",
+  "20000464": "20000464",
+  "20000465": "20000464",
+  "20000466": "20000464",
+  "20000467": "20000464",
+  "20000468": "20000464",
+  "20000469": "20000464",
+  "20000470": "20000464",
+  "20000471": "20000464",
+  "20000472": "20000464",
+  "20000473": "20000464",
+  "20000474": "20000464",
+  "20000477": "20000464",
+  "20000478": "20000464",
+  "20000479": "20000621",
+  "20000480": "20000480",
+  "20000483": "20000483",
+  "20000484": "20000484",
+  "20000485": "20000485",
+  "20000486": "20000485",
+  "20000487": "20000485",
+  "20000490": "20000485",
+  "20000492": "20000485",
+  "20000494": "20000441",
+  "20000495": "20000441",
+  "20000498": "20000498",
+  "20000499": "20000499",
+  "20000500": "20000441",
+  "20000501": "20000501",
+  "20000503": "20000503",
+  "20000504": "20000504",
+  "20000505": "20000505",
+  "20000506": "20000504",
+  "20000507": "20000441",
+  "20000509": "20000509",
+  "20000510": "20000509",
+  "20000511": "20000509",
+  "20000512": "20000509",
+  "20000513": "20000509",
+  "20000514": "20000509",
+  "20000518": "20000509",
+  "20000520": "20000509",
+  "20000521": "20000521",
+  "20000522": "20000521",
+  "20000523": "20000523",
+  "20000524": "20000524",
+  "20000525": "20000524",
+  "20000529": "20000524",
+  "20000530": "20000524",
+  "20000531": "20000531",
+  "20000532": "20000531",
+  "20000533": "20000533",
+  "20000535": "20000533",
+  "20000536": "20000536",
+  "20000538": "20000538",
+  "20000539": "20000538",
+  "20000540": "20000538",
+  "20000541": "20000538",
+  "20000542": "20000538",
+  "20000543": "20000538",
+  "20000544": "20000538",
+  "20000545": "20000538",
+  "20000546": "20000538",
+  "20000547": "20000538",
+  "20000548": "20000538",
+  "20000549": "20000538",
+  "20000550": "20000538",
+  "20000551": "20000538",
+  "20000552": "20000538",
+  "20000553": "20000538",
+  "20000554": "20000538",
+  "20000555": "20000538",
+  "20000556": "20000538",
+  "20000557": "20000538",
+  "20000558": "20000538",
+  "20000560": "20000538",
+  "20000561": "20000538",
+  "20000562": "20000538",
+  "20000563": "20000538",
+  "20000565": "20000565",
+  "20000566": "20000538",
+  "20000567": "20000538",
+  "20000568": "20000538",
+  "20000569": "20000565",
+  "20000570": "20000565",
+  "20000571": "20000538",
+  "20000572": "20000565",
+  "20000574": "20000574",
+  "20000575": "20000574",
+  "20000576": "20000574",
+  "20000577": "20000574",
+  "20000578": "20000574",
+  "20000579": "20000574",
+  "20000581": "20000574",
+  "20000582": "20000574",
+  "20000583": "20000574",
+  "20000584": "20000574",
+  "20000585": "20000574",
+  "20000586": "20000574",
+  "20000587": "20000587",
+  "20000588": "20000587",
+  "20000590": "20000587",
+  "20000591": "20000587",
+  "20000592": "20000587",
+  "20000593": "20000593",
+  "20000595": "20000593",
+  "20000596": "20000593",
+  "20000597": "20000593",
+  "20000598": "20000593",
+  "20000599": "20000593",
+  "20000600": "20000593",
+  "20000602": "20000593",
+  "20000605": "20000593",
+  "20000606": "20000593",
+  "20000607": "20000593",
+  "20000610": "20000593",
+  "20000611": "20000593",
+  "20000612": "20000593",
+  "20000613": "20000593",
+  "20000614": "20000593",
+  "20000615": "20000593",
+  "20000616": "20000593",
+  "20000617": "20000593",
+  "20000618": "20000593",
+  "20000620": "20000621",
+  "20000621": "20000621",
+  "20000623": "20000621",
+  "20000624": "20000621",
+  "20000625": "20000621",
+  "20000627": "20000621",
+  "20000628": "20000621",
+  "20000629": "20000621",
+  "20000630": "20000621",
+  "20000632": "20000621",
+  "20000634": "20000621",
+  "20000635": "20000621",
+  "20000636": "20000621",
+  "20000637": "20000621",
+  "20000638": "20000638",
+  "20000639": "20000638",
+  "20000640": "20000638",
+  "20000641": "20000638",
+  "20000642": "20000638",
+  "20000643": "20000638",
+  "20000644": "20000638",
+  "20000645": "20000638",
+  "20000646": "20000646",
+  "20000648": "20000648",
+  "20000650": "20000593",
+  "20000653": "20000593",
+  "20000654": "20000593",
+  "20000655": "20000593",
+  "20000657": "20000657",
+  "20000658": "20000657",
+  "20000659": "20000657",
+  "20000661": "20000657",
+  "20000663": "20000657",
+  "20000664": "20000657",
+  "20000673": "20000657",
+  "20000674": "20000657",
+  "20000676": "20000657",
+  "20000677": "20000657",
+  "20000678": "20000657",
+  "20000679": "20000657",
+  "20000680": "20000657",
+  "20000681": "20000657",
+  "20000682": "20000657",
+  "20000683": "20000657",
+  "20000684": "20000657",
+  "20000685": "20000657",
+  "20000686": "20000657",
+  "20000688": "20000688",
+  "20000690": "20000690",
+  "20000691": "20000690",
+  "20000692": "20000690",
+  "20000693": "20000690",
+  "20000694": "20000690",
+  "20000695": "20000690",
+  "20000696": "20000696",
+  "20000697": "20000697",
+  "20000698": "20000697",
+  "20000699": "20000697",
+  "20000700": "20000697",
+  "20000702": "20000702",
+  "20000703": "20000703",
+  "20000704": "20000703",
+  "20000705": "20000705",
+  "20000706": "20000705",
+  "20000707": "20000705",
+  "20000708": "20000705",
+  "20000710": "20000710",
+  "20000711": "20000710",
+  "20000712": "20000485",
+  "20000714": "20000485",
+  "20000715": "20000715",
+  "20000716": "20000756",
+  "20000717": "20000717",
+  "20000718": "20000717",
+  "20000719": "20000717",
+  "20000720": "20000717",
+  "20000721": "20000717",
+  "20000722": "20000717",
+  "20000723": "20000717",
+  "20000724": "20000717",
+  "20000725": "20000717",
+  "20000726": "20000717",
+  "20000727": "20000717",
+  "20000728": "20000717",
+  "20000729": "20000717",
+  "20000730": "20000717",
+  "20000731": "20000717",
+  "20000732": "20000717",
+  "20000733": "20000717",
+  "20000734": "20000717",
+  "20000735": "20000735",
+  "20000736": "20000735",
+  "20000737": "20000735",
+  "20000738": "20000735",
+  "20000739": "20000735",
+  "20000740": "20000735",
+  "20000741": "20000741",
+  "20000742": "20000742",
+  "20000743": "20000742",
+  "20000744": "20000742",
+  "20000745": "20000742",
+  "20000746": "20000742",
+  "20000747": "20000742",
+  "20000748": "20000742",
+  "20000749": "20000742",
+  "20000750": "20000742",
+  "20000751": "20000742",
+  "20000752": "20000742",
+  "20000753": "20000742",
+  "20000754": "20000742",
+  "20000755": "20000755",
+  "20000756": "20000756",
+  "20000757": "20000756",
+  "20000758": "20000756",
+  "20000759": "20000756",
+  "20000760": "20000756",
+  "20000761": "20000756",
+  "20000762": "20000756",
+  "20000763": "20000756",
+  "20000764": "20000756",
+  "20000765": "20000756",
+  "20000766": "20000756",
+  "20000768": "20000768",
+  "20000769": "20000768",
+  "20000770": "20000770",
+  "20000771": "20000771",
+  "20000772": "20000772",
+  "20000773": "20000771",
+  "20000774": "20000770",
+  "20000775": "20000775",
+  "20000776": "20000775",
+  "20000777": "20000775",
+  "20000778": "20000775",
+  "20000779": "20000775",
+  "20000780": "20000780",
+  "20000781": "20000780",
+  "20000782": "20000780",
+  "20000783": "20000780",
+  "20000784": "20000780",
+  "20000785": "20000780",
+  "20000786": "20000780",
+  "20000787": "20000780",
+  "20000788": "20000788",
+  "20000789": "20000788",
+  "20000790": "20000788",
+  "20000791": "20000788",
+  "20000792": "20000788",
+  "20000793": "20000788",
+  "20000794": "20000788",
+  "20000795": "20000788",
+  "20000797": "20000788",
+  "20000798": "20000788",
+  "20000799": "20000799",
+  "20000800": "20000799",
+  "20000801": "20000799",
+  "20000802": "20000802",
+  "20000803": "20000802",
+  "20000804": "20000802",
+  "20000805": "20000802",
+  "20000806": "20000802",
+  "20000807": "20000802",
+  "20000808": "20000808",
+  "20000810": "20000808",
+  "20000811": "20000808",
+  "20000812": "20000808",
+  "20000813": "20000808",
+  "20000814": "20000808",
+  "20000815": "20000808",
+  "20000816": "20000808",
+  "20000817": "20000817",
+  "20000818": "20000817",
+  "20000819": "20000817",
+  "20000820": "20000817",
+  "20000822": "20000822",
+  "20000823": "20000822",
+  "20000824": "20000822",
+  "20000827": "20000822",
+  "20000828": "20000822",
+  "20000829": "20000822",
+  "20000830": "20000822",
+  "20000831": "20000822",
+  "20000832": "20000822",
+  "20000833": "20000822",
+  "20000834": "20000822",
+  "20000835": "20000822",
+  "20000836": "20000822",
+  "20000837": "20000822",
+  "20000838": "20000822",
+  "20000840": "20000822",
+  "20000841": "20000822",
+  "20000842": "20000822",
+  "20000843": "20000822",
+  "20000844": "20000822",
+  "20000845": "20000822",
+  "20000846": "20000822",
+  "20000847": "20000822",
+  "20000848": "20000822",
+  "20000849": "20000822",
+  "20000851": "20000822",
+  "20000852": "20000822",
+  "20000853": "20000822",
+  "20000854": "20000822",
+  "20000855": "20000822",
+  "20000856": "20000822",
+  "20000875": "20000822",
+  "20000876": "20000822",
+  "20000877": "20000822",
+  "20000883": "20000822",
+  "20000886": "20000822",
+  "20000887": "20000822",
+  "20000888": "20000822",
+  "20000889": "20000822",
+  "20000890": "20000822",
+  "20000891": "20000822",
+  "20000892": "20000822",
+  "20000893": "20000822",
+  "20000895": "20000822",
+  "20000896": "20000822",
+  "20000903": "20000822",
+  "20000911": "20000822",
+  "20000912": "20000822",
+  "20000913": "20000822",
+  "20000914": "20000822",
+  "20000915": "20000822",
+  "20000916": "20000822",
+  "20000917": "20000538",
+  "20000919": "20000822",
+  "20000922": "20000822",
+  "20000923": "20000822",
+  "20000929": "20000822",
+  "20000933": "20000822",
+  "20000934": "20000822",
+  "20000936": "20000822",
+  "20000937": "20000822",
+  "20000938": "20000822",
+  "20000939": "20000822",
+  "20000940": "20000822",
+  "20000941": "20000822",
+  "20000942": "20000822",
+  "20000951": "20000822",
+  "20000955": "20000822",
+  "20000958": "20000822",
+  "20000960": "20000822",
+  "20000965": "20000822",
+  "20000968": "20000822",
+  "20000969": "20000822",
+  "20000977": "20000822",
+  "20000978": "20000822",
+  "20000979": "20000822",
+  "20000983": "20000822",
+  "20000984": "20000822",
+  "20000985": "20000822",
+  "20000986": "20000822",
+  "20000987": "20000822",
+  "20000988": "20000822",
+  "20000989": "20000822",
+  "20000990": "20000822",
+  "20000991": "20000822",
+  "20000998": "20000822",
+  "20001009": "20000822",
+  "20001010": "20000822",
+  "20001011": "20000822",
+  "20001012": "20000822",
+  "20001013": "20000822",
+  "20001014": "20000822",
+  "20001015": "20000822",
+  "20001017": "20000822",
+  "20001025": "20000822",
+  "20001026": "20000822",
+  "20001035": "20000822",
+  "20001036": "20000822",
+  "20001037": "20000822",
+  "20001038": "20000822",
+  "20001047": "20000822",
+  "20001048": "20000822",
+  "20001049": "20000822",
+  "20001055": "20000822",
+  "20001056": "20000822",
+  "20001057": "20000822",
+  "20001058": "20000822",
+  "20001061": "20000822",
+  "20001063": "20000822",
+  "20001064": "20000822",
+  "20001065": "20000822",
+  "20001066": "20000822",
+  "20001067": "20000822",
+  "20001068": "20000822",
+  "20001069": "20000822",
+  "20001070": "20000822",
+  "20001071": "20000822",
+  "20001077": "20000822",
+  "20001083": "20000822",
+  "20001084": "20000822",
+  "20001085": "20000822",
+  "20001086": "20000822",
+  "20001087": "20000822",
+  "20001089": "20000822",
+  "20001090": "20000822",
+  "20001091": "20000822",
+  "20001092": "20000822",
+  "20001093": "20000822",
+  "20001097": "20000822",
+  "20001098": "20000822",
+  "20001102": "20000822",
+  "20001103": "20001103",
+  "20001104": "20001104",
+  "20001108": "20001108",
+  "20001124": "20001124",
+  "20001125": "20001125",
+  "20001126": "20001126",
+  "20001128": "20001128",
+  "20001129": "20001129",
+  "20001130": "20001130",
+  "20001131": "20001131",
+  "20001132": "20000621",
+  "20001133": "20000002",
+  "20001134": "20000002",
+  "20001135": "20000038",
+  "20001136": "20000209",
+  "20001142": "20000538",
+  "20001143": "20000565",
+  "20001145": "20000593",
+  "20001147": "20000621",
+  "20001148": "20001148",
+  "20001149": "20000822",
+  "20001150": "20000822",
+  "20001151": "20000822",
+  "20001152": "20000822",
+  "20001153": "20000822",
+  "20001154": "20000822",
+  "20001155": "20000822",
+  "20001156": "20000822",
+  "20001157": "20000822",
+  "20001158": "20000349",
+  "20001159": "20000170",
+  "20001160": "20000209",
+  "20001162": "20000209",
+  "20001163": "20000170",
+  "20001164": "20000209",
+  "20001166": "20000209",
+  "20001167": "20000209",
+  "20001168": "20000209",
+  "20001170": "20000209",
+  "20001171": "20000344",
+  "20001172": "20000349",
+  "20001174": "20000621",
+  "20001175": "20000822",
+  "20001176": "20000822",
+  "20001177": "20001108",
+  "20001178": "20001108",
+  "20001179": "20000002",
+  "20001180": "20000002",
+  "20001181": "20000002",
+  "20001182": "20000045",
+  "20001183": "20000822",
+  "20001184": "20000002",
+  "20001185": "20000002",
+  "20001186": "20000002",
+  "20001187": "20000002",
+  "20001188": "20000002",
+  "20001189": "20000002",
+  "20001190": "20000002",
+  "20001191": "20000002",
+  "20001192": "20000045",
+  "20001193": "20000802",
+  "20001194": "20000082",
+  "20001195": "20000082",
+  "20001196": "20000082",
+  "20001197": "20000121",
+  "20001198": "20000106",
+  "20001199": "20000106",
+  "20001200": "20000129",
+  "20001201": "20000139",
+  "20001202": "20000148",
+  "20001203": "20000002",
+  "20001204": "20000002",
+  "20001205": "20000002",
+  "20001206": "20000509",
+  "20001207": "20000209",
+  "20001208": "20000209",
+  "20001209": "20000209",
+  "20001210": "20000209",
+  "20001211": "20000209",
+  "20001212": "20000400",
+  "20001213": "20000400",
+  "20001214": "20000400",
+  "20001215": "20000400",
+  "20001216": "20001216",
+  "20001217": "20001217",
+  "20001219": "20000464",
+  "20001221": "20000464",
+  "20001225": "20000485",
+  "20001228": "20000464",
+  "20001229": "20000461",
+  "20001230": "20000170",
+  "20001231": "20000822",
+  "20001232": "20000817",
+  "20001233": "20000501",
+  "20001234": "20000501",
+  "20001235": "20000501",
+  "20001236": "20000501",
+  "20001237": "20001237",
+  "20001238": "20001238",
+  "20001239": "20001339",
+  "20001240": "20000822",
+  "20001241": "20000538",
+  "20001242": "20000822",
+  "20001243": "20000209",
+  "20001244": "20000209",
+  "20001245": "20000209",
+  "20001247": "20000538",
+  "20001248": "20000002",
+  "20001249": "20000002",
+  "20001250": "20000565",
+  "20001251": "20000565",
+  "20001252": "20000565",
+  "20001253": "20000538",
+  "20001254": "20000538",
+  "20001255": "20000565",
+  "20001256": "20000565",
+  "20001257": "20000565",
+  "20001258": "20000209",
+  "20001259": "20000593",
+  "20001260": "20000593",
+  "20001261": "20000593",
+  "20001262": "20000593",
+  "20001264": "20000621",
+  "20001265": "20000621",
+  "20001266": "20000574",
+  "20001267": "20000538",
+  "20001268": "20000538",
+  "20001269": "20000538",
+  "20001270": "20000538",
+  "20001271": "20000690",
+  "20001272": "20000690",
+  "20001273": "20000696",
+  "20001274": "20000780",
+  "20001275": "20000523",
+  "20001276": "20000509",
+  "20001277": "20000509",
+  "20001278": "20000349",
+  "20001279": "20000344",
+  "20001280": "20000148",
+  "20001282": "20000822",
+  "20001283": "20000082",
+  "20001284": "20000802",
+  "20001285": "20000082",
+  "20001286": "20000822",
+  "20001287": "20000106",
+  "20001288": "20000788",
+  "20001289": "20000209",
+  "20001290": "20000817",
+  "20001291": "20000209",
+  "20001292": "20000621",
+  "20001293": "20000209",
+  "20001294": "20000170",
+  "20001295": "20000170",
+  "20001296": "20000209",
+  "20001297": "20000209",
+  "20001298": "20000756",
+  "20001299": "20000129",
+  "20001300": "20000587",
+  "20001301": "20001301",
+  "20001302": "20001301",
+  "20001303": "20001301",
+  "20001304": "20001301",
+  "20001305": "20000822",
+  "20001306": "20000822",
+  "20001307": "20000822",
+  "20001308": "20000822",
+  "20001309": "20000822",
+  "20001310": "20000822",
+  "20001311": "20000822",
+  "20001312": "20000593",
+  "20001313": "20000082",
+  "20001314": "20000082",
+  "20001315": "20000538",
+  "20001316": "20000638",
+  "20001317": "20000817",
+  "20001318": "20000441",
+  "20001319": "20000045",
+  "20001320": "20000082",
+  "20001321": "20000139",
+  "20001322": "20000446",
+  "20001323": "20001323",
+  "20001324": "20001324",
+  "20001325": "20001325",
+  "20001326": "20000587",
+  "20001327": "20000788",
+  "20001328": "20000788",
+  "20001329": "20000822",
+  "20001330": "20000822",
+  "20001331": "20000822",
+  "20001332": "20000822",
+  "20001333": "20000822",
+  "20001334": "20000822",
+  "20001335": "20000822",
+  "20001336": "20000822",
+  "20001337": "20001337",
+  "20001338": "20000621",
+  "20001339": "20001339",
+  "20001340": "20001339",
+  "20001341": "20001108",
+  "20001342": "20001108",
+  "20001343": "20001108",
+  "20001344": "20000657",
+  "20001345": "20000696",
+  "20001346": "20000696",
+  "20001347": "20000657",
+  "20001348": "20000657",
+  "20001349": "20000657",
+  "20001350": "20000690",
+  "20001351": "20000657",
+  "20001352": "20000690",
+  "20001353": "20000148",
+  "20001354": "20000209",
+  "20001355": "20000446",
+  "20001356": "20000446",
+  "20001357": "20000446",
+  "20001358": "20001358",
+  "20001359": "20000780",
+  "20001360": "20000768",
+  "20001361": "20001361",
+  "20001362": "20000209",
+  "20001363": "20000209",
+  "20001364": "20000209",
+  "20001365": "20000170",
+  "20001366": "20000170",
+  "20001367": "20000209",
+  "20001368": "20000209",
+  "20001369": "20000209",
+  "20001370": "20000209",
+  "20001371": "20000209",
+  "20001372": "20000209",
+  "20001373": "20001373",
+  "20001374": "20001374",
+  "20001375": "20000509",
+  "20001376": "20000170",
+  "20001377": "20001377",
+  "20001379": "20000822",
+  "20001380": "20000574",
+  "20001381": "20000574",
+  "20001382": "20000574",
+  "20001383": "20000621",
+  "20001384": "20000593",
+  "20001385": "20000593",
+  "20001386": "20000593",
+  "20001387": "20000593",
+  "20001388": "20000593",
+  "20001389": "20000593",
+  "20001390": "20000822",
+  "20001391": "20000565",
+  "20001392": "20000538",
+  "20001393": "20000822",
+  "20001394": "20000822",
+  "20001395": "20000209",
+  "20001396": "20000209",
+  "20001397": "20000822"
+ }
+}

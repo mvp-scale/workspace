@@ -1,0 +1,1282 @@
+{
+ "generated_at": "2026-11-21T12:12:53",
+ "ledger_last": "L2917",
+ "playbook": "knowledge_pipeline/playbook/00-knowledge-pipeline-v1.md",
+ "live_trace": "knowledge_pipeline/projects/world-state/live_trace.py",
+ "window": {
+  "dir": "runs-e2e-2",
+  "trace": "demo/mockups/structure-live/runs-e2e-2/trace",
+  "chain_mtime": "2026-11-21T12:03:08",
+  "traced": 5,
+  "stages_in_chain": {
+   "@journal_kind": {
+    "ran": 5
+   },
+   "@rerank": {
+    "ran": 2
+   },
+   "area_function": {
+    "ran": 5
+   },
+   "capability_list": {
+    "empty": 5
+   },
+   "claims_v1": {
+    "deferred": 5
+   },
+   "condition": {
+    "ran": 5
+   },
+   "contradictions": {
+    "deferred": 5
+   },
+   "decider": {
+    "ran": 5
+   },
+   "domain_rollup": {
+    "ran": 5
+   },
+   "facts": {
+    "ran": 5
+   },
+   "factuality_story": {
+    "not_attached": 5
+   },
+   "function_sentence": {
+    "not_attached": 5
+   },
+   "identity_g4": {
+    "deferred": 5
+   },
+   "independent_counter": {
+    "ran": 4,
+    "empty": 1
+   },
+   "journal_durable": {
+    "ran": 5
+   },
+   "ner_fewnerd": {
+    "ran": 4,
+    "empty": 1
+   },
+   "novelty": {
+    "not_attached": 5
+   },
+   "place_linker": {
+    "empty": 4,
+    "ran": 1
+   },
+   "place_student": {
+    "ran": 4,
+    "abstain": 1
+   },
+   "scan_dates": {
+    "ran": 5
+   },
+   "span_rules": {
+    "empty": 4,
+    "ran": 1
+   },
+   "structure_pack": {
+    "ran": 5
+   },
+   "tags_bundles": {
+    "empty": 4,
+    "ran": 1
+   },
+   "time": {
+    "not_attached": 5
+   },
+   "topic_landing": {
+    "ran": 2,
+    "abstain": 3
+   },
+   "windows": {
+    "ran": 5
+   }
+  },
+  "slow_jsonl_lines": 5,
+  "slow_keys": {
+   "change": {
+    "abstain": 4,
+    "proposal": 1
+   },
+   "claims": {
+    "ran": 5
+   },
+   "contradictions": {
+    "empty": 5
+   },
+   "direction": {
+    "abstain": 4,
+    "ran": 1
+   },
+   "factuality_p": {
+    "ran": 5
+   },
+   "function_p": {
+    "ran": 5
+   },
+   "identity_g4": {
+    "ran": 4,
+    "empty": 1
+   }
+  },
+  "slow_consolidate_files": {
+   "consolidated.json": {
+    "sha256_12": "49ce3988aed0",
+    "status": "PROVISIONAL"
+   },
+   "educate_index.json": {
+    "sha256_12": "7fa4ea0b48fe",
+    "status": "PROVISIONAL"
+   },
+   "evolved.json": {
+    "sha256_12": "0092c7bc8733",
+    "status": "PROVISIONAL"
+   },
+   "resource_snapshot.json": {
+    "sha256_12": "",
+    "status": null
+   },
+   "resource_state.json": {
+    "sha256_12": "557dedb1d702",
+    "status": null
+   },
+   "slow_consolidate_run.json": {
+    "sha256_12": "",
+    "status": "PROVISIONAL"
+   },
+   "truth.json": {
+    "sha256_12": "6d152a23a2f1",
+    "status": "PROVISIONAL"
+   }
+  },
+  "run_state": "stopped",
+  "v4_flags_used": {
+   "journal": true,
+   "fewnerd": true,
+   "claims": false,
+   "identity": false,
+   "contradictions": false
+  },
+  "default_on": {
+   "journal": true,
+   "fewnerd": true,
+   "claims": false,
+   "identity": false,
+   "contradictions": false
+  },
+  "code_files": [
+   "knowledge_pipeline/projects/world-state/live_trace.py",
+   "knowledge_pipeline/projects/world-state/live_trace_v4.py",
+   "knowledge_pipeline/projects/world-state/slow_clock.py",
+   "knowledge_pipeline/projects/world-state/slow_consolidate.py"
+  ]
+ },
+ "rows": [
+  {
+   "id": "g0_read",
+   "group": "core",
+   "gates": [
+    "G0"
+   ],
+   "label": "read text, source, time, read depth",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 24"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/live_trace.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: windows: chain 5 of 5 traced lines (ran 5); code: live_trace.py:55, live_trace.py:143"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "last 24h queue: 1,256 full text, 897 teaser by robots, 208 paywall/blocked; about half teaser-only",
+    "bar": "none recorded",
+    "src": [
+     "L2782"
+    ],
+    "state": "PROVISIONAL",
+    "note": "read depth is stored per article; the chain line does not carry it yet"
+   }
+  },
+  {
+   "id": "g1_spans",
+   "group": "core",
+   "gates": [
+    "G1"
+   ],
+   "label": "dates, spans, numbers",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 51"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/scan_gate.py; knowledge_pipeline/projects/world-state/span_rules.py; knowledge_pipeline/projects/world-state/facts_lib.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: scan_dates: chain 5 of 5 traced lines (ran 5); span_rules: chain 5 of 5 traced lines (empty 4, ran 1); code: live_trace.py:149, live_trace.py:167"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "1 of 1 event dates resolved in 5 traced lines",
+    "bar": "none recorded",
+    "src": [
+     "chain.jsonl runs-e2e-2"
+    ],
+    "state": "PROVISIONAL",
+    "note": "resolution count only, no outside truth"
+   }
+  },
+  {
+   "id": "g1_places",
+   "group": "core",
+   "gates": [
+    "G1"
+   ],
+   "label": "places (lookup + country)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 51"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/live_trace.py; knowledge_pipeline/projects/world-state/pack_view.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: place_linker: chain 5 of 5 traced lines (empty 4, ran 1); code: live_trace.py:184"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "precision 0.923->0.926, recall 0.900->0.900 on place_val (300 stories); GeoNames name test 64 mislinks -> 0",
+    "bar": "none recorded",
+    "src": [
+     "L2852",
+     "L2799"
+    ],
+    "state": "PROVISIONAL",
+    "note": "labels from model reviewers, not outside truth; Hollywood stays iso:US with a metonym flag (L2852)"
+   }
+  },
+  {
+   "id": "g2_facts",
+   "group": "core",
+   "gates": [
+    "G2"
+   ],
+   "label": "facts, bundles, independent count",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 52"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/facts_lib.py; knowledge_pipeline/projects/world-state/analyze2.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: facts: chain 5 of 5 traced lines (ran 5); independent_counter: chain 5 of 5 traced lines (empty 1, ran 4); tags_bundles: chain 5 of 5 traced lines (empty 4, ran 1); code: live_trace.py:154, live_trace.py:158 (+1)"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": null,
+    "bar": "none recorded",
+    "src": [
+     "none"
+    ],
+    "state": "unmeasured",
+    "note": "triples are not scored alone"
+   }
+  },
+  {
+   "id": "g2_ner",
+   "group": "core",
+   "gates": [
+    "G2"
+   ],
+   "label": "entity types (Few-NERD)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 51"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/runs/pulse/names_fewnerd_v2; model dir; L2883 test F1 coarse 0.7126 / fine 0.5657"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: ner_fewnerd: chain 5 of 5 traced lines (empty 1, ran 4); code: live_trace_v4.py:4; flag LT_V4_FEWNERD default on (live_trace_v4.py:13)"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "Few-NERD test coarse F1 0.7126, fine F1 0.5657 (v2)",
+    "bar": "keep rule: coarse>=0.71, bootstrap>0, latency<=+20%",
+    "src": [
+     "L2883"
+    ],
+    "state": "met",
+    "note": ""
+   }
+  },
+  {
+   "id": "g2_claims",
+   "group": "core",
+   "gates": [
+    "G2"
+   ],
+   "label": "claims and pronoun resolution",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 52"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/projects/world-state/claims_v1.py; knowledge_pipeline/projects/world-state/claims_units.py; limits: pronoun ORG errors remain (L2866)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: claims_v1: slow.jsonl 5 of 5 lines (ran 5); code: live_trace.py:6; flag LT_V4_CLAIMS default off (live_trace_v4.py:13); the newest run (runs-e2e-2) was traced with this flag off"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "CaRB test P 0.677 R 0.483 F1 0.563 (in-house scorer)",
+    "bar": "F1 >= 0.45 (keep rule)",
+    "src": [
+     "L2863",
+     "L2866"
+    ],
+    "state": "met",
+    "note": "runs at the slow clock: p90 676 ms > 600 ms in the chain (L2898)"
+   }
+  },
+  {
+   "id": "g3_topic",
+   "group": "core",
+   "gates": [
+    "G3a"
+   ],
+   "label": "topic (landing + frozen re-ranker)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 53"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/landing_calibrate.py; knowledge_pipeline/projects/world-state/reranker.py; knowledge_pipeline/projects/world-state/pack_view.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: topic_landing: chain 2 of 5 traced lines (abstain 3, ran 2); code: live_trace.py:213"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "re-ranker minus landing +10.710 pts on publisher section; vs earlier windows +0.510 (noise floor 3.0); 43-article window CI -6.5 to +28.2.",
+    "bar": "predicted 4.0 to 15.0 pts (L2850); forward gain over earlier windows must beat the noise floor",
+    "src": [
+     "L2850",
+     "L2763"
+    ],
+    "state": "PROVISIONAL",
+    "note": "forward gain over earlier windows is NO GAIN (L2850)"
+   }
+  },
+  {
+   "id": "g3_area",
+   "group": "core",
+   "gates": [
+    "G3a"
+   ],
+   "label": "area, function, domain roll-up",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 53"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/live_trace.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: area_function: chain 5 of 5 traced lines (ran 5); domain_rollup: chain 5 of 5 traced lines (ran 5); function head: slow.jsonl 5 of 5 lines (ran 5); code: live_trace.py:189, live_trace.py:195"
+   },
+   "runs_in": "chain+slow",
+   "quality": {
+    "score": null,
+    "bar": "none recorded",
+    "src": [
+     "none"
+    ],
+    "state": "unmeasured",
+    "note": "no bar and no score for area/function; the function head AUC 0.791 is under g3_heads"
+   }
+  },
+  {
+   "id": "g3_condition",
+   "group": "core",
+   "gates": [
+    "G3a"
+   ],
+   "label": "condition with direction",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 53"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/projects/world-state/expert1_runtime.py; knowledge_pipeline/projects/world-state/direction_v1.py; limits: fires on 108 of 3600 = 3.0% of traced articles on runs-v7 (L2708)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: condition: chain 5 of 5 traced lines (ran 5); direction: slow.jsonl 5 of 5 lines (abstain 4, ran 1); code: live_trace.py:220"
+   },
+   "runs_in": "chain+slow",
+   "quality": {
+    "score": "direction on SENTiVENT confirm half: all-items 0.859 (always-up 0.667)",
+    "bar": "all-items>=0.80 with answered>=0.90",
+    "src": [
+     "L2895"
+    ],
+    "state": "PROVISIONAL",
+    "note": "bar met on finance text only; the decider change field is a validated=False proposal, so the answer stays an abstain; condition fires on 3.0% of runs-v7 articles"
+   }
+  },
+  {
+   "id": "g3_heads",
+   "group": "core",
+   "gates": [
+    "G3a"
+   ],
+   "label": "factuality and function heads",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 53"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/projects/world-state/runs/pulse/function_head_v1/function_head.pkl; knowledge_pipeline/projects/world-state/runs/pulse/factuality_v1/factuality_head.pkl; limits: saved; function AUC 0.791 on 300 gold, factuality CV AUC 0.758; hook RAW_HEADS=1 default off (L2795)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: function head: slow.jsonl 5 of 5 lines (ran 5); factuality head: slow.jsonl 5 of 5 lines (ran 5); code: slow_clock.py:6"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "function AUC 0.791 (bal acc 0.704) on 300 gold; factuality CV AUC 0.758, bal acc 0.56 @0.5, 0.632 @line",
+    "bar": "factuality bal acc 0.80 (live_trace.py NA text)",
+    "src": [
+     "L2795",
+     "live_trace.py:82"
+    ],
+    "state": "PROVISIONAL",
+    "note": "669 ms per article, so it runs at the slow clock"
+   }
+  },
+  {
+   "id": "g3_time",
+   "group": "core",
+   "gates": [
+    "G3a"
+   ],
+   "label": "time and novelty (proxies)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 53"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/projects/world-state/scan_gate.py; knowledge_pipeline/projects/world-state/journal.py; limits: proxies only: event-date offsets (scan_dates) and the journal duplicate kind; no time or novelty model, no outside truth (time judge AUC 0.607, novelty AUROC 0.51) (L2791)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: time proxy (scan_dates): chain 5 of 5 traced lines (ran 5); novelty proxy (journal dup kind): chain 5 of 5 traced lines (ran 5); code: live_trace.py:149"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "time judge AUC 0.607, novelty AUROC 0.51 (both rejected as labels)",
+    "bar": "none: no outside truth",
+    "src": [
+     "L2791"
+    ],
+    "state": "PROVISIONAL",
+    "note": "proxy output: event-date offsets and the journal duplicate kind"
+   }
+  },
+  {
+   "id": "g3_decider",
+   "group": "core",
+   "gates": [
+    "G3b"
+   ],
+   "label": "decider (Lean-checked)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 54"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/decider.py; knowledge_pipeline/projects/world-state/lean/Decide.lean"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: decider: chain 5 of 5 traced lines (ran 5); code: live_trace.py:273"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "check_against_lean() = 160",
+    "bar": "160 (every Lean-checked case)",
+    "src": [
+     "decider.check_against_lean"
+    ],
+    "state": "met",
+    "note": "change and traits are hard-coded 'not run' on 5 of 5 traced lines (live_trace.py:262)"
+   }
+  },
+  {
+   "id": "g4_identity",
+   "group": "core",
+   "gates": [
+    "G4"
+   ],
+   "label": "entity identity and assertions",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 55"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/simulation/g4-align.py; knowledge_pipeline/runs/g4/store.jsonl; limits: wrong merges 1/61 = 1.6% after the ident-v2 rules, 4 correct merges lost (L2900); alias errors (L2796)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: identity_g4: slow.jsonl 5 of 5 lines (empty 1, ran 4); code: live_trace.py:6; flag LT_V4_IDENTITY default off (live_trace_v4.py:13); the newest run (runs-e2e-2) was traced with this flag off"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "wrong merges 1/61 = 1.6% after ident-v2 (CI 0.3-8.7); before 17/94 = 18%",
+    "bar": "none recorded",
+    "src": [
+     "L2900"
+    ],
+    "state": "PROVISIONAL",
+    "note": "replay on one sample; 4 correct merges lost"
+   }
+  },
+  {
+   "id": "g4_contra",
+   "group": "core",
+   "gates": [
+    "G4"
+   ],
+   "label": "contradictions",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 55"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/simulation/g4-align.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: contradictions: slow.jsonl 5 of 5 lines (empty 5); code: live_trace.py:6; flag LT_V4_CONTRADICTIONS default off (live_trace_v4.py:13); the newest run (runs-e2e-2) was traced with this flag off"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": null,
+    "bar": "none recorded",
+    "src": [
+     "none"
+    ],
+    "state": "unmeasured",
+    "note": "no labelled contradiction test set (plan step 7)"
+   }
+  },
+  {
+   "id": "g5_link",
+   "group": "core",
+   "gates": [
+    "G5"
+   ],
+   "label": "linking (IPTC, WordNet)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 56"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/projects/world-state/structure_pack.py; limits: IPTC path from the article topic fallback for 424 of 747 entities (57%) (L2796)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: structure_pack (terms): chain 5 of 5 traced lines (ran 5); entity linking (identity_g4): slow.jsonl 5 of 5 lines (empty 1, ran 4); code: live_trace.py:258"
+   },
+   "runs_in": "chain+slow",
+   "quality": {
+    "score": "424 of 747 entities (57%) get the IPTC path only from the article topic fallback",
+    "bar": "none recorded",
+    "src": [
+     "L2796"
+    ],
+    "state": "PROVISIONAL",
+    "note": "the fallback is marked 'guess' on the page"
+   }
+  },
+  {
+   "id": "g5_evol",
+   "group": "core",
+   "gates": [
+    "G5"
+   ],
+   "label": "evolution (residual clusters, promotion)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 56"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/evolve.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: evolve (RESIDUAL nodes): slow_consolidate/evolved.json sha 0092c7bc8733 PROVISIONAL; code: slow_consolidate.py:2"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "172 unplaced terms, 0 promotion candidates (windows gate binding)",
+    "bar": "none recorded",
+    "src": [
+     "L2881"
+    ],
+    "state": "PROVISIONAL",
+    "note": "check-evolve 19/19 structural"
+   }
+  },
+  {
+   "id": "g6_educate",
+   "group": "core",
+   "gates": [
+    "G6"
+   ],
+   "label": "educate (answers with sources)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 57"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/educate.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: educate index: slow_consolidate/educate_index.json sha 7fa4ea0b48fe PROVISIONAL; code: slow_consolidate.py:12"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "pointers 100% on 82 fixture + 3345 sweep statements (check-educate 16 checks)",
+    "bar": "none recorded: weights equal PROVISIONAL (T178)",
+    "src": [
+     "L2882",
+     "T178"
+    ],
+    "state": "PROVISIONAL",
+    "note": ""
+   }
+  },
+  {
+   "id": "journal",
+   "group": "plumbing",
+   "gates": [],
+   "label": "Journal (durable)",
+   "section": 1,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §1 line 28"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/journal.py; check-durable ALL PASS"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: journal_durable: chain 5 of 5 traced lines (ran 5); code: live_trace.py:19; flag LT_V4_JOURNAL default on (live_trace_v4.py:13)"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "journal-on total p90 541.4 ms (stage p90 17.5); check-durable ALL PASS",
+    "bar": "total p90 <= 600 ms and check-durable ALL PASS",
+    "src": [
+     "L2898",
+     "L2848"
+    ],
+    "state": "met",
+    "note": ""
+   }
+  },
+  {
+   "id": "lean_p",
+   "group": "plumbing",
+   "gates": [],
+   "label": "Lean P1/P4 property tests",
+   "section": 11,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §11 line 407"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": ""
+   },
+   "used": {
+    "s": "yes",
+    "ev": "offline by design, not a stage of any run: the proof gate, done: lean/Props.lean (P1, P4) and props_mirror.py (L2878)"
+   },
+   "runs_in": "offline",
+   "quality": {
+    "score": "lean exit 0, no sorry; props_mirror 0 failures",
+    "bar": "lean exit 0, no sorry, 0 mirror failures",
+    "src": [
+     "L2878"
+    ],
+    "state": "met",
+    "note": ""
+   }
+  },
+  {
+   "id": "learn",
+   "group": "learning",
+   "gates": [],
+   "label": "retrain (learning ladder)",
+   "section": 13,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §13 line 433"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/projects/world-state/reranker.py; knowledge_pipeline/projects/world-state/forward_test.py; limits: topic only; forward test NO GAIN (L2850) (L2850)"
+   },
+   "used": {
+    "s": "part",
+    "ev": "newest run runs-e2e-2: topic re-ranker (frozen): chain 2 of 5 traced lines (ran 2); code: live_trace.py:91; only the topic re-ranker is a retrained head in the chain; function, factuality, time, novelty heads are not retrained there"
+   },
+   "runs_in": "chain",
+   "quality": {
+    "score": "forward gain +0.510 pts vs noise floor 3.0: NO GAIN",
+    "bar": "gain above the noise floor",
+    "src": [
+     "L2850"
+    ],
+    "state": "PROVISIONAL",
+    "note": ""
+   }
+  },
+  {
+   "id": "world_resource",
+   "group": "world",
+   "gates": [],
+   "label": "Macro Pulse resource state",
+   "section": 10,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §10 line 31"
+   },
+   "implemented": {
+    "s": "part",
+    "ev": "knowledge_pipeline/projects/world-state/ledger_split.py; limits: 26 seed resources, all marked guess (PROVISIONAL) (L2848); check-durable ALL PASS"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: resource state: slow_consolidate/resource_state.json sha 557dedb1d702 ; code: slow_consolidate.py:10"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "26 seed resources, all guesses; replay 0 new ticks, 4556 of 4556 rows carry evidence",
+    "bar": "none recorded",
+    "src": [
+     "L2848"
+    ],
+    "state": "PROVISIONAL",
+    "note": ""
+   }
+  },
+  {
+   "id": "world_truth",
+   "group": "world",
+   "gates": [],
+   "label": "world state against truth",
+   "section": 10,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §10 line 31"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/resource_truth.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: truth snapshot: slow_consolidate/truth.json sha 6d152a23a2f1 PROVISIONAL; code: slow_clock.py:114"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "event peak hit rate 20.5% against chance 20.6%",
+    "bar": "80% hit rate",
+    "src": [
+     "L2885"
+    ],
+    "state": "PROVISIONAL",
+    "note": "reported, never gating"
+   }
+  },
+  {
+   "id": "two_clocks",
+   "group": "world",
+   "gates": [],
+   "label": "two-clocks consolidation",
+   "section": 18,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §18 line 550"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/consolidate.py"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "newest run runs-e2e-2: consolidated.json: slow_consolidate/consolidated.json sha 49ce3988aed0 PROVISIONAL; code: slow_consolidate.py:1"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "check-consolidate 22 of 22 structural checks pass; assertion strengths all 1 (1 of 9 stores in the trace)",
+    "bar": "none recorded",
+    "src": [
+     "L2859"
+    ],
+    "state": "PROVISIONAL",
+    "note": "decay half-life is a guess"
+   }
+  }
+ ],
+ "counts": {
+  "core": {
+   "n": 17,
+   "aligned": 17,
+   "implemented": 11,
+   "live": 17,
+   "runs": {
+    "chain": 8,
+    "slow": 6,
+    "chain+slow": 3,
+    "offline": 0,
+    "no": 0
+   },
+   "quality": {
+    "met": 3,
+    "PROVISIONAL": 11,
+    "unmeasured": 3
+   }
+  },
+  "all": {
+   "n": 23,
+   "aligned": 23,
+   "implemented": 15,
+   "live": 22,
+   "runs": {
+    "chain": 10,
+    "slow": 9,
+    "chain+slow": 3,
+    "offline": 1,
+    "no": 0
+   },
+   "quality": {
+    "met": 5,
+    "PROVISIONAL": 15,
+    "unmeasured": 3
+   }
+  }
+ },
+ "gate_coverage": {
+  "playbook_gates": [
+   "G0",
+   "G1",
+   "G2",
+   "G3a",
+   "G3b",
+   "G4",
+   "G5",
+   "G6"
+  ],
+  "covered": [
+   "G0",
+   "G1",
+   "G2",
+   "G3a",
+   "G3b",
+   "G4",
+   "G5",
+   "G6"
+  ],
+  "missing": []
+ },
+ "durable_check": {
+  "ran": true,
+  "pass": true,
+  "lines": [
+   "PASS journal: two replays of the same input give the same sha256 fc72b1663166e4dd",
+   "PASS journal: reload in a fresh Durable gives the same rows and day table {\"2026-11-20\": {\"items\": 3, \"stories\": 2, \"copies\": 1, \"republishe",
+   "PASS journal: a syndicated copy is counted once (3 items, 2 stories, 1 copy; the replayed i1 adds nothing) {'items': 3, 'stories': 2, 'copie",
+   "PASS journal: an item already logged in another run is not counted again ",
+   "PASS ledger: a second pass over the same lines adds 0 ticks and gives the same sha256 3600 lines, sha cf9550da49a3aa49",
+   "PASS ledger: a replay without any log gives the same sha256 ",
+   "PASS ledger: a fresh process reloading the tick log gives equal Ledger rows (26 resources), equal state sha256, equal tick and item counts t",
+   "PASS ledger: 100 percent of state rows carry >= 1 evidence pointer 4556 rows, 28472 pointers",
+   "PASS ledger: per-day shares are written and sum to 1 per (country, day) within 1e-4 (6-decimal rounding) 394 (day, country) cells, 23 days",
+   "PASS ledger: the seed is marked PROVISIONAL and all rows say so seed 26 rows, ['draft v2 (guess)']"
+  ],
+  "when": "2026-11-21T12:12:51",
+  "cmd": "check-durable.py --no-g4"
+ },
+ "plan": {
+  "source": "ledger L2802",
+  "steps": [
+   {
+    "step": "0a",
+    "title": "fix F4 baseline key",
+    "state": "done",
+    "evidence": "L2803 matches",
+    "done_check": "F5 baseline key differs from its result key, so guard E5 no longer blocks the note: forward_test.py writes previous-results.json",
+    "waits_on": []
+   },
+   {
+    "step": "0b",
+    "title": "needs-you board",
+    "state": "done",
+    "evidence": "L2849 matches",
+    "done_check": "session_start.py prints every open NEEDS YOU line with its task id",
+    "waits_on": []
+   },
+   {
+    "step": "1",
+    "title": "durable journal/store/ledger",
+    "state": "done",
+    "evidence": "L2849 matches; check-durable ALL PASS",
+    "done_check": "check-durable.py ALL PASS: journal replay and reload, resource ledger replay, G4 store replay",
+    "waits_on": [],
+    "row": {
+     "id": "journal",
+     "tick": "implemented",
+     "now": "yes"
+    }
+   },
+   {
+    "step": "2",
+    "title": "contract v4 (page code into chain)",
+    "state": "waiting",
+    "evidence": "",
+    "done_check": "contract live-trace-v4 approved (T172) and the Few-NERD, claims and G4 rows show used in live_trace.py",
+    "waits_on": [
+     "T172"
+    ],
+    "row": {
+     "id": "g2_ner",
+     "tick": "used",
+     "now": "yes"
+    }
+   },
+   {
+    "step": "3",
+    "title": "resource state v1 (resource x country x day, evidence, Pulse)",
+    "state": "done",
+    "evidence": "L2848 matches",
+    "done_check": "resource state replay adds 0 ticks, reload equal, 100% of state rows carry evidence (check-durable); seed marked PROVISIONAL",
+    "waits_on": [
+     "T171 provisional",
+     "T175",
+     "T178 provisional"
+    ],
+    "row": {
+     "id": "world_resource",
+     "tick": "implemented",
+     "now": "part"
+    }
+   },
+   {
+    "step": "4",
+    "title": "SENTiVENT direction head",
+    "state": "waiting",
+    "evidence": "",
+    "done_check": "a SENTiVENT direction head trained (needs T173) and scored on held-out gold against a bar fixed first",
+    "waits_on": [
+     "T173"
+    ]
+   },
+   {
+    "step": "5",
+    "title": "resource truth (current events + US public series)",
+    "state": "waiting",
+    "evidence": "",
+    "done_check": "current events and US weekly series downloaded (T174) and resource state scored against them",
+    "waits_on": [
+     "T174"
+    ],
+    "row": {
+     "id": "world_truth",
+     "tick": "implemented",
+     "now": "yes"
+    }
+   },
+   {
+    "step": "6",
+    "title": "two clocks v0",
+    "state": "done",
+    "evidence": "L2859 matches",
+    "done_check": "a consolidation pass runs at a checkpoint and merges duplicates under the section 9 gates",
+    "waits_on": [],
+    "row": {
+     "id": "two_clocks",
+     "tick": "implemented",
+     "now": "yes"
+    }
+   },
+   {
+    "step": "7",
+    "title": "contradictions",
+    "state": "done",
+    "evidence": "L2857 matches",
+    "done_check": "contradiction edges found on a labelled test set and scored",
+    "waits_on": [],
+    "row": {
+     "id": "g4_contra",
+     "tick": "implemented",
+     "now": "yes"
+    }
+   },
+   {
+    "step": "8",
+    "title": "G6 v0",
+    "state": "waiting",
+    "evidence": "",
+    "done_check": "G6 v0 answers a topic question with sources and no unsupported statement (T178 weights approved)",
+    "waits_on": [
+     "T178"
+    ],
+    "row": {
+     "id": "g6_educate",
+     "tick": "implemented",
+     "now": "yes"
+    }
+   },
+   {
+    "step": "9",
+    "title": "P1/P4 property tests",
+    "state": "notstarted",
+    "evidence": "",
+    "done_check": "P1 and P4 property tests (playbook section 11 table) pass",
+    "waits_on": [],
+    "row": {
+     "id": "lean_p",
+     "tick": "implemented",
+     "now": "yes"
+    }
+   },
+   {
+    "step": "10",
+    "title": "learn ladder",
+    "state": "notstarted",
+    "evidence": "",
+    "done_check": "the learning ladder retrains a head other than the topic re-ranker and scores it against its baseline",
+    "waits_on": [],
+    "row": {
+     "id": "learn",
+     "tick": "implemented",
+     "now": "part"
+    }
+   }
+  ],
+  "running": [],
+  "last_card": {
+   "id": "L2850",
+   "text": "SCORE T158-F5 (L2846): HIT. change_pts: pooled re-ranker minus landing agreement with the publisher section, points = 10.710 (src: runs/pulse/topic_loop/forward/results.json#change_pts) (predicted 4.0"
+  }
+ },
+ "needs_you": [
+  {
+   "task": "T171",
+   "text": "which resource list seeds resource state: the engine's 26-row resources.csv (all marked guess) or a shorter 6-resource list? OPTIONS: (a) the 26, marked PROVISIONAL; (b) the 6 core; (c) your own list. Step 3 runs on the 26 as PROVISIONAL until you pick. From plan L2802.",
+   "unlocks": [
+    {
+     "step": "3",
+     "note": " provisional"
+    }
+   ]
+  },
+  {
+   "task": "T172",
+   "text": "approve contract live-trace-v4 (page code moved into the chain)? Plan step 2 waits on it. From plan L2802.",
+   "unlocks": [
+    {
+     "step": "2",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "task": "T173",
+   "text": "(1) grant training on SENTiVENT and the crosswalk to our labels? (2) MAVEN-FACT: keep scoring-only or drop? Plan step 4 waits; loop_permissions.json owner_grants holds only L2751, and also lacks L2756 (recorded here, not edited). From plan L2802.",
+   "unlocks": [
+    {
+     "step": "4",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "task": "T174",
+   "text": "yes or no for each download: (1) Wikipedia current events, (2) US public weekly series, (3) Wikidata names. Plan step 5 waits; nothing is downloaded without your yes. From plan L2802.",
+   "unlocks": [
+    {
+     "step": "5",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "task": "T175",
+   "text": "place granularity for resource state: country (iso2 or WORLD, the v1 default) or finer (region, city)? From plan L2802.",
+   "unlocks": [
+    {
+     "step": "3",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "task": "T176",
+   "text": "approve the R7 wording and the ledger_split READINGS text shown to readers? From plan L2802.",
+   "unlocks": []
+  },
+  {
+   "task": "T177",
+   "text": "hosted spend cap: keep 2.5 USD (D43) or raise to 10 USD? From plan L2802.",
+   "unlocks": []
+  },
+  {
+   "task": "T178",
+   "text": "approve the world-state weights (how V, dV, N, C and U combine) or name changes? Plan step 8 waits. From plan L2802.",
+   "unlocks": [
+    {
+     "step": "3",
+     "note": " provisional"
+    },
+    {
+     "step": "8",
+     "note": ""
+    }
+   ]
+  }
+ ],
+ "story": [
+  {
+   "step": "Read",
+   "gate": "G0",
+   "rows": [
+    "g0_read",
+    "journal"
+   ],
+   "live": 2,
+   "of": 2,
+   "badge": "live"
+  },
+  {
+   "step": "Understand",
+   "gate": "G3",
+   "rows": [
+    "g3_topic",
+    "g3_area",
+    "g3_condition",
+    "g3_heads",
+    "g3_time",
+    "g3_decider"
+   ],
+   "live": 6,
+   "of": 6,
+   "badge": "live"
+  },
+  {
+   "step": "Extract",
+   "gate": "G1-G2",
+   "rows": [
+    "g1_spans",
+    "g1_places",
+    "g2_facts",
+    "g2_ner",
+    "g2_claims"
+   ],
+   "live": 5,
+   "of": 5,
+   "badge": "live"
+  },
+  {
+   "step": "Connect",
+   "gate": "G4-G5",
+   "rows": [
+    "g4_identity",
+    "g4_contra",
+    "g5_link",
+    "g5_evol"
+   ],
+   "live": 4,
+   "of": 4,
+   "badge": "live"
+  },
+  {
+   "step": "World state",
+   "gate": "G5",
+   "rows": [
+    "world_resource",
+    "world_truth",
+    "two_clocks"
+   ],
+   "live": 3,
+   "of": 3,
+   "badge": "live"
+  },
+  {
+   "step": "Decision",
+   "gate": "G6",
+   "rows": [
+    "g3_decider",
+    "g6_educate"
+   ],
+   "live": 2,
+   "of": 2,
+   "badge": "live"
+  }
+ ]
+}

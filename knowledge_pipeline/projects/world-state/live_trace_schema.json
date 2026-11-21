@@ -1,0 +1,119 @@
+{
+  "version": "live-trace-v3",
+  "changes_from_v2": "Owner yes 2026-11-20 (ledger L2756, round-1 re-ranker adopted L2751): topic_landing keeps its stage name and every v2 field, and gains the topic re-ranker (reranker.py, runs/pulse/topic_loop/r1/primary_reranker.pkl, specs/rerank_calibration_v1.json). out.l1_code, out.p, out.decision, out.agrees_rollup and the journal ids.topic (best = the best card under the answered level-1 code, l1, l2) now describe the RE-RANKER's answer; the landing's own level-1 code, p and decision move to out.landing_l1_code, out.landing_p, out.landing_decision; best, top3, l1_agree3, vote, voted, n_sent, damped stay the landing's evidence. New out.rerank {l1_code, p, top2 [[code, p] x2], version 'rerank-r1:<model sha16>', node}. The topic_node decider field takes the re-ranker's p and its own line (specs/rerank_calibration_v1.json line_permille). Stage out cap for topic_landing is 1000 characters (others 700). New informational gap RERANK_DISAGREE; LANDING_WEAK now means the re-ranker's decision is ABSTAIN. run.json version live-trace-v3, label_version gains rerank_model and rerank_calibration, degraded gains 'no re-ranker: ...' (ALLOW_NO_RERANK=1 only; without it a card-list or cards_sha mismatch, or a calibration fitted on another model, refuses to start). stages_full.topic_landing gains rerank_features and rerank_calibration. v1 and v2 runs stay valid (verify_trace, funnel_view, the page).",
+  "changes_from_v1": "Owner-approved 2026-11-19 (ledger L2735). New stage topic_landing (after domain_rollup, before structure_pack); structure_pack drops l1_guess and guess_top3 and gains l1_code_used; run.json gains version, label_version and degraded; gap codes LANDING_SPLIT and LANDING_WEAK added, TOPIC_DISAGREE relabelled reference. v1 traces (no topic_landing stage, run.json without version) stay valid and readable. Step 3 (graph, journal-v0, inside the same yes): every traced line gains a journal object (ids, story keys, dup, publishers); run.json gains journal_version and journal; gap code SYNDICATED; verify_trace checks the journal against the lines before it. Runs without journal_version (step 2) stay valid.",
+  "purpose": "Contract between the runner (live_trace.py), the aggregator (live_gaps.py), the checker (verify_trace.py) and the page (demo/mockups/structure-live/index.html). Change it only through the owner session; a builder who needs a change reports it and stops.",
+  "folder": "/workspace/demo/mockups/structure-live/trace/  (served at /mockups/structure-live/trace/)",
+  "files": {
+    "run.json": "one object, rewritten atomically every 3 s: the run header plus aggregates and gaps (see run)",
+    "tail.json": "list of the last 40 article lines, newest first (each is the parsed article_line, not the chain wrapper)",
+    "chain.jsonl": "append-only, one chain_line per traced article, in seq order, no gaps",
+    "a/<seq>.json": "raw record for article seq: {article_line, text (the exact string read), stages_full (full stage outputs)}",
+    "fixture/": "same layout (v2) with 6 made-up articles (clean, teaser-only, error stage, not_attached, a syndicated copy of the clean one, a landing abstain) so the page can be built and tested before the runner exists; the page opens it with ?fixture=1. fixture-v1/ keeps the earlier v1 fixture (4 articles) so the page fallback has a test: ?fixture=1&v=1"
+  },
+  "chain_line": {
+    "seq": "int, 0,1,2,... no gaps; skipped rows also get a line (state skipped, with the reason)",
+    "prev": "hex sha256 of the previous chain_line (seq 0: the run_id)",
+    "sha": "hex sha256 of (prev + line), both as UTF-8 text",
+    "line": "STRING: the article_line as compact JSON (sort_keys, separators , and :, ensure_ascii false). The page verifies by hashing this string as written; it never re-serialises"
+  },
+  "run": {
+    "run_id": "string",
+    "start_epoch": "float, recorded on the ledger before the first article",
+    "ends_epoch": "float, start + duration cap (at most 3600 s)",
+    "state": "running | stopped | drift_stop | error",
+    "code_hash": "first 16 hex of sha256 over file_sha values",
+    "version": "live-trace-v3 (live-trace-v2 or absent/live-trace-v1 on older runs)",
+    "label_version": "{iptc_release, cards (first 16 hex of the sha256 over the card strings in qcode order), table (name-to-code table version), calibration (first 16 hex of the sha256 of specs/landing_calibration_v1.json; null when the run used landing-v0)}",
+    "journal_version": "journal-v0 on runs that write the journal (step 3); absent on step 2 runs. verify_trace requires a journal on every traced line when it is present",
+    "journal": "{records, first, copy, republished, generic_title, no_key, independent_items (stories, each counted once), multi_publisher_stories, max_publishers, no_l2_items, l2_nodes: [{code, label, items, publishers}] top 50 by items, as_of: {run_id, seq, label_version}}; counted per run from the lines alone (live_gaps.journal_block); absent until a line carries a journal",
+    "degraded": "list of strings, [\"no landing\"] when the run was started with ALLOW_NO_LANDING=1 and the cards could not be built; otherwise []",
+    "why": "only when state is error before the first article (start-up failure, for example topic_landing could not build); no chain line exists then",
+    "file_sha": "{path: sha256} for live_trace.py, live_gaps.py, structure_pack.py, pack_view.py, journal.py, mnds_codes.py, specs/mnds_name_to_code_v1.json, analyze2.py, facts_lib.py, scan_gate.py, extract.py, decider.py, expert1_runtime.py, this schema, the IPTC and WordNet files",
+    "model_sha": "{path: sha256} for each model pickle the run loads",
+    "columns_allowlist": ["id", "url", "source", "title", "teaser", "body", "published", "ready_at"],
+    "budget_ms": {"p50": 300, "p90": 600},
+    "counts": {"traced": "int", "skipped": "int", "backlog_ready": "int, ready rows after the cursor not yet traced", "never_ready_since_start": "int, found_at >= START and no ready_at yet (information, not part of the identity)", "rows_ready_since_start": "int, read-only count of rows with ready_at >= START; identity the page checks: rows_ready_since_start = traced + skipped + backlog_ready", "rows_found_since_start": "int, information only, count by found_at >= START", "ready_found_before_start": "int, information only, rows found before START but ready at or after it"},
+    "queue_lag_p50_s": "median of (read time - ready_at)",
+    "stages": "{stage_name: {ran, empty, abstain, error, timeout, not_attached: counts, p50_ms, p90_ms}}",
+    "decider": "{field: {outcome: count}} for story_type, topic, change, size, traits",
+    "gaps": "[{code, count, rate, examples: [seq, ... up to 5]}] ranked by rate, no accuracy column",
+    "check_cmd": "list of two read-only sqlite3 commands the owner can paste: the ready_at count (rows_ready_since_start) and the never_ready count"
+  },
+  "article_line": {
+    "seq": "int",
+    "id": "queue item id",
+    "url": "string",
+    "source": "string",
+    "title": "string, the headline as read (optional for old fixtures; the runner writes it; the page shows the URL if absent)",
+    "published": "string or null",
+    "ready_at": "float epoch",
+    "read_at": "float epoch",
+    "lag_s": "read_at - ready_at",
+    "state": "traced | skipped",
+    "skip_reason": "null or short string (too short, empty, error before any stage)",
+    "input": {"chars": "int", "has_body": "bool", "body_chars": "int", "text_sha1": "hex sha1 of the exact text string (also stored in a/<seq>.json)", "capped": "bool, text cut at 12000 characters", "pct_read_per_model": "{model: percent of the text that model saw, where known}"},
+    "stages": "[stage, ...] in pipeline order",
+    "decider": "{field: {outcome, answer_or_proposed, marker, harvest}} from decider.py, or not_attached. v1 landing adds a sixth field topic_node (answer = the landing's level-1 code; confidence = p; threshold = the calibration line; marker BELOW_BAR from runs/pulse/field_table.json); absent when the landing has no calibration",
+    "journal": "traced lines only, written by the runner (journal.py): {label_version: {iptc_release, cards, table}, ids: {topic: {best, l1, l2 (null for a level-1 landing), top3} or null, places: [ISO-2 country codes from place_linker top_countries], names: [strings, up to 20; names_id_space is \"string\" until Wikidata IDs exist (step 7)], names_id_space}, story_key: {title: sha1 or null, prefix: sha1 or null} (the keys actually used: title null when under 5 words or a column name, prefix null when the body is under 100 characters or is page boilerplate), dup: {kind: first | copy | republished | generic_title | no_key, of_seq: seq of the story's first item, or null for a root}, publishers: distinct sources carrying the story so far in this run (1 for a root; copies add, republished do not), permission: public-news}. Skipped lines carry none",
+    "gaps": "[gap code, ...]",
+    "total_ms": "float",
+    "over_budget": "bool, total_ms above budget p90"
+  },
+  "stage": {
+    "name": "one of stage_names",
+    "gate": "playbook 00 gate (G1, G2, G3a, G4 ...)",
+    "kind": "tool | model | pack",
+    "version": "string (file, model file or commit)",
+    "state": "ran | empty | abstain | error | timeout | not_attached (timeout is reserved: the runner has no watchdog and never writes it; a stage over 2,000 ms gets slow: true and appears in run.slow_stages)",
+    "out": "compact output, at most about 600 characters when serialised (full output goes to a/<seq>.json stages_full)",
+    "n": "int count of items produced, or null",
+    "ms": "float",
+    "provenance": "Observed | Resolved | External | Inferred | Candidate (playbook 00 tags; the structure pack is Inferred)",
+    "why": "short reason for empty, abstain, error, timeout or not_attached (a not_attached stage names its source file and why it is not wired)"
+  },
+  "stage_names": [
+    {"name": "windows", "kind": "model", "note": "Reader.read_detail: the v6b windows; says how much of the text the encoder saw"},
+    {"name": "scan_dates", "kind": "tool", "note": "scan_gate.scan plus the Date resolver"},
+    {"name": "facts", "kind": "tool", "note": "Fact extractors, Binder, Validator: counts of stated, unbound, invalid items"},
+    {"name": "independent_counter", "kind": "tool", "note": "ff[1] from facts_for; today analyze2 throws it away (L1 keeps it)"},
+    {"name": "tags_bundles", "kind": "tool", "note": "Factuality tagger and Change lexicon via build_bundles"},
+    {"name": "span_rules", "kind": "tool", "note": "span rules plus quarantine"},
+    {"name": "place_linker", "kind": "tool", "note": "extract.place_country (not called from analyze2 today)"},
+    {"name": "area_function", "kind": "model", "note": "v6b topic head (49 labels, called Area) and story-type head (called Function)"},
+    {"name": "domain_rollup", "kind": "model", "note": "fixed 49-to-17 roll-up, specs/topic_to_iptc_v1.json; there is no separate Domain model"},
+    {"name": "condition", "kind": "model", "note": "ExpertS.read condition head"},
+    {"name": "place_student", "kind": "model", "note": "Place student pickle plus encoder"},
+    {"name": "capability_list", "kind": "tool", "note": "match against the verb-object list (371 pairs); a list match, not a model"},
+    {"name": "topic_landing", "kind": "model", "gate": "G3a", "note": "pack_view.Landing: the article (text[:2000]) and each sentence of 40+ characters land on the nearest IPTC Media Topic card (bge-small, 1,059 cards in qcode order). out (under 700 characters): best {qcode, layer, score, margin}, top3 [[qcode, score] x3], l1_code, l1_agree3 (1-3), vote [[l1_code, n_sentences] x up to 3] or [] (v1: the vote runs only when the 3 best cards disagree on the level-1 code, l1_agree3 under 3; otherwise []), voted (true when the vote ran), n_sent (sentences of 40+ characters, landed only when voted), agrees_rollup (code join; null if the roll-up did not run), decision (v0: EVIDENCE_ONLY; v1: ANSWER_L1 or ABSTAIN), and in v1 only: p (calibrated probability that l1_code is right, floor(1000 p) / 1000, the same integer the decision and the decider use) and damped (true when hub damping changed the best card). v1 = specs/landing_calibration_v1.json (hub-damped ranking, 9 features, vote gated on l1_agree3 < 3, as_of {run_id, seq, label_version}, the line where running accuracy held 0.80 on MN-DS T28); version string starts 'landing-v1' and ends 'calib <16 hex of that file>'; no file, or one fitted on other cards, gives v0 and run.json degraded says why. why in v1: 'p 0.310 below the line 0.780' on an abstain. n = 1 + n_sent. why 'no sentence of 40 characters' when the vote is empty. Full output in stages_full: article (5 nodes with path_codes), sentences (up to 12 nodes with n_sentences and 3 example sentences), and in v1 features (the 9 numbers the calibrator saw) and calibration {sha16, line_permille, as_of, stale}. Not attached when ALLOW_NO_LANDING=1 and the cards cannot be built; without that flag the run refuses to start. Provenance Inferred."},
+    {"name": "structure_pack", "kind": "pack", "note": "WordNet placement of the article's words on the IPTC tree; the topic guess moved to topic_landing. out: n_terms, n_placed, in_topic (counted against topic_landing.out.l1_code; null when the landing did not run), l1_code_used, hops, unplaced_share. provenance Inferred"},
+    {"name": "decider", "kind": "tool", "note": "decider.py over the five fields"},
+    {"name": "function_sentence", "kind": "model", "note": "NOT ATTACHED: the sentence-level Function head was never saved (runs/pulse/t210 does not exist)"},
+    {"name": "novelty", "kind": "model", "note": "NOT ATTACHED: no Novelty model exists (AUROC 0.51)"},
+    {"name": "time", "kind": "model", "note": "NOT ATTACHED: no Time model"},
+    {"name": "factuality_story", "kind": "model", "note": "NOT ATTACHED: no whole-story Factuality head"}
+  ],
+  "gap_codes": [
+    "TEASER_ONLY", "WINDOW_CUT", "FACTS_ZERO", "UNBOUND_HIGH", "QUARANTINED", "INDEPENDENT_LOW", "BUNDLE_NO_SIZE", "CHANGE_NO_CONDITION",
+    "TOPIC_DISAGREE (reference: landing IPTC level 1 code vs the legacy Domain roll-up; v1 traces: pack guess vs roll-up)", "LANDING_SPLIT (article landing level 1 vs the sentence vote, vote of 3+ sentences)", "LANDING_WEAK (v0: best cosine under 0.58; v1: decision ABSTAIN; v3: the re-ranker's decision is ABSTAIN)", "RERANK_DISAGREE (v3, informational: the re-ranker's level-1 code differs from the landing's own)", "SYNDICATED (journal dup.kind is copy or republished)", "PLACE_DISAGREE (Place student vs Place linker)", "UNPLACED_HIGH (pack: share of nouns not placed)",
+    "DECIDER_ABSTAIN", "OVER_BUDGET", "STAGE_ERROR", "NOT_ATTACHED"
+  ],
+  "anti_cheat": [
+    "the runner selects only the allowlisted columns; category, region, country and story are never read",
+    "articles are read once, in ready_at order, with a cursor; every row since START gets a chain line (skipped rows too)",
+    "the prediction and START are on the ledger before the first article",
+    "the runner re-hashes its code and model files every 5 minutes and stops with state drift_stop if anything changed",
+    "the page offers: recompute the chain, recompute each text sha1, raw JSON link per article, a random-article button, no filters (seq order only)"
+  ],
+  "example_article_line": {
+    "seq": 0, "id": "abc", "url": "https://example.org/a", "source": "Example", "published": "2026-11-18T10:00:00Z", "ready_at": 1795020000.0, "read_at": 1795020005.0, "lag_s": 5.0,
+    "state": "traced", "skip_reason": null,
+    "input": {"chars": 812, "has_body": true, "body_chars": 700, "text_sha1": "0000000000000000000000000000000000000000", "capped": false, "pct_read_per_model": {"v6b_windows": 100}},
+    "stages": [
+      {"name": "scan_dates", "gate": "G1", "kind": "tool", "version": "scan_gate", "state": "ran", "out": "2 dates, 3 amounts", "n": 5, "ms": 1.2, "provenance": "Observed", "why": null},
+      {"name": "novelty", "gate": "G5", "kind": "model", "version": null, "state": "not_attached", "out": null, "n": null, "ms": 0, "provenance": null, "why": "no Novelty model exists"}
+    ],
+    "decider": {"topic": {"outcome": "ANSWER_PROVISIONAL", "answer_or_proposed": "economy", "marker": "BELOW_BAR", "harvest": false}},
+    "gaps": ["NOT_ATTACHED"], "total_ms": 180.4, "over_budget": false
+  }
+}

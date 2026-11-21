@@ -70,3 +70,18 @@ Placed on 2026-10-29: account and workspace checks, `ant` and vault gotchas -> `
 - 2026-11-12, owner decision put to the owner without the context to make it (L2442, withdrawn in L2446): I turned one chain of experiments (embedding-head router vs Clef on the dial path) into a closed yes/no question with three options, worded so one read as the obvious pick, while leaving out the BitMob tools, the other teachers (Jev, Sonnet), the other engine families, the outside-truth sets and the second goal statement in GO.md. Rule: before any owner decision, write a context brief first (every goal statement, every component and whether it was in the test, every reference and teacher, what the evidence covers and what it does not) and put the question open-ended; never ask for a yes on a bar derived from a partial pipeline; give each option its strongest case, in equal length.
 
 - 2026-11-13, MM3 usage (owner review): write the MDL annotations fully so the run can be found later: uses as C4 chains (level:name with parent/child written flat, guessed parts end with ?), blast, touches, why, stage, change, risk, problem, plus kebab-case custom keys (ledger id, decision id, method step); name files in questions exactly as the where entries including the line range; one narrow judgment per question, no double negatives, one polarity per category; phrase the goal as the claim to prove; pin the model (jev-1.14.0, D-0011) in .mm3/config.yaml; a free doctor does not show the address calls use, mm3 config does; run mm3 config --load after editing config.yaml; log.jsonl is not read by agents unless the owner asks.
+
+## 2026-11-20: a view of the pipeline starts from the full chain inventory
+- **What happened:** the knowledge-raw page (v1, then v2) showed entities, claims and the decision. It hid most of what the live chain already extracts:
+  - scan spot classes: attribution, quotes, negation, modality, events;
+  - span rules;
+  - change bundles;
+  - the WordNet/IPTC mapping;
+  - the embedding top-3;
+  - read coverage.
+
+  It also dropped 48 of 55 claims (unbound sides, pronoun subjects, speech verbs). The owner: "you dwarfed pretty much the whole point of the knowledge pipeline" (ledger L2787).
+- **Rule:**
+  - Any view, page or summary of the pipeline is built from the stage list in live_trace.py, plus the BitMob heads table. Every stage output appears, or is listed as "not shown, because ...".
+  - A completeness check (each stage name in stage_out is rendered on the page) runs before the page is called done.
+  - Scope never shrinks (D39) applies to views, not just to heads.

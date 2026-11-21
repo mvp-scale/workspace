@@ -24,3 +24,13 @@ for name, X in (("v6b", X6), ("bge_small", Xb), ("v6b_plus_bge", np.hstack([X6, 
         for te, t in lines: bals.append(bal(oof[te], y_gold[te], t))
         res["variants"][f"{name}_C{C}"] = {"auc_vs_gold": round(auc(oof, y_gold), 3), "bal_at_0_5": round(bal(oof, y_gold, 0.5), 3), "bal_at_train_line_mean_over_folds": round(float(np.mean(bals)), 3), "auc_vs_jev_label": round(auc(oof, yj), 3)}
 json.dump(res, open(OUT / "t178_factuality_student.json", "w"), indent=1); print(json.dumps(res))
+# --- T158-H1 save step (add-only). SAVE=1 fits the best-AUC-vs-gold CV configuration (bge_small, C=1.0) on ALL rows, same features and settings,
+# and writes runs/pulse/factuality_v1/factuality_head.pkl. The CV scores above stay the held-out number (no separate test split exists in this script).
+if os.environ.get("SAVE"):
+    import pickle, hashlib
+    SD = pathlib.Path(os.environ.get("SAVE_DIR", "runs/pulse/factuality_v1")); SD.mkdir(parents=True, exist_ok=True)
+    best = max(res["variants"], key=lambda k: res["variants"][k]["auc_vs_gold"]); assert best == "bge_small_C1.0", best
+    hs = LogisticRegression(C=1.0, max_iter=3000).fit(Xb, yj); ps = hs.predict_proba(Xb)[:, 1]
+    line = float(np.median([t for _, t in [(0, max(np.arange(0.05, 0.96, 0.01), key=lambda t: np.mean(((LogisticRegression(C=1.0, max_iter=3000).fit(Xb[tr], yj[tr]).predict_proba(Xb[tr])[:, 1] >= t) == (yj[tr] == 1))))) for tr, _ in GroupKFold(5).split(Xb, yj, doc)]]))
+    pickle.dump({"model": hs, "line": line, "encoder": "BAAI/bge-small-en-v1.5", "max_seq_length": 128, "normalize": True, "dims": int(Xb.shape[1]), "label": "Jev happened probability >= 0.5", "config": best, "cv_metrics": res["variants"][best], "in_sample_bal_at_0_5_vs_gold": bal(ps, y_gold, 0.5), "in_sample_bal_at_line_vs_gold": bal(ps, y_gold, line), "in_sample_auc_vs_gold": auc(ps, y_gold)}, open(SD / "factuality_head.pkl", "wb"))
+    print("saved", SD / "factuality_head.pkl", "line", line, "in-sample auc", auc(ps, y_gold))

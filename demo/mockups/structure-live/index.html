@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What we pull out of real news articles</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#16191d;--mut:#5d6672;--line:#d9dde3;--acc:#1f5fbf;
+--ran:#1f8a4c;--ranb:#dff3e6;--empty:#8a6d00;--emptyb:#fff3c4;--abstain:#9a4a00;--abstainb:#ffe3cc;
+--error:#b3261e;--errorb:#fbd9d6;--timeout:#7a1f8f;--timeoutb:#f1d9f7;--na:#6b7280;--nab:#e5e7eb;
+--hi:#fde68a;--code:#eef0f3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1216;--card:#181c22;--fg:#e6e9ee;--mut:#9aa4b2;--line:#2c333c;--acc:#7fb0ff;
+--ran:#6fd39a;--ranb:#143523;--empty:#e8c75a;--emptyb:#3a3210;--abstain:#f2a766;--abstainb:#43280f;
+--error:#ff8a80;--errorb:#4a1a17;--timeout:#d79cea;--timeoutb:#3a1c44;--na:#9aa0aa;--nab:#272c33;--hi:#665a12;--code:#222831}}
+:root[data-theme="dark"]{--bg:#0f1216;--card:#181c22;--fg:#e6e9ee;--mut:#9aa4b2;--line:#2c333c;--acc:#7fb0ff;
+--ran:#6fd39a;--ranb:#143523;--empty:#e8c75a;--emptyb:#3a3210;--abstain:#f2a766;--abstainb:#43280f;
+--error:#ff8a80;--errorb:#4a1a17;--timeout:#d79cea;--timeoutb:#3a1c44;--na:#9aa0aa;--nab:#272c33;--hi:#665a12;--code:#222831}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}
+main{width:90%;max-width:1280px;margin:0 auto;padding:16px 0 48px}
+@media (max-width:600px){main{width:calc(100% - 32px)}}
+h1{font-size:22px;margin:8px 0}h2{font-size:17px;margin:26px 0 8px}
+section,.box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:10px 0}
+.mut{color:var(--mut)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.btn{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);cursor:pointer}
+button:hover{border-color:var(--acc)}button:disabled{opacity:.5;cursor:default}
+code,pre,.cmd{font:13px/1.4 ui-monospace,Menlo,monospace}
+.cmd{display:block;background:var(--code);padding:8px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;user-select:all}
+.table{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:600;white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;margin:0 4px 2px 0;background:var(--nab);color:var(--na);white-space:nowrap}
+.s-ran{background:var(--ranb);color:var(--ran)}.s-empty{background:var(--emptyb);color:var(--empty)}
+.s-abstain{background:var(--abstainb);color:var(--abstain)}.s-error{background:var(--errorb);color:var(--error)}
+.s-timeout{background:var(--timeoutb);color:var(--timeout)}.s-not_attached{background:var(--nab);color:var(--na)}
+.sev-hi{background:var(--errorb);color:var(--error)}.sev-mid{background:var(--abstainb);color:var(--abstain)}.sev-lo{background:var(--emptyb);color:var(--empty)}.sev-na{background:var(--nab);color:var(--na)}
+tr.na td{color:var(--na);background:var(--nab)}
+.pass{color:var(--ran);font-weight:700}.fail{color:var(--error);font-weight:700}
+a{color:var(--acc)}a.seq{margin-right:8px}
+.card{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:var(--card)}
+.card>.head{padding:10px 12px;cursor:pointer}.card.hl{outline:2px solid var(--acc)}
+.card .title{font-weight:600}.card .meta{color:var(--mut);font-size:13px}
+.card .body{display:none;padding:0 12px 12px;border-top:1px solid var(--line)}.card.open .body{display:block}
+.err{color:var(--error);white-space:pre-wrap;word-break:break-word}
+.text{white-space:pre-wrap;background:var(--code);padding:8px;border-radius:6px;font-size:14px}
+mark{background:var(--hi);color:inherit;border-radius:2px}mark.in{background:var(--ranb);color:var(--ran);outline:1px solid var(--ran)}mark.out{background:var(--abstainb);color:var(--abstain);outline:1px solid var(--abstain)}
+.replay{border:1px dashed var(--acc);border-radius:6px;padding:8px;margin:8px 0}
+.replay pre{background:var(--code);padding:8px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin:4px 0}
+.flagbox.fl-red{background:var(--errorb);color:var(--error);border:1px solid var(--error)}.flagbox.fl-amber{background:var(--emptyb);color:var(--empty);border:1px solid var(--empty)}
+.simplecard td{font-size:15px}
+.bar{position:sticky;top:0;z-index:3;background:var(--bg);padding:4px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>What we pull out of real news articles</h1>
+<div class="mut" id="src"></div>
+<section id="simple"></section>
+<h2>The articles</h2>
+<div class="mut" style="margin-bottom:6px">Newest first. Click one to see what we got from it.</div>
+<div id="stream"></div>
+<details id="tech" style="margin-top:28px"><summary style="font-size:16px;font-weight:700;cursor:pointer">Behind the scenes (for the technical team): checks, steps, gaps, hash log</summary>
+
+<section id="intro">
+<b>What this is.</b> Real news articles arrive from the news reader. Each one goes through the same chain of steps, in order. For every article this page keeps a record of what each step did, including steps that found nothing, failed, or are not built yet. Nothing is picked or hidden, and no article is scored against labels.
+<div class="mut" style="margin-top:6px">How to use it: read <b>1</b> to see whether it is working, <b>2</b> for the steps, <b>3</b> for what the data says so far, then press the button in <b>4</b> to watch one article go through every step. Everything below that is detail you can open when you want it.</div>
+</section>
+
+<h2>1. Is it working?</h2>
+<section id="verdict"></section>
+<section id="banner" aria-label="Run banner"></section>
+
+<h2>2. The process, in order</h2>
+<section class="table" id="process"></section>
+
+<h2>3. What we learned so far</h2>
+<section id="learned"></section>
+
+<h2>4. Walk one article through it</h2>
+<section id="walk"></section>
+
+<h2>Detail: gaps ranked by how many articles have them</h2>
+<section class="table" id="gaps"></section>
+
+<h2>Detail: numbers per step</h2>
+<section class="table" id="stages"></section>
+
+<h2>Detail: Decider outcomes per field</h2>
+<section class="table" id="decider"></section>
+
+</details>
+</main>
+<script>
+(function(){
+"use strict";
+var Q=new URLSearchParams(location.search);
+var FIX=Q.get("fixture")==="1";
+var BASE=FIX?(Q.get("v")==="1"?"trace/fixture-v1/":"trace/fixture/"):(/^trace-[a-z0-9]+\/$/.test(Q.get("base")||"")?Q.get("base"):"trace/");
+var run=null,tail=[],cards={},seen={},errs=[];
+var ART={}; // seq -> full record cache
+
+function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=String(text);return e}
+function clear(n){while(n.firstChild)n.removeChild(n.firstChild)}
+function fmt(x,d){return (typeof x==="number"&&isFinite(x))?x.toFixed(d==null?1:d):"no data"}
+function js(x){try{return JSON.stringify(x)}catch(e){return "[unserialisable]"}}
+function fetchJSON(p){return fetch(p,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error(p+" HTTP "+r.status);return r.json()})}
+function fetchText(p){return fetch(p,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error(p+" HTTP "+r.status);return r.text()})}
+function hex(buf){var a=new Uint8Array(buf),s="";for(var i=0;i<a.length;i++)s+=(a[i]<16?"0":"")+a[i].toString(16);return s}
+function digest(alg,str){return crypto.subtle.digest(alg,new TextEncoder().encode(str)).then(hex)}
+function chip(cls,text){return el("span","chip "+cls,text)}
+function sevClass(g){if(g.code==="STAGE_ERROR"||g.rate>=0.5)return"sev-hi";if(g.rate>=0.2)return"sev-mid";if(g.code==="NOT_ATTACHED")return"sev-na";return"sev-lo"}
+function th(tr,t,n){var h=el("th",n?"n":"",t);tr.appendChild(h)}
+function td(tr,t,n){var d=el("td",n?"n":"",t);tr.appendChild(d);return d}
+
+/* ---------- banner ---------- */
+var vOut=el("span","mut"),tOut=el("span","mut");
+function bannerBuild(){
+  var b=document.getElementById("banner");clear(b);
+  if(!run){b.appendChild(el("div","err","no data: run.json not loaded yet (the runner has not written it, or the fetch failed)"));return}
+  var r1=el("div","row");
+  var stc={running:"s-ran",stopped:"s-empty",drift_stop:"s-error",error:"s-error"}[run.state]||"s-not_attached";
+  r1.appendChild(chip(stc,"state: "+(run.state||"no data")));
+  r1.appendChild(el("span","",""));
+  r1.lastChild.textContent="run "+(run.run_id||"no data")+" | code hash ";
+  r1.lastChild.appendChild(el("code","",run.code_hash||"no data"));
+  var left;
+  if(FIX)left="fixture (static)";
+  else if(typeof run.ends_epoch==="number"){var s=run.ends_epoch-Date.now()/1000;left=(run.state==="running"&&s>0)?Math.floor(s/60)+" min "+Math.floor(s%60)+" s left":"ended"}
+  else left="no data";
+  r1.appendChild(el("span","mut","time left: "+left));
+  b.appendChild(r1);
+  var c=run.counts||{};
+  var hasReady=typeof c.rows_ready_since_start==="number";
+  var parts=["traced","skipped","backlog_ready"].reduce(function(a,k){return a+(typeof c[k]==="number"?c[k]:0)},0);
+  var line=el("div","","");line.style.margin="8px 0";
+  var sumOk,sumTxt;
+  if(hasReady){
+    line.textContent="Rows ready since START: "+fmt(c.rows_ready_since_start,0)+" = traced "+fmt(c.traced,0)+" + skipped "+fmt(c.skipped,0)+" + waiting "+fmt(c.backlog_ready,0)+"   |   never extracted (shown separately): "+fmt(c.never_ready_since_start,0)+(typeof c.rows_found_since_start==="number"?"   |   found since START (information only): "+fmt(c.rows_found_since_start,0):"");
+    sumOk=parts===c.rows_ready_since_start;sumTxt=sumOk?"counts add up ("+parts+")":"counts do NOT add up: parts sum to "+parts+", ready "+c.rows_ready_since_start;
+  }else{
+    var nr=(typeof c.never_ready_since_start==="number"?c.never_ready_since_start:0);
+    line.textContent="(old count fields) Rows found since START: "+fmt(c.rows_found_since_start,0)+" = traced "+fmt(c.traced,0)+" + skipped "+fmt(c.skipped,0)+" + waiting "+fmt(c.backlog_ready,0)+" + never extracted "+fmt(c.never_ready_since_start,0);
+    sumOk=(parts+nr)===c.rows_found_since_start;sumTxt=sumOk?"counts add up ("+(parts+nr)+")":"counts do NOT add up: parts sum to "+(parts+nr)+", found "+c.rows_found_since_start;
+  }
+  b.appendChild(line);
+  var sum=el("div",sumOk?"pass":"fail",sumTxt);
+  sum.id="sumcheck";b.appendChild(sum);
+  b.appendChild(el("div","mut","Read-only check command (paste in a shell to recount the rows since START):"));
+  var cmd=el("code","cmd",run.check_cmd||"no data");b.appendChild(cmd);
+  b.appendChild(el("div","mut","Queue lag p50: "+fmt(run.queue_lag_p50_s)+" s | budget p50 "+(run.budget_ms?run.budget_ms.p50:"no data")+" ms, p90 "+(run.budget_ms?run.budget_ms.p90:"no data")+" ms"));
+  var r2=el("div","row");r2.style.marginTop="8px";
+  var bv=el("button","","Verify chain"),bt=el("button","","Check text hashes"),br=el("button","","Random article");
+  bv.id="btn-verify";bt.id="btn-texts";br.id="btn-random";
+  bv.onclick=verifyChain;bt.onclick=checkTexts;br.onclick=randomArticle;
+  vOut.id="verify-out";tOut.id="texts-out";
+  r2.appendChild(bv);r2.appendChild(vOut);r2.appendChild(bt);r2.appendChild(tOut);r2.appendChild(br);
+  b.appendChild(r2);
+}
+function setOut(n,cls,t){n.className=cls;n.textContent=t}
+function verifyChain(){
+  setOut(vOut,"mut","verifying...");
+  return fetchText(BASE+"chain.jsonl").then(function(txt){
+    var lines=txt.split("\n").filter(function(l){return l.length>0});
+    var prev=run&&run.run_id,i=0;
+    function next(){
+      if(i>=lines.length){setOut(vOut,"pass","PASS: "+lines.length+" lines, no gaps, all hashes match");return Promise.resolve(true)}
+      var o;try{o=JSON.parse(lines[i])}catch(e){setOut(vOut,"fail","FAIL at line index "+i+": not JSON");return Promise.resolve(false)}
+      if(o.seq!==i){setOut(vOut,"fail","FAIL at seq "+i+": seq gap or reorder (found "+o.seq+")");return Promise.resolve(false)}
+      if(o.prev!==prev){setOut(vOut,"fail","FAIL at seq "+i+": prev link does not match");return Promise.resolve(false)}
+      return digest("SHA-256",o.prev+o.line).then(function(h){
+        if(h!==o.sha){setOut(vOut,"fail","FAIL at seq "+i+": sha256(prev+line) does not match sha");return false}
+        prev=o.sha;i++;return next()});
+    }
+    return next();
+  }).catch(function(e){setOut(vOut,"fail","FAIL: could not read chain.jsonl ("+e.message+")");return false});
+}
+function checkTexts(){
+  setOut(tOut,"mut","checking...");
+  var bad=[],ok=0,miss=[];
+  var seqs=tail.map(function(a){return a.seq});
+  var p=Promise.resolve();
+  seqs.forEach(function(s){p=p.then(function(){
+    var a=tail.filter(function(x){return x.seq===s})[0];
+    return getArt(s).then(function(rec){
+      if(!rec||typeof rec.text!=="string"){miss.push(s);return}
+      return digest("SHA-1",rec.text).then(function(h){if(h===(a.input&&a.input.text_sha1))ok++;else bad.push(s)})
+    }).catch(function(){miss.push(s)})})});
+  return p.then(function(){
+    var t=ok+" ok, "+bad.length+" mismatched"+(bad.length?" (seq "+bad.join(",")+")":"")+", "+miss.length+" not fetched"+(miss.length?" (seq "+miss.join(",")+")":"");
+    setOut(tOut,(bad.length||miss.length)?"fail":"pass",(bad.length||miss.length?"FAIL: ":"PASS: ")+t);
+  });
+}
+function randomArticle(){
+  if(!tail.length)return;
+  var a=tail[Math.floor(Math.random()*tail.length)];
+  var c=cards[a.seq];if(!c)return;
+  openCard(a.seq,true);c.el.scrollIntoView({block:"center"});
+  c.el.classList.add("hl");setTimeout(function(){c.el.classList.remove("hl")},2500);
+}
+function getArt(seq){
+  if(ART[seq])return Promise.resolve(ART[seq]);
+  return fetchJSON(BASE+"a/"+seq+".json").then(function(r){ART[seq]=r;return r});
+}
+
+/* ---------- guide: verdict, process, learned, walk ---------- */
+function gid(i){return document.getElementById(i)}
+var PLAIN={
+windows:["Reader windows (Domain v6b input)","Cut the article into pieces the topic model can read, and say how much of the text it saw."],
+scan_dates:["Scan and Date resolver","Find dates, amounts, quotes and event words in the raw text."],
+facts:["Fact extractors, Binder, Validator","Pull out stated facts (who, what, amounts, dates) and check each one against the text."],
+independent_counter:["Independent counter","Count amounts, dates and names a second way, to catch what the fact step missed."],
+tags_bundles:["Factuality tagger and Change lexicon","Mark whether a claim is asserted or only reported, and pair each change word with its size."],
+span_rules:["Span rules","Ages, relative dates and similar patterns; anything that does not match the text is held back."],
+place_linker:["Place linker","Find place names and the country they point to."],
+area_function:["Area and Function (v6b topic and story-type heads)","Trained model: which of 49 topics (Area) and what kind of story (Function)."],
+domain_rollup:["Domain (roll-up of Area)","Group the 49 topics into 17 broad domains with a fixed map (there is no separate Domain model)."],
+condition:["Condition","Trained model: does the story describe a world condition (economy, safety and so on)."],
+place_student:["Place student","Small trained model: which world region the story is about."],
+capability_list:["Capability","Match verb and object pairs against our list of 371 known capabilities (a list match, not a model)."],
+topic_landing:["Topic landing (IPTC)","Land the article, and each of its sentences, on the nearest IPTC news topic (any depth), and report which top-level topic that is. On runs with landing-v1 it also gives a calibrated confidence p and says ANSWER_L1 or ABSTAIN at the line where its running accuracy held 80% on MN-DS T28; the Decider proposes it as the topic_node field (provisional: below the bar). Older runs: evidence only."],
+structure_pack:["Structure pack (IPTC + WordNet)","Place article words on the IPTC news-topic tree through WordNet, counted against the topic the landing chose."],
+decider:["Decider","For each of 5 fields: answer, answer provisionally, or abstain."],
+function_sentence:["Sentence-level Function","NOT BUILT."],novelty:["Novelty","NOT BUILT."],time:["Time","NOT BUILT."],factuality_story:["Whole-story Factuality","NOT BUILT."]};
+function plainOf(n){return PLAIN[n]?PLAIN[n][1]:"(no description written for this step)"}
+function labelOf(n){return PLAIN[n]?PLAIN[n][0]:n}
+function stepNames(){var S=(run&&run.stages)||{};var names=ORDER.filter(function(n){return S[n]});Object.keys(S).forEach(function(n){if(names.indexOf(n)<0)names.push(n)});return names}
+function notBuilt(){var S=(run&&run.stages)||{};return stepNames().filter(function(n){var x=S[n];return x.not_attached>0&&!x.ran&&!x.empty&&!x.abstain&&!x.error&&!x.timeout})}
+function gapMap(){var m={};((run&&run.gaps)||[]).forEach(function(g){m[g.code]=g});return m}
+function pctOf(g){return g?(g.rate*100).toFixed(0)+"%":"0%"}
+function renderVerdict(){
+  var box=gid("verdict");clear(box);
+  if(!run){box.appendChild(el("div","err","no data: run.json not loaded yet"));return}
+  var c=run.counts||{},S=run.stages||{},rows=[];
+  function add(lv,label,detail){rows.push({lv:lv,label:label,detail:detail})}
+  var st=run.state;
+  if(st==="running")add("ok","Runner","running");else if(st==="stopped")add("ok","Runner","finished (time cap reached or stopped normally)");else add("bad","Runner","state is "+st);
+  var traced=c.traced||0,newest=tail.length&&tail[0].read_at?Math.round(Date.now()/1000-tail[0].read_at):null;
+  if(!traced){var startIn=run.start_epoch?Math.round(run.start_epoch-Date.now()/1000):0;add("warn","Articles arriving",startIn>0?"waiting for the first article: it starts in "+startIn+" s":"no article traced yet")}
+  else if(st==="running"&&newest!=null&&newest>900&&!(c.backlog_ready>0))add("warn","Articles arriving",traced+" traced; none for "+Math.round(newest/60)+" min (the news reader is quiet, arrival is bursty)");
+  else add("ok","Articles arriving",traced+" traced"+(newest!=null&&st==="running"?", newest read "+newest+" s ago":"")+(c.backlog_ready?", "+c.backlog_ready+" waiting":""));
+  var parts=["traced","skipped","backlog_ready"].reduce(function(a,k){return a+(typeof c[k]==="number"?c[k]:0)},0),hasReady=typeof c.rows_ready_since_start==="number";
+  if(hasReady)add(parts===c.rows_ready_since_start?"ok":"bad","Counts add up","ready "+c.rows_ready_since_start+" = traced "+(c.traced||0)+" + skipped "+(c.skipped||0)+" + waiting "+(c.backlog_ready||0));
+  else add("warn","Counts add up","this run file uses the old count fields, so the identity cannot be checked");
+  var errs=0;Object.keys(S).forEach(function(n){errs+=S[n].error||0});
+  add(errs?"bad":"ok","No step errors",errs?errs+" step errors (see the gaps list)":"0 errors across "+traced+" articles");
+  var b=run.budget_ms||{p50:300,p90:600},p50=run.total_p50_ms,p90=run.total_p90_ms;
+  if(typeof p50==="number")add((p50<=b.p50&&p90<=b.p90)?"ok":"bad","Speed","median "+fmt(p50,0)+" ms (budget "+b.p50+"), 90th percentile "+fmt(p90,0)+" ms (budget "+b.p90+")");
+  else add("warn","Speed","no timing in the data yet");
+  var vc=vOut.className;add(vc==="pass"?"ok":(vc==="fail"?"bad":"warn"),"Log not tampered with",vc==="pass"||vc==="fail"?vOut.textContent:"checking the hash chain...");
+  var nb=notBuilt();add(nb.length?"warn":"ok","Parts not built",nb.length?nb.length+": "+nb.map(labelOf).join(", ")+" (shown grey below)":"none");
+  var bad=rows.filter(function(r){return r.lv==="bad"}).length,warn=rows.filter(function(r){return r.lv==="warn"}).length;
+  var head=el("div","","");head.style.cssText="font-size:18px;font-weight:700;margin-bottom:8px";
+  head.appendChild(chip(bad?"s-error":(warn?"s-empty":"s-ran"),bad?"NOT WORKING":(warn?"WORKING, with known gaps":"WORKING")));
+  head.appendChild(el("span","mut","  "+(rows.length-bad-warn)+" of "+rows.length+" checks pass, "+warn+" warnings, "+bad+" failures"));
+  box.appendChild(head);
+  var t=el("table");rows.forEach(function(r){var tr=el("tr");var k=td(tr,"");k.appendChild(chip(r.lv==="ok"?"s-ran":(r.lv==="warn"?"s-empty":"s-error"),r.lv==="ok"?"PASS":(r.lv==="warn"?"WARN":"FAIL")));td(tr,r.label);td(tr,r.detail);t.appendChild(tr)});
+  box.appendChild(t);
+  if(!traced&&!/[?&]base=/.test(location.search)&&!FIX){var lk=el("div","");lk.style.marginTop="8px";lk.appendChild(document.createTextNode("The live run has not traced an article yet (the news reader polls every 15 minutes). To see the page full of real articles now, open the replay of the last three hours: "));var aa=el("a","","?base=trace-demo/");aa.href="index.html?base=trace-demo/";lk.appendChild(aa);box.appendChild(lk)}
+}
+function renderProcess(){
+  var box=gid("process");clear(box);
+  var S=run&&run.stages;if(!S){box.appendChild(el("div","mut","no data: no stage counts yet"));return}
+  var t=el("table"),h=el("tr");["#","Step","What it does","How far it is trusted","Result so far"].forEach(function(x){th(h,x)});t.appendChild(h);
+  stepNames().forEach(function(n,i){
+    var x=S[n],na=(x.not_attached>0&&!x.ran&&!x.empty&&!x.abstain&&!x.error&&!x.timeout),r=el("tr",na?"na":"");
+    td(r,i+1);var c=td(r,"");c.appendChild(el("b","",labelOf(n)));c.appendChild(el("div","mut",n));
+    td(r,na?(naWhy(n)):plainOf(n));td(r,TRUST[n]||"");var o=td(r,"");
+    if(na)o.appendChild(chip("s-not_attached","NOT BUILT"));
+    else{o.appendChild(chip("s-ran","ran "+(x.ran||0)));if(x.empty)o.appendChild(chip("s-empty","empty "+x.empty));if(x.abstain)o.appendChild(chip("s-abstain","abstain "+x.abstain));if(x.error)o.appendChild(chip("s-error","error "+x.error));if(x.timeout)o.appendChild(chip("s-timeout","timeout "+x.timeout));
+      o.appendChild(el("span","mut"," median "+(x.p50_ms==null?"-":fmt(x.p50_ms))+" ms"))}
+    t.appendChild(r)});
+  box.appendChild(t);
+}
+function renderLearned(){
+  var box=gid("learned");clear(box);
+  if(!run){box.appendChild(el("div","mut","no data yet"));return}
+  var c=run.counts||{},n=c.traced||0,g=gapMap(),b=[];
+  if(!n){box.appendChild(el("div","mut","No articles traced yet. This section fills in from the data as they arrive."));return}
+  b.push(n+" real articles traced. Median "+fmt(run.total_p50_ms,0)+" ms per article, 90th percentile "+fmt(run.total_p90_ms,0)+" ms.");
+  if(g.TEASER_ONLY)b.push(pctOf(g.TEASER_ONLY)+" of articles were read from a headline and teaser only, because the news reader fetches the full body later.");
+  var D=run.decider||{},ans=[],none=[];
+  Object.keys(D).forEach(function(f){var tot=0,a=0;Object.keys(D[f]).forEach(function(o){tot+=D[f][o];if(o.indexOf("ANSWER")===0)a+=D[f][o]});(a>0?ans:none).push(f+(a>0?" ("+Math.round(100*a/Math.max(1,tot))+"% answered)":""))});
+  if(Object.keys(D).length)b.push("The Decider answers "+(ans.length?ans.join(", "):"no field")+", only provisionally. "+(none.length?none.join(", ")+" abstain on every article (not admitted yet).":""));
+  if(g.TOPIC_DISAGREE)b.push("Two topic systems disagree: the topic landing (or, on older runs, the structure pack) and the Domain roll-up name a different top-level topic on "+pctOf(g.TOPIC_DISAGREE)+" of articles. For the landing this is a reference check only: the roll-up is the older 49-to-17 map. We have no outside truth here, so neither is proven right; the topic layer needs one agreed answer.");
+  if(g.LANDING_SPLIT)b.push("On "+pctOf(g.LANDING_SPLIT)+" the whole article and the majority of its sentences land under different top-level topics.");
+  if(g.RERANK_DISAGREE)b.push("On "+pctOf(g.RERANK_DISAGREE)+" the topic re-ranker names a different top-level topic than the landing alone (information only: the re-ranker's is the answer).");
+  if(g.LANDING_WEAK)b.push("On "+pctOf(g.LANDING_WEAK)+" the landing is weak (its best match is a poor fit, or it abstained).");
+  if(g.UNPLACED_HIGH)b.push("On "+pctOf(g.UNPLACED_HIGH)+" of articles most words reach no IPTC node: the IPTC plus WordNet vocabulary is thin for everyday news.");
+  if(g.CHANGE_NO_CONDITION)b.push("On "+pctOf(g.CHANGE_NO_CONDITION)+" the change tool found a change but the Condition model saw none: the two disagree.");
+  if(g.BUNDLE_NO_SIZE)b.push("On "+pctOf(g.BUNDLE_NO_SIZE)+" a change was found with no size attached.");
+  var nb=notBuilt();if(nb.length)b.push(nb.length+" parts are not built: "+nb.map(labelOf).join(", ")+".");
+  b.push("These are counts of gaps, not accuracy. Nothing here is scored against outside truth.");
+  var ul=el("ul");ul.style.margin="0";b.forEach(function(x){ul.appendChild(el("li","",x))});box.appendChild(ul);
+}
+function walkOne(){
+  var a=tail[0];if(!a){gid("walkmsg").textContent="no article yet";return}
+  openCard(a.seq,true);var c=cards[a.seq];if(!c)return;
+  if(!c.body.querySelector(".replay")){var rb=c.body.querySelector("button");if(rb)rb.click()}
+  c.el.scrollIntoView({block:"start"});c.el.classList.add("hl");setTimeout(function(){c.el.classList.remove("hl")},2500);
+  gid("walkmsg").textContent="Opened article #"+a.seq+". Use Next and Back in the dashed box to move one step at a time.";
+}
+function renderWalk(){
+  var box=gid("walk");if(box.firstChild)return;
+  box.appendChild(el("div","","Press the button. It opens the newest article and steps through the chain one step at a time: what the step does, what it was given, and what it returned. Steps that are not built say so."));
+  var r=el("div","row");r.style.marginTop="8px";var bt=el("button","","Walk the newest article through every step");bt.onclick=walkOne;var m=el("span","mut","");m.id="walkmsg";r.appendChild(bt);r.appendChild(m);box.appendChild(r);
+}
+
+/* ---------- readable story for one article ---------- */
+var TRUST={
+facts:"Tool, no bar set: F1 0.402 on CaRB (recall 0.31); every fact is checked against the text. (status as stated on the sim page)",
+scan_dates:"Rule-based tool; matches are literal text spans.",
+independent_counter:"Cross-check only; today analyze2 discards it, the live trace keeps it.",
+tags_bundles:"New in P2: sizes are weak, about half wrong in a 10-bundle read; no truth set.",
+span_rules:"Rule-based; anything that does not match the text is held back.",
+place_linker:"Tool, no outside truth.",
+area_function:"Domain v6b topic head: partly proven, right on the first guess 68% of the time against human labels (MN-DS), 80% within two guesses; the bar is 80%. Function (story type): proven only against the Sonnet labeller.",
+domain_rollup:"A fixed map from the 49 topics to 17 domains; there is no separate Domain model.",
+condition:"UNPROVEN and rarely fires: present on 12 of 230 sample articles; treat as not working until a judge exists.",
+place_student:"Proxy only: matches Jev and a text-based judge (answers 63% of reads at 95% agreement); no human truth.",
+capability_list:"A list match, not a model: 371 verb-object pairs, 23 recurring, 348 candidates; no outside truth.",
+topic_landing:"Not proven: top-level topic right on 56% of 1,676 MN-DS items and 56% of 1,352 fresh ones, second level 33% and 29% (ledger L2731); the bar is 60% and 40%. Landing-v1 adds a calibrated confidence (0.74 AUROC on fresh ones); the answer stays provisional until the top-level topic reaches the 60% bar. Runs before landing-v1 carry no confidence and are evidence only.",
+structure_pack:"New mock-up, not proven: places 2.2 times more words than exact IPTC matching, but accuracy is below exact matching and below embeddings (ledger T156, T157). Wrong-sense placements are common.",
+decider:"Rules checked in Lean; it keeps only fields admitted for answering.",
+function_sentence:"The sentence-level head was never saved.",novelty:"No model; the test judge is too weak (AUROC 0.51).",time:"No model; no trustworthy judge.",factuality_story:"No model passes: the CPU student reaches 61 to 64% against an 80% bar."};
+var STOP={that:1,with:1,this:1,from:1,have:1,after:1,over:1,will:1,says:1,about:1,into:1,they:1,their:1,what:1,when:1,been:1,more:1,than:1,were:1,your:1,says:1,could:1,would:1,also:1,just:1,amid:1,under:1,between:1,while:1,there:1};
+function words(s){return (String(s||"").toLowerCase().match(/[a-z]{4,}/g)||[]).filter(function(w){return !STOP[w]})}
+function titleBody(a,rec){
+  var title=a.title||"",text=(rec&&rec.text)||"";if(!title||text.length<300)return null;
+  var body=text.indexOf(title)===0?text.slice(title.length):text,tw=words(title).filter(function(w,i,x){return x.indexOf(w)===i}),bw={};words(body).forEach(function(w){bw[w]=1});
+  if(tw.length<3)return null;var hit=tw.filter(function(w){return bw[w]}).length;return {share:hit/tw.length,hit:hit,of:tw.length,missing:tw.filter(function(w){return !bw[w]})};
+}
+function so(a,name){var s=(a.stages||[]).filter(function(x){return x.name===name})[0];return s&&s.out&&typeof s.out==="object"?s.out:null}
+function ss(a,name){return (a.stages||[]).filter(function(x){return x.name===name})[0]||null}
+function kvs(o){var k=Object.keys(o||{});return k.length?k.map(function(x){return x.replace(/_/g," ")+" "+o[x]}).join(", "):"none"}
+function pc1(x){return typeof x==="number"?Math.round(x*100)+"%":"?"}
+function sec(box,title){var h=el("div","");h.style.cssText="font-weight:700;margin:14px 0 4px";h.textContent=title;box.appendChild(h)}
+function bullet(ul,label,text,trust){var li=el("li","");var b=el("b","",label+": ");li.appendChild(b);li.appendChild(document.createTextNode(text));if(trust){var t=el("div","mut",trust);t.style.fontSize="12.5px";li.appendChild(t)}ul.appendChild(li)}
+function nice(p){return String(p||"").split(" > ").join(" › ")}
+function renderStory(box,a,rec){
+  clear(box);var f=(rec&&rec.stages_full)||{},sp=f.structure_pack||{},tb=titleBody(a,rec);
+  var scan=so(a,"scan_dates"),fa=so(a,"facts"),ic=so(a,"independent_counter"),tg=so(a,"tags_bundles"),sr=so(a,"span_rules"),pl=so(a,"place_linker"),af=so(a,"area_function"),dr=so(a,"domain_rollup"),co=so(a,"condition"),ps=so(a,"place_student"),cp=so(a,"capability_list"),pk=so(a,"structure_pack"),de=so(a,"decider"),la=so(a,"topic_landing");
+  /* verdict */
+  var v=el("div","");v.style.cssText="padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin:8px 0";
+  if(tb&&tb.share<0.25){var w=chip("s-error","HEADLINE AND BODY MAY NOT MATCH");v.appendChild(w);v.appendChild(el("span","",""));v.lastChild.textContent=" Only "+tb.hit+" of the headline's "+tb.of+" key words appear in the body (missing: "+tb.missing.slice(0,6).join(", ")+"). The tools below read the text as stored; their answers may describe the wrong story. (Page-side heuristic, not part of the frozen run.)"}
+  else if(tb){v.appendChild(chip("s-ran","headline and body look consistent"));v.appendChild(el("span","mut"," "+tb.hit+" of "+tb.of+" headline key words appear in the body."))}
+  else v.appendChild(el("span","mut","Headline and body not compared (headline too short or body too short)."));
+  box.appendChild(v);
+  /* tools */
+  sec(box,"What the BitMob tools found");var ul=el("ul");ul.style.margin="0";
+  if(scan)bullet(ul,"Scan and Date resolver","found "+(scan.dates||0)+" dates ("+(scan.dates_resolved||0)+" resolved to calendar dates, anchored to "+(scan.anchor||"?")+"), "+((scan.spots||{}).money||0)+" money mentions, "+((scan.spots||{}).quote||0)+" quotes, "+((scan.spots||{}).event||0)+" event words.",TRUST.scan_dates);
+  if(fa){var k=fa.kinds||{};bullet(ul,"Fact extractors, Binder, Validator","extracted "+(k.name||0)+" names, "+(k.triple||0)+" who-did-what claims, "+(k.amount||0)+" amounts and "+(k.date||0)+" dates. "+(fa.stated||0)+" passed all four checks against the text (stated), "+(fa.unbound||0)+" could not be bound to what they count or who did it (unbound), "+(fa.invalid||0)+" failed the text check (invalid), "+(fa.quarantined||0)+" were held back.",TRUST.facts)}
+  if(ic&&fa){var k2=fa.kinds||{};var d=(ic.amount||0)-(k2.amount||0);bullet(ul,"Independent counter","counted "+(ic.amount||0)+" amounts, "+(ic.date||0)+" dates, "+(ic.name||0)+" names on its own. "+(d>0?"It saw "+d+" more amount"+(d>1?"s":"")+" than the extractors kept: those were missed.":(d<0?"The extractors kept "+(-d)+" more amounts than it counted.":"Amounts match the extractors.")),TRUST.independent_counter)}
+  if(tg)bullet(ul,"Factuality tagger and Change lexicon","found "+(tg.hits||0)+" change words, built "+(tg.bundles||0)+" change bundles ("+(tg.with_size||0)+" with a size); direction: "+kvs(tg.by_condition)+"; tagged: "+kvs(tg.factuality)+".",TRUST.tags_bundles);
+  if(sr)bullet(ul,"Span rules","matched "+Object.keys(sr.kinds||{}).map(function(x){return sr.kinds[x]+" "+x.replace(/_/g," ")}).join(", ")+"; "+(sr.quarantined||0)+" held back.",TRUST.span_rules);
+  if(pl)bullet(ul,"Place linker","found "+(pl.places||0)+" place mentions, linked "+(pl.linked||0)+" to countries (top: "+((pl.top_countries||[]).slice(0,3).map(function(x){return x[0]+" "+x[1]}).join(", ")||"none")+"); region "+(pl.region||"none")+".",TRUST.place_linker);
+  if(cp)bullet(ul,"Capability","matched "+(cp.n_recurring||0)+" recurring and "+(cp.n_candidate||0)+" candidate verb-object pairs"+((cp.candidate||[]).length?" (candidate: "+cp.candidate.slice(0,3).join(", ")+")":"")+".",TRUST.capability_list);
+  box.appendChild(ul);
+  /* models */
+  sec(box,"What the BitMob models said");var um=el("ul");um.style.margin="0";
+  if(af){var t0=(af.topic||[])[0],s0=(af.story_type||[])[0];bullet(um,"Area (topic head of Domain v6b)",t0?(t0[0]+" "+pc1(t0[1])+", then "+((af.topic||[]).slice(1,3).map(function(x){return x[0]+" "+pc1(x[1])}).join(", ")||"none")):"no data","");
+    bullet(um,"Function (story type)",s0?(s0[0]+" "+pc1(s0[1])):"no data",TRUST.area_function)}
+  if(dr){var d0=(dr.top||[])[0];bullet(um,"Domain (roll-up of the Area answer)",d0?d0[0]+" "+pc1(d0[1]):"no data",TRUST.domain_rollup)}
+  if(la){var lf=f.topic_landing||{},ln=lf.article||[],b0=ln[0]||{},codeLab=function(c){var h=(ln.concat(lf.sentences||[])).filter(function(y){return (y.path_codes||[])[0]===c})[0];return h?h.path[0]:c},lab1=la.rerank?codeLab(la.l1_code):((b0.path||[])[0]||la.l1_code),rrNote=la.rerank?" Re-ranker "+la.rerank.version+" answers "+lab1+" (top 2: "+la.rerank.top2.map(function(x){return codeLab(x[0])+" "+pc1(x[1])}).join(", ")+")"+(la.landing_l1_code&&la.landing_l1_code!==la.l1_code?"; the landing alone said "+codeLab(la.landing_l1_code):"")+". Candidates below are the landing's evidence.":"",vt=(la.vote||[]).map(function(x){var m=(lf.sentences||[]).filter(function(y){return (y.path_codes||[])[0]===x[0]})[0];return ((m&&m.path[0])||x[0])+" "+x[1]}).join(", ");
+    bullet(um,"Topic landing (IPTC)",nice((b0.path||[la.best&&la.best.qcode]).join(" > "))+" (level "+((la.best||{}).layer||"?")+", cosine "+((la.best||{}).score!=null?la.best.score:"?")+"); top-level topic: "+lab1+" ["+la.l1_code+"]; "+la.l1_agree3+" of the 3 best cards share it; sentence vote: "+(vt||(la.voted===false&&la.n_sent?"not run (the 3 best cards agree)":"none (short text)"))+(la.p!=null?"; confidence "+pc1(la.p):"")+"; decision: "+String(la.decision).toLowerCase().replace(/_/g," ")+(la.decision==="EVIDENCE_ONLY"?" (not used for answering)":"")+rrNote,TRUST.topic_landing)}
+  if(co)bullet(um,"Condition",co.present===false?"no world condition present ("+pc1(co.present_conf)+" sure)":(co.present===true?"condition present"+(co.which?": "+co.which:""):"unsure"),TRUST.condition);
+  if(ps)bullet(um,"Place student",(ps.top1||"none")+" "+pc1(((ps.top||[])[0]||[])[1])+(ps.answered?"":" (below its confidence line, so deferred)"),TRUST.place_student);
+  if(de)bullet(um,"Decider",Object.keys(de).map(function(x){return x.replace(/_/g," ")+": "+String(de[x]).toLowerCase().replace(/_/g," ")}).join("; "),TRUST.decider);
+  if(a.journal&&a.journal.dup){var jn=a.journal,jd=jn.dup,sk=jn.story_key||{},kk=sk.title&&sk.prefix?"title and body start":(sk.title?"title only":(sk.prefix?"body start only":"no key")),np=jn.publishers||1,
+      kw={first:"first item of its story in this run",generic_title:"first item of its story (the title is a column name, so the body start is the key)",no_key:"too short to key: counted as its own story",copy:"copy of #"+jd.of_seq,republished:"republished by the same publisher as #"+jd.of_seq}[jd.kind]||jd.kind;
+    bullet(um,"Graph record (journal)","story key from "+kk+"; "+kw+(jd.kind==="copy"?" from the other publisher":"")+"; carried by "+np+" publisher"+(np===1?"":"s")+" so far","Duplicate rule: journal.py (a copy adds nothing to the resource ledger).");
+    if(jd.of_seq!=null&&(jd.kind==="copy"||jd.kind==="republished")){var jli=um.lastChild;getArt(jd.of_seq).then(function(r0){var so0=r0&&r0.article_line&&r0.article_line.source;if(so0)jli.firstChild.nextSibling.textContent=jli.firstChild.nextSibling.textContent.replace(jd.kind==="copy"?"from the other publisher":"republished by the same publisher as #"+jd.of_seq,jd.kind==="copy"?"from "+so0:"republished by "+so0+", as in #"+jd.of_seq)}).catch(function(){})}}
+  var nbl=(a.stages||[]).filter(function(x){return x.state==="not_attached"}).map(function(x){return labelOf(x.name)});
+  if(nbl.length)bullet(um,"Not built",nbl.join(", "),"These four have no model; the page lists why in section 2.");
+  box.appendChild(um);
+  /* expansion */
+  sec(box,"Knowledge expansion: unknown words lifted onto the IPTC topic tree (IPTC + WordNet)");
+  var spans=sp.placed_spans;
+  if(!pk){box.appendChild(el("div","mut","The structure pack did not run for this article."))}
+  else{
+    var g=el("div","");
+    if(la)g.textContent=(la.rerank?"Topic re-ranker chose the top-level topic ["+la.l1_code+"] (p "+pc1(la.p)+"); the landing's best card scored "+pc1((la.best||{}).score)+".":"Topic landing chose the top-level topic "+(((f.topic_landing||{}).article||[{}])[0].path||[la.l1_code])[0]+" ["+la.l1_code+"] ("+pc1((la.best||{}).score)+" match).")+" Domain roll-up (reference, the older map) says: "+((dr&&dr.top&&dr.top[0])?dr.top[0][0]:"no data")+". "+(la.agrees_rollup===false?"They differ, and there is no outside truth here to say which is right.":(la.agrees_rollup===true?"They agree.":"The roll-up did not run."));
+    else g.textContent="Structure pack guessed the top-level topic: "+(pk.l1_guess||"none")+" ("+((pk.guess_top3||[])[0]?pc1(pk.guess_top3[0][1]):"?")+"). Domain roll-up says: "+((dr&&dr.top&&dr.top[0])?dr.top[0][0]:"no data")+". "+((a.gaps||[]).indexOf("TOPIC_DISAGREE")>=0?"They DISAGREE, and there is no outside truth here to say which is right.":"They agree.");
+    box.appendChild(g);
+    var q=el("div","mut","Of "+(pk.n_terms||0)+" nouns, "+(pk.n_placed||0)+" were placed on an IPTC node ("+(pk.hops?"exact "+(pk.hops.exact||0)+", by synonym "+(pk.hops.side||0)+", one step up "+(pk.hops.up||0):"")+"); "+(pk.in_topic==null?"none could be tested against":(pk.in_topic||0)+" of them sit under")+" the article's "+(la?"landing":"guessed")+" topic.");box.appendChild(q);
+    if(!spans){box.appendChild(el("div","err","This record was saved before word-level detail was kept, so the individual lifts cannot be shown for it. Open an article from the replay or the live run to see them."))}
+    else{
+      var seen={},rows=[];spans.forEach(function(x){var k=String(x.word).toLowerCase();if(seen[k])return;seen[k]=1;rows.push(x)});
+      rows.sort(function(x,y){return (y.in_topic===true)-(x.in_topic===true)});
+      var t=el("table"),h=el("tr");["Word in the article","How it was matched","IPTC path","Under the article's topic?"].forEach(function(x){th(h,x)});t.appendChild(h);
+      rows.slice(0,25).forEach(function(x){var r=el("tr");td(r,x.word);td(r,x.hop==="exact"?"the word is itself an IPTC topic":(x.hop==="side"?"synonym ("+x.via+")":"one step up ("+x.via+")"));td(r,nice(x.path));var c=td(r,"");c.appendChild(chip(x.in_topic===true?"s-ran":"s-abstain",x.in_topic===true?"yes (sense not checked)":"no, a different topic"));t.appendChild(r)});
+      var wrap=el("div","table");wrap.appendChild(t);box.appendChild(wrap);
+      if(rows.length>25)box.appendChild(el("div","mut","+ "+(rows.length-25)+" more placed words in the technical detail below."));
+      var un=sp.unplaced||[];box.appendChild(el("div","mut","Not placed ("+un.length+"): "+un.slice(0,30).join(", ")+(un.length>30?", ...":"")));
+    }
+  }
+  /* wikidata */
+  sec(box,"Wikidata");box.appendChild(el("div","mut","Not used. The full dump was ruled out (about 130 GB), and no small subset has been built, so names stay unlinked to real-world entities."));
+  /* learned */
+  sec(box,"What this article tells us");var ul2=el("ul");ul2.style.margin="0";var L=[];
+  if(tb&&tb.share<0.25)L.push("The stored body probably belongs to a different story than the headline, which would make every answer above suspect. That is a gap in the news reader's extraction, not in the tools.");
+  if(pk&&pk.n_terms){var un2=Math.round(100*(1-(pk.n_placed||0)/pk.n_terms));L.push(un2+"% of nouns reached no IPTC node.");if(spans){var seen2={},tot=0,off=0;spans.forEach(function(x){var k=String(x.word).toLowerCase();if(seen2[k])return;seen2[k]=1;tot++;if(x.in_topic===false)off++});if(tot)L.push(off+" of the "+tot+" distinct placed words landed in a topic other than the guessed one, often a wrong sense of the word.")}}
+  if(nbl.length)L.push(nbl.length+" parts are not built, so nothing was produced for them.");
+  if(spans&&spans.length)L.push("Being under the article's topic does not mean the word was understood correctly: read the synonym and one-step-up rows above and judge whether the sense fits. Nothing here is scored against truth.");
+  L.push("Wikidata was not used, so no person, place or organisation here was linked to a real-world entity.");
+  L.forEach(function(x){ul2.appendChild(el("li","",x))});box.appendChild(ul2);
+}
+
+/* ---------- plain-language view for a non-technical reader ---------- */
+var ENG={};
+function engineRun(a,rec){
+  if(ENG[a.seq])return ENG[a.seq];
+  var title=a.title||"",text=rec.text||"",body=text.indexOf(title)===0?text.slice(title.length).replace(/^[\s.#]+/,""):text;
+  var date=(a.published||"").slice(0,10)||new Date().toISOString().slice(0,10);
+  ENG[a.seq]=fetch("/sim-api/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:title,body:body.slice(0,12000),date:date})}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()});
+  return ENG[a.seq];
+}
+function cap(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1)}
+function countryName(c){try{return new Intl.DisplayNames(["en"],{type:"region"}).of(c)||c}catch(e){return c}}
+function uniq(arr){var seen={},out=[];arr.forEach(function(x){if(!seen[x]){seen[x]=1;out.push(x)}});return out}
+function flagBox(box,cls,text){var d=el("div","");d.style.cssText="padding:8px 10px;border-radius:6px;margin:6px 0;font-weight:600";d.className="flagbox "+cls;d.textContent=text;box.appendChild(d)}
+function prow(t,label,node){var r=el("tr");var k=el("td","",label);k.style.cssText="font-weight:700;white-space:nowrap;width:1%;padding-right:18px";r.appendChild(k);var v=el("td","");if(typeof node==="string")v.textContent=node;else v.appendChild(node);r.appendChild(v);t.appendChild(r)}
+function summaryLine(a){
+  var f=so(a,"facts"),pl=so(a,"place_linker"),sc=so(a,"scan_dates"),dr=so(a,"domain_rollup"),k=(f&&f.kinds)||{};
+  var topic=dr&&dr.top&&dr.top[0]?cap(dr.top[0][0])+" ("+pc1(dr.top[0][1])+")":"topic unknown";
+  return "About: "+topic+"  |  "+(k.name||0)+" names  |  "+((pl&&pl.places)||0)+" places  |  "+((sc&&sc.dates)||0)+" dates  |  "+(k.amount||0)+" numbers";
+}
+function renderSimple(box,a,rec){
+  clear(box);
+  var tb=titleBody(a,rec);
+  if(tb&&tb.share<0.25)flagBox(box,"fl-red","Warning: the headline and the article text look like two different stories, so everything below may describe the wrong story.");
+  if(a.input&&!a.input.has_body)flagBox(box,"fl-amber","Only the headline and a short teaser were available, not the full article, so less could be found.");
+  var holder=el("div","");box.appendChild(holder);holder.appendChild(el("div","mut","Reading the article..."));
+  if(FIX){clear(holder);holder.appendChild(el("div","mut","Made-up fixture article: the extraction engine is not run for it."));return}
+  engineRun(a,rec).then(function(r){fillSimple(holder,a,rec,r)}).catch(function(e){clear(holder);holder.appendChild(el("div","err","The extraction engine did not answer ("+e.message+"). The technical detail below still has what the trace recorded."))});
+}
+function fillSimple(h,a,rec,r){
+  clear(h);var st=r.story||{},t=el("table");t.style.margin="6px 0";
+  var dm=(st.domain&&st.domain.top)||[],ty=(st.type&&st.type.top)||[];
+  prow(t,"What it is about",dm.length?cap(dm[0].name)+" ("+dm[0].pct+"% sure)"+(dm[1]&&dm[1].pct>=10?"; also "+dm[1].name+" ("+dm[1].pct+"%)":"")+(ty.length?". Kind of story: "+ty[0].name+" ("+ty[0].pct+"% sure).":""):"could not tell");
+  var en=(st.entities||[]).slice(0,10).map(function(e){return e.name+(e.mentions>1?" ("+e.mentions+")":"")});
+  prow(t,"Who and what is mentioned",en.length?en.join(", "):"nothing found");
+  var rg=st.region||{},rt=(rg.top||[])[0],pl=so(a,"place_linker"),cs=pl&&pl.top_countries?pl.top_countries.slice(0,4).map(function(x){return countryName(x[0])+(x[1]>1?" ("+x[1]+")":"")}).join(", "):"";
+  prow(t,"Where",(cs?"Countries named: "+cs+". ":"No countries named. ")+(rt?(rg.answered?"Region: "+rt.name+" ("+rt.pct+"% sure).":"Region: could not tell (best guess "+rt.name+", only "+rt.pct+"% sure)."):""));
+  var ds=uniq((st.dates||[]).map(function(d){return d.text+(d.date?" = "+d.date:"")})).slice(0,6);
+  prow(t,"When",ds.length?ds.join("; "):"no dates found");
+  var ns=uniq((st.numbers||[]).map(function(n){return n.text+(n.unit?" "+n.unit:"")+(n.noun?" "+n.noun:"")})).slice(0,6);
+  prow(t,"Numbers",ns.length?ns.join("; "):"no numbers found");
+  var acts=(st.actions||[]).filter(function(x){return x.status==="stated"&&x.subject}),un=(st.actions||[]).length-acts.length;
+  var ul=el("div","");acts.slice(0,6).forEach(function(x){ul.appendChild(el("div","",x.subject+" — "+x.verb+(x.object?" — "+x.object:"")))});
+  if(!acts.length)ul.appendChild(document.createTextNode("no clear who-did-what claims found"));
+  if(un>0)ul.appendChild(el("div","mut",un+" more actions were found but could not be tied to a clear subject."));
+  prow(t,"What happened",ul);
+  h.appendChild(t);
+  var cn=st.condition||{},nf=el("div","");nf.style.cssText="margin-top:8px";nf.appendChild(el("div","","What we could not work out:"));nf.firstChild.style.fontWeight="700";
+  var li=el("ul");li.style.margin="2px 0";
+  [(cn.present===false?"Whether this describes a world condition such as the economy or safety: the model says none ("+cn.present_pct+"% sure), but it rarely fires and is not trusted yet.":"Whether this describes a world condition such as the economy or safety: unsure."),
+   "Whether something changed, and by how much: this part is not switched on yet.",
+   "Which real-world people, companies and places the names refer to: not looked up in a knowledge base (Wikidata is not used)."].forEach(function(x){li.appendChild(el("li","",x))});
+  nf.appendChild(li);h.appendChild(nf);
+  var sp=(rec&&rec.stages_full&&rec.stages_full.structure_pack&&rec.stages_full.structure_pack.placed_spans)||[];
+  if(sp.length){
+    var d=el("details");d.style.marginTop="8px";d.appendChild(el("summary","","Experiment: hanging the article's words on a news-topic tree (IPTC)"));
+    var seen={},ex=[];sp.forEach(function(x){var k=String(x.word).toLowerCase();if(!seen[k]&&x.in_topic===true&&ex.length<6){seen[k]=1;ex.push(x)}});
+    d.appendChild(el("div","mut","Each word we can place gets a spot on the topic tree. This is an experiment and many placements are the wrong meaning of the word. Examples:"));
+    var u2=el("ul");u2.style.margin="2px 0";ex.forEach(function(x){u2.appendChild(el("li","",x.word+"  →  "+nice(x.path)))});d.appendChild(u2);h.appendChild(d);
+  }
+}
+function renderSimpleSummary(){
+  var box=gid("simple");clear(box);
+  if(!run){box.appendChild(el("div","mut","Loading..."));return}
+  var c=run.counts||{},n=c.traced||0,g=gapMap(),D=run.decider||{};
+  var replay=/[?&]base=/.test(location.search);
+  var p=el("div","");p.style.cssText="font-size:16px;margin-bottom:8px";
+  p.textContent=replay?"This is a replay of "+n+" real news articles from the last few hours.":"We have read "+n+" real news articles since this run started"+(run.state==="running"?" and the run is still going.":".");
+  box.appendChild(p);
+  box.appendChild(el("div","","For each article the system tries to find: what it is about, who and what is mentioned, where, when, which numbers, and what happened. Click an article below to see exactly what it found, and what it could not work out."));
+  function ansPct(f){var o=D[f]||{},t=0,a=0;Object.keys(o).forEach(function(k){t+=o[k];if(k.indexOf("ANSWER")===0)a+=o[k]});return t?Math.round(100*a/t):null}
+  var ul=el("ul");ul.style.margin="8px 0";
+  var tp=ansPct("topic"),ty=ansPct("story_type");
+  if(n){
+    ul.appendChild(el("li","","Works, with caution: the topic was answered for "+(tp==null?"?":tp)+"% of articles and the kind of story (fact, opinion, forecast) for "+(ty==null?"?":ty)+"%. Both are provisional: they are not yet checked against outside truth."));
+    ul.appendChild(el("li","","Not working yet: whether something changed and by how much, and who it affects, is answered for 0% of articles because that part is switched off."));
+    ul.appendChild(el("li","","Not looked up: names are not linked to real people, companies or places (no knowledge base such as Wikidata is used)."));
+    if(g.TEASER_ONLY)ul.appendChild(el("li","",Math.round(g.TEASER_ONLY.rate*100)+"% of articles were read from a headline and a short teaser only, because the full text was not ready yet."));
+    var nb=notBuilt();if(nb.length)ul.appendChild(el("li","",nb.length+" parts of the design are not built at all: "+nb.map(labelOf).join(", ")+"."));
+  }
+  box.appendChild(ul);
+  var line=el("div","mut");line.textContent=(run.state==="running"?"Running now. ":"Finished. ")+(tail.length&&tail[0].read_at&&run.state==="running"?"Newest article read "+Math.round(Date.now()/1000-tail[0].read_at)+" seconds ago. ":"")+"Technical checks are at the bottom of the page.";
+  box.appendChild(line);
+  if(!n&&!replay&&!FIX){var lk=el("div","");lk.style.marginTop="8px";lk.appendChild(document.createTextNode("No article has arrived yet (the news reader checks for news every 15 minutes). See it full of real articles now: "));var aa=el("a","","open the replay");aa.href="index.html?base=trace-demo/";lk.appendChild(aa);box.appendChild(lk)}
+}
+
+/* ---------- gaps / stages / decider ---------- */
+function renderGaps(){
+  var box=document.getElementById("gaps");clear(box);
+  var g=run&&run.gaps;
+  if(!g||!g.length){box.appendChild(el("div","mut","no data: no gaps reported"));return}
+  var t=el("table"),h=el("tr");["Gap","Count","Rate","Examples (open article)"].forEach(function(x,i){th(h,x,i===1||i===2)});t.appendChild(h);
+  g.slice().sort(function(a,b){return b.rate-a.rate}).forEach(function(x){
+    var r=el("tr"),c=td(r,"");c.appendChild(chip(sevClass(x),x.code));
+    td(r,x.count,1);td(r,(x.rate*100).toFixed(1)+"%",1);
+    var e=td(r,"");(x.examples||[]).forEach(function(s){
+      var a=el("a","seq","#"+s);a.href="#seq-"+s;a.onclick=function(ev){ev.preventDefault();goto(s)};e.appendChild(a)});
+    if(!(x.examples||[]).length)e.textContent="no examples";
+    t.appendChild(r)});
+  box.appendChild(t);
+}
+function goto(s){var c=cards[s];if(!c){var m=gid("src");m.className="err";m.textContent="Article #"+s+" is not in the last 40 shown (see chain.jsonl and a/"+s+".json)";return}
+  openCard(s,true);c.el.scrollIntoView({block:"center"});c.el.classList.add("hl");setTimeout(function(){c.el.classList.remove("hl")},2500)}
+var ORDER=["windows","scan_dates","facts","independent_counter","tags_bundles","span_rules","place_linker","area_function","domain_rollup","topic_landing","condition","place_student","capability_list","structure_pack","decider","function_sentence","novelty","time","factuality_story"];
+function naWhy(name){
+  for(var i=0;i<tail.length;i++){var ss=tail[i].stages||[];for(var j=0;j<ss.length;j++)if(ss[j].name===name&&ss[j].state==="not_attached"&&ss[j].why)return ss[j].why}
+  return "not attached (reason not in the data shown)";
+}
+function renderStages(){
+  var box=document.getElementById("stages");clear(box);
+  var S=run&&run.stages;
+  if(!S){box.appendChild(el("div","mut","no data: no stage counts"));return}
+  var t=el("table"),h=el("tr");["Stage","ran","empty","abstain","error","timeout","not attached","p50 ms","p90 ms"].forEach(function(x,i){th(h,x,i>0)});t.appendChild(h);
+  var names=ORDER.filter(function(n){return S[n]});Object.keys(S).forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
+  names.forEach(function(n){
+    var s=S[n],allNA=(s.not_attached>0&&!s.ran&&!s.empty&&!s.abstain&&!s.error&&!s.timeout);
+    var r=el("tr",allNA?"na":"");r.setAttribute("data-stage",n);
+    var c=td(r,n);
+    if(allNA){c.appendChild(el("div","mut",naWhy(n)))}
+    ["ran","empty","abstain","error","timeout","not_attached"].forEach(function(k){var d=td(r,s[k]==null?"no data":s[k],1);if(k==="error"&&s[k]>0)d.className="n fail"});
+    td(r,s.p50_ms==null?"-":fmt(s.p50_ms),1);td(r,s.p90_ms==null?"-":fmt(s.p90_ms),1);
+    t.appendChild(r)});
+  box.appendChild(t);
+}
+function renderDecider(){
+  var box=document.getElementById("decider");clear(box);
+  var D=run&&run.decider;
+  if(!D||!Object.keys(D).length){box.appendChild(el("div","mut","no data: no decider outcomes"));return}
+  var t=el("table"),h=el("tr");th(h,"Field");th(h,"Outcomes (count)");t.appendChild(h);
+  Object.keys(D).forEach(function(f){var r=el("tr");td(r,f);var c=td(r,"");
+    Object.keys(D[f]).forEach(function(o){c.appendChild(chip("s-ran",o+": "+D[f][o]))});t.appendChild(r)});
+  box.appendChild(t);
+}
+
+/* ---------- stream ---------- */
+function stageRow(s){
+  var r=el("tr");td(r,s.name);td(r,s.gate||"no data");td(r,s.kind||"no data");
+  var c=td(r,"");c.appendChild(chip("s-"+s.state,s.state));
+  var o=td(r,"");
+  if(s.state==="not_attached"){o.textContent="not attached: "+(s.why||"no reason in data (no source file named)")}
+  else if(s.state==="error"){o.className="err";o.textContent=(s.why||"error, no message")}
+  else o.textContent=s.out==null?"no data":(typeof s.out==="string"?s.out:js(s.out));
+  td(r,s.state==="not_attached"?"-":fmt(s.ms),1);
+  td(r,s.provenance||"-");
+  var w=td(r,s.why||"-");if(s.state==="error")w.textContent="see output";if(s.state==="not_attached")w.textContent="see output";
+  if(s.state==="not_attached")r.className="na";
+  if(s.state==="error")r.setAttribute("data-err","1");
+  return r;
+}
+function packSpans(text,full){
+  var sp=[],p=full&&full.structure_pack;
+  if(!p)return sp;
+  (p.placed_spans||p.placed||p.spans||[]).forEach(function(x){if(x&&typeof x.start==="number"&&typeof x.end==="number")sp.push(x)});
+  (p.words||[]).forEach(function(w){if(typeof w==="string"){var i=text.indexOf(w);if(i>=0)sp.push({start:i,end:i+w.length,word:w})}});
+  sp.sort(function(a,b){return a.start-b.start});
+  return sp;
+}
+function highlight(box,text,full){
+  var sp=packSpans(text,full),pos=0,n=0;
+  sp.forEach(function(p){if(p.start<pos||p.end>text.length||p.end<=p.start)return;
+    if(p.start>pos)box.appendChild(document.createTextNode(text.slice(pos,p.start)));
+    var m=el("mark",p.in_topic===true?"in":(p.in_topic===false?"out":""),text.slice(p.start,p.end));
+    var tip=[];if(p.hop!=null)tip.push("hop "+p.hop);if(p.via)tip.push("via "+p.via);if(p.path)tip.push("path "+(Array.isArray(p.path)?p.path.join(" > "):p.path));
+    tip.push(p.in_topic===true?"in topic":(p.in_topic===false?"outside topic":"topic relation not in data"));
+    m.title=tip.join(" | ");box.appendChild(m);pos=p.end;n++});
+  if(pos<text.length)box.appendChild(document.createTextNode(text.slice(pos)));
+  return n;
+}
+function buildCard(a){
+  var card=el("div","card");card.id="seq-"+a.seq;card.setAttribute("data-seq",a.seq);
+  var head=el("div","head");head.setAttribute("role","button");head.tabIndex=0;
+  var t=el("div","title","#"+a.seq+"  "+(a.title||a.url||"no headline in data"));head.appendChild(t);
+  var m=el("div","meta",(a.source||"no source")+"  |  found "+(a.read_at?new Date(a.read_at*1000).toLocaleTimeString():"")+(a.input&&!a.input.has_body?"  |  headline and teaser only":""));head.appendChild(m);
+  var gc=el("div","",summaryLine(a));gc.style.cssText="font-size:14px;margin-top:2px";head.appendChild(gc);card.appendChild(head);
+  var body=el("div","body");card.appendChild(body);
+  head.onclick=function(){openCard(a.seq)};
+  head.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openCard(a.seq)}};
+  return {el:card,body:body,a:a,built:false};
+}
+function openCard(seq,forceOpen){
+  var c=cards[seq];if(!c)return;
+  if(forceOpen)c.el.classList.add("open");else c.el.classList.toggle("open");
+  if(c.el.classList.contains("open")&&!c.built){c.built=true;fillBody(c)}
+}
+function fillBody(c){
+  var a=c.a,b=c.body;clear(b);
+  var links=el("div","row");links.style.margin="8px 0";
+  var raw=el("a","","raw JSON");raw.href=BASE+"a/"+a.seq+".json";raw.target="_blank";raw.rel="noopener";links.appendChild(raw);
+  if(a.url){links.appendChild(el("span","mut","url: "+a.url))}
+  var rp=el("button","","Replay");links.appendChild(rp);b.appendChild(links);
+  var story=el("div","story simplecard");b.appendChild(story);story.appendChild(el("div","mut","loading..."));
+  var tw=el("div");b.appendChild(tw);
+  var det=el("details");det.style.marginTop="10px";det.appendChild(el("summary","","Show technical detail: article text, step-by-step walk-through, gate codes, raw output"));b.appendChild(det);var techStory=el("div","story");tw.appendChild(el("div","mut","loading article text..."));
+  var wrap=el("div","table"),tb=el("table"),h=el("tr");
+  ["Stage","Gate","Kind","State","Output","ms","Provenance","Why"].forEach(function(x,i){th(h,x,i===5)});tb.appendChild(h);
+  (a.stages||[]).forEach(function(s){tb.appendChild(stageRow(s))});
+  if(!(a.stages||[]).length){var r=el("tr");td(r,"no data: no stages for this article");tb.appendChild(r)}
+  wrap.appendChild(tb);det.appendChild(wrap);
+  var d=el("div","mut","Decider: "+(a.decider?js(a.decider):"not attached"));d.style.marginTop="8px";det.appendChild(d);
+  var rpanel=el("div");det.appendChild(rpanel);
+  var full=null;
+  getArt(a.seq).then(function(rec){
+    full=rec.stages_full||null;try{renderSimple(story,a,rec)}catch(e){clear(story);story.appendChild(el("div","err","could not build the summary: "+e.message))}try{renderStory(techStory,a,rec)}catch(e){techStory.appendChild(el("div","err","could not build the technical walk-through: "+e.message))}clear(tw);
+    if(typeof rec.text==="string"){
+      var tx=el("div","text");var n=highlight(tx,rec.text,full);
+      tw.appendChild(el("div","mut","Text the readers saw ("+rec.text.length+" chars). "+(n?n+" placed words highlighted (structure pack; green = in topic, amber = outside topic, no colour = relation not in data; hover for the path).":"No placed-word spans in the data: nothing highlighted.")));tw.appendChild(tx);
+    }else tw.appendChild(el("div","mut","no data: text not in a/"+a.seq+".json"));
+  }).catch(function(e){clear(tw);tw.appendChild(el("div","err","could not load a/"+a.seq+".json: "+e.message))});
+  rp.onclick=function(){
+    det.open=true;if(rpanel.firstChild){clear(rpanel);return}
+    replay(rpanel,a,function(){return full});
+  };
+  det.insertBefore(tw,det.children[1]);det.insertBefore(links,det.children[1]);det.insertBefore(techStory,det.children[1]);
+}
+function replay(panel,a,getFull){
+  var st=a.stages||[],i=0;
+  var box=el("div","replay");panel.appendChild(box);
+  function draw(){
+    clear(box);
+    if(!st.length){box.appendChild(el("div","mut","no stages to replay"));return}
+    var s=st[i];
+    var nav=el("div","row");
+    var bb=el("button","","Back"),bn=el("button","","Next");bb.disabled=i===0;bn.disabled=i===st.length-1;
+    bb.onclick=function(){i--;draw()};bn.onclick=function(){i++;draw()};
+    nav.appendChild(bb);nav.appendChild(bn);nav.appendChild(el("b","","step "+(i+1)+" of "+st.length+": "+s.name));nav.appendChild(chip("s-"+s.state,s.state));
+    box.appendChild(nav);
+    box.appendChild(el("div","","What this step does: "+plainOf(s.name)));
+    box.appendChild(el("div","mut","gate "+(s.gate||"-")+" | "+(s.kind||"-")+" | version "+(s.version||"no data")+" | "+(s.state==="not_attached"?"not run":fmt(s.ms)+" ms")));
+    box.appendChild(el("div","","Input context"));
+    var ctx=["text: "+(a.input?a.input.chars:"no data")+" chars, sha1 "+(a.input?a.input.text_sha1:"no data")];
+    for(var k=0;k<i;k++){var p=st[k];ctx.push(p.name+" ["+p.state+"]: "+(p.state==="not_attached"?"not attached":(p.state==="error"?"ERROR "+(p.why||""):(p.out==null?"no data":(typeof p.out==="string"?p.out:js(p.out)))))) }
+    box.appendChild(el("pre","",ctx.join("\n")));
+    box.appendChild(el("div","","Output"));
+    var f=getFull(),fo=f&&f[s.name];
+    var o;
+    if(s.state==="not_attached")o="not attached: "+(s.why||"no reason in data");
+    else if(s.state==="error")o="ERROR: "+(s.why||"no message");
+    else o=(s.out==null?"no data":(typeof s.out==="string"?s.out:js(s.out)));
+    if(s.state!=="not_attached"&&s.why&&s.state!=="error")o+="\nwhy: "+s.why;
+    o+="\nfull output: "+(fo!==undefined?JSON.stringify(fo,null,1):"not in a/"+a.seq+".json stages_full (no data)");
+    box.appendChild(el("pre","",o));
+    if(s.name==="structure_pack"){
+      var rec=ART[a.seq],words=(rec&&typeof rec.text==="string")?packSpans(rec.text,f):[];
+      box.appendChild(el("div","","Words placed by this stage ("+words.length+")"));
+      var wl=el("pre","",words.length?words.map(function(w){return (w.word||(rec.text.slice(w.start,w.end)))+"  ["+w.start+"-"+w.end+"]"+(w.hop!=null?" hop "+w.hop:"")+(w.via?" via "+w.via:"")+(w.path?" path "+(Array.isArray(w.path)?w.path.join(" > "):w.path):"")+(w.in_topic===true?" | in topic":(w.in_topic===false?" | outside topic":""))}).join("\n"):"no placed-word spans in the data");
+      box.appendChild(wl);
+    }
+  }
+  draw();
+}
+function addArticles(){
+  var list=tail.slice().sort(function(a,b){return a.seq-b.seq}); // insert oldest-first, each prepended
+  var stream=document.getElementById("stream");
+  list.forEach(function(a){
+    if(seen[a.seq])return;seen[a.seq]=1;
+    var c=buildCard(a);cards[a.seq]=c;
+    // keep newest-first: insert before first card with lower seq
+    var ref=null;for(var n=stream.firstChild;n;n=n.nextSibling){if(+n.getAttribute("data-seq")<a.seq){ref=n;break}}
+    stream.insertBefore(c.el,ref);
+  });
+  if(!list.length&&!stream.firstChild)stream.appendChild(el("div","mut","no data: no articles traced yet"));
+  else if(list.length){for(var n=stream.firstChild;n;n=n.nextSibling){if(n.className==="mut"&&!n.getAttribute("data-seq")){stream.removeChild(n);break}}}
+}
+
+/* ---------- loop ---------- */
+function refresh(){
+  var s=document.getElementById("src");
+  return Promise.all([fetchJSON(BASE+"run.json").catch(function(e){return {__err:e.message}}),fetchJSON(BASE+"tail.json").catch(function(e){return {__err:e.message}})]).then(function(r){
+    var msgs=[];
+    if(r[0]&&!r[0].__err){run=r[0]}else msgs.push("run.json: "+(r[0]&&r[0].__err));
+    if(Array.isArray(r[1]))tail=r[1];else msgs.push("tail.json: "+(r[1]&&r[1].__err));
+    if(run&&run.state==="error"&&run.why)msgs.push("run refused: "+run.why);
+    if(run&&run.degraded&&run.degraded.length)msgs.push("degraded: "+run.degraded.join(", "));
+    s.textContent=(FIX?"FIXTURE MODE: made-up articles from trace/fixture/. ":"Live: "+BASE+" every 3 s. ")+(msgs.length?"Problem: "+msgs.join("; "):"Last update "+new Date().toLocaleTimeString());
+    s.className=msgs.length?"err":"mut";
+    bannerBuildKeep();renderGaps();renderStages();renderDecider();addArticles();renderSimpleSummary();renderVerdict();renderProcess();renderLearned();renderWalk();
+    if(Q.get("seq")&&!window.__seqdone&&/^\d+$/.test(Q.get("seq"))){window.__seqdone=1;getArt(+Q.get("seq")).then(function(rec){var a=rec.article_line;if(!a)return;var c=buildCard(a);cards[a.seq]=c;seen[a.seq]=1;var st=gid("stream");st.insertBefore(c.el,st.firstChild);openCard(a.seq,true);c.el.scrollIntoView({block:"start"})}).catch(function(e){gid("src").className="err";gid("src").textContent="could not load article "+Q.get("seq")+": "+e.message})}
+    if(run&&!window.__vdone){window.__vdone=1;verifyChain().then(function(){renderVerdict()})}
+  });
+}
+function bannerBuildKeep(){var v=vOut.textContent,vc=vOut.className,t=tOut.textContent,tc=tOut.className;bannerBuild();vOut.textContent=v;vOut.className=vc||"mut";tOut.textContent=t;tOut.className=tc||"mut"}
+window.__trace={refresh:refresh,verify:verifyChain,texts:checkTexts};
+window.addEventListener("error",function(e){errs.push(e.message)});
+window.__errs=errs;
+window.__ready=refresh();
+if(!FIX)setInterval(refresh,3000);
+})();
+</script>
+</body>
+</html>

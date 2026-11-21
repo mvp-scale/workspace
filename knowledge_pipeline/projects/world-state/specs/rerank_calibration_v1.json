@@ -1,0 +1,54 @@
+{
+ "version": "rerank_calibration_v1",
+ "written": "2026-11-20",
+ "method": "StandardScaler + LogisticRegression(C=1) on whether the corrected level-1 answer equals the MN-DS gold level-1 code; fitted on publisher-held-out out-of-fold predictions of MN-DS train only",
+ "features": [
+  "log_q1",
+  "margin",
+  "agree_landing"
+ ],
+ "scaler_mean": [
+  -0.40028402875944435,
+  0.5557778747258111,
+  0.6266146721910797
+ ],
+ "scaler_scale": [
+  0.34856433488582955,
+  0.3148899553189603,
+  0.4837031370437284
+ ],
+ "coef": [
+  0.2943060605494097,
+  0.5094806196861404,
+  0.3582190141558144
+ ],
+ "intercept": 0.8564589608125832,
+ "model_sha16": "e289945b3c9fcfe2",
+ "cards_sha": "45d71cfbf0eb13d2847365b08b1fe19111046fb000513b3216cbb3eb15a36f08",
+ "split_sha256": "4c5a188cab672b4067fe2f55f820bfdaecb205d447526f582c11c3b1f668b314",
+ "fit_items": 4103,
+ "fit_set": "MN-DS train publishers only (4103 items, 144 publishers), 5 publisher folds",
+ "line_permille": 633,
+ "line_rule": "same as landing_calibrate.find_line: lowest floor(1000 p) whose set of 30+ items has accuracy >= 0.80 (on the out-of-fold items); decision ANSWER_L1 iff floor(1000 p) >= line_permille",
+ "oof": {
+  "top1": 0.6724,
+  "auroc": 0.7559,
+  "at_line": {
+   "n": 2577,
+   "coverage": 0.628,
+   "accuracy": 0.801
+  }
+ },
+ "dev_select": {
+  "n": 880,
+  "top1": 0.6932,
+  "landing_top1": 0.567,
+  "at_line": {
+   "n": 567,
+   "coverage": 0.644,
+   "accuracy": 0.806
+  },
+  "note": "select is the dev half; never used to fit"
+ },
+ "seconds": 20.2
+}

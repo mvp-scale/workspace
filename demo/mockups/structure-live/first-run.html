@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Structure pack, live</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--ink:#14181f;--mute:#5b6573;--line:#d9dee6;--ok:#1f8a4c;--okbg:#e3f4ea;--warn:#b26a00;--warnbg:#fdf0d8;--none:#6b7482;--nonebg:#eceef2;--acc:#2456c9}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10141a;--panel:#171c24;--ink:#e8ecf2;--mute:#9aa5b5;--line:#2a323f;--ok:#58c887;--okbg:#17352549;--warn:#e0a24a;--warnbg:#3a2b1262;--none:#8d97a6;--nonebg:#232a35;--acc:#7da2ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header,main{width:90%;max-width:1280px;margin:0 auto}header{padding:18px 0 6px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mute);font-size:13.5px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:120px}
+.kpi b{display:block;font-size:20px}.kpi span{font-size:12px;color:var(--mute)}
+.mix{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}.mix span{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12.5px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 12px}
+.card h2{font-size:16px;margin:0 0 2px}.meta{font-size:12.5px;color:var(--mute)}.txt{font-size:13.5px;color:var(--mute);margin:6px 0}
+.chip{display:inline-block;border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;font-size:13px;border:1px solid transparent}
+.chip.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}.chip.warn{background:var(--warnbg);color:var(--warn);border-color:var(--warn)}.chip.none{background:var(--nonebg);color:var(--none)}
+table{border-collapse:collapse;width:100%;margin:6px 0;font-size:13.5px}td,th{text-align:left;padding:3px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mute);font-weight:600;font-size:12.5px}
+td:first-child{font-weight:600;white-space:nowrap}details{margin:4px 0;font-size:13.5px}summary{cursor:pointer;color:var(--acc)}
+.legend{font-size:13px;margin:4px 0 12px}.pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--mute)}
+@media (max-width:640px){header,main{width:calc(100% - 32px)}}
+</style></head><body>
+<header>
+<h1>Structure pack, live</h1>
+<div class="sub">Real articles from the news reader, read once each as they arrive. IPTC Media Topics plus WordNet, CPU only. Observational: no pass bar and no gold labels. Temporary page.</div>
+<div class="card" style="border-color:var(--warn);background:var(--warnbg)"><b>First run, stalled.</b> It read the first 300 articles and stopped advancing (my query bug, ledger L2639), so the counters below do not move even though the queue keeps growing. The real step-by-step view is planned on the plan page (#live there), waiting on Q8.</div>
+<div class="bar" id="bar"></div>
+<div class="legend"><span class="chip ok">in topic</span> placed under the article's topic guess &nbsp; <span class="chip warn">outside topic</span> placed, but the topic filter drops it &nbsp; <span class="chip none">not placed</span> no IPTC node reached</div>
+<div class="mix" id="mix"></div>
+</header>
+<main id="feed"><div class="card">Waiting for the first article&hellip;</div></main>
+<script>
+(function(){
+var feed=document.getElementById('feed'),bar=document.getElementById('bar'),mix=document.getElementById('mix');
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+function pct(a,b){return b?(100*a/b).toFixed(1)+'%':'-'}
+function tail(p){var s=p.split(' > ');return s.slice(-3).join(' > ')}
+function kpi(v,l){var d=el('div','kpi');d.appendChild(el('b','',v));d.appendChild(el('span','',l));return d}
+function fmtT(s){var m=Math.max(0,Math.round(s));return Math.floor(m/60)+':'+('0'+m%60).slice(-2)}
+function render(d){
+  bar.textContent='';
+  bar.appendChild(kpi(String(d.processed),'articles read'));
+  bar.appendChild(kpi(String(d.backlog),'waiting in queue'));
+  bar.appendChild(kpi(pct(d.placed,d.terms),'words placed'));
+  bar.appendChild(kpi(pct(d.in_topic,d.terms),'words in topic'));
+  bar.appendChild(kpi(d.median_ms==null?'-':d.median_ms.toFixed(0)+' ms','median per article'));
+  bar.appendChild(kpi(fmtT(d.ends-d.now),'until the run stops'));
+  bar.appendChild(kpi(d.code,'code hash (frozen)'));
+  mix.textContent='';
+  Object.keys(d.topics).forEach(function(k){mix.appendChild(el('span','',k+' · '+d.topics[k]))});
+  var sig=d.processed+':'+d.items.length;if(sig===window.__sig&&feed.children.length)return;window.__sig=sig;
+  feed.textContent='';
+  if(!d.items.length){feed.appendChild(el('div','card','Waiting for the first article…'));return}
+  d.items.forEach(function(a){
+    var c=el('div','card');
+    c.appendChild(el('h2','',a.title||'(no title)'));
+    c.appendChild(el('div','meta',a.source+' · found '+new Date(a.found_at*1000).toLocaleTimeString()+' · '+a.chars+' characters read · '+a.ms+' ms'));
+    c.appendChild(el('div','txt',a.text));
+    var tp=el('div','meta','Topic guess: '+a.topic_prior.map(function(t){return t[0]+' ('+t[1].toFixed(2)+')'}).join(', '));c.appendChild(tp);
+    c.appendChild(el('div','meta','Words '+a.n_terms+' · placed '+a.n_placed+' · in topic '+a.n_in_topic));
+    var inT=a.words.filter(function(w){return w.in_topic}),out=a.words.filter(function(w){return w.hop&&!w.in_topic}),no=a.words.filter(function(w){return !w.hop});
+    if(inT.length){var t=el('table'),h=el('tr');['Word','Link used','IPTC path (last three levels)'].forEach(function(x){h.appendChild(el('th','',x))});t.appendChild(h);
+      inT.forEach(function(w){var r=el('tr');r.appendChild(el('td','',w.w));r.appendChild(el('td','',w.hop==='exact'?'exact label':w.via));r.appendChild(el('td','',tail(w.path)));t.appendChild(r)});c.appendChild(t)}
+    else c.appendChild(el('div','meta','Nothing placed under the topic guess.'));
+    if(out.length){var d1=el('details'),s1=el('summary','','Placed outside the topic ('+out.length+')');d1.appendChild(s1);
+      out.forEach(function(w){d1.appendChild(el('span','chip warn',w.w+' → '+tail(w.path)))});c.appendChild(d1)}
+    if(no.length){var d2=el('details'),s2=el('summary','','Not placed ('+no.length+')');d2.appendChild(s2);
+      no.forEach(function(w){d2.appendChild(el('span','chip none',w.w))});c.appendChild(d2)}
+    feed.appendChild(c)});
+}
+function tick(){fetch('data.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(render).catch(function(){})}
+tick();setInterval(tick,5000);
+})();
+</script></body></html>

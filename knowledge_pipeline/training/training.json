@@ -1,5 +1,5 @@
 {
- "built": "2026-11-16T04:40:23Z",
+ "built": "2026-11-21T18:20:13Z",
  "note": "Scores are agreement with Sonnet labels on the sealed set (1,499 items), not outside truth. Noise across seeds: about 0.009 topic, 0.007 story type, 0.019 presence F1.",
  "baseline_sparse_sealed": {
   "topic": 0.7532,
@@ -1552,204 +1552,204 @@
  ],
  "recent_results": [
   {
-   "file": "runs/pulse/t233/t233_knn_norm.json",
-   "updated": "2026-11-13T16:43Z",
-   "summary": "items: 24866; reference: 17406; queries: 7460; k: 20; tau: 0.05"
+   "file": "runs/pulse/t173-direction/t158_direction_runs_v7.json",
+   "updated": "2026-11-21T15:20Z",
+   "summary": "script: direction_v1.py; provisional: True"
   },
   {
-   "file": "runs/pulse/t233/items.json",
-   "updated": "2026-11-13T16:43Z",
-   "summary": "parts: ids, labels"
+   "file": "runs/pulse/t173-direction/t173_direction.json",
+   "updated": "2026-11-21T15:20Z",
+   "summary": "script: direction_v1.py; provisional: True"
   },
   {
-   "file": "runs/pulse/t232h_k480/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "hybrid: True; k: 480; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+   "file": "runs/pulse/t173-direction/t158_direction_confirm.json",
+   "updated": "2026-11-21T15:17Z",
+   "summary": "script: direction_v1.py; provisional: True; subset: confirm"
   },
   {
-   "file": "runs/pulse/t232h_k240/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "hybrid: True; k: 240; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+   "file": "runs/pulse/t173-direction/t158_direction_select.json",
+   "updated": "2026-11-21T15:17Z",
+   "summary": "script: direction_v1.py; provisional: True; subset: select"
   },
   {
-   "file": "runs/pulse/t232h_k120/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "hybrid: True; k: 120; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+   "file": "runs/pulse/t173-direction/t158_split.json",
+   "updated": "2026-11-21T15:16Z",
+   "summary": "rule: sha256('T158dir'+doc) sorted, first half"
   },
   {
-   "file": "runs/pulse/t232h_k60/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "hybrid: True; k: 60; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+   "file": "runs/pulse/names_fewnerd_v2/model-card.json",
+   "updated": "2026-11-21T05:46Z",
+   "summary": "name: names_fewnerd_v2; task: NER, 66 Few-NERD fine types (8 coarse = ; framework: spaCy 3.8.16 tok2vec+ner, CPU, same arch; test_vs_v1: see test-scores-vs-v1.json; adoption: NOT wired; integrator decides. Keep rule"
   },
   {
-   "file": "runs/pulse/t232h_k30/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "hybrid: True; k: 30; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475"
+   "file": "runs/pulse/names_fewnerd_v2/test-scores-vs-v1.json",
+   "updated": "2026-11-21T05:46Z",
+   "summary": "loadavg: 3.16064453125"
   },
   {
-   "file": "runs/pulse/t232_k480/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "k: 480; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+   "file": "runs/pulse/t158-claims/causes-test-v1.json",
+   "updated": "2026-11-21T03:21Z",
+   "summary": "gold: 2713; spurious_predictions: 449"
   },
   {
-   "file": "runs/pulse/t232_k240/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "k: 240; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+   "file": "runs/pulse/t158-claims/causes-dev-v1.json",
+   "updated": "2026-11-21T03:21Z",
+   "summary": "gold: 2548; spurious_predictions: 401"
   },
   {
-   "file": "runs/pulse/t232_k120/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "k: 120; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+   "file": "runs/pulse/t158-claims/bootstrap.json",
+   "updated": "2026-11-21T03:21Z",
+   "summary": "parts: dev v1-base, dev v1-v0, dev v1 f1 ci, test v1-base, test v1-v0, test v1 f1 ci"
   },
   {
-   "file": "runs/pulse/t232_k60/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "k: 60; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+   "file": "runs/pulse/t158-claims/test-v1.json",
+   "updated": "2026-11-21T03:21Z",
+   "summary": "name: v1; split: test; sentences: 634; precision: 0.677; recall: 0.483"
   },
   {
-   "file": "runs/pulse/t232_k30/t232_router_coverage.json",
-   "updated": "2026-11-13T13:37Z",
-   "summary": "k: 30; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+   "file": "runs/pulse/t158-claims/dev-v1.json",
+   "updated": "2026-11-21T03:21Z",
+   "summary": "name: v1; split: dev; sentences: 641; precision: 0.697; recall: 0.519"
   },
   {
-   "file": "runs/pulse/t232/t232_router_coverage.json",
-   "updated": "2026-11-13T13:36Z",
-   "summary": "k: 60; older_triples: 63659; newer_triples: 67805; articles_with_targets: 8475; targets: 13215"
+   "file": "runs/pulse/t158-claims/causes-test-base.json",
+   "updated": "2026-11-21T03:20Z",
+   "summary": "gold: 2713; spurious_predictions: 739"
   },
   {
-   "file": "runs/pulse/t231x_depth1/t231_conditioned.json",
-   "updated": "2026-11-13T13:36Z",
-   "summary": "triples: 131464; boilerplate_pairs_dropped: 7; level: depth1; difference_conditioned_minus_global: -0.1345448748605133"
+   "file": "runs/pulse/t158-claims/causes-dev-base.json",
+   "updated": "2026-11-21T03:20Z",
+   "summary": "gold: 2548; spurious_predictions: 738"
   },
   {
-   "file": "runs/pulse/t231x_top/t231_conditioned.json",
-   "updated": "2026-11-13T13:36Z",
-   "summary": "triples: 131464; boilerplate_pairs_dropped: 7; level: top; difference_conditioned_minus_global: -0.09863307424283034"
+   "file": "runs/pulse/t158-claims/dev-ydedupe.json",
+   "updated": "2026-11-21T03:20Z",
+   "summary": "name: ydedupe; split: dev; sentences: 641; precision: 0.698; recall: 0.519"
   },
   {
-   "file": "runs/pulse/t231/t231_conditioned.json",
-   "updated": "2026-11-13T13:35Z",
-   "summary": "triples: 131464; boilerplate_pairs_dropped: 7; difference_conditioned_minus_global: -0.1345448748605133"
+   "file": "runs/pulse/t158-claims/dev-ynodedupe.json",
+   "updated": "2026-11-21T03:20Z",
+   "summary": "name: ynodedupe; split: dev; sentences: 641; precision: 0.686; recall: 0.52"
   },
   {
-   "file": "runs/pulse/t230/capability_tiers.json",
-   "updated": "2026-11-13T13:27Z",
-   "summary": "min_days: 3; listed_older: 98; listed_newer: 111; recurring_both_periods: 26; t222_pairs: 371"
+   "file": "runs/pulse/t158-claims/dev-lgnoner-dev.json",
+   "updated": "2026-11-21T03:19Z",
+   "summary": "name: lgnoner-dev; split: dev; sentences: 641; precision: 0.686; recall: 0.52"
   },
   {
-   "file": "runs/pulse/t229_d12/t229_days.json",
-   "updated": "2026-11-13T13:26Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0"
+   "file": "runs/pulse/t158-claims/test-base-lg.json",
+   "updated": "2026-11-21T03:17Z",
+   "summary": "name: base-lg; split: test; sentences: 634; precision: 0.559; recall: 0.31"
   },
   {
-   "file": "runs/pulse/t229_d8/t229_days.json",
-   "updated": "2026-11-13T13:26Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.00010638297872340425"
+   "file": "runs/pulse/t158-claims/dev-base-lg.json",
+   "updated": "2026-11-21T03:16Z",
+   "summary": "name: base-lg; split: dev; sentences: 641; precision: 0.575; recall: 0.339"
   },
   {
-   "file": "runs/pulse/t229_d6/t229_days.json",
-   "updated": "2026-11-13T13:26Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0007303370786516854"
+   "file": "runs/pulse/t158-claims/dev-xpassive.json",
+   "updated": "2026-11-21T03:16Z",
+   "summary": "name: xpassive; split: dev; sentences: 641; precision: 0.683; recall: 0.516"
   },
   {
-   "file": "runs/pulse/t229_d5/t229_days.json",
-   "updated": "2026-11-13T13:26Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0007264957264957266"
+   "file": "runs/pulse/t158-claims/dev-xno-passive.json",
+   "updated": "2026-11-21T03:16Z",
+   "summary": "name: xno-passive; split: dev; sentences: 641; precision: 0.658; recall: 0.508"
   },
   {
-   "file": "runs/pulse/t229_d4/t229_days.json",
-   "updated": "2026-11-13T13:25Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0011970764220252973"
+   "file": "runs/pulse/t158-claims/causes-dev-xv1.json",
+   "updated": "2026-11-21T03:15Z",
+   "summary": "gold: 2548; spurious_predictions: 502"
   },
   {
-   "file": "runs/pulse/t229_d3/t229_days.json",
-   "updated": "2026-11-13T13:25Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0016766808246141097"
+   "file": "runs/pulse/t158-claims/dev-xv1.json",
+   "updated": "2026-11-21T03:15Z",
+   "summary": "name: xv1; split: dev; sentences: 641; precision: 0.658; recall: 0.508"
   },
   {
-   "file": "runs/pulse/t229/t229_days.json",
-   "updated": "2026-11-13T13:25Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0002127659574468085"
+   "file": "runs/pulse/t158-claims/dev-g3-+measure+attrs(move).json",
+   "updated": "2026-11-21T03:15Z",
+   "summary": "name: g3-+measure+attrs(move); split: dev; sentences: 641; precision: 0.647; recall: 0.469"
   },
   {
-   "file": "runs/pulse/t228/t228_timesplit.json",
-   "updated": "2026-11-13T13:24Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0016877431818890381"
+   "file": "runs/pulse/t158-claims/dev-g3-+measure+attrs(keep).json",
+   "updated": "2026-11-21T03:15Z",
+   "summary": "name: g3-+measure+attrs(keep); split: dev; sentences: 641; precision: 0.658; recall: 0.508"
   },
   {
-   "file": "runs/pulse/t227/t227_gate.json",
-   "updated": "2026-11-13T13:13Z",
-   "summary": "promoted: 114; promoted_topics: 24; topics_with_3plus: 10"
+   "file": "runs/pulse/t158-claims/dev-g3-+measure.json",
+   "updated": "2026-11-21T03:15Z",
+   "summary": "name: g3-+measure; split: dev; sentences: 641; precision: 0.658; recall: 0.508"
   },
   {
-   "file": "runs/pulse/t226/t226_g4_event.json",
-   "updated": "2026-11-13T12:36Z",
-   "summary": "events: 2192; articles: 6796; articles_with_body: 6796; triples: 73276; tau: 0.85"
+   "file": "runs/pulse/t158-claims/dev-g3-no-measure,no-attrs.json",
+   "updated": "2026-11-21T03:15Z",
+   "summary": "name: g3-no-measure,no-attrs; split: dev; sentences: 641; precision: 0.657; recall: 0.508"
   },
   {
-   "file": "runs/pulse/t225/t225_g4_baseline.json",
-   "updated": "2026-11-13T12:27Z",
-   "summary": "triples: 168081; distinct_keys: 65896; keys_per_triple: 0.39204907157858415; share_2plus_articles: 0.4123619036056817; share_2plus_publishers: 0.3798106106592206"
+   "file": "runs/pulse/t158-claims/dev-g2-all.json",
+   "updated": "2026-11-21T03:14Z",
+   "summary": "name: g2-all; split: dev; sentences: 641; precision: 0.657; recall: 0.508"
   },
   {
-   "file": "runs/pulse/t224/t224_carb_action.json",
-   "updated": "2026-11-13T07:37Z",
-   "summary": "gold_total: 2713; gold_action: 1135; share_action: 0.4183560633984519; sentences_with_action_gold: 479; scorer: in-house CaRB-style token overlap, not t"
+   "file": "runs/pulse/t158-claims/dev-g2-+xcomp.json",
+   "updated": "2026-11-21T03:14Z",
+   "summary": "name: g2-+xcomp; split: dev; sentences: 641; precision: 0.65; recall: 0.463"
   },
   {
-   "file": "runs/pulse/t223/t223_place_fresh.json",
-   "updated": "2026-11-13T07:04Z",
-   "summary": "stories: 1000; excluded_trained_ids: 1600; line: 0.5529077649116516; answered_share: 0.645; decidable: 414"
+   "file": "runs/pulse/t158-claims/dev-g2-+clause.json",
+   "updated": "2026-11-21T03:14Z",
+   "summary": "name: g2-+clause; split: dev; sentences: 641; precision: 0.657; recall: 0.495"
   },
   {
-   "file": "runs/pulse/t167/t167_place_judge.json",
-   "updated": "2026-11-13T07:04Z",
-   "summary": "stories_with_body: 1600; decidable: 745; accuracy: 0.882; jev_global_share_of_decidable: 0.04"
+   "file": "runs/pulse/t158-claims/dev-g2-+copula.json",
+   "updated": "2026-11-21T03:14Z",
+   "summary": "name: g2-+copula; split: dev; sentences: 641; precision: 0.647; recall: 0.458"
   },
   {
-   "file": "runs/pulse/t222/t222_summary.json",
-   "updated": "2026-11-13T06:52Z",
-   "summary": "rows: 16564; pairs_before_noise_exclusion: 378; pairs_kept: 371; pairs_with_fewer_than_3_publishers: 0; rows_per_pair_median: 30"
+   "file": "runs/pulse/t158-claims/dev-g2-o+s.json",
+   "updated": "2026-11-21T03:14Z",
+   "summary": "name: g2-o+s; split: dev; sentences: 641; precision: 0.648; recall: 0.453"
   },
   {
-   "file": "runs/pulse/t221/t221_splithalf.json",
-   "updated": "2026-11-13T06:51Z",
-   "summary": "triples_after_filters: 132302; top: 100; shuffled_control_jaccard_mean: 0.0018110794448064555"
+   "file": "runs/pulse/t158-claims/causes-dev-grid-lg+o+s.json",
+   "updated": "2026-11-21T03:13Z",
+   "summary": "gold: 2548; spurious_predictions: 485"
   },
   {
-   "file": "runs/pulse/t220/t220_pmi.json",
-   "updated": "2026-11-13T06:50Z",
-   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+   "file": "runs/pulse/t158-claims/dev-grid-lg+o+s.json",
+   "updated": "2026-11-21T03:13Z",
+   "summary": "name: grid-lg+o+s; split: dev; sentences: 641; precision: 0.648; recall: 0.453"
   },
   {
-   "file": "runs/pulse/t219/t219_frames.json",
-   "updated": "2026-11-13T06:44Z",
-   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+   "file": "runs/pulse/t158-claims/dev-grid-lg+s.json",
+   "updated": "2026-11-21T03:13Z",
+   "summary": "name: grid-lg+s; split: dev; sentences: 641; precision: 0.6; recall: 0.363"
   },
   {
-   "file": "runs/pulse/t218/t218_filtered.json",
-   "updated": "2026-11-13T06:32Z",
-   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+   "file": "runs/pulse/t158-claims/dev-grid-lg+o.json",
+   "updated": "2026-11-21T03:13Z",
+   "summary": "name: grid-lg+o; split: dev; sentences: 641; precision: 0.63; recall: 0.43"
   },
   {
-   "file": "runs/pulse/t217/t217_reuse.json",
-   "updated": "2026-11-13T06:26Z",
-   "summary": "articles: 8000; tau: 0.85; min_events: 5; min_publishers: 3; text_seen: headline plus teaser"
+   "file": "runs/pulse/t158-claims/dev-grid-lg-only.json",
+   "updated": "2026-11-21T03:13Z",
+   "summary": "name: grid-lg-only; split: dev; sentences: 641; precision: 0.575; recall: 0.339"
   },
   {
-   "file": "runs/pulse/t216/t216_lanes.json",
-   "updated": "2026-11-13T06:20Z",
-   "summary": "pairs: 100; text_seen: headline plus teaser"
+   "file": "runs/pulse/t158-claims/test-v0.json",
+   "updated": "2026-11-21T03:12Z",
+   "summary": "name: v0; split: test; sentences: 634; precision: 0.171; recall: 0.113"
   },
   {
-   "file": "runs/pulse/t215/t215_router_tolerance_d.json",
-   "updated": "2026-11-13T05:53Z",
-   "summary": "stories: 880; band_median_points: 0.0217; ratio_d_max_baseline_setting: 1.501; seconds: 613"
+   "file": "runs/pulse/t158-claims/test-base.json",
+   "updated": "2026-11-21T03:12Z",
+   "summary": "name: base; split: test; sentences: 634; precision: 0.563; recall: 0.312"
   },
   {
-   "file": "runs/pulse/t215/f0020_reference.json",
-   "updated": "2026-11-13T05:40Z",
-   "summary": "source: data/step1/jointfine-d.json key '0.9|0.0; ratio_to_tolerance_d: 1.0003513565766504"
+   "file": "runs/pulse/t158-claims/dev-v0.json",
+   "updated": "2026-11-21T03:12Z",
+   "summary": "name: v0; split: dev; sentences: 641; precision: 0.18; recall: 0.128"
   }
  ],
  "selective_vs_human": {
@@ -1962,7 +1962,7 @@
       "s": "no",
       "t": "the outside set (CheckThat) measures fact vs opinion, not our four types; contract unconfirmed",
       "src": "field_table.json#story_type",
-      "ts": "2026-11-10T17:17Z",
+      "ts": "2026-11-20T03:04Z",
       "file": "field_table.json"
      },
      {
@@ -2001,9 +2001,9 @@
      }
     ],
     "changed": {
-     "ts": "2026-11-12T03:49Z",
-     "file": "label_store",
-     "col": 0
+     "ts": "2026-11-20T03:04Z",
+     "file": "field_table.json",
+     "col": 7
     }
    },
    {

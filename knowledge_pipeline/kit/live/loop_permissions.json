@@ -18,7 +18,7 @@
   "Deleting or overwriting data",
   "Git commit",
   "Starting or stopping services that are not ours",
-  "Training on or redistributing anchor data (MN-DS, MAVEN-FACT, CheckThat are scoring-only)"
+  "Training on or redistributing anchor data (MN-DS, MAVEN-FACT, CheckThat are scoring-only), EXCEPT the one MN-DS grant below; redistributing any anchor data still needs a yes"
  ],
  "card_rules": [
   "One change per card",
@@ -26,6 +26,38 @@
   "No human raters; truth comes from public datasets, and agreement between models is not accuracy",
   "A weak or null result is recorded as a miss and routed, not hidden"
  ],
- "keyword_flags": ["kaggle", "gpu", "5090", "cuda", "hosted", "anthropic", "openai", "git commit", "rm -rf", "maven", "mn-ds", "checkthat"],
- "sources": ["/workspace/CLAUDE.md", "memory: feedback_local_gpu_needs_permission, feedback_kaggle_first, feedback_one_hour_cap, feedback_no_hosted_in_tests, feedback_no_human_labels, feedback_services_md_no_new_pages", "knowledge_pipeline/playbook/15-bitmob-stack.md"]
+ "keyword_flags": [
+  "kaggle",
+  "gpu",
+  "5090",
+  "cuda",
+  "hosted",
+  "anthropic",
+  "openai",
+  "git commit",
+  "rm -rf",
+  "maven",
+  "mn-ds",
+  "checkthat"
+ ],
+ "sources": [
+  "/workspace/CLAUDE.md",
+  "memory: feedback_local_gpu_needs_permission, feedback_kaggle_first, feedback_one_hour_cap, feedback_no_hosted_in_tests, feedback_no_human_labels, feedback_services_md_no_new_pages",
+  "knowledge_pipeline/playbook/15-bitmob-stack.md"
+ ],
+ "owner_grants": [
+  {
+   "ledger": "L2751",
+   "date": "2026-11-20",
+   "grant": "MN-DS may be used for TRAINING a small re-ranker of the landing's candidates (topic_loop.py), for this re-ranker only. Conditions: publisher split made once (specs/topic_loop_split_v1.json) with a clean, deduplicated test part never trained on; adopt only if it beats the landing on the clean part beyond chance, does not hurt live checks, and improves at least one live check. Supersedes 'MN-DS scoring only' for this re-ranker only.",
+   "licence": "L2753: MN-DS labels CC BY 4.0 (Zenodo 7394851), attribution required; article-text terms not confirmed, check before any commercial release",
+   "not_covered": "any other model, student or head trained on MN-DS; redistribution"
+  },
+  {
+   "ledger": "L2752",
+   "date": "2026-11-20",
+   "grant": "Local RTX 5090 jobs of at most 1 hour; GPU services may be stopped when a job needs the GPU (say what was stopped); Kaggle CPU or GPU allowed. No unattended job over 1 hour, kill by verified PID."
+  }
+ ],
+ "keyword_flags_note": "'mn-ds' stays a flag; a topic_loop card must assert no test-clean id or publisher in training input (topic_loop.assert_no_leak) and name L2751 in its change line"
 }
