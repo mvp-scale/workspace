@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-11-22T01:04:20",
- "ledger_last": "L2972",
+ "generated_at": "2026-11-22T02:04:02",
+ "ledger_last": "L2975",
  "playbook": "knowledge_pipeline/playbook/00-knowledge-pipeline-v1.md",
  "live_trace": "knowledge_pipeline/projects/world-state/live_trace.py",
  "window": {
@@ -927,7 +927,7 @@
    },
    "runs_in": "slow",
    "quality": {
-    "score": "ECB+ test fixture F1 0.5133 (recomputed now: fact_join.py --eval ecbplus-join.json P 0.460 R 0.581 F1 0.5133 thr 0.53 (17.1 s))",
+    "score": "ECB+ test fixture F1 0.5133 (recomputed now: fact_join.py --eval ecbplus-join.json P 0.460 R 0.581 F1 0.5133 thr 0.53 (20.9 s))",
     "bar": "F1 >= 0.49 (check-knowledge K8)",
     "src": [
      "L2956",
@@ -1186,7 +1186,7 @@
    "PASS ledger: per-day shares are written and sum to 1 per (country, day) within 1e-4 (6-decimal rounding) 394 (day, country) cells, 23 days",
    "PASS ledger: the seed is marked PROVISIONAL and all rows say so seed 26 rows, ['draft v2 (guess)']"
   ],
-  "when": "2026-11-22T01:03:59",
+  "when": "2026-11-22T02:03:37",
   "cmd": "check-durable.py --no-g4"
  },
  "plan": {

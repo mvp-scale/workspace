@@ -265,6 +265,16 @@ class H(BaseHTTPRequestHandler):
             try: return self.send(200, raw().knowledge(src))
             except ValueError as e: return self.send(404, {"error": str(e)})
             except Exception as e: return self.send(500, {"error": repr(e)})
+        if p in ("/api/raw/concepts", "/api/raw/deep"):   # concept layer v0 (concepts_v0.py): ?src=area:<key>|window|trace:<dir> (+ &concept=<id> for deep); read only, no network
+            from urllib.parse import parse_qs; a = parse_qs(q); src = (a.get("src") or ["window"])[0]
+            if src.startswith("trace:") and not src_ok(src[6:]): return self.send(400, {"error": "trace path must be under /workspace or /tmp"})
+            try:
+                if p == "/api/raw/concepts": return self.send(200, raw().concepts(src))
+                cid = (a.get("concept") or [""])[0]
+                if not cid: return self.send(400, {"error": "concept=<id> is required"})
+                return self.send(200, raw().deep(src, cid))
+            except ValueError as e: return self.send(404, {"error": str(e)})
+            except Exception as e: return self.send(500, {"error": repr(e)})
         if p == "/api/raw/reset": return self.send(200, raw().reset())
         if p == "/api/raw/ticker": return self.send(200, raw().ticker())
         self.send(404, {"error": "not found"})

@@ -108,6 +108,28 @@ body[data-mode=status] .app{display:none}body:not([data-mode=status]) #status{di
 .kn .nx{margin-left:auto}
 .kn .bld{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:none;border:1px solid var(--border);border-radius:12px;padding:5px 12px;background:var(--surface)}.kn .bld .btn.on{background:var(--accent-soft);border-color:var(--accent)}.kn .bld input[type=range]{flex:1 1 180px;min-width:120px;accent-color:var(--accent)}.kn .bld .bk{font:12px var(--mono);color:var(--text-2);white-space:nowrap}.kn .bld .bk b{color:var(--text);font-size:15px}
 .kn .added{border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px}.kn .added h3{margin-bottom:2px}.kn .added .sec{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:6px 0 1px}.kn .added .ad{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:2px 0;border-bottom:1px solid var(--border)}.kn .added .ad .tx{flex:1;overflow-wrap:anywhere}.kn .added .x{font-size:11.5px;color:var(--text-2)}.kn .added .why1{font-size:11px;padding:0 8px}.kn .added .sumk{margin:3px 0}
+/* Knowledge views (owner goal 2026-11-22): Concepts | Build | Evidence; Concepts = card (L1), street map (L0), delta list, go deep (L2/L3) */
+.kn .vsw{display:flex;gap:6px;align-items:center;flex:none}.kn .vsw .btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--text);font-weight:600}.kn .vsw .vh{font:11px var(--mono);color:var(--mut);margin-left:6px}
+.kn[data-view=concepts] .ans,.kn[data-view=concepts] .ctr,.kn[data-view=concepts] .low{display:none}
+.kn[data-view=build] .ans,.kn[data-view=build] .ctr,.kn[data-view=build] .evp,.kn[data-view=build] .cv{display:none}.kn[data-view=build] .low{grid-template-columns:1fr}
+.kn[data-view=evidence] .rp,.kn[data-view=evidence] .cv,.kn[data-view=evidence] .bld{display:none}.kn[data-view=evidence] .low{grid-template-columns:1fr}
+.kn .cv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:10px;flex:1;min-height:0}.kn .cv .cl,.kn .cv .cr{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+.kn .cv .pn{border:1px solid var(--border);border-radius:12px;padding:8px 12px;background:var(--surface);overflow:auto;min-height:0}.kn .cv .pn h3{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:500;margin:0 0 6px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.kn .cv .cardp{flex:0 1 auto;max-height:58%}.kn .cv .deltap{flex:1 1 0}.kn .cv .mapp{flex:3 1 0;display:flex;flex-direction:column;overflow:hidden;padding:6px 10px;min-height:260px}.kn .cv .deepp{flex:2 1 0}
+.kn .cv .ch{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.kn .cv .ch b.nm{font-size:17px;letter-spacing:-.01em}.kn .cv .stb{font:11px var(--mono);border-radius:999px;padding:1px 9px;color:#fff;white-space:nowrap}
+.kn .cv .slot{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:12.5px;align-items:baseline}.kn .cv .slot>.sn{font:10.5px var(--mono);text-transform:uppercase;color:var(--mut);display:flex;gap:4px;align-items:baseline}
+.kn .cv .fm{font-size:9px;opacity:.55}.kn .cv .fm[data-fill=today]{color:var(--good)}.kn .cv .fm[data-fill=partly]{color:var(--warn)}.kn .cv .fm[data-fill=not]{color:var(--text-3)}
+.kn .cv .cbar{display:inline-block;width:90px;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;vertical-align:middle;margin:0 6px}.kn .cv .cbar i{display:block;height:100%;background:var(--accent)}
+.kn .cv .lk{cursor:pointer;color:var(--accent);background:none;border:0;padding:0;font:inherit;text-align:left}.kn .cv .lk:hover{text-decoration:underline}.kn .cv .dim{color:var(--mut)}.kn .cv .rl{font:10.5px var(--mono);color:var(--text-2);margin:0 4px}
+.kn .cv .dl{display:grid;grid-template-columns:78px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px solid var(--border);font-size:12.5px}.kn .cv .vd{font:10px var(--mono);text-transform:uppercase;border-radius:4px;padding:0 5px;border:1px solid var(--border-strong);text-align:center;white-space:nowrap}
+.kn .cv .vd[data-verdict=conflict]{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}.kn .cv .vd[data-verdict=update]{background:var(--warn-soft);border-color:var(--warn)}.kn .cv .vd[data-verdict=new-link]{background:var(--accent-soft);border-color:var(--accent)}.kn .cv .vd[data-verdict=new-concept]{background:var(--good-soft);border-color:var(--good)}
+.kn .cv .dl .tx{overflow-wrap:anywhere;min-width:0}.kn .cv .dl .tx small{display:block;color:var(--mut);font-size:11px}.kn .cv .dl .acts{display:flex;gap:4px}.kn .cv .btn.sm{padding:0 7px;font-size:11px}
+.kn .cv .knownc{font:11.5px var(--mono);color:var(--mut);padding:4px 0}.kn .cv .mk{display:flex;gap:8px;align-items:center;font:11px var(--mono);color:var(--text-2);flex-wrap:wrap}.kn .cv .mk input{flex:1 1 100px;min-width:80px;accent-color:var(--accent)}
+.kn .cv svg.map{flex:1;min-height:0;width:100%;display:block}.kn .cv .scent{font:11.5px var(--mono);color:var(--text-2);min-height:32px;max-height:32px;overflow:hidden;border-top:1px solid var(--border);padding-top:3px}.kn .cv .mleg{font:10.5px var(--mono);color:var(--mut);display:flex;gap:10px;flex-wrap:wrap}.kn .cv .mleg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px}
+.kn .cv svg.map text{font:10px var(--mono);fill:var(--text);paint-order:stroke;stroke:var(--surface);stroke-width:3px;pointer-events:none}.kn .cv svg.map .nd{cursor:pointer}.kn .cv svg.map .lkh{stroke:transparent;stroke-width:12;fill:none;cursor:help}
+.kn .cv .prog{height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;margin:6px 0}.kn .cv .prog i{display:block;height:100%;width:35%;background:var(--accent);animation:cvp 1.1s ease-in-out infinite alternate}@keyframes cvp{from{margin-left:0}to{margin-left:65%}}
+.kn .cv .dsec{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:7px 0 2px}.kn .cv .dr{font-size:12.5px;padding:2px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.kn .cv .dr em{font:10.5px var(--mono);font-style:normal;color:var(--mut);margin-right:6px}
+.kn .cv .oq[data-status=answered]{border-left:3px solid var(--good);padding-left:6px}.kn .cv .oq[data-status=unknown]{border-left:3px solid var(--warn);padding-left:6px}.kn .cv .why1{margin:6px 0}
 </style></head><body><div class="app">
 <div class="col"><div class="brand"><span>Knowledge pipeline</span><span id="mode_a"></span></div><ol class="steps" id="steps"></ol>
 <div class="ctl"><div id="msg"></div><div class="small"><div class="tabs sw" id="srcsw" aria-label="article source"></div></div><div class="small"><span class="k">staged area</span><div class="tabs sw" id="areasw" aria-label="staged interest area"></div></div><div class="small"><div id="srcinfo" style="font:11px var(--mono);flex:1;min-width:0"></div><select id="w" aria-label="window" style="width:64px;flex:none"><option value="24h">24h</option><option value="any">any</option></select></div><button class="prime pulse" id="b_next">Read first article</button><div class="row2"><button class="btn" id="b_play">Play</button><button class="btn" id="b_story">random story</button><button class="btn" id="b_reset">reset</button></div></div></div>
@@ -191,7 +213,7 @@ const INIT=(async()=>{try{AREAS=await api("/sim-api/raw/areas")}catch(e){AREAS=[
 function drawSrc(){const sw=$("srcsw");if(!sw)return;sw.replaceChildren();[["window","Pipeline window","what the last chain window wrote: live trace, slow clock, consolidated"],["queue","Live queue","random articles from the news queue, read now"]].forEach(([k,n,t])=>{const b=el("button",{class:SRC===k?"on":"",title:t,"data-src":k},n);if(k==="window"&&!WINF){b.disabled=true;b.title="no pipeline window with traced articles yet"}b.onclick=()=>setSrc(k);sw.append(b)});
   const as=$("areasw");if(as){as.replaceChildren();for(const a of AREAS){const k="area:"+a.key,b=el("button",{class:SRC===k?"on":"",title:(a.label||"")+" · "+a.articles+" articles · "+a.publishers+" publishers"+(a.built?"":" · built on first use, about a minute"),"data-src":k,"data-area":a.key},a.short);b.onclick=()=>setSrc(k);as.append(b)}if(!AREAS.length)as.append(el("span",{class:"k"},"none staged"))}
   const W=curW(),i=$("srcinfo");if(i)i.textContent=W?(W.name+" · "+W.traced+" traced · slow "+W.slow_lines+(W.slow_partial?" (partial)":"")+" · consolidated "+(W.consolidated?"yes":"no")):(SRC==="queue"?"live queue":(isArea(SRC)?"staged area "+areaName(SRC)+": not built":"no window"));$("w").disabled=SRC!=="queue"}
-async function setSrc(k){if(k===SRC||BUSY)return;play(false);BUSY=true;$("b_next").disabled=true;try{await api("/sim-api/raw/reset")}catch(e){}SRC=k;WINA=null;fresh();ING=new Set();A=null;STEP=0;QUEUE=[];KN=null;$("det").classList.remove("open");$("msg").textContent="";drawSrc();drawSteps();render();
+async function setSrc(k){if(k===SRC||BUSY)return;play(false);BUSY=true;$("b_next").disabled=true;try{await api("/sim-api/raw/reset")}catch(e){}SRC=k;WINA=null;fresh();ING=new Set();A=null;STEP=0;QUEUE=[];KN=null;BK=null;BKFROM=null;BKCUR=undefined;CC=null;CFOC=null;CDEEP={};CDF=null;CDO={};CMARK=null;$("det").classList.remove("open");$("msg").textContent="";drawSrc();drawSteps();render();
   if(isArea(k)){$("msg").textContent="building "+areaName(k)+": slow clock and consolidation on its saved articles (first time only, about a minute)";try{const d=await api("/sim-api/raw/window?src="+encodeURIComponent(k));WINA=d&&d.exists?d:null;$("msg").textContent=WINA?"":((d&&d.why)||"staged area not available")}catch(e){WINA=null;$("msg").textContent=e.message}}
   BUSY=false;$("b_next").disabled=false;drawSrc();drawSteps();render()}
 async function fetchBatch(story){await INIT;const aid=AID&&!story?AID:null;AID=null;const q="/sim-api/raw/sample?n="+(story?10:1)+"&window="+$("w").value+"&pick="+(story?"story":"articles")+(aid?"&id="+encodeURIComponent(aid):"");
@@ -207,7 +229,7 @@ function goto(n){STEP=n;drawSteps();if(n===4)ingest(A);render()}
 function play(on){if(PLAY){clearInterval(PLAY);PLAY=null}$("b_play").classList.toggle("on",!!on);$("b_play").textContent=on?"Pause":"Play";if(!on)return;
   PLAY=setInterval(async()=>{if(BUSY)return;if(!A||STEP>=NSTEP){if(!(await loadArticle(false))){play(false);return}goto(1)}else goto(STEP+1)},3000)}
 $("b_next").onclick=()=>next(false);$("b_play").onclick=()=>play(!PLAY);$("b_story").onclick=()=>next(true);
-$("b_reset").onclick=async()=>{play(false);try{await api("/sim-api/raw/reset")}catch(e){}fresh();ING=new Set();A=null;STEP=0;QUEUE=[];KN=null;$("det").classList.remove("open");drawSteps();render()};
+$("b_reset").onclick=async()=>{play(false);try{await api("/sim-api/raw/reset")}catch(e){}fresh();ING=new Set();A=null;STEP=0;QUEUE=[];KN=null;BK=null;BKFROM=null;BKCUR=undefined;CC=null;CFOC=null;CDEEP={};CDF=null;CDO={};CMARK=null;$("det").classList.remove("open");drawSteps();render()};
 /* header */
 const srcLabel=()=>A?(A.window?(isArea(SRC)?"staged area "+areaName(SRC):"window "+A.window.name)+" · "+A.window.traced+" traced":"live queue"):(curW()?(isArea(SRC)?"staged area "+areaName(SRC):"window "+curW().name)+" · "+curW().traced+" traced":"");
 function head(title,sub){const h=$("sh");h.replaceChildren(el("h1",{},title),el("span",{class:"sub","data-srclabel":"1"},[sub,srcLabel()].filter(Boolean).join(" · ")));if(A)h.append(el("span",{class:"meta"},(A.publisher||"")+" | "+(A.published||"")+" | "+(A.title||"")))}
@@ -535,6 +557,122 @@ function sK(st){
   if(SRC==="queue"){st.append(emptyKn("No consolidated window for the live queue","Knowledge is built by slow_consolidate over a finished window of articles. Choose “Pipeline window” or a staged area on the left."));return}
   const box=el("div",{class:"kn",id:"kn","data-knowledge":"loading"},el("div",{class:"l na"},"loading knowledge…"));st.append(box);
   knFeed().then(d=>{if(box.isConnected)box.replaceWith(drawKn(d))}).catch(e=>{if(box.isConnected)box.replaceWith(emptyKn("Knowledge feed failed",e.message))})}
+/* Concepts view (owner goal 2026-11-22): knowledge = concepts + typed links. Card (L1), street map (L0), delta list since the mark, go deep (L2/L3). Data: /sim-api/raw/concepts and /sim-api/raw/deep (built by the server from knowledge.json, CPU only). Built with el()/textContent only. */
+let KVIEW="concepts",CC=null,CFOC=null,CMARK=null,CDEEP={},CDF=null,CDO={},CCTX={asOf:null,kk:0,NG:0,G:[]};
+const CSTATE={gap:"--text-3",emerging:"--s4",active:"--accent",settled:"--good",contested:"--bad"},CSN=["gap","emerging","active","settled","contested"];
+const CREL={causes:"causes",affects_resource:"affects resource",opposes:"opposes",precedes:"precedes",is_a:"is a",part_of:"part of"},CDIRECTED=new Set(["causes","affects_resource","precedes","is_a","part_of"]);
+const relTx=r=>CREL[r]||String(r||"related to").replace(/[_-]/g," ");
+const depthOf=x=>{const m=String(x==null?0:x).match(/\d/);return m?Math.min(3,+m[0]):0};
+const fillOf=v=>{const s=String(v==null?"":v).toLowerCase();if(v===true||/today|full|yes|filled|^ok|^done/.test(s))return"today";if(/part/.test(s))return"partly";return"not"};
+const FILLTX={today:"filled today",partly:"partly filled",not:"can't yet"},FILLMK={today:"●",partly:"◐",not:"○"};
+const dirOf=d=>{const s=String((d&&typeof d==="object")?(d.sign||d.dir||d.direction):d||"").toLowerCase();return/up|rise|grow|increas/.test(s)?"up":/down|fall|declin|decreas/.test(s)?"down":/flat|stable|steady/.test(s)?"flat":"unknown"};
+const DARR={up:"↑",down:"↓",flat:"→",unknown:"?"},DTX={up:"going up",down:"going down",flat:"flat",unknown:"direction not known yet"};
+const pct=x=>x==null||isNaN(+x)?"–":Math.round(100*Math.max(0,Math.min(1,+x)))+"%";
+const vNorm=v=>String(v||"").toLowerCase().replace(/[_ ]+/g,"-"),VRANK={conflict:0,update:1,"new-link":2,"new-concept":3};
+const cNone=(h,t)=>el("div",{class:"empty","data-concepts":"none"},el("b",{},h),t);
+async function cFeed(){if(CC&&CC.src===SRC&&Date.now()-CC.t<15000)return CC.d;let d;try{d=await api("/sim-api/raw/concepts?src="+encodeURIComponent(SRC))}catch(e){d={exists:false,why:"The concepts feed is not available yet ("+e.message+")."}}CC={src:SRC,d,t:Date.now()};return d}
+function cInit(box,G,kk,NG,asOf,final){CCTX={asOf,kk,NG,G,final};box.append(el("div",{class:"l na","data-concepts":"loading"},"loading concepts…"));
+  cFeed().then(d=>{if(box.isConnected)cDraw(box,d)}).catch(e=>{if(box.isConnected)box.replaceChildren(cNone("Concepts feed failed",e.message))})}
+function cRedraw(){const b=document.getElementById("kn_concepts");if(b&&CC&&CC.d)cDraw(b,CC.d)}
+function cFocus(id){CFOC=id;cRedraw()}
+async function cDeep(id){if(CDEEP[id]&&(CDEEP[id].loading||CDEEP[id].d)){CDF=id;CFOC=id;cRedraw();return}
+  CDEEP[id]={loading:true,t0:Date.now()};CDF=id;CFOC=id;cRedraw();
+  try{const d=await api("/sim-api/raw/deep?src="+encodeURIComponent(SRC)+"&concept="+encodeURIComponent(id));CDEEP[id]={d};if(d&&d.depth!=null)CDO[id]=depthOf(d.depth)}catch(e){CDEEP[id]={err:e.message}}
+  cRedraw()}
+function cDraw(box,D){
+  box.replaceChildren();
+  if(!D||!D.exists){box.setAttribute("data-concepts","none");box.append(cNone("No concepts for this source",(D&&D.why)||"The concepts feed returned nothing for this source."));return}
+  box.setAttribute("data-concepts","ready");
+  const{asOf,kk,NG,G,final}=CCTX,all=D.concepts||[],vis=all.filter(c=>final||c.first_seq==null||c.first_seq<=asOf);
+  const CM={};vis.forEach(c=>CM[c.id]=c);const links=(D.links||[]).filter(l=>CM[l.a]&&CM[l.b]);
+  const nmOf=id=>(CM[id]&&CM[id].label)||(all.find(c=>c.id===id)||{}).label||String(id);
+  if(!CM[CFOC]){const f=D.focus&&CM[D.focus]?D.focus:(vis.slice().sort((a,b)=>(b.facts||0)-(a.facts||0))[0]||{}).id;CFOC=f==null?null:f}
+  box.dataset.focus=CFOC==null?"":CFOC;
+  if(!vis.length){box.append(cNone("No concepts yet at this article","Move the build slider forward: concepts appear as the articles that first mention them are read."));return}
+  const F=CM[CFOC],dep=c=>Math.max(depthOf(c.depth),CDO[c.id]||0);
+  const cl=el("div",{class:"cl"}),cr=el("div",{class:"cr"});box.append(cl,cr);
+  /* L1 card */
+  const cd=el("div",{class:"pn cardp","data-card":F.id,"data-depth":String(dep(F))});
+  const stc=CSTATE[F.state]?css(CSTATE[F.state]):css("--text-3");
+  cd.append(el("h3",{},"Concept card · zoom level L1 of L3"),el("div",{class:"ch"},el("b",{class:"nm","data-card-name":"1"},F.label||F.id),tg(F.kind||"concept"),el("span",{class:"stb","data-state":F.state||"",style:"background:"+stc},F.state||"state not known"),el("span",{class:"dim",title:"how far we have read into this concept"},"depth L"+dep(F))));
+  const DD=CDEEP[F.id],DX=(DD&&DD.d)||null,SF=(DX&&(DX.slot_fill_after||(typeof DX.card_fill_after==="object"?DX.card_fill_after:null)))||F.slot_fill||{},C0=F.card||{},mk=s=>{const f=fillOf(SF[s]);return el("span",{class:"fm","data-fill":f,"data-slot-fill":s,title:s.replace(/_/g," ")+": "+FILLTX[f]},FILLMK[f])};
+  const slot=(s,name,...kids)=>el("div",{class:"slot","data-slot":s},el("div",{class:"sn"},name,mk(s)),el("div",{},...kids));
+  const wi=C0.what_it_is||(DX&&DX.what_it_is_after)||null;cd.append(slot("what_it_is","what it is",wi&&wi.text?el("span",{},wi.text,el("span",{class:"dim"},wi.src?"  (source: "+wi.src+")":"")):el("span",{class:"dim"},"not known yet")));
+  const dr=dirOf(F.direction);cd.append(slot("direction","direction",el("b",{"data-dir":dr},DARR[dr]+" "),DTX[dr],el("span",{class:"cbar",title:"certainty "+pct(F.certainty)+" (from independent owners, time and contradictions)"},el("i",{style:"width:"+pct(F.certainty)})),pct(F.certainty)+" sure",el("span",{class:"dim"}," · "+(F.owners==null?"?":F.owners)+" owner"+(F.owners===1?"":"s")+" · "+(F.facts==null?"?":F.facts)+" fact"+(F.facts===1?"":"s"))));
+  const lk=(id,t)=>CM[id]?(()=>{const b=el("button",{class:"lk",type:"button",title:"make this the focus"},t||nmOf(id));b.onclick=()=>cFocus(id);return b})():el("span",{},t||nmOf(id));
+  const dv=C0.drivers||[];cd.append(slot("drivers","drivers",...(dv.length?dv.slice(0,5).flatMap(x=>[lk(x.concept),el("span",{class:"rl"},relTx(x.rel)+" · "+pct(x.certainty)),el("br")]):[el("span",{class:"dim"},"none known yet")])));
+  const rs=C0.resources||[];cd.append(slot("resources","resources",...(rs.length?rs.slice(0,6).map(x=>el("span",{class:"pubn","data-resource":x.resource,style:"margin-right:6px",title:"resource "+x.resource+" is "+(dirOf(x.direction)==="unknown"?"affected, direction not known":DTX[dirOf(x.direction)])},String(x.resource).replace(/^resource:/,"").replace(/_/g," ")+" "+DARR[dirOf(x.direction)])):[el("span",{class:"dim"},"none known yet")])));
+  const rl=C0.related||[];cd.append(slot("related","related",...(rl.length?rl.slice(0,6).flatMap(x=>[lk(x.concept),el("span",{class:"rl"},relTx(x.rel)+(x.n>1?" ×"+x.n:"")),el("span",{})]):[el("span",{class:"dim"},"none known yet")])));
+  if((C0.gaps||[]).length)cd.append(el("div",{class:"dim",style:"font-size:11.5px;margin-top:4px","data-gaps":"1"},"gaps: "+C0.gaps.map(g=>knShort(g,70)).join(" · ")));
+  const gb=el("button",{class:"btn why1",type:"button",id:"cv_deep","data-deep":F.id,title:"read every fact about this concept: subconcepts, timeline, competing accounts, open questions"},"Go deep ↓");gb.onclick=()=>cDeep(F.id);cd.append(gb);
+  cl.append(cd);
+  /* delta list */
+  const lo=CMARK!=null?CMARK:Math.floor(kk/2),loSeq=NG&&lo>=1?G[Math.min(lo,NG)-1].seq:-1,hiSeq=NG?asOf:Infinity;
+  const tri=(D.triage||[]).filter(t=>t.seq>loSeq&&t.seq<=hiSeq),known=tri.filter(t=>vNorm(t.verdict)==="known").length,items=tri.filter(t=>VRANK[vNorm(t.verdict)]!=null).sort((a,b)=>(VRANK[vNorm(a.verdict)]-VRANK[vNorm(b.verdict)])||(b.seq-a.seq));
+  const dp=el("div",{class:"pn deltap","data-delta":String(items.length),"data-delta-known":String(known)});
+  const mkr=el("div",{class:"mk"},"since article ");
+  if(NG>1){const sl=el("input",{type:"range",id:"cv_mark",min:"0",max:String(Math.max(0,kk-1)),value:String(Math.min(lo,Math.max(0,kk-1))),title:"the mark: what you last looked at"}),lb=el("b",{},String(Math.min(lo,Math.max(0,kk-1))));sl.oninput=()=>{lb.textContent=sl.value};sl.onchange=()=>{CMARK=+sl.value;cRedraw()};mkr.append(sl,lb,el("span",{}," up to "+kk))}
+  else mkr.append(el("b",{},"the start"));
+  dp.append(el("h3",{},"Since your last look"),mkr);
+  dp.append(el("div",{class:"knownc","data-known":String(known)},known.toLocaleString("en-US")+" known, hidden (nothing new)"));
+  for(const t of items.slice(0,40)){const v=vNorm(t.verdict),open=CM[t.concept];
+    const ob=el("button",{class:"btn sm",type:"button",title:"open this concept"},"open");ob.onclick=()=>{if(open)cFocus(t.concept)};if(!open)ob.disabled=true;
+    const gd=el("button",{class:"btn sm",type:"button","data-deep-line":String(t.concept),title:"read everything about this concept"},"go deep");gd.onclick=()=>{if(open)cDeep(t.concept)};if(!open)gd.disabled=true;
+    dp.append(el("div",{class:"dl","data-verdict-line":v},el("span",{class:"vd","data-verdict":v},v.replace("-"," ")),el("span",{class:"tx"},el("b",{},nmOf(t.concept)),"  "+(t.detail||""),el("small",{},"article "+t.seq+" · "+(t.title||""))),el("span",{class:"acts"},ob,gd)))}
+  if(items.length>40)dp.append(el("div",{class:"dim",style:"font-size:11.5px"},"+"+(items.length-40)+" more, lower in rank"));
+  if(!items.length)dp.append(el("div",{class:"l na"},"nothing changed since the mark: every article in this range only repeated what is known"));
+  cl.append(dp);
+  /* L0 street map */
+  const mp=el("div",{class:"pn mapp"});cr.append(mp);
+  /* go deep (L2/L3) */
+  const dd0=CDEEP[F.id];
+  if(CDF===F.id&&dd0){const dpn=el("div",{class:"pn deepp","data-deep-panel":F.id,"data-deep-state":dd0.loading?"loading":(dd0.err?"error":"ready")});cr.append(dpn);
+    if(dd0.loading){dpn.append(el("h3",{},"Going deep · "+(F.label||F.id)),el("div",{class:"prog"},el("i",{})),el("div",{class:"l na"},"reading every fact, account and date about this concept… (this runs on the CPU)"))}
+    else if(dd0.err)dpn.append(el("h3",{},"Go deep failed"),el("div",{class:"l na"},dd0.err));
+    else{const x=dd0.d||{},sec=(t,n,rows,na)=>{dpn.append(el("div",{class:"dsec"},t+" ("+n+")"));if(!n)dpn.append(el("div",{class:"l na"},na));else rows()};
+      dpn.append(el("h3",{},"Deep read · levels L2 and L3 · "+(F.label||F.id),el("span",{class:"dim"},"depth now L"+depthOf(x.depth)+(x.ms!=null?" · "+Math.round(x.ms)+" ms":""))));
+      const sb=x.subconcepts||[],tl=x.timeline||[],ac=x.accounts||[],oq=x.open_questions||[],hs=x.history||[];
+      sec("Subconcepts",sb.length,()=>dpn.append(el("div",{"data-deep-sub":"1"},...sb.slice(0,14).map(s=>el("span",{class:"pubn",style:"margin:0 6px 4px 0;display:inline-block",title:relTx(s.rel)},knShort(s.label||s.id,30)+" · "+(s.facts||0))))),"none found");
+      sec("Timeline",tl.length,()=>{tl.slice(0,8).forEach(t=>dpn.append(el("div",{class:"dr","data-deep-tl":"1"},el("em",{},(t.day||"")+" · art "+t.seq+((t.pubs||[]).length?" · "+t.pubs.join(", "):"")),knShort(t.text,220))));if(tl.length>8)dpn.append(el("div",{class:"dim",style:"font-size:11.5px"},"+"+(tl.length-8)+" more dated facts"))},"no dated facts");
+      sec("Competing accounts",ac.length,()=>ac.slice(0,8).forEach(a=>dpn.append(el("div",{class:"dr","data-deep-acc":"1"},el("em",{},(a.stance||"account")+" · "+((a.pubs||[]).length||a.pubs||0)+" pub"),a.claim||""))),"no competing accounts: one account only");
+      sec("Open questions",oq.length,()=>oq.slice(0,8).forEach(q=>{const st=String(q.status||"unknown").toLowerCase();dpn.append(el("div",{class:"dr oq","data-status":st==="answered"?"answered":"unknown","data-deep-q":"1"},el("em",{},st==="answered"?"answered":"still unknown"),q.q||"",q.answer?el("div",{class:"dim"},"→ "+q.answer):null))}),"none");
+      sec("History",hs.length,()=>hs.slice(0,8).forEach(h=>dpn.append(el("div",{class:"dr","data-deep-hist":"1"},el("em",{},h.window||""),h.text||""))),"no earlier windows");
+      const num_=v=>typeof v==="number",b4=x.slot_fill_before||(num_(x.card_fill_before)?{}:x.card_fill_before)||{},af=x.slot_fill_after||(num_(x.card_fill_after)?{}:x.card_fill_after)||{},ks=[...new Set([...Object.keys(b4),...Object.keys(af)])];
+      dpn.append(el("div",{class:"dsec"},"Card fill, before → after"+(num_(x.card_fill_before)&&num_(x.card_fill_after)?" ("+pct(x.card_fill_before)+" → "+pct(x.card_fill_after)+")":"")));
+      dpn.append(el("div",{class:"dr","data-deep-fill":"1"},...ks.map(k=>el("span",{style:"margin-right:12px;white-space:nowrap"},k.replace(/_/g," ")+" ",FILLMK[fillOf(b4[k])]+" → "+FILLMK[fillOf(af[k])]))))}}
+  const nbr=new Set();links.forEach(l=>{if(l.a===F.id)nbr.add(l.b);if(l.b===F.id)nbr.add(l.a)});
+  const CAP=40,rest=vis.filter(c=>c.id!==F.id&&!nbr.has(c.id)).sort((a,b)=>(b.facts||0)-(a.facts||0)),n1=vis.filter(c=>nbr.has(c.id)).sort((a,b)=>(b.facts||0)-(a.facts||0));
+  const shown=[F,...n1,...rest].slice(0,CAP),SH=new Set(shown.map(c=>c.id)),ring1=shown.filter(c=>nbr.has(c.id)).slice(0,14),R1=new Set(ring1.map(c=>c.id)),ring2=shown.filter(c=>c.id!==F.id&&!R1.has(c.id));
+  mp.append(el("h3",{},"Street map · zoom level L0",el("span",{class:"dim","data-map-count":String(shown.length)},shown.length+" concept"+(shown.length===1?"":"s")+(vis.length>shown.length?" of "+vis.length:"")+" · "+links.length+" link"+(links.length===1?"":"s")+(vis.length<all.length?" (the rest appear as you build)":""))));
+  const svg=sv("svg",{class:"map",preserveAspectRatio:"xMidYMid meet","data-nodes":String(shown.length),"data-links":"0"});mp.append(svg);
+  const bb=svg.getBoundingClientRect(),W=Math.max(300,Math.round(bb.width||640)),H=Math.max(180,Math.round(bb.height||400)),cx=W/2,cy=H/2,P={};P[F.id]=[cx,cy];svg.setAttribute("viewBox","0 0 "+W+" "+H);
+  const put=(L,rx,ry,off)=>L.forEach((c,i)=>{const a=-Math.PI/2+off+2*Math.PI*i/Math.max(1,L.length);P[c.id]=[cx+rx*Math.cos(a),cy+ry*Math.sin(a)]});
+  const r1=ring2.length?14:20;put(ring1.slice(0,r1),W*(ring2.length?.25:.38),H*(ring2.length?.23:.34),0);if(ring1.length>r1)put(ring1.slice(r1),W*(ring2.length?.32:.43),H*(ring2.length?.30:.4),.3);
+  put(ring2,W*.43,H*.39,Math.PI/Math.max(4,ring2.length));
+  const df=sv("defs");df.append(sv("marker",{id:"cvar",viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"6",markerHeight:"6",orient:"auto"}));df.firstChild.append(sv("path",{d:"M0 0L10 5L0 10z",style:"fill:var(--text-2)"}));svg.append(df);
+  const rad=c=>Math.max(6,Math.min(22,5+3*Math.sqrt(c.facts||0)));
+  const scent=el("div",{class:"scent","data-scent":"1"},"hover a link to see why it connects; click a concept to make it the focus");const hint=scent.textContent;
+  let nl=0;
+  for(const l of links){if(!SH.has(l.a)||!SH.has(l.b))continue;nl++;
+    const[x1,y1]=P[l.a],[x2,y2]=P[l.b],dx=x2-x1,dy=y2-y1,dl=Math.hypot(dx,dy)||1,CA=CM[l.a],CB=CM[l.b],r2=rad(CB)+3,ex=x2-dx/dl*r2,ey=y2-dy/dl*r2,touch=l.a===F.id||l.b===F.id,opp=l.rel==="opposes",why="“"+nmOf(l.a)+"” "+relTx(l.rel)+(opp?" ":" → ")+"“"+nmOf(l.b)+"”"+" · certainty "+pct(l.certainty)+" · "+(l.owners==null?"?":l.owners)+" owner"+(l.owners===1?"":"s")+((l.edge_ids||[]).length?" · "+l.edge_ids.length+" source edge"+(l.edge_ids.length===1?"":"s"):"");
+    const g=sv("g",{class:"lnk","data-rel":l.rel,"data-a":l.a,"data-b":l.b,"data-why":why});
+    const ln=sv("line",{x1,y1,x2:ex,y2:ey,style:"stroke:"+(opp?"var(--bad)":"var(--text-3)")+";stroke-width:"+(0.8+2.2*(+l.certainty||0)).toFixed(1)+";opacity:"+(touch?.95:.2)+(opp?";stroke-dasharray:5 3":""),"marker-end":CDIRECTED.has(l.rel)?"url(#cvar)":""});
+    const hv=sv("line",{class:"lkh",x1,y1,x2,y2});g.append(ln,hv);
+    if(touch&&l.rel!=="related"){const t=sv("text",{x:(x1+x2)/2,y:(y1+y2)/2-3,"text-anchor":"middle",style:"font-size:9px;fill:var(--text-2)"});t.textContent=relTx(l.rel);g.append(t)}
+    g.onmouseenter=()=>{scent.textContent=why;ln.style.strokeWidth=(3.5)+"px"};g.onmouseleave=()=>{scent.textContent=hint;ln.style.strokeWidth=(0.8+2.2*(+l.certainty||0)).toFixed(1)+"px"};
+    svg.append(g)}
+  svg.setAttribute("data-links",String(nl));
+  const lblSet=new Set([F.id,...ring1.map(c=>c.id),...ring2.slice(0,shown.length>30?8:99).map(c=>c.id)]);
+  for(const c of shown){const[x,y]=P[c.id],r=rad(c),dd=dep(c),isF=c.id===F.id,col=CSTATE[c.state]?css(CSTATE[c.state]):css("--text-3");
+    const g=sv("g",{class:"nd"+(isF?" focus":""),"data-node":c.id,"data-depth":String(dd),"data-state":c.state||""});
+    const tt=sv("title");tt.textContent=(c.label||c.id)+" · "+(c.state||"?")+" · "+(c.facts||0)+" facts · depth L"+dd+" · click to focus";g.append(tt);
+    if(isF)g.append(sv("circle",{cx:x,cy:y,r:r+5+3*dd,style:"fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.5"}));
+    g.append(sv("circle",{cx:x,cy:y,r,style:"fill:"+col+";fill-opacity:.85;stroke:var(--surface);stroke-width:1.5"}));
+    for(let k=1;k<=dd;k++)g.append(sv("circle",{class:"dring",cx:x,cy:y,r:r+2+3*k-3,style:"fill:none;stroke:"+col+";stroke-width:1.3;opacity:"+(.9-.18*k)}));
+    if(lblSet.has(c.id)){const t=sv("text",{x,y:y+r+3+3*dd+9,"text-anchor":"middle",style:isF?"font-weight:700;font-size:11px":""});t.textContent=knShort(c.label||c.id,isF?26:17);g.append(t)}
+    g.onclick=()=>cFocus(c.id);svg.append(g)}
+  mp.append(scent,el("div",{class:"mleg"},el("span",{},"size = facts"),...CSN.map(s=>el("span",{},el("i",{style:"background:"+css(CSTATE[s])}),s)),el("span",{},"rings = depth L0 to L3 (more rings, read deeper)")));
+}
 function drawKn(d){
   if(!d.exists)return emptyKn("No knowledge.json for this window",d.why||"");
   const K=d.knowledge||{},AR=d.articles||{},E=K.edges||{},C=K.counters||{},cur=(A&&A.window&&A.window.seq!=null)?A.window.seq:null;
@@ -561,6 +699,9 @@ function drawKn(d){
   if(SRC!=="queue"){const nb=el("button",{class:"btn nx",id:"kn_next",title:"read the next article of this window and stay on Knowledge so the counters grow"},"Next article, stay here →");nb.onclick=async()=>{if(BUSY)return;if(!(await loadArticle(false)))return;goto(KSTEP)};hd.append(nb)}
   root.append(hd);
   if(NG)root.append(bkBar(d,kk,NG));
+  root.setAttribute("data-view",KVIEW);
+  {const sw=el("div",{class:"vsw","data-view-switch":"1"});for(const[k,n,t]of[["concepts","Concepts","what we know as concepts and the links between them"],["build","Build","watch the knowledge being built, article by article"],["evidence","Evidence","the counters and their source sentences"]]){const b=el("button",{class:"btn"+(KVIEW===k?" on":""),type:"button","data-view-btn":k,title:t},n);b.onclick=()=>{KVIEW=k;root.replaceWith(drawKn(d))};sw.append(b)}
+    root.append(sw);const cv=el("div",{class:"cv",id:"kn_concepts","data-concepts":"loading"});root.append(cv);if(KVIEW==="concepts")cInit(cv,G,kk,NG,asOf,final)}
   /* answer card */
   const ans=K.answer||{},sts=(ans.statements||[]).filter(x=>BK==null||(x.refs||[]).some(r=>upto(r).length)),q=String(ans.question||"").replace(/^auto:\s*/,"");
   const ac=el("div",{class:"ans","data-block":"answer"},el("h3",{},ans.question?"What we know about "+q:"No answer for this window ",tg(ans.auto?"auto question, PROVISIONAL":"PROVISIONAL")));

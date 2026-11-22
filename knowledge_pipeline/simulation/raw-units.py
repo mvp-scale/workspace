@@ -305,6 +305,17 @@ def knowledge(src="window"):
         why = "this window has no slow_consolidate/knowledge.json" + ("" if os.path.exists(os.path.join(td, "slow_consolidate")) else " (the window was not consolidated)") + ": it was consolidated before the knowledge schema, or slow_consolidate.py has not written it yet. A staged area builds it on first request."
         return {"exists": False, "why": why, "source": w["info"], "articles": arts}
     return {"exists": True, "knowledge": k, "articles": arts, "source": w["info"], "area": _area_meta(w["info"].get("area")) if w["info"].get("area") else None}
+def concepts(src="window"):
+    """concept layer v0 (PROVISIONAL, projects/world-state/concepts_v0.py): concept cards, typed links and a per-article triage built from the window's knowledge.json + consolidated.json + g4 store. Read only; no network. {exists: False, why} when the window has no knowledge feed."""
+    import concepts_v0 as CV
+    wd, td = resolve_window(src); w = _load_window(wd, td); r = CV.build(td, w["info"].get("area") or w["info"].get("name"))
+    if r.get("exists"): r["source"] = w["info"]
+    return r
+def deep(src, concept):
+    """the time-boxed deep pass of one concept (zoom L2/L3): subconcepts, timeline, competing accounts, history before the window, open questions; own data and local caches only, cached per (window, concept), 120 s box"""
+    import concepts_v0 as CV
+    wd, td = resolve_window(src); w = _load_window(wd, td)
+    return CV.deep(td, w["info"].get("area") or w["info"].get("name"), concept)
 def reset_trace():
     """a reset starts every loaded window over: cursor to the first article, a fresh graph (the window files are not touched)"""
     with WIN_LOCK:
