@@ -420,6 +420,9 @@ def align(rec, G, ch, contradictions=True):
     # place-lookup identity for GPE/NORP names (country names, aliases, demonyms)
     if not hasattr(pk, "_lk"): pk.lookup_places("", ch.EX)
     lk = pk._lk[0]
+    def ctry_lc():
+        if not hasattr(pk, "_ctry_lc"): pk._ctry_lc = {k.lower(): (k, v[0]) for k, v in lk.items() if v[1] == "country name"}   # lower-case official country names (GeoNames) -> (name, iso); demonyms and aliases are not names
+        return pk._ctry_lc
     for m in M:
         if IDENT_RULES == "v2" and m.get("iso") and m.get("src") == "place":   # ident-v2 (e): a place-linker span that ends in a country name or demonym but starts with non-place words is a name of something else (Alternative for Germany, MTN Uganda, Two Danish, Latin America): it keeps no iso and stays untyped
             _w = m["surface"].strip().split()
@@ -759,6 +762,15 @@ def align(rec, G, ch, contradictions=True):
         if role["kind"] == "entity": return role["c"]["_e"][0]
         if role["kind"] == "concept":
             words = role["words"]; k = cnorm(" ".join(words)); eid = "concept:" + k
+            cn = ctry_lc().get(k)   # identity (T158 fix r2): a role phrase that is exactly a country's name is that country (iso:SA), not a concept entity of the same words; 'saudi led coalition' is not a country name and stays a concept; a one-word name needs a capital letter in the text (Turkey, not turkey)
+            if cn and (len(k.split()) > 1 or (role.get("span") and re.search(r"(?<!\w)%s(?!\w)" % re.escape(cn[0]), text[role["span"][0]:role["span"][1]]))):
+                iso = cn[1]; eid = "iso:" + iso; r = S.ent.get(eid)
+                if r is None:
+                    canon = ctry_name(ch, iso); r = S.ent[eid] = {"id": eid, "type": "place", "canon": canon, "aliases": {}, "arts": {}, "evid": [], "unsure": [], "sents": 0, "iptc": topic_iptc(), "geo": [canon], "kind_note": None, "coarse": "location"}
+                    S.alias[("place", nrm(canon))] = eid; S.canon_ent[nrm(canon)].add(eid)
+                r["aliases"][cn[0]] = r["aliases"].get(cn[0], 0) + 1; r["arts"].setdefault(art, pub)
+                if not any(x["art"] == art for x in r["evid"]): r["evid"].append({"art": art, "pub": pub, "title": rec["title"], "sent": sent_txt(role.get("si", 0)), "spans": [_span(*role["span"])] if role.get("span") else [], "independent": independent, "sents": [role.get("si", 0)]})
+                return eid
             r = S.ent.get(eid); sis = [role.get("si", 0)]
             if r is None:
                 r = S.ent[eid] = {"id": eid, "type": "concept", "canon": k, "aliases": {}, "arts": {}, "evid": [], "unsure": [], "iptc": place_concept(k.split(), role.get("sis") or []), "geo": None}
@@ -814,6 +826,7 @@ def align(rec, G, ch, contradictions=True):
         if ok_: att["obj_key"] = ok_
         if status: att["status"] = status
         if a["pred"] != pred: att["pred_surface"] = a["pred"]
+        if text[v[0]:v[1]].strip().lower() != str(a["pred"]).strip().lower(): att["verb_text"] = text[v[0]:v[1]]   # the text at the verb span when it is not the predicate's own surface (an appositive claim "the capital Sanaa" has the synthetic predicate "is" and its span on the appositive noun): grounding reads the subject before THIS token
         if a["obj"] and a["obj"]["kind"] == "date" and not tm: att["time"] = [{"text": a["obj"]["text"], "label": a["obj"]["text"], "iso": None, "period": None}]
         spans = [_span(*v)]
         for k in ("subj", "obj"):

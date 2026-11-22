@@ -45,6 +45,7 @@ def claims_v1(units, text, sents, stats, topic, place, claims=None):
         vs, ve = c["v_span"]; si = sidx(vs); subj = c["s_short"] or c["s"]; both = bool(c["s"] and c["o"])
         u = {"unit": None, "sent_text": (text[sents[si][0]:sents[si][1]].strip()[:300] if si < len(sents) else None), "type": "triple" if both else "partial_claim", "subject": subj or None, "predicate": c["p"], "value": c["o"] or None, "sentence": si, "id": None, "spans": triple_spans(text, vs, ve, [subj, c["p"], c["o"]], sents),
              "topic_l1": topic["l1"], "topic_node": topic["node"], "place": place, "src": "claims v1", "subject_full": c["s"], "negated": c["neg"], "modal": c["modal"], "attributed_to": c["attrib"] or c.get("said_by"), "passive": c["passive"], "attrs": c["attrs"], "demoted": bool(c.get("demoted")), "rule": c["rule"]}
+        if "clause_antecedent" in c["rule"]: u["subject_surface"] = "pronoun"; u["agent_how"] = "clause antecedent (subject of the governing clause, same sentence)"
         if not both: u["missing"] = "subject" if not c["s"] else "object"
         new.append(u)
     vkeys = {(x["s"], x["e"]) for u in new for x in u["spans"] if x["role"] == "verb"}; old = len(units)

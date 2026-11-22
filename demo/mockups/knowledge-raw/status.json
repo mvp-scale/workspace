@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-11-21T22:52:26",
- "ledger_last": "L2963",
+ "generated_at": "2026-11-22T01:04:20",
+ "ledger_last": "L2972",
  "playbook": "knowledge_pipeline/playbook/00-knowledge-pipeline-v1.md",
  "live_trace": "knowledge_pipeline/projects/world-state/live_trace.py",
  "window": {
@@ -130,13 +130,13 @@
     "path": "demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json",
     "as_of": "2026-11-21",
     "articles": 34,
-    "sha256_12": "358232dbcd71"
+    "sha256_12": "8a72c17ac32d"
    },
    "mix": {
     "path": "demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json",
     "as_of": "2026-11-21",
     "articles": 40,
-    "sha256_12": "a43f7f38e67c"
+    "sha256_12": "130823b5dae2"
    }
   },
   "slow_consolidate_files": {
@@ -894,7 +894,7 @@
    },
    "runs_in": "slow",
    "quality": {
-    "score": "check-consolidate 22 of 22 structural checks pass; strengths now: c1 reinforced 50/522; mix reinforced 67/725 (slow_consolidate knowledge.json funnel)",
+    "score": "check-consolidate 22 of 22 structural checks pass; strengths now: c1 reinforced 38/562; mix reinforced 41/754 (slow_consolidate knowledge.json funnel)",
     "bar": "none recorded",
     "src": [
      "L2859",
@@ -923,11 +923,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "ECB+ test fixture F1 0.5133 (recomputed now: fact_join.py --eval ecbplus-join.json P 0.460 R 0.581 F1 0.5133 thr 0.53 (18.1 s))",
+    "score": "ECB+ test fixture F1 0.5133 (recomputed now: fact_join.py --eval ecbplus-join.json P 0.460 R 0.581 F1 0.5133 thr 0.53 (17.1 s))",
     "bar": "F1 >= 0.49 (check-knowledge K8)",
     "src": [
      "L2956",
@@ -958,20 +958,20 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "wire/journal copies collapsed: c1 120, mix 24; reinforced edges whose publishers share one owner prefix: c1 0, mix 2 (mix: BBC Business, BBC UK)",
+    "score": "wire/journal copies collapsed: c1 111, mix 19; reinforced edges whose publishers share one owner (publisher-owners.json): c1 0, mix 0 (none)",
     "bar": "0 sibling-owner reinforced edges",
     "src": [
      "L2955",
      "L2957",
      "L2962"
     ],
-    "state": "PROVISIONAL",
-    "note": "owner = first word of the publisher name (Guardian*, BBC*, Boston*); structural count over knowledge.json edges, no outside truth; Fable found sibling feeds counted independent (L2962)",
-    "value": 2,
+    "state": "met",
+    "note": "owner = publisher-owners.json (each owner a cited public fact; an unlisted feed is its own owner); strength counts distinct owners (consolidate.independence); structural count over knowledge.json edges, no outside truth; Fable found sibling feeds counted independent (L2962), fixed T158 r2",
+    "value": 0,
     "higher_is_better": false
    }
   },
@@ -993,17 +993,20 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "unmeasured; 2 known false wrong-agent statements on mix (L2962)",
-    "bar": "0 wrong-agent statements on the auto answers, >=90% sampled",
+    "score": "c1 128/136 = 94.1%, 7 wrong-agent statements; mix 67/72 = 93.1%, 0 wrong-agent statements",
+    "bar": "agent grounding >= 90% on every area and 0 wrong-agent statements on the auto answers",
     "src": [
-     "L2962"
+     "L2962",
+     "check-agent-grounding.py"
     ],
-    "state": "unmeasured",
-    "note": "houthi destroy/intercept statements: every source sentence names the Saudi-led coalition; no sampled score yet"
+    "state": "PROVISIONAL",
+    "note": "agent grounding (check-agent-grounding.py): the stored subject's name or identity alias must sit in the sentence's subject span (before the verb, same clause), per supporting fragment of each reinforced edge; no human labels. Fixed T158 r1: a pronoun in a reported clause took the nearest earlier ORG (it -> Houthi); remaining misses are appositives ('Sanaa, the capital' stored as capital|be|Sanaa) and cross-sentence pronouns",
+    "value": 0.9306,
+    "higher_is_better": true
    }
   },
   {
@@ -1024,17 +1027,20 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "unmeasured; Fable read 3 of 6 mix merges wrong (L2962, not a scored sample)",
-    "bar": ">= 80% correct on 40 sampled reinforced edges per area",
+    "score": "c1 36 of 38 sampled unflagged = 94.7% (38 reinforced edges); mix 35 of 40 sampled unflagged = 87.5% (41 reinforced edges) (heuristic flags)",
+    "bar": ">= 80% unflagged on 40 sampled reinforced edges per area (fixed seed 158)",
     "src": [
-     "L2962"
+     "L2962",
+     "check-reinforced-precision.py"
     ],
-    "state": "unmeasured",
-    "note": "needs a 40-per-area sample read against the source sentences"
+    "state": "met",
+    "note": "HEURISTIC, not a truth label (check-reinforced-precision.py): flagged = member subjects resolve to different identity ids, or subject == object, or no two fragment sentences share a content token; it misses a wrong merge whose sentences share words (who-did-it is check-agent-grounding); no human labels",
+    "value": 0.875,
+    "higher_is_better": true
    }
   },
   {
@@ -1055,7 +1061,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
@@ -1089,11 +1095,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "bridging capabilities: c1 11, mix 4",
+    "score": "bridging capabilities: c1 10, mix 2",
     "bar": "real per-Area bridges only",
     "src": [
      "L2961",
@@ -1136,9 +1142,9 @@
     "no": 0
    },
    "quality": {
-    "met": 6,
+    "met": 8,
     "PROVISIONAL": 19,
-    "unmeasured": 4
+    "unmeasured": 2
    }
   }
  },
@@ -1180,7 +1186,7 @@
    "PASS ledger: per-day shares are written and sum to 1 per (country, day) within 1e-4 (6-decimal rounding) 394 (day, country) cells, 23 days",
    "PASS ledger: the seed is marked PROVISIONAL and all rows say so seed 26 rows, ['draft v2 (guess)']"
   ],
-  "when": "2026-11-21T22:52:06",
+  "when": "2026-11-22T01:03:59",
   "cmd": "check-durable.py --no-g4"
  },
  "plan": {

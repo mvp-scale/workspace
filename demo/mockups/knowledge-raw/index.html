@@ -100,6 +100,11 @@ body[data-mode=status] .app{display:none}body:not([data-mode=status]) #status{di
 .kn .fb{display:grid;grid-template-columns:96px minmax(0,1fr) 54px;gap:6px;align-items:center;font-size:12px;padding:1px 0}.kn .fb .bn{height:12px;background:var(--surface-2);border-radius:3px;overflow:hidden}.kn .fb .bn i{display:block;height:100%;background:var(--accent);min-width:2px}.kn .fb em{font:11px var(--mono);font-style:normal;text-align:right}.kn .fb span{font:10.5px var(--mono);text-transform:uppercase;color:var(--mut)}
 .kn .yl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}.kn .yl div{border:1px solid var(--border);border-radius:8px;padding:3px 8px}.kn .yl b{display:block;font-size:17px;font-variant-numeric:tabular-nums}.kn .yl span{font:10px var(--mono);text-transform:uppercase;color:var(--mut)}
 .kn svg.gl{width:100%;height:96px;display:block;margin:2px 0}.kn .gleg{font:11px var(--mono);color:var(--text-2);display:flex;gap:12px;flex-wrap:wrap}
+.kn .wi{flex:none;border:1px solid var(--border);border-radius:12px;background:var(--surface)}.kn .wi>summary{cursor:pointer;padding:6px 14px;font:12px var(--mono);color:var(--text-2);list-style:none}.kn .wi>summary::before{content:"▸ "}.kn .wi[open]>summary::before{content:"▾ "}.kn .wi>summary b{color:var(--text)}
+.kn .wib{max-height:46vh;overflow:auto;padding:4px 14px 10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,.8fr);gap:6px 18px;font-size:12px;line-height:1.35}@media(max-width:1250px){.kn .wib{grid-template-columns:1fr}}
+.kn .wib h4{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:4px 0 4px}.kn .wib .ly{padding:2px 0;border-bottom:1px solid var(--border)}.kn .wib .ly b{font-weight:600}.kn .wib .ly em{font:10.5px var(--mono);color:var(--mut);font-style:normal;margin-right:6px}
+.kn .wib .bl{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;padding:2px 0;border-bottom:1px solid var(--border)}.kn .wib .bl .nn{font:600 13px var(--mono);font-variant-numeric:tabular-nums;text-align:right}.kn .wib .bl .nn small{display:block;font:9.5px var(--mono);color:var(--mut);font-weight:400}.kn .wib .eg{display:block;color:var(--text-2);overflow-wrap:anywhere}
+.kn .wib .st0{font:11px var(--mono);color:var(--text-2);margin-top:8px;padding-top:6px;border-top:1px solid var(--border)}
 .kn .nx{margin-left:auto}
 .kn .bld{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:none;border:1px solid var(--border);border-radius:12px;padding:5px 12px;background:var(--surface)}.kn .bld .btn.on{background:var(--accent-soft);border-color:var(--accent)}.kn .bld input[type=range]{flex:1 1 180px;min-width:120px;accent-color:var(--accent)}.kn .bld .bk{font:12px var(--mono);color:var(--text-2);white-space:nowrap}.kn .bld .bk b{color:var(--text);font-size:15px}
 .kn .added{border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px}.kn .added h3{margin-bottom:2px}.kn .added .sec{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:6px 0 1px}.kn .added .ad{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:2px 0;border-bottom:1px solid var(--border)}.kn .added .ad .tx{flex:1;overflow-wrap:anywhere}.kn .added .x{font-size:11.5px;color:var(--text-2)}.kn .added .why1{font-size:11px;padding:0 8px}.kn .added .sumk{margin:3px 0}
@@ -603,6 +608,39 @@ function drawKn(d){
   else rp.append(el("div",{class:"l na"},"no growth rows in knowledge.json"));
   const Y=K.yield||{},pc=v=>v==null?"–":(typeof v==="number"?v.toFixed(1):String(v));
   rp.append(el("h3",{style:"margin-top:10px"},"yield at consolidation"),el("div",{class:"yl","data-yield":"1"},el("div",{},el("b",{},Y.pct_reinforced==null?"–":pc(Y.pct_reinforced)+"%"),el("span",{},"assertions ≥ 2 publishers")),el("div",{},el("b",{},pc(Y.contested_per_100)),el("span",{},"contested per 100 articles")),el("div",{},el("b",{},Y.bridging==null?"–":String(Y.bridging)),el("span",{},"bridging capabilities")),el("div",{},el("b",{},Y.answerable==null?"–":String(Y.answerable)),el("span",{},"answerable questions"))));
+  /* "What is this?" (owner goal 2026-11-21): live numbers from this window's knowledge.json, plain words; closed by default, remembered in localStorage */
+  {const F=K.funnel||{},J=K.join||{},nn=v=>v==null?"–":String(v),stm=((K.answer||{}).statements||[]),topId=evid("reinforced").slice().sort((x,y)=>((E[y].publishers||[]).length-(E[x].publishers||[]).length)||(x<y?-1:1))[0],topE=topId?E[topId]:null,cm0=(K.capabilities||[]).find(c=>c.bridging)||null,pr0=(K.contested||[])[0]||null,a0=Object.values(AR)[0]||null;
+    const copies=F.fragments!=null&&F.sources!=null?F.fragments-F.sources:null,pubTxt=e=>(e.publishers||[]).slice(0,4).join(", ")+((e.publishers||[]).length>4?" +"+((e.publishers||[]).length-4):"");
+    const wc=Object.values(E).find(e=>e.independent&&e.independent.collapsed>0)||null;
+    const bl=(k,lab,what,eg)=>el("div",{class:"bl","data-whatis":k,"data-n":nn(k==="copies"?copies:k==="answer"?stm.length:F[k])},el("div",{class:"nn"},nn(k==="copies"?copies:k==="answer"?stm.length:F[k]),el("small",{},lab)),el("div",{},what,eg?el("span",{class:"eg"},"e.g. "+eg):null));
+    const ly=(g,t,x)=>el("div",{class:"ly"},el("em",{},g),el("b",{},t+": "),x);
+    const depth=el("div",{},el("h4",{},"Depth: what we pull out of one article"),
+      ly("G0","Read","the text, the publisher and the time."),ly("G1-G2","Extract","dates, numbers, places, typed names, claims (who did what) and the speaker."),
+      ly("G3","Understand","topic, Area, how factual it is, which direction it points."),ly("G4-G5","Connect","the same entity across articles; links to IPTC and WordNet."),
+      ly("G3b","Decide","a Lean-checked change to the world state, or abstain."));
+    const brd=el("div",{},el("h4",{},"Breadth: across articles, at consolidation"),
+      bl("observations","observations","articles read into this window.",a0?knShort((a0.publisher||"")+": "+(a0.title||""),90):null),
+      bl("fragments","fragments","one claim sentence from one article.",topE&&topE.fragments&&topE.fragments[0]?knShort(topE.fragments[0].sent,100):null),
+      bl("sources","sources","independent sources: wire copies of one story count once.",wc?trip(wc)+" ("+wc.independent.collapsed+" copy collapsed)":null),
+      bl("copies","wire copies","removed (fragments minus sources)."),
+      bl("facts_raw","raw facts","facts before joining; assertions are the joined ones ("+nn(F.assertions)+", merge rate "+(J.merge_rate!=null?(100*J.merge_rate).toFixed(1)+"%":"–")+").",null),
+      bl("assertions","assertions","one fact per same-event group, with all its fragments.",topE?trip(topE):null),
+      bl("reinforced","reinforced","an assertion from 2 or more independent outlets.",topE?trip(topE)+" ("+pubTxt(topE)+")":null),
+      bl("contested","contested","a later report reverses an earlier one; both sides kept.",pr0&&E[pr0.a]&&E[pr0.b]?trip(E[pr0.a])+" vs "+trip(E[pr0.b]):"none in this window"),
+      bl("capabilities","capabilities","things the story's actors can do, grouped by Area.",(K.capabilities||[])[0]?(K.capabilities[0].label||K.capabilities[0].id):null),
+      bl("bridging","bridging","a capability used by 2 or more Areas: links stories.",cm0?(cm0.label||cm0.id)+" ("+(cm0.areas||[]).join(", ")+")":"none in this window"),
+      bl("answer","answer statements","sourced answer lines, each with its publishers.",stm[0]?knShort(stm[0].text,100):null));
+    const pos=el("div",{},el("h4",{},"What this makes possible"),
+      el("div",{class:"ly"},"Track a story as it unfolds, fact by fact."),el("div",{class:"ly"},"Detect real disputes between reports."),el("div",{class:"ly"},"Separate wire copies from independent reporting."),
+      el("div",{class:"ly"},"Link across stories through bridging capabilities."),el("div",{class:"ly"},"Feed the world-state resources on evidence."));
+    const st0=el("div",{class:"st0","data-whatis-status":"1"},"status: loading…");
+    pos.append(st0);const body=el("div",{class:"wib"},depth,brd,pos);
+    const fillSt=S=>{const rows=((S&&S.rows)||[]).filter(r=>r.group==="knowledge");st0.textContent=rows.length?"status (read from status.json): "+rows.map(r=>{const q=r.quality||{};return r.label+" "+(q.state||"?")+(q.value!=null?" ("+q.value+")":"")}).join("; "):"status: no Knowledge rows in status.json"};
+    if(typeof ST!=="undefined"&&ST&&ST.rows)fillSt(ST);else fetch("status.json",{cache:"no-store"}).then(r=>r.json()).then(fillSt).catch(()=>{st0.textContent="status: status.json not available"});
+    let op=false;try{op=localStorage.getItem("kr_whatis")==="1"}catch(e){}
+    const dt=el("details",{class:"wi",id:"kn_whatis","data-whatis-panel":"1"},el("summary",{},"What is this? ",el("b",{},"the Knowledge step in plain words")," ·  "+nn(F.observations)+" articles → "+nn(F.sources)+" sources → "+nn(F.assertions)+" assertions → "+nn(F.reinforced)+" reinforced"),body);
+    if(op)dt.setAttribute("open","");dt.addEventListener("toggle",()=>{try{localStorage.setItem("kr_whatis",dt.open?"1":"0")}catch(e){}});
+    root.insertBefore(dt,hd.nextSibling)}
   root.append(low);return root}
 /* build view (owner goal 2026-11-21: watch the knowledge being built, or jump 5-10 articles): everything below is computed in the page from knowledge.json, nothing reloads the chain */
 const knNm1=x=>x==null||x===""?"–":String(x).replace(/^[a-z_]{2,12}:(?=\S)/,""),knTrip=e=>[e.subject,e.predicate,e.object].map(knNm1).join(" — "),knShort=(t,n)=>{t=String(t||"");return t.length>n?t.slice(0,n-1)+"…":t};

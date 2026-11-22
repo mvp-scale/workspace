@@ -11,7 +11,7 @@ Rules, each switchable (OPTS) so dev can measure them one at a time:
 Import: V1.extract(text, nlp) -> [{"s","p","o","attrs","neg","modal","attrib","passive","rule"}]."""
 import re
 import spo_chains as S
-OPTS = {"expand_o": True, "expand_s": True, "attrs": True, "speaker": True, "copula": True, "clause": True, "xcomp": True, "measure": True, "attrs_move": False, "passive": True, "dedupe": True, "measure_move": True}
+OPTS = {"expand_o": True, "expand_s": True, "attrs": True, "speaker": True, "copula": True, "clause": True, "xcomp": True, "measure": True, "attrs_move": False, "passive": True, "dedupe": True, "measure_move": True, "antecedent": True}
 SKIP_O = {"relcl", "acl", "appos", "conj", "cc", "ccomp", "advcl", "punct", "mark", "dep", "parataxis"}
 SKIP_S = SKIP_O | {"prep"}
 def span_text(tok, skip):
@@ -35,6 +35,9 @@ def extract(text, nlp, opts=None):
         s_text = t["s"]; o_text = t["o"]; p = t["p"]; attrs = []; rule = []; s_short = t["s"]
         if o_.get("expand_s") and s is not None and not t["s_pronoun"] and s.pos_ in ("NOUN", "PROPN", "NUM"):
             s_text = span_text(s, SKIP_S); rule.append("expand_s")
+        if o_.get("antecedent") and t["s_pronoun"] and s is not None:   # who-did-it (T158 fix round 1): a pronoun subject inside a reported clause ('The coalition said IT intercepted ...') is the governing clause's subject, grounded in this sentence; never the nearest NER mention of an earlier sentence (the claims v0 resolver did that: 'it' -> Houthi)
+            ant = _clause_antecedent(v, s)
+            if ant is not None: s_text = span_text(ant, SKIP_S) if ant.pos_ in ("NOUN", "PROPN", "NUM") else ant.text; s_short = s_text; rule.append("clause_antecedent"); t = {**t, "s": s_text, "s_pronoun": False}
         if o is not None and not t.get("appositive"):
             if o_.get("expand_o") and o.pos_ in ("NOUN", "PROPN", "NUM", "PRON"):
                 o_text = span_text(o, SKIP_O); rule.append("expand_o")
@@ -47,13 +50,28 @@ def extract(text, nlp, opts=None):
     if o_.get("copula") or o_.get("clause") or o_.get("xcomp"): out += _extra(doc, out, o_)
     if o_.get("dedupe"):   # a bare 'X said' (no object) is dropped when the same verb has its clause claim
         cv = {x["v_i"] for x in out if "clause" in x["rule"]}; out = [x for x in out if not (x["o"] is None and x.get("v_i") in cv and "clause" not in x["rule"])]
-    if o_.get("measure"): out += _measure(doc, out)
+    if o_.get("measure"): out += _measure(doc, out, o_)
     if o_.get("attrs"): out = _attrs(doc, out, o_)
     for x in out:
         x["v_span"] = [doc[x["v_i"]].idx, doc[x["v_i"]].idx + len(doc[x["v_i"]].text)] if x.get("v_i") is not None else None
         for k in ("v_i", "s_i", "prep", "o_pos"): x.pop(k, None)
     return out
 
+def _clause_antecedent(v, pron):
+    """the nominal subject of the clause that governs v when v is (a conjunct of) a ccomp/advcl clause; None when there is none or it is itself a pronoun (then the resolver keeps its job)"""
+    h = v; hops = 0
+    while h.dep_ == "conj" and hops < 3: h = h.head; hops += 1
+    if h.dep_ not in ("ccomp", "advcl") or h.head is h: return None
+    g = h.head
+    for c in g.children:
+        if c.dep_ in ("nsubj", "nsubjpass") and c.pos_ in ("NOUN", "PROPN") and c.i < h.i: return c
+    return None
+def _subj_text(sub, v, o_):
+    """subject text of a claim built outside the base extractor (clause, xcomp, copula, measure): the phrase, or for a pronoun the governing clause's subject (same rule as in extract)"""
+    if o_.get("antecedent") and sub.pos_ == "PRON" and sub.lower_ in ("it", "he", "she", "they"):
+        ant = _clause_antecedent(v, sub)
+        if ant is not None: return span_text(ant, SKIP_S) if ant.pos_ in ("NOUN", "PROPN", "NUM") else ant.text
+    return span_text(sub, SKIP_S) if sub.pos_ in ("NOUN", "PROPN", "NUM") else sub.text
 def _clause_text(c):
     keep = [x for x in c.subtree if not (x.dep_ == "punct" and x.i in (c.left_edge.i, c.right_edge.i))]; return c.doc[c.left_edge.i:c.right_edge.i + 1].text.strip(" ,;")
 def _extra(doc, out, o_):
@@ -63,7 +81,7 @@ def _extra(doc, out, o_):
         if v.pos_ not in ("VERB", "AUX"): continue
         subs = S._subjects(v)
         if not subs: continue
-        sT = span_text(subs[0], SKIP_S) if subs[0].pos_ in ("NOUN", "PROPN", "NUM") else subs[0].text
+        sT = _subj_text(subs[0], v, o_)
         neg = any(c.dep_ == "neg" for c in v.children); modal = [c.lower_ for c in v.children if c.dep_ == "aux" and (c.tag_ == "MD" or c.lower_ in S.MODALS)]
         vt = " ".join([c.text for c in v.children if c.dep_ in ("aux", "auxpass", "neg", "prt") and c.i < v.i] + [v.text])
         if o_.get("clause"):
@@ -84,7 +102,7 @@ def _extra(doc, out, o_):
     return [a for a in add if (a["s"], a["p"], a["o"]) not in seen]
 
 _MEASURE_ENT = {"PERCENT", "MONEY", "QUANTITY", "CARDINAL"}
-def _measure(doc, out):
+def _measure(doc, out, o_=None):
     """'dropped 10%' : a numeric npadvmod/dobj measure of the verb is its object (the amount), so a later 'under Trump' stays an attribute"""
     add = []; have = {(x["v_i"], x.get("s_i")) for x in out if x.get("v_i") is not None and x.get("prep") is None and x["o"]}
     for v in doc:
@@ -93,7 +111,7 @@ def _measure(doc, out):
             if c.dep_ == "npadvmod" and (c.ent_type_ in _MEASURE_ENT or any(x.pos_ == "NUM" for x in c.children) or c.pos_ == "NUM") and c.ent_type_ not in ("DATE", "TIME"):
                 subs = S._subjects(v)
                 if not subs: continue
-                sT = span_text(subs[0], SKIP_S) if subs[0].pos_ in ("NOUN", "PROPN", "NUM") else subs[0].text
+                sT = _subj_text(subs[0], v, o_ or {})
                 if (v.i, subs[0].i) in have: continue
                 vt = " ".join([x.text for x in v.children if x.dep_ in ("aux", "auxpass", "neg", "prt") and x.i < v.i] + [v.text])
                 add.append({"s": sT, "s_short": sT, "p": vt, "o": span_text(c, SKIP_O), "attrs": [], "neg": any(x.dep_ == "neg" for x in v.children), "modal": [x.lower_ for x in v.children if x.dep_ == "aux" and x.tag_ == "MD"], "attrib": None, "passive": False, "said_by": None, "rule": ["measure"], "v_i": v.i, "s_i": subs[0].i, "prep": None, "o_pos": "NUM"})

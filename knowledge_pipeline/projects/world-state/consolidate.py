@@ -184,6 +184,7 @@ def merge_assertions(stores, ST):
     for S in stores:
         for aid, r in S["asr"].items():
             if r.get("kind") != "claim": continue
+            if r["subj"] == r["obj"]: continue   # self-loop guard (T158 fix r2): 'houthis accuse houthis' is a mis-read of one entity as both sides, not a fact
             e = E.setdefault(h(r["key"]), {"id": h(r["key"]), "kind": "assertion", "key": r["key"], "subj": r["subj"], "pred": r["pred"], "obj": r["obj"], "obj_text": r.get("obj_text"), "iptc": None, "frag": {}, "lineage": set()})
             if r.get("iptc") and (e["iptc"] is None or canon(r["iptc"]) < canon(e["iptc"])): e["iptc"] = r["iptc"]   # the same key in several stores: the smallest canonical form wins, so store order changes nothing
             e["lineage"].add((S["file"], "g4-store", aid))
@@ -245,30 +246,30 @@ def syndication_groups(fr, ST):
     g = collections.defaultdict(list)
     for i in range(n): g[find(i)].append(i)
     return [(g[k], sorted({w for i in g[k] for w in how[i]})) for k in sorted(g)]
+OWNERS_FILE = os.path.join(HERE, "publisher-owners.json"); _OWN = []
+def owner_of(pub):
+    """publisher feed name -> its owner (publisher-owners.json, each owner a cited public fact); a feed the map does not list is its own owner"""
+    if not _OWN:
+        try: _OWN.append({o["publisher"]: o["owner"] for o in json.load(open(OWNERS_FILE, encoding="utf-8"))["publishers"]})
+        except Exception: _OWN.append({})
+    return _OWN[0].get(pub) or pub
 def independence(fr, ST):
-    """-> (strength, publishers, independent): one source per syndication group, named by the publisher of its earliest fragment (day, then publisher, then article), strength = distinct source publishers"""
+    """-> (strength, publishers, independent): one source per syndication group, named by the publisher of its earliest fragment (day, then publisher, then article); sources are then counted per OWNER (T158 fix r2: Guardian US + Guardian World, BBC UK + BBC Business, Boston Globe + Boston.com are one owner, one voice), strength = distinct owners, publishers = the earliest source's own feed name per owner"""
     srcs = []
     for grp, how in syndication_groups(fr, ST):
         fs = sorted((fr[i] for i in grp), key=lambda f: (f.get("day") or "9999", f.get("pub") or "", f["art"])); rep = fs[0]; pub = rep.get("pub") or ST.pub(rep["art"])
-        srcs.append({"pub": pub, "arts": sorted({f["art"] for f in fs}), "fragments": len(fs), "day": rep.get("day"), "copies": sorted({f.get("pub") or ST.pub(f["art"]) for f in fs} - {pub}), "how": how or ["single fragment"]})
-    pubs = sorted({x["pub"] for x in srcs if x["pub"]})
-    return len(pubs), pubs, {"n": len(pubs), "sources": srcs, "fragments": len(fr), "collapsed": len(fr) - len(srcs), "rule": "one source per story root or near-identical sentence (Jaccard >= %.2f, >= %d tokens); publisher = the earliest fragment's own" % (SYN_JACCARD, SYN_MIN_TOK)}
+        srcs.append({"pub": pub, "owner": owner_of(pub), "arts": sorted({f["art"] for f in fs}), "fragments": len(fs), "day": rep.get("day"), "copies": sorted({f.get("pub") or ST.pub(f["art"]) for f in fs} - {pub}), "how": how or ["single fragment"]})
+    first = {}
+    for x in sorted(srcs, key=lambda x: (x["day"] or "9999", x["pub"], x["arts"])):
+        if x["pub"]: first.setdefault(x["owner"], x["pub"])
+    pubs = sorted(first.values())
+    return len(pubs), pubs, {"n": len(pubs), "sources": srcs, "owners": sorted(first), "fragments": len(fr), "collapsed": len(fr) - len(srcs), "same_owner_sources": len([x for x in srcs if x["pub"]]) - len(first), "rule": "one source per story root or near-identical sentence (Jaccard >= %.2f, >= %d tokens); publisher = the earliest fragment's own; strength = distinct owners (publisher-owners.json)" % (SYN_JACCARD, SYN_MIN_TOK)}
 # ---------- fact slots: the join (fact_join.py scorer; T158 L2954) ----------
 CONCEPT_TYPES = {"concept", "facility", "org", "other", "unk", "product", "group", "event", "work"}
 def _name(sid): return re.sub(r"[^a-z0-9 ]+", " ", sid.split(":", 1)[-1].lower()).split()
 def anchors(subjs):
-    """subject ids -> {subject id: anchor id}. Same id = same anchor; two concept-like subjects whose names share the head word and one contains the other ('zoo' in 'cincinnati zoo') share an anchor (the shorter name). Persons, places and iso ids stay on identity."""
-    subjs = sorted(set(subjs)); a = {x: x for x in subjs}
-    cl = [x for x in subjs if x.split(":", 1)[0] in CONCEPT_TYPES and _name(x)]
-    for x in cl:
-        tx = _name(x)
-        for y in cl:
-            if y == x: continue
-            ty = _name(y)
-            if ty[-1] == tx[-1] and set(ty) < set(tx) and ty[-1] not in _STOP: a[x] = a.get(y, y) if len(ty) < len(_name(a[x])) else a[x]
-    for x in list(a):   # one hop: the anchor of my anchor
-        while a[a[x]] != a[x]: a[x] = a[a[x]]
-    return a
+    """subject ids -> {subject id: anchor id}. Identity only (T158 fix r2): one subject id is one anchor, so facts about different subjects never share a slot. The v0 rule (two concept-like subjects whose names share a head word and one contains the other: 'zoo' in 'cincinnati zoo') merged 'armed group known as Ansar Allah' with 'FutureCoal, formerly known as World Coal Association' on the head word 'group', and a Houthi operation with a coalition operation on 'operation': a head noun is too generic to say two subjects are the same thing. Country names and iso ids are joined where entities are typed (g4_align.ref_ent), not here."""
+    return {x: x for x in sorted(set(subjs))}
 def _scorer():
     if os.environ.get("FACT_JOIN") == "lemma": return None, "fallback: same predicate lemma (FACT_JOIN=lemma)", None
     try:
@@ -421,7 +422,7 @@ def consolidate(items=(), stores=(), ticks=(), iptc=None, join=True):
         for e in edges:
             if e["kind"] == "assertion" and e.get("slot"): e["strength"], e["publishers"], e["independent"] = independence(e["fragments"], ST)
     else: jrep = {"mode": "off", "facts_raw": sum(e["kind"] == "assertion" for e in edges), "slots": sum(e["kind"] == "assertion" for e in edges), "merge_rate": 0.0, "map": {e["id"]: e["id"] for e in edges if e["kind"] == "assertion"}, "status": "PROVISIONAL"}
-    jrep["independence"] = {"fragments": sum(e["fragments_n"] for e in edges if e["kind"] == "assertion"), "sources": sum(len((e.get("independent") or {}).get("sources") or []) for e in edges if e["kind"] == "assertion"), "collapsed": sum((e.get("independent") or {}).get("collapsed") or 0 for e in edges if e["kind"] == "assertion"), "rule": "one source per story root or near-identical sentence (Jaccard >= %.2f on >= %d content tokens); strength = distinct source publishers, each the earliest fragment's own publisher" % (SYN_JACCARD, SYN_MIN_TOK)}
+    jrep["independence"] = {"fragments": sum(e["fragments_n"] for e in edges if e["kind"] == "assertion"), "sources": sum(len((e.get("independent") or {}).get("sources") or []) for e in edges if e["kind"] == "assertion"), "collapsed": sum((e.get("independent") or {}).get("collapsed") or 0 for e in edges if e["kind"] == "assertion"), "rule": "one source per story root or near-identical sentence (Jaccard >= %.2f on >= %d content tokens); strength = distinct owners (publisher-owners.json), each the earliest fragment's own publisher; a claim with subject == object is dropped" % (SYN_JACCARD, SYN_MIN_TOK)}
     stories = collections.Counter(); [stories.update([r]) for r in ST.root.values()]
     body = {"version": VERSION, "rule": {"window_days": WINDOW_DAYS, "min_windows": MIN_WINDOWS, "min_publishers": MIN_PUBLISHERS, "promotion": "none (candidates stay PROVISIONAL; no promote step, no human review)"},
             "inputs": {"items": len(ST.by), "stores": sorted({S["file"] for S in stores}), "tick_rows": len({(t["file"], t["id"]) for t in ticks})},

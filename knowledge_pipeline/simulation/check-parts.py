@@ -32,7 +32,7 @@ def build_fixtures():
         for r in keep: f.write(json.dumps(r, ensure_ascii=False) + "\n")
 if "--refresh" in args or not os.path.exists(FIX + "/articles.json"): build_fixtures()
 ARTS = json.load(open(FIX + "/articles.json"))
-ROWS = [r["id"] for r in json.load(open(STATUS))["rows"]]
+ROWS = [r["id"] for r in json.load(open(STATUS))["rows"] if r.get("group") != "knowledge"]   # the Knowledge rows (kn_*) are staged-area scores, not pipeline parts (added after the 23 parts; T158 r1)
 # ------------------------------------------------------------------ shared heavy objects, loaded once, each from its own module
 class R_:
     """lazy resources; a load error is re-raised for every part that needs it (so the part FAILs, with the reason)"""
