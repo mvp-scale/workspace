@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-11-21T14:53:53",
- "ledger_last": "L2947",
+ "generated_at": "2026-11-21T22:52:26",
+ "ledger_last": "L2963",
  "playbook": "knowledge_pipeline/playbook/00-knowledge-pipeline-v1.md",
  "live_trace": "knowledge_pipeline/projects/world-state/live_trace.py",
  "window": {
@@ -123,6 +123,20 @@
    },
    "identity_g4": {
     "ran": 60
+   }
+  },
+  "knowledge_areas": {
+   "c1": {
+    "path": "demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json",
+    "as_of": "2026-11-21",
+    "articles": 34,
+    "sha256_12": "358232dbcd71"
+   },
+   "mix": {
+    "path": "demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json",
+    "as_of": "2026-11-21",
+    "articles": 40,
+    "sha256_12": "a43f7f38e67c"
    }
   },
   "slow_consolidate_files": {
@@ -567,8 +581,8 @@
     "ev": "playbook §2 line 55"
    },
    "implemented": {
-    "s": "no",
-    "ev": "file missing: knowledge_pipeline/runs/g4/store.jsonl"
+    "s": "part",
+    "ev": "knowledge_pipeline/simulation/g4-align.py; knowledge_pipeline/runs/g4/store.jsonl; limits: wrong merges 1/61 = 1.6% after the ident-v2 rules, 4 correct merges lost (L2900); alias errors (L2796)"
    },
    "used": {
     "s": "yes",
@@ -579,10 +593,11 @@
     "score": "wrong merges 1/61 = 1.6% after ident-v2 (CI 0.3-8.7); before 17/94 = 18%",
     "bar": "none recorded",
     "src": [
-     "L2900"
+     "L2900",
+     "L2962"
     ],
     "state": "PROVISIONAL",
-    "note": "replay on one sample; 4 correct merges lost"
+    "note": "replay on one sample; 4 correct merges lost; fact-merge precision on mix is weak: Fable read of reinforced edges found 3 of 6 wrong merges (L2962, a read-only sample, not a scored test)"
    }
   },
   {
@@ -607,13 +622,15 @@
    },
    "runs_in": "slow",
    "quality": {
-    "score": null,
+    "score": "time-ordered status rule proven on a synthetic control (check-knowledge K8 d: care->die 0 edges, die->care 1 edge); real pairs: c1 0, mix 0",
     "bar": "none recorded",
     "src": [
-     "none"
+     "L2955",
+     "L2959",
+     "L2954"
     ],
-    "state": "unmeasured",
-    "note": "no labelled contradiction test set (plan step 7)"
+    "state": "PROVISIONAL",
+    "note": "0 real contradiction pairs on c1 and mix, so the rule is proven on a control only; no labelled contradiction test set (plan step 7)"
    }
   },
   {
@@ -704,10 +721,11 @@
     "bar": "none recorded: weights equal PROVISIONAL (T178)",
     "src": [
      "L2882",
+     "L2962",
      "T178"
     ],
     "state": "PROVISIONAL",
-    "note": ""
+    "note": "the mix auto answer holds 2 false wrong-agent statements (houthi destroy/intercept: sources say the Saudi-led coalition did it, L2962)"
    }
   },
   {
@@ -876,13 +894,213 @@
    },
    "runs_in": "slow",
    "quality": {
-    "score": "check-consolidate 22 of 22 structural checks pass; assertion strengths all 1 (1 of 9 stores in the trace)",
+    "score": "check-consolidate 22 of 22 structural checks pass; strengths now: c1 reinforced 50/522; mix reinforced 67/725 (slow_consolidate knowledge.json funnel)",
     "bar": "none recorded",
     "src": [
-     "L2859"
+     "L2859",
+     "L2955",
+     "L2960"
     ],
     "state": "PROVISIONAL",
-    "note": "decay half-life is a guess"
+    "note": "decay half-life is a guess; reinforced counts wire copies collapsed, not yet precision-checked (L2962)"
+   }
+  },
+  {
+   "id": "kn_fact_join_ecb_pairwise_f1",
+   "group": "knowledge",
+   "gates": [
+    "G4"
+   ],
+   "label": "Fact join (ECB+ pairwise F1)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 29"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/fact_join.py; knowledge_pipeline/projects/world-state/fact-join-model.json; knowledge_pipeline/simulation/fixtures/knowledge/ecbplus-join.json; areas: c1 (34 articles), mix (40 articles)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "ECB+ test fixture F1 0.5133 (recomputed now: fact_join.py --eval ecbplus-join.json P 0.460 R 0.581 F1 0.5133 thr 0.53 (18.1 s))",
+    "bar": "F1 >= 0.49 (check-knowledge K8)",
+    "src": [
+     "L2956",
+     "L2959",
+     "ecbplus-join.json"
+    ],
+    "state": "met",
+    "note": "outside truth: ECB+ (Apache-2.0) gold event coreference; baselines exact words 0.351, same lemma 0.440 (L2956)",
+    "value": 0.5133,
+    "higher_is_better": true
+   }
+  },
+  {
+   "id": "kn_independence_wire_copies_sib",
+   "group": "knowledge",
+   "gates": [
+    "G4"
+   ],
+   "label": "Independence (wire copies, sibling feeds)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 29"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/consolidate.py; knowledge_pipeline/projects/world-state/slow_consolidate.py; areas: c1 (34 articles), mix (40 articles)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "wire/journal copies collapsed: c1 120, mix 24; reinforced edges whose publishers share one owner prefix: c1 0, mix 2 (mix: BBC Business, BBC UK)",
+    "bar": "0 sibling-owner reinforced edges",
+    "src": [
+     "L2955",
+     "L2957",
+     "L2962"
+    ],
+    "state": "PROVISIONAL",
+    "note": "owner = first word of the publisher name (Guardian*, BBC*, Boston*); structural count over knowledge.json edges, no outside truth; Fable found sibling feeds counted independent (L2962)",
+    "value": 2,
+    "higher_is_better": false
+   }
+  },
+  {
+   "id": "kn_who_did_it_correctness_auto_",
+   "group": "knowledge",
+   "gates": [
+    "G6"
+   ],
+   "label": "Who-did-it correctness (auto answers)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 57"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/educate.py; areas: c1 (34 articles), mix (40 articles)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "unmeasured; 2 known false wrong-agent statements on mix (L2962)",
+    "bar": "0 wrong-agent statements on the auto answers, >=90% sampled",
+    "src": [
+     "L2962"
+    ],
+    "state": "unmeasured",
+    "note": "houthi destroy/intercept statements: every source sentence names the Saudi-led coalition; no sampled score yet"
+   }
+  },
+  {
+   "id": "kn_reinforced_precision_sampled",
+   "group": "knowledge",
+   "gates": [
+    "G4"
+   ],
+   "label": "Reinforced precision (sampled)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 29"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/consolidate.py; knowledge_pipeline/projects/world-state/slow_consolidate.py; areas: c1 (34 articles), mix (40 articles)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "unmeasured; Fable read 3 of 6 mix merges wrong (L2962, not a scored sample)",
+    "bar": ">= 80% correct on 40 sampled reinforced edges per area",
+    "src": [
+     "L2962"
+    ],
+    "state": "unmeasured",
+    "note": "needs a 40-per-area sample read against the source sentences"
+   }
+  },
+  {
+   "id": "kn_contested_on_real_data",
+   "group": "knowledge",
+   "gates": [
+    "G4"
+   ],
+   "label": "Contested on real data",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 29"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/consolidate.py; knowledge_pipeline/projects/world-state/slow_consolidate.py; areas: c1 (34 articles), mix (40 articles)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "true contested pairs on mix: 0 (c1 0)",
+    "bar": ">= 1 true pair on mix, 0 false",
+    "src": [
+     "L2955",
+     "L2962"
+    ],
+    "state": "PROVISIONAL",
+    "note": "rule proven on a synthetic control only (K8 d); mix has a real dispute that needs attribution slots (L2962)",
+    "value": 0,
+    "higher_is_better": true
+   }
+  },
+  {
+   "id": "kn_bridging_per_area_capabiliti",
+   "group": "knowledge",
+   "gates": [
+    "G5"
+   ],
+   "label": "Bridging (per-Area capabilities)",
+   "section": 2,
+   "aligned": {
+    "s": "yes",
+    "ev": "playbook §2 line 30"
+   },
+   "implemented": {
+    "s": "yes",
+    "ev": "knowledge_pipeline/projects/world-state/consolidate.py; knowledge_pipeline/projects/world-state/slow_consolidate.py; areas: c1 (34 articles), mix (40 articles)"
+   },
+   "used": {
+    "s": "yes",
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 358232dbcd71 as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha a43f7f38e67c as_of 2026-11-21"
+   },
+   "runs_in": "slow",
+   "quality": {
+    "score": "bridging capabilities: c1 11, mix 4",
+    "bar": "real per-Area bridges only",
+    "src": [
+     "L2961",
+     "L2962"
+    ],
+    "state": "PROVISIONAL",
+    "note": "mostly noise: c1 11 splits one hippo story across Area heads; mix 4 rest on 2 articles with flipped Area order (L2962)"
    }
   }
  ],
@@ -901,26 +1119,26 @@
    },
    "quality": {
     "met": 3,
-    "PROVISIONAL": 11,
-    "unmeasured": 3
+    "PROVISIONAL": 12,
+    "unmeasured": 2
    }
   },
   "all": {
-   "n": 23,
-   "aligned": 23,
-   "implemented": 15,
-   "live": 22,
+   "n": 29,
+   "aligned": 29,
+   "implemented": 21,
+   "live": 28,
    "runs": {
     "chain": 10,
-    "slow": 9,
+    "slow": 15,
     "chain+slow": 3,
     "offline": 1,
     "no": 0
    },
    "quality": {
-    "met": 5,
-    "PROVISIONAL": 15,
-    "unmeasured": 3
+    "met": 6,
+    "PROVISIONAL": 19,
+    "unmeasured": 4
    }
   }
  },
@@ -962,7 +1180,7 @@
    "PASS ledger: per-day shares are written and sum to 1 per (country, day) within 1e-4 (6-decimal rounding) 394 (day, country) cells, 23 days",
    "PASS ledger: the seed is marked PROVISIONAL and all rows say so seed 26 rows, ['draft v2 (guess)']"
   ],
-  "when": "2026-11-21T14:53:51",
+  "when": "2026-11-21T22:52:06",
   "cmd": "check-durable.py --no-g4"
  },
  "plan": {
@@ -1281,5 +1499,9 @@
    "of": 2,
    "badge": "live"
   }
- ]
+ ],
+ "sections": {
+  "knowledge": "Knowledge (§2 G4-G6, staged areas)"
+ },
+ "regressions": []
 }

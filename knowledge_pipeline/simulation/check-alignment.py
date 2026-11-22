@@ -8,11 +8,14 @@ Also: the 12-step plan from ledger L2802 with state and done-check, the NEEDS YO
 Completeness: every gate row of playbook section 2 (G0, G1, G2, G3a, G3b, G4, G5, G6) must be covered by a checklist row; the script exits 1 if one is not.
     /workspace/models/embed-zs/.venv/bin/python simulation/check-alignment.py [--no-durable] [--watch SECONDS] [--out path] [--window <window or trace dir>]
 --window reads that one window instead of the newest (used by check-flow.py on a scratch copy of the fixtures). An empty window (no traced line) is never read as a run: the newest window by modification time being empty is flagged (window.newest_empty) and the script exits 1; the evidence is then read from the newest window that has traced lines. A chain stage counts as run only when it has state 'ran' on at least one traced line ('empty' is not ran).
+Knowledge section (group "knowledge", §2 G4-G6): rows read from the staged area stores demo/mockups/structure-live/area-{c1,mix}/trace/slow_consolidate/knowledge.json (not from the newest core window, which still picks the newest completed run) and the ECB+ join fixture. met only when an outside-truth score meets its bar.
+Ratchet ("at or better", default run only: not with --window or a non-default --out): the previous status is kept in knowledge-raw/status-prev.json; per row (group + label) built yes>part>no, runs_in not 'no'->'no', quality met>PROVISIONAL>unmeasured and quality.value (quality.higher_is_better) must not drop; a drop or a missing row prints REGRESSION, lands in status.json "regressions" and exits 3. No drop: the baseline rises to the best of both. --accept records the current status as the baseline.
 CPU only, no hosted calls, touches no service."""
 import sys, os, re, ast, json, glob, time, subprocess, datetime, argparse, pathlib, tempfile
 HERE = pathlib.Path(__file__).resolve().parent; KP = HERE.parent; WS = KP / "projects" / "world-state"; PB = KP / "playbook" / "00-knowledge-pipeline-v1.md"
 LT = WS / "live_trace.py"; LT4 = WS / "live_trace_v4.py"; SC = WS / "slow_clock.py"; SCON = WS / "slow_consolidate.py"; CODE = [LT, LT4, SC, SCON]; SL = KP.parent / "demo" / "mockups" / "structure-live"; RU = HERE / "raw-units.py"; G4 = HERE / "g4-align.py"; LEDGER = KP / ".ledger" / "ledger.jsonl"; DEMO = KP.parent / "demo"
-ap = argparse.ArgumentParser(); ap.add_argument("--out", default=str(DEMO / "mockups" / "knowledge-raw" / "status.json")); ap.add_argument("--no-durable", action="store_true"); ap.add_argument("--watch", type=int, default=0); ap.add_argument("--window", default=None); a = ap.parse_args()
+ap = argparse.ArgumentParser(); ap.add_argument("--out", default=str(DEMO / "mockups" / "knowledge-raw" / "status.json")); ap.add_argument("--no-durable", action="store_true"); ap.add_argument("--watch", type=int, default=0); ap.add_argument("--window", default=None); ap.add_argument("--accept", action="store_true", help="record the current status as the new ratchet baseline (owner accepts a drop)"); ap.add_argument("--prev", default=str(DEMO / "mockups" / "knowledge-raw" / "status-prev.json")); a = ap.parse_args()
+DEFAULT_OUT = str(DEMO / "mockups" / "knowledge-raw" / "status.json"); AREAS = {n: SL / ("area-" + n) / "trace" / "slow_consolidate" / "knowledge.json" for n in ("c1", "mix")}; FIXJ = HERE / "fixtures" / "knowledge" / "ecbplus-join.json"
 def rel(p): p = pathlib.Path(p).resolve(); return str(p.relative_to(KP.parent)) if KP.parent in p.parents else str(p)
 def grep(path, pat, flags=re.I):
     try: return [(i + 1, l) for i, l in enumerate(open(path, errors="replace")) if re.search(pat, l, flags)]
@@ -221,6 +224,7 @@ def build():
         if score is None: return {"score": None, "bar": bar, "src": srcs, "state": "unmeasured", "note": note or "no scored number in the ledger line(s) %s" % ", ".join(srcs)}
         return {"score": score, "bar": bar, "src": srcs, "state": state, "note": note}
     f = lambda g, i: g[i] if g else None
+    KN = {n: j for n, p_ in AREAS.items() if isinstance((j := jload(p_)), dict)}   # staged area stores: the Knowledge section and two_clocks read these, not the newest core window
     def q_read():
         g = mm("L2782", r"(\d[\d,]*) full text, (\d+) teaser by robots, (\d+) paywall/blocked.*?(about half teaser-only)")
         return Q(["L2782"], ("last 24h queue: %s full text, %s teaser by robots, %s paywall/blocked; %s" % g) if g else None, "none recorded", "PROVISIONAL", "read depth is stored per article; the chain line does not carry it yet")
@@ -258,15 +262,18 @@ def build():
         return Q(["L2791"], ("time judge AUC %s, novelty AUROC %s (both rejected as labels)" % g) if g else None, "none: no outside truth", "PROVISIONAL", "proxy output: event-date offsets and the journal duplicate kind")
     def q_ident():
         g = mm("L2900", r"ident-v2 rules -> (\d+/\d+ = [\d.]+%) \(CI ([\d.]+-[\d.]+)\)"); h = mm("L2900", r"wrong merges (\d+/\d+ = \d+%)")
-        return Q(["L2900"], ("wrong merges %s after ident-v2 (CI %s); before %s" % (g[0], g[1], h[0] if h else "?")) if g else None, "none recorded", "PROVISIONAL", "replay on one sample; 4 correct merges lost")
-    def q_contra(): return Q(["none"], None, "none recorded", "PROVISIONAL", "no labelled contradiction test set (plan step 7)")
+        return Q(["L2900", "L2962"], ("wrong merges %s after ident-v2 (CI %s); before %s" % (g[0], g[1], h[0] if h else "?")) if g else None, "none recorded", "PROVISIONAL", "replay on one sample; 4 correct merges lost; fact-merge precision on mix is weak: Fable read of reinforced edges found 3 of 6 wrong merges (L2962, a read-only sample, not a scored test)")
+    def q_contra():
+        c0 = [(n, ((k.get("counters") or {}).get("contested") or {}).get("n")) for n, k in KN.items()]
+        ok = all(i in ledger for i in ("L2955", "L2959")) and bool(re.search(r"synthetic control", ltext("L2959") + ltext("L2954"), re.I))
+        return Q(["L2955", "L2959", "L2954"], ("time-ordered status rule proven on a synthetic control (check-knowledge K8 d: care->die 0 edges, die->care 1 edge); real pairs: %s" % ", ".join("%s %s" % x for x in c0)) if ok and c0 else None, "none recorded", "PROVISIONAL", "0 real contradiction pairs on c1 and mix, so the rule is proven on a control only; no labelled contradiction test set (plan step 7)")
     def q_link(): return Q(["L2796"], ("%d of %d entities (%.0f%%) get the IPTC path only from the article topic fallback" % (entfb[0], entfb[1], 100 * entfb[0] / entfb[1])) if entfb else None, "none recorded", "PROVISIONAL", "the fallback is marked 'guess' on the page")
     def q_evol():
         g = mm("L2881", r"Real stores .*?: (\d+) unplaced.*?, (\d+) candidates")
         return Q(["L2881"], ("%s unplaced terms, %s promotion candidates (windows gate binding)" % g) if g else None, "none recorded", "PROVISIONAL", "check-evolve 19/19 structural")
     def q_educ():
         g = mm("L2882", r"Pointers 100% on (\d+) fixture \+ (\d+) sweep statements")
-        return Q(["L2882", "T178"], ("pointers 100%% on %s fixture + %s sweep statements (check-educate 16 checks)" % g) if g else None, "none recorded: weights equal PROVISIONAL (T178)", "PROVISIONAL")
+        return Q(["L2882", "T178"], ("pointers 100%% on %s fixture + %s sweep statements (check-educate 16 checks)" % g) if g else None, "none recorded: weights equal PROVISIONAL (T178)", "PROVISIONAL", "the mix auto answer holds 2 false wrong-agent statements (houthi destroy/intercept: sources say the Saudi-led coalition did it, L2962)") | ({"src": ["L2882", "L2962", "T178"]} if g else {})
     def q_journal():
         g = mm("L2898", r"\+journal ([\d.]+) \(stage p90 ([\d.]+)\)"); d_ = mm("L2848", r"Run: simulation/check-durable\.py, (ALL PASS)")
         return Q(["L2898", "L2848"], ("journal-on total p90 %s ms (stage p90 %s)%s" % (g[0], g[1], "; check-durable ALL PASS" if d_ else "")) if g else None, "total p90 <= 600 ms and check-durable ALL PASS", "met" if g and d_ and float(g[0]) <= 600 else "PROVISIONAL")
@@ -284,7 +291,9 @@ def build():
         return Q(["L2885"], ("event peak hit rate %s%% against chance %s%%" % (g[0], g[2])) if g else None, ("%s%% hit rate" % g[1]) if g else "none recorded", "PROVISIONAL", "reported, never gating")
     def q_clocks():
         g = mm("L2859", r"ALL PASS \((\d+) checks\)")
-        return Q(["L2859"], ("check-consolidate %s of %s structural checks pass; assertion strengths all 1 (1 of 9 stores in the trace)" % (g[0], g[0])) if g else None, "none recorded", "PROVISIONAL", "decay half-life is a guess")
+        rf = {n: (k.get("funnel") or {}) for n, k in KN.items()}
+        st_ = "; ".join("%s reinforced %s/%s" % (n, f_.get("reinforced"), f_.get("assertions")) for n, f_ in rf.items() if f_.get("assertions"))
+        return Q(["L2859", "L2955", "L2960"], ("check-consolidate %s of %s structural checks pass; strengths now: %s (slow_consolidate knowledge.json funnel)" % (g[0], g[0], st_)) if g and st_ else (("check-consolidate %s structural checks pass" % g[0]) if g else None), "none recorded", "PROVISIONAL", "decay half-life is a guess; reinforced counts wire copies collapsed, not yet precision-checked (L2962)")
     QUAL = {"g0_read": q_read, "g1_spans": q_spans, "g1_places": q_places, "g2_facts": lambda: Q(["none"], None, "none recorded", "PROVISIONAL", "triples are not scored alone"), "g2_ner": q_ner, "g2_claims": q_claims, "g3_topic": q_topic, "g3_area": q_area, "g3_condition": q_cond, "g3_heads": q_heads, "g3_time": q_time, "g3_decider": q_decider, "g4_identity": q_ident, "g4_contra": q_contra, "g5_link": q_link, "g5_evol": q_evol, "g6_educate": q_educ, "journal": q_journal, "lean_p": q_lean, "learn": q_learn, "world_resource": q_wres, "world_truth": q_wtruth, "two_clocks": q_clocks}
     out = []
     for r in rows:
@@ -294,6 +303,35 @@ def build():
             im["ev"] += "; check-durable " + ("ALL PASS" if dur["pass"] else "FAIL")
             if not dur["pass"] and im["s"] == "yes": im["s"] = "part"
         out.append({"id": r["id"], "group": r["group"], "gates": r["gates"], "label": r["label"], "section": r["sec"], "aligned": al, "implemented": im, "used": us, "runs_in": runs_in, "quality": QUAL[r["id"]]()})
+    # ---- Knowledge (§2 G4-G6, staged areas) ----
+    def fj_eval():
+        """(F1, how): fact_join.py --eval on the ECB+ fixture (about 22 s CPU) unless --no-durable; else F1 from the ledger L2956 line"""
+        if not a.no_durable and FIXJ.exists():
+            try:
+                pr = subprocess.run([sys.executable, str(WS / "fact_join.py"), "--eval", str(FIXJ)], capture_output=True, text=True, timeout=90, cwd=str(WS)); j = json.loads(pr.stdout.strip().splitlines()[-1])
+                return float(j["f1"]), "recomputed now: fact_join.py --eval ecbplus-join.json P %.3f R %.3f F1 %.4f thr %s (%s s)" % (j["precision"], j["recall"], j["f1"], j["threshold"], j["seconds"])
+            except Exception: pass
+        g = mm("L2956", r"ecbplus-join\.json.*?F1 (\.\d+)"); return (float("0" + g[0]), "ledger L2956 fixture F1 %s (not recomputed)" % g[0]) if g else (None, "no score")
+    owner = lambda p_: re.split(r"[ .]", p_.strip())[0].lower()
+    sib = {n: sorted(i for i, e in (k.get("edges") or {}).items() if (e.get("strength") or 0) >= 2 and len(e.get("publishers") or []) >= 2 and len({owner(p_) for p_ in e["publishers"]}) == 1) for n, k in KN.items()}
+    f1, f1_how = fj_eval(); BAR = .49
+    col = {n: ((k.get("join") or {}).get("independence") or {}).get("collapsed") for n, k in KN.items()}; ctd = {n: (((k.get("counters") or {}).get("contested") or {}).get("n")) for n, k in KN.items()}; brd = {n: (((k.get("counters") or {}).get("bridging") or {}).get("n")) for n, k in KN.items()}
+    both = len(KN) == len(AREAS); cs = lambda d: ", ".join("%s %s" % x for x in d.items())
+    def kq(score, bar, srcs, state, note, value=None, hib=True):
+        q = {"score": score, "bar": bar, "src": srcs, "state": state, "note": note}
+        if value is not None: q.update(value=value, higher_is_better=hib)
+        return q
+    KROWS = [("Fact join (ECB+ pairwise F1)", ["WS_JOIN"], "G4", kq("ECB+ test fixture F1 %.4f (%s)" % (f1, f1_how), "F1 >= %.2f (check-knowledge K8)" % BAR, ["L2956", "L2959", "ecbplus-join.json"], "met" if f1 is not None and f1 >= BAR else "PROVISIONAL", "outside truth: ECB+ (Apache-2.0) gold event coreference; baselines exact words 0.351, same lemma 0.440 (L2956)", f1)),
+      ("Independence (wire copies, sibling feeds)", ["WS_CONS"], "G4", kq("wire/journal copies collapsed: %s; reinforced edges whose publishers share one owner prefix: %s (%s)" % (cs(col), cs({n: len(v) for n, v in sib.items()}), "; ".join("%s: %s" % (n, ", ".join(sorted({", ".join(sorted(set(KN[n]["edges"][i]["publishers"]))) for i in v})[:2])) for n, v in sib.items() if v) or "none"), "0 sibling-owner reinforced edges", ["L2955", "L2957", "L2962"], "met" if both and not any(sib.values()) else "PROVISIONAL", "owner = first word of the publisher name (Guardian*, BBC*, Boston*); structural count over knowledge.json edges, no outside truth; Fable found sibling feeds counted independent (L2962)", sum(len(v) for v in sib.values()), False)),
+      ("Who-did-it correctness (auto answers)", ["WS_ED"], "G6", kq("unmeasured; 2 known false wrong-agent statements on mix (L2962)", "0 wrong-agent statements on the auto answers, >=90% sampled", ["L2962"], "unmeasured", "houthi destroy/intercept statements: every source sentence names the Saudi-led coalition; no sampled score yet")),
+      ("Reinforced precision (sampled)", ["WS_CONS"], "G4", kq("unmeasured; Fable read 3 of 6 mix merges wrong (L2962, not a scored sample)", ">= 80% correct on 40 sampled reinforced edges per area", ["L2962"], "unmeasured", "needs a 40-per-area sample read against the source sentences")),
+      ("Contested on real data", ["WS_CONS"], "G4", kq("true contested pairs on mix: %s (c1 %s)" % (ctd.get("mix"), ctd.get("c1")), ">= 1 true pair on mix, 0 false", ["L2955", "L2962"], "PROVISIONAL", "rule proven on a synthetic control only (K8 d); mix has a real dispute that needs attribution slots (L2962)", ctd.get("mix"))),
+      ("Bridging (per-Area capabilities)", ["WS_CONS"], "G5", kq("bridging capabilities: %s" % cs(brd), "real per-Area bridges only", ["L2961", "L2962"], "PROVISIONAL", "mostly noise: c1 11 splits one hippo story across Area heads; mix 4 rest on 2 articles with flipped Area order (L2962)"))]
+    WSF = {"WS_JOIN": [WS / "fact_join.py", WS / "fact-join-model.json", FIXJ], "WS_CONS": [WS / "consolidate.py", WS / "slow_consolidate.py"], "WS_ED": [WS / "educate.py"]}
+    for lb, fk, g_, q_ in KROWS:
+        files = [x for k_ in fk for x in WSF[k_]]; al = aligned(2, ["%s — " % g_]); im = implemented(files, [], None, "areas: " + ", ".join("%s (%d articles)" % (n, k.get("articles") or 0) for n, k in KN.items()))
+        have = [n for n in KN]; us = T("yes" if both else ("part" if have else "no"), "staged area stores: " + "; ".join("%s sha %s as_of %s" % (rel(AREAS[n]), (KN[n].get("sha256") or "")[:12], KN[n].get("as_of")) for n in have) + ("" if both else "; missing: " + ", ".join(n for n in AREAS if n not in KN)))
+        out.append({"id": "kn_" + re.sub(r"\W+", "_", lb.lower()).strip("_")[:28], "group": "knowledge", "gates": [g_], "label": lb, "section": 2, "aligned": al, "implemented": im, "used": us, "runs_in": "slow" if both else ("slow" if have else "no"), "quality": q_})
     # ---- §2 gate coverage ----
     gtable = re.findall(r"^\| (G\d[ab]?) — ", secs.get(2, ""), re.M); covered = {g for r in out for g in r["gates"]}
     cov = {"playbook_gates": gtable, "covered": sorted(covered & set(gtable)), "missing": sorted(set(gtable) - covered)}
@@ -358,15 +396,49 @@ def build():
     qb_ = lambda rs: {k: sum(r["quality"]["state"] == k for r in rs) for k in ("met", "PROVISIONAL", "unmeasured")}
     counts = {"core": {"n": len(core), "aligned": sum(r["aligned"]["s"] == "yes" for r in core), "implemented": sum(r["implemented"]["s"] == "yes" for r in core), "live": sum(r["used"]["s"] == "yes" for r in core), "runs": rb_(core), "quality": qb_(core)},
               "all": {"n": len(out), "aligned": sum(r["aligned"]["s"] == "yes" for r in out), "implemented": sum(r["implemented"]["s"] == "yes" for r in out), "live": sum(r["used"]["s"] == "yes" for r in out), "runs": rb_(out), "quality": qb_(out)}}
-    wsum = {"dir": win["dir"], "newest_empty": win["newest_empty"], "window_arg": a.window, "trace": rel(win["trace"]) if win["trace"] else None, "chain_mtime": win["mtime"], "traced": win["traced"], "stages_in_chain": {k: dict(v) for k, v in sorted(win["chain"].items())}, "slow_jsonl_lines": win["slow_lines"], "slow_keys": {k: dict(v) for k, v in sorted(win["slow"].items())}, "slow_consolidate_files": {k: {"sha256_12": v["sha"], "status": v["status"]} for k, v in sorted(win["files"].items())}, "run_state": win["run"].get("state"), "v4_flags_used": (win["run"].get("v4") or {}).get("flags"), "default_on": DON, "code_files": [rel(f) for f in CODE if f.exists()]}
+    wsum = {"dir": win["dir"], "newest_empty": win["newest_empty"], "window_arg": a.window, "trace": rel(win["trace"]) if win["trace"] else None, "chain_mtime": win["mtime"], "traced": win["traced"], "stages_in_chain": {k: dict(v) for k, v in sorted(win["chain"].items())}, "slow_jsonl_lines": win["slow_lines"], "slow_keys": {k: dict(v) for k, v in sorted(win["slow"].items())}, "knowledge_areas": {n: {"path": rel(AREAS[n]), "as_of": k.get("as_of"), "articles": k.get("articles"), "sha256_12": (k.get("sha256") or "")[:12]} for n, k in KN.items()}, "slow_consolidate_files": {k: {"sha256_12": v["sha"], "status": v["status"]} for k, v in sorted(win["files"].items())}, "run_state": win["run"].get("state"), "v4_flags_used": (win["run"].get("v4") or {}).get("flags"), "default_on": DON, "code_files": [rel(f) for f in CODE if f.exists()]}
     return {"generated_at": datetime.datetime.now().isoformat(timespec="seconds"), "ledger_last": max(ledger, key=lambda i: int(i[1:])), "playbook": rel(PB), "live_trace": rel(LT), "window": wsum, "rows": out, "counts": counts, "gate_coverage": cov, "durable_check": dur,
-            "plan": {"source": "ledger L2802", "steps": steps, "running": running, "last_card": last_card}, "needs_you": needs, "story": story}
+            "plan": {"source": "ledger L2802", "steps": steps, "running": running, "last_card": last_card}, "needs_you": needs, "story": story, "sections": {"knowledge": "Knowledge (§2 G4-G6, staged areas)"}, "regressions": []}
+BR = {"yes": 2, "part": 1, "no": 0}; QR = {"met": 2, "PROVISIONAL": 1, "unmeasured": 0}
+def snap(rows):
+    """ratchet record per row (key group|label): built, runs_in (1 = not 'no'), quality state rank, numeric value and its direction"""
+    o = {}
+    for r in rows:
+        q = r["quality"]; o[r["group"] + "|" + r["label"]] = {"built": BR[r["implemented"]["s"]], "runs": int(r["runs_in"] != "no"), "q": QR[q["state"]], "value": q.get("value"), "hib": q.get("higher_is_better", True)}
+    return o
+def ratchet(cur, prev):
+    """regressions of cur against prev (dicts from snap): a drop on built, runs_in, quality state or declared value, or a missing row; new rows and improvements pass"""
+    bad = []
+    for k, p in prev.items():
+        c = cur.get(k)
+        if c is None: bad.append({"row": k, "field": "row", "was": "present", "now": "missing"}); continue
+        for fld, nm in (("built", "built"), ("runs", "runs_in"), ("q", "quality state")):
+            if c[fld] < p[fld]: bad.append({"row": k, "field": nm, "was": p[fld], "now": c[fld]})
+        if p.get("value") is not None:
+            if c.get("value") is None: bad.append({"row": k, "field": "value", "was": p["value"], "now": None})
+            elif (c["value"] < p["value"] - 5e-4) if p.get("hib", True) else (c["value"] > p["value"] + 5e-4): bad.append({"row": k, "field": "value", "was": p["value"], "now": c["value"], "higher_is_better": p.get("hib", True)})
+    return bad
+def best(cur, prev):
+    """new baseline when nothing dropped: per field the better of both"""
+    o = {k: dict(v) for k, v in cur.items()}
+    for k, p in prev.items():
+        c = o.setdefault(k, dict(p))
+        for fld in ("built", "runs", "q"): c[fld] = max(c[fld], p[fld])
+        if p.get("value") is not None and c.get("value") is not None: c["value"] = (max if p.get("hib", True) else min)(c["value"], p["value"])
+    return o
 def run():
-    d = build(); tmp = a.out + ".tmp"; open(tmp, "w").write(json.dumps(d, indent=1, ensure_ascii=False)); os.replace(tmp, a.out)
+    d = build(); cur = snap(d["rows"]); active = a.window is None and a.out == DEFAULT_OUT; prev = jload(a.prev) if active else None
+    if active and prev is None and os.path.exists(a.prev) and not a.accept: print("REGRESSION baseline %s exists but is unreadable; not overwritten (fix it or run --accept)" % a.prev); d["regressions"] = [{"row": "baseline", "field": "file", "was": "readable", "now": "unreadable"}]
+    if active and prev and not a.accept: d["regressions"] += ratchet(cur, prev.get("rows") or {})
+    if active and (a.accept or (not prev and not d["regressions"]) or (prev and not d["regressions"])):
+        base = cur if (a.accept or not prev) else best(cur, prev.get("rows") or {}); tp = a.prev + ".tmp"; open(tp, "w").write(json.dumps({"saved_at": d["generated_at"], "ledger_last": d["ledger_last"], "how": "accepted" if a.accept else ("seed" if not prev else "ratchet up"), "rows": base}, indent=1, ensure_ascii=False)); os.replace(tp, a.prev)
+    for r in d["regressions"]: print("REGRESSION %s: %s was %s now %s" % (r["row"], r["field"], r["was"], r["now"]))
+    tmp = a.out + ".tmp"; open(tmp, "w").write(json.dumps(d, indent=1, ensure_ascii=False)); os.replace(tmp, a.out)
     c = d["counts"]; print("wrote %s | newest run %s%s | core: %d of %d run, %d implemented, %d aligned | runs_in %s | quality %s | all: %d of %d run | gates missing: %s" % (a.out, d["window"]["dir"], (" (traced %d)" % d["window"]["traced"]) + ((" | WINDOW EMPTY: " + d["window"]["newest_empty"]["why"]) if d["window"]["newest_empty"] else ""), c["core"]["live"], c["core"]["n"], c["core"]["implemented"], c["core"]["aligned"], c["core"]["runs"], c["core"]["quality"], c["all"]["live"], c["all"]["n"], d["gate_coverage"]["missing"] or "none"))
+    print("ratchet: %s" % ("off (--window or --out given)" if not active else ("baseline accepted" if a.accept else ("%d regression(s)" % len(d["regressions"]) if prev else "baseline seeded"))))
     return d
 if __name__ == "__main__":
     while True:
         d = run()
-        if not a.watch: sys.exit(1 if d["gate_coverage"]["missing"] or d["window"]["newest_empty"] else 0)
+        if not a.watch: sys.exit(3 if d["regressions"] else (1 if d["gate_coverage"]["missing"] or d["window"]["newest_empty"] else 0))
         time.sleep(a.watch)

@@ -101,6 +101,8 @@ body[data-mode=status] .app{display:none}body:not([data-mode=status]) #status{di
 .kn .yl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}.kn .yl div{border:1px solid var(--border);border-radius:8px;padding:3px 8px}.kn .yl b{display:block;font-size:17px;font-variant-numeric:tabular-nums}.kn .yl span{font:10px var(--mono);text-transform:uppercase;color:var(--mut)}
 .kn svg.gl{width:100%;height:96px;display:block;margin:2px 0}.kn .gleg{font:11px var(--mono);color:var(--text-2);display:flex;gap:12px;flex-wrap:wrap}
 .kn .nx{margin-left:auto}
+.kn .bld{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:none;border:1px solid var(--border);border-radius:12px;padding:5px 12px;background:var(--surface)}.kn .bld .btn.on{background:var(--accent-soft);border-color:var(--accent)}.kn .bld input[type=range]{flex:1 1 180px;min-width:120px;accent-color:var(--accent)}.kn .bld .bk{font:12px var(--mono);color:var(--text-2);white-space:nowrap}.kn .bld .bk b{color:var(--text);font-size:15px}
+.kn .added{border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px}.kn .added h3{margin-bottom:2px}.kn .added .sec{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:6px 0 1px}.kn .added .ad{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:2px 0;border-bottom:1px solid var(--border)}.kn .added .ad .tx{flex:1;overflow-wrap:anywhere}.kn .added .x{font-size:11.5px;color:var(--text-2)}.kn .added .why1{font-size:11px;padding:0 8px}.kn .added .sumk{margin:3px 0}
 </style></head><body><div class="app">
 <div class="col"><div class="brand"><span>Knowledge pipeline</span><span id="mode_a"></span></div><ol class="steps" id="steps"></ol>
 <div class="ctl"><div id="msg"></div><div class="small"><div class="tabs sw" id="srcsw" aria-label="article source"></div></div><div class="small"><span class="k">staged area</span><div class="tabs sw" id="areasw" aria-label="staged interest area"></div></div><div class="small"><div id="srcinfo" style="font:11px var(--mono);flex:1;min-width:0"></div><select id="w" aria-label="window" style="width:64px;flex:none"><option value="24h">24h</option><option value="any">any</option></select></div><button class="prime pulse" id="b_next">Read first article</button><div class="row2"><button class="btn" id="b_play">Play</button><button class="btn" id="b_story">random story</button><button class="btn" id="b_reset">reset</button></div></div></div>
@@ -144,12 +146,14 @@ function rowsLine(r){return[["aligned (playbook)",r.aligned],["implemented",r.im
 function drawStatus(){const root=$("status");root.replaceChildren();
   const hd=el("div",{class:"sthd"},el("div",{class:"brand",style:"margin:0"},"Knowledge pipeline"),el("span",{id:"mode_b"}),el("span",{class:"k",id:"stgen"},ST?"generated "+ST.generated_at.replace("T"," ")+" · ledger "+ST.ledger_last+" · reads status.json":""));root.append(hd);
   if(!ST){root.append(el("div",{class:"empty"},el("b",{},"No status yet"),STERR||"loading"));$("mode_b").replaceChildren(modeSwitch());return}
+  const rg=(ST.regressions||[]).map(x=>typeof x==="string"?x:[x.row||x.id,x.text||x.what||x.why||x.note].filter(Boolean).join(": ")||JSON.stringify(x));
+  if(rg.length)root.append(el("div",{class:"regr","data-regressions":String(rg.length),style:"color:var(--bad);font-size:13px;font-weight:600;border:1px solid var(--bad);border-radius:10px;padding:5px 12px;flex:none"},"Regressions ("+rg.length+"): "+rg.join(" | ")));
   const pns=el("div",{class:"pns"});root.append(pns);const c=ST.counts.core,gc=ST.gate_coverage;
   /* 1 checklist */
   const p1=el("section",{class:"pn",id:"p_check"},el("h2",{},"Checklist"),el("div",{class:"cnt","data-count":"core"},el("b",{},"core: "+c.live+" of "+c.n+" live"),el("span",{}," · implemented "+c.implemented+" · aligned "+c.aligned+" · quality "+((c.quality||{}).met||0)+" met, "+((c.quality||{}).PROVISIONAL||0)+" provisional, "+((c.quality||{}).unmeasured||0)+" unmeasured · gates covered "+gc.covered.length+" of "+gc.playbook_gates.length+(gc.missing.length?" (missing "+gc.missing.join(", ")+")":""))),
     el("div",{class:"ckh"},el("span",{}),el("span",{}),el("span",{title:"aligned to the playbook"},"aligned"),el("span",{title:"implemented: the files exist, limits from the ledger"},"built"),el("span",{title:"runs = output present in the newest end-to-end run: chain (chain.jsonl stage), slow (slow.jsonl key or slow_consolidate file), chain+slow, offline (proof gate), no"},"runs"),el("span",{title:"quality: met = a recorded bar is met; provisional = below the bar, no bar, or the output is marked PROVISIONAL (never a blocker); unmeasured = no scored number in the ledger"},"quality")),
     el("div",{class:"lg","data-legend":"runs"},"runs = output present in the newest end-to-end run"+(ST.window&&ST.window.dir?" ("+ST.window.dir+": chain "+ST.window.traced+" lines, slow "+ST.window.slow_jsonl_lines+" lines)":"")+" · chain, slow, chain+slow, offline or no"));
-  const G=[["core","Core gates G0–G6 (§2)"],["plumbing","Plumbing: Journal (§1), Lean (§11)"],["learning","Learning (§13)"],["world","World-model view (§10, §18)"]];
+  const G=[["core","Core gates G0–G6 (§2)"],["knowledge",((ST.sections||{}).knowledge)||"Knowledge (§2 G4-G6, staged areas)"],["plumbing","Plumbing: Journal (§1), Lean (§11)"],["learning","Learning (§13)"],["world","World-model view (§10, §18)"]];
   for(const[g,n]of G){const rs=ST.rows.filter(r=>r.group===g);p1.append(el("div",{class:"gh"},n+" · "+rs.filter(r=>r.used.s==="yes").length+" of "+rs.length+" run"));
     for(const r of rs){const row=el("div",{class:"ck","data-row":r.id,title:rowsLine(r)},el("span",{class:"gt"},r.gates.join(" ")||"§"+r.section),el("span",{class:"lb"},r.label));
       for(const[k,t]of[["aligned",r.aligned],["implemented",r.implemented],["used",r.used]])row.append(el("span",{class:"tk","data-t":k,"data-s":t.s,title:(k==="used"?"runs":k)+": "+TKN[t.s]+" - "+t.ev},k==="used"?(r.runs_in||"no"):TICK[t.s]));
@@ -517,6 +521,7 @@ function s6(st){const d=A.decider||{},c=A.codes||{},p=A.p||{},U=itemsOf(A).filte
   st.append(el("div",{class:"dec"},chg,...(dcb?[dcb]:[]),sure,evd,op))}
 /* 5 Knowledge (L2936, plan 5): what the whole window has learned, read from slow_consolidate/knowledge.json (schema: projects/world-state/KNOWLEDGE_SCHEMA.md). All numbers PROVISIONAL (L2901). Counters follow the article being read: only fragments from articles up to this one count (growth by chain seq). */
 let KN=null,KSEL="reinforced";const KSTEP=5;
+let BK=null,BKFROM=null,BKCUR,BKDEF=0,BKN=0,BT=null;   /* build position: BK = article index 1..N the knowledge is built up to (null = follow the article being read); BKFROM = where the last jump started */
 async function knFeed(){if(KN&&KN.src===SRC&&Date.now()-KN.t<15000)return KN.d;const d=await api("/sim-api/raw/knowledge?src="+encodeURIComponent(SRC));KN={src:SRC,d,t:Date.now()};drawSteps();return d}
 const safeUrl=u=>/^https?:\/\//i.test(String(u||""))?String(u):null;
 const srcLink=(pub,url,title)=>{const u=safeUrl(url);return u?el("a",{href:u,target:"_blank",rel:"noopener noreferrer",title:title||u},pub||u):el("span",{},pub||"")};
@@ -530,7 +535,9 @@ function drawKn(d){
   const K=d.knowledge||{},AR=d.articles||{},E=K.edges||{},C=K.counters||{},cur=(A&&A.window&&A.window.seq!=null)?A.window.seq:null;
   const seqOf=id=>{const a=AR[id];return a&&a.seq!=null?a.seq:-1};
   const G=(K.growth||[]).slice().sort((a,b)=>a.seq-b.seq),last=G.length?G[G.length-1].seq:Math.max(0,...Object.values(AR).map(a=>a.seq==null?0:a.seq));
-  const asOf=cur==null||cur>=last?last:cur,final=asOf>=last,nArt=Object.keys(AR).length||K.articles||0;
+  const NG=G.length,defK=NG?(cur==null||cur>=last?NG:Math.max(1,G.findIndex(g=>g.seq>=cur)+1)):0;
+  if(BKCUR!==cur){BKCUR=cur;BK=null;BKFROM=null;bkStop()}
+  BKDEF=defK;BKN=NG;const kk=NG?(BK==null?defK:Math.min(NG,Math.max(1,BK))):0,asOf=NG?G[kk-1].seq:(cur==null?last:cur),final=asOf>=last,nArt=Object.keys(AR).length||K.articles||0;
   const frs=id=>(E[id]&&E[id].fragments)||[],upto=id=>frs(id).filter(f=>seqOf(f.art)<=asOf),pubsN=id=>final&&E[id]&&(E[id].publishers||[]).length?E[id].publishers.length:new Set(upto(id).map(f=>f.pub)).size,artsN=id=>new Set(upto(id).map(f=>f.art)).size;
   const ci=Math.max(0,G.findIndex(g=>g.seq>=asOf)),g0=G[ci]||null;   /* the growth row of the article being read: the slow clock's own count (independent publishers by story root), cumulative by chain seq */
   const evid=c=>((C[c]||{}).evidence||[]).filter(id=>c==="bridging"||E[id]);
@@ -548,15 +555,16 @@ function drawKn(d){
   const hd=el("div",{class:"hd1"},el("div",{class:"asof","data-asof":"1"},"as of consolidation ",el("b",{},asof||"unknown time"),", ",el("b",{},String(K.articles!=null?K.articles:nArt)+" articles"),", ",el("b",{},String(K.publishers!=null?K.publishers:"?")+" publishers")),tg("slow_consolidate, "+(K.provisional===false?"checked":"PROVISIONAL")),d.area?tg("staged area: "+d.area.short):"",el("span",{class:"asof"},"counters count articles up to "+(cur==null?"the last":"this one")+" ("+(G.findIndex(g=>g.seq>=asOf)+1||nArt)+" of "+(G.length||nArt)+")"));
   if(SRC!=="queue"){const nb=el("button",{class:"btn nx",id:"kn_next",title:"read the next article of this window and stay on Knowledge so the counters grow"},"Next article, stay here →");nb.onclick=async()=>{if(BUSY)return;if(!(await loadArticle(false)))return;goto(KSTEP)};hd.append(nb)}
   root.append(hd);
+  if(NG)root.append(bkBar(d,kk,NG));
   /* answer card */
-  const ans=K.answer||{},sts=ans.statements||[],q=String(ans.question||"").replace(/^auto:\s*/,"");
+  const ans=K.answer||{},sts=(ans.statements||[]).filter(x=>BK==null||(x.refs||[]).some(r=>upto(r).length)),q=String(ans.question||"").replace(/^auto:\s*/,"");
   const ac=el("div",{class:"ans","data-block":"answer"},el("h3",{},ans.question?"What we know about "+q:"No answer for this window ",tg(ans.auto?"auto question, PROVISIONAL":"PROVISIONAL")));
   if(!sts.length)ac.append(el("div",{class:"l na"},ans.abstain||"The window has no assertion subject to answer about."));
   else{const secs=[];for(const x of sts){const n=x.section||"known";if(!secs.includes(n))secs.push(n)}
     for(const n of secs){ac.append(el("div",{class:"sec","data-section":n},n.replace(/_/g," ")));
-      for(const x of sts.filter(y=>(y.section||"known")===n)){const seen=new Set(),ls=[];for(const rid of x.refs||[])for(const f of frs(rid)){if(seen.has(f.art))continue;seen.add(f.art);const a=AR[f.art]||{};ls.push(srcLink(f.pub||a.publisher,a.url,a.title))}
+      for(const x of sts.filter(y=>(y.section||"known")===n)){const seen=new Set(),pbs=new Set(),ls=[];for(const rid of x.refs||[])for(const f of (BK==null?frs(rid):upto(rid))){pbs.add(f.pub);if(seen.has(f.art))continue;seen.add(f.art);const a=AR[f.art]||{};ls.push(srcLink(f.pub||a.publisher,a.url,a.title))}
         const sr=el("span",{class:"srcs"});ls.slice(0,5).forEach(l=>sr.append(l));if(ls.length>5)sr.append(el("span",{class:"l na"},"+"+(ls.length-5)+" more"));
-        ac.append(el("div",{class:"st1","data-statement":"1"},el("span",{class:"tx"},x.text||""),el("span",{class:"pubn"},(x.publishers==null?seen.size:x.publishers)+" publisher"+(x.publishers===1?"":"s")),sr))}}}
+        ac.append(el("div",{class:"st1","data-statement":"1"},el("span",{class:"tx"},x.text||""),el("span",{class:"pubn"},(BK!=null||x.publishers==null?pbs.size:x.publishers)+" publisher"+((BK!=null||x.publishers==null?pbs.size:x.publishers)===1?"":"s")),sr))}}}
   root.append(ac);
   /* four counters */
   const ctr=el("div",{class:"ctr"});
@@ -582,6 +590,7 @@ function drawKn(d){
     if(!L.length)evp.append(el("div",{class:"l na"},KSEL==="reinforced"?"none yet at this article: no assertion has come from a second independent publisher":"none yet at this article"))}
   /* right: funnel, growth, yield */
   const rp=el("div",{class:"rp"});low.append(rp);
+  if(NG)rp.append(addedPanel(d,kk));
   rp.append(el("h3",{},"layer funnel at consolidation (bar length is square-root scaled)"));
   const F=K.funnel||{},keys=["observations","fragments","assertions","reinforced","contested","capabilities","bridging","concepts"].filter(k=>F[k]!=null),mx=Math.max(1,...keys.map(k=>Math.sqrt(F[k])));
   for(const k of keys)rp.append(el("div",{class:"fb","data-funnel":k},el("span",{},k),el("div",{class:"bn"},el("i",{style:"width:"+Math.max(1,Math.round(100*Math.sqrt(F[k])/mx))+"%"})),el("em",{},String(F[k]))));
@@ -595,6 +604,68 @@ function drawKn(d){
   const Y=K.yield||{},pc=v=>v==null?"–":(typeof v==="number"?v.toFixed(1):String(v));
   rp.append(el("h3",{style:"margin-top:10px"},"yield at consolidation"),el("div",{class:"yl","data-yield":"1"},el("div",{},el("b",{},Y.pct_reinforced==null?"–":pc(Y.pct_reinforced)+"%"),el("span",{},"assertions ≥ 2 publishers")),el("div",{},el("b",{},pc(Y.contested_per_100)),el("span",{},"contested per 100 articles")),el("div",{},el("b",{},Y.bridging==null?"–":String(Y.bridging)),el("span",{},"bridging capabilities")),el("div",{},el("b",{},Y.answerable==null?"–":String(Y.answerable)),el("span",{},"answerable questions"))));
   root.append(low);return root}
+/* build view (owner goal 2026-11-21: watch the knowledge being built, or jump 5-10 articles): everything below is computed in the page from knowledge.json, nothing reloads the chain */
+const knNm1=x=>x==null||x===""?"–":String(x).replace(/^[a-z_]{2,12}:(?=\S)/,""),knTrip=e=>[e.subject,e.predicate,e.object].map(knNm1).join(" — "),knShort=(t,n)=>{t=String(t||"");return t.length>n?t.slice(0,n-1)+"…":t};
+function bkStop(){if(BT){clearInterval(BT);BT=null}}
+function bkRender(d){const r=document.getElementById("kn");if(r&&r.dataset.knowledge==="ready")r.replaceWith(drawKn(d))}
+function bkGo(d,k){const prev=BK==null?BKDEF:BK;k=Math.min(BKN,Math.max(1,k));if(k!==prev)BKFROM=prev;BK=k;bkRender(d)}
+function bkPlay(d){if(BT)return;if((BK==null?BKDEF:BK)>=BKN)bkGo(d,1);BT=setInterval(()=>{if(!document.getElementById("kn")){bkStop();return}const c=BK==null?BKDEF:BK;if(c>=BKN){bkStop();bkRender(d);return}bkGo(d,c+1)},1000);bkRender(d)}
+function bkBar(d,k,N){
+  const bar=el("div",{class:"bld","data-build":"1","data-build-k":String(k),"data-build-n":String(N)});
+  const b=(id,t,tt,f,on)=>{const x=el("button",{class:"btn"+(on?" on":""),id,title:tt,type:"button"},t);x.onclick=f;return x};
+  const lab=el("span",{class:"bk","data-build-label":"1"},"as of article ",el("b",{},String(k)),el("span",{}," of "+N));
+  const sl=el("input",{type:"range",id:"bk_slider",min:"1",max:String(N),value:String(k),title:"build the knowledge up to this article, without reloading the chain"});
+  sl.oninput=()=>{lab.replaceChildren("as of article ",el("b",{},sl.value),el("span",{}," of "+N))};sl.onchange=()=>bkGo(d,+sl.value);
+  bar.append(b("bk_play","▶ play","build the knowledge one article a second",()=>bkPlay(d),!!BT),b("bk_pause","⏸","pause",()=>{bkStop();bkRender(d)},false),b("bk_p1","+1","one more article",()=>{bkStop();bkGo(d,k+1)}),b("bk_p5","+5","jump five articles",()=>{bkStop();bkGo(d,k+5)}),b("bk_p10","+10","jump ten articles",()=>{bkStop();bkGo(d,k+10)}),sl,lab);
+  if(BK!=null)bar.append(b("bk_read","↺ read article","go back to the article being read",()=>{bkStop();BK=null;BKFROM=null;bkRender(d)}));
+  else bar.append(el("span",{class:"asof"},"following the article being read"));
+  return bar}
+/* per-article events of the whole window, from edges (fragments, independent.sources, slot) and contested; keyed by chain seq. Cached on the feed object. */
+function knTL(d){
+  if(d._tl)return d._tl;
+  const K=d.knowledge||{},AR=d.articles||{},E=K.edges||{},sq=id=>{const a=AR[id];return a&&a.seq!=null?a.seq:-1},ev={},first={},add=(s,it)=>{(ev[s]=ev[s]||[]).push(it)};
+  const tk=t=>new Set(String(t||"").toLowerCase().replace(/[a-z_]{2,12}:/g," ").split(/[^a-z0-9]+/).filter(w=>w.length>2).map(w=>w.slice(0,5)));
+  for(const id in E){const e=E[id],all=e.fragments||[],fr=all.filter(f=>sq(f.art)>=0).map(f=>({f,s:sq(f.art)})).sort((a,b)=>a.s-b.s);if(!fr.length)continue;
+    first[id]=fr[0].s;add(fr[0].s,{kind:"new",id,frag:fr[0].f});
+    const srcs=((e.independent||{}).sources||[]).map(s=>{const as=(s.arts||[]).filter(a=>sq(a)>=0).sort((a,b)=>sq(a)-sq(b));return{s,fa:as[0],fs:as.length?sq(as[0]):null}}).filter(x=>x.fs!=null).sort((a,b)=>a.fs-b.fs);
+    const artSrc={};srcs.forEach(x=>(x.s.arts||[]).forEach(a=>{artSrc[a]=x}));
+    srcs.forEach((x,i)=>{if(i>0)add(x.fs,{kind:"reinforced",id,was:i,now:i+1,pub:x.s.pub,frag:all.find(f=>f.art===x.fa),prev:srcs.slice(0,i).map(y=>y.s.pub)})});
+    const sc=new Set();for(const{f,s}of fr){const x=artSrc[f.art];if(x&&f.art!==x.fa&&!sc.has(f.art)){sc.add(f.art);add(s,{kind:"copy",id,pub:f.pub,of:x.s.pub,how:(x.s.how||[]).join(", "),frag:f,base:all.find(g=>g.art===x.fa)})}}
+    const M=(e.slot||{}).members||[];
+    if(M.length>1){const mt=M.map(m=>tk((m.predicate||"")+" "+(m.object||""))),fm={};   /* the feed gives a slot's members and its fragments but not which fragment belongs to which member: assigned by word overlap with the member's verb + object (approximate) */
+      for(const x of fr){const ft=tk(x.f.sent);let bj=0,bs=-1;mt.forEach((t,j)=>{let n=0;t.forEach(w=>{if(ft.has(w))n++});const sc2=n/(t.size||1);if(sc2>bs){bs=sc2;bj=j}});if(!(bj in fm))fm[bj]=x}
+      const js=Object.keys(fm).map(Number).sort((a,b)=>fm[a].s-fm[b].s||a-b);let A,B,ap=false;
+      if(js.length>=2){A={m:M[js[0]],x:fm[js[0]]};B={m:M[js[1]],x:fm[js[1]]};if(B.x.s<A.x.s){const t=A;A=B;B=t}}
+      else{const f2=fr.find(x=>x.f.art!==fr[0].f.art);if(f2){A={m:M[0],x:fr[0]};B={m:M[1],x:f2};ap=true}}
+      if(A&&B)add(Math.max(A.x.s,B.x.s),{kind:"joined",id,A,B,prob:(e.slot||{}).min_pair_prob,how:(e.slot||{}).merged_how,approx:ap||js.length>=2})}}
+  for(const c of K.contested||[]){if(first[c.a]!=null&&first[c.b]!=null)add(Math.max(first[c.a],first[c.b]),{kind:"apart",id:c.a,c})}
+  return(d._tl={ev,first})}
+const KINDS=[["new","New facts"],["reinforced","Reinforced"],["copy","Copies ignored"],["joined","Joined"],["apart","Kept apart"]];
+function addedPanel(d,k){
+  const K=d.knowledge||{},AR=d.articles||{},E=K.edges||{},G=(K.growth||[]).slice().sort((a,b)=>a.seq-b.seq),T=knTL(d).ev;
+  const from=BKFROM!=null&&BKFROM<k?BKFROM:k-1,seqs=[];for(let i=from+1;i<=k;i++)seqs.push(G[i-1].seq);
+  const items=[];for(const s of seqs)for(const it of T[s]||[])items.push(Object.assign({seq:s},it));
+  const ttl=(i)=>{const a=Object.values(AR).find(x=>x.seq===G[i-1].seq);return a?(a.publisher||"")+" — "+knShort(a.title,60):""};
+  const box=el("div",{class:"added","data-added":"1","data-added-from":String(from+1),"data-added-to":String(k),"data-added-n":String(items.length)});
+  box.append(el("h3",{},from+1===k?"What article "+k+" added":"What articles "+(from+1)+" to "+k+" added"),el("div",{class:"x"},from+1===k?ttl(k):""));
+  const sent=f=>f?(f.pub||"")+": "+(f.sent||""):"–",tr=id=>E[id]?knTrip(E[id]):id;
+  const why=(h,rows,m)=>{const b=el("button",{class:"btn why1",type:"button",title:"open the source sentences"},"why");b.onclick=()=>dopen(h,rows);return b};
+  const CAP=8,sum=el("div",{class:"sumk"});box.append(sum);
+  for(const[kind,name]of KINDS){const L=items.filter(x=>x.kind===kind);sum.append(el("span",{class:"chip","data-added-count":kind},name+" "+L.length));if(!L.length)continue;
+    box.append(el("div",{class:"sec","data-added-section":kind},name+" ("+L.length+")"));
+    for(const x of L.slice(0,CAP)){let txt,rows,h=name;
+      if(kind==="new"){txt=tr(x.id);rows=[["new fact",tr(x.id)],["first seen in",sent(x.frag)],["publishers so far","1"]]}
+      else if(kind==="reinforced"){txt=tr(x.id)+" — was "+x.was+" publisher"+(x.was===1?"":"s")+" → now "+x.now+" ("+x.pub+")";rows=[["fact",tr(x.id)],["earlier",x.prev.join(", ")],["new independent source",sent(x.frag)]]}
+      else if(kind==="copy"){txt=x.pub+": same wording as "+x.of+": not independent — "+tr(x.id);rows=[["copy",sent(x.frag)],["same wording as",sent(x.base)],["why not independent",x.how||"copy of an earlier source"]]}
+      else if(kind==="joined"){txt=tr(x.id)+" — "+knShort(knNm1(x.A.m.object),38)+" + "+knShort(knNm1(x.B.m.object),38)+" · min_pair_prob "+(x.prob==null?"–":(+x.prob).toFixed(2));rows=[["wording A",x.A.m.key+" | "+sent(x.A.x.f)],["wording B",x.B.m.key+" | "+sent(x.B.x.f)],["min_pair_prob",x.prob],["merged by",x.how]];
+        if(x.approx)rows.push(["note","which sentence belongs to which wording is matched by word overlap (the feed lists a slot's members and its sentences, not the pairing)"])}
+      else{const c=x.c;txt="kept apart: "+tr(c.a)+"  vs  "+tr(c.b)+" · "+(c.kind||"contested")+(c.reversal?" · reversal":"");rows=[["one side",tr(c.a)],["other side",tr(c.b)],["earlier",c.earlier&&c.earlier.day],["later",c.later&&c.later.day],["kind",c.kind+(c.reversal?" (reversal)":"")]]}
+      box.append(el("div",{class:"ad","data-added-kind":kind,"data-edge":x.id,"data-seq":String(x.seq)},el("span",{class:"tx"},txt),why(h+": "+knShort(tr(x.id),70),rows)))}
+    if(L.length>CAP)box.append(el("div",{class:"l na"},"+"+(L.length-CAP)+" more"))}
+  if(!items.length)box.append(el("div",{class:"l na"},"nothing new in this step: every sentence here repeated what was already known"));
+  const J=K.join||{},gp=J.gated_pairs||{},gs=Object.keys(gp).map(x=>x+" "+gp[x]).join(", ");
+  box.append(el("div",{class:"x","data-added-apart":"1"},"Kept apart by the join gates, whole window: "+(gs||"none")+(K.contested&&K.contested.length?"":" · contested pairs: none")+". The feed carries these counts for the whole window, not per pair or per article, so they are not placed on the timeline."));
+  return box}
 /* detail */
 function dopen(h,rows){const d=$("det");d.replaceChildren(el("span",{class:"x"},"close"),el("h4",{},h));d.firstChild.onclick=()=>d.classList.remove("open");for(const[k,v,m]of rows)if(have(v))d.append(el("div",{class:"r"},el("span",{},k),el("span",{},String(v),m?tg(m):"")));d.classList.add("open")}
 function itemDetail(u){dopen(spanText(A,u)||u.subject||"",[["type",u.type+(u.ner_fine?" / "+u.ner_fine:(u.ner?" / "+u.ner:"")),u.ner_fine?"entities v2 (Few-NERD v1, test F1 coarse 0.691 / fine 0.537)":(u.ner?(u.ner_src==="lg"?"entities v1 (spaCy lg), unmeasured vs outside truth":"spot only"):null)],["coarse type",u.ner_coarse||null,"Few-NERD prefix"],["lg cross-check",u.ner_lg||(u.ner_fine&&u.ner&&u.ner!=="UNTYPED"?u.ner:null),"spaCy lg label"],["mentions",u.mentions&&u.mentions.length>1?u.mentions.length+" in this article (counted once)":null],["source",u.src==="lg"?"added by lg pass":(u.src==="fewnerd"?"added by Few-NERD pass":null)],["filter",u.filter?(u.filter.kept?"kept":"dropped: "+u.filter.reason):null,"filter v0"],["node key",u.key],["merge",u.merge?u.merge.result+(u.merge.before!=null?" "+u.merge.before+"→"+u.merge.after:""):null,"merge v0"],["sentence",u.sent_text]])}

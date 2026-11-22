@@ -348,8 +348,28 @@ def slot_merge(edges, scorer=None, FJ=None, mode=""):
             for i in ix: mapping[G[i]["id"]] = sid
     out.sort(key=lambda e: e["id"]); rep_ = {"mode": mode, "threshold": thr, "facts_raw": len(A), "slots": len(out), "merge_rate": round(1.0 - len(out) / len(A), 4) if A else 0.0, "merged_slots": len(merges), "anchors": len(groups), "anchor_merges": sum(1 for s, a in an.items() if s != a), "gated_pairs": dict(sorted(gated.items())), "map": mapping, "status": "PROVISIONAL"}
     return out + R, rep_
+CAP_LIGHT = {"be", "have", "do", "say", "get", "go", "make", "tell", "add", "see", "take", "give", "let", "use", "include", "become", "remain", "seem", "show", "note", "report"}   # verbs that name no capability (stative or reporting)
+CAP_MIN_PUBS = 2   # an open verb-object pair needs >= 2 independent publishers (wire copies collapsed) before it is a capability candidate
+def edge_cap_labels(e):
+    """one assertion edge (and the members of its slot) -> {normalised 'verb object' labels}: lemma verb + head noun of a short object (<= 2 content tokens). The open side of capability_list: the fast pass only matches the closed t230/t222 list (36 of 40 mix articles got none); this reads the triples the slow pass already holds, in any domain."""
+    pairs = [(e.get("pred"), e["obj"] if e.get("obj") is not None else e.get("obj_text"))] + [(m.get("predicate"), m.get("object")) for m in (e.get("slot") or {}).get("members") or []]; out = set()
+    for p, o in pairs:
+        if not p or not o: continue
+        v = lemma_verb(str(p).split()[0]); t = [x for x in re.findall(r"[a-z]+", str(o).split(":")[-1].lower()) if x not in _DET]
+        if v in CAP_LIGHT or not (0 < len(t) <= 2) or len(t[-1]) < 3: continue
+        out.add(v + " " + cnorm(t[-1]))
+    return out
+def open_caps(ST, edges):
+    """{cap id: {label, arts {article: publisher}, edges {edge ids}}} for open verb-object pairs read from the slow pass's assertion edges that meet CAP_MIN_PUBS independent publishers"""
+    M = collections.defaultdict(lambda: {"arts": {}, "edges": set()})
+    for e in edges:
+        if e.get("kind") != "assertion": continue
+        for lab in edge_cap_labels(e):
+            m = M[cap_id(lab)]; m["label"] = norm_cap(lab); m["edges"].add(e["id"])
+            for f in e["fragments"]: m["arts"].setdefault(f["art"], f.get("pub") or ST.pub(f["art"]))
+    return {i: m for i, m in M.items() if ST.strength(sorted(m["arts"].items()))[0] >= CAP_MIN_PUBS}
 def capability_layer(ST, edges=()):
-    """playbook 00 sections 8 and 9: Domain > Area > Capability as a typed graph, not a tree (a capability sits under every area its articles had). Built from the chain's capability_list (t230 / t222 verb-object lists), so every node is PROVISIONAL; nothing here promotes one."""
+    """playbook 00 sections 8 and 9: Domain > Area > Capability as a typed graph, not a tree (a capability sits under every area its articles had). Built from the chain's capability_list (t230 / t222 closed verb-object lists) plus open verb-object pairs from the slow pass's assertion edges (>= 2 independent publishers), so every node is PROVISIONAL; nothing here promotes one."""
     N = {}
     for a, it in sorted(ST.by.items()):
         for c in it.get("caps") or []:
@@ -357,12 +377,22 @@ def capability_layer(ST, edges=()):
             n["kinds"].add(c["kind"]); n["arts"][a] = it["source"]; n["pl"][(it.get("domain"), it.get("area"))] += 1
             if it.get("domain"): n["dom"][it["domain"]] += 1
             if it.get("area"): n["area"][it["area"]] += 1
+    for i, m in open_caps(ST, edges).items():   # open verb-object pairs from the slow pass: placed under the Area of each article that stated them
+        n = N.setdefault(i, {"label": m["label"], "kinds": set(), "arts": {}, "dom": collections.Counter(), "area": collections.Counter(), "pl": collections.Counter()}); n["kinds"].add("candidate")
+        for a, pub in m["arts"].items():
+            it = getattr(ST, "by", {}).get(a) or {}
+            if a in n["arts"]: continue
+            n["arts"][a] = pub; n["pl"][(it.get("domain"), it.get("area"))] += 1
+            if it.get("domain"): n["dom"][it["domain"]] += 1
+            if it.get("area"): n["area"][it["area"]] += 1
+        for e in edges:
+            if e["id"] in m["edges"] and i not in (e.get("capabilities") or []): e["capabilities"] = sorted(set(e.get("capabilities") or []) | {i})
     ec = collections.Counter(i for e in edges for i in (e.get("capabilities") or [])); nodes = []; pl = []
     for i in sorted(N):
         n = N[i]; st, stories, pubs = ST.strength(sorted(n["arts"].items()))
         nodes.append({"id": i, "label": n["label"], "kind": "recurring" if "recurring" in n["kinds"] else "candidate", "status": "PROVISIONAL", "articles": len(n["arts"]), "strength": st, "stories": stories, "publishers": pubs, "edges": ec[i], "domains": dict(sorted(n["dom"].items())), "areas": sorted(n["area"]), "areas_n": len(n["area"]), "bridging": len(n["area"]) >= 2, "area_counts": dict(sorted(n["area"].items())), "items": [[a, p, getattr(ST, "by", {}).get(a, {}).get("day")] for a, p in sorted(n["arts"].items())]})
         pl += [{"domain": d, "area": ar, "capability": i, "articles": k} for (d, ar), k in sorted(n["pl"].items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1])))]
-    return {"status": "PROVISIONAL", "model": "Domain > Area > Capability (playbook 00 sections 8-9); placements are co-occurrence in an article, a typed graph, not an is_a tree", "promotion": "none (no promote step, no human review; ids come from the verb-object lists, not from learning)",
+    return {"status": "PROVISIONAL", "model": "Domain > Area > Capability (playbook 00 sections 8-9); placements are co-occurrence in an article, a typed graph, not an is_a tree", "promotion": "none (no promote step, no human review; ids come from the verb-object lists and the slow pass triples, not from learning)",
             "counts": {"capabilities": len(nodes), "recurring": sum(n["kind"] == "recurring" for n in nodes), "candidate": sum(n["kind"] == "candidate" for n in nodes), "articles_with_capability": len({a for n in N.values() for a in n["arts"]}), "placements": len(pl), "bridging": sum(len(n["area"]) >= 2 for n in N.values())}, "nodes": nodes, "placements": pl}
 def candidates(stores, ST, iptc_labels, wn, iptc_par):
     """concept entities from every G4 store, merged by (type, canonical name): recurrence by windows and independent publishers, then the distinctness check. Returns (candidate list, counts, the is_a graph)."""
