@@ -5,7 +5,11 @@ What it does:
   1. Story identity: every item (trace line, journal row) is replayed through journal.classify in (day, id) order, so a syndicated copy resolves to the root of its story; an item with no key is its own story. This is journal.py's logic, not a second one.
   2. Merge: the same assertion (G4 key: subject | predicate | object) in several runs, stores and days becomes ONE edge that keeps every supporting fragment (article, publisher, day, sentence, spans) and a lineage line per input record merged. A resource tick log gives one edge per (resource, country).
      Fragments are deduplicated by (article, sentence), so replaying an input adds nothing.
-  3. Strength = the number of independent publishers: one publisher per story (the publisher of the story's root item), so 20 syndicated copies count 1 (T07). `fragments` and `stories` are listed beside it.
+  3. Strength = the number of independent publishers (fact-join fix, T158 L2954): fragments are grouped into sources, one group per story root (journal copies, T07) OR per near-identical sentence across outlets (content-token Jaccard >= SYN_JACCARD on >= SYN_MIN_TOK tokens: a wire copy is one source
+     even when the journal did not catch it); each source is named by the publisher of its earliest fragment (the fragment's own publisher, not the story root's). Strength = distinct source publishers; `independent` lists the sources and what collapsed. `fragments` and `stories` are listed beside it.
+  3b. Fact slots (the join): assertion edges with the same anchor (same subject id; concept-like subjects also meet by head word + containment, 'zoo' in 'cincinnati zoo') are compared pairwise by fact_join.Scorer (ECB+-trained pair scorer, e5-small-v2 features, CPU) and merged by average linkage at the model's threshold,
+     with hard gates (different status class, opposite direction, different amount / date bucket, different place ids, disjoint objects, differing numbers in the object text never merge); complete linkage, so every pair in a slot clears the threshold. A merged slot keeps every member (key, predicate, object, fragments) under `slot`, its id is h('slot | ' + sorted member keys), its predicate/object are the member with most fragments.
+     Without fact_join (or its model) the fallback is 'same predicate lemma' and `join.mode` says so. Everything PROVISIONAL.
   4. Candidates: a G4 concept entity that is neither an IPTC label nor a WordNet noun, seen in >= MIN_WINDOWS time windows (WINDOW_DAYS days each) and by >= MIN_PUBLISHERS independent publishers, is listed as `ours:<slug>`, status PROVISIONAL. Nothing here promotes it: there is no promote step and no human review; status stays PROVISIONAL (T08).
      A candidate's is_a parent is the IPTC node its entity was placed on (if any); the is_a graph over IPTC + ours is kept acyclic by IsA.add (a parent that would close a cycle is refused and counted).
 Output is canonical JSON with a sha256 of its body (no clock inside), so two passes over the same inputs give the same sha256."""
@@ -27,7 +31,37 @@ def window(day):
     try: return datetime.date.fromisoformat(day[:10]).toordinal() // WINDOW_DAYS
     except (TypeError, ValueError): return None
 # ---------- loaders: each gives plain dicts, nothing is written ----------
-def cap_id(label): return "cap:" + re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
+_IRR = {"is": "be", "was": "be", "were": "be", "been": "be", "has": "have", "had": "have", "does": "do", "did": "do", "done": "do", "went": "go", "gone": "go", "made": "make", "said": "say", "took": "take", "taken": "take", "gave": "give", "given": "give", "began": "begin", "begun": "begin", "held": "hold", "led": "lead", "left": "leave", "lost": "lose", "met": "meet", "paid": "pay", "ran": "run", "sold": "sell", "set": "set", "told": "tell", "won": "win", "died": "die", "dying": "die", "dead": "die", "hit": "hit", "cut": "cut", "put": "put", "shot": "shoot", "fell": "fall", "fallen": "fall", "rose": "rise", "risen": "rise", "sent": "send", "built": "build", "brought": "bring", "found": "find", "kept": "keep", "got": "get", "became": "become", "came": "come", "saw": "see", "seen": "see", "knew": "know", "known": "know", "thought": "think", "wrote": "write", "written": "write", "drove": "drive", "driven": "drive"}
+_DET = {"a", "an", "the", "its", "his", "her", "their", "our", "my", "your", "this", "that", "these", "those", "some", "any", "of"}
+def lemma_verb(w):
+    """suffix lemma for a verb token with a small irregular table (no model): carries/carried/carrying -> carry, causing -> cause, stopped -> stop"""
+    w = w.lower()
+    if w in _IRR: return _IRR[w]
+    if len(w) > 4 and w.endswith("ies"): return w[:-3] + "y"
+    if len(w) > 4 and w.endswith("ied"): return w[:-3] + "y"
+    for suf in ("ing", "ed"):
+        if len(w) > len(suf) + 2 and w.endswith(suf):
+            b = w[:-len(suf)]
+            if len(b) > 2 and b[-1] == b[-2] and b[-1] not in "aeiouslz": return b[:-1]   # stopped -> stop
+            return b + "e" if re.search(r"(ais|ois|uis|eas|ous|ov|iv|uc|ac|ic|uz|iz|rg|ng|ag|ak|at|ut|ur|ir|us|ad|id|ud|um|im|ip|op|ar|ep)$", b) and not re.search(r"(ent|ount|ist|ast|est)$", b) and (suf == "ed" or not re.search(r"[bcdfghjklmnpqrstvwxz]{2}$", b)) else b
+    if len(w) > 3 and w.endswith("es") and w[:-2].endswith(("s", "x", "z", "ch", "sh")): return w[:-2]
+    if len(w) > 3 and w.endswith("s") and not w.endswith("ss"): return w[:-1]
+    return w
+def cnorm(obj):
+    """object phrase -> lower case, no determiners, head noun singular: 'the attacks' -> 'attack', 'energy bills' -> 'energy bill'"""
+    t = [x for x in re.findall(r"[a-z0-9]+", obj.lower()) if x not in _DET]
+    if t:
+        w = t[-1]
+        if len(w) > 4 and w.endswith("ies"): w = w[:-3] + "y"
+        elif len(w) > 3 and w.endswith(("sses", "xes", "ches", "shes")): w = w[:-2]
+        elif len(w) > 3 and w.endswith("s") and not w.endswith(("ss", "us", "is")): w = w[:-1]
+        t[-1] = w
+    return " ".join(t)
+def norm_cap(label):
+    """verb-object label -> 'lemma-verb normalised-object' (defect 5): 'carried out attacks' and 'carry attack' meet; a one-word label is its lemma"""
+    t = label.lower().split(None, 1)
+    return " ".join(x for x in (lemma_verb(t[0]), cnorm(t[1]) if len(t) > 1 else "") if x) if t else ""
+def cap_id(label): return "cap:" + re.sub(r"[^a-z0-9]+", "-", norm_cap(label)).strip("-")
 def chain_stage(l, name):
     for s in l.get("stages") or []:
         if s.get("name") == name: return s
@@ -37,7 +71,7 @@ def chain_caps(l):
     o = chain_stage(l, "capability_list").get("out") or {}; out = []; seen = set()
     for kind in ("recurring", "candidate"):
         for lab in o.get(kind) or []:
-            if cap_id(lab) not in seen: seen.add(cap_id(lab)); out.append({"id": cap_id(lab), "label": lab, "kind": kind})
+            if cap_id(lab) not in seen: seen.add(cap_id(lab)); out.append({"id": cap_id(lab), "label": norm_cap(lab), "raw": lab, "kind": kind})
     return out
 def chain_place(l):
     """one chain line -> (domain, area) as the chain's own roll-up and area head named them (top answer, only when the stage ran), else None"""
@@ -153,6 +187,10 @@ def merge_assertions(stores, ST):
             e = E.setdefault(h(r["key"]), {"id": h(r["key"]), "kind": "assertion", "key": r["key"], "subj": r["subj"], "pred": r["pred"], "obj": r["obj"], "obj_text": r.get("obj_text"), "iptc": None, "frag": {}, "lineage": set()})
             if r.get("iptc") and (e["iptc"] is None or canon(r["iptc"]) < canon(e["iptc"])): e["iptc"] = r["iptc"]   # the same key in several stores: the smallest canonical form wins, so store order changes nothing
             e["lineage"].add((S["file"], "g4-store", aid))
+            at = r.get("attrs") or {}; ea = e.setdefault("attrs", {})
+            for k_, v_ in (("status", r.get("status")), ("direction", at.get("direction")), ("place", at.get("place")), ("speaker", at.get("speaker")), ("obj_key", r.get("obj_key"))):
+                if v_ is not None and (k_ not in ea or canon(v_) < canon(ea[k_])): ea[k_] = v_
+            ea["time"] = sorted(set(ea.get("time") or []) | {t.get("text") for t in at.get("time") or [] if t.get("text")})
             for ev in r["evid"]:
                 k = (ev["art"], ev.get("sent") or ""); e["frag"].setdefault(k, {"art": ev["art"], "pub": ev["pub"], "day": ST.day(ev["art"]), "sent": ev.get("sent"), "spans": ev.get("spans"), "polarity": (ev.get("attrs") or {}).get("polarity"), "direction": (ev.get("attrs") or {}).get("direction"), "source": S["file"]})
     return E
@@ -168,12 +206,148 @@ def merge_ticks(ticks, ST):
 def finish(E, ST):
     out = []
     for k in sorted(E):
-        e = E[k]; fr = sorted(e["frag"].values(), key=lambda f: (f["day"] or "", f["art"], f["sent"] or "")); n, st, pubs = ST.strength([(f["art"], f["pub"]) for f in fr])
+        e = E[k]; fr = sorted(e["frag"].values(), key=lambda f: (f["day"] or "", f["art"], f["sent"] or "")); n, st, pubs = ST.strength([(f["art"], f["pub"]) for f in fr]); ind = None
+        if e["kind"] == "assertion": n, pubs, ind = independence(fr, ST)   # sentence-level syndication: wire copies are one source, publisher = the fragment's own
         days = sorted({f["day"] for f in fr if f["day"]}); wins = sorted({window(d) for d in days} - {None})
         out.append({"id": e["id"], "kind": e["kind"], "key": e["key"], "subj": e["subj"], "pred": e["pred"], "obj": e["obj"], "iptc": e.get("iptc"), "strength": n, "stories": st, "fragments_n": len(fr), "publishers": pubs, "days": days, "windows": len(wins),
                     "fragments": fr, "lineage": [{"file": f, "kind": kd, "ref": r} for f, kd, r in sorted(e["lineage"])]})
-        if e["kind"] == "assertion": out[-1]["capabilities"] = sorted({c["id"] for f in fr for c in (getattr(ST, "by", {}).get(f["art"]) or {}).get("caps") or []})   # defect 6: capability ids of the articles that support the edge (association, nothing promoted)
+        if e["kind"] == "assertion":
+            out[-1]["capabilities"] = sorted({c["id"] for f in fr for c in (getattr(ST, "by", {}).get(f["art"]) or {}).get("caps") or []})   # defect 6: capability ids of the articles that support the edge (association, nothing promoted)
+            out[-1]["independent"] = ind; out[-1]["obj_text"] = e.get("obj_text"); out[-1]["attrs"] = e.get("attrs") or {}
     return out
+# ---------- independence: sentence-level syndication (fact-join fix, T158 L2954) ----------
+SYN_JACCARD = 0.7; SYN_MIN_TOK = 8
+_STOP = set("the a an and of to in on at for by with from is was were be been has have had that this it its as he she they his her their".split())
+def sent_sig(s):
+    """sentence -> frozenset of content tokens (lower, alphanumeric, no stopwords; the 'title. # title ...' prefix of a first sentence is cut at the '#'), or None when under SYN_MIN_TOK tokens (too short to prove a copy)"""
+    s = str(s or ""); s = s.split("#", 1)[1] if "#" in s[:300] else s
+    t = frozenset(x for x in re.findall(r"[a-z0-9]+", s.lower()) if x not in _STOP and len(x) > 1)
+    return t if len(t) >= SYN_MIN_TOK else None
+def syndication_groups(fr, ST):
+    """fragments -> groups of fragment indexes that are ONE source: the same story root (journal copies) or a near-identical sentence across outlets (Jaccard >= SYN_JACCARD). Union-find, deterministic."""
+    n = len(fr); par = list(range(n)); how = [set() for _ in range(n)]
+    def find(x):
+        while par[x] != x: par[x] = par[par[x]]; x = par[x]
+        return x
+    def union(a, b, why):
+        ra, rb = find(a), find(b)
+        if ra != rb: par[max(ra, rb)] = min(ra, rb)
+        how[a].add(why); how[b].add(why)
+    roots = {}; sig = [sent_sig(f.get("sent")) for f in fr]
+    for i, f in enumerate(fr):
+        r = ST.story(f["art"])
+        if r in roots and roots[r] != i: union(i, roots[r], "story root")
+        roots.setdefault(r, i)
+    for i in range(n):
+        if sig[i] is None: continue
+        for j in range(i + 1, n):
+            if sig[j] is not None and len(sig[i] & sig[j]) / len(sig[i] | sig[j]) >= SYN_JACCARD and (fr[i].get("pub") != fr[j].get("pub") or fr[i]["art"] != fr[j]["art"]): union(i, j, "near-identical sentence")
+    g = collections.defaultdict(list)
+    for i in range(n): g[find(i)].append(i)
+    return [(g[k], sorted({w for i in g[k] for w in how[i]})) for k in sorted(g)]
+def independence(fr, ST):
+    """-> (strength, publishers, independent): one source per syndication group, named by the publisher of its earliest fragment (day, then publisher, then article), strength = distinct source publishers"""
+    srcs = []
+    for grp, how in syndication_groups(fr, ST):
+        fs = sorted((fr[i] for i in grp), key=lambda f: (f.get("day") or "9999", f.get("pub") or "", f["art"])); rep = fs[0]; pub = rep.get("pub") or ST.pub(rep["art"])
+        srcs.append({"pub": pub, "arts": sorted({f["art"] for f in fs}), "fragments": len(fs), "day": rep.get("day"), "copies": sorted({f.get("pub") or ST.pub(f["art"]) for f in fs} - {pub}), "how": how or ["single fragment"]})
+    pubs = sorted({x["pub"] for x in srcs if x["pub"]})
+    return len(pubs), pubs, {"n": len(pubs), "sources": srcs, "fragments": len(fr), "collapsed": len(fr) - len(srcs), "rule": "one source per story root or near-identical sentence (Jaccard >= %.2f, >= %d tokens); publisher = the earliest fragment's own" % (SYN_JACCARD, SYN_MIN_TOK)}
+# ---------- fact slots: the join (fact_join.py scorer; T158 L2954) ----------
+CONCEPT_TYPES = {"concept", "facility", "org", "other", "unk", "product", "group", "event", "work"}
+def _name(sid): return re.sub(r"[^a-z0-9 ]+", " ", sid.split(":", 1)[-1].lower()).split()
+def anchors(subjs):
+    """subject ids -> {subject id: anchor id}. Same id = same anchor; two concept-like subjects whose names share the head word and one contains the other ('zoo' in 'cincinnati zoo') share an anchor (the shorter name). Persons, places and iso ids stay on identity."""
+    subjs = sorted(set(subjs)); a = {x: x for x in subjs}
+    cl = [x for x in subjs if x.split(":", 1)[0] in CONCEPT_TYPES and _name(x)]
+    for x in cl:
+        tx = _name(x)
+        for y in cl:
+            if y == x: continue
+            ty = _name(y)
+            if ty[-1] == tx[-1] and set(ty) < set(tx) and ty[-1] not in _STOP: a[x] = a.get(y, y) if len(ty) < len(_name(a[x])) else a[x]
+    for x in list(a):   # one hop: the anchor of my anchor
+        while a[a[x]] != a[x]: a[x] = a[a[x]]
+    return a
+def _scorer():
+    if os.environ.get("FACT_JOIN") == "lemma": return None, "fallback: same predicate lemma (FACT_JOIN=lemma)", None
+    try:
+        import fact_join as FJ; sc = FJ.Scorer(); ver = getattr(sc, "version", None) or (getattr(sc, "model", None) or {}).get("version") if isinstance(getattr(sc, "model", None), dict) else getattr(sc, "version", None); return sc, "fact_join %s (%s), threshold %.3f" % (ver or "model", getattr(sc, "mode", "?"), sc.threshold), FJ
+    except Exception as ex: return None, "fallback: same predicate lemma (fact_join unavailable: %s)" % str(ex)[:120], None
+def _mention(e, FJ):
+    f = e["fragments"][0]; at = e.get("attrs") or {}; sent = str(f.get("sent") or ""); sent = sent.split("#", 1)[1].strip() if "#" in sent[:300] else sent
+    who = [" ".join(_name(e["subj"]))] + ([" ".join(_name(at["speaker"]))] if at.get("speaker") else []); where = [at["place"]] if at.get("place") else []
+    obj = e["obj"] if e["obj"] is not None else e.get("obj_text")
+    if FJ is None: return {"word": e["pred"], "lemma": e["pred"].split()[0] if e["pred"] else "", "obj": obj}
+    return FJ.mention(e["pred"], e["pred"].split()[0] if e["pred"] else "", sent, who=who, where=where, when=at.get("time") or [], obj=(str(obj).lower() if obj is not None else None), day=f.get("day"), art=None, id=e["id"])
+def _gate(a, b):
+    """-> a reason why two edges can never be one fact, or None"""
+    x, y = a.get("attrs") or {}, b.get("attrs") or {}
+    if x.get("status") and y.get("status") and x["status"] != y["status"]: return "status %s vs %s" % (x["status"], y["status"])
+    if x.get("direction") and y.get("direction") and x["direction"] != y["direction"]: return "direction %s vs %s" % (x["direction"], y["direction"])
+    kx, ky = x.get("obj_key") or {}, y.get("obj_key") or {}
+    if kx and ky and kx.get("class") == ky.get("class") and kx.get("bucket") != ky.get("bucket") and (kx.get("class") != "amount" or kx.get("unit") == ky.get("unit")): return "%s bucket %s vs %s" % (kx.get("class"), kx.get("bucket"), ky.get("bucket"))
+    if a["obj"] and b["obj"] and a["obj"] != b["obj"] and a["obj"].split(":")[0] in ("iso", "place") and b["obj"].split(":")[0] in ("iso", "place"): return "place %s vs %s" % (a["obj"], b["obj"])
+    oa, ob = _otoks(a), _otoks(b); na, nb = {t for t in oa if t[0].isdigit()}, {t for t in ob if t[0].isdigit()}
+    if na and nb and na != nb: return "number %s vs %s" % ("/".join(sorted(na)), "/".join(sorted(nb)))   # '5 2p' against '7p': two amounts stated as text are two facts
+    if oa and ob and not (oa & ob):   # the objects share no content word: a copula ('be hippo' / 'be tragic') or a quote-like clause (>= 4 words each) is a different fact
+        if a["pred"] == "be" or b["pred"] == "be" or (len(oa) >= 4 and len(ob) >= 4): return "object disjoint"
+    return None
+def _otoks(e):
+    o = e["obj"] if e["obj"] is not None else e.get("obj_text"); o = str(o or "").split(":", 1)[-1] if o is not None else ""
+    return {t for t in re.findall(r"[a-z0-9]+", o.lower()) if t not in _STOP and t not in _DET}
+def _link(dist, thr):
+    """distance matrix -> labels, COMPLETE linkage cut at thr: every pair inside a slot clears the threshold, so a chain a~b~c never joins a and c and a gated pair (distance 1) never shares a slot (scipy when there; else greedy agglomeration with the same criterion)"""
+    n = len(dist)
+    if n == 1: return [0]
+    try:
+        import numpy as np; from scipy.cluster.hierarchy import linkage, fcluster
+        D = np.array(dist, dtype=float); iu = np.triu_indices(n, 1); return [int(x) - 1 for x in fcluster(linkage(D[iu], "complete"), thr, "distance")]
+    except Exception:
+        cl = [[i] for i in range(n)]
+        while True:
+            best = None
+            for i in range(len(cl)):
+                for j in range(i + 1, len(cl)):
+                    d = max(dist[p][q] for p in cl[i] for q in cl[j])
+                    if d <= thr and (best is None or d < best[0]): best = (d, i, j)   # same cut as scipy fcluster (distance <= thr)
+            if best is None: break
+            _, i, j = best; cl[i] += cl.pop(j)
+        lab = [0] * n
+        for k, c in enumerate(cl):
+            for i in c: lab[i] = k
+        return lab
+def slot_merge(edges, scorer=None, FJ=None, mode=""):
+    """assertion edges (finish output) -> (edges with slots, join report). Edges of one anchor are scored pairwise (scorer.prob, or same-lemma fallback), gated, clustered; a cluster of >= 2 is one slot edge with `slot.members`; resource edges pass through."""
+    A = [e for e in edges if e["kind"] == "assertion"]; R = [e for e in edges if e["kind"] != "assertion"]; an = anchors(e["subj"] for e in A)
+    thr = getattr(scorer, "threshold", 0.5) if scorer else 0.5; groups = collections.defaultdict(list); out = []; mapping = {}; merges = []; gated = collections.Counter()
+    for e in A: groups[an[e["subj"]]].append(e)
+    for key in sorted(groups):
+        G = sorted(groups[key], key=lambda e: e["id"]); M = [_mention(e, FJ) for e in G]; n = len(G); dist = [[0.0] * n for _ in range(n)]; P = {}
+        for i in range(n):
+            for j in range(i + 1, n):
+                g = _gate(G[i], G[j])
+                if g: p = 0.0; gated[g.split()[0]] += 1
+                elif scorer: p = round(float(scorer.prob(M[i], M[j])), 4)
+                else: p = 1.0 if M[i]["word"] == M[j]["word"] else 0.0
+                dist[i][j] = dist[j][i] = 1.0 - p; P[(i, j)] = p
+        lab = _link(dist, 1.0 - thr) if n > 1 else [0]; cl = collections.defaultdict(list)
+        for i, l in enumerate(lab): cl[l].append(i)
+        for l in sorted(cl, key=lambda l: min(G[i]["id"] for i in cl[l])):
+            ix = sorted(cl[l], key=lambda i: (-G[i]["fragments_n"], G[i]["key"]))
+            if len(ix) == 1: e = dict(G[ix[0]]); e["anchor"] = key; e["slot"] = None; out.append(e); mapping[e["id"]] = e["id"]; continue
+            rep = G[ix[0]]; keys = sorted(G[i]["key"] for i in ix); sid = h("slot | " + " || ".join(keys)); frag = {}
+            for i in ix:
+                for f in G[i]["fragments"]: frag.setdefault((f["art"], f.get("sent") or ""), f)
+            fr = sorted(frag.values(), key=lambda f: (f["day"] or "", f["art"], f["sent"] or "")); days = sorted({f["day"] for f in fr if f["day"]})
+            pw = [P[(min(a, b), max(a, b))] for a in ix for b in ix if a < b]
+            e = {**rep, "id": sid, "anchor": key, "fragments": fr, "fragments_n": len(fr), "days": days, "windows": len({window(d) for d in days} - {None}), "stories": len({f["art"] for f in fr}),
+                 "lineage": sorted({canon(l): l for i in ix for l in G[i]["lineage"]}.values(), key=canon), "capabilities": sorted({c for i in ix for c in G[i].get("capabilities") or []}),
+                 "slot": {"n": len(ix), "merged_how": mode, "min_pair_prob": min(pw), "mean_pair_prob": round(sum(pw) / len(pw), 4), "members": [{"edge": G[i]["id"], "key": G[i]["key"], "predicate": G[i]["pred"], "object": G[i]["obj"] if G[i]["obj"] is not None else G[i].get("obj_text"), "fragments_n": G[i]["fragments_n"]} for i in ix]}}
+            out.append(e); merges.append(sid)
+            for i in ix: mapping[G[i]["id"]] = sid
+    out.sort(key=lambda e: e["id"]); rep_ = {"mode": mode, "threshold": thr, "facts_raw": len(A), "slots": len(out), "merge_rate": round(1.0 - len(out) / len(A), 4) if A else 0.0, "merged_slots": len(merges), "anchors": len(groups), "anchor_merges": sum(1 for s, a in an.items() if s != a), "gated_pairs": dict(sorted(gated.items())), "map": mapping, "status": "PROVISIONAL"}
+    return out + R, rep_
 def capability_layer(ST, edges=()):
     """playbook 00 sections 8 and 9: Domain > Area > Capability as a typed graph, not a tree (a capability sits under every area its articles had). Built from the chain's capability_list (t230 / t222 verb-object lists), so every node is PROVISIONAL; nothing here promotes one."""
     N = {}
@@ -186,10 +360,10 @@ def capability_layer(ST, edges=()):
     ec = collections.Counter(i for e in edges for i in (e.get("capabilities") or [])); nodes = []; pl = []
     for i in sorted(N):
         n = N[i]; st, stories, pubs = ST.strength(sorted(n["arts"].items()))
-        nodes.append({"id": i, "label": n["label"], "kind": "recurring" if "recurring" in n["kinds"] else "candidate", "status": "PROVISIONAL", "articles": len(n["arts"]), "strength": st, "stories": stories, "publishers": pubs, "edges": ec[i], "domains": dict(sorted(n["dom"].items())), "areas": dict(sorted(n["area"].items())), "items": [[a, p, getattr(ST, "by", {}).get(a, {}).get("day")] for a, p in sorted(n["arts"].items())]})
+        nodes.append({"id": i, "label": n["label"], "kind": "recurring" if "recurring" in n["kinds"] else "candidate", "status": "PROVISIONAL", "articles": len(n["arts"]), "strength": st, "stories": stories, "publishers": pubs, "edges": ec[i], "domains": dict(sorted(n["dom"].items())), "areas": sorted(n["area"]), "areas_n": len(n["area"]), "bridging": len(n["area"]) >= 2, "area_counts": dict(sorted(n["area"].items())), "items": [[a, p, getattr(ST, "by", {}).get(a, {}).get("day")] for a, p in sorted(n["arts"].items())]})
         pl += [{"domain": d, "area": ar, "capability": i, "articles": k} for (d, ar), k in sorted(n["pl"].items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1])))]
     return {"status": "PROVISIONAL", "model": "Domain > Area > Capability (playbook 00 sections 8-9); placements are co-occurrence in an article, a typed graph, not an is_a tree", "promotion": "none (no promote step, no human review; ids come from the verb-object lists, not from learning)",
-            "counts": {"capabilities": len(nodes), "recurring": sum(n["kind"] == "recurring" for n in nodes), "candidate": sum(n["kind"] == "candidate" for n in nodes), "articles_with_capability": len({a for n in N.values() for a in n["arts"]}), "placements": len(pl)}, "nodes": nodes, "placements": pl}
+            "counts": {"capabilities": len(nodes), "recurring": sum(n["kind"] == "recurring" for n in nodes), "candidate": sum(n["kind"] == "candidate" for n in nodes), "articles_with_capability": len({a for n in N.values() for a in n["arts"]}), "placements": len(pl), "bridging": sum(len(n["area"]) >= 2 for n in N.values())}, "nodes": nodes, "placements": pl}
 def candidates(stores, ST, iptc_labels, wn, iptc_par):
     """concept entities from every G4 store, merged by (type, canonical name): recurrence by windows and independent publishers, then the distinctness check. Returns (candidate list, counts, the is_a graph)."""
     C = {}
@@ -208,16 +382,23 @@ def candidates(stores, ST, iptc_labels, wn, iptc_par):
         cid = "ours:" + re.sub(r"[^a-z0-9]+", "-", term).strip("-"); ok = g.add(cid, c["iptc"]) if c["iptc"] else g.add(cid, None)
         out.append({"id": cid, "label": term, "status": "PROVISIONAL", "windows": len(wins), "publishers": pubs, "strength": n, "stories": st, "is_a": g.par.get(cid), "is_a_refused": not ok, "lineage": [{"file": f, "kind": kd, "ref": r} for f, kd, r in sorted(c["lineage"])]}); cnt["candidate"] += 1
     return out, dict(cnt), g
-def consolidate(items=(), stores=(), ticks=(), iptc=None):
-    """items: trace/journal items; stores: load_g4 results; ticks: tick rows -> the consolidated body (a dict, no sha256 yet)"""
+def consolidate(items=(), stores=(), ticks=(), iptc=None, join=True):
+    """items: trace/journal items; stores: load_g4 results; ticks: tick rows -> the consolidated body (a dict, no sha256 yet). join=False skips the fact slots (edges stay one per exact key)."""
     ST = Stories(list(items), stores); iptc_par, iptc_labels = iptc or load_iptc(); wn = load_wordnet()
     E = merge_assertions(stores, ST); E.update(merge_ticks(ticks, ST)); edges = finish(E, ST); cands, cc, g = candidates(stores, ST, iptc_labels, wn, iptc_par)
+    if join:
+        sc, mode, FJ = _scorer(); edges, jrep = slot_merge(edges, sc, FJ, mode)
+        for e in edges:
+            if e["kind"] == "assertion" and e.get("slot"): e["strength"], e["publishers"], e["independent"] = independence(e["fragments"], ST)
+    else: jrep = {"mode": "off", "facts_raw": sum(e["kind"] == "assertion" for e in edges), "slots": sum(e["kind"] == "assertion" for e in edges), "merge_rate": 0.0, "map": {e["id"]: e["id"] for e in edges if e["kind"] == "assertion"}, "status": "PROVISIONAL"}
+    jrep["independence"] = {"fragments": sum(e["fragments_n"] for e in edges if e["kind"] == "assertion"), "sources": sum(len((e.get("independent") or {}).get("sources") or []) for e in edges if e["kind"] == "assertion"), "collapsed": sum((e.get("independent") or {}).get("collapsed") or 0 for e in edges if e["kind"] == "assertion"), "rule": "one source per story root or near-identical sentence (Jaccard >= %.2f on >= %d content tokens); strength = distinct source publishers, each the earliest fragment's own publisher" % (SYN_JACCARD, SYN_MIN_TOK)}
     stories = collections.Counter(); [stories.update([r]) for r in ST.root.values()]
     body = {"version": VERSION, "rule": {"window_days": WINDOW_DAYS, "min_windows": MIN_WINDOWS, "min_publishers": MIN_PUBLISHERS, "promotion": "none (candidates stay PROVISIONAL; no promote step, no human review)"},
             "inputs": {"items": len(ST.by), "stores": sorted({S["file"] for S in stores}), "tick_rows": len({(t["file"], t["id"]) for t in ticks})},
             "stories": {"items": len(ST.root), "stories": len(stories), "copies": len(ST.root) - len(stories)},
-            "edges": edges, "capabilities": capability_layer(ST, edges), "candidates": cands, "candidate_counts": cc, "is_a": {"nodes": len(g.par), "ours": sum(1 for n in g.par if n.startswith("ours:")), "acyclic": g.acyclic(), "refused": len(g.refused)},
-            "counts": {"edges": len(edges), "assertion_edges": sum(e["kind"] == "assertion" for e in edges), "resource_edges": sum(e["kind"] == "resource" for e in edges), "multi_publisher_edges": sum(e["strength"] >= 2 for e in edges), "fragments": sum(e["fragments_n"] for e in edges), "candidates": len(cands)}}
+            "edges": edges, "join": jrep, "capabilities": capability_layer(ST, edges), "candidates": cands, "candidate_counts": cc, "is_a": {"nodes": len(g.par), "ours": sum(1 for n in g.par if n.startswith("ours:")), "acyclic": g.acyclic(), "refused": len(g.refused)},
+            "counts": {"edges": len(edges), "assertion_edges": sum(e["kind"] == "assertion" for e in edges), "resource_edges": sum(e["kind"] == "resource" for e in edges), "multi_publisher_edges": sum(e["strength"] >= 2 for e in edges), "fragments": sum(e["fragments_n"] for e in edges), "candidates": len(cands),
+                       "facts_raw": jrep["facts_raw"], "slots_merged": jrep.get("merged_slots", 0), "merge_rate": jrep["merge_rate"]}}
     return body
 def seal(body):
     b = {k: v for k, v in body.items() if k != "sha256"}; return {**b, "sha256": hashlib.sha256(canon(b).encode()).hexdigest()}

@@ -144,6 +144,7 @@ def latest_window():
 def resolve_window(src):
     """src 'window' or 'trace:<path>' -> (window dir, trace dir); raises ValueError with the reason"""
     if src == "window": wd = latest_window()
+    elif src.startswith("area:"): wd = build_area(src[5:])   # staged interest area: the fixture's articles run through slow_clock + slow_consolidate into a cache window (first request builds it)
     elif src.startswith("trace:"):
         wd = src[6:]; wd = wd if os.path.isabs(wd) else os.path.join(STRUCT, wd); wd = os.path.abspath(wd)
     else: raise ValueError("unknown src: " + src)
@@ -180,8 +181,9 @@ def _load_window(wd, td):
     iptc = ((cons.get("concepts") or {}).get("iptc") or {}); ours = (cons.get("concepts") or {}).get("ours") or []
     cap_total = sum(len(o.get("capabilities") or []) for o in obs.values())
     tgt = sr.get("target_ids")
+    ak = _area_of(wd)
     w = {"dir": wd, "trace": td, "name": os.path.basename(wd.rstrip("/")), "lines": lines, "traced": traced, "slow": slow, "cons": cons, "obs": obs, "by_art": by_art, "pos": 0, "g": None, "served": set(),
-         "info": {"name": os.path.basename(wd.rstrip("/")), "window_state": wj.get("state"), "chain_lines": len(lines), "traced": len(traced), "slow_lines": len(slow), "slow_target": tgt, "slow_state": sr.get("state"),
+         "info": {"name": os.path.basename(wd.rstrip("/")), "area": ak, "area_label": (_area_meta(ak) or {}).get("short") if ak else None, "window_state": wj.get("state"), "chain_lines": len(lines), "traced": len(traced), "slow_lines": len(slow), "slow_target": tgt, "slow_state": sr.get("state"),
                   "slow_partial": bool(tgt is not None and tgt < len(traced)), "consolidated": bool(cons),
                   "counts": {"observations": len(obs), "assertions": (cons.get("counts") or {}).get("assertion_edges"), "assertions_all_edges": ((cons.get("layers") or {}).get("assertions") or {}).get("n"),
                              "concepts": (iptc.get("nodes_used") or 0) + len(ours), "concepts_iptc_nodes_used": iptc.get("nodes_used"), "concepts_ours": len(ours), "candidates": (cons.get("counts") or {}).get("candidates"), "capabilities": cap_total}}}
@@ -246,6 +248,63 @@ def sample_trace(n=5, pick="articles", aid=None, src="window"):
     tr = [r for r in recs if r["state"] == "traced"]; us = [u for r in tr for u in r["units"]]
     tally = {"pick": pick, "articles": len(recs), "traced": len(tr), "skipped": len(recs) - len(tr), "units": len(us), "units_kept": sum(1 for u in us if u["filter"]["kept"]), "merge_rule": MERGE_LABEL, "window": w["name"], "src": "pipeline window", "seconds": round(time.time() - t0, 1), "read_so_far": len(w["served"]), "window_traced": len(w["traced"])}
     return {"articles": recs, "tally": tally, "merge_rule": MERGE_LABEL, "source": window_info(src)}
+# ---- staged interest areas + the knowledge feed (L2936, plan 5): fixtures/knowledge/<key>/trace (saved articles, offline) -> cache window area-<key> with slow.jsonl + slow_consolidate/knowledge.json ----
+SIM = os.path.dirname(os.path.abspath(__file__)); AREA_SRC = os.path.join(SIM, "fixtures", "knowledge"); WSD = os.path.join(os.path.dirname(SIM), "projects", "world-state")
+AREA_SHORT = {"c1": "Fiona the hippo", "mix": "Gulf strikes + energy"}   # picker names; any other key falls back to its areas.json label
+AREA_LOCK = threading.Lock()
+SLOW_FILES = ("g4_align.py", "slow_clock.py", "claims_units.py", "claims_v1.py", "raw_core.py", "fewnerd_typing.py", "live_trace_v4.py")   # a change here re-runs the slow clock for a cached area
+CONS_FILES = ("consolidate.py", "slow_consolidate.py", "educate.py", "knowledge_yield.py", "resource_truth.py", "evolve.py", "ledger_split.py", "fact_join.py", "fact-join-model.json")   # a change here re-runs consolidation only (the fact-join model too)
+def _area_root(): return os.environ.get("KR_AREA_CACHE") or STRUCT
+def area_dir(key): return os.path.join(_area_root(), "area-" + key)
+def _areas_json(): return _jload(os.path.join(AREA_SRC, "areas.json"), []) or []
+def _area_meta(key):
+    for a in _areas_json():
+        if a.get("key") == key: return {"key": key, "short": AREA_SHORT.get(key) or a.get("label") or key, "label": a.get("label"), "note": a.get("note"), "articles": len(a.get("ids") or []), "publishers": len(a.get("publishers") or []), "days": a.get("days")}
+    return None
+def _area_of(wd):
+    b = os.path.basename(os.path.abspath(wd).rstrip("/"))
+    return b[5:] if b.startswith("area-") and os.path.abspath(wd) == os.path.abspath(area_dir(b[5:])) else None
+def _stamp(files): return max([os.path.getmtime(os.path.join(WSD, f)) for f in files if os.path.exists(os.path.join(WSD, f))] or [0])
+def areas():
+    """the staged areas of areas.json for the picker: key, short name, label, articles, publishers, whether the cache window is built"""
+    out = []
+    for a in _areas_json():
+        m = _area_meta(a.get("key"))
+        if m and os.path.exists(os.path.join(AREA_SRC, m["key"], "trace", "chain.jsonl")): out.append({**m, "built": os.path.exists(os.path.join(area_dir(m["key"]), "trace", "slow_consolidate", "knowledge.json"))})
+    return out
+def _sub(cmd, timeout):
+    import subprocess
+    env = {**os.environ, "PYTHONHASHSEED": "0", "CUDA_VISIBLE_DEVICES": "", "WORLD_GPU": "0", "HF_HUB_OFFLINE": "1", "THREADS": "4", "TOKENIZERS_PARALLELISM": "false"}; env.pop("LT_V4_G4_DIR", None)
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=WSD, env=env, timeout=timeout)
+    if r.returncode != 0: raise RuntimeError("%s failed (rc %s): %s" % (os.path.basename(cmd[1]), r.returncode, (r.stderr or r.stdout)[-300:].replace("\n", " ")))
+def build_area(key, rebuild=False):
+    """cache window dir of a staged area; built on the first request: copy of the fixture trace, slow_clock.py (own g4 store), slow_consolidate.py (window-own --g4). Rebuilt when the slow-side code changed (slow clock again) or the consolidation-side code changed (consolidation only). CPU only, no hosted call."""
+    import shutil
+    m = _area_meta(key); src = os.path.join(AREA_SRC, key or "", "trace")
+    if not m or not os.path.exists(os.path.join(src, "chain.jsonl")): raise ValueError("unknown staged area %r (areas.json: %s)" % (key, ", ".join(a["key"] for a in _areas_json())))
+    wd = area_dir(key); td = os.path.join(wd, "trace"); sp = os.path.join(wd, "built.json"); py = sys.executable
+    with AREA_LOCK:
+        st = _jload(sp, {}) or {}; s1, s2 = _stamp(SLOW_FILES), _stamp(CONS_FILES); kp = os.path.join(td, "slow_consolidate", "knowledge.json")
+        frz = bool(os.environ.get("KR_AREA_FREEZE")) and os.path.exists(os.path.join(td, "slow_run.json"))   # KR_AREA_FREEZE=1: a cache that exists is served as it is while the code under it is being edited (checks); only ?rebuild or a missing file rebuilds
+        full = rebuild or (not frz and st.get("slow_stamp") != s1) or not os.path.exists(os.path.join(td, "slow_run.json"))
+        cons = full or (not frz and st.get("cons_stamp") != s2) or not os.path.exists(kp)
+        if full:
+            if os.path.isdir(td): os.replace(td, td + ".old-%d" % int(time.time()))   # the old cache copy is moved aside, never deleted (and the fixture is never touched)
+            os.makedirs(wd, exist_ok=True); shutil.copytree(src, td)
+            _sub([py, "slow_clock.py", td, "--cap-min", "8"], 560)
+        if cons:
+            _sub([py, "slow_consolidate.py", "--trace", td, "--g4", os.path.join(td, "g4", "store.jsonl")], 300)
+        if full or cons:
+            json.dump({"area": key, "slow_stamp": s1, "cons_stamp": s2, "built_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "knowledge": os.path.exists(kp)}, open(sp, "w")); WIN.pop(os.path.abspath(td), None)   # the loaded window is stale after a rebuild
+    return wd
+def knowledge(src="window"):
+    """the knowledge feed of one window: slow_consolidate/knowledge.json as written (schema: projects/world-state/KNOWLEDGE_SCHEMA.md) plus what the page needs to read it: article id -> {seq, publisher, title, url, published}. {exists: False, why} when the window has no knowledge.json; a window is never written to here."""
+    wd, td = resolve_window(src); w = _load_window(wd, td); kp = os.path.join(td, "slow_consolidate", "knowledge.json"); k = _jload(kp)
+    arts = {ln.get("id"): {"seq": ln.get("seq"), "publisher": ln.get("source"), "title": ln.get("title"), "url": ln.get("url"), "published": ln.get("published")} for ln in w["lines"]}
+    if not isinstance(k, dict):
+        why = "this window has no slow_consolidate/knowledge.json" + ("" if os.path.exists(os.path.join(td, "slow_consolidate")) else " (the window was not consolidated)") + ": it was consolidated before the knowledge schema, or slow_consolidate.py has not written it yet. A staged area builds it on first request."
+        return {"exists": False, "why": why, "source": w["info"], "articles": arts}
+    return {"exists": True, "knowledge": k, "articles": arts, "source": w["info"], "area": _area_meta(w["info"].get("area")) if w["info"].get("area") else None}
 def reset_trace():
     """a reset starts every loaded window over: cursor to the first article, a fresh graph (the window files are not touched)"""
     with WIN_LOCK:

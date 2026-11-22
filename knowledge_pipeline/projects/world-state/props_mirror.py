@@ -22,6 +22,8 @@ def rand_store(name):
     return {"file": name, "asr": asr, "arts": {}}
 class ST_:
     def day(self, a): return "2026-01-0%d" % (1 + hash_(a) % 5)
+    def story(self, a): return a   # each test article is its own story root (consolidate.syndication_groups needs it)
+    def pub(self, a): return ""
     def strength(self, ap):
         st = {a for a, _ in ap}; pubs = sorted({p for _, p in ap} - {""}); return len(pubs), len(st), pubs
 def run(stores):

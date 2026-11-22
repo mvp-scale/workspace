@@ -6,8 +6,12 @@ One store (Store) holds everything; each edge carries `via` (its relation source
   Entity identity: in-article alias clusters (surname, acronym incl. article country, head-noun containment, pronoun-resolved mentions, demonyms and places -> iso:XX), across articles an exact name/alias match in the same type (same name in another type = "unsure" flag).
   Assertion key: (subject identity, predicate lemma, object identity or normalised object head). Evidence is counted per independent publisher; journal copies/republished items do not count.
   Vertical: iptc_path + how in {exact, wordnet, sentence, article-topic}; places also get a geo path country -> region.
-  Horizontal via: hierarchy, assertion, attribution, causal cue v0, co-occurrence, temporal, spatial, change, capability, similar v0 (unmeasured), story."""
-import re, bisect, time, hashlib, collections, itertools, datetime, os, json, pathlib
+  Horizontal via: hierarchy, assertion, attribution, causal cue v0, co-occurrence, temporal, spatial, change, capability, similar v0 (unmeasured), story.
+Knowledge step, item B (owner yes L2936, PROVISIONAL, ledger T158): (1) cross-article identity second pass, inside the story scope, rules surname / head noun / acronym, merged_how on every cross-article merge; (2) predicate = verb lemma (spaCy rule lemmatizer of the claims model when it is loaded, else a small irregular table + suffix rules) + a status table (die / dead / died, undergo care ...);
+  (3) numeric and date objects keyed by class + bucket (amount: value rounded to 2 significant figures + unit; date: iso day), exact value kept on the fragment; (4) contradict_edges adds kinds amount and status; polarity fires on the normalised keys.
+Fact-join fix (T158 L2954, PROVISIONAL): (5) a negation spot negates a verb only inside its clause (neg_in_scope: same sentence, 30 chars before to 15 after, no clause boundary between, 'despite' is not a negation); (6) the status contradiction is time-aware: it fires only when the LATER report reverses the earlier
+  (dead first, alive later, strictly later day; care -> died is a timeline, undated sides never fire); every contradiction edge carries `order` {earlier, later, days} when both sides are dated."""
+import sys, re, bisect, time, hashlib, collections, itertools, datetime, os, json, pathlib
 LABEL = "G4/G5 v1, unmeasured"
 IDENT_RULES = os.environ.get("G4_IDENT_RULES", "v2")   # T174 identity fix (item IDENTITY, wave 1). "v2" (default) = the four merge guards below, tagged "ident-v2"; G4_IDENT_RULES=v1 restores the earlier merges exactly.
 PLACE_MODS = set("the of republic people's peoples kingdom state states federal democratic islamic united north south east west northern southern eastern western central new greater upper lower".split())
@@ -154,10 +158,109 @@ def resolve_date(text, pub):
         if w == "last month": n = (d.month - 2) % 12 + 1; yy = d.year - (1 if d.month == 1 else 0); return None, "%d-%02d" % (yy, n), datetime.date(yy, n, 1).strftime("%b %Y")
         return None, None, w
     if re.match(r"^\d{4}$", t): return None, t, t
+    iso_md = md_date(t, pub)
+    if iso_md: return iso_md, iso_md[:7], datetime.date.fromisoformat(iso_md).strftime("%d %b %Y")
     if t in MONTHS or t[:3] in MON3 and len(t) <= 9 and t in MONTHS:
         n = MONTHS[t]
         if y: yy = y if n <= mo else y - 1; return None, "%d-%02d" % (yy, n), datetime.date(yy, n, 1).strftime("%b %Y")
     return None, None, t
+MON_RX = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+DATE_MD = re.compile(r"^(?:(\d{1,2})(?:st|nd|rd|th)?\s+(" + MON_RX + r")\.?|(" + MON_RX + r")\.?\s+(\d{1,2})(?:st|nd|rd|th)?)(?:,?\s+(\d{4}))?$")
+def md_date(text, pub):
+    """'Nov 19', 'Nov. 19', '19 November', 'November 19, 2026' -> iso day (year from the text, else the latest such day not after the publish day, else the publish year); None when the text is not a month + day"""
+    m = DATE_MD.match(str(text or "").strip().lower())
+    if not m: return None
+    d = int(m.group(1) or m.group(4)); mo = MON3.get((m.group(2) or m.group(3))[:3]); yr = int(m.group(5)) if m.group(5) else None
+    pd = None
+    if pub and re.match(r"^\d{4}-\d{2}-\d{2}", pub):
+        try: pd = datetime.date.fromisoformat(pub[:10])
+        except ValueError: pd = None
+    if yr is None and pd is None: return None
+    try:
+        if yr is None:
+            yr = pd.year; x = datetime.date(yr, mo, d)
+            if x > pd: x = datetime.date(yr - 1, mo, d)
+            return x.isoformat()
+        return datetime.date(yr, mo, d).isoformat()
+    except ValueError: return None
+# --- predicate lemma + status table + object buckets (item B, defects 2 and 3) ---
+AUXL = {"be", "have", "do", "will", "would", "can", "could", "may", "might", "must", "shall", "should", "to", "not", "never", "n't", "also", "has", "had", "is", "are", "was", "were", "been", "being", "am", "does", "did", "'s", "'re", "'ve", "'d", "'ll"}
+PREPS = set("in on at from into under over by with of for amid despite against after before during since about up down out off through across between among toward towards until within without".split())
+IRREG_V = {"was": "be", "were": "be", "is": "be", "are": "be", "been": "be", "being": "be", "am": "be", "said": "say", "says": "say", "told": "tell", "got": "get", "gets": "get", "became": "become", "went": "go", "gone": "go", "made": "make", "took": "take", "taken": "take", "gave": "give", "given": "give", "saw": "see", "seen": "see", "came": "come", "found": "find", "knew": "know", "known": "know", "left": "leave",
+           "held": "hold", "brought": "bring", "began": "begin", "begun": "begin", "ran": "run", "ate": "eat", "eaten": "eat", "fell": "fall", "fallen": "fall", "rose": "rise", "risen": "rise", "died": "die", "dies": "die", "dying": "die", "had": "have", "has": "have", "did": "do", "does": "do", "won": "win", "lost": "lose", "met": "meet", "paid": "pay", "sold": "sell", "set": "set", "put": "put", "hit": "hit", "cut": "cut", "grew": "grow", "grown": "grow", "wrote": "write", "written": "write", "spoke": "speak", "spoken": "speak", "drove": "drive", "driven": "drive", "undergone": "undergo", "underwent": "undergo", "undergoing": "undergo", "undergoes": "undergo"}
+E_BASES = set("us mak tak hav com giv liv mov provid declar announc caus involv includ releas increas decreas continu believ requir receiv surviv recov fac mark rais clos chang remov creat reduc rul hop lov sav shar sin rat pric hik".split()) - {"recov"}
+LEMMA_CACHE = {}
+def _suffix_lemma(w):
+    """fallback lemma for one word without a parser: irregular table, then -ies / -ied / -ing / -ed / -es / -s rules (no e-restoration beyond a short list)"""
+    w = w.lower()
+    if w in IRREG_V: return IRREG_V[w]
+    if len(w) > 4 and w.endswith("ies"): return w[:-3] + "y"
+    if len(w) > 4 and w.endswith("ied"): return w[:-3] + "y"
+    for suf in ("ing", "ed"):
+        if len(w) > len(suf) + 2 and w.endswith(suf):
+            b = w[:-len(suf)]
+            if len(b) > 2 and b[-1] == b[-2] and b[-1] not in "lsz": b = b[:-1]
+            elif b[-1] in "cgvz" or b in E_BASES: b += "e"
+            return b
+    if len(w) > 3 and w.endswith("es") and w[-3] in "sxz": return w[:-2]
+    if len(w) > 3 and w.endswith("s") and not w.endswith(("ss", "us", "is")): return w[:-1]
+    return w
+def _claims_lemmatizer():
+    """the claims model's rule lemmatizer, only when claims_units already loaded it in this process (no model is loaded for a lemma)"""
+    cu = sys.modules.get("claims_units")
+    nlp = getattr(cu, "_C1", {}).get("nlp") if cu else None
+    if nlp is None: return None, None
+    try: return nlp, nlp.get_pipe("lemmatizer")
+    except Exception: return None, None
+def pred_lemma(surface):
+    """predicate surface ('has been undergoing', 'got into', 'died from') -> lemma phrase ('undergo', 'get into', 'die from'): leading auxiliaries / negation / 'to' dropped, the verb lemmatised (claims-model rule lemmatizer when loaded, else the suffix fallback), particles and prepositions kept. A bare copula stays 'be'."""
+    key = " ".join(str(surface or "").lower().split()); nlp, lm = _claims_lemmatizer(); ck = (key, lm is not None)
+    if ck in LEMMA_CACHE: return LEMMA_CACHE[ck]
+    toks = key.split(); i = 0
+    while i < len(toks) - 1 and (toks[i] in AUXL or toks[i] in ("to", "not")) and not (toks[i + 1] in PREPS and toks[i] in ("is", "are", "was", "were", "be", "been", "being", "am", "'s", "'re")): i += 1
+    toks = toks[i:]
+    if not toks: LEMMA_CACHE[ck] = key; return key
+    out = None
+    if lm is not None:
+        try:
+            from spacy.tokens import Doc
+            d = Doc(nlp.vocab, words=toks, pos=["VERB"] * len(toks)); out = " ".join(lm.rule_lemmatize(t)[0].lower() for t in d)
+        except Exception: out = None
+    if out is None: out = " ".join(w if w in PREPS else _suffix_lemma(w) for w in toks)
+    LEMMA_CACHE[ck] = out
+    return out
+# status table: head verb lemma -> (canonical predicate, status class); object words decide the care and copula cases. The classes are opposite pairs for the "status" contradiction: dead against alive.
+STATUS_VERB = {"die": ("die", "dead"), "perish": ("die", "dead"), "succumb": ("die", "dead"), "expire": ("die", "dead"), "survive": ("survive", "alive"), "recover": ("recover", "alive"), "live": ("survive", "alive")}
+CARE_VERB = {"undergo": "undergo", "receive": "undergo", "get": "undergo", "need": "undergo", "require": "undergo"}
+CARE_OBJ = set("care treatment surgery therapy procedure operation hospice monitoring intervention checkup check-up".split())
+DEAD_OBJ = {"dead", "deceased", "late", "death", "gone"}; ALIVE_OBJ = {"alive", "stable", "well", "healthy", "recovering", "fine", "improving"}
+def status_of(lem, obj_text):
+    """-> (canonical predicate or None, status class or None) from the predicate lemma phrase and the object text"""
+    w = str(lem or "").split(); ot = set(nrm(obj_text).split()) if obj_text else set()
+    if not w: return None, None
+    if w[0] in STATUS_VERB: return STATUS_VERB[w[0]]
+    if w[0] in CARE_VERB and ot & CARE_OBJ: return CARE_VERB[w[0]], "alive"
+    if w[0] == "be" and (len(w) == 1 or w[1] in ("under", "in")):
+        if ot & DEAD_OBJ and len(w) == 1: return "be", "dead"
+        if ot & ALIVE_OBJ and len(w) == 1: return "be", "alive"
+        if len(w) == 2 and ot & CARE_OBJ: return "be " + w[1], "alive"
+    return None, None
+def sigfig(x, n=2):
+    """value rounded to n significant figures, as a short string (1234 -> '1200', 5.04 -> '5', 0.0537 -> '0.054')"""
+    if x is None or x != x: return None
+    if x == 0: return "0"
+    return "%g" % float("%.*g" % (n, x))
+def amount_bucket(am):
+    """amount dict {text, value, unit} -> {"class": "amount", "bucket": "<value 2 s.f.>|<unit>", "value", "unit"} or None. Unit normalised ('%' kept, else cnorm)."""
+    if not am or am.get("value") is None: return None
+    u = am.get("unit"); un = "%" if u == "%" else (cnorm(u) if u else "")
+    b = sigfig(am["value"])
+    return {"class": "amount", "bucket": "%s|%s" % (b, un), "value": am["value"], "unit": un} if b is not None else None
+def date_bucket(d):
+    """date dict {text, iso, period, label} -> {"class": "date", "bucket": iso day, else period, else normalised text}"""
+    if not d: return None
+    b = d.get("iso") or d.get("period") or nrm(d.get("text"))
+    return {"class": "date", "bucket": b, "iso": d.get("iso"), "text": d.get("text")} if b else None
 # --- contradictions (plan step 7, add-only; nothing above changed except the three marked lines in align) ---
 # Rule: the same assertion key (subject + predicate + object identity) read with opposite polarity (positive vs negative evidence on one assertion), or two assertions with the same subject and object whose predicates are opposite directions (rise / fall, canonical since the change bundle),
 # with evidence inside a time window, adds one edge via "contradiction" (label "contradicts"). Both assertions are kept; the edge carries the sources (article, publisher, independent) of each side. A polarity edge joins the two readings of one assertion, written "A:x#+" and "A:x#-".
@@ -176,23 +279,56 @@ def _pair_ok(S, e1, e2, W):
     if t1 and t2 and not (t1 & t2): return False
     return (a1.get("modality") == "predicted") == (a2.get("modality") == "predicted")
 def _sources(evs): return sorted(({"art": e["art"], "pub": e["pub"], "independent": e["independent"]} for e in evs), key=lambda x: x["art"])
+def _order(S, a_, ea, b_, eb, reversal=False):
+    """-> {earlier, earlier_day, later, later_day, reversal} from the earliest dated article on each side, or None when a side has no day"""
+    da = sorted(d for d in (_day(S, e["art"]) for e in ea) if d); db = sorted(d for d in (_day(S, e["art"]) for e in eb) if d)
+    if not (da and db): return None
+    (e1, d1), (e2, d2) = sorted(((a_, da[0]), (b_, db[0])), key=lambda t: (t[1], t[0]))
+    return {"earlier": e1, "earlier_day": d1.isoformat(), "later": e2, "later_day": d2.isoformat(), "reversal": reversal}
+NEG_SKIP = {"despite"}; CLAUSE_RX = re.compile(r"[,;:]|\b(so|but|because|which|who|while|although|though|that|and)\b", re.I)
+def neg_in_scope(text, n, v, sa, sb):
+    """fact-join fix (5): a negation spot n (s, e, 'negation') negates the verb span v only inside its clause: same sentence [sa, sb), from 30 characters before the verb to 15 after, no clause boundary (comma, semicolon, colon, so / but / because / which / who / while / although / though / that / and) in the text between the two, and never 'despite' (a concession)"""
+    if not (sa <= n[0] < sb and v[0] - 30 <= n[0] <= v[1] + 15): return False
+    if text[n[0]:n[1]].lower().strip() in NEG_SKIP: return False
+    lo, hi = (n[1], v[0]) if n[0] < v[0] else (v[1], n[0])
+    return not CLAUSE_RX.search(text[lo:hi]) if hi > lo else True
 def contradict_edges(S, aids, art, W=WINDOW_DAYS):
-    """-> [edge dict] for the assertions in aids (claims only), against everything in the store. Pure: the caller merges them. Same input, same edges (sorted)."""
+    """-> [edge dict] for the assertions in aids (claims only), against everything in the store. Pure: the caller merges them. Same input, same edges (sorted). Each edge carries `order` (earlier / later side by article day) when both sides are dated."""
     out = {}; idx = None
-    def put(a_, b_, kind, ea, eb, note):
+    def put(a_, b_, kind, ea, eb, note, reversal=False):
         a_, b_, ea, eb = (a_, b_, ea, eb) if a_ <= b_ else (b_, a_, eb, ea)
-        out[("contradiction", a_, b_, "contradicts")] = {"via": "contradiction", "a": a_, "b": b_, "label": "contradicts", "w": 1, "art": art, "spans": [], "sent": None, "note": note, "kind": kind, "window_days": W, "sources": {"a": _sources(ea), "b": _sources(eb)}}
+        out[("contradiction", a_, b_, "contradicts")] = {"via": "contradiction", "a": a_, "b": b_, "label": "contradicts", "w": 1, "art": art, "spans": [], "sent": None, "note": note, "kind": kind, "window_days": W, "sources": {"a": _sources(ea), "b": _sources(eb)}, "order": _order(S, a_, ea, b_, eb, reversal)}
     for aid in sorted(aids):
         r = S.asr.get(aid)
         if not r or r.get("kind") != "claim": continue
         pos = [e for e in r["evid"] if e["attrs"].get("polarity") != "negative"]; neg = [e for e in r["evid"] if e["attrs"].get("polarity") == "negative"]
         pr = [(p, n) for p in pos for n in neg if _pair_ok(S, p, n, W)]
         if pr: put(aid + "#+", aid + "#-", "polarity", list({id(p): p for p, _ in pr}.values()), list({id(n): n for _, n in pr}.values()), "same assertion read as true and as negated, inside %d days" % W)
+        if idx is None:
+            idx = collections.defaultdict(list); sp_idx = collections.defaultdict(list); st_idx = collections.defaultdict(list)
+            for y in S.asr.values():
+                if y.get("kind") != "claim": continue
+                idx[(y["subj"], y["obj"], y["obj_text"])].append(y)
+                if (y.get("obj_key") or {}).get("class") == "amount": sp_idx[(y["subj"], y["pred"])].append(y)
+                if y.get("status"): st_idx[y["subj"]].append(y)
+        if (r.get("obj_key") or {}).get("class") == "amount":   # item B (4): same subject + predicate, a different amount bucket (same unit, more than 10 percent apart), evidence inside the window
+            ox = r["obj_key"]
+            for y in sp_idx.get((r["subj"], r["pred"]), ()):
+                if y["id"] == aid: continue
+                oy = y["obj_key"]
+                if ox["unit"] != oy["unit"] or ox["bucket"] == oy["bucket"] or ox.get("value") is None or oy.get("value") is None: continue
+                if abs(ox["value"] - oy["value"]) <= 0.1 * max(abs(ox["value"]), abs(oy["value"])): continue
+                px = [e for e in r["evid"] if e["attrs"].get("polarity") != "negative"]; py = [e for e in y["evid"] if e["attrs"].get("polarity") != "negative"]
+                pr = [(p, q) for p in px for q in py if _pair_ok(S, p, q, W)]
+                if pr: put(aid, y["id"], "amount", list({id(p): p for p, _ in pr}.values()), list({id(q): q for _, q in pr}.values()), "%s %s%s against %s%s, same subject and predicate, inside %d days" % (r["pred"], ox["bucket"].split("|")[0], ox["unit"], oy["bucket"].split("|")[0], oy["unit"], W))
+        if r.get("status"):   # item B (4) + fact-join fix (6): opposite status classes on one subject, positive polarity only ("did not recover" is not "dead"), and ONLY when the later report reverses the earlier: the dead reading dated strictly before the alive one. care -> died is a timeline, not a conflict; an undated side never fires.
+            for y in st_idx.get(r["subj"], ()):
+                if y["id"] == aid or y["status"] == r["status"]: continue
+                dead, alive = (r, y) if r["status"] == "dead" else (y, r)
+                px = [e for e in dead["evid"] if e["attrs"].get("polarity") != "negative"]; py = [e for e in alive["evid"] if e["attrs"].get("polarity") != "negative"]
+                pr = [(p, q) for p in px for q in py if _pair_ok(S, p, q, W) and _day(S, p["art"]) and _day(S, q["art"]) and _day(S, p["art"]) < _day(S, q["art"])]
+                if pr: put(dead["id"], alive["id"], "status", list({id(p): p for p, _ in pr}.values()), list({id(q): q for _, q in pr}.values()), "%s (dead, earlier) reversed by %s (alive, later), same subject, inside %d days" % (dead["pred"], alive["pred"], W), reversal=True)
         if r["pred"] in OPPOSITE:
-            if idx is None:
-                idx = collections.defaultdict(list)
-                for y in S.asr.values():
-                    if y.get("kind") == "claim": idx[(y["subj"], y["obj"], y["obj_text"])].append(y)
             for y in idx.get((r["subj"], r["obj"], r["obj_text"]), ()):
                 if y["pred"] != OPPOSITE[r["pred"]]: continue
                 px = [e for e in r["evid"] if e["attrs"].get("polarity") != "negative"]; py = [e for e in y["evid"] if e["attrs"].get("polarity") != "negative"]   # "did not fall" is not "rose"
@@ -391,9 +527,10 @@ def align(rec, G, ch, contradictions=True):
     # ---- entity records (in-article), identity across articles ----
     def type_path(t): return {"person": "person", "org": "organisation", "place": "place", "group": "group of people", "concept": "concept", "product": "product", "event": "event", "law": "law", "unk": "name", "facility": "facility", "work": "work of art", "substance": "substance", "disease": "disease", "other": "other name"}.get(t, t)
     E = {}   # cluster idx -> record
-    def ent_for(c):
-        if "_e" in c: return c["_e"]
-        sis = sorted({m["sent"] for m in c["ms"]}); ty = c["type"]
+    XTYPES = {"person", "org", "group", "product", "event", "law", "facility", "work", "place"}; XMERGES = []
+    def ident_of(c):
+        """pure: the identity keys of one cluster against the store as it is now -> (type, canon, eid, nmn, aliases, generated initials, exact hit or None, how). Does not write the store."""
+        ty = c["type"]
         if c.get("iso"): canon = ctry_name(ch, c["iso"]); eid = "iso:" + c["iso"]; nmn = nrm(canon)
         else:
             canon = c["wn"] if c.get("wn") else c["canon"]; nmn = nrm(canon) if ty != "concept" else cnorm(canon); eid = ty + ":" + nmn
@@ -404,16 +541,67 @@ def align(rec, G, ch, contradictions=True):
         al |= gen
         if c.get("iso"): al.update(nrm(x) for x in c["surf"])
         # across articles: exact canonical name or alias in the same type (iso ids are exact by construction)
-        hit = None
+        hit = None; how = None
         if not c.get("iso"):
-            if eid in S.ent: hit = eid
+            if eid in S.ent: hit = eid; how = "exact-name"
             else:
                 cand = {S.alias[(ty, a)] for a in al if (ty, a) in S.alias and not (IDENT_RULES == "v2" and a in gen and a not in {nrm(x) for x in c["surf"]} and a != nmn)}
-                if len(cand) == 1: hit = next(iter(cand))
+                if len(cand) == 1: hit = next(iter(cand)); how = "exact-alias"
+        elif eid in S.ent: how = "iso"
+        return ty, canon, eid, nmn, al, gen, hit, how
+    XSCOPE = [None]
+    def story_scope():
+        """the store entities that share at least one article with an ANCHOR of this article (an entity of this article that is already in the store by exact name or alias: person, org, event, product, law, facility, work, group; never a country or a bare concept). The cross-article second pass looks only inside this set, so a surname or a head noun cannot reach into an unrelated story."""
+        if XSCOPE[0] is None:
+            arts = set()
+            for c in clusters:
+                if c.get("iso") or c["type"] not in XTYPES: continue
+                h_ = ident_of(c)[6]
+                if h_ is not None and h_ in S.ent: arts |= set(S.ent[h_]["arts"])
+            arts.discard(art); XSCOPE[0] = sorted(eid for eid, r in S.ent.items() if r["arts"].keys() & arts) if arts else []
+        return XSCOPE[0]
+    def xfind(c, ty, nmn):
+        """cross-article second pass: the intra-article find rules (person surname, head noun, acronym) over the story scope. ident-v2 guards kept: no iso entity, different coarse type never, a place joins a longer place only through place modifiers, the acronym must be the original all-caps surface (never an initials string generated from a name). Merges only when exactly one candidate matches. -> (eid, how) or (None, None)"""
+        if ty not in XTYPES or c.get("iso"): return None, None
+        tk = nmn.split(); surf = c["canon"].strip(); hits = {}
+        if not tk: return None, None
+        for eid in story_scope():
+            r = S.ent[eid]
+            if r["type"] != ty or eid.startswith("iso:"): continue
+            if c.get("coarse") and r.get("coarse") and c["coarse"] != r["coarse"]: continue
+            ct = nrm(r["canon"]).split(); rs = r["canon"].strip(); how = None
+            if not ct or ct == tk: continue
+            if ty == "person":
+                if len(tk) == 1 and 1 < len(ct) <= 3 and len(tk[0]) > 2 and tk[0] == ct[-1]: how = "surname"
+                elif len(ct) == 1 and len(tk) == 2 and len(ct[0]) > 2 and ct[0] == tk[-1]: how = "surname"   # a bare surname meets a full name of two tokens (first + last), never a longer phrase
+                elif len(tk) >= 2 and len(ct) >= 2 and tk != ct:   # a titled or longer form of the same name: the shorter (2+ tokens) is the tail of the longer (zoo director dave jenike / dave jenike)
+                    sh, lg = (tk, ct) if len(tk) < len(ct) else (ct, tk)
+                    if len(sh) < len(lg) and lg[-len(sh):] == sh and all(len(x) > 1 for x in sh): how = "name-tail"
+            else:
+                if surf.isupper() and len(tk) == 1 and len(ct) >= 2 and tk[0] == initials(ct): how = "acronym"
+                elif rs.isupper() and len(ct) == 1 and len(tk) >= 2 and ct[0] == initials(tk): how = "acronym"
+                else:
+                    sh, lg = (tk, ct) if len(tk) < len(ct) else (ct, tk)
+                    if sh != lg and len(sh) < len(lg) and lg[-len(sh):] == sh:
+                        if len(sh) == 1 and (len(sh[0]) < 4 or sh[0] in GENERIC or sh[0] in PLACE_MODS or sh[0] in TITLES): continue
+                        if ty == "place" and not all(x in PLACE_MODS or x == "and" for x in lg[:len(lg) - len(sh)]): continue
+                        how = "head-noun"
+            if how: hits[eid] = how
+        if len(hits) == 1: e_ = next(iter(hits)); return e_, hits[e_]
+        return None, None
+    def ent_for(c):
+        if "_e" in c: return c["_e"]
+        sis = sorted({m["sent"] for m in c["ms"]}); ty, canon, eid, nmn, al, gen, hit, how = ident_of(c)
+        if hit is None and IDENT_RULES == "v2" and not c.get("iso"):
+            hit, how = xfind(c, ty, nmn)
+            if hit: XMERGES.append((c["canon"], S.ent[hit]["canon"], how))
         if hit: eid = hit
         r = S.ent.get(eid); new = r is None
         if new:
-            r = S.ent[eid] = {"id": eid, "type": ty, "canon": canon, "aliases": {}, "arts": {}, "evid": [], "unsure": [], "sents": 0, "iptc": None, "geo": None, "kind_note": None}
+            r = S.ent[eid] = {"id": eid, "type": ty, "canon": canon, "aliases": {}, "arts": {}, "evid": [], "unsure": [], "sents": 0, "iptc": None, "geo": None, "kind_note": None, "coarse": c.get("coarse")}
+        if how and art not in r["arts"] and r["arts"]:   # every cross-article merge says how it was made (exact-name, exact-alias, iso, surname, head-noun, acronym)
+            mh = r.setdefault("merged_how", [])
+            if not any(x["art"] == art and x["how"] == how and x["surface"] == c["canon"].strip() for x in mh): mh.append({"art": art, "how": how, "surface": c["canon"].strip()})
         if len(nrm(canon).split()) > len(nrm(r["canon"]).split()) and ty not in ("place", "concept"): r["canon"] = canon
         for x, n in c["surf"].items(): r["aliases"][x] = r["aliases"].get(x, 0) + n
         for x in c.get("pron", []): r.setdefault("pron", []).append(x) if x not in r.get("pron", []) else None
@@ -521,7 +709,7 @@ def align(rec, G, ch, contradictions=True):
         w = (word or "").strip(); lw = w.lower()
         if not w or lw in GENERIC: return None
         if re.fullmatch(r"[\d.,]+", lw) or lw in ("cent", "percent", "%", "years", "year", "months", "month", "weeks", "days", "hours", "times", "dollars", "mark"): return {"kind": "num"}
-        if lw in MONTHS or lw in WDAYS: return {"kind": "date", "text": w}
+        if lw in MONTHS or lw in WDAYS or DATE_MD.match(lw): return {"kind": "date", "text": w}
         m = locate(w, sa, sb, a, b, before)
         if m is None: return {"kind": "concept", "words": [cnorm(w)], "span": None}
         s, e = m.start(), m.end()
@@ -591,7 +779,7 @@ def align(rec, G, ch, contradictions=True):
     for a in A:
         u = a["u"]; si = a["si"]; v = a["v"]; sa, sb = sents[si]
         sid = ref_ent(a["subj"]); oid = ref_ent(a["obj"]) if a["obj"] and a["obj"]["kind"] in ("entity", "concept") else None
-        pred = a["pred"]; bd, bwhy = bundle_for(a); direction = None
+        pred = pred_lemma(a["pred"]); bd, bwhy = bundle_for(a); direction = None   # item B (2): the verb lemma, not the surface form
         if oid is None and not (a["obj"] and a["obj"]["kind"] in ("num", "date")) and not any(v[1] <= x[0] < sb for x in amts) and not any(d["sent"] == si and d["s"] >= v[1] for d in DT): continue
         if bd: direction = bd["direction"]; pred = "rise" if direction == "up" else ("fall" if direction == "down" else pred)
         elif pred in UP: pred = "rise"; direction = "up"
@@ -606,15 +794,26 @@ def align(rec, G, ch, contradictions=True):
         pl = [m for m in places if m["sent"] == si]; place = None; place_how = None
         if pl: place = pl[0]["iso"]; place_how = "same sentence"
         elif (rec["stage_out"].get("place_linker", {}).get("out") or {}).get("country"): place = art_iso; place_how = "article country (top place-linker country)"
-        neg = [n for n in negs if v[0] - 40 <= n[0] <= v[1] + 15 and sa <= n[0] < sb]; mod = [n for n in mods if v[0] - 40 <= n[0] <= v[1] + 15 and sa <= n[0] < sb]
+        neg = [n for n in negs if neg_in_scope(text, n, v, sa, sb)]; mod = [n for n in mods if v[0] - 40 <= n[0] <= v[1] + 15 and sa <= n[0] < sb]   # fact-join fix (5): negation only inside the verb's clause
         spk = None
         for at in ATT:
             if at["clause"] and at["clause"]["s"] <= v[0] < at["clause"]["e"] + 1: spk = at; break
         so = rec["sentences"][si] if si < len(rec["sentences"]) else {}
-        key = "%s | %s | %s" % (sid, pred, oid or (cnorm(str(u["value"])) if a["obj"] and a["obj"]["kind"] not in ("num", "date") else "-"))
+        st_pred, status = (None, None) if direction else status_of(pred, str(u["value"]) if a["obj"] else None)   # item B (2): status table (die / dead / died, undergo care ...) names the predicate once
+        if st_pred: pred = st_pred
+        ok_ = None   # item B (3): a numeric or date object is keyed by class + bucket (amount: value 2 s.f. + unit; date: iso day), the exact value stays on the fragment
+        if oid is None:
+            if a["obj"] and a["obj"]["kind"] == "date":
+                ot_ = nrm(a["obj"].get("text")); dm_ = next((d for d in tm if nrm(d["text"]) == ot_), None)
+                ok_ = date_bucket(dm_ or ({"text": a["obj"].get("text"), "iso": md_date(a["obj"].get("text"), pubd)} if md_date(a["obj"].get("text"), pubd) else (tm[0] if tm else None)))
+            elif a["obj"] is None or a["obj"]["kind"] == "num": ok_ = amount_bucket(am[0][2]) if am else None
+        key = "%s | %s | %s" % (sid, pred, oid or (cnorm(str(u["value"])) if a["obj"] and a["obj"]["kind"] not in ("num", "date") else ("%s:%s" % (ok_["class"], ok_["bucket"]) if ok_ else "-")))
         aid = "A:" + h(key)
         att = {"amount": [x[2] for x in am], "time": [{"text": d["text"], "label": d["label"], "iso": d["iso"], "period": d["period"]} for d in tm[:2]], "place": place, "place_how": place_how, "direction": direction, "direction_how": ("change bundle " + bwhy) if bd else ("verb lemma in the up/down list" if direction else None),
                "polarity": "negative" if neg else "positive", "modality": "predicted" if mod or so.get("factuality") == "predicted" else ("reported" if so.get("factuality") == "reported" else "asserted"), "speaker": spk["c"]["_e"][0] if spk else None, "speaker_how": spk["how"] if spk else None}
+        if ok_: att["obj_key"] = ok_
+        if status: att["status"] = status
+        if a["pred"] != pred: att["pred_surface"] = a["pred"]
         if a["obj"] and a["obj"]["kind"] == "date" and not tm: att["time"] = [{"text": a["obj"]["text"], "label": a["obj"]["text"], "iso": None, "period": None}]
         spans = [_span(*v)]
         for k in ("subj", "obj"):
@@ -627,7 +826,7 @@ def align(rec, G, ch, contradictions=True):
             if r_ and r_["iptc"] and r_["iptc"]["how"] == "exact" and r_["type"] == "concept" and (not l1 or pk.chain(r_["iptc"]["node"])[0] == l1 if r_["iptc"]["node"] else False): ip = {**r_["iptc"], "why": "exact IPTC label of its %s '%s'" % ("object" if rid == oid else "subject", r_["canon"])}; break
         r = S.asr.get(aid); new = r is None
         ev = {"art": art, "pub": pub, "title": rec["title"], "sent": sent_txt(si), "spans": spans, "independent": independent, "attrs": att, "sents": [si]}
-        if new: r = S.asr[aid] = {"id": aid, "key": key, "subj": sid, "pred": pred, "obj": oid, "obj_text": None if oid else (cnorm(str(u["value"])) if a["obj"] and a["obj"]["kind"] not in ("num", "date") else None), "kind": "claim", "arts": {}, "evid": [], "iptc": ip, "attrs": att}
+        if new: r = S.asr[aid] = {"id": aid, "key": key, "subj": sid, "pred": pred, "obj": oid, "obj_text": None if oid else (cnorm(str(u["value"])) if a["obj"] and a["obj"]["kind"] not in ("num", "date") else None), "kind": "claim", "arts": {}, "evid": [], "iptc": ip, "attrs": att, **({"obj_key": ok_} if ok_ else {}), **({"status": status} if status else {})}
         prior = len(r["arts"]); priorp = len(set(S.arts[x]["publisher"] for x, ok in [(x, 1) for x in r["arts"]] if S.arts[x]["independent"]))
         if art not in r["arts"]: r["arts"][art] = pub; r["evid"].append(ev)
         r["iptc"] = r["iptc"] or ip
@@ -785,7 +984,7 @@ def align(rec, G, ch, contradictions=True):
     S.curve.append({"articles": len(S.arts), "entities": len(S.ent), "assertions": len(S.asr), "edges": len(S.edges)})
     S.save_article(art)   # durable store: append this article's changes (no-op when no file is attached)
     rec["g4"] = {"label": LABEL, "entities": ents_out, "assertions": asr_list, "edges": [{**r, "arts": None} for r in ed.values()], "nodes": nodes, "ms": ms, "contradictions_ms": _tc, "story": {"root": root, "independent": independent, "kind": kind}, "joins": joins[:12], "graph": {**S.stats(), "joins_nodes": len(joins), "curve": S.curve[-60:]}, "similar_edges": sim_n, "contradiction_edges": sum(1 for r in ed.values() if r["via"] == "contradiction"),
-                 "mentions_unclustered": len(M) - sum(len(c["ms"]) for c in clusters), "alias_merges": sum(len(c["ms"]) - len({(m["surface"].strip()) for m in c["ms"]}) + 0 for c in clusters), "aliases_merged": sum(max(0, len(c["surf"]) - 1) for c in clusters)}
+                 "mentions_unclustered": len(M) - sum(len(c["ms"]) for c in clusters), "alias_merges": sum(len(c["ms"]) - len({(m["surface"].strip()) for m in c["ms"]}) + 0 for c in clusters), "aliases_merged": sum(max(0, len(c["surf"]) - 1) for c in clusters), "cross_merges": [{"surface": a_, "into": b_, "how": h_} for a_, b_, h_ in XMERGES]}
 def ch_stop(ch):
     if not hasattr(ch, "_g4_stop"):
         from spacy.lang.en.stop_words import STOP_WORDS

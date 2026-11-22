@@ -74,10 +74,10 @@ def read_slow(path):
 def find_g4(a, trace):
     multi = [a[i + 1] for i, x in enumerate(a) if x == "--g4"]
     if multi: c = multi
-    else:
-        c = [os.path.join(ROOT, "runs", "g4", "store.jsonl")] + sorted(glob.glob(os.path.join(ROOT, "runs", "g4", "archive", "store.jsonl-*")))
-        c += [os.path.join(trace, "g4", "store.jsonl"), os.path.join(os.path.dirname(trace), "g4", "store.jsonl")]
-        if os.environ.get("LT_V4_G4_DIR"): c.append(os.path.join(os.environ["LT_V4_G4_DIR"], "store.jsonl"))
+    else:   # defect 6 (knowledge step): the window's OWN store only, the first that exists. The shared runs/g4 store and its archive mix store generations (111 article ids for 60 observations) and are never read by default; pass them with --g4 on purpose.
+        own = [os.path.join(trace, "g4", "store.jsonl"), os.path.join(os.path.dirname(trace), "g4", "store.jsonl")]
+        if os.environ.get("LT_V4_G4_DIR"): own.append(os.path.join(os.environ["LT_V4_G4_DIR"], "store.jsonl"))
+        c = [p for p in own if os.path.exists(p)][:1] or own[:1]
     seen = set(); ok = []; missing = []
     for p in c:
         r = os.path.realpath(p)
@@ -120,9 +120,10 @@ def build_layers(items, meta, stores, ticks, slow, iptc, evo, changes=None):
     body["decay_rule"] = {"half_life_days": HALF_LIFE_DAYS, "as_of": as_of, "formula": "weight = 0.5 ** (age_days / half_life_days)", "status": STATUS + " (the half-life is a guess; nothing is dropped or ranked by it here)"}
     body["status"] = STATUS; body["version"] = VERSION + "+" + body["version"]
     return body
-def educate_index(cons, state_path, seed=None):
+def educate_index(cons, state_path, seed=None, keep=None):
     import educate as E
     state = json.load(open(state_path)) if state_path and os.path.exists(state_path) else {}; IX = E.Index(cons, state, E.load_seed(seed or E.SEED))
+    if keep is not None: keep["IX"] = IX   # the knowledge step answers from the same index
     rc = collections.Counter(e["subj"][9:] for e in cons["edges"] if e["kind"] == "resource"); cc = collections.Counter(e["obj"][8:] for e in cons["edges"] if e["kind"] == "resource")
     ec = collections.Counter(); [ec.update([x]) for e in cons["edges"] if e["kind"] == "assertion" for x in (e["subj"], e["obj"]) if x in IX.labels]
     qs = [r for r, _ in sorted(rc.items(), key=lambda kv: (-kv[1], kv[0]))[:3]] + [c for c, _ in sorted(cc.items(), key=lambda kv: (-kv[1], kv[0]))[:3] if len(c) == 2] + [IX.labels[k] for k, _ in sorted(ec.items(), key=lambda kv: (-kv[1], kv[0]))[:3]] + [n["label"] for n in sorted((cons["concepts"].get("capabilities") or {}).get("nodes", []), key=lambda n: (-n["articles"], n["id"]))[:2]] + ["no such thing in the stores"]
@@ -141,6 +142,100 @@ def truth(trace, out_snap):
         try: r[k] = f()
         except Exception as ex: r[k] = {"unmeasured": "%s: %s" % (type(ex).__name__, str(ex)[:300])}
     return r
+# ---------- knowledge.json (knowledge step, KNOWLEDGE_SCHEMA.md, owner yes L2936) ----------
+SENT_MAX = 400
+def load_contradictions(paths):
+    """G4 store files -> {canonical key: contradiction edge record}; later lines override earlier ones (the store is append-only). consolidate.load_g4 reads asr/ent/arts only, so the edges section is read here."""
+    import consolidate as C; out = {}
+    for p in paths:
+        if not os.path.exists(p): continue
+        for ln in open(p, encoding="utf-8"):
+            if not ln.strip(): continue
+            for kj, vj in json.loads(ln).get("edges", []):
+                v = C._dec(vj)
+                if isinstance(v, dict) and v.get("via") == "contradiction": out[C.canon(C._dec(kj))] = v
+    return out
+def side_day(v, side, ST):
+    """a contradiction edge's side ('a' | 'b') -> the earliest known day of its source articles, or None"""
+    d = sorted(x for x in (ST.day(s["art"]) for s in (v.get("sources") or {}).get(side, [])) if x); return d[0] if d else None
+def contested_pairs(cons, stores, g4p, by_id, ST):
+    """the store's contradiction edges -> (kept pairs, dropped counts). Fact-join fix (T158 L2954): both sides map to slot edges; a pair is kept only when a != b (a polarity edge joins two readings of ONE fact: dropped as self_pair), both edges sit under the same anchor (cross_anchor otherwise),
+    both sides have a day (unordered otherwise), and for kind status the later report reverses the earlier (dead first, alive later; care -> died is a timeline, dropped as timeline). amount / direction / polarity pairs need the time order only. Each kept pair names earlier and later."""
+    import consolidate as C; jmap = (cons.get("join") or {}).get("map") or {}; amap = {}
+    for S in stores:
+        for aid, r in S["asr"].items():
+            if r.get("kind") == "claim":
+                e = jmap.get(C.h(r["key"]), C.h(r["key"]))
+                if e in by_id: amap.setdefault(aid, e)
+    keep = {}; drop = collections.Counter()
+    for v in load_contradictions(g4p).values():
+        a, b = amap.get(re.sub(r"#[+-]$", "", v["a"])), amap.get(re.sub(r"#[+-]$", "", v["b"])); k = v.get("kind")
+        if not (a and b): drop["unmapped"] += 1; continue
+        if a == b: drop["self_pair"] += 1; continue
+        if by_id[a].get("anchor") != by_id[b].get("anchor"): drop["cross_anchor"] += 1; continue
+        da, db = side_day(v, "a", ST), side_day(v, "b", ST)
+        if not (da and db): drop["unordered"] += 1; continue
+        (ea, la), (eb, lb) = ((a, da), (b, db)) if (da, a) <= (db, b) else ((b, db), (a, da))
+        if k == "status":
+            sa = ((by_id[ea].get("attrs") or {}).get("status")); sb = ((by_id[eb].get("attrs") or {}).get("status"))
+            if not (sa == "dead" and sb == "alive" and la < lb): drop["timeline"] += 1; continue
+        keep[(min(a, b), max(a, b), str(k))] = {"a": min(a, b), "b": max(a, b), "kind": k, "earlier": {"edge": ea, "day": la}, "later": {"edge": eb, "day": lb}, "reversal": k == "status", "note": v.get("note"), "status": STATUS}
+    return [keep[t] for t in sorted(keep)], dict(sorted(drop.items()))
+def knowledge(cons, meta, items, stores, g4p, ix, IX, trace):
+    """consolidated body -> the knowledge.json body (sealed by the caller). Everything is derived from the window's own observations and its own G4 store: no clock, no random value, sorted everywhere, so the same inputs give the same sha256. Counters: new = assertion edges (fact slots, consolidate.py slot_merge) first seen in the window (the store is the window's own, so all of them); reinforced = strength >= 2 independent publishers (consolidate.independence: one source per story root or near-identical sentence, publisher = the fragment's own); contested = contradiction edges of the store mapped to slot edges and kept by contested_pairs (a != b, same anchor, time-ordered, status only when reversed); bridging = capability nodes used by >= 2 Areas."""
+    import consolidate as C
+    ST = C.Stories(list(items), stores); obs = cons["observations"]; A = [e for e in cons["edges"] if e["kind"] == "assertion"]; by_id = {e["id"]: e for e in A}
+    seq_of = {o["id"]: (meta.get(o["id"]) or {}).get("seq") for o in obs}; seqs = sorted({s for s in seq_of.values() if s is not None}); last = seqs[-1] if seqs else 0
+    sq = lambda art: seq_of.get(art) if seq_of.get(art) is not None else last   # an article the chain does not number counts at the end, so the growth totals reconcile
+    # edges index: every assertion edge, fragments art/pub/sent only
+    edges = {}
+    for e in A:
+        fr = []; seen = set()
+        for f in e["fragments"]:
+            k = (f["art"], f.get("sent") or "")
+            if k in seen: continue
+            seen.add(k); fr.append({"art": f["art"], "pub": f.get("pub") or ST.pub(f["art"]), "sent": (f.get("sent") or "")[:SENT_MAX]})
+        ind = e.get("independent") or {}
+        edges[e["id"]] = {"subject": e["subj"], "predicate": e["pred"], "object": e["obj"] if e["obj"] is not None else e.get("obj_text"), "kind": e["kind"], "strength": e["strength"], "publishers": list(e["publishers"]), "fragments": fr, "anchor": e.get("anchor"),
+                          "independent": {"n": ind.get("n", e["strength"]), "collapsed": ind.get("collapsed", 0), "sources": [{"pub": s["pub"], "arts": s["arts"], "fragments": s["fragments"], "copies": s["copies"], "how": s["how"]} for s in ind.get("sources") or []]},
+                          "slot": ({"n": e["slot"]["n"], "merged_how": e["slot"]["merged_how"], "min_pair_prob": e["slot"]["min_pair_prob"], "members": e["slot"]["members"]} if e.get("slot") else None)}
+    new = sorted(by_id); reinf = sorted(i for i, e in by_id.items() if e["strength"] >= 2)
+    contested, cdrop = contested_pairs(cons, stores, g4p, by_id, ST); cev = sorted({x for c in contested for x in (c["a"], c["b"])})
+    # capabilities and bridging (areas_n / bridging come from consolidate.py when it writes them; else len(areas))
+    caps = []
+    for n in (cons["concepts"].get("capabilities") or {}).get("nodes", []):
+        ar = n.get("areas") or {}; areas = sorted(ar.keys() if isinstance(ar, dict) else ar); an = n["areas_n"] if n.get("areas_n") is not None else len(areas)
+        caps.append({"id": n["id"], "label": n["label"], "areas": areas, "areas_n": an, "bridging": bool(n["bridging"]) if n.get("bridging") is not None else an >= 2})
+    bridg = sorted(c["id"] for c in caps if c["bridging"])
+    # growth by chain seq: cumulative assertions / reinforced / contested, one row per chain seq of the window
+    first = {}; rseq = {}
+    for i, e in by_id.items():   # reinforced at the chain seq where the 2nd independent source publisher arrives (consolidate.independence sources, not story roots)
+        fs = sorted(((sq(f["art"]), f["art"], f.get("pub")) for f in e["fragments"]), key=lambda t: (t[0], t[1], str(t[2]))); first[i] = fs[0][0] if fs else last; ps = set()
+        for s_, p in sorted((min(sq(a) for a in src["arts"]), src["pub"]) for src in (e.get("independent") or {}).get("sources") or []):
+            ps.add(p)
+            if len(ps) >= 2: rseq[i] = s_; break
+    cseq = []
+    for c in contested:
+        side = lambda eid: min([sq(f["art"]) for f in by_id[eid]["fragments"]] or [last]); cseq.append(max(side(c["a"]), side(c["b"])))
+    growth = [{"seq": s, "assertions": sum(1 for x in first.values() if x <= s), "reinforced": sum(1 for x in rseq.values() if x <= s), "contested": sum(1 for x in cseq if x <= s)} for s in seqs]
+    nodes = cons["concepts"]["iptc"]["nodes_used"] + len(cons["concepts"]["ours"])
+    J = cons.get("join") or {}
+    funnel = {"observations": len(obs), "fragments": sum(e["fragments_n"] for e in A), "sources": sum(len((e.get("independent") or {}).get("sources") or []) for e in A), "facts_raw": J.get("facts_raw", len(A)), "assertions": len(A), "reinforced": len(reinf), "contested": len(cev), "capabilities": len(caps), "bridging": len(bridg), "concepts": nodes}
+    join = {k: J.get(k) for k in ("mode", "threshold", "facts_raw", "slots", "merge_rate", "merged_slots", "anchors", "anchor_merges", "gated_pairs", "independence")}
+    join.update({"contested_kept": len(contested), "contested_dropped": cdrop, "rule": "slots: one fact per anchor cluster (fact_join scorer, hard gates); reinforced: >= 2 independent sources (story root or near-identical sentence = one source); contested: a != b, same anchor, both dated, status only when the later report reverses (dead -> alive)", "status": STATUS})
+    body = {"as_of": cons["decay_rule"]["as_of"], "window": trace, "articles": len(obs), "publishers": len({o["publisher"] for o in obs if o.get("publisher")}),
+            "counters": {"new": {"n": len(new), "evidence": new}, "reinforced": {"n": len(reinf), "evidence": reinf}, "contested": {"n": len(cev), "evidence": cev}, "bridging": {"n": len(bridg), "evidence": bridg}},
+            "edges": edges, "contested": contested, "capabilities": caps, "funnel": funnel, "growth": growth, "join": join}
+    return body
+def knowledge_final(body, cons, ix, IX, man_note):
+    """yield (knowledge_yield.py, answerable from the educate index) and the auto answer (educate.py --auto); each falls back to an explicit null with the reason in man_note, never a silent gap"""
+    import knowledge_yield as KY, educate as E
+    y = KY.yield_block(cons, contested_n=len(body["contested"])); body["yield"] = {k: y[k] for k in ("pct_reinforced", "contested_per_100", "bridging", "answerable")}
+    body["yield"]["bridging"] = body["counters"]["bridging"]["n"]   # the same number as the counter (knowledge_yield counts nodes from consolidated.json; the schema counts the capabilities list written here)
+    man_note["yield_basis"] = y["basis"]
+    try: body["answer"] = E.knowledge_answer(E.auto_answer(IX), IX)
+    except Exception as ex: body["answer"] = None; man_note["answer_unmeasured"] = "%s: %s" % (type(ex).__name__, str(ex)[:300])
+    body["provisional"] = True; return body
 # ---------- the pass ----------
 def main(a):
     opt = lambda f: a[a.index(f) + 1] if f in a else None; t0 = time.time(); cap = float(opt("--cap-min") or 60) * 60
@@ -169,10 +264,12 @@ def main(a):
         # truth: snapshot into the output folder (not the shared /workspace/data/anchors/truth file); scores reported only
         tr = seal(truth(trace, os.path.join(out, "resource_snapshot.json"))); outs["truth"] = write(os.path.join(out, "truth.json"), tr)
         e, i = tr.get("event_peak", {}), tr.get("identity", {}); outs["truth"]["summary"] = {"event_peak": {k: e.get(k) for k in ("checkable", "hits", "hit_rate", "bar", "pass", "unmeasured")}, "identity": {k: i.get(k) for k in ("pairs_resolved", "conflicts", "conflict_rate", "pass", "unmeasured")}}
-        ix = seal(educate_index(cons, os.path.join(out, "resource_state.json"))); outs["educate_index"] = write(os.path.join(out, "educate_index.json"), ix); outs["educate_index"]["answers_with_statements"] = ix["answers_with_statements"]
+        keep = {}; ix = seal(educate_index(cons, os.path.join(out, "resource_state.json"), keep=keep)); outs["educate_index"] = write(os.path.join(out, "educate_index.json"), ix); outs["educate_index"]["answers_with_statements"] = ix["answers_with_statements"]
+        knote = {}; kn = seal(knowledge_final(knowledge(cons, meta, items_all, stores, g4p, ix, keep["IX"], trace), cons, ix, keep["IX"], knote))
+        outs["knowledge"] = write(os.path.join(out, "knowledge.json"), kn); outs["knowledge"]["counters"] = {k: v["n"] for k, v in kn["counters"].items()}; outs["knowledge"]["yield"] = kn["yield"]; outs["knowledge"]["notes"] = knote; outs["knowledge"]["join"] = {k: kn["join"].get(k) for k in ("mode", "facts_raw", "slots", "merge_rate", "contested_kept", "contested_dropped")}
     signal.alarm(0)
     man.update({"state": "done", "ended": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "seconds": round(time.time() - t0, 1), "inputs": {"chain": {"file": chain, "sha256": sha_file(chain), "traced_items": len(items)}, "journal_rows": len(jitems), "slow": {"file": slow_path, "present": os.path.exists(slow_path), "lines": slines, "ids": len(slow), "stage_counts": scount}, "g4_stores": [{"file": p, "sha256": sha_file(p), "bytes": os.path.getsize(p)} for p in g4p], "g4_missing": g4missing},
                 "outputs": outs, "layers": cons["layers"], "note": "every output PROVISIONAL; truth scores reported, never gating; the half-life of the decay field is a guess"})
     write(os.path.join(out, "slow_consolidate_run.json"), man)
-    print(json.dumps({"out": out, "state": man["state"], "seconds": man["seconds"], "slow_present": man["inputs"]["slow"]["present"], "outputs": {k: {"sha256": v["sha256"], **{x: v[x] for x in ("counts", "layers", "summary", "answers_with_statements") if x in v}} for k, v in outs.items()}}, sort_keys=True, indent=1))
+    print(json.dumps({"out": out, "state": man["state"], "seconds": man["seconds"], "slow_present": man["inputs"]["slow"]["present"], "outputs": {k: {"sha256": v["sha256"], **{x: v[x] for x in ("counts", "layers", "summary", "answers_with_statements", "counters") if x in v}} for k, v in outs.items()}}, sort_keys=True, indent=1))
 if __name__ == "__main__": main(sys.argv[1:])

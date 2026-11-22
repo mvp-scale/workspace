@@ -1,11 +1,12 @@
 """educate: G6 educate v0 (lean wave 0, L2868; playbook 00 section 10 and the G6 row of section 2). Template answers over stored edges. No model, no hosted call, no generated free text, CPU only, read-only on every input.
-    python3 educate.py "<question>" [--consolidated <consolidated.json>] [--state <resource state json>] [--seed <resources.csv>] [--trace <trace folder>] [--ticks <ticks.jsonl>] [--json]
+    python3 educate.py "<question>" | --auto [--consolidated <consolidated.json>] [--state <resource state json>] [--seed <resources.csv>] [--trace <trace folder>] [--ticks <ticks.jsonl>] [--json]
 Inputs: the consolidate.py output (edges with fragments, publishers, strength; if --consolidated is not given it is computed in memory from the G4 stores, the trace and the tick log, exactly as consolidate.py does) and the resource state of ledger_split.py --state (V, dV, N, C, U per resource, country, day; optional).
 Answer (playbook 00 section 10): what it is / what is changing / why / known / uncertain / adjacent. Each section is a list of statements. A statement is one template (TEMPLATES, the only place text lives) filled with slots taken from the stored data, plus its pointers:
   refs        : fragment pointers {art, sent (sentence id, or null for a resource tick, which has no sentence), span, pub, day, src}; at most MAX_REFS are listed, refs_total says how many support the statement
   publishers_n: independent publishers (edge strength) for a statement about one edge, otherwise the number of distinct publisher names over the cited fragments (publishers_basis says which)
   weights     : every fragment counts 1.0, equal. PROVISIONAL: the weighting is an owner decision (T178, pending). No weighted score is computed; ranking is by independent publishers, then fragments, then id.
 A question that matches nothing gets one templated abstain line and no statements. The one statement kind that is not a count over fragments, the seed definition of a resource, points at its seed-file row (kind seed-row) and says PROVISIONAL (resources.csv, status guess).
+--auto (knowledge step, L2936): no question is typed. The question is the top-strength subject entity of the window: among assertion edges, the named subject entity (type not concept, iso, unk) with the most distinct independent-or-copy publishers over its subject edges, then most edges, then key; if the window has no named entity, the same rule over concept entities of 3+ letters. Deterministic, marked auto in the answer ("auto": true, question text starts "auto:"). knowledge_answer() gives the same answer in the knowledge.json shape (refs = edge ids).
 Question resolution is deterministic string matching: a resource id or seed name, an upper-case ISO country code (or iso:XX / country:XX), an entity label or a capability label (longest match; capabilities come from concepts.capabilities of the consolidated body: Domain > Area > Capability, PROVISIONAL, nothing promoted). Country names are not mapped (no stored name table)."""
 import os, sys, re, json, glob, csv, hashlib, collections
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
@@ -143,8 +144,8 @@ def capability_answer(IX, t, q):
     for k, m in enumerate(sib, 1): sec["adjacent"].append(stm("adjacent", "adj.item", {"rank": k, "label": m["label"], "kind": "capability", "edges": m["edges"], "frags": m["articles"], "pubs": len(m["publishers"])}, [{"art": a, "sent": None, "spans": [], "pub": p, "day": d, "source": "capability_list"} for a, p, d in m.get("items", [])]))
     if not sib: sec["adjacent"].append(stm("adjacent", "adj.none", {"label": label}, F))
     return {"version": VERSION, "question": q, "resolved": t, "weights": WEIGHTS, "sections": sec, "statements": sum(len(v) for v in sec.values()), "source": {"consolidated_sha256": IX.body.get("sha256"), "state_sha256": IX.state.get("sha256"), "seed": None}}
-def answer(IX, q):
-    t = IX.resolve(q)
+def answer(IX, q, t=None):
+    t = t or IX.resolve(q)
     if not t: return {"version": VERSION, "question": q, "resolved": None, "weights": WEIGHTS, "sections": {s: [] for s in SECTIONS}, "abstain": render("abstain", {"question": json.dumps(q)}), "statements": 0}
     if t["kind"] == "capability": return capability_answer(IX, t, q)
     E = IX.select(t); S = IX.states(t); label = t["label"]; F = frags_of(E); sec = {s: [] for s in SECTIONS}
@@ -193,6 +194,33 @@ def answer(IX, q):
     for i, ((k, l), es) in enumerate(rk, 1): sec["adjacent"].append(stm("adjacent", "adj.item", {"rank": i, "label": l, "kind": k, "edges": len(es), "frags": sum(e["fragments_n"] for e in es), "pubs": len({f["pub"] for f in frags_of(es)})}, frags_of(es)))
     if not rk: sec["adjacent"].append(stm("adjacent", "adj.none", {"label": label}, F))
     return {"version": VERSION, "question": q, "resolved": t, "weights": WEIGHTS, "sections": sec, "statements": sum(len(v) for v in sec.values()), "source": {"consolidated_sha256": IX.body.get("sha256"), "state_sha256": IX.state.get("sha256"), "seed": os.path.basename(SEED) if IX.seed else None}}
+AUTO_SKIP = {"concept", "iso", "unk"}
+def auto_target(IX):
+    """the auto question: the top-strength subject entity of the window (see the module doc); None if the window has no assertion subject"""
+    pubs = collections.defaultdict(set); cnt = collections.Counter()
+    for e in IX.edges:
+        if e["kind"] != "assertion" or not e["subj"] or e["subj"].startswith("iso:"): continue
+        pubs[e["subj"]].update(e["publishers"]); cnt[e["subj"]] += 1
+    def pick(named):
+        c = [k for k in pubs if len(lab(k)) >= 3 and (kind_of(k) not in AUTO_SKIP) == named]
+        return min(c, key=lambda k: (-len(pubs[k]), -cnt[k], k)) if c else None
+    k = pick(True) or pick(False)
+    return {"kind": "entity", "label": lab(k), "entity": k} if k else None
+def auto_answer(IX):
+    t = auto_target(IX)
+    if not t: return {"version": VERSION, "question": "auto: none", "auto": True, "resolved": None, "weights": WEIGHTS, "sections": {s: [] for s in SECTIONS}, "abstain": "No assertion subject in the window.", "statements": 0}
+    ans = answer(IX, "auto: " + t["label"], t); ans["auto"] = True; return ans
+def knowledge_answer(ans, IX):
+    """the answer in the knowledge.json shape: {question, auto, statements: [{text, refs: [edge id], publishers}]}; an edge id is listed when one of its fragments is a cited ref (same art, sentence id, publisher)"""
+    idx = collections.defaultdict(set)
+    for e in IX.edges:
+        for f in e["fragments"]: idx[(f["art"], sid(f.get("sent")), f.get("pub"))].add(e["id"])
+    out = []
+    for sec in SECTIONS:
+        for st in ans["sections"][sec]:
+            ids = sorted({i for r in st["refs"] for i in idx.get((r["art"], r["sent"], r["pub"]), ())})
+            out.append({"section": sec, "text": st["text"], "refs": ids, "publishers": st["publishers_n"]})
+    return {"question": ans["question"], "auto": bool(ans.get("auto")), "statements": out}
 def as_text(ans):
     if ans.get("abstain"): return ans["abstain"]
     out = ["Q: " + ans["question"], "Resolved: %s (%s) | weights: %s" % (ans["resolved"]["label"], ans["resolved"]["kind"], ans["weights"])]
@@ -201,9 +229,9 @@ def as_text(ans):
         out += ["- " + st["text"] for st in ans["sections"][s]]
     return "\n".join(out)
 def main(a):
-    if not a or a[0].startswith("--"): print(__doc__); return
+    if not a or (a[0].startswith("--") and a[0] != "--auto"): print(__doc__); return
     opt = lambda f: a[a.index(f) + 1] if f in a else None
     state = json.load(open(opt("--state"))) if opt("--state") else {}
-    IX = Index(build_body(a), state, load_seed(opt("--seed") or SEED)); ans = answer(IX, a[0])
+    IX = Index(build_body(a), state, load_seed(opt("--seed") or SEED)); ans = auto_answer(IX) if a[0] == "--auto" else answer(IX, a[0])
     print(json.dumps(ans, sort_keys=True, ensure_ascii=False, indent=1) if "--json" in a else as_text(ans))
 if __name__ == "__main__": main(sys.argv[1:])

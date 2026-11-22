@@ -2,7 +2,8 @@
 Throwaway test bench, CPU only, no hosted calls, no GPU. Not part of the console.
 Run: /workspace/models/embed-zs/.venv/bin/python simulation/server.py   (from knowledge_pipeline)  then open http://localhost:18770/
 GET /api/articles -> dropdown list; GET /api/article?id=... ; POST /api/run {title, body, date, sparse} -> gate-by-gate read (G0 normalize, G1 spans, G2 facts, G3 cascade, decider, journal record, engine map); GET /api/heads -> measured scores per head.
-Raw mode: GET /api/raw/sample?n=5&window=24h|any[&src=window|trace:<dir>] -> n random queue articles through live_trace.Chain.trace (CPU), knowledge units, merge rule v0 (unmeasured) into an in-memory graph; GET or POST /api/raw/reset clears the graph. Code in raw-units.py."""
+Raw mode: GET /api/raw/sample?n=5&window=24h|any[&src=window|trace:<dir>] -> n random queue articles through live_trace.Chain.trace (CPU), knowledge units, merge rule v0 (unmeasured) into an in-memory graph; GET or POST /api/raw/reset clears the graph. Code in raw-units.py.
+Knowledge step (L2936): src also takes area:<key> (a staged interest area of simulation/fixtures/knowledge/areas.json; its cache window is built on the first request by slow_clock.py + slow_consolidate.py, CPU only); GET /api/raw/areas lists the areas; GET /api/raw/knowledge?src=window|trace:<dir>|area:<key> -> the window's knowledge.json + article id -> seq/publisher/title/url."""
 import json, os, random, re, sqlite3, sys, pathlib, time, hashlib, collections
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = pathlib.Path(__file__).resolve().parent; WS = HERE.parent / "projects" / "world-state"; os.chdir(WS); sys.path.insert(0, str(WS))
@@ -256,6 +257,13 @@ class H(BaseHTTPRequestHandler):
             from urllib.parse import parse_qs; a = parse_qs(q); src = (a.get("src") or ["window"])[0]
             if src.startswith("trace:") and not src_ok(src[6:]): return self.send(400, {"error": "trace path must be under /workspace or /tmp"})
             try: return self.send(200, raw().window_info(src))
+            except Exception as e: return self.send(500, {"error": repr(e)})
+        if p == "/api/raw/areas": return self.send(200, raw().areas())   # the staged interest areas of fixtures/knowledge/areas.json (key, short name, articles, publishers, built)
+        if p == "/api/raw/knowledge":   # ?src=window|trace:<dir>|area:<key> : the window's slow_consolidate/knowledge.json (schema projects/world-state/KNOWLEDGE_SCHEMA.md) plus article id -> seq/publisher/title/url; {exists: false, why} when the window has none; area:<key> builds its cache window on first request
+            from urllib.parse import parse_qs; a = parse_qs(q); src = (a.get("src") or ["window"])[0]
+            if src.startswith("trace:") and not src_ok(src[6:]): return self.send(400, {"error": "trace path must be under /workspace or /tmp"})
+            try: return self.send(200, raw().knowledge(src))
+            except ValueError as e: return self.send(404, {"error": str(e)})
             except Exception as e: return self.send(500, {"error": repr(e)})
         if p == "/api/raw/reset": return self.send(200, raw().reset())
         if p == "/api/raw/ticker": return self.send(200, raw().ticker())

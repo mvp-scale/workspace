@@ -15,7 +15,7 @@ HERE = pathlib.Path(__file__).resolve().parent; WS = HERE.parent / "projects" / 
 NODE_PATH = os.environ.get("PUPPETEER_NODE_PATH", "/root/.npm/_npx/7d92d9a2d2ccc630/node_modules"); CHROME = os.environ.get("CHROME", "/root/.cache/puppeteer/chrome/linux-153.0.8010.36/chrome-linux64/chrome")
 STATUS = DEMO / "mockups" / "knowledge-raw" / "status.json"
 VAPE = "b9bd5dedf7525c0d06846c5faccf48b317c43b468b9d0d67c80b11704919564c"
-ap = argparse.ArgumentParser(); ap.add_argument("--sim", default="http://127.0.0.1:18771"); ap.add_argument("--port", type=int, default=18772); ap.add_argument("--id", default=VAPE); ap.add_argument("--shots", default=""); a = ap.parse_args()
+ap = argparse.ArgumentParser(); ap.add_argument("--sim", default="http://127.0.0.1:18771"); ap.add_argument("--port", type=int, default=18772); ap.add_argument("--id", default=VAPE); ap.add_argument("--shots", default=""); ap.add_argument("--src", default="", help="article source of the page: window, queue or area:<key> (default: the page default)"); a = ap.parse_args()
 def get(path):
     with urllib.request.urlopen(a.sim + "/api/" + path, timeout=600) as r: return json.load(r)
 class H(http.server.BaseHTTPRequestHandler):
@@ -44,7 +44,7 @@ const dU={},dS={},sty={};let noReason=0,total=0;document.querySelectorAll('#gwra
 const nodes=[...document.querySelectorAll('#gwrap svg g[data-node]')].map(g=>g.dataset.node);const ent=nodes.find(n=>!/^[DTACRS]:/.test(n));const asr=nodes.find(n=>n.startsWith('A:'));const hl={};
 for(const [nm,id] of [['entity',ent],['assertion',asr],['topic',nodes.find(n=>n.startsWith('T:'))]]){if(!id){hl[nm]=null;continue}window._gsel(id);const ps=[...document.querySelectorAll('#gwrap svg path[data-kind]')];hl[nm]={id,lit:ps.filter(p=>p.style.opacity==='1').length,dim:ps.filter(p=>p.style.opacity==='0.06').length,why:document.querySelectorAll('#gwhy .wl').length,whyBad:[...document.querySelectorAll('#gwhy .wl')].filter(w=>!/[↑↔]/.test(w.textContent)||w.textContent.length<12).length,sample:(document.querySelector('#gwhy .wl')||{}).textContent||''}}
 window._gsel(null);const chips=[...document.querySelectorAll('#gwrap svg g[data-node^="A:"]')].map(g=>g.querySelector('text').textContent);
-return {up,side,dU,dS,sty,noReason,total,hl,chips:chips.length,chipsNoTriple:chips.filter(t=>t.indexOf(' — ')<0).length,chipSample:chips.slice(0,2),guess:[...document.querySelectorAll('#gwrap svg text')].filter(t=>t.textContent==='guess').length,keyText:[...k.querySelectorAll('.kr')].map(r=>r.textContent.slice(0,90))}}"""
+return {up,side,dU,dS,sty,noReason,total,hl,chips:chips.length,chipsNoTriple:chips.filter(t=>t.indexOf(' — ')<0&&!t.endsWith('…')).length,chipSample:chips.slice(0,2),guess:[...document.querySelectorAll('#gwrap svg text')].filter(t=>t.textContent==='guess').length,keyText:[...k.querySelectorAll('.kr')].map(r=>r.textContent.slice(0,90))}}"""
 JS = r"""
 const puppeteer=require('puppeteer');const fs=require('fs');
 (async()=>{const [url,chrome,shots]=process.argv.slice(2);const b=await puppeteer.launch({executablePath:chrome,headless:true,args:['--no-sandbox','--disable-gpu']});const pg=await b.newPage();await pg.setViewport({width:1300,height:900});
@@ -53,18 +53,27 @@ await pg.goto(url,{waitUntil:'networkidle0'});const found={stage:{},spot:{}},scr
 const collect=async(label)=>{const r=await pg.evaluate(()=>{const o={stage:{},spot:{},sc:[document.documentElement.scrollHeight,innerHeight,document.documentElement.scrollWidth,innerWidth]};document.querySelectorAll('[data-stage],[data-spot]').forEach(n=>{const t=(n.textContent||'').trim().length;const r=n.getBoundingClientRect();const vis=t>0&&(r.width>0||r.height>0);for(const k of(n.dataset.stage||'').split(' ').filter(Boolean))if(vis)o.stage[k]=(o.stage[k]||0)+t;for(const k of(n.dataset.spot||'').split(' ').filter(Boolean))if(vis)o.spot[k]=(o.spot[k]||0)+t});return o});
  for(const k in r.stage)found.stage[k]=(found.stage[k]||[]).concat(label);for(const k in r.spot)found.spot[k]=(found.spot[k]||[]).concat(label);scroll.push({label,doc:r.sc})};
 extra.story=await pg.evaluate(()=>[...document.querySelectorAll('#steps li')].map(li=>({name:li.querySelector('.t').textContent,gate:(li.querySelector('.gtag')||{}).textContent||'',badge:(li.querySelector('.bdg')||{}).dataset?(li.querySelector('.bdg').dataset.badge||''):'',text:(li.querySelector('.bdg')||{}).textContent||'',live:li.querySelector('.bdg')?li.querySelector('.bdg').dataset.live:null,of:li.querySelector('.bdg')?li.querySelector('.bdg').dataset.of:null})));
-await pg.click('#b_next');await pg.waitForFunction(()=>document.querySelectorAll('#steps li.go').length===6,{timeout:600000});await new Promise(r=>setTimeout(r,800));
-for(let i=1;i<=6;i++){await pg.evaluate(i=>document.querySelectorAll('#steps li')[i-1].click(),i);await new Promise(r=>setTimeout(r,700));
+await pg.click('#b_next');await pg.waitForFunction(()=>document.querySelectorAll('#steps li.go').length===7,{timeout:600000});await new Promise(r=>setTimeout(r,800));
+for(let i=1;i<=7;i++){await pg.evaluate(i=>document.querySelectorAll('#steps li')[i-1].click(),i);await new Promise(r=>setTimeout(r,700));
  if(i===3){await collect('s3-extract');await shot('s3-extract')}
  else if(i===4){for(const v of ['graph','rel','flat']){await pg.evaluate(v=>{const b=document.querySelector('[data-view="'+v+'"]');if(b)b.click()},v);await new Promise(r=>setTimeout(r,700));await collect('s4-connect-'+v);await shot('s4-connect-'+v);if(v==='graph')extra.connect=await pg.evaluate(CONNECT)}}
- else{const nm='s'+i+({1:'-read',2:'-understand',4:'-connect',5:'-world',6:'-decision'}[i]||'');await collect(nm);await shot(nm)}}
+ else if(i===5){await pg.setViewport({width:1440,height:900});await pg.waitForFunction(()=>{const k=document.querySelector('[data-knowledge]');return k&&k.dataset.knowledge!=='loading'},{timeout:600000});await new Promise(r=>setTimeout(r,600));await collect('s5-knowledge-1440x900');await shot('s5-knowledge');extra.kn=await pg.evaluate(KNOWL);
+   if(extra.kn&&extra.kn.ctr){extra.knEv={};for(const c of ['new','reinforced','contested','bridging']){await pg.evaluate(c=>document.querySelector('[data-counter="'+c+'"]').click(),c);await new Promise(r=>setTimeout(r,250));extra.knEv[c]=await pg.evaluate(KNEV)}await pg.evaluate(()=>document.querySelector('[data-counter="reinforced"]').click())}
+   await pg.setViewport({width:1300,height:900})}
+ else{const nm='s'+i+({1:'-read',2:'-understand',4:'-connect',6:'-world',7:'-decision'}[i]||'');await collect(nm);await shot(nm)}}
+extra.grow=[];if((await pg.evaluate(()=>!!document.getElementById('areasw')&&/^area:/.test(new URLSearchParams(location.search).get('src')||'')))){await pg.setViewport({width:1440,height:900});await pg.evaluate(()=>document.getElementById('b_reset').click());await new Promise(r=>setTimeout(r,700));await pg.click('#b_next');await pg.waitForFunction(()=>document.querySelectorAll('#steps li.go').length===7,{timeout:600000});await pg.evaluate(()=>document.querySelectorAll('#steps li')[4].click());
+  for(let k=0;k<5;k++){await pg.waitForFunction(()=>{const x=document.querySelector('[data-knowledge]');return x&&x.dataset.knowledge==='ready'},{timeout:600000});await new Promise(r=>setTimeout(r,500));extra.grow.push(await pg.evaluate(KNOWL));if(k===1)await shot('s5-knowledge-early');
+    if(k<4){await pg.evaluate(()=>document.getElementById('kn_next').click());await new Promise(r=>setTimeout(r,2500))}}await pg.setViewport({width:1300,height:900})}
 await pg.setViewport({width:1440,height:900});await pg.evaluate(()=>document.querySelector('[data-mode=status]').click());await new Promise(r=>setTimeout(r,900));await shot('status-1440x900');
 extra.status=await pg.evaluate(()=>{const d=document.documentElement,pn=[...document.querySelectorAll('#status .pn')].map(p=>({id:p.id,sh:p.scrollHeight,ch:p.clientHeight,sw:p.scrollWidth,cw:p.clientWidth}));return{doc:[d.scrollHeight,innerHeight,d.scrollWidth,innerWidth],panels:pn,rows:[...document.querySelectorAll('#p_check .ck')].map(r=>({id:r.dataset.row,ticks:[...r.querySelectorAll('.tk')].map(t=>t.dataset.s+':'+t.textContent.trim()),title:r.title.length})),gates:[...document.querySelectorAll('#p_check .ck .gt')].map(g=>g.textContent),count:(document.querySelector('[data-count=core]')||{}).textContent||'',steps:[...document.querySelectorAll('#p_next .sp')].map(r=>({id:r.dataset.step,state:r.dataset.state,text:r.textContent.length})),needs:[...document.querySelectorAll('#p_needs .ny')].map(r=>({id:r.dataset.task,un:[...r.querySelectorAll('.un')].map(u=>u.textContent)})),run:(document.querySelector('[data-running]')||{dataset:{}}).dataset.running||null,gen:(document.getElementById('stgen')||{}).textContent||'',hidden_story:getComputedStyle(document.querySelector('.app')).display}});
 console.log(JSON.stringify({found,scroll,errs,extra}));await b.close()})().catch(e=>{console.error('FAIL',e);process.exit(3)});
 """
-JS = "const CONNECT=" + CONNECT + ";\n" + JS
+KNOWL = r"""()=>{const k=document.getElementById('kn');if(!k)return {none:(document.querySelector('[data-knowledge=none]')||{}).textContent||'absent'};const d=document.documentElement,ctr={};k.querySelectorAll('.cb').forEach(b=>ctr[b.dataset.counter]=+b.dataset.n);
+return {asof:(k.querySelector('[data-asof]')||{}).textContent||'',ctr,seq:+k.dataset.asofSeq,statements:k.querySelectorAll('[data-statement]').length,stNoPub:[...k.querySelectorAll('[data-statement]')].filter(x=>!/publisher/.test((x.querySelector('.pubn')||{}).textContent||'')).length,stLinks:[...k.querySelectorAll('[data-statement]')].filter(x=>x.querySelectorAll('a[href]').length>0).length,question:(k.querySelector('[data-block=answer] h3')||{}).textContent||'',funnel:[...k.querySelectorAll('[data-funnel]')].map(x=>x.dataset.funnel),growth:!!k.querySelector('svg[data-growth]'),growthNow:(k.querySelector('[data-growth-now]')||{}).textContent||'',yl:!!k.querySelector('[data-yield]'),doc:[d.scrollHeight,innerHeight,d.scrollWidth,innerWidth],kscroll:[k.scrollHeight,k.clientHeight],col:(c=>[c.scrollHeight,c.clientHeight])(document.querySelector('.col')),kbottom:k.getBoundingClientRect().bottom,innerH:innerHeight,panels:[...k.querySelectorAll('.ans,.evp,.rp')].map(p=>({c:p.className,b:p.getBoundingClientRect().bottom}))}}"""
+KNEV = r"""()=>{const e=document.querySelector('.evp');if(!e)return null;const rows=[...e.querySelectorAll(e.dataset.evidence==='contested'?'[data-pair]':'[data-edge],[data-capability]')],fr=[...e.querySelectorAll('[data-fragment]')];return {kind:e.dataset.evidence,rows:rows.length,pairs:e.querySelectorAll('[data-pair]').length,frags:fr.length,fragBad:fr.filter(f=>!(f.querySelector('b')||{}).textContent||f.textContent.trim().length<8).length,caps:e.querySelectorAll('[data-capability]').length,head:(e.querySelector('h3')||{}).textContent||'',hasNone:!!e.querySelector('.l.na')}}"""
+JS = "const CONNECT=" + CONNECT + ";const KNOWL=" + KNOWL + ";const KNEV=" + KNEV + ";\n" + JS
 jf = tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, dir=tempfile.gettempdir()); jf.write(JS); jf.close()
-env = dict(os.environ, NODE_PATH=NODE_PATH); url = "http://127.0.0.1:%d/mockups/knowledge-raw/index.html?id=%s" % (a.port, a.id)
+env = dict(os.environ, NODE_PATH=NODE_PATH); url = "http://127.0.0.1:%d/mockups/knowledge-raw/index.html?" % a.port + ("" if a.src.startswith("area:") and a.id == VAPE else "id=%s&" % a.id) + ("src=" + urllib.parse.quote(a.src, safe=":") if a.src else "")   # a staged area reads its own first article; the queue default id is not in it
 if a.shots: os.makedirs(a.shots, exist_ok=True)
 pr = subprocess.run(["node", jf.name, url, CHROME, a.shots], capture_output=True, text=True, env=env, timeout=900); os.unlink(jf.name)
 if pr.returncode != 0: print("browser run failed:", pr.stderr[-800:]); sys.exit(3)
@@ -89,9 +98,12 @@ chk("every row has three ticks", all(len(r["ticks"]) == 3 and all(t.split(":")[0
 chk("rendered ticks equal status.json", all([t.split(":")[0] for t in r["ticks"]] == [rb[r["id"]][k]["s"] for k in ("aligned", "implemented", "used")] for r in dom["rows"]))
 cc = sj["counts"]["core"]; chk("count line equals status.json (core %d of %d live)" % (cc["live"], cc["n"]), ("core: %d of %d live" % (cc["live"], cc["n"])) in dom["count"], dom["count"][:70])
 sm = {x["step"]: x for x in sj["story"]}; sb = X["story"]
-chk("Story has 6 steps, each with a gate tag and a badge", len(sb) == 6 and all(x["gate"] and x["badge"] for x in sb), str([(x["name"], x["gate"], x["badge"]) for x in sb]))
+chk("Story has 7 steps (Read, Understand, Extract, Connect, Knowledge, World state, Decision), each with a gate tag and a badge", [x["name"] for x in sb] == ["Read", "Understand", "Extract", "Connect", "Knowledge", "World state", "Decision"] and all(x["gate"] and x["badge"] for x in sb), str([(x["name"], x["gate"], x["badge"]) for x in sb]))
 badok = True
 for x in sb:
+    if x["name"] == "Knowledge":
+        if x["badge"] not in ("live", "page", "na"): badok = False; print("      Knowledge step shows badge %s" % x["badge"])   # not in status.json (check-alignment.py does not list it): the page derives it from the knowledge.json of the source
+        continue
     rows_ = [rb[r]["used"]["s"] for r in sm[x["name"]]["rows"]]; exp = "live" if all(t == "yes" for t in rows_) else ("page" if not any(t == "yes" for t in rows_) else "part")
     if x["badge"] != exp or (x["badge"] == "live" and any(t != "yes" for t in rows_)): badok = False; print("      step %s shows %s, status.json says %s" % (x["name"], x["badge"], exp))
 chk("Story never shows live for an item status.json marks not live", badok, "badges: " + ", ".join("%s=%s" % (x["name"], x["text"]) for x in sb))
@@ -116,6 +128,36 @@ if C:
     print("      why sample: " + " | ".join(v["sample"][:110] for v in hl.values() if v))
     chk("assertion chips show the full triple (subject — verb → object): %d chips" % C["chips"], C["chips"] > 0 and C["chipsNoTriple"] == 0, str(C["chipSample"]))
     print("      key lines: " + " || ".join(C["keyText"]))
+print("  --- Knowledge step ---"); KX = X.get("kn"); src_k = a.src or "window"
+try: kd = get("raw/knowledge?src=" + urllib.parse.quote(src_k, safe=":"))
+except Exception as e: kd = {"exists": False, "why": repr(e)}
+if not kd.get("exists"):
+    chk("source %s has no knowledge.json: the step shows a block with the reason, no crash" % src_k, bool(KX) and "none" in KX and ("knowledge.json" in KX["none"] or "No consolidated window" in KX["none"]), str(KX)[:160]); print("      reason: %s" % str(kd.get("why"))[:160])
+else:
+    K = kd["knowledge"]; G = {g["seq"]: g for g in K.get("growth", [])}; Ctr = K["counters"]
+    chk("Knowledge step rendered for source %s" % src_k, bool(KX) and "ctr" in KX, str(KX)[:160])
+    if KX and "ctr" in KX:
+        chk("label 'as of consolidation <time>, N articles, P publishers' equals knowledge.json", ("as of consolidation" in KX["asof"]) and ("%s articles" % K["articles"]) in KX["asof"] and ("%s publishers" % K["publishers"]) in KX["asof"], KX["asof"])
+        seq = KX["seq"]; g0 = G.get(seq) or G[max(x for x in G if x <= seq)] if G else {}
+        exp = {"new": g0.get("assertions"), "reinforced": g0.get("reinforced"), "contested": g0.get("contested"), "bridging": Ctr["bridging"]["n"]}
+        chk("four counters new/reinforced/contested/bridging equal the growth row of this article (seq %s)" % seq, KX["ctr"] == exp, "page %s | knowledge.json %s" % (KX["ctr"], exp))
+        final = bool(G) and seq >= max(G); E_ = K["edges"]; ev = X["knEv"]
+        if final:
+            want = {"new": min(len(Ctr["new"]["evidence"]), 100), "reinforced": min(len(Ctr["reinforced"]["evidence"]), 100), "contested": min(len(K.get("contested", [])), 100), "bridging": len(Ctr["bridging"]["evidence"])}
+            chk("final article: each counter opens an evidence list with the rows of knowledge.json", {k: ev[k]["rows"] for k in want} == want, "page %s | want %s" % ({k: ev[k]["rows"] for k in want}, want))
+        chk("every opened fragment shows a publisher and its sentence (%d fragments)" % sum(v["frags"] for v in ev.values()), all(v["fragBad"] == 0 for v in ev.values()) and all(ev[k]["frags"] > 0 for k in ("new", "reinforced", "contested") if ev[k]["rows"] > 0), str({k: (v["rows"], v["frags"], v["fragBad"]) for k, v in ev.items()}))
+        sts = (K.get("answer") or {}).get("statements") or []; arts = kd["articles"]
+        withref = sum(1 for x in sts if any(f["art"] in arts and arts[f["art"]].get("url") for r in x.get("refs", []) for f in E_.get(r, {}).get("fragments", [])))
+        chk("answer card: question, every statement with a publisher count and source links (%d statements, %d with links)" % (len(sts), withref), KX["statements"] == len(sts) and KX["stNoPub"] == 0 and KX["stLinks"] == withref and (len(sts) > 0) == bool(KX["question"].strip()), "page %s statements, %s without publisher count, %s with links; question %r" % (KX["statements"], KX["stNoPub"], KX["stLinks"], KX["question"][:60]))
+        fk = [k for k in ("observations", "fragments", "assertions", "reinforced", "contested", "capabilities", "bridging", "concepts") if K.get("funnel", {}).get(k) is not None]
+        chk("funnel bands, growth line and yield row present", KX["funnel"] == fk and (KX["growth"] or len(G) < 2) and KX["yl"], "bands %s growth %s yield %s" % (KX["funnel"], KX["growth"], KX["yl"]))
+        chk("Knowledge fits 1440x900: no page scroll, no clipped block, left column fully visible", KX["doc"][0] <= KX["doc"][1] + 1 and KX["doc"][2] <= KX["doc"][3] + 1 and KX["kscroll"][0] <= KX["kscroll"][1] + 1 and KX["col"][0] <= KX["col"][1] + 1 and KX["kbottom"] <= KX["innerH"] + 1 and all(q["b"] <= KX["innerH"] + 1 for q in KX["panels"]), "doc %s | kn scroll/client %s | left column scroll/client %s | bottom %s of %s" % (KX["doc"], KX["kscroll"], KX["col"], round(KX["kbottom"]), KX["innerH"]))
+        print("      counters: %s | %s" % (KX["ctr"], KX["growthNow"]))
+    GR = X.get("grow") or []
+    if GR:
+        okk = all(g and "ctr" in g for g in GR); sq = [g["seq"] for g in GR] if okk else []
+        chk("staged area: stepping through %d articles grows the counters (seq %s)" % (len(GR), sq), okk and sq == sorted(set(sq)) and len(sq) > 1 and all(GR[i]["ctr"][c] <= GR[i + 1]["ctr"][c] for i in range(len(GR) - 1) for c in ("new", "reinforced", "contested")) and GR[-1]["ctr"]["new"] > GR[0]["ctr"]["new"], str([g["ctr"] for g in GR]) if okk else str(GR)[:200])
+        chk("growth counters equal knowledge.json growth rows at each of those articles", okk and all(g["ctr"]["new"] == G[g["seq"]]["assertions"] and g["ctr"]["reinforced"] == G[g["seq"]]["reinforced"] and g["ctr"]["contested"] == G[g["seq"]]["contested"] for g in GR if g["seq"] in G), "")
 over = [s for s in res["scroll"] if s["doc"][0] > s["doc"][1] + 1 or s["doc"][2] > s["doc"][3] + 1]
 print("  page scroll at 1300x900: %s" % ("NONE" if not over else "; ".join("%s %s" % (s["label"], s["doc"]) for s in over))); bad += len(over)
 print("  console/page errors: %s" % ("none" if not res["errs"] else "; ".join(res["errs"][:5]))); bad += len(res["errs"])

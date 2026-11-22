@@ -3,18 +3,18 @@
 <style>
 :root{--mut:var(--text-3);--k-person:var(--s1);--k-org:var(--s2);--k-place:var(--s3);--k-amount:var(--s4);--k-date:var(--s5);--k-product:var(--s6);--k-event:var(--s7);--k-law:var(--s8);--k-group:var(--s2);--k-name:var(--mut);--k-organization:var(--s2);--k-location:var(--s3);--k-building:color-mix(in srgb,var(--s3) 55%,var(--s1));--k-art:var(--s8);--k-other:var(--mut);--k-facility:var(--k-building);--k-work:var(--k-art);--k-substance:var(--s5);--k-disease:var(--s8)}
 html,body{height:100%;margin:0;overflow:hidden}body{font-size:14px;line-height:1.45}
-.app{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;height:100vh}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);height:100vh}
 @media(max-width:900px){html,body{overflow:auto;height:auto}.app{display:block;height:auto}.col{border:0!important;border-bottom:1px solid var(--border)!important;height:auto!important}.stage{min-height:70vh}}
-.col{padding:22px 22px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;height:100vh;box-sizing:border-box}.col.r{border-right:0;border-left:1px solid var(--border);background:var(--surface)}
-.brand{font-weight:650;font-size:15px;letter-spacing:-.01em;margin-bottom:18px}
+.col{padding:16px 20px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;height:100vh;box-sizing:border-box}
+.brand{font-weight:650;font-size:15px;letter-spacing:-.01em;margin-bottom:10px}
 .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-.steps li{display:grid;grid-template-columns:28px 1fr;gap:4px;padding:8px 8px;border-radius:10px;cursor:default;color:var(--mut);transition:background .3s,color .3s}
-.steps li .no{font:12px var(--mono);padding-top:7px}.steps li .t{font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.25}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:2px 4px;padding:5px 8px;border-radius:10px;cursor:default;color:var(--mut);transition:background .3s,color .3s}
+.steps li .no{font:12px var(--mono);padding-top:5px}.steps li .t{font-size:20px;font-weight:600;letter-spacing:-.02em;line-height:1.25}
 .steps li .c{grid-column:2;font-size:12.5px;color:var(--text-2);display:none;margin-top:2px}
 .steps li.done{color:var(--text-2)}.steps li.done .no::after{content:" ✓"}
 .steps li.on{background:var(--accent-soft);color:var(--text)}.steps li.on .c{display:block}.steps li.go{cursor:pointer}
 .ctl{margin-top:auto;display:flex;flex-direction:column;gap:8px}
-.prime{font:inherit;font-size:17px;font-weight:650;background:var(--accent);color:var(--accent-text);border:0;border-radius:12px;padding:14px 18px;cursor:pointer;transition:transform .15s}.prime:hover{transform:translateY(-1px)}.prime:disabled{opacity:.6}
+.prime{font:inherit;font-size:17px;font-weight:650;background:var(--accent);color:var(--accent-text);border:0;border-radius:12px;padding:11px 18px;cursor:pointer;transition:transform .15s}.prime:hover{transform:translateY(-1px)}.prime:disabled{opacity:.6}
 .prime.pulse{animation:pl 1.6s ease-in-out infinite}@keyframes pl{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent)}50%{box-shadow:0 0 0 12px transparent}}
 .row2{display:flex;gap:8px}.row2 .btn{flex:1;justify-content:center}.btn.on{background:var(--good);border-color:var(--good);color:var(--accent-text)}
 .small{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--mut)}.small select{font:inherit;background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:4px}.small .btn{padding:2px 8px;font-size:12px;color:var(--mut)}
@@ -69,7 +69,7 @@ html,body{height:100%;margin:0;overflow:hidden}body{font-size:14px;line-height:1
 /* mode switch, step meta, Status part, Connect key */
 body[data-mode=status] .app{display:none}body:not([data-mode=status]) #status{display:none}
 .brand{display:flex;align-items:center;justify-content:space-between;gap:8px}.tabs.sw button{padding:3px 12px}
-.steps li .m{grid-column:2;display:flex;gap:6px;align-items:center;margin-top:1px;flex-wrap:wrap}.steps li .t{font-size:20px}
+.steps li .m{grid-column:2;display:flex;gap:6px;align-items:center;margin-top:1px;flex-wrap:wrap}.steps li .t{font-size:19px}
 .gtag{font:10px var(--mono);border:1px solid var(--border-strong);border-radius:4px;padding:0 4px;color:var(--text-2)}.bdg{font:10px var(--mono);border-radius:999px;padding:0 8px;border:1px solid;white-space:nowrap}
 .bdg.live{color:var(--good);border-color:var(--good)}.bdg.page{color:var(--warn);border-color:var(--warn)}.bdg.part{color:var(--text-2);border-color:var(--border-strong)}.bdg.na{color:var(--mut);border-color:var(--border)}
 #status{height:100vh;box-sizing:border-box;padding:14px 22px;display:flex;flex-direction:column;gap:10px;overflow:hidden}.sthd{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.sthd .k{margin-left:auto}
@@ -85,12 +85,27 @@ body[data-mode=status] .app{display:none}body:not([data-mode=status]) #status{di
 .keyb{display:flex;flex-direction:column;gap:4px;font-size:12px}.kr{display:flex;flex-wrap:wrap;align-items:center;gap:3px 12px}.kk{font:11px var(--mono)}.kt{color:var(--text-2)}.ki{display:inline-flex;gap:5px;align-items:center}.ki b,.kb b{font-family:var(--mono);font-weight:600}.kl{margin-left:auto;font-size:11px;color:var(--mut)}
 .kb{padding:0 8px;font-size:11.5px;display:inline-flex;gap:5px;align-items:center}.kb[data-off="1"]{opacity:.5}
 .why{min-height:60px;max-height:60px;overflow:auto;font-size:12px;border-top:1px solid var(--border);padding-top:4px;flex:none}.why .hint{color:var(--mut)}.why .wl{padding:1px 0;overflow-wrap:anywhere}.why .wl b{font-family:var(--mono)}
+/* Knowledge step (L2936): answer card, four counters with evidence, funnel, growth, yield */
+.kn{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}.kn .hd1{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.kn .asof{font:12px var(--mono);color:var(--text-2)}.kn .asof b{color:var(--text);font-weight:600}
+.kn .ans{border:1px solid var(--border);border-radius:12px;padding:10px 14px;background:var(--surface);max-height:34%;overflow:auto;flex:0 1 auto;min-height:56px}.kn .ans h3{font-size:16px;margin:0 0 4px;letter-spacing:-.01em}
+.kn .ans .sec{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:8px 0 2px}.kn .st1{font-size:13px;padding:2px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}.kn .st1 .tx{flex:1 1 360px;overflow-wrap:anywhere}
+.kn .pubn{font:11px var(--mono);border:1px solid var(--border-strong);border-radius:999px;padding:0 7px;color:var(--text-2);white-space:nowrap}.kn .srcs{font-size:11.5px;display:flex;gap:8px;flex-wrap:wrap}.kn .srcs a{color:var(--accent);text-decoration:underline}
+.kn .ctr{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;flex:none}.kn .cb{text-align:left;font:inherit;border:1px solid var(--border);border-radius:12px;padding:8px 12px;background:var(--surface);color:var(--text);cursor:pointer}.kn .cb.on{border-color:var(--accent);background:var(--accent-soft)}
+.kn .cb b{display:block;font-size:30px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}.kn .cb span{font:11px var(--mono);text-transform:uppercase;color:var(--mut)}.kn .cb i{display:block;font-style:normal;font-size:11.5px;color:var(--text-2);margin-top:1px}
+.kn .low{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;flex:1;min-height:0}@media(max-width:1250px){.kn .low{grid-template-columns:1fr}}
+.kn .evp,.kn .rp{border:1px solid var(--border);border-radius:12px;padding:8px 12px;background:var(--surface);overflow:auto;min-height:0}.kn .evp h3,.kn .rp h3{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:500;margin:0 0 6px}
+.kn details.ev{border-bottom:1px solid var(--border);padding:3px 0}.kn details.ev summary{cursor:pointer;font-size:13px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.kn details.ev summary .tr{flex:1 1 260px;overflow-wrap:anywhere}
+.kn .fr{font-size:12px;padding:3px 0 3px 12px;border-left:2px solid var(--border-strong);margin:3px 0;color:var(--text-2);overflow-wrap:anywhere}.kn .fr b{color:var(--text);font-weight:600;margin-right:6px}.kn .fr a{color:var(--accent)}
+.kn .kd{font:10px var(--mono);text-transform:uppercase;border:1px solid var(--border-strong);border-radius:4px;padding:0 4px;color:var(--mut)}.kn .side2{border-left:3px solid var(--warn);padding-left:6px;margin:2px 0}
+.kn .fb{display:grid;grid-template-columns:96px minmax(0,1fr) 54px;gap:6px;align-items:center;font-size:12px;padding:1px 0}.kn .fb .bn{height:12px;background:var(--surface-2);border-radius:3px;overflow:hidden}.kn .fb .bn i{display:block;height:100%;background:var(--accent);min-width:2px}.kn .fb em{font:11px var(--mono);font-style:normal;text-align:right}.kn .fb span{font:10.5px var(--mono);text-transform:uppercase;color:var(--mut)}
+.kn .yl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}.kn .yl div{border:1px solid var(--border);border-radius:8px;padding:3px 8px}.kn .yl b{display:block;font-size:17px;font-variant-numeric:tabular-nums}.kn .yl span{font:10px var(--mono);text-transform:uppercase;color:var(--mut)}
+.kn svg.gl{width:100%;height:96px;display:block;margin:2px 0}.kn .gleg{font:11px var(--mono);color:var(--text-2);display:flex;gap:12px;flex-wrap:wrap}
+.kn .nx{margin-left:auto}
 </style></head><body><div class="app">
 <div class="col"><div class="brand"><span>Knowledge pipeline</span><span id="mode_a"></span></div><ol class="steps" id="steps"></ol>
-<div class="ctl"><div id="msg"></div><div class="small"><div class="tabs sw" id="srcsw" aria-label="article source"></div></div><div class="small" id="srcinfo" style="font:11px var(--mono);flex-wrap:wrap"></div><button class="prime pulse" id="b_next">Read first article</button><div class="row2"><button class="btn" id="b_play">Play</button></div>
-<div class="small"><select id="w" aria-label="window"><option value="24h">24h</option><option value="any">any</option></select><button class="btn" id="b_story">random story</button><button class="btn" id="b_reset">reset</button></div></div></div>
+<div class="ctl"><div id="msg"></div><div class="small"><div class="tabs sw" id="srcsw" aria-label="article source"></div></div><div class="small"><span class="k">staged area</span><div class="tabs sw" id="areasw" aria-label="staged interest area"></div></div><div class="small"><div id="srcinfo" style="font:11px var(--mono);flex:1;min-width:0"></div><select id="w" aria-label="window" style="width:64px;flex:none"><option value="24h">24h</option><option value="any">any</option></select></div><button class="prime pulse" id="b_next">Read first article</button><div class="row2"><button class="btn" id="b_play">Play</button><button class="btn" id="b_story">random story</button><button class="btn" id="b_reset">reset</button></div></div></div>
 <div class="stage" id="stagewrap"><div class="sh" id="sh"></div><div class="body" id="stage"></div></div>
-<div class="col r"><div class="k">What we know so far</div><div class="nums" id="nums"></div><svg id="curve" viewBox="0 0 280 70" preserveAspectRatio="none"></svg><div id="top" style="overflow:auto;min-height:0"></div></div></div>
+</div>
 <div id="status"></div>
 <div id="det"></div>
 <script>
@@ -98,8 +113,8 @@ const $=id=>document.getElementById(id);
 function el(t,a,...k){const n=document.createElement(t);for(const x in(a||{}))n.setAttribute(x,a[x]);for(const c of k)if(c!=null&&c!==false)n.append(c);return n}
 const SVGNS="http://www.w3.org/2000/svg",sv=(t,a)=>{const n=document.createElementNS(SVGNS,t);for(const x in(a||{}))n.setAttribute(x,a[x]);return n};
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const STEPS=[["Read","The article arrives and is checked against stories already seen."],["Understand","Each field is answered by a model; the decider says whether to trust it."],["Extract","Names, places, amounts, dates and claims are pulled from the text, then filtered."],["Connect","Names become entities, claims become assertions with attributes, and both are linked up to the IPTC tree and across to each other (G4/G5 v1, unmeasured)."],["World state","Topic and condition decide which world resources the article moves."],["Decision","What changed, how sure, the evidence, and what is still unknown."]];
-const NA="not answered";const have=x=>x!=null&&x!==""&&!(Array.isArray(x)&&!x.length);
+const STEPS=[["Read","The article arrives and is checked against stories already seen."],["Understand","Each field is answered by a model; the decider says whether to trust it."],["Extract","Names, places, amounts, dates and claims are pulled from the text, then filtered."],["Connect","Names become entities, claims become assertions with attributes, and both are linked up to the IPTC tree and across to each other (G4/G5 v1, unmeasured)."],["Knowledge","What the whole window has learned so far: new, reinforced, contested and bridging assertions with their evidence, and a sourced answer (PROVISIONAL)."],["World state","Topic and condition decide which world resources the article moves."],["Decision","What changed, how sure, the evidence, and what is still unknown."]];
+const NSTEP=STEPS.length;const NA="not answered";const have=x=>x!=null&&x!==""&&!(Array.isArray(x)&&!x.length);
 const f2=x=>typeof x==="number"?x.toFixed(2):(x==null?NA:String(x));
 let A=null,STEP=0,QUEUE=[],BUSY=false,PLAY=null,S,ING=new Set();
 function fresh(){S={n:0,items:0,rein:0,nodes:new Map(),edges:new Map(),dom:[],curve:[0],topics:new Set(),cur:null,newc:0,reinc:0,ents:new Map(),asr:new Map(),ed:new Map(),gn:new Map(),arts:new Map(),joins:[],gstats:null,ms:[],gc:[0]}}fresh();
@@ -117,11 +132,12 @@ const spanText=(a,u)=>(u.spans||[]).map(s=>(a.text||"").slice(s.s,s.e)).join(" "
 /* Top-level switch (Story | Status) and the Status part. The Status part only renders status.json, which simulation/check-alignment.py writes from the code, the playbook and the ledger. */
 let ST=null,STERR=null,MODE=new URLSearchParams(location.search).get("mode")==="status"?"status":"story";
 async function loadStatus(){try{const r=await fetch("status.json",{cache:"no-store"});if(!r.ok)throw new Error("status.json "+r.status+" (run simulation/check-alignment.py)");ST=await r.json();STERR=null}catch(e){STERR=e.message}drawSteps();if(MODE==="status")drawStatus()}
-function modeSwitch(){const w=el("div",{class:"tabs"});[["story","Story","one article through the six steps"],["status","Status","what is built, what is live, what is next"]].forEach(([k,n,t])=>{const b=el("button",{class:MODE===k?"on":"","data-mode":k,title:t},n);b.onclick=()=>setMode(k);w.append(b)});return w}
+function modeSwitch(){const w=el("div",{class:"tabs"});[["story","Story","one article through the seven steps"],["status","Status","what is built, what is live, what is next"]].forEach(([k,n,t])=>{const b=el("button",{class:MODE===k?"on":"","data-mode":k,title:t},n);b.onclick=()=>setMode(k);w.append(b)});return w}
 function setMode(m){MODE=m;document.body.dataset.mode=m;for(const i of["mode_a","mode_b"]){const n=$(i);if(n)n.replaceChildren(modeSwitch())}if(m==="status")drawStatus();else{$("det").classList.remove("open");render()}}
 const TICK={yes:"✅",part:"⚠️",no:"❌"},TKN={yes:"yes",part:"partly",no:"no"};
 const STW={done:"done",running:"running",waiting:"waiting on you",notstarted:"not started"};
-function badgeOf(name){const s=ST&&ST.story&&ST.story.find(x=>x.step===name);if(!s)return null;return{...s,text:s.badge==="live"?"runs in newest run":(s.badge==="page"?"no output in newest run":"partly runs "+s.live+" of "+s.of)}}
+function knBadge(){const ok=KN&&KN.d&&KN.d.exists;return{step:"Knowledge",gate:"G4-G6",rows:["g5_evol","g6_educate"],live:ok?2:0,of:2,badge:ok?"live":(KN?"page":"na"),text:ok?"knowledge.json for this source":(KN?"no knowledge.json for this source":"loads at this step")}}
+function badgeOf(name){const s=ST&&ST.story&&ST.story.find(x=>x.step===name);if(!s)return name==="Knowledge"?knBadge():null;return{...s,text:s.badge==="live"?"runs in newest run":(s.badge==="page"?"no output in newest run":"partly runs "+s.live+" of "+s.of)}}
 const QW={met:"met",PROVISIONAL:"provisional",unmeasured:"unmeasured"};
 const qText=q=>q?(q.score?q.score:"no scored number")+" | bar: "+(q.bar||"none recorded")+" | src: "+(q.src||[]).join(", ")+(q.note?" | "+q.note:""):"";
 function rowsLine(r){return[["aligned (playbook)",r.aligned],["implemented",r.implemented],["runs (output in the newest end-to-end run)",r.used]].map(([n,t])=>n+": "+TKN[t.s]+" - "+t.ev).join("\n")+"\nruns_in: "+(r.runs_in||"no")+"\nquality: "+QW[(r.quality||{}).state]+" - "+qText(r.quality)}
@@ -155,36 +171,44 @@ function drawStatus(){const root=$("status");root.replaceChildren();
 function stepMeta(name){const b=badgeOf(name),m=el("span",{class:"m"});if(!b){m.append(el("span",{class:"bdg na"},STERR?"status unavailable":"status loading"));return m}
   m.append(el("span",{class:"gtag",title:"playbook section 2 gate"},b.gate),el("span",{class:"bdg "+b.badge,"data-badge":b.badge,"data-live":b.live,"data-of":b.of,title:"output present in the newest end-to-end run: "+b.live+" of "+b.of+" rows ("+b.rows.join(", ")+"); from status.json"},b.text));return m}
 function drawSteps(){const o=$("steps");o.replaceChildren();STEPS.forEach((s,i)=>{const li=el("li",{class:(A&&STEP===i+1?"on":"")+(A&&STEP>i+1?" done":"")+(A?" go":"")},el("span",{class:"no"},String(i+1)),el("span",{class:"t"},s[0]),stepMeta(s[0]),el("span",{class:"c"},s[1]));if(A)li.onclick=()=>goto(i+1);o.append(li)});
-  const b=$("b_next");b.textContent=!A?"Read first article":(STEP>=6?"Read next article":"Next");b.classList.toggle("pulse",!A||STEP>=6)}
+  const b=$("b_next");b.textContent=!A?"Read first article":(STEP>=NSTEP?"Read next article":"Next");b.classList.toggle("pulse",!A||STEP>=6)}
 /* flow */
-let AID=new URLSearchParams(location.search).get("id"),SRC="queue",WINF=null,SRCQ=new URLSearchParams(location.search).get("src");
-/* article source (flow fix, defect 2): Pipeline window = what the last chain window wrote (live trace, slow clock, consolidated); Live queue = random queue articles read now. Default Pipeline window when one exists (?src=queue overrides). */
-const INIT=(async()=>{try{const d=await api("/sim-api/raw/window");WINF=d&&d.exists?d:null}catch(e){WINF=null}SRC=SRCQ==="queue"?"queue":(WINF?"window":"queue");drawSrc();if(!A)render()})();
+let AID=new URLSearchParams(location.search).get("id"),SRC="queue",WINF=null,WINA=null,AREAS=[],SRCQ=new URLSearchParams(location.search).get("src");
+/* article source (flow fix, defect 2; areas L2936): Pipeline window = what the last chain window wrote (live trace, slow clock, consolidated); Live queue = random queue articles read now; a Staged area = the saved articles of one interest area (fixtures/knowledge), run through the slow clock and consolidation on first use. Default Pipeline window when one exists (?src=queue or ?src=area:<key> overrides). */
+const isArea=k=>String(k).startsWith("area:"),areaOf=k=>AREAS.find(a=>"area:"+a.key===k)||null,areaName=k=>(areaOf(k)||{short:String(k).slice(5)}).short,curW=()=>SRC==="window"?WINF:(isArea(SRC)?WINA:null);
+const INIT=(async()=>{try{AREAS=await api("/sim-api/raw/areas")}catch(e){AREAS=[]}try{const d=await api("/sim-api/raw/window");WINF=d&&d.exists?d:null}catch(e){WINF=null}
+  const aq=SRCQ&&isArea(SRCQ)&&AREAS.some(a=>"area:"+a.key===SRCQ);SRC=SRCQ==="queue"?"queue":(aq?SRCQ:(WINF?"window":"queue"));drawSrc();if(!A)render();
+  if(aq){try{const d=await api("/sim-api/raw/window?src="+encodeURIComponent(SRC));WINA=d&&d.exists?d:null}catch(e){WINA=null;$("msg").textContent=e.message}drawSrc();if(!A)render()}})();
 function drawSrc(){const sw=$("srcsw");if(!sw)return;sw.replaceChildren();[["window","Pipeline window","what the last chain window wrote: live trace, slow clock, consolidated"],["queue","Live queue","random articles from the news queue, read now"]].forEach(([k,n,t])=>{const b=el("button",{class:SRC===k?"on":"",title:t,"data-src":k},n);if(k==="window"&&!WINF){b.disabled=true;b.title="no pipeline window with traced articles yet"}b.onclick=()=>setSrc(k);sw.append(b)});
-  const i=$("srcinfo");if(i)i.textContent=SRC==="window"&&WINF?(WINF.name+" · "+WINF.traced+" traced · slow "+WINF.slow_lines+(WINF.slow_partial?" (partial)":"")+" · consolidated "+(WINF.consolidated?"yes":"no")):"live queue";$("w").disabled=SRC==="window"}
-async function setSrc(k){if(k===SRC||BUSY)return;play(false);SRC=k;try{await api("/sim-api/raw/reset")}catch(e){}fresh();ING=new Set();A=null;STEP=0;QUEUE=[];CL_=null;$("det").classList.remove("open");drawSrc();drawSteps();render();knowledge()}
+  const as=$("areasw");if(as){as.replaceChildren();for(const a of AREAS){const k="area:"+a.key,b=el("button",{class:SRC===k?"on":"",title:(a.label||"")+" · "+a.articles+" articles · "+a.publishers+" publishers"+(a.built?"":" · built on first use, about a minute"),"data-src":k,"data-area":a.key},a.short);b.onclick=()=>setSrc(k);as.append(b)}if(!AREAS.length)as.append(el("span",{class:"k"},"none staged"))}
+  const W=curW(),i=$("srcinfo");if(i)i.textContent=W?(W.name+" · "+W.traced+" traced · slow "+W.slow_lines+(W.slow_partial?" (partial)":"")+" · consolidated "+(W.consolidated?"yes":"no")):(SRC==="queue"?"live queue":(isArea(SRC)?"staged area "+areaName(SRC)+": not built":"no window"));$("w").disabled=SRC!=="queue"}
+async function setSrc(k){if(k===SRC||BUSY)return;play(false);BUSY=true;$("b_next").disabled=true;try{await api("/sim-api/raw/reset")}catch(e){}SRC=k;WINA=null;fresh();ING=new Set();A=null;STEP=0;QUEUE=[];KN=null;$("det").classList.remove("open");$("msg").textContent="";drawSrc();drawSteps();render();
+  if(isArea(k)){$("msg").textContent="building "+areaName(k)+": slow clock and consolidation on its saved articles (first time only, about a minute)";try{const d=await api("/sim-api/raw/window?src="+encodeURIComponent(k));WINA=d&&d.exists?d:null;$("msg").textContent=WINA?"":((d&&d.why)||"staged area not available")}catch(e){WINA=null;$("msg").textContent=e.message}}
+  BUSY=false;$("b_next").disabled=false;drawSrc();drawSteps();render()}
 async function fetchBatch(story){await INIT;const aid=AID&&!story?AID:null;AID=null;const q="/sim-api/raw/sample?n="+(story?10:1)+"&window="+$("w").value+"&pick="+(story?"story":"articles")+(aid?"&id="+encodeURIComponent(aid):"");
-  if(SRC==="window"){let d=null;try{d=await api(q+"&src=window")}catch(e){if(!aid)throw e}
+  if(SRC!=="queue"){let d=null;try{d=await api(q+"&src="+encodeURIComponent(SRC))}catch(e){if(!aid)throw e}
     if(d&&!(d.tally&&d.tally.error)&&(d.articles||[]).length)return d.articles;if(d&&!aid)throw new Error((d.tally&&d.tally.error)||"no article")}   /* a named ?id= that is not in the window is read from the queue */
-  if(SRC==="window"){SRC="queue";drawSrc()}   /* fell back: the switch shows where the article came from */
+  if(SRC!=="queue"){SRC="queue";drawSrc()}   /* fell back: the switch shows where the article came from */
   const d=await api(q);if(d.tally&&d.tally.error)throw new Error(d.tally.error);return d.articles||[]}
 async function loadArticle(story){if(BUSY)return false;BUSY=true;$("b_next").disabled=true;$("msg").textContent="";
   try{if(!HEADS){try{HEADS=await api("/sim-api/heads")}catch(e){HEADS={table:[]}}}if(story||!QUEUE.length)QUEUE=await fetchBatch(story);const r=QUEUE.shift();if(!r)throw new Error("no article");A=r;return true}
   catch(e){$("msg").textContent=e.message;return false}finally{BUSY=false;$("b_next").disabled=false}}
-async function next(story){if(!A||STEP>=6||story){if(!(await loadArticle(story)))return;goto(1)}else goto(STEP+1)}
-function goto(n){STEP=n;drawSteps();if(n===4)ingest(A);render();knowledge()}
+async function next(story){if(!A||STEP>=NSTEP||story){if(!(await loadArticle(story)))return;goto(1)}else goto(STEP+1)}
+function goto(n){STEP=n;drawSteps();if(n===4)ingest(A);render()}
 function play(on){if(PLAY){clearInterval(PLAY);PLAY=null}$("b_play").classList.toggle("on",!!on);$("b_play").textContent=on?"Pause":"Play";if(!on)return;
-  PLAY=setInterval(async()=>{if(BUSY)return;if(!A||STEP>=6){if(!(await loadArticle(false))){play(false);return}goto(1)}else goto(STEP+1)},3000)}
+  PLAY=setInterval(async()=>{if(BUSY)return;if(!A||STEP>=NSTEP){if(!(await loadArticle(false))){play(false);return}goto(1)}else goto(STEP+1)},3000)}
 $("b_next").onclick=()=>next(false);$("b_play").onclick=()=>play(!PLAY);$("b_story").onclick=()=>next(true);
-$("b_reset").onclick=async()=>{play(false);try{await api("/sim-api/raw/reset")}catch(e){}fresh();ING=new Set();A=null;STEP=0;QUEUE=[];$("det").classList.remove("open");drawSteps();render();knowledge()};
+$("b_reset").onclick=async()=>{play(false);try{await api("/sim-api/raw/reset")}catch(e){}fresh();ING=new Set();A=null;STEP=0;QUEUE=[];KN=null;$("det").classList.remove("open");drawSteps();render()};
 /* header */
-const srcLabel=()=>A?(A.window?"window "+A.window.name+" · "+A.window.traced+" traced":"live queue"):(SRC==="window"&&WINF?"window "+WINF.name+" · "+WINF.traced+" traced":"");
+const srcLabel=()=>A?(A.window?(isArea(SRC)?"staged area "+areaName(SRC):"window "+A.window.name)+" · "+A.window.traced+" traced":"live queue"):(curW()?(isArea(SRC)?"staged area "+areaName(SRC):"window "+curW().name)+" · "+curW().traced+" traced":"");
 function head(title,sub){const h=$("sh");h.replaceChildren(el("h1",{},title),el("span",{class:"sub","data-srclabel":"1"},[sub,srcLabel()].filter(Boolean).join(" · ")));if(A)h.append(el("span",{class:"meta"},(A.publisher||"")+" | "+(A.published||"")+" | "+(A.title||"")))}
 function body(){const b=$("stage");const n=el("div",{class:"body",id:"stage"});b.replaceWith(n);return n}
 /* render */
 function render(){const st=body();if(!A){head("Knowledge pipeline","");idle(st);return}
-  const f=[null,s1,s2,s3,s4,s5,s6][STEP];head(STEPS[STEP-1][0],"step "+STEP+" / 6");if(A.state!=="traced"){st.append(el("div",{class:"title"},A.skip_reason||A.state));return}f(st)}
-let TK=null;async function idle(st){if(SRC==="window"&&WINF){const c=WINF.counts||{};st.append(el("div",{class:"idle"},el("div",{class:"arrow"},"Press “Read first article”"),el("div",{class:"k"},"Pipeline window"),el("div",{class:"num"},WINF.name),el("div",{},WINF.traced+" traced of "+WINF.chain_lines+" chain lines · slow clock "+WINF.slow_lines+(WINF.slow_target!=null?" of "+WINF.slow_target:"")+(WINF.slow_partial?" (cut by --limit)":"")),el("div",{},"consolidated: "+c.observations+" observations · "+(c.assertions==null?"-":c.assertions)+" assertion edges · "+c.concepts+" concepts · "+c.capabilities+" capabilities")));return}const w=el("div",{class:"idle"},el("div",{class:"arrow"},"Press “Read first article”"),el("div",{class:"k"},"News in the queue"),el("div",{id:"tick"}));st.append(w);
+  const f=[null,s1,s2,s3,s4,sK,s5,s6][STEP];head(STEPS[STEP-1][0],"step "+STEP+" / "+NSTEP);if(A.state!=="traced"){st.append(el("div",{class:"title"},A.skip_reason||A.state));return}f(st)}
+let TK=null;async function idle(st){const WI=curW();if(WI){const c=WI.counts||{};st.append(el("div",{class:"idle"},el("div",{class:"arrow"},"Press “Read first article”"),el("div",{class:"k"},isArea(SRC)?"Staged area":"Pipeline window"),el("div",{class:"num"},isArea(SRC)?areaName(SRC):WI.name),el("div",{},WI.traced+" traced of "+WI.chain_lines+" chain lines · slow clock "+WI.slow_lines+(WI.slow_target!=null?" of "+WI.slow_target:"")+(WI.slow_partial?" (cut by --limit)":"")),el("div",{},"consolidated: "+c.observations+" observations · "+(c.assertions==null?"-":c.assertions)+" assertion edges · "+c.concepts+" concepts · "+c.capabilities+" capabilities")));return}
+  if(isArea(SRC)){st.append(el("div",{class:"idle"},el("div",{class:"arrow"},"Staged area "+areaName(SRC)),el("div",{class:"k"},"not built yet"),el("div",{},$("msg").textContent||"building its cache window: slow clock and consolidation on the saved articles")));return}
+  const w=el("div",{class:"idle"},el("div",{class:"arrow"},"Press “Read first article”"),el("div",{class:"k"},"News in the queue"),el("div",{id:"tick"}));st.append(w);
   try{const d=await (TK?Promise.resolve(TK):api("/sim-api/raw/ticker"));TK=d;const t=$("tick");if(!t)return;for(const i of d.items.slice(0,12))t.append(el("div",{},el("b",{},i.source||""),el("span",{},i.title)));w.insertBefore(el("div",{class:"num"},d.total+" in "+d.hours+"h"),w.children[1])}catch(e){}}
 /* 1 Read */
 function s1(st){const sy=A.story||{};const k=sy.kind;const lab=!k?NA:(k==="first"||k==="generic_title"||k==="no_key"?"NEW STORY":(k==="copy"?"COPY":"ALREADY SEEN"));
@@ -368,19 +392,11 @@ function connected(){const U=S.asr;return{n:(A&&A.g4)?A.g4.assertions.length:0}}
 function gsets(){const cur=S.cur;const E=[...S.ents.values()],X=[...S.asr.values()];const le=E.filter(e=>e.seen.has(cur)),lx=X.filter(x=>x.seen.has(cur));const leI=new Set(le.map(e=>e.id));
   const de=E.filter(e=>!e.seen.has(cur)).sort((a,b)=>(b.articles-a.articles)||(b.publishers-a.publishers)).slice(0,Math.max(0,20)),dx=X.filter(x=>!x.seen.has(cur)&&(x.articles>1||leI.has(x.subj))).sort((a,b)=>b.articles-a.articles).slice(0,8);return{le,lx,de,dx}}
 function viaChips(onchange,counts){const row=el("div",{class:"leg",style:"gap:6px;align-items:center"});row.append(el("span",{class:"k"},"relations"));for(const v in VIA){if(v==="hierarchy")continue;const on=!VOFF.has(v),b=el("button",{class:"btn",style:"padding:0 8px;font-size:11.5px;border-width:1.5px;border-style:solid;border-color:"+(on?VIAN(v):"var(--border)")+";"+(on?"":"opacity:.5")},el("i",{style:"display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;background:"+VIAN(v)}),v.replace(", unmeasured","")+" "+(counts[v]||0));b.onclick=()=>{on?VOFF.add(v):VOFF.delete(v);onchange()};row.append(b)}return row}
-let CL_=null;
-function layerSwitch(){const w=el("div",{class:"tabs",id:"lsw",title:"consolidated output of the window (slow_consolidate); none selected = this article's own graph"});w.append(el("span",{class:"k",style:"align-self:center"},"consolidated"));[["obs","Observations","one pointer per article, not merged"],["asr","Assertions","merged edges that touch this article"],["cap","Capabilities","capability candidates of this article"]].forEach(([k,n,t])=>{const b=el("button",{class:CL_===k?"on":"",title:t,"data-layer":k},n);b.onclick=()=>{CL_=CL_===k?null:k;render()};w.append(b)});return w}
-function vLayer(box){const C=A.consolidated,c=C.counts||{},kv=(k,v)=>el("div",{class:"claim wrap"},el("em",{},k),el("span",{},v==null||v===""?NA:String(v)));
-  box.append(el("div",{class:"title","data-layer-head":CL_},"window "+A.window.name+": "+c.observations+" observations · "+(c.assertions==null?"-":c.assertions)+" assertion edges · "+c.concepts+" concepts · "+c.capabilities+" capabilities ",tg("slow_consolidate, "+(C.status||"PROVISIONAL"))));
-  const side=el("div",{style:"overflow:auto;min-height:0;flex:1","data-layer-body":CL_});box.append(side);
-  if(CL_==="obs"){const o=C.observation;if(!o)side.append(el("div",{class:"l na"},"no observation for this article in consolidated.json"));else{for(const k of["id","publisher","day","status"])side.append(kv(k,o[k]));side.append(kv("chain line",(o.ref?o.ref.file+" #"+o.ref.seq:null)),kv("journal",o.journal&&o.journal.kind),kv("slow parts",(o.slow_parts||[]).join(", ")));if(o.decider_change)side.append(kv("decider change",o.decider_change.outcome+(o.decider_change.proposed?" ("+o.decider_change.proposed+")":"")))}}
-  else if(CL_==="asr"){side.append(el("div",{class:"grp"},C.assertions_n+" merged edges touch this article"+(C.assertions_n>C.assertions.length?" ("+C.assertions.length+" shown)":"")));C.assertions.forEach(e=>side.append(el("div",{class:"claim wrap"},el("span",{},cut(e.key||"",110)),el("em",{},"publishers "+(e.publishers==null?"-":e.publishers)+" · fragments "+(e.fragments_n==null?"-":e.fragments_n)+" · weight "+f2(e.weight)+" · "+(e.status||"")))));if(!C.assertions.length)side.append(el("div",{class:"l na"},"no merged edge touches this article"))}
-  else{side.append(el("div",{class:"grp"},C.capabilities.length+" capability candidate"+(C.capabilities.length===1?"":"s")+" in this article (window total "+c.capabilities+")"));C.capabilities.forEach(x=>side.append(el("span",{class:"chip"},String(x))));if(!C.capabilities.length)side.append(el("div",{class:"l na"},"none in this article: the capability_list stage returned nothing (a training event, not a code gap)"))}}
 function viewSwitch(){const w=el("div",{class:"tabs"});[["graph","Graph","Domain › topic › concept, assertions as edges"],["rel","Relations","entities in rows, edges by source"],["flat","Table","one row per assertion"]].forEach(([k,n,t])=>{const b=el("button",{class:CV===k?"on":"",title:t,"data-view":k},n);b.onclick=()=>{CV=k;render()};w.append(b)});return w}
 function s4(st){const g=A.g4;const hd=el("div",{class:"title"},g?(A.g4.assertions.length+" assertions ("+A.g4.assertions.filter(x=>!x.new).length+" reinforced) · "+A.g4.entities.length+" entities ("+A.g4.entities.filter(x=>!x.new).length+" already known)"):NA,tg("G4/G5 v1, unmeasured"));
   const wrap=el("div",{style:"display:flex;flex-direction:column;min-height:0;flex:1;gap:8px"});st.append(wrap);if(!g){wrap.append(el("div",{class:"l na"},A.g4_error||NA));return}
-  wrap.append(el("div",{style:"display:flex;gap:14px;align-items:center;flex-wrap:wrap"},hd,viewSwitch(),A.consolidated?layerSwitch():""));
-  const box=el("div",{style:"display:flex;flex-direction:column;min-height:0;flex:1;gap:8px"});wrap.append(box);if(CL_&&A.consolidated)vLayer(box);else({graph:vGraph,rel:vRel,flat:vFlat})[CV](box)}
+  wrap.append(el("div",{style:"display:flex;gap:14px;align-items:center;flex-wrap:wrap"},hd,viewSwitch()));
+  const box=el("div",{style:"display:flex;flex-direction:column;min-height:0;flex:1;gap:8px"});wrap.append(box);({graph:vGraph,rel:vRel,flat:vFlat})[CV](box)}   /* Connect is full width: this article's own graph only; what the whole window learned is the Knowledge step */
 /* GRAPH: Domain > Topic (IPTC node) > Concept/Entity, assertions as labelled edges with attribute chips, cross-links by relation source */
 /* Connect key: why each line exists. UP = placement under a topic (style by evidence), SIDE = link between two things. */
 const UPHOW={"exact":{n:"exact name",dash:"",o:.9,w:1.8,c:"var(--accent)"},"wordnet":{n:"WordNet",dash:"6 3",o:.85,w:1.5,c:"var(--accent)"},"sentence":{n:"same sentence",dash:"1.5 3",o:.9,w:1.7,c:"var(--accent)"},"article-topic":{n:"article topic (guess)",dash:"",o:.4,w:1,c:"var(--border-strong)"},"type-map":{n:"entity type",dash:"8 3 1.5 3",o:.65,w:1.3,c:"var(--text-3)"}};
@@ -397,9 +413,10 @@ function keyBlock(cUp,cSide,pot){const k=el("div",{class:"keyb",id:"gkey"}),swat
   for(const v in VIA){if(v==="hierarchy")continue;const off=VOFF.has(v),n=off?(pot[v]||0):(cSide[v]||0);if(!n&&!off)continue;
     const b=el("button",{class:"btn kb","data-via":v,"data-off":off?"1":"0",title:VIA[v][1]+(off?" (hidden, click to show)":" (click to hide)")},swatch(VIAN(v),2,v==="co-occurrence"?"2 3":"6 3",1),(SIDEN[v]||v)+" ",el("b",{"data-n":v},String(n)),off?" off":"");b.onclick=()=>{off?VOFF.delete(v):VOFF.add(v);render()};r2.append(b)}
   k.append(r1,r2);return k}
+let GFIT=true;try{GFIT=localStorage.getItem("kr_gfit")!=="0"}catch(e){}
 function vGraph(box){const{le,lx,de,dx}=gsets(),cur=S.cur,all=le.concat(de),X=lx.concat(dx);
   const sc=el("div",{style:"overflow:auto;min-height:0;flex:1;border:1px solid var(--border);border-radius:12px;background:var(--surface)",id:"gwrap"});
-  const why=el("div",{class:"why",id:"gwhy"});box.append(sc,why);
+  const why=el("div",{class:"why",id:"gwhy"});const fit=el("button",{class:"chip",style:"align-self:flex-end;margin:0 0 4px;cursor:pointer",title:"fit the whole graph on screen, or show it at full size with scrolling"},GFIT?"⤢ fit to screen: on":"⤢ fit to screen: off");fit.onclick=()=>{GFIT=!GFIT;try{localStorage.setItem("kr_gfit",GFIT?"1":"0")}catch(e){}render()};box.append(fit,sc,why);
   const W=Math.max(600,(sc.clientWidth||700)-2),RH=23,CH=32,pos=new Map(),dom=new Map();
   const LINES=[],NODES=new Map(),PARENT=new Map(),cUp={},cSide={};
   for(const e of all){const ip=e.iptc||{},d=ip.domain||"(no path)",t=ip.path||"(no path)";if(!dom.has(d))dom.set(d,new Map());const T=dom.get(d);if(!T.has(t))T.set(t,[]);T.get(t).push(e)}
@@ -410,7 +427,7 @@ function vGraph(box){const{le,lx,de,dx}=gsets(),cur=S.cur,all=le.concat(de),X=lx
   if(extra.size){dn.push({d:"World state · capability · story",y:y+8,lit:true,y0:y,y1:y+RH*extra.size,x:true});for(const n of extra.keys()){pos.set(n,y+RH/2+10);extra.set(n,y+RH/2+10);y+=RH}y+=20}
   const chips=[];let cy=34;const showAtt=!VOFF.has("attribution");
   for(const x of X.filter(x=>x.kind!=="attribution"||showAtt).sort((a,b)=>((pos.get(a.subj)||1e9)-(pos.get(b.subj)||1e9))||0)){const sy=pos.get(x.subj);cy=Math.max(cy,(sy||cy)-CH/2);chips.push({x,y:cy+CH/2,lit:x.seen.has(cur)});cy+=CH+4}
-  const H=Math.max(y,cy)+20,svg=sv("svg",{width:W,height:H,viewBox:"0 0 "+W+" "+H});sc.append(svg);
+  const H=Math.max(y,cy)+20,svg=sv("svg",GFIT?{width:"100%",height:"100%",viewBox:"0 0 "+W+" "+H,preserveAspectRatio:"xMidYMin meet"}:{width:W,height:H,viewBox:"0 0 "+W+" "+H});sc.style.overflow=GFIT?"hidden":"auto";sc.append(svg);
   [["Domain",C1[0]],["Topic (IPTC node)",C2[0]],["Concept / entity",C3[0]],["Assertion: subject — verb → object",C4[0]]].forEach(([t,x])=>{const n=sv("text",{x,y:18,fill:css("--mut"),"font-size":11,"font-family":css("--mono")});n.textContent=t.toUpperCase();svg.append(n)});
   /* every drawn line is registered with its two ends and its reason (hover text and the why box) */
   const edge=(x1,y1,x2,y2,o)=>{const m=o.bul==null?(x1+x2)/2:null,d=m!=null?"M"+x1+" "+y1+"C"+m+" "+y1+" "+m+" "+y2+" "+x2+" "+y2:"M"+x1+" "+y1+"C"+(x1+o.bul)+" "+y1+" "+(x2+o.bul)+" "+y2+" "+x2+" "+y2;
@@ -498,18 +515,89 @@ function s6(st){const d=A.decider||{},c=A.codes||{},p=A.p||{},U=itemsOf(A).filte
   const dc=A.decider_change,cc=(A.consolidated||{}).counts||{};
   const dcb=dc?el("div",{class:"blk","data-block":"decider-change"},el("h3",{},"Change decision ",tg("slow clock proposal, PROVISIONAL")),el("div",{class:"big"},dc.proposed?String(dc.proposed):"no proposal"),el("div",{class:"x"},"outcome ",callChip(dc.outcome)," ",dc.outcome||NA," · provisional: "+(dc.provisional?"yes":"no")+(dc.validated===false?" · not validated":"")+(dc.why?" · "+dc.why:"")),el("div",{class:"x"},"from "+(dc.source||NA)),A.consolidated?el("div",{class:"x"},"consolidated in this window: "+cc.observations+" observations · "+(cc.assertions==null?"-":cc.assertions)+" assertion edges · "+cc.concepts+" concepts · "+cc.capabilities+" capabilities"):null):null;
   st.append(el("div",{class:"dec"},chg,...(dcb?[dcb]:[]),sure,evd,op))}
-/* right panel */
-function knowledge(){const n=$("nums");n.replaceChildren();const g=S.gstats||{},reinf=[...S.asr.values()].filter(x=>x.publishers>1||x.articles>1),kv=(l,v)=>n.append(el("div",{},el("div",{class:"num"},String(v)),el("div",{class:"k"},l)));
-  kv("articles read",S.n);kv("entities",S.ents.size);kv("assertions",S.asr.size);kv("reinforced assertions",reinf.length);
-  const c=$("curve");c.replaceChildren();const P=S.gc,mx=Math.max(1,...P);if(P.length>1){const x=i=>4+i*272/Math.max(1,P.length-1),y=v=>66-v*60/mx;c.append(sv("path",{d:P.map((v,i)=>(i?"L":"M")+x(i)+" "+y(v)).join(""),fill:"none",stroke:css("--accent"),"stroke-width":2.5,"vector-effect":"non-scaling-stroke"}))}
-  const t=$("top");t.replaceChildren();const sec=(h)=>t.append(el("div",{class:"k",style:"margin:10px 0 4px"},h));
-  sec("Reinforced assertions (independent publishers)");const top=reinf.sort((a,b)=>b.publishers-a.publishers||b.articles-a.articles).slice(0,6);for(const x of top){const r=el("div",{class:"top1"},el("span",{},asrLabel(x)),el("b",{},"×"+x.publishers+" pub"));r.onclick=()=>asrDetail(x.id);t.append(r)}if(!top.length)t.append(el("div",{class:"l na",style:"font-size:12.5px;color:var(--mut);font-style:italic"},"none yet: no assertion has been seen from a second independent publisher"));
-  sec("Joins at IPTC-node level ("+(g.joins_nodes==null?0:g.joins_nodes)+" nodes reached by 2+ articles)");for(const j of(S.joins||[]).slice(0,6)){const r=el("div",{class:"top1",title:j.path},el("span",{},j.path.split(" > ").slice(-1)[0]),el("b",{},j.articles+" art · "+j.entities+" ent"));t.append(r)}if(!(S.joins||[]).length)t.append(el("div",{class:"l na",style:"font-size:12.5px;color:var(--mut);font-style:italic"},"none yet"));
-  sec("Relations by source");const by={};for(const e of S.ed.values())by[e.via]=(by[e.via]||0)+1;for(const v in by)if(v!=="hierarchy")t.append(el("div",{class:"top1"},el("span",{style:"color:"+VIAN(v)},v.replace(", unmeasured","")),el("b",{},String(by[v]))));
-  t.append(el("div",{class:"l",style:"font-size:11px;color:var(--mut);margin-top:8px"},"G4/G5 v1, unmeasured"+(S.ms.length?" · +"+Math.round(S.ms[S.ms.length-1])+" ms for this article":"")))}
+/* 5 Knowledge (L2936, plan 5): what the whole window has learned, read from slow_consolidate/knowledge.json (schema: projects/world-state/KNOWLEDGE_SCHEMA.md). All numbers PROVISIONAL (L2901). Counters follow the article being read: only fragments from articles up to this one count (growth by chain seq). */
+let KN=null,KSEL="reinforced";const KSTEP=5;
+async function knFeed(){if(KN&&KN.src===SRC&&Date.now()-KN.t<15000)return KN.d;const d=await api("/sim-api/raw/knowledge?src="+encodeURIComponent(SRC));KN={src:SRC,d,t:Date.now()};drawSteps();return d}
+const safeUrl=u=>/^https?:\/\//i.test(String(u||""))?String(u):null;
+const srcLink=(pub,url,title)=>{const u=safeUrl(url);return u?el("a",{href:u,target:"_blank",rel:"noopener noreferrer",title:title||u},pub||u):el("span",{},pub||"")};
+const emptyKn=(h,t)=>el("div",{class:"empty","data-knowledge":"none"},el("b",{},h),t);
+function sK(st){
+  if(SRC==="queue"){st.append(emptyKn("No consolidated window for the live queue","Knowledge is built by slow_consolidate over a finished window of articles. Choose “Pipeline window” or a staged area on the left."));return}
+  const box=el("div",{class:"kn",id:"kn","data-knowledge":"loading"},el("div",{class:"l na"},"loading knowledge…"));st.append(box);
+  knFeed().then(d=>{if(box.isConnected)box.replaceWith(drawKn(d))}).catch(e=>{if(box.isConnected)box.replaceWith(emptyKn("Knowledge feed failed",e.message))})}
+function drawKn(d){
+  if(!d.exists)return emptyKn("No knowledge.json for this window",d.why||"");
+  const K=d.knowledge||{},AR=d.articles||{},E=K.edges||{},C=K.counters||{},cur=(A&&A.window&&A.window.seq!=null)?A.window.seq:null;
+  const seqOf=id=>{const a=AR[id];return a&&a.seq!=null?a.seq:-1};
+  const G=(K.growth||[]).slice().sort((a,b)=>a.seq-b.seq),last=G.length?G[G.length-1].seq:Math.max(0,...Object.values(AR).map(a=>a.seq==null?0:a.seq));
+  const asOf=cur==null||cur>=last?last:cur,final=asOf>=last,nArt=Object.keys(AR).length||K.articles||0;
+  const frs=id=>(E[id]&&E[id].fragments)||[],upto=id=>frs(id).filter(f=>seqOf(f.art)<=asOf),pubsN=id=>final&&E[id]&&(E[id].publishers||[]).length?E[id].publishers.length:new Set(upto(id).map(f=>f.pub)).size,artsN=id=>new Set(upto(id).map(f=>f.art)).size;
+  const ci=Math.max(0,G.findIndex(g=>g.seq>=asOf)),g0=G[ci]||null;   /* the growth row of the article being read: the slow clock's own count (independent publishers by story root), cumulative by chain seq */
+  const evid=c=>((C[c]||{}).evidence||[]).filter(id=>c==="bridging"||E[id]);
+  const partner={};for(const c of K.contested||[]){(partner[c.a]=partner[c.a]||[]).push(c.b);(partner[c.b]=partner[c.b]||[]).push(c.a)}
+  const newL=final?evid("new"):evid("new").filter(id=>upto(id).length);
+  const reinL=final?evid("reinforced"):evid("reinforced").filter(id=>artsN(id)>=2);   /* the list is the final evidence seen by this article; the counter is the growth row */
+  const contL=final?evid("contested"):evid("contested").filter(id=>upto(id).length&&(partner[id]||[]).some(o=>upto(o).length));
+  const bridL=evid("bridging");
+  const CT=[["new","new","assertions first seen in this window",newL],["reinforced","reinforced","same assertion from 2 or more independent publishers",reinL],["contested","contested","contradicting pairs, both sides kept",contL],["bridging","bridging","capabilities used by 2 or more Areas (value at consolidation)",bridL]];
+  const GF={new:"assertions",reinforced:"reinforced",contested:"contested"},num=(k,l)=>k==="bridging"?((C[k]||{}).n!=null?C[k].n:l.length):(g0&&g0[GF[k]]!=null?g0[GF[k]]:l.length);
+  if(!CT.some(x=>x[0]===KSEL))KSEL="reinforced";
+  const root=el("div",{class:"kn",id:"kn","data-knowledge":"ready","data-asof-seq":String(asOf)});
+  /* header: as of consolidation */
+  const asof=String(K.as_of||"").replace("T"," ").replace(/\.\d+Z?$/,"").replace(/Z$/,"");
+  const hd=el("div",{class:"hd1"},el("div",{class:"asof","data-asof":"1"},"as of consolidation ",el("b",{},asof||"unknown time"),", ",el("b",{},String(K.articles!=null?K.articles:nArt)+" articles"),", ",el("b",{},String(K.publishers!=null?K.publishers:"?")+" publishers")),tg("slow_consolidate, "+(K.provisional===false?"checked":"PROVISIONAL")),d.area?tg("staged area: "+d.area.short):"",el("span",{class:"asof"},"counters count articles up to "+(cur==null?"the last":"this one")+" ("+(G.findIndex(g=>g.seq>=asOf)+1||nArt)+" of "+(G.length||nArt)+")"));
+  if(SRC!=="queue"){const nb=el("button",{class:"btn nx",id:"kn_next",title:"read the next article of this window and stay on Knowledge so the counters grow"},"Next article, stay here →");nb.onclick=async()=>{if(BUSY)return;if(!(await loadArticle(false)))return;goto(KSTEP)};hd.append(nb)}
+  root.append(hd);
+  /* answer card */
+  const ans=K.answer||{},sts=ans.statements||[],q=String(ans.question||"").replace(/^auto:\s*/,"");
+  const ac=el("div",{class:"ans","data-block":"answer"},el("h3",{},ans.question?"What we know about "+q:"No answer for this window ",tg(ans.auto?"auto question, PROVISIONAL":"PROVISIONAL")));
+  if(!sts.length)ac.append(el("div",{class:"l na"},ans.abstain||"The window has no assertion subject to answer about."));
+  else{const secs=[];for(const x of sts){const n=x.section||"known";if(!secs.includes(n))secs.push(n)}
+    for(const n of secs){ac.append(el("div",{class:"sec","data-section":n},n.replace(/_/g," ")));
+      for(const x of sts.filter(y=>(y.section||"known")===n)){const seen=new Set(),ls=[];for(const rid of x.refs||[])for(const f of frs(rid)){if(seen.has(f.art))continue;seen.add(f.art);const a=AR[f.art]||{};ls.push(srcLink(f.pub||a.publisher,a.url,a.title))}
+        const sr=el("span",{class:"srcs"});ls.slice(0,5).forEach(l=>sr.append(l));if(ls.length>5)sr.append(el("span",{class:"l na"},"+"+(ls.length-5)+" more"));
+        ac.append(el("div",{class:"st1","data-statement":"1"},el("span",{class:"tx"},x.text||""),el("span",{class:"pubn"},(x.publishers==null?seen.size:x.publishers)+" publisher"+(x.publishers===1?"":"s")),sr))}}}
+  root.append(ac);
+  /* four counters */
+  const ctr=el("div",{class:"ctr"});
+  for(const[k,n,t,l]of CT){const b=el("button",{class:"cb"+(KSEL===k?" on":""),"data-counter":k,"data-n":String(num(k,l)),title:t},el("span",{},n),el("b",{},String(num(k,l))),el("i",{},t));b.onclick=()=>{KSEL=k;root.replaceWith(drawKn(d))};ctr.append(b)}
+  root.append(ctr);
+  /* evidence panel */
+  const low=el("div",{class:"low"}),evp=el("div",{class:"evp","data-evidence":KSEL});low.append(evp);
+  const nm1=x=>x==null||x===""?"–":String(x).replace(/^[a-z_]{2,12}:(?=\S)/,""),trip=e=>[e.subject,e.predicate,e.object].map(nm1).join(" — ");
+  const fragRow=f=>{const a=AR[f.art]||{};return el("div",{class:"fr","data-fragment":"1"},el("b",{},f.pub||a.publisher||"?"),f.sent||"",a.url?" ":"",a.url?srcLink("source",a.url,a.title):"")};
+  const edgeRow=(id,open)=>{const e=E[id];if(!e)return null;const fr=upto(id),pn=pubsN(id),dt=el("details",{class:"ev","data-edge":id},el("summary",{},el("span",{class:"tr"},trip(e)),el("span",{class:"kd"},e.kind||"edge"),el("span",{class:"pubn",title:"independent publishers (one per story, by the story root): "+((e.publishers||[]).join(", ")||"not listed")},pn+" publisher"+(pn===1?"":"s")+" · "+fr.length+" fragment"+(fr.length===1?"":"s"))));
+    fr.slice(0,12).forEach(f=>dt.append(fragRow(f)));if(fr.length>12)dt.append(el("div",{class:"l na"},"+"+(fr.length-12)+" more fragments"));if(open)dt.setAttribute("open","");return dt};
+  const byStr=(a,b)=>(pubsN(b)-pubsN(a))||(upto(b).length-upto(a).length)||(a<b?-1:1);
+  const sel=CT.find(x=>x[0]===KSEL),L=sel[3],CAP=100;
+  if(KSEL==="bridging"){evp.append(el("h3",{},"bridging evidence: "+L.length+" capabilit"+(L.length===1?"y":"ies")+" used by 2 or more Areas"));
+    const cm={};for(const c of K.capabilities||[])cm[c.id]=c;for(const id of L){const c=cm[id]||{id,label:id,areas:[]};evp.append(el("div",{class:"st1","data-capability":id},el("span",{class:"tx"},c.label||id),el("span",{class:"pubn"},(c.areas_n!=null?c.areas_n:(c.areas||[]).length)+" Areas"),el("span",{class:"srcs"},...(c.areas||[]).map(a=>el("span",{class:"kd"},String(a))))))}
+    if(!L.length)evp.append(el("div",{class:"l na"},"none: no capability is used by 2 or more Areas in this window"+(isArea(SRC)&&d.area&&d.area.key==="c1"?" (a single-event story sits in one Area; the mixed area is the bridging case)":"")))}
+  else if(KSEL==="contested"){const prs=(K.contested||[]).filter(c=>final||(upto(c.a).length&&upto(c.b).length));
+    evp.append(el("h3",{},"contested evidence: "+prs.length+" pair"+(prs.length===1?"":"s")+" ("+L.length+" distinct edges), both sides kept"));
+    for(const c of prs.slice(0,CAP)){const dt=el("details",{class:"ev","data-pair":c.a+"|"+c.b,open:""},el("summary",{},el("span",{class:"tr"},"one assertion against another"),el("span",{class:"kd"},c.kind||"contested")));for(const id of[c.a,c.b]){const e=E[id];if(!e)continue;const sd=el("div",{class:"side2","data-edge":id},el("div",{style:"font-size:13px"},trip(e)));upto(id).slice(0,4).forEach(f=>sd.append(fragRow(f)));dt.append(sd)}evp.append(dt)}
+    if(!prs.length)evp.append(el("div",{class:"l na"},"none yet at this article: no two assertions in this window contradict each other (kinds: polarity, amount, status, direction)"))}
+  else{const rows=L.slice().sort(byStr);evp.append(el("h3",{},KSEL+" evidence: "+L.length+" assertion"+(L.length===1?"":"s")+" seen by this article"+(rows.length>CAP?" (top "+CAP+" by publishers)":"")+", each opens to its fragments"+(!final&&KSEL==="reinforced"?" · counter = slow clock count, list = 2 or more articles":"")));
+    rows.slice(0,CAP).forEach((id,i)=>{const r=edgeRow(id,KSEL==="reinforced"&&i<3);if(r)evp.append(r)});
+    if(!L.length)evp.append(el("div",{class:"l na"},KSEL==="reinforced"?"none yet at this article: no assertion has come from a second independent publisher":"none yet at this article"))}
+  /* right: funnel, growth, yield */
+  const rp=el("div",{class:"rp"});low.append(rp);
+  rp.append(el("h3",{},"layer funnel at consolidation (bar length is square-root scaled)"));
+  const F=K.funnel||{},keys=["observations","fragments","assertions","reinforced","contested","capabilities","bridging","concepts"].filter(k=>F[k]!=null),mx=Math.max(1,...keys.map(k=>Math.sqrt(F[k])));
+  for(const k of keys)rp.append(el("div",{class:"fb","data-funnel":k},el("span",{},k),el("div",{class:"bn"},el("i",{style:"width:"+Math.max(1,Math.round(100*Math.sqrt(F[k])/mx))+"%"})),el("em",{},String(F[k]))));
+  if(!keys.length)rp.append(el("div",{class:"l na"},"no funnel in knowledge.json"));
+  rp.append(el("h3",{style:"margin-top:10px"},"growth by article"));
+  if(G.length>1){const W=400,H=96,x=i=>2+i*(W-4)/Math.max(1,G.length-1),mA=Math.max(1,...G.map(g=>g.assertions||0)),mR=Math.max(1,...G.map(g=>Math.max(g.reinforced||0,g.contested||0))),yA=v=>H-4-(H-8)*v/mA,yR=v=>H-4-(H-8)*v/mR;
+    const svg=sv("svg",{class:"gl",viewBox:"0 0 "+W+" "+H,preserveAspectRatio:"none","data-growth":String(G.length)}),ln=(f,y,c)=>sv("path",{d:G.map((g,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(g[f]||0).toFixed(1)).join(""),fill:"none",stroke:css(c),"stroke-width":2,"vector-effect":"non-scaling-stroke"});
+    svg.append(ln("assertions",yA,"--accent"),ln("reinforced",yR,"--good"),ln("contested",yR,"--warn"),sv("line",{x1:x(ci),x2:x(ci),y1:0,y2:H,stroke:css("--text-3"),"stroke-dasharray":"3 3","stroke-width":1,"vector-effect":"non-scaling-stroke"}));rp.append(svg);
+    const gn=g0||{};rp.append(el("div",{class:"gleg","data-growth-now":"1"},el("span",{style:"color:"+css("--accent")},"assertions "+(gn.assertions||0)+" (scale to "+mA+")"),el("span",{style:"color:"+css("--good")},"reinforced "+(gn.reinforced||0)),el("span",{style:"color:"+css("--warn")},"contested "+(gn.contested||0)+" (scale to "+mR+")"),el("span",{},"at article "+(ci+1)+" of "+G.length)))}
+  else rp.append(el("div",{class:"l na"},"no growth rows in knowledge.json"));
+  const Y=K.yield||{},pc=v=>v==null?"–":(typeof v==="number"?v.toFixed(1):String(v));
+  rp.append(el("h3",{style:"margin-top:10px"},"yield at consolidation"),el("div",{class:"yl","data-yield":"1"},el("div",{},el("b",{},Y.pct_reinforced==null?"–":pc(Y.pct_reinforced)+"%"),el("span",{},"assertions ≥ 2 publishers")),el("div",{},el("b",{},pc(Y.contested_per_100)),el("span",{},"contested per 100 articles")),el("div",{},el("b",{},Y.bridging==null?"–":String(Y.bridging)),el("span",{},"bridging capabilities")),el("div",{},el("b",{},Y.answerable==null?"–":String(Y.answerable)),el("span",{},"answerable questions"))));
+  root.append(low);return root}
 /* detail */
 function dopen(h,rows){const d=$("det");d.replaceChildren(el("span",{class:"x"},"close"),el("h4",{},h));d.firstChild.onclick=()=>d.classList.remove("open");for(const[k,v,m]of rows)if(have(v))d.append(el("div",{class:"r"},el("span",{},k),el("span",{},String(v),m?tg(m):"")));d.classList.add("open")}
 function itemDetail(u){dopen(spanText(A,u)||u.subject||"",[["type",u.type+(u.ner_fine?" / "+u.ner_fine:(u.ner?" / "+u.ner:"")),u.ner_fine?"entities v2 (Few-NERD v1, test F1 coarse 0.691 / fine 0.537)":(u.ner?(u.ner_src==="lg"?"entities v1 (spaCy lg), unmeasured vs outside truth":"spot only"):null)],["coarse type",u.ner_coarse||null,"Few-NERD prefix"],["lg cross-check",u.ner_lg||(u.ner_fine&&u.ner&&u.ner!=="UNTYPED"?u.ner:null),"spaCy lg label"],["mentions",u.mentions&&u.mentions.length>1?u.mentions.length+" in this article (counted once)":null],["source",u.src==="lg"?"added by lg pass":(u.src==="fewnerd"?"added by Few-NERD pass":null)],["filter",u.filter?(u.filter.kept?"kept":"dropped: "+u.filter.reason):null,"filter v0"],["node key",u.key],["merge",u.merge?u.merge.result+(u.merge.before!=null?" "+u.merge.before+"→"+u.merge.after:""):null,"merge v0"],["sentence",u.sent_text]])}
 function nodeDetail(n){const d=$("det");d.replaceChildren(el("span",{class:"x"},"close"),el("h4",{},n.label));d.firstChild.onclick=()=>d.classList.remove("open");d.append(el("div",{class:"r"},el("span",{},"evidence"),el("span",{},String(n.ev.size))),el("div",{class:"r"},el("span",{},"domain"),el("span",{},n.l1l||n.l1||NA,tg())));for(const x of n.evid)d.append(el("div",{class:"r"},el("span",{},x.pub||""),el("span",{},(x.title||"")+(x.text?" — "+x.text:""))));d.classList.add("open")}
-setMode(MODE);drawSteps();render();knowledge();loadStatus();setInterval(loadStatus,30000);
+setMode(MODE);drawSteps();render();loadStatus();setInterval(loadStatus,30000);
 </script></body></html>
