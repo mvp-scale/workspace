@@ -381,3 +381,21 @@ Gate **fail**; goal p 0.36 (unsure). No story passed. The loop verb reads no fil
 | Route | `none-fits` top on 7 of 10 stories (p 0.48-0.54), `build-now` on certainty-formula 0.46 and t1-concept-match 0.46 | Unsure everywhere; with no file evidence the check cannot say build-now. Not a redesign signal. |
 
 What changes because of MM3-0736: (a) the `knowledge.json` sha-equality test for owner marks moves from R5 to R1; (b) every pass bar in section 4 is listed as a named K row in R1's deliverable so the next MM3 run (a `class` on `check-knowledge.py` once it exists) has file evidence; (c) the seeded-change control in 4.1 is extended from 20 to 50 articles covering negation, swapped amount, swapped date, swapped agent and reversed status (the five contradiction kinds). `next:` from MM3 is a drill on measurement/hidden-change-rate; not run (one MM3 call was the brief).
+
+## Human knowledge model (conceptual, not built) — owner 2026-11-22
+
+Owner direction: keep this conceptual; plan only. It records what the person already knows and decides only what to show and in what order. It never changes evidence, certainty or truth (playbook rule: no human labels as truth).
+
+Shape when built: person -> concept or relation -> {state: unseen | seen | marked-known | follow | ignore, level: concept | relation | system, last_seen, source: marked | inferred}.
+
+Plugs into existing parts: triage ranking (known drops, follow rises); the brief (skip the foundation for known concepts, show the mechanism); "since your last look" uses the person's own last look.
+
+Phases: 0 written down (now) · 1 owner marks steer ranking only · 2 inferred familiarity from what was opened, labelled inferred · 3 occasional one-line recall checks on relations marked known.
+
+Rules: never feeds evidence; self-reported, inferred and demonstrated understanding stay distinct; an evidence change reopens a marked-known item; add to playbook 00 as an explicit extension before phase 1.
+
+## Findings from the owner's review of the stream window (runs-e2e-101, 464 articles) — 2026-11-22
+
+1. Hub concepts need story-thread scope. "United States" absorbed unrelated stories (AI data centre, Florida primary, Lebanon-Israel talks), so its card mixed them (did / because / allies / disputed all off-topic). A large concept must open into its threads (concept x event cluster) before a card is shown; the card is per thread.
+2. The map shows only right-level concepts and typed links. US -> wife / children / AP were drawn: role words (wife, children, expert, diplomat) belong to their person or are dropped; sources (AP and other agencies) belong to the evidence layer, never map nodes; co-occurrence 'related' links stay hidden by default; every drawn link must state why it connects in one line, else it is not drawn. Hubs collapse into their threads; fisheye focus on the selected thread; no unlabelled nodes.
+3. 'Disputed' only from speaker-vs-speaker pairs on the same target; polarity opposites across unrelated sentences are not disputes (false pairs seen on the US card).

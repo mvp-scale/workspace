@@ -12,11 +12,20 @@ Knowledge step, item B (owner yes L2936, PROVISIONAL, ledger T158): (1) cross-ar
 Fact-join fix (T158 L2954, PROVISIONAL): (5) a negation spot negates a verb only inside its clause (neg_in_scope: same sentence, 30 chars before to 15 after, no clause boundary between, 'despite' is not a negation); (6) the status contradiction is time-aware: it fires only when the LATER report reverses the earlier
   (dead first, alive later, strictly later day; care -> died is a timeline, undated sides never fire); every contradiction edge carries `order` {earlier, later, days} when both sides are dated."""
 import sys, re, bisect, time, hashlib, collections, itertools, datetime, os, json, pathlib
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # lexicons.py sits next to this file, also when it is loaded by path
+import lexicons as LX
 LABEL = "G4/G5 v1, unmeasured"
 IDENT_RULES = os.environ.get("G4_IDENT_RULES", "v2")   # T174 identity fix (item IDENTITY, wave 1). "v2" (default) = the four merge guards below, tagged "ident-v2"; G4_IDENT_RULES=v1 restores the earlier merges exactly.
 PLACE_MODS = set("the of republic people's peoples kingdom state states federal democratic islamic united north south east west northern southern eastern western central new greater upper lower".split())
 DEFAULT_DIR = str(pathlib.Path(__file__).resolve().parent.parent.parent / "runs" / "g4")   # knowledge_pipeline/runs/g4: where simulation/g4-align.py put it (simulation/../runs/g4)
 TITLES = {"dr", "mr", "mrs", "ms", "miss", "prof", "professor", "sir", "dame", "mp", "senator", "president", "minister", "mayor", "judge"}
+COORD_DIR = set("north south east west northern southern eastern western central upper lower greater".split())
+def is_coordination(lg, sh):
+    """True when the longer name lg (token list) is 'X and Y' with the shorter name sh as its tail Y and X is more than direction words (United States and Iran, Puntland and Jubbaland), so sh is one conjunct, not a short form of the whole; 'West and Central Africa' stays one name"""
+    ex = lg[:len(lg) - len(sh)]
+    if "and" not in ex: return False
+    left = ex[:len(ex) - 1 - ex[::-1].index("and")]
+    return bool(left) and not all(t in COORD_DIR for t in left)
 SKIPW = {"of", "the", "and", "for", "in", "on"}
 GENERIC = set("what who that which it this he she they i we you one some there things thing lot way time times part none other others number-of me him her them us who whom place kind type day week month year list change article request end".split())
 NERMAP = {"PERSON": "person", "ORG": "org", "GPE": "place", "LOC": "place", "FAC": "place", "NORP": "group", "LANGUAGE": "group", "PRODUCT": "product", "WORK_OF_ART": "product", "EVENT": "event", "LAW": "law"}
@@ -230,10 +239,9 @@ def pred_lemma(surface):
     LEMMA_CACHE[ck] = out
     return out
 # status table: head verb lemma -> (canonical predicate, status class); object words decide the care and copula cases. The classes are opposite pairs for the "status" contradiction: dead against alive.
-STATUS_VERB = {"die": ("die", "dead"), "perish": ("die", "dead"), "succumb": ("die", "dead"), "expire": ("die", "dead"), "survive": ("survive", "alive"), "recover": ("recover", "alive"), "live": ("survive", "alive")}
-CARE_VERB = {"undergo": "undergo", "receive": "undergo", "get": "undergo", "need": "undergo", "require": "undergo"}
-CARE_OBJ = set("care treatment surgery therapy procedure operation hospice monitoring intervention checkup check-up".split())
-DEAD_OBJ = {"dead", "deceased", "late", "death", "gone"}; ALIVE_OBJ = {"alive", "stable", "well", "healthy", "recovering", "fine", "improving"}
+# the words are data (lexicons.json, playbook 00.1 round E); KP_LEXICONS=off leaves every class empty
+STATUS_VERB = LX.table("status.verbs"); CARE_VERB = LX.table("status.care_verbs"); CARE_OBJ = LX.words("status.care_nouns")
+DEAD_OBJ = LX.words("status.dead_words"); ALIVE_OBJ = LX.words("status.alive_words")
 def status_of(lem, obj_text):
     """-> (canonical predicate or None, status class or None) from the predicate lemma phrase and the object text"""
     w = str(lem or "").split(); ot = set(nrm(obj_text).split()) if obj_text else set()
@@ -334,6 +342,51 @@ def contradict_edges(S, aids, art, W=WINDOW_DAYS):
                 px = [e for e in r["evid"] if e["attrs"].get("polarity") != "negative"]; py = [e for e in y["evid"] if e["attrs"].get("polarity") != "negative"]   # "did not fall" is not "rose"
                 pr = [(p, q) for p in px for q in py if _pair_ok(S, p, q, W)]
                 if pr: put(aid, y["id"], "direction", list({id(p): p for p, _ in pr}.values()), list({id(q): q for _, q in pr}.values()), "%s against %s, same subject and object, inside %d days" % (r["pred"], y["pred"], W))
+    for e_ in report_contradictions(S, aids, art): out[("contradiction", e_["a"], e_["b"], "contradicts")] = e_
+    return [out[k] for k in sorted(out)]
+# --- speaker contradictions (T158 round 3, ledger L2962, design 7.3): DIFFERENT speakers assert incompatible content about the same target ---
+# Reports come from evidence attrs["report"] (claims v1 slots resolved on the identity store). Outcome classes: hit (struck, damaged, destroyed), attack (targeted, fired at), blocked (intercepted, repelled), none (no damage, did not report damage, denied).
+# Rule, all of: speaker entities known and the two speaker sets disjoint; the two sides share a target entity; both dated and within REPORT_WINDOW_DAYS; classes incompatible by REPORT_PAIRS (hit vs blocked = outcome; hit vs none = claim_vs_denial; attack vs an explicit denial = claim_vs_denial);
+# a claim that only says 'targeted' is not contradicted by 'repelled' or 'no damage' (both can be true) and never fires. Same speaker repeating or changing their line never fires (one voice is not a dispute).
+REPORT_WINDOW_DAYS = 2; REPORT_PAIRS = LX.pairs("attack.report_pairs")
+def report_kind(r1, r2):
+    """-> contradiction kind for two reports (dicts of attrs["report"]) or None"""
+    c1, c2 = r1["cls"], r2["cls"]
+    if (c1, c2) in REPORT_PAIRS: return REPORT_PAIRS[(c1, c2)]
+    if (c2, c1) in REPORT_PAIRS: return REPORT_PAIRS[(c2, c1)]
+    if c1 == "attack" and c2 == "none" and r2.get("explicit_denial"): return "claim_vs_denial"
+    if c2 == "attack" and c1 == "none" and r1.get("explicit_denial"): return "claim_vs_denial"
+    return None
+def _rep_speakers(r): return {x["entity"] for x in r["speakers"] if x["entity"] != "unresolved"}
+def report_contradictions(S, aids, art, W=REPORT_WINDOW_DAYS):
+    new = [(aid, ev, rp) for aid in sorted(aids) for ev in (S.asr.get(aid) or {}).get("evid", []) if ev["art"] == art for rp in (ev["attrs"].get("report") or [])]
+    if not new: return []
+    allr = collections.defaultdict(list)
+    for y in S.asr.values():
+        if y.get("kind") != "claim": continue
+        for ev in y["evid"]:
+            for rp in ev["attrs"].get("report") or []:
+                for t in rp["targets"]: allr[t].append((y["id"], ev, rp))
+    out = {}
+    for aid, ev, rp in new:
+        sp1 = _rep_speakers(rp)
+        if not sp1: continue
+        for t in rp["targets"]:
+            for bid, ev2, rp2 in allr.get(t, ()):
+                if bid == aid: continue
+                k = report_kind(rp, rp2)
+                if not k: continue
+                sp2 = _rep_speakers(rp2)
+                if not sp2 or sp1 & sp2: continue
+                d1, d2 = _day(S, ev["art"]), _day(S, ev2["art"])
+                if not (d1 and d2) or abs((d1 - d2).days) > W: continue
+                a_, b_, ea, eb, ra, rb = (aid, bid, ev, ev2, rp, rp2) if aid <= bid else (bid, aid, ev2, ev, rp2, rp)
+                key = ("contradiction", a_, b_, "contradicts")
+                if key in out: continue
+                shared = sorted(set(ra["targets"]) & set(rb["targets"]))
+                out[key] = {"via": "contradiction", "a": a_, "b": b_, "label": "contradicts", "w": 1, "art": art, "spans": [], "sent": None, "kind": k, "window_days": W, "sources": {"a": _sources([ea]), "b": _sources([eb])}, "order": _order(S, a_, [ea], b_, [eb]),
+                            "note": "%s said %s (%s) against %s said %s (%s), same target %s, inside %d days" % (",".join(sorted(_rep_speakers(ra))), ra["say"], ra["cls"], ",".join(sorted(_rep_speakers(rb))), rb["say"], rb["cls"], ",".join(shared), W),
+                            "speakers": {"a": ra["speakers"], "b": rb["speakers"]}, "classes": {"a": ra["cls"], "b": rb["cls"]}, "quotes": {"a": ra["quote"], "b": rb["quote"]}, "say": {"a": ra["say"], "b": rb["say"]}, "targets": shared, "sents": {"a": ea.get("sent"), "b": eb.get("sent")}}
     return [out[k] for k in sorted(out)]
 def contradiction_counts(S):
     """C per assertion and per entity, derived from the contradiction edges in the store (nothing extra is stored): {"asr": {aid: n}, "ent": {eid: n}}. An entity's C counts each edge once over the assertions it is the subject or object of."""
@@ -485,7 +538,8 @@ def align(rec, G, ch, contradictions=True):
                         if IDENT_RULES == "v2" and m["type"] in ("product", "place"):   # ident-v2 (c): a product or place name joins a longer name of its type only as its head noun (Times in New York Times, Central Africa in West and Central Africa), never as its leading part (Windows in Windows Fax and Scan, Google in Google Mobile Services, West in West and Central Africa)
                             sh, lg = (tk, ct) if len(tk) < len(ct) else (ct, tk)
                             if sh != lg and lg[-len(sh):] != sh: continue
-                            if sh != lg and m["type"] == "place" and not all(x in PLACE_MODS or x == "and" for x in lg[:len(lg) - len(sh)]): continue   # a place joins a longer place name only when the extra words are place modifiers (West and Central Africa), not a title or a party (Alternative for Germany, Prince and Princess of Wales)
+                            if sh != lg and m["type"] == "place" and not all(x in PLACE_MODS or x == "and" for x in lg[:len(lg) - len(sh)]): continue
+                            if sh != lg and is_coordination(lg, sh): continue   # round 4: 'Iran' is not the tail of the coordination 'United States and Iran' (the left conjunct is a place of its own, not a direction word)   # a place joins a longer place name only when the extra words are place modifiers (West and Central Africa), not a title or a party (Alternative for Germany, Prince and Princess of Wales)
                         return c
                 else:   # acronym: initials of the canonical name, with or without "of"; the article's country may close it (Reserve Bank + Australia)
                     a = nm.replace(" ", ""); ini = initials(ct)
@@ -588,6 +642,7 @@ def align(rec, G, ch, contradictions=True):
                     if sh != lg and len(sh) < len(lg) and lg[-len(sh):] == sh:
                         if len(sh) == 1 and (len(sh[0]) < 4 or sh[0] in GENERIC or sh[0] in PLACE_MODS or sh[0] in TITLES): continue
                         if ty == "place" and not all(x in PLACE_MODS or x == "and" for x in lg[:len(lg) - len(sh)]): continue
+                        if is_coordination(lg, sh): continue
                         how = "head-noun"
             if how: hits[eid] = how
         if len(hits) == 1: e_ = next(iter(hits)); return e_, hits[e_]
@@ -753,6 +808,38 @@ def align(rec, G, ch, contradictions=True):
         if not res or res["kind"] != "entity" and res["kind"] != "concept": continue
         ob = role_entity(str(u["value"]), sa, sb, v[0], v[1], False, si)
         A.append({"u": u, "si": si, "v": v, "subj": res, "obj": ob, "pred": str(u["predicate"]).lower()})
+    # ---- attribution slots (T158 round 3): speaker entity (via identity), verb of saying, outcome class and target entities of a reported claim ----
+    SLOT_SPK_T = ("person", "org", "place", "group")
+    def _ovl(c, a, b): return any(m["s"] < b and a < m["e"] for m in c["ms"])
+    def slot_speaker(x):
+        if not x.get("span"): return {"text": x.get("text"), "entity": "unresolved", "how": "no grounded speaker (pronoun or passive)"}
+        cs = [c for c in clusters if c["type"] in SLOT_SPK_T and _ovl(c, x["span"][0], x["span"][1]) and not c.get("_slot_skip")]
+        if not cs: return {"text": x["text"], "entity": "unresolved", "how": "no entity mention inside the speaker phrase"}
+        rank = {"person": 0, "org": 1, "place": 2, "group": 3}; cs.sort(key=lambda c: (rank[c["type"]], 0 if str(c["_e"][0]).startswith("iso:") else 1, -len(c["canon"])))
+        return {"text": (x["text"] or "").lstrip("# *"), "entity": cs[0]["_e"][0], "how": "entity mention in the speaker phrase (identity store)"}
+    SENT_SPK = collections.defaultdict(list)
+    for u_ in units:
+        for sl_ in (u_.get("slots") or []):
+            for x_ in sl_["speakers"]:
+                if x_.get("span") and u_.get("sentence") is not None: SENT_SPK[u_["sentence"]].append(tuple(x_["span"]))
+    def slot_targets(sl, si, sp, deep=True):
+        tg = set()
+        for (a, b) in sl["target_spans"]:
+            for c in clusters:
+                if c["type"] == "place" and _ovl(c, a, b) and not any(_ovl(c, x, y) for x, y in SENT_SPK.get(si, ())): tg.add(c["_e"][0])
+        if sl["self_target"]: tg |= {x["entity"] for x in sp if str(x["entity"]).startswith(("iso:", "place:"))}
+        if sl["sent_targets"] and deep:   # a denial answers the claim made in the same sentence by another speaker: its target is that claim's target (never every place of the sentence)
+            for u2 in units:
+                if u2.get("sentence") != si: continue
+                for s2 in u2.get("slots") or []:
+                    if s2 is not sl and s2["cls"] in ("hit", "attack") and s2["speakers"] != sl["speakers"]: tg |= slot_targets(s2, si, [slot_speaker(x) for x in s2["speakers"]], False)
+        return tg
+    def report_of(u, si):
+        out = []
+        for sl in u.get("slots") or []:
+            sp = [slot_speaker(x) for x in sl["speakers"]]; tg = slot_targets(sl, si, sp); cs, ce = sl["content_span"]
+            out.append({"speakers": sp, "kind": sl["kind"], "say": sl["say"], "cls": sl["cls"], "explicit_denial": sl["say"] in ("deny", "dismiss", "reject", "refute"), "targets": sorted(tg), "quote": text[cs:ce].strip()[:240]})
+        return out
     # ownership of amounts / dates: those after the assertion's verb and before the next triple verb in the sentence
     by_sent_v = collections.defaultdict(list)
     for a in A: by_sent_v[a["si"]].append(a["v"][0])
@@ -823,6 +910,14 @@ def align(rec, G, ch, contradictions=True):
         aid = "A:" + h(key)
         att = {"amount": [x[2] for x in am], "time": [{"text": d["text"], "label": d["label"], "iso": d["iso"], "period": d["period"]} for d in tm[:2]], "place": place, "place_how": place_how, "direction": direction, "direction_how": ("change bundle " + bwhy) if bd else ("verb lemma in the up/down list" if direction else None),
                "polarity": "negative" if neg else "positive", "modality": "predicted" if mod or so.get("factuality") == "predicted" else ("reported" if so.get("factuality") == "reported" else "asserted"), "speaker": spk["c"]["_e"][0] if spk else None, "speaker_how": spk["how"] if spk else None}
+        rep_ = report_of(u, si)   # the speaker goes in att["said_by"], never att["speaker"]: consolidate.py feeds att["speaker"] into the fact-join 'who', and the fact keys must not move
+        if rep_:
+            att["report"] = rep_; first = next((x for r_ in rep_ for x in r_["speakers"] if x["entity"] != "unresolved"), None)
+            att["said_by"] = {"entity": first["entity"] if first else "unresolved", "text": (first or rep_[0]["speakers"][0])["text"], "how": "attribution slot (%s)" % rep_[0]["kind"]}
+        elif att["speaker"]: att["said_by"] = {"entity": att["speaker"], "text": None, "how": att["speaker_how"]}
+        elif u.get("attributed_to"):   # an attribution marker without a slot: ground the speaker text on an entity mention of the same sentence, else unresolved (never a guess)
+            at_ = nrm(str(u["attributed_to"])); cands = [c for c in clusters if c["type"] in SLOT_SPK_T and any(m["sent"] == si for m in c["ms"]) and nrm(c["canon"]) and nrm(c["canon"]) in at_]
+            att["said_by"] = {"entity": cands[0]["_e"][0] if cands else "unresolved", "text": str(u["attributed_to"]), "how": "attributed_to text -> entity mention in the sentence" if cands else "attributed_to text names no entity mention"}
         if ok_: att["obj_key"] = ok_
         if status: att["status"] = status
         if a["pred"] != pred: att["pred_surface"] = a["pred"]
@@ -884,7 +979,7 @@ def align(rec, G, ch, contradictions=True):
         if q: edge("hierarchy", aid, q, r["iptc"]["how"], 1, None, o["si"], r["iptc"].get("why"))
         if o["sid"] and not o.get("attr"): edge("assertion", o["sid"], o["oid"], o["pred"], 1, [_span(*o["v"])], o["si"]) if o["oid"] else None
         if o.get("attr"): edge("attribution", o["sid"], aid, "said", 1, [_span(*o["v"])], o["si"])
-        elif o["att"].get("speaker"): edge("attribution", o["att"]["speaker"], aid, "said", 1, [_span(*o["v"])], o["si"])
+        elif o["att"].get("speaker") not in (None, "unresolved"): edge("attribution", o["att"]["speaker"], aid, "said", 1, [_span(*o["v"])], o["si"])
         pl = o["att"].get("place")
         if pl and not o.get("attr"): edge("spatial", aid, "iso:" + pl, "in", 1, None, o["si"], o["att"].get("place_how"))
         if o["att"].get("direction") and not o.get("attr"):

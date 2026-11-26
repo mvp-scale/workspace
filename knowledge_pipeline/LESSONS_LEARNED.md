@@ -85,3 +85,6 @@ Placed on 2026-10-29: account and workspace checks, `ant` and vault gotchas -> `
   - Any view, page or summary of the pipeline is built from the stage list in live_trace.py, plus the BitMob heads table. Every stage output appears, or is listed as "not shown, because ...".
   - A completeness check (each stage name in stage_out is rendered on the page) runs before the page is called done.
   - Scope never shrinks (D39) applies to views, not just to heads.
+
+## 2026-11-23 Presentation: start from the reader, test the reader
+Three presentation attempts (ladder, developments view, consume-mockups v1/v2) failed the same way: designed from pipeline fields, showed metadata (owners, counts, chips) instead of meaning, and were graded against the author's own checklist, which agents, Jev and Clef then confirmed. Adopted method: KITs (elicit needs) -> GDTA (goal -> decision -> L1/L2/L3 requirements) -> SA-oriented design + ICD 203 judgments (grounded, cited, entailment-checked synthesis) -> SAGAT-style reader test scored against data. See playbook/design/reader-first-briefing-method.md.

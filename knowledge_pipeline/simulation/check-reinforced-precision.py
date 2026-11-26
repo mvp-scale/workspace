@@ -31,7 +31,8 @@ def score(key, n=40, seed=158):
         if f: e = k["edges"][i]; bad.append({"edge": i, "key": "%s | %s | %s" % (e["subject"], e["predicate"], e["object"]), "flags": f})
     return {"area": key, "reinforced_edges": len(R), "sampled": len(S), "flagged": len(bad), "unflagged_rate": round(1 - len(bad) / len(S), 4) if S else None, "flagged_edges": bad}
 if __name__ == "__main__":
-    out = {a: score(a) for a in ("c1", "mix")}
+    AREAS = sys.argv[sys.argv.index("--area") + 1].split(",") if "--area" in sys.argv else ["c1", "mix"]
+    out = {a: score(a) for a in AREAS}
     if "--json" in sys.argv: print(json.dumps(out, indent=1))
     else:
         for a, r in out.items():

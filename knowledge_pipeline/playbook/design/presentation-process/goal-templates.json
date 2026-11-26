@@ -1,0 +1,30 @@
+{
+  "_about": "Reader goal templates (GDTA shape: goal -> decision -> SA requirement at L1 perceive / L2 comprehend / L3 project). Domain-agnostic: every row is answered from a field the pipeline produces for ANY staged window. {dev} = one development. scope page = answered once per page. 'data' = the field path in /api/raw/developments. Per-reader priorities (follow list, goal weights) are an OPTIONAL override that changes ranking only; they are never required to run.",
+  "goals": {
+    "monitor": {"goal": "Know what changed since my last look", "decision": "Do I need to look at this now?", "requirements": [
+      {"id": "MON-1", "level": "L1", "type": "change", "scope": "page", "q": "How many developments have new reporting since the last look?", "data": "counts.moved; developments[].moved"},
+      {"id": "MON-2", "level": "L1", "type": "change", "scope": "development", "q": "Does {dev} have new reporting since the last look?", "data": "dev.moved, dev.since.articles_after"},
+      {"id": "MON-3", "level": "L2", "type": "certainty", "scope": "development", "q": "Did the certainty word of {dev} change since the last look, and to what?", "data": "since.certainty_word_before, since.certainty_word_changed, certainty_word"},
+      {"id": "MON-4", "level": "L1", "type": "magnitude", "scope": "development", "q": "How many new assertions did {dev} gain since the last look?", "data": "since.new_assertions"}]},
+    "decide": {"goal": "Know whether I can act on it", "decision": "Is this well enough sourced, and who disagrees?", "requirements": [
+      {"id": "DEC-1", "level": "L2", "type": "certainty", "scope": "development", "q": "How well sourced is {dev} (single source / reported / established / disputed)?", "data": "certainty_word"},
+      {"id": "DEC-2", "level": "L1", "type": "magnitude", "scope": "development", "q": "How many independent publisher owners report {dev}?", "data": "owners"},
+      {"id": "DEC-3", "level": "L2", "type": "contradiction", "scope": "development", "q": "Do sources disagree about {dev}, and who are the two sides?", "data": "contradictions[].sides[].speakers"},
+      {"id": "DEC-4", "level": "L2", "type": "contradiction", "scope": "page", "q": "Which development has sources disagreeing?", "data": "developments[].contradictions"}]},
+    "explain": {"goal": "Know who is involved, where, when and why", "decision": "Who do I need to talk to or watch; is this connected to what I already follow?", "requirements": [
+      {"id": "EXP-1", "level": "L1", "type": "entity", "scope": "development", "q": "Which people or organisations are involved in {dev}?", "data": "entities[kind in person, org]"},
+      {"id": "EXP-2", "level": "L1", "type": "place", "scope": "development", "q": "Where is {dev} happening?", "data": "entities[kind in iso, place, facility]"},
+      {"id": "EXP-3", "level": "L2", "type": "relation-cause", "scope": "development", "q": "What cause do the sources state for {dev}?", "data": "follow.stated_causes[].quote"},
+      {"id": "EXP-4", "level": "L1", "type": "time", "scope": "development", "q": "When was {dev} first reported, and over how many days?", "data": "first_day, last_day, days"},
+      {"id": "EXP-5", "level": "L2", "type": "connection", "scope": "development", "q": "Which other development shares a named entity with {dev}?", "data": "entities[] intersection across developments"}]},
+    "anticipate": {"goal": "Know what to watch next", "decision": "What do I expect, and what would change my judgment?", "requirements": [
+      {"id": "ANT-1", "level": "L3", "type": "forward", "scope": "development", "q": "What do sources say will happen next in {dev}, and who says it?", "data": "expect.statements[].quote, .speaker"},
+      {"id": "ANT-2", "level": "L3", "type": "gap", "scope": "page", "q": "Which developments carry no forward statement?", "data": "expect.n_found == 0"},
+      {"id": "ANT-3", "level": "L3", "type": "forward", "scope": "page", "q": "How many developments carry a forward statement?", "data": "count(expect.n_found > 0)"}]},
+    "retain": {"goal": "Carry the state in my head until next time", "decision": "What is the one line I keep?", "requirements": [
+      {"id": "RET-1", "level": "L2", "type": "synthesis", "scope": "development", "q": "What is the one-line state of {dev}?", "data": "summary.quote (best-supported source sentence), certainty_word"},
+      {"id": "RET-2", "level": "L2", "type": "synthesis", "scope": "page", "q": "Which development leads the page, and why?", "data": "ranking rule output"}]}
+  },
+  "ranking": "disputed+moved > moved > disputed > forward statement only > unchanged; ties by owners desc, then articles desc. Priorities override: a development touching a followed entity moves to the top of its band (never changes certainty).",
+  "coined_terms": []
+}

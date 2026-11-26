@@ -44,7 +44,7 @@ def claims_v1(units, text, sents, stats, topic, place, claims=None):
     for c in cl:
         vs, ve = c["v_span"]; si = sidx(vs); subj = c["s_short"] or c["s"]; both = bool(c["s"] and c["o"])
         u = {"unit": None, "sent_text": (text[sents[si][0]:sents[si][1]].strip()[:300] if si < len(sents) else None), "type": "triple" if both else "partial_claim", "subject": subj or None, "predicate": c["p"], "value": c["o"] or None, "sentence": si, "id": None, "spans": triple_spans(text, vs, ve, [subj, c["p"], c["o"]], sents),
-             "topic_l1": topic["l1"], "topic_node": topic["node"], "place": place, "src": "claims v1", "subject_full": c["s"], "negated": c["neg"], "modal": c["modal"], "attributed_to": c["attrib"] or c.get("said_by"), "passive": c["passive"], "attrs": c["attrs"], "demoted": bool(c.get("demoted")), "rule": c["rule"]}
+             "topic_l1": topic["l1"], "topic_node": topic["node"], "place": place, "src": "claims v1", "subject_full": c["s"], "negated": c["neg"], "modal": c["modal"], "attributed_to": c["attrib"] or c.get("said_by"), "passive": c["passive"], "attrs": c["attrs"], "demoted": bool(c.get("demoted")), "rule": c["rule"], **({"slots": c["slots"]} if c.get("slots") else {})}
         if "clause_antecedent" in c["rule"]: u["subject_surface"] = "pronoun"; u["agent_how"] = "clause antecedent (subject of the governing clause, same sentence)"
         if not both: u["missing"] = "subject" if not c["s"] else "object"
         new.append(u)
@@ -54,4 +54,4 @@ def claims_v1(units, text, sents, stats, topic, place, claims=None):
 def summary(claims):
     """compact counts for the trace stage: claims, with both sides, partial, negated, modal, attributed, by rule"""
     both = sum(1 for c in claims if c["s"] and c["o"]); rules = collections.Counter(r for c in claims for r in (c.get("rule") or []))
-    return {"claims": len(claims), "both_sides": both, "partial": len(claims) - both, "negated": sum(1 for c in claims if c.get("neg")), "modal": sum(1 for c in claims if c.get("modal")), "attributed": sum(1 for c in claims if c.get("attrib") or c.get("said_by")), "by_rule": dict(sorted(rules.items()))}
+    return {"claims": len(claims), "both_sides": both, "partial": len(claims) - both, "negated": sum(1 for c in claims if c.get("neg")), "modal": sum(1 for c in claims if c.get("modal")), "attributed": sum(1 for c in claims if c.get("attrib") or c.get("said_by")), "slots": sum(len(c.get("slots") or []) for c in claims), "by_rule": dict(sorted(rules.items()))}

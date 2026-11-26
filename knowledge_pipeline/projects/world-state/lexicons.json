@@ -1,0 +1,581 @@
+{
+ "about": "Domain lexicons as data (playbook 00.1 round E, owner D3 via D55, ledger L3011). Moved out of claims_v1.py, g4_align.py, concepts_v0.py with words and order unchanged; read by name through lexicons.py. KP_LEXICONS=off loads every class empty (the general path: polarity, amount, date, direction). Each class: pos (WordNet part of speech checked by simulation/check-lexicons.py), means, origin (file:line before the move), ledger (line that introduced it), words | map | groups | pairs, not_stated_pos (words that are not a WordNet lemma of pos, each with its reason).",
+ "domain": "news: armed conflict outcomes (attack.*), life status (status.*), agent relations (relation.*), triage change groups (change.*), count units (amount.*)",
+ "wordnet": "/workspace/data/ontology_src/wordnet/wordnet (WordNet 3.1 database files, local)",
+ "classes": {
+  "attack.hit_verbs": {
+   "pos": "verb",
+   "means": "content verb whose reported outcome is a hit (struck, damaged, destroyed)",
+   "origin": "claims_v1.py:148 HIT_V",
+   "ledger": "L2985",
+   "words": [
+    "hit",
+    "strike",
+    "bomb",
+    "shell",
+    "bombard",
+    "damage",
+    "sink",
+    "wound",
+    "kill",
+    "raid",
+    "destroy",
+    "obliterate"
+   ]
+  },
+  "attack.attack_verbs": {
+   "pos": "verb",
+   "means": "content verb of an attack claimed with no outcome",
+   "origin": "claims_v1.py:149 ATTACK_V",
+   "ledger": "L2985",
+   "words": [
+    "target",
+    "attack",
+    "fire",
+    "launch",
+    "assault"
+   ]
+  },
+  "attack.block_verbs": {
+   "pos": "verb",
+   "means": "content verb of an attack blocked (intercepted, repelled)",
+   "origin": "claims_v1.py:150 BLOCK_V",
+   "ledger": "L2985",
+   "words": [
+    "intercept",
+    "repel",
+    "thwart",
+    "foil",
+    "neutralize",
+    "neutralise",
+    "repulse",
+    "down"
+   ]
+  },
+  "attack.block_phrasal": {
+   "pos": "verb",
+   "means": "verb + particle that means blocked",
+   "origin": "claims_v1.py:177 inline (lem == 'shoot' and prt 'down')",
+   "ledger": "L2985",
+   "pairs": [
+    [
+     "shoot",
+     "down"
+    ]
+   ]
+  },
+  "attack.block_if_incoming_object": {
+   "pos": "verb",
+   "means": "verb that means blocked when its object is an incoming weapon (attack.incoming_nouns)",
+   "origin": "claims_v1.py:179 inline (lem == 'destroy')",
+   "ledger": "L2985",
+   "words": [
+    "destroy"
+   ]
+  },
+  "attack.deny_verbs": {
+   "pos": "verb",
+   "means": "verb of denying a reported hit or attack",
+   "origin": "claims_v1.py:151 DENY_V",
+   "ledger": "L2985",
+   "words": [
+    "deny",
+    "dismiss",
+    "reject",
+    "refute"
+   ]
+  },
+  "attack.denied_object_nouns": {
+   "pos": "noun",
+   "means": "object noun of a deny verb that makes a denial of a hit or attack ('denied the attack', 'rejected the report')",
+   "origin": "claims_v1.py:217 inline tuple",
+   "ledger": "L2985",
+   "words": [
+    "attack",
+    "strike",
+    "report",
+    "claim",
+    "allegation",
+    "damage"
+   ]
+  },
+  "attack.self_report_verbs": {
+   "pos": "verb",
+   "means": "verb a party uses to report its own damage (with 'no damage' gives outcome none)",
+   "origin": "claims_v1.py:152 SELF_REPORT_V",
+   "ledger": "L2985",
+   "words": [
+    "report",
+    "see",
+    "record",
+    "suffer",
+    "sustain",
+    "register",
+    "incur",
+    "cause",
+    "confirm"
+   ]
+  },
+  "attack.damage_nouns": {
+   "pos": "noun",
+   "means": "noun of damage in 'no damage' reports",
+   "origin": "claims_v1.py:153 DMG_N",
+   "ledger": "L2985",
+   "words": [
+    "damage",
+    "casualty",
+    "injury",
+    "loss",
+    "harm"
+   ]
+  },
+  "attack.incoming_nouns": {
+   "pos": "noun",
+   "means": "noun of an incoming weapon",
+   "origin": "claims_v1.py:154 INCOMING_N",
+   "ledger": "L2985",
+   "words": [
+    "drone",
+    "missile",
+    "rocket",
+    "projectile",
+    "uav",
+    "shell",
+    "attack",
+    "threat",
+    "munition",
+    "target"
+   ],
+   "not_stated_pos": {
+    "uav": {
+     "pos": null,
+     "why": "acronym (unmanned aerial vehicle), not in WordNet 3.1; WordNet has drone"
+    }
+   }
+  },
+  "attack.report_pairs": {
+   "pos": "class",
+   "means": "outcome classes that contradict when two disjoint speakers report them on one target: hit vs blocked = outcome, hit vs none = claim_vs_denial",
+   "origin": "g4_align.py:350 REPORT_PAIRS",
+   "ledger": "L2985",
+   "pairs": [
+    [
+     "hit",
+     "blocked",
+     "outcome"
+    ],
+    [
+     "hit",
+     "none",
+     "claim_vs_denial"
+    ]
+   ]
+  },
+  "status.verbs": {
+   "pos": "verb",
+   "means": "head verb lemma -> (canonical predicate, status class dead/alive)",
+   "origin": "g4_align.py:240 STATUS_VERB",
+   "ledger": "L2952",
+   "map": {
+    "die": [
+     "die",
+     "dead"
+    ],
+    "perish": [
+     "die",
+     "dead"
+    ],
+    "succumb": [
+     "die",
+     "dead"
+    ],
+    "expire": [
+     "die",
+     "dead"
+    ],
+    "survive": [
+     "survive",
+     "alive"
+    ],
+    "recover": [
+     "recover",
+     "alive"
+    ],
+    "live": [
+     "survive",
+     "alive"
+    ]
+   }
+  },
+  "status.care_verbs": {
+   "pos": "verb",
+   "means": "verb that with a care object means alive and under care",
+   "origin": "g4_align.py:241 CARE_VERB",
+   "ledger": "L2952",
+   "map": {
+    "undergo": "undergo",
+    "receive": "undergo",
+    "get": "undergo",
+    "need": "undergo",
+    "require": "undergo"
+   }
+  },
+  "status.care_nouns": {
+   "pos": "noun",
+   "means": "care object nouns",
+   "origin": "g4_align.py:242 CARE_OBJ",
+   "ledger": "L2952",
+   "words": [
+    "care",
+    "treatment",
+    "surgery",
+    "therapy",
+    "procedure",
+    "operation",
+    "hospice",
+    "monitoring",
+    "intervention",
+    "checkup",
+    "check-up"
+   ],
+   "not_stated_pos": {
+    "check-up": {
+     "pos": null,
+     "why": "hyphenated spelling of WordNet noun checkup (same class)"
+    }
+   }
+  },
+  "status.dead_words": {
+   "pos": "adj",
+   "means": "copula object meaning dead",
+   "origin": "g4_align.py:243 DEAD_OBJ",
+   "ledger": "L2952",
+   "words": [
+    "dead",
+    "deceased",
+    "late",
+    "death",
+    "gone"
+   ],
+   "not_stated_pos": {
+    "death": {
+     "pos": "noun",
+     "why": "copula object noun ('is death'), WordNet noun"
+    }
+   }
+  },
+  "status.alive_words": {
+   "pos": "adj",
+   "means": "copula object meaning alive",
+   "origin": "g4_align.py:243 ALIVE_OBJ",
+   "ledger": "L2952",
+   "words": [
+    "alive",
+    "stable",
+    "well",
+    "healthy",
+    "recovering",
+    "fine",
+    "improving"
+   ]
+  },
+  "relation.oppose_predicates": {
+   "pos": "verb",
+   "means": "predicate that makes an 'opposes' link between two agents",
+   "origin": "concepts_v0.py:20 OPPOSE",
+   "ledger": "L2975",
+   "words": [
+    "strike",
+    "target",
+    "attack",
+    "hit",
+    "destroy",
+    "intercept",
+    "fight",
+    "threaten",
+    "fire at",
+    "shoot",
+    "bomb",
+    "oppose",
+    "clash with",
+    "kill",
+    "launch at",
+    "retaliate",
+    "sanction",
+    "blame",
+    "accuse",
+    "condemn"
+   ],
+   "not_stated_pos": {
+    "fire at": {
+     "pos": "verb",
+     "head": "fire",
+     "why": "verb + preposition; the head verb is a WordNet verb"
+    },
+    "clash with": {
+     "pos": "verb",
+     "head": "clash",
+     "why": "verb + preposition; the head verb is a WordNet verb"
+    },
+    "launch at": {
+     "pos": "verb",
+     "head": "launch",
+     "why": "verb + preposition; the head verb is a WordNet verb"
+    }
+   }
+  },
+  "relation.kinetic_verbs": {
+   "pos": "verb",
+   "means": "first predicate word of a kinetic act (did / allies / opponents on a card)",
+   "origin": "concepts_v0.py:26 KIN",
+   "ledger": "L2975",
+   "words": [
+    "strike",
+    "target",
+    "attack",
+    "hit",
+    "destroy",
+    "bomb",
+    "fire",
+    "launch",
+    "shoot",
+    "kill",
+    "retaliate",
+    "raid",
+    "intercept",
+    "repel",
+    "counter",
+    "fend",
+    "carry",
+    "blockade",
+    "threaten"
+   ]
+  },
+  "change.status_groups": {
+   "pos": "verb",
+   "means": "opposite predicate groups for triage status conflicts",
+   "origin": "concepts_v0.py:723 STATUS_GROUPS",
+   "ledger": "L2986",
+   "groups": [
+    [
+     [
+      "open",
+      "reopen",
+      "resume",
+      "start",
+      "begin",
+      "launch",
+      "restart"
+     ],
+     [
+      "close",
+      "shut",
+      "suspend",
+      "stop",
+      "end",
+      "halt",
+      "cease",
+      "finish"
+     ]
+    ],
+    [
+     [
+      "win",
+      "gain",
+      "advance",
+      "capture",
+      "secure",
+      "take"
+     ],
+     [
+      "lose",
+      "retreat",
+      "surrender",
+      "forfeit",
+      "withdraw"
+     ]
+    ],
+    [
+     [
+      "approve",
+      "pass",
+      "accept",
+      "agree",
+      "allow",
+      "permit",
+      "confirm",
+      "support",
+      "back",
+      "release",
+      "free"
+     ],
+     [
+      "reject",
+      "veto",
+      "refuse",
+      "ban",
+      "block",
+      "deny",
+      "oppose",
+      "detain",
+      "arrest",
+      "decline"
+     ]
+    ],
+    [
+     [
+      "rise",
+      "increase",
+      "grow",
+      "climb",
+      "surge",
+      "raise",
+      "jump",
+      "gain"
+     ],
+     [
+      "fall",
+      "decrease",
+      "drop",
+      "decline",
+      "shrink",
+      "slump",
+      "cut",
+      "plunge",
+      "reduce"
+     ]
+    ],
+    [
+     [
+      "survive",
+      "live",
+      "recover",
+      "arrive",
+      "return"
+     ],
+     [
+      "die",
+      "kill",
+      "dead",
+      "perish",
+      "leave",
+      "depart"
+     ]
+    ]
+   ],
+   "not_stated_pos": {
+    "dead": {
+     "pos": "adj",
+     "why": "canonical predicate 'dead' (copula), WordNet adjective"
+    }
+   }
+  },
+  "change.status_objects": {
+   "pos": "adj",
+   "means": "opposite object words for triage status conflicts",
+   "origin": "concepts_v0.py:728 STATUS_OBJ",
+   "ledger": "L2986",
+   "groups": [
+    [
+     [
+      "alive",
+      "survived",
+      "open",
+      "opened",
+      "operating",
+      "active",
+      "resumed",
+      "intact",
+      "safe"
+     ],
+     [
+      "dead",
+      "died",
+      "killed",
+      "closed",
+      "shut",
+      "halted",
+      "suspended",
+      "destroyed",
+      "unsafe",
+      "collapsed"
+     ]
+    ]
+   ],
+   "not_stated_pos": {
+    "survived": {
+     "pos": "verb",
+     "why": "past participle used as an object word, WordNet verb"
+    },
+    "resumed": {
+     "pos": "verb",
+     "why": "past participle used as an object word, WordNet verb"
+    },
+    "died": {
+     "pos": "verb",
+     "why": "past participle used as an object word, WordNet verb"
+    },
+    "killed": {
+     "pos": "verb",
+     "why": "past participle used as an object word, WordNet verb"
+    },
+    "collapsed": {
+     "pos": "verb",
+     "why": "past participle used as an object word, WordNet verb"
+    }
+   }
+  },
+  "amount.units": {
+   "pos": "noun",
+   "means": "count nouns read as the unit of a number (regex alternation, order kept); the scale units (%, percent, million, billion, thousand, trillion, k) stay in code",
+   "origin": "concepts_v0.py:708 NUM_RE",
+   "ledger": "L2986",
+   "words": [
+    "dead",
+    "people",
+    "killed",
+    "injured",
+    "troops",
+    "soldiers",
+    "civilians",
+    "missiles",
+    "drones",
+    "dollars",
+    "deaths",
+    "barrels",
+    "ships"
+   ],
+   "not_stated_pos": {
+    "injured": {
+     "pos": "adj",
+     "why": "participle noun use ('5 injured'), WordNet adjective"
+    }
+   }
+  },
+  "forward.not_forward_phrases": {
+   "pos": "phrase",
+   "means": "phrases that contain a forward cue word but state no forward statement (so the forward-statement regex skips the quote)",
+   "origin": "developments_v0.py:22 FWD_NOT",
+   "ledger": "L3001",
+   "words": [
+    "early warning",
+    "warning system",
+    "warning systems",
+    "without warning"
+   ]
+  }
+ },
+ "labels": {
+  "about": "output class names the code assigns and compares (not trigger words); they may appear in code",
+  "attack.outcome": [
+   "hit",
+   "attack",
+   "blocked",
+   "none"
+  ],
+  "status.class": [
+   "dead",
+   "alive"
+  ]
+ }
+}

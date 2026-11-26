@@ -14,9 +14,16 @@ Runs on the two offline fixtures of build-knowledge-fixture.py (simulation/fixtu
     /workspace/models/embed-zs/.venv/bin/python simulation/check-knowledge.py [--area c1,mix] [--only K1,K2,...] [--keep]
 MATURITY numbers (pct reinforced, contested per 100, bridging, answerable, identity pairs resolved / conflicts, merge rate, collapsed wire copies, contested kept / dropped) are printed on the K2 / K4 / K5 / K8 lines, never gated. One PASS / FAIL line per step and area with the numbers asserted, then the total; exit 1 on any FAIL. A step whose input is missing FAILs with the reason (never silently skipped); a failed K1 or K2 makes later steps of that area FAIL as 'needs K1' / 'needs K2'.
 CPU only, offline, no hosted call, no queue write, no service touched; decider.py, lean/, live_trace*.py, slow_clock.py, chain_windows.py are not edited (slow_clock asserts check_against_lean() == 160, shown on K1). Target under 120 s per area (seconds shown; the join loads e5-small-v2, so K2 and K6 take ~45 s each and the OVER 120 tag is informational), K8 under 40 s per area plus the shared ~18 s ECB+ eval. Scratch = a temp dir, removed at exit (--keep leaves it and prints the path)."""
-import sys, os, re, json, time, shutil, hashlib, tempfile, subprocess, collections, itertools
+import sys, os, re, json, datetime, time, shutil, hashlib, tempfile, subprocess, collections, itertools
 HERE = os.path.dirname(os.path.abspath(__file__)); KP = os.path.dirname(HERE); WS = os.path.join(KP, "projects", "world-state")
 FIXROOT = os.path.join(HERE, "fixtures", "knowledge"); PYNP = "/workspace/models/embed-zs/.venv/bin/python"; PY = PYNP if os.path.exists(PYNP) else sys.executable
+def area_bars(key):
+    """the area's own bars from fixtures/knowledge/areas.json (round A, L3012); a missing area or missing bars is a Fail, never a default"""
+    p = os.path.join(FIXROOT, "areas.json"); A = {a["key"]: a for a in json.load(open(p))} if os.path.exists(p) else {}
+    if key not in A: raise Fail("area %s missing from %s" % (key, os.path.relpath(p, KP)))
+    b = A[key].get("bars")
+    if not isinstance(b, dict) or not isinstance(b.get("counters_gt0"), list): raise Fail("area %s has no bars.counters_gt0 in areas.json" % key)
+    return b
 ENV = {**os.environ, "PYTHONHASHSEED": "0", "CUDA_VISIBLE_DEVICES": "", "WORLD_GPU": "0", "HF_HUB_OFFLINE": "1", "THREADS": "4", "TOKENIZERS_PARALLELISM": "false"}
 SEALED = ("consolidated.json", "evolved.json", "resource_state.json", "truth.json", "educate_index.json", "knowledge.json")
 KEYS = ("as_of", "window", "articles", "publishers", "counters", "edges", "contested", "capabilities", "funnel", "growth", "yield", "provisional")
@@ -29,6 +36,11 @@ class Fail(Exception): pass
 def need(cond, msg, bad):
     if not cond: bad.append(msg)
     return cond
+LEX_OFF = os.environ.get("KP_LEXICONS", "on").strip().lower() == "off"; SKIPPED = []
+def need_lex(cond, msg, bad, cls):
+    """an assertion that tests a lexicon's own behaviour (declared in L3011): with KP_LEXICONS=off a failure is a SKIP naming the class, not a FAIL"""
+    if cond or not LEX_OFF: return need(cond, msg, bad)
+    SKIPPED.append("SKIP (lexicons off, needs %s): %s" % (cls, msg)); return cond
 def run(cmd, timeout):
     try: r = subprocess.run(cmd, capture_output=True, text=True, cwd=WS, env=ENV, timeout=timeout); return r.returncode, r.stdout, r.stderr
     except subprocess.TimeoutExpired as e: return -9, (e.stdout.decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")), "timeout after %d s" % timeout
@@ -85,7 +97,7 @@ def k2(C):
     need(obs == n and (k.get("articles") == n), "observations %s / knowledge articles %s, want %d" % (obs, k.get("articles"), n), bad)
     need(k.get("provisional") is True, "provisional is not true", bad)
     cn = {c: ((k.get("counters") or {}).get(c) or {}).get("n", 0) for c in COUNTERS}
-    for c in (("new", "reinforced") if C.key == "c1" else ("new", "bridging") if C.key == "mix" else ("new",)): need(cn[c] > 0, "counter %s = %s, want > 0" % (c, cn[c]), bad)   # contested: maturity only (time-aware rule, proven on K8 (d))
+    for c in area_bars(C.key)["counters_gt0"]: need(cn.get(c, 0) > 0, "counter %s = %s, want > 0" % (c, cn.get(c, 0)), bad)   # contested: maturity only (time-aware rule, proven on K8 (d))
     y = k.get("yield") or {}
     if bad: raise Fail("; ".join(bad))
     return "%d files, articles %d, new %d, reinforced %d, contested %d, bridging %d | maturity: reinforced %s%%, contested/100 %s, bridging %s, answerable %s" % (len(have), n, cn["new"], cn["reinforced"], cn["contested"], cn["bridging"], y.get("pct_reinforced"), y.get("contested_per_100"), y.get("bridging"), y.get("answerable"))
@@ -207,7 +219,7 @@ def k7(C):
     if bad: raise Fail("; ".join(bad))
     return "page feed knowledge(src=trace:<scratch>) has %s, counters equal knowledge.json, %d articles named (src=area:<key> builds a cache window with slow_clock, not run here)" % ("/".join(FEED), na)
 # ---------------------------------------------------------------- K8
-JOIN_F1_BAR = 0.49; KINDS = ("polarity", "amount", "status", "direction"); DAY_RX = re.compile(r"^\d{4}-\d{2}-\d{2}$"); _JOIN = {}   # the ECB+ eval runs once per check (~18 s) and is shared by the areas
+JOIN_F1_BAR = 0.49; SPK_KINDS = ("outcome", "claim_vs_denial"); SPK_PAIRS = {frozenset(("hit", "blocked")), frozenset(("hit", "none"))}; KINDS = ("polarity", "amount", "status", "direction") + SPK_KINDS; DAY_RX = re.compile(r"^\d{4}-\d{2}-\d{2}$"); _JOIN = {}   # the ECB+ eval runs once per check (~18 s) and is shared by the areas
 def ws_mod(name):
     if WS not in sys.path: sys.path.insert(0, WS)
     return __import__(name)
@@ -234,7 +246,7 @@ def synthetic(C, bad):
     def ce(d_care, d_die): S = type("S", (), {})(); S.arts = {"a1": {"day": d_care}, "a2": {"day": d_die}}; S.asr = {"A:care": care, "A:die": die}; return G.contradict_edges(S, ["A:care", "A:die"], "a2")
     need(len(ce("2025-11-18", "2025-11-20")) == 0, "synthetic: care(18) then die(20) gives %d contradiction edges, want 0 (timeline)" % len(ce("2025-11-18", "2025-11-20")), bad)
     r = ce("2025-11-20", "2025-11-18"); o = (r[0].get("order") or {}) if r else {}
-    need(len(r) == 1 and r[0].get("kind") == "status" and o.get("reversal") is True and o.get("earlier") == "A:die", "synthetic: die(18) then care(20) gives %s, want 1 status edge, order.reversal True, earlier A:die" % ([(x.get("kind"), x.get("order")) for x in r]), bad)
+    need_lex(len(r) == 1 and r[0].get("kind") == "status" and o.get("reversal") is True and o.get("earlier") == "A:die", "synthetic: die(18) then care(20) gives %s, want 1 status edge, order.reversal True, earlier A:die" % ([(x.get("kind"), x.get("order")) for x in r]), bad, "status.verbs")
     need(len(ce(None, "2025-11-18")) == 0 and len(ce("2025-11-20", None)) == 0, "synthetic: an undated side fires a status edge", bad)
     def neg(t, nw, vw): n, v = t.index(nw), t.index(vw); return G.neg_in_scope(t, (n, n + len(nw), "negation"), (v, v + len(vw)), 0, len(t))
     ns = (neg("She was unable to nurse, so a zoo staffer hand-milked her mother.", "unable", "hand-milked"), neg("Fiona did not survive the night.", "not", "survive"), neg("Despite the hat she recovered quickly.", "Despite", "recovered"))
@@ -246,6 +258,21 @@ def synthetic(C, bad):
     def cp(d_die, d_care, anchor_care="person:fiona", jmap=None):
         by = {kd: {"anchor": "person:fiona", "attrs": {"status": "dead"}}, ka: {"anchor": anchor_care, "attrs": {"status": "alive"}}}
         return SC.contested_pairs({"join": {"map": jmap or {}}}, stores, [st], by, ST({"a2": d_die, "a1": d_care}))
+    # attribution control (T158 round 3): a claim and a denial by DIFFERENT speakers on one target fire; the same speaker repeating, an attack-only claim against 'no damage', and a pair 3 days apart do not
+    def rep(spk, cls, tg=("iso:KW",), den=False): return {"speakers": [{"text": spk, "entity": spk}], "kind": "said", "say": "deny" if den else "say", "cls": cls, "explicit_denial": den, "targets": list(tg), "quote": "q-" + cls}
+    def rc(i, art, r): return {"id": i, "kind": "claim", "subj": "x:" + i, "pred": "p", "obj": None, "obj_text": None, "key": "k-" + i, "evid": [{"art": art, "pub": "P-" + art, "independent": True, "attrs": {"polarity": "positive", "place": None, "time": [], "modality": "asserted", "report": [r]}}]}
+    def se(ra, rb, da="2025-11-18", db="2025-11-18"): S = type("S", (), {})(); S.arts = {"s1": {"day": da}, "s2": {"day": db}}; S.asr = {"A:r1": rc("A:r1", "s1", ra), "A:r2": rc("A:r2", "s2", rb)}; return G.contradict_edges(S, ["A:r1", "A:r2"], "s2")
+    f1 = se(rep("iso:IR", "hit"), rep("iso:KW", "blocked")); f2 = se(rep("iso:IR", "hit"), rep("iso:KW", "none")); f3 = se(rep("iso:IR", "attack"), rep("iso:KW", "none", den=True))
+    need_lex([x["kind"] for x in f1] == ["outcome"] and [x["kind"] for x in f2] == ["claim_vs_denial"] and [x["kind"] for x in f3] == ["claim_vs_denial"], "attribution control: hit/blocked, hit/none, attack/explicit denial give %s %s %s, want outcome, claim_vs_denial, claim_vs_denial" % ([x["kind"] for x in f1], [x["kind"] for x in f2], [x["kind"] for x in f3]), bad, "attack.report_pairs")
+    n1 = (len(se(rep("iso:IR", "hit"), rep("iso:IR", "blocked"))), len(se(rep("iso:IR", "attack"), rep("iso:KW", "none"))), len(se(rep("iso:IR", "hit"), rep("iso:KW", "blocked"), db="2025-11-21")), len(se(rep("iso:IR", "hit"), rep("unresolved", "blocked"))), len(se(rep("iso:IR", "hit"), rep("iso:KW", "blocked", tg=("iso:BH",)))))
+    need(n1 == (0, 0, 0, 0, 0), "attribution control: same speaker / attack vs plain no-damage / 3 days apart / unresolved speaker / other target fire %s edges, want 0 each" % (n1,), bad)
+    if f1:   # the edge reaches contested_pairs with both sides and their speakers
+        e1 = dict(f1[0]); st2 = os.path.join(C.S, "k8-synthetic-spk-store.jsonl")
+        with open(st2, "w", encoding="utf-8") as f: f.write(json.dumps({"edges": [[["contradiction", e1["a"], e1["b"], "contradicts"], e1]]}) + "\n")
+        k1, k2 = CO.h("k-A:r1"), CO.h("k-A:r2"); by2 = {k1: {"anchor": "x:1"}, k2: {"anchor": "x:2"}}
+        st3 = [{"asr": {"A:r1": rc("A:r1", "s1", rep("iso:IR", "hit")), "A:r2": rc("A:r2", "s2", rep("iso:KW", "blocked"))}}]
+        kp, dp = SC.contested_pairs({"join": {"map": {}}}, st3, [st2], by2, ST({"s1": "2025-11-18", "s2": "2025-11-18"}))
+        need(len(kp) == 1 and kp[0]["kind"] == "outcome" and sorted(x["speakers"][0]["entity"] for x in kp[0]["sides"].values()) == ["iso:IR", "iso:KW"] and not dp, "contested_pairs on the speaker edge: kept %s dropped %s, want 1 outcome pair with both speakers (different anchors allowed)" % (kp, dp), bad)
     kept, drop = cp("2025-11-18", "2025-11-20")
     need(len(kept) == 1 and kept[0]["kind"] == "status" and kept[0]["reversal"] is True and kept[0]["earlier"] == {"edge": kd, "day": "2025-11-18"} and kept[0]["later"]["edge"] == ka and not drop, "contested_pairs die(18)/care(20): kept %s dropped %s, want 1 status pair earlier = die" % (kept, drop), bad)
     got = {"timeline": cp("2025-11-20", "2025-11-18")[1], "unordered": cp("2025-11-18", None)[1], "cross_anchor": cp("2025-11-18", "2025-11-20", anchor_care="concept:zoo")[1], "self_pair": cp("2025-11-18", "2025-11-20", jmap={ka: kd})[1]}
@@ -295,7 +322,12 @@ def k8(C):
     pairs = k.get("contested") or []; pbad = []
     for p in pairs:
         a, b, kd = p.get("a"), p.get("b"), p.get("kind"); er, la = p.get("earlier") or {}, p.get("later") or {}; da, db = er.get("day"), la.get("day")
-        ok = a != b and a in E and b in E and E[a].get("anchor") == E[b].get("anchor") and kd in KINDS and isinstance(da, str) and isinstance(db, str) and DAY_RX.match(da) and DAY_RX.match(db) and da <= db and {er.get("edge"), la.get("edge")} == {a, b} and (kd != "status" or p.get("reversal") is True)
+        spk = kd in SPK_KINDS; sd = list((p.get("sides") or {}).values()); sp = [{x.get("entity") for x in q.get("speakers", []) if x.get("entity") != "unresolved"} for q in sd]
+        if spk:   # attribution kinds (T158 round 3): DIFFERENT speakers, a shared target, <= 2 days, incompatible outcome classes by rule; no anchor requirement
+            oc = {q.get("outcome") for q in sd}; dd = sorted(q.get("day") or "" for q in sd)
+            sok = len(sd) == 2 and all(sp) and not (sp[0] & sp[1]) and bool(p.get("targets")) and all(q.get("quote") for q in sd) and (frozenset(oc) in SPK_PAIRS or (kd == "claim_vs_denial" and oc == {"attack", "none"})) and all(DAY_RX.match(x) for x in dd) and (datetime.date.fromisoformat(dd[1]) - datetime.date.fromisoformat(dd[0])).days <= 2
+            if not sok: pbad.append("speaker pair %s/%s %s breaks the rule: %s" % (a, b, kd, [(q.get("speakers"), q.get("outcome")) for q in sd]))
+        ok = a != b and a in E and b in E and (spk or E[a].get("anchor") == E[b].get("anchor")) and kd in KINDS and isinstance(da, str) and isinstance(db, str) and DAY_RX.match(da) and DAY_RX.match(db) and da <= db and {er.get("edge"), la.get("edge")} == {a, b} and (kd != "status" or p.get("reversal") is True)
         if not ok: pbad.append("%s/%s %s %s..%s" % (a, b, kd, da, db))
     need(not pbad, "%d contested pairs break the rule (a != b, in edges, same anchor, dated, ordered, kind, reversal on status), e.g. %s" % (len(pbad), pbad[:2]), bad)
     cev = sorted({x for p in pairs for x in (p.get("a"), p.get("b"))}); cc = cnt.get("contested") or {}
@@ -331,6 +363,7 @@ def main():
             res.append((ak, k, ok)); print("%s %s %-4s %-12s %5.1f s  %s" % ("PASS" if ok else "FAIL", k, ak, name, time.time() - t, msg), flush=True)
         secs[ak] = time.time() - ta
     n = sum(1 for r in res if r[2]); print("TOTAL %.1f s (%s) | %d of %d steps PASS%s" % (time.time() - t0, ", ".join("%s %.0f s%s" % (a, s, "" if s < 120 else " OVER 120") for a, s in secs.items()), n, len(res), "" if n == len(res) else " | FAIL: " + ", ".join("%s/%s" % (a, k) for a, k, o in res if not o)))
+    for x in SKIPPED: print(x, flush=True)
     if KEEP: print("scratch kept: " + root)
     elif os.path.basename(root).startswith("check-knowledge-") and os.path.dirname(root) == tempfile.gettempdir(): shutil.rmtree(root, ignore_errors=True)
     sys.exit(0 if res and n == len(res) else 1)

@@ -43,7 +43,8 @@ def score(key):
     wrong = [s["text"][:100] for s in (k.get("answer") or {}).get("statements", []) if set(s.get("refs") or []) & bad_edges]
     return {"area": key, "reinforced_edges": len(edges), "fragments_tested": n, "grounded": ok, "unmeasurable": unm, "pronoun_subject": pron, "rate_ex_pronoun": round(ok / (n - pron), 4) if n - pron else None, "rate": round(ok / n, 4) if n else None, "ungrounded_edges": len(bad_edges), "wrong_agent_statements": len(wrong), "wrong_statements": wrong, "ungrounded": bad}
 if __name__ == "__main__":
-    out = {a: score(a) for a in ("c1", "mix")}
+    AREAS = sys.argv[sys.argv.index("--area") + 1].split(",") if "--area" in sys.argv else ["c1", "mix"]
+    out = {a: score(a) for a in AREAS}
     if "--json" in sys.argv: print(json.dumps(out, indent=1))
     else:
         for a, r in out.items(): print("%s: grounded %s/%s = %s (pronoun-subject fragments %s, rate without them %s; unmeasurable %s), ungrounded edges %s, wrong-agent statements %s" % (a, r["grounded"], r["fragments_tested"], r["rate"], r["pronoun_subject"], r["rate_ex_pronoun"], r["unmeasurable"], r["ungrounded_edges"], r["wrong_agent_statements"])); [print("   BAD", b["key"], "|", b["sent"][:110]) for b in r["ungrounded"][:12]]

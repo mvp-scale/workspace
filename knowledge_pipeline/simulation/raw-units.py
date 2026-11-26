@@ -250,7 +250,7 @@ def sample_trace(n=5, pick="articles", aid=None, src="window"):
     return {"articles": recs, "tally": tally, "merge_rule": MERGE_LABEL, "source": window_info(src)}
 # ---- staged interest areas + the knowledge feed (L2936, plan 5): fixtures/knowledge/<key>/trace (saved articles, offline) -> cache window area-<key> with slow.jsonl + slow_consolidate/knowledge.json ----
 SIM = os.path.dirname(os.path.abspath(__file__)); AREA_SRC = os.path.join(SIM, "fixtures", "knowledge"); WSD = os.path.join(os.path.dirname(SIM), "projects", "world-state")
-AREA_SHORT = {"c1": "Fiona the hippo", "mix": "Gulf strikes + energy"}   # picker names; any other key falls back to its areas.json label
+# picker names: the "short" field of the area entry in areas.json, else its label (no area is named in code)
 AREA_LOCK = threading.Lock()
 SLOW_FILES = ("g4_align.py", "slow_clock.py", "claims_units.py", "claims_v1.py", "raw_core.py", "fewnerd_typing.py", "live_trace_v4.py")   # a change here re-runs the slow clock for a cached area
 CONS_FILES = ("consolidate.py", "slow_consolidate.py", "educate.py", "knowledge_yield.py", "resource_truth.py", "evolve.py", "ledger_split.py", "fact_join.py", "fact-join-model.json")   # a change here re-runs consolidation only (the fact-join model too)
@@ -259,7 +259,7 @@ def area_dir(key): return os.path.join(_area_root(), "area-" + key)
 def _areas_json(): return _jload(os.path.join(AREA_SRC, "areas.json"), []) or []
 def _area_meta(key):
     for a in _areas_json():
-        if a.get("key") == key: return {"key": key, "short": AREA_SHORT.get(key) or a.get("label") or key, "label": a.get("label"), "note": a.get("note"), "articles": len(a.get("ids") or []), "publishers": len(a.get("publishers") or []), "days": a.get("days")}
+        if a.get("key") == key: return {"key": key, "short": a.get("short") or a.get("label") or key, "label": a.get("label"), "note": a.get("note"), "articles": len(a.get("ids") or []), "publishers": len(a.get("publishers") or []), "days": a.get("days")}
     return None
 def _area_of(wd):
     b = os.path.basename(os.path.abspath(wd).rstrip("/"))
@@ -311,6 +311,53 @@ def concepts(src="window"):
     wd, td = resolve_window(src); w = _load_window(wd, td); r = CV.build(td, w["info"].get("area") or w["info"].get("name"))
     if r.get("exists"): r["source"] = w["info"]
     return r
+def developments(src="window", cut=None):
+    """developments v0 (PROVISIONAL, projects/world-state/developments_v0.py): the window's articles grouped into developments (area -> development -> assertion -> evidence), with certainty words, contradictions, KNOW / FOLLOW / EXPECT and the triage changes since a cut (article seq; default = the last 25% of the window is new). Read only; no network, no model. {exists: False, why} when the window has no knowledge feed."""
+    import developments_v0 as DV
+    wd, td = resolve_window(src); w = _load_window(wd, td); r = DV.build(td, w["info"].get("area") or w["info"].get("name"), cut)
+    if r.get("exists"): r["source"] = w["info"]; r["across"] = developments_across(td, w["info"].get("area") or w["info"].get("name"))
+    return r
+_ACROSS = {}
+def developments_across(td, area=None, cuts=4):
+    """round V (00.1 row V): what each development did across the window's cuts, from the carried ids of round D. The window is replayed at article-count prefixes
+    (25/50/75/100%): DV.build(only=prefix, prev=members_of(previous cut)). Pure function of the window files: no model, no network; every title is a quoted article title.
+    Per step: new (no earlier id), kept (the id carried), merged (its members now sit inside another development; one id survives), split (members spread, none holds half).
+    A gap is named, never filled: a step with no developments, a development missing from a middle cut, or a window too small for two cuts.
+    Caveat (round D): the grouping uses the whole window's knowledge.json, so merges made by later articles may leak into earlier cuts."""
+    import developments_v0 as DV
+    td = os.path.abspath(td); kp = os.path.join(td, "slow_consolidate", "knowledge.json"); sig = (td, cuts, os.path.getmtime(kp) if os.path.exists(kp) else 0, os.path.getmtime(os.path.join(td, "chain.jsonl")) if os.path.exists(os.path.join(td, "chain.jsonl")) else 0)
+    if sig in _ACROSS: return _ACROSS[sig]
+    A = DV._articles(td); n = len(A); ks = sorted({max(1, int(round(n * i / cuts))) for i in range(1, cuts + 1)}) if n else []
+    out = {"method": "replay of the window at article-count cuts (round D carry_ids, >= 50% of the earlier members contained)", "cheap_replay": True, "articles": n, "cuts": [], "steps": [], "gaps": [], "ids": 0}
+    prev = None; cutrows = []
+    for k in ks:
+        r = DV.build(td, area, prev=prev, only={a["id"] for a in A[:k]})
+        if not r.get("exists"): cutrows.append({"articles": k, "seq": A[k - 1]["seq"] if A else None, "developments": []}); prev = None; continue
+        devs = r["developments"] + r["thin"]; mem = DV.members_of(r)
+        cutrows.append({"articles": k, "seq": A[k - 1]["seq"], "developments": [{"id": d["id"], "title": d["title"], "articles": d["articles"], "thin": bool(d["thin"]), "mem": sorted(mem[d["id"]])} for d in devs]}); prev = mem
+    for i, c in enumerate(cutrows):
+        out["cuts"].append({"articles": c["articles"], "seq": c["seq"], "developments": [{k: v for k, v in d.items() if k != "mem"} for d in c["developments"]]})
+        if not c["developments"]: out["gaps"].append({"kind": "empty_cut", "cut": i, "articles": c["articles"], "label": "gap: no development at the cut of %d articles" % c["articles"]})
+        if i == 0: continue
+        a, b = cutrows[i - 1], c; bid = {d["id"]: d for d in b["developments"]}; aid = {d["id"]: d for d in a["developments"]}; rows = []
+        for d in b["developments"]:
+            rows.append({"id": d["id"], "title": d["title"], "articles": d["articles"], "status": "kept" if d["id"] in aid else "new", "was": aid[d["id"]]["articles"] if d["id"] in aid else None})
+        for d in a["developments"]:
+            if d["id"] in bid: continue
+            P = set(d["mem"]); best = max(((len(P & set(e["mem"])) / len(P), e) for e in b["developments"]), key=lambda t: (t[0], t[1]["id"]), default=(0, None))
+            if best[1] is not None and best[0] >= 0.5: rows.append({"id": d["id"], "title": d["title"], "articles": d["articles"], "status": "merged", "into": best[1]["id"], "into_title": best[1]["title"], "share": round(best[0], 2)})
+            else: rows.append({"id": d["id"], "title": d["title"], "articles": d["articles"], "status": "split", "share": round(best[0], 2)})
+        out["steps"].append({"from": a["articles"], "to": b["articles"], "rows": rows})
+    seen = {}
+    for i, c in enumerate(cutrows):
+        for d in c["developments"]: seen.setdefault(d["id"], []).append(i)
+    out["ids"] = len(seen)
+    for did, at in sorted(seen.items()):
+        for j in range(at[0], at[-1] + 1):
+            if j not in at: out["gaps"].append({"kind": "missing_in_middle", "id": did, "cut": j, "articles": cutrows[j]["articles"], "label": "gap: %s is missing at the cut of %d articles but present before and after" % (did, cutrows[j]["articles"])})
+    if len(cutrows) < 2: out["gaps"].append({"kind": "one_cut", "label": "gap: this window has %d article%s, one cut only, no history yet" % (n, "" if n == 1 else "s")})
+    _ACROSS[sig] = out
+    return out
 def deep(src, concept):
     """the time-boxed deep pass of one concept (zoom L2/L3): subconcepts, timeline, competing accounts, history before the window, open questions; own data and local caches only, cached per (window, concept), 120 s box"""
     import concepts_v0 as CV

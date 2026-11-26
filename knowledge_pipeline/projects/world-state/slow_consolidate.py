@@ -172,14 +172,27 @@ def contested_pairs(cons, stores, g4p, by_id, ST):
         a, b = amap.get(re.sub(r"#[+-]$", "", v["a"])), amap.get(re.sub(r"#[+-]$", "", v["b"])); k = v.get("kind")
         if not (a and b): drop["unmapped"] += 1; continue
         if a == b: drop["self_pair"] += 1; continue
-        if by_id[a].get("anchor") != by_id[b].get("anchor"): drop["cross_anchor"] += 1; continue
+        spk_kind = k in ("outcome", "claim_vs_denial")   # attribution contradictions (T158 round 3): the two sides are different SPEAKERS on one TARGET entity, not one anchor; both sides stay, with their speakers
+        if spk_kind:
+            sa_, sb_ = {x["entity"] for x in (v.get("speakers") or {}).get("a", []) if x["entity"] != "unresolved"}, {x["entity"] for x in (v.get("speakers") or {}).get("b", []) if x["entity"] != "unresolved"}
+            if not (sa_ and sb_) or sa_ & sb_: drop["same_or_unknown_speaker"] += 1; continue
+            if not v.get("targets"): drop["no_shared_target"] += 1; continue
+        elif by_id[a].get("anchor") != by_id[b].get("anchor"): drop["cross_anchor"] += 1; continue
         da, db = side_day(v, "a", ST), side_day(v, "b", ST)
         if not (da and db): drop["unordered"] += 1; continue
+        if spk_kind and abs((datetime.date.fromisoformat(da[:10]) - datetime.date.fromisoformat(db[:10])).days) > 2: drop["outside_2_days"] += 1; continue
         (ea, la), (eb, lb) = ((a, da), (b, db)) if (da, a) <= (db, b) else ((b, db), (a, da))
         if k == "status":
             sa = ((by_id[ea].get("attrs") or {}).get("status")); sb = ((by_id[eb].get("attrs") or {}).get("status"))
             if not (sa == "dead" and sb == "alive" and la < lb): drop["timeline"] += 1; continue
-        keep[(min(a, b), max(a, b), str(k))] = {"a": min(a, b), "b": max(a, b), "kind": k, "earlier": {"edge": ea, "day": la}, "later": {"edge": eb, "day": lb}, "reversal": k == "status", "note": v.get("note"), "status": STATUS}
+        pr = {"a": min(a, b), "b": max(a, b), "kind": k, "earlier": {"edge": ea, "day": la}, "later": {"edge": eb, "day": lb}, "reversal": k == "status", "note": v.get("note"), "status": STATUS}
+        if spk_kind:   # both sides with their speakers, outcome class, quote and the shared target entity; sides are keyed by edge id (a < b)
+            sd = lambda side, e_: {"edge": e_, "speakers": [{"entity": x["entity"], "text": x.get("text")} for x in (v.get("speakers") or {}).get(side, [])], "said": (v.get("say") or {}).get(side), "outcome": (v.get("classes") or {}).get(side), "quote": (v.get("quotes") or {}).get(side), "day": side_day(v, side, ST)}
+            sides = sorted((sd("a", a), sd("b", b)), key=lambda x: x["edge"])
+            pr.update({"targets": list(v.get("targets") or []), "sides": {x["edge"]: x for x in sides}, "label": " vs ".join("%s: %s %s" % ("/".join(y["text"] or y["entity"] for y in x["speakers"]), x["said"], x["outcome"]) for x in sides)})
+        kk = (min(a, b), max(a, b), str(k))
+        if kk in keep: drop["duplicate_pair"] += 1; continue   # two store edges that join-map onto the same two assertions are one pair
+        keep[kk] = pr
     return [keep[t] for t in sorted(keep)], dict(sorted(drop.items()))
 def knowledge(cons, meta, items, stores, g4p, ix, IX, trace):
     """consolidated body -> the knowledge.json body (sealed by the caller). Everything is derived from the window's own observations and its own G4 store: no clock, no random value, sorted everywhere, so the same inputs give the same sha256. Counters: new = assertion edges (fact slots, consolidate.py slot_merge) first seen in the window (the store is the window's own, so all of them); reinforced = strength >= 2 independent publishers (consolidate.independence: one source per story root or near-identical sentence, publisher = the fragment's own); contested = contradiction edges of the store mapped to slot edges and kept by contested_pairs (a != b, same anchor, time-ordered, status only when reversed); bridging = capability nodes used by >= 2 Areas."""

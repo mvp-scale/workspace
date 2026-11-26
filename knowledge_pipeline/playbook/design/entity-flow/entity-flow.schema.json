@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "entity-flow.schema.json",
+  "title": "Knowledge pipeline entity-flow bundle",
+  "description": "Portable bundle of one staged area: process stages and the entities that flow through them. Every value is PROVISIONAL unless a field says otherwise. Nullable fields are null when the pipeline did not produce the value (see entity-model.md for coverage).",
+  "type": "object",
+  "required": ["meta", "stages", "publishers", "articles", "fragments", "facts", "entities", "links", "contests", "timeline", "changes"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {"$ref": "#/$defs/meta"},
+    "stages": {"type": "array", "items": {"$ref": "#/$defs/stage"}},
+    "publishers": {"type": "array", "items": {"$ref": "#/$defs/publisher"}},
+    "articles": {"type": "array", "items": {"$ref": "#/$defs/article"}},
+    "fragments": {"type": "array", "items": {"$ref": "#/$defs/fragment"}},
+    "facts": {"type": "array", "items": {"$ref": "#/$defs/fact"}},
+    "entities": {"type": "array", "items": {"$ref": "#/$defs/entity"}},
+    "links": {"type": "array", "items": {"$ref": "#/$defs/link"}},
+    "contests": {"type": "array", "items": {"$ref": "#/$defs/contest"}},
+    "timeline": {"type": "array", "items": {"$ref": "#/$defs/timeline_item"}},
+    "changes": {"type": "array", "items": {"$ref": "#/$defs/change"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1},
+    "nstr": {"type": ["string", "null"]},
+    "nnum": {"type": ["number", "null"]},
+    "nint": {"type": ["integer", "null"]},
+    "idlist": {"type": "array", "items": {"type": "string"}},
+    "named_p": {"type": "array", "items": {"type": "object", "required": ["name", "p"], "properties": {"name": {"type": "string"}, "p": {"type": "number"}}}},
+    "meta": {
+      "type": "object",
+      "required": ["schema_version", "area", "area_label", "as_of", "provisional", "counts", "dropped", "coverage", "timing"],
+      "properties": {
+        "schema_version": {"const": "entity-flow-0.1"},
+        "area": {"type": "string"}, "area_label": {"type": "string"}, "as_of": {"type": "string"},
+        "provisional": {"type": "boolean"}, "source": {"type": "string"},
+        "endpoint_calls": {"type": "object", "additionalProperties": {"type": "integer"}},
+        "generated_seconds": {"type": "number"},
+        "dropped": {"type": "object", "description": "per-type counts removed to stay under the size cap", "additionalProperties": {"type": "integer"}},
+        "caps": {"type": "object"},
+        "counts": {"type": "object", "required": ["publishers", "articles", "fragments", "facts", "entities", "links", "contests", "timeline", "changes"], "properties": {"entity_kinds": {"type": "object"}}},
+        "funnel": {"type": "object", "description": "knowledge.funnel: observations, fragments, sources, facts_raw, assertions, reinforced, contested, capabilities, bridging, concepts"},
+        "yield": {"type": "object"}, "counters": {"type": "object"},
+        "growth": {"type": "array", "items": {"type": "object", "required": ["seq", "assertions", "reinforced", "contested"]}},
+        "join": {"type": "object"}, "answer": {"type": ["object", "null"]},
+        "timing": {"type": "object"}, "coverage": {"type": "object"},
+        "rules": {"type": ["string", "null"]}, "sha256_knowledge": {"type": ["string", "null"]}
+      }
+    },
+    "stage": {
+      "type": "object",
+      "required": ["id", "name", "clock", "status", "module", "input_types", "output_types"],
+      "properties": {
+        "id": {"type": "string"}, "name": {"type": "string"},
+        "clock": {"type": "string", "description": "fast = per-article chain (600 ms budget); slow(per article) = slow_clock.py deferred parts; slow(batch) = window consolidation; slow(on demand) = deep pass"},
+        "status": {"type": "string", "description": "built | partial | missing, optionally with PROVISIONAL"},
+        "module": {"type": "string"}, "input_types": {"$ref": "#/$defs/idlist"}, "output_types": {"$ref": "#/$defs/idlist"}
+      }
+    },
+    "publisher": {
+      "type": "object", "required": ["id", "owner", "owner_listed", "articles"],
+      "properties": {"id": {"type": "string", "description": "feed name as the queue labels it"}, "owner": {"type": "string"}, "owner_listed": {"type": "boolean", "description": "false = not in publisher-owners.json, counted as its own owner"}, "cite": {"$ref": "#/$defs/nstr"}, "articles": {"type": "integer"}}
+    },
+    "article": {
+      "type": "object", "required": ["id", "seq", "publisher", "title", "published"],
+      "properties": {
+        "id": {"type": "string", "description": "sha256 hex"}, "seq": {"type": "integer"}, "publisher": {"type": "string"}, "title": {"type": "string"}, "url": {"$ref": "#/$defs/nstr"}, "published": {"$ref": "#/$defs/nstr"},
+        "read_depth": {"enum": ["full", "teaser", null]}, "read_reason": {"$ref": "#/$defs/nstr"}, "words": {"$ref": "#/$defs/nint"},
+        "story_kind": {"enum": ["first", "copy", "republished", "generic_title", "no_key", null]}, "story_root": {"type": ["object", "null"], "description": "the first article of this story (journal story key): {id, title, publisher}; null when this article is the root", "properties": {"id": {"type": "string"}, "title": {"type": "string"}, "publisher": {"type": "string"}}}, "story_publishers": {"$ref": "#/$defs/nint"},
+        "area_top": {"$ref": "#/$defs/named_p"}, "story_type_top": {"$ref": "#/$defs/named_p"}, "place_top": {"$ref": "#/$defs/named_p"},
+        "iptc_l1": {"$ref": "#/$defs/nstr"}, "iptc_node": {"$ref": "#/$defs/nstr"}, "iptc_node_label": {"$ref": "#/$defs/nstr"}, "condition_present": {"type": ["boolean", "null"]},
+        "decider": {"type": "object", "description": "field -> outcome (ANSWER_PROVISIONAL | ABSTAIN_LOW_CONFIDENCE | ABSTAIN_NOT_ADMITTED)", "additionalProperties": {"type": ["string", "null"]}},
+        "resource_events": {"type": "array", "items": {"type": "object", "required": ["resource"], "properties": {"resource": {"type": "string"}, "group": {"$ref": "#/$defs/nstr"}, "talk": {"$ref": "#/$defs/nnum"}, "signed": {"$ref": "#/$defs/nnum"}}}},
+        "sentences": {"type": "integer"}, "claims_n": {"type": "integer"}, "claims_v1_n": {"$ref": "#/$defs/nint"},
+        "ms_fast": {"$ref": "#/$defs/nnum"}, "ms_slow": {"$ref": "#/$defs/nnum"}, "gaps": {"type": ["array", "null"], "items": {"type": "string"}}
+      }
+    },
+    "fragment": {
+      "type": "object", "required": ["id", "article_id", "type"],
+      "description": "one claim record read from one sentence (claims funnel v0 with spans). Capped per article, see meta.dropped.",
+      "properties": {
+        "id": {"type": "string", "description": "<article id first 12 chars>:<index>"}, "article_id": {"type": "string"}, "sentence_index": {"$ref": "#/$defs/nint"}, "sentence": {"$ref": "#/$defs/nstr"},
+        "type": {"enum": ["triple", "partial_claim", "attribution"]}, "subject": {"$ref": "#/$defs/nstr"}, "predicate": {"$ref": "#/$defs/nstr"}, "object": {"$ref": "#/$defs/nstr"}, "missing": {"$ref": "#/$defs/nstr"},
+        "spans": {"type": "object", "description": "role -> [start, end] character offsets in the article text", "additionalProperties": {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2}},
+        "fate": {"$ref": "#/$defs/nstr"}, "factuality": {"$ref": "#/$defs/nstr"}, "negated": {"type": ["boolean", "null"]}, "modal": {"type": ["boolean", "null"]}, "resolved_from": {"type": ["object", "string", "null"], "description": "pronoun resolver v0: {pronoun, to, ner, span, sentences_back}"}
+      }
+    },
+    "fact": {
+      "type": "object", "required": ["id", "subject", "predicate", "object", "anchor", "strength", "independent_owners", "evidence"],
+      "description": "one fact slot (knowledge.edges): subject-predicate-object plus every fragment that supports it and how many independent owners that is",
+      "properties": {
+        "id": {"type": "string", "description": "sha1(key)[:12]"}, "subject": {"type": "string"}, "predicate": {"type": "string"}, "object": {"type": ["string", "null"]}, "kind": {"type": "string"}, "anchor": {"type": "string"},
+        "strength": {"type": "integer"}, "independent_owners": {"type": "integer"}, "collapsed_copies": {"type": "integer"},
+        "independent_sources": {"type": "array", "items": {"type": "object", "properties": {"owner_or_publisher": {"type": "string"}, "articles": {"$ref": "#/$defs/idlist"}, "fragments": {"type": "integer"}, "copies": {"$ref": "#/$defs/idlist"}, "how": {"$ref": "#/$defs/idlist"}}}},
+        "publishers": {"$ref": "#/$defs/idlist"},
+        "evidence": {"type": "array", "items": {"type": "object", "required": ["article_id", "publisher", "sentence"], "properties": {"article_id": {"type": "string"}, "publisher": {"type": "string"}, "sentence": {"type": "string"}, "day": {"$ref": "#/$defs/nstr"}, "fragment_id": {"$ref": "#/$defs/nstr"}}}},
+        "first_day": {"$ref": "#/$defs/nstr"}, "last_day": {"$ref": "#/$defs/nstr"}, "days": {"$ref": "#/$defs/idlist"},
+        "slot": {"type": ["object", "null"], "description": "present when >= 2 raw keys were merged by fact_join", "properties": {"n": {"type": "integer"}, "merged_how": {"type": "string"}, "min_pair_prob": {"type": "number"}, "members": {"type": "array", "items": {"type": "object"}}}},
+        "is_new": {"type": "boolean"}, "is_reinforced": {"type": "boolean"}, "in_contest": {"type": "boolean"}
+      }
+    },
+    "entity": {
+      "type": "object", "required": ["id", "label", "kind"],
+      "description": "a concept node (typed entity, place, person, org, resource row, process) or a capability. Concept-only fields are absent on capabilities.",
+      "properties": {
+        "id": {"type": "string", "description": "<type>:<canonical name> e.g. person:fiona, iso:SA, resource:primary_energy, cap:affect-price, process:..."},
+        "label": {"type": "string"}, "kind": {"enum": ["person", "org", "place", "entity", "concept", "resource", "process", "capability"]},
+        "depth": {"enum": ["L1", "L2", "L3", null]}, "state": {"enum": ["active", "emerging", "gap", "settled", "contested", null]},
+        "certainty": {"$ref": "#/$defs/nnum"}, "certainty_word": {"enum": ["established", "reported", "single source", "disputed", null]},
+        "direction": {"$ref": "#/$defs/nstr"}, "owners": {"type": "integer"}, "facts": {"type": "integer"}, "first_seq": {"$ref": "#/$defs/nint"}, "last_seq": {"$ref": "#/$defs/nint"}, "in_graph_from_seq": {"$ref": "#/$defs/nint"},
+        "what_it_is": {"type": ["object", "string", "null"]}, "slot_fill": {"type": ["object", "null"], "description": "card slot -> today | partly | cant"},
+        "edge_ids": {"$ref": "#/$defs/idlist"}, "conflicts": {"type": "array"},
+        "did": {"type": "array", "items": {"type": "object", "description": "synthesised line: verb + objects + days + outlets + edge_ids + cited sentence; the synthesised text is often broken, the sentence is not"}},
+        "drivers": {"type": "array", "items": {"type": "object", "description": "marker is a cause word or a time-order word (after, following)"}},
+        "resources": {"type": "array"}, "related": {"type": "array"}, "allies": {"type": "array"}, "opponents": {"type": "array"}, "disputed": {"type": "array"}, "gaps": {"type": "array", "items": {"type": "string"}},
+        "g4": {"type": ["object", "null"], "description": "identity record from the G4 store: type, canon, aliases, iptc_path, iptc_how, geo"},
+        "areas": {"$ref": "#/$defs/idlist"}, "bridging": {"type": "boolean"}
+      }
+    },
+    "link": {
+      "type": "object", "required": ["a", "b", "rel", "owners"],
+      "properties": {"a": {"type": "string", "description": "entity id"}, "b": {"type": "string", "description": "entity id"}, "rel": {"enum": ["affects_resource", "related", "opposes", "is_a", "part_of", "causes"]}, "direction": {"$ref": "#/$defs/nstr"}, "certainty": {"$ref": "#/$defs/nnum"}, "owners": {"type": "integer"}, "n": {"type": "integer"}, "edge_ids": {"$ref": "#/$defs/idlist"}, "note": {"$ref": "#/$defs/nstr"}}
+    },
+    "contest": {
+      "type": "object", "required": ["id", "a", "b", "kind"],
+      "description": "a pair of fact ids that disagree (a, b are fact ids); both sides kept",
+      "properties": {"id": {"type": "string"}, "a": {"type": "string"}, "b": {"type": "string"}, "kind": {"type": "string", "description": "outcome | claim_vs_denial | polarity | amount | status | direction"}, "label": {"$ref": "#/$defs/nstr"}, "status": {"$ref": "#/$defs/nstr"}, "reversal": {"type": ["boolean", "null"]}, "note": {"$ref": "#/$defs/nstr"},
+        "earlier": {"type": ["object", "null"]}, "later": {"type": ["object", "null"]}, "targets": {"type": ["array", "null"], "items": {"type": "string"}},
+        "sides": {"type": "array", "items": {"type": "object", "properties": {"edge_id": {"type": "string"}, "day": {"$ref": "#/$defs/nstr"}, "said": {"$ref": "#/$defs/nstr"}, "outcome": {"$ref": "#/$defs/nstr"}, "quote": {"$ref": "#/$defs/nstr"}, "speakers": {"type": ["array", "null"]}}}}}
+    },
+    "timeline_item": {
+      "type": "object", "required": ["concept", "edge_id"],
+      "properties": {"concept": {"type": "string", "description": "entity id"}, "seq": {"$ref": "#/$defs/nint"}, "day": {"$ref": "#/$defs/nstr"}, "text": {"$ref": "#/$defs/nstr"}, "edge_id": {"type": "string", "description": "fact id"}, "publishers": {"type": ["array", "null"], "items": {"type": "string"}}}
+    },
+    "change": {
+      "type": "object", "required": ["seq", "article_id", "verdict"],
+      "description": "per-article triage verdict: what this article did to the graph (concepts_v0 replays articles in seq order)",
+      "properties": {"seq": {"type": "integer"}, "article_id": {"type": "string"}, "publisher": {"$ref": "#/$defs/nstr"}, "verdict": {"enum": ["new_concept", "update", "conflict", "new_link", "known"]}, "concept": {"$ref": "#/$defs/nstr"}, "detail": {"$ref": "#/$defs/nstr"}, "counts": {"type": ["object", "null"]},
+        "facts": {"$ref": "#/$defs/nint"}, "unmapped": {"$ref": "#/$defs/nint"}, "graph_before": {"$ref": "#/$defs/nint", "description": "concepts in the graph before this article"}, "change_kind": {"$ref": "#/$defs/nstr"}, "change_text": {"$ref": "#/$defs/nstr"}, "change_concept": {"$ref": "#/$defs/nstr"}, "change_edge_ids": {"type": ["array", "null"], "items": {"type": "string"}},
+        "touched": {"type": ["array", "null"], "items": {"type": "string"}}, "edge_ids": {"type": ["array", "null"], "items": {"type": "string"}},
+        "concept_changes": {"type": "array", "items": {"type": "object", "properties": {"concept": {"type": "string"}, "kind": {"$ref": "#/$defs/nstr"}, "text": {"$ref": "#/$defs/nstr"}, "publisher": {"$ref": "#/$defs/nstr"}, "edge_ids": {"type": ["array", "null"]}}}}}
+    }
+  }
+}

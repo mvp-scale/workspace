@@ -24,6 +24,14 @@ The knowledge pipeline viewer (http://localhost:18766) is derived from the ledge
 
 1. Ledger viewer, Engine tab: the record. 2. Reading gates (:8100): the working view with the loop map and the lap. Both are kept current and checked at every loop tick with `python3 kit/live/monitor_pages.py` (OK, STALE or DOWN per page). Change the Engine card first, then rebuild the gates page (`python3 projects/world-state/gates_heads.py`).
 
+## Knowledge pages (playbook 00.1, current work 2026-11-24)
+
+| Page | URL | What it shows | Built by | Data |
+|---|---|---|---|---|
+| Knowledge pipeline | http://localhost:8100/mockups/knowledge-raw/index.html | Status (checklist rows + ratchet), Knowledge, Concepts, Developments views over the staged areas c1, mix, u1 and the stream window | `simulation/server.py` feeds via the console `/sim-api/` pass-through; `simulation/check-alignment.py` writes `status.json` | `knowledge-raw/status.json`, `/api/raw/*` |
+| Morning Brief (mock-up) | http://localhost:8100/mockups/knowledge-raw/executive-brief.html | Consume design D1 (L3003) | hand-built | inline |
+| Knowledge Ladder (mock-up) | http://localhost:8100/mockups/knowledge-raw/brief-mockup.html | Ladder mock-up | hand-built | inline |
+
 ## Main mock-up page (where "how good is it" is reported)
 
 | Page | URL | What it shows | Built by | Data |

@@ -275,6 +275,14 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, raw().deep(src, cid))
             except ValueError as e: return self.send(404, {"error": str(e)})
             except Exception as e: return self.send(500, {"error": repr(e)})
+        if p == "/api/raw/developments":   # developments v0 (developments_v0.py): ?src=area:<key>|window|trace:<dir> [&cut=<article seq>]; read only, no network, no model
+            from urllib.parse import parse_qs; a = parse_qs(q); src = (a.get("src") or ["window"])[0]
+            if src.startswith("trace:") and not src_ok(src[6:]): return self.send(400, {"error": "trace path must be under /workspace or /tmp"})
+            cut = (a.get("cut") or [""])[0]
+            if cut and not re.fullmatch(r"\d{1,6}", cut): return self.send(400, {"error": "cut must be an article seq (digits)"})
+            try: return self.send(200, raw().developments(src, int(cut) if cut else None))
+            except ValueError as e: return self.send(404, {"error": str(e)})
+            except Exception as e: return self.send(500, {"error": repr(e)})
         if p == "/api/raw/reset": return self.send(200, raw().reset())
         if p == "/api/raw/ticker": return self.send(200, raw().ticker())
         self.send(404, {"error": "not found"})

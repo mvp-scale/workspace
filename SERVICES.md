@@ -1,8 +1,22 @@
 # Workspace URLs
 
-Every URL we use, checked from this machine at 2026-11-10 15:17. `up` = answered, `down` = not running (on-demand or stopped). Nothing here was started to check it.
+Every URL we use. Knowledge-pipeline rows checked from this machine at 2026-11-24 13:00 (the other rows at 2026-11-10 15:17). `up`/200 = answered, `down` = not running (on-demand or stopped). Nothing here was started to check it.
 Start and stop: `./service.sh up | reset | down`, `./service.sh start <name>`. Knowledge-pipeline page detail (what each shows, what builds it): `knowledge_pipeline/services.md`. Ports and rules: `CLAUDE.md`.
 
+## Knowledge pipeline: pages in current use (2026-11-24, playbook 00.1 rounds E/A/D done, B/C/V running)
+
+Most recently changed first. Plan: `knowledge_pipeline/playbook/00.1-knowledge-enhancement-v1.md`. Record: ledger L3010-L3016.
+
+| URL | What | File (last changed) | Status |
+|---|---|---|---|
+| http://localhost:8100/mockups/knowledge-raw/index.html | Knowledge pipeline page: Status, Knowledge, Concepts, Developments views; staged areas c1, mix, u1 (u1 added by round A). Reads the bench through the console at `/sim-api/` | `demo/mockups/knowledge-raw/index.html` (2026-11-24 12:49; round V is editing it now) | 200 |
+| http://localhost:8100/mockups/knowledge-raw/executive-brief.html | Morning Brief mock-up (consume design D1, L3003) | `demo/mockups/knowledge-raw/executive-brief.html` (2026-11-23 23:08) | 200 |
+| http://localhost:8100/mockups/knowledge-raw/brief-mockup.html | Knowledge Ladder mock-up | `demo/mockups/knowledge-raw/brief-mockup.html` (2026-11-23 09:21) | 200 |
+| http://localhost:18770/ | Simulation bench (owner's task; started by hand, not by service.sh): one article or a stream through the chain; serves the `/api/raw/*` feeds the knowledge-raw page reads. It loads pipeline code at start, so round E/A/D code changes reach it only after a restart. Restart: `/workspace/models/embed-zs/.venv/bin/python /workspace/knowledge_pipeline/simulation/server.py` | `knowledge_pipeline/simulation/index.html` (2026-11-20 12:19) | 200 |
+| http://localhost:8100/mockups/structure-live/index.html | Structure pack, live (temporary, T158); also holds the staged area stores `area-c1`, `area-mix`, `area-u1` | `demo/mockups/structure-live/index.html` (2026-11-20 08:10) | 200 |
+| http://localhost:8100/mockups/target-state/index.html | Target state per element | `demo/mockups/target-state/index.html` (2026-11-18 15:57) | 200 |
+| http://localhost:18771/ | TEMPORARY: a second bench started by `check-raw-complete.py` for round V (page on :18772 while the check runs); stops when the check ends. Never the owner's :18770 | none | 200 (while round V runs) |
+| https://claude.ai/artifact/SnzE3t8XAREphM9z3VCeet | Reader-first briefing method (published page, L3004) | `knowledge_pipeline/playbook/design/reader-first-briefing-method.md` | not checked |
 
 ## Ledger viewer (knowledge pipeline record, port 18766, `./service.sh start ledger-viewer`)
 
@@ -74,11 +88,3 @@ Start and stop: `./service.sh up | reset | down`, `./service.sh start <name>`. K
 |---|---|---|
 | https://api.typesafe.ai | Hosted Jev API (code and questions only for reviews; costs money; needs a yes) | not checked |
 | https://www.kaggle.com/code/coreygorman/kp-t67-ner-bakeoff | Kaggle kernel kp-t67-ner-bakeoff (queued) | not checked |
-
-
-
-
-[S?] http://localhost:18770/
-
-It's running now, and I restarted it a few minutes ago to pick up the clock-time fix. If it ever stops, restart it with:
-/workspace/models/embed-zs/.venv/bin/python /workspace/knowledge_pipeline/simulation/server.py

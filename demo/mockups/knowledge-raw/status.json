@@ -1,128 +1,129 @@
 {
- "generated_at": "2026-11-22T02:04:02",
- "ledger_last": "L2975",
+ "generated_at": "2026-11-22T05:36:27",
+ "ledger_last": "L2991",
  "playbook": "knowledge_pipeline/playbook/00-knowledge-pipeline-v1.md",
  "live_trace": "knowledge_pipeline/projects/world-state/live_trace.py",
  "window": {
-  "dir": "runs-e2e-4",
+  "dir": "runs-e2e-101",
   "newest_empty": null,
   "window_arg": null,
-  "trace": "demo/mockups/structure-live/runs-e2e-4/trace",
-  "chain_mtime": "2026-11-21T13:49:02",
-  "traced": 60,
+  "trace": "demo/mockups/structure-live/runs-e2e-101/trace",
+  "chain_mtime": "2026-11-22T02:27:41",
+  "traced": 464,
   "stages_in_chain": {
    "@journal_kind": {
-    "ran": 60
+    "ran": 464
    },
    "@rerank": {
-    "ran": 33
+    "ran": 267
    },
    "area_function": {
-    "ran": 60
+    "ran": 464
    },
    "capability_list": {
-    "empty": 50,
-    "ran": 10
+    "ran": 125,
+    "empty": 339
    },
    "claims_v1": {
-    "deferred": 60
+    "deferred": 464
    },
    "condition": {
-    "ran": 55,
-    "abstain": 5
+    "abstain": 42,
+    "ran": 422
    },
    "contradictions": {
-    "deferred": 60
+    "deferred": 464
    },
    "decider": {
-    "ran": 60
+    "ran": 464
    },
    "domain_rollup": {
-    "ran": 60
+    "ran": 464
    },
    "facts": {
-    "ran": 60
+    "ran": 464
    },
    "factuality_story": {
-    "not_attached": 60
+    "not_attached": 464
    },
    "function_sentence": {
-    "not_attached": 60
+    "not_attached": 464
    },
    "identity_g4": {
-    "deferred": 60
+    "deferred": 464
    },
    "independent_counter": {
-    "ran": 60
+    "ran": 463,
+    "empty": 1
    },
    "journal_durable": {
-    "ran": 60
+    "ran": 464
    },
    "ner_fewnerd": {
-    "ran": 59,
-    "empty": 1
+    "ran": 461,
+    "empty": 3
    },
    "novelty": {
-    "not_attached": 60
+    "not_attached": 464
    },
    "place_linker": {
-    "ran": 51,
-    "empty": 9
+    "ran": 406,
+    "empty": 58
    },
    "place_student": {
-    "abstain": 22,
-    "ran": 38
+    "ran": 305,
+    "abstain": 159
    },
    "scan_dates": {
-    "ran": 60
+    "ran": 464
    },
    "span_rules": {
-    "ran": 42,
-    "empty": 18
+    "ran": 391,
+    "empty": 73
    },
    "structure_pack": {
-    "ran": 60
+    "ran": 464
    },
    "tags_bundles": {
-    "ran": 16,
-    "empty": 44
+    "empty": 265,
+    "ran": 199
    },
    "time": {
-    "not_attached": 60
+    "not_attached": 464
    },
    "topic_landing": {
-    "ran": 33,
-    "abstain": 27
+    "abstain": 197,
+    "ran": 267
    },
    "windows": {
-    "ran": 60
+    "ran": 464
    }
   },
-  "slow_jsonl_lines": 60,
+  "slow_jsonl_lines": 464,
   "slow_keys": {
    "change": {
-    "proposal": 24,
-    "abstain": 36
+    "proposal": 285,
+    "abstain": 179
    },
    "claims": {
-    "ran": 59,
-    "empty": 1
+    "ran": 464
    },
    "contradictions": {
-    "empty": 60
+    "empty": 463,
+    "ran": 1
    },
    "direction": {
-    "ran": 24,
-    "abstain": 36
+    "ran": 285,
+    "abstain": 179
    },
    "factuality_p": {
-    "ran": 60
+    "ran": 464
    },
    "function_p": {
-    "ran": 60
+    "ran": 464
    },
    "identity_g4": {
-    "ran": 60
+    "ran": 464
    }
   },
   "knowledge_areas": {
@@ -136,28 +137,32 @@
     "path": "demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json",
     "as_of": "2026-11-21",
     "articles": 40,
-    "sha256_12": "130823b5dae2"
+    "sha256_12": "83a355be55b7"
    }
   },
   "slow_consolidate_files": {
    "consolidated.json": {
-    "sha256_12": "c5d5c9cbd5e1",
+    "sha256_12": "65f121d1d467",
     "status": "PROVISIONAL"
    },
    "educate_index.json": {
-    "sha256_12": "0ce0f4f1261e",
+    "sha256_12": "36697f3be5a9",
     "status": "PROVISIONAL"
    },
    "evolved.json": {
-    "sha256_12": "d73d26a30eea",
+    "sha256_12": "c2197e419681",
     "status": "PROVISIONAL"
+   },
+   "knowledge.json": {
+    "sha256_12": "d7e82b39a5bc",
+    "status": null
    },
    "resource_snapshot.json": {
     "sha256_12": "",
     "status": null
    },
    "resource_state.json": {
-    "sha256_12": "bfd8432b0296",
+    "sha256_12": "0541bce3517e",
     "status": null
    },
    "slow_consolidate_run.json": {
@@ -165,7 +170,7 @@
     "status": "PROVISIONAL"
    },
    "truth.json": {
-    "sha256_12": "b85a6a5e28c1",
+    "sha256_12": "d546ac713628",
     "status": "PROVISIONAL"
    }
   },
@@ -210,7 +215,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: windows: chain 60 of 60 traced lines (ran 60); code: live_trace.py:55, live_trace.py:143"
+    "ev": "newest run runs-e2e-101: windows: chain 464 of 464 traced lines (ran 464); code: live_trace.py:55, live_trace.py:143"
    },
    "runs_in": "chain",
    "quality": {
@@ -241,14 +246,14 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: scan_dates: chain 60 of 60 traced lines (ran 60); span_rules: chain 42 of 60 traced lines (empty 18, ran 42); code: live_trace.py:149, live_trace.py:167"
+    "ev": "newest run runs-e2e-101: scan_dates: chain 464 of 464 traced lines (ran 464); span_rules: chain 391 of 464 traced lines (empty 73, ran 391); code: live_trace.py:149, live_trace.py:167"
    },
    "runs_in": "chain",
    "quality": {
-    "score": "102 of 102 event dates resolved in 60 traced lines",
+    "score": "933 of 933 event dates resolved in 464 traced lines",
     "bar": "none recorded",
     "src": [
-     "chain.jsonl runs-e2e-4"
+     "chain.jsonl runs-e2e-101"
     ],
     "state": "PROVISIONAL",
     "note": "resolution count only, no outside truth"
@@ -272,7 +277,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: place_linker: chain 51 of 60 traced lines (empty 9, ran 51); code: live_trace.py:184"
+    "ev": "newest run runs-e2e-101: place_linker: chain 406 of 464 traced lines (empty 58, ran 406); code: live_trace.py:184"
    },
    "runs_in": "chain",
    "quality": {
@@ -304,7 +309,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: facts: chain 60 of 60 traced lines (ran 60); independent_counter: chain 60 of 60 traced lines (ran 60); tags_bundles: chain 16 of 60 traced lines (empty 44, ran 16); code: live_trace.py:154, live_trace.py:158 (+1)"
+    "ev": "newest run runs-e2e-101: facts: chain 464 of 464 traced lines (ran 464); independent_counter: chain 463 of 464 traced lines (empty 1, ran 463); tags_bundles: chain 199 of 464 traced lines (empty 265, ran 199); code: live_trace.py:154, live_trace.py:158 (+1)"
    },
    "runs_in": "chain",
    "quality": {
@@ -335,7 +340,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: ner_fewnerd: chain 59 of 60 traced lines (empty 1, ran 59); code: live_trace_v4.py:4; flag LT_V4_FEWNERD default on (live_trace_v4.py:13)"
+    "ev": "newest run runs-e2e-101: ner_fewnerd: chain 461 of 464 traced lines (empty 3, ran 461); code: live_trace_v4.py:4; flag LT_V4_FEWNERD default on (live_trace_v4.py:13)"
    },
    "runs_in": "chain",
    "quality": {
@@ -366,7 +371,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: claims_v1: chain stage never ran on 60 traced lines (deferred 60); claims_v1: slow.jsonl 60 of 60 lines (empty 1, ran 59); code: live_trace.py:6; flag LT_V4_CLAIMS default off (live_trace_v4.py:13); the newest run (runs-e2e-4) was traced with this flag off"
+    "ev": "newest run runs-e2e-101: claims_v1: chain stage never ran on 464 traced lines (deferred 464); claims_v1: slow.jsonl 464 of 464 lines (ran 464); code: live_trace.py:6; flag LT_V4_CLAIMS default off (live_trace_v4.py:13); the newest run (runs-e2e-101) was traced with this flag off"
    },
    "runs_in": "slow",
    "quality": {
@@ -398,7 +403,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: topic_landing: chain 33 of 60 traced lines (abstain 27, ran 33); code: live_trace.py:213"
+    "ev": "newest run runs-e2e-101: topic_landing: chain 267 of 464 traced lines (abstain 197, ran 267); code: live_trace.py:213"
    },
    "runs_in": "chain",
    "quality": {
@@ -430,7 +435,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: area_function: chain 60 of 60 traced lines (ran 60); domain_rollup: chain 60 of 60 traced lines (ran 60); function head: chain stage never ran on 60 traced lines (not_attached 60); function head: slow.jsonl 60 of 60 lines (ran 60); code: live_trace.py:189, live_trace.py:195"
+    "ev": "newest run runs-e2e-101: area_function: chain 464 of 464 traced lines (ran 464); domain_rollup: chain 464 of 464 traced lines (ran 464); function head: chain stage never ran on 464 traced lines (not_attached 464); function head: slow.jsonl 464 of 464 lines (ran 464); code: live_trace.py:189, live_trace.py:195"
    },
    "runs_in": "chain+slow",
    "quality": {
@@ -461,7 +466,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: condition: chain 55 of 60 traced lines (abstain 5, ran 55); direction: slow.jsonl 60 of 60 lines (abstain 36, ran 24); code: live_trace.py:220"
+    "ev": "newest run runs-e2e-101: condition: chain 422 of 464 traced lines (abstain 42, ran 422); direction: slow.jsonl 464 of 464 lines (abstain 179, ran 285); code: live_trace.py:220"
    },
    "runs_in": "chain+slow",
    "quality": {
@@ -492,7 +497,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: function head: chain stage never ran on 60 traced lines (not_attached 60); function head: slow.jsonl 60 of 60 lines (ran 60); factuality head: chain stage never ran on 60 traced lines (not_attached 60); factuality head: slow.jsonl 60 of 60 lines (ran 60); code: slow_clock.py:6"
+    "ev": "newest run runs-e2e-101: function head: chain stage never ran on 464 traced lines (not_attached 464); function head: slow.jsonl 464 of 464 lines (ran 464); factuality head: chain stage never ran on 464 traced lines (not_attached 464); factuality head: slow.jsonl 464 of 464 lines (ran 464); code: slow_clock.py:6"
    },
    "runs_in": "slow",
    "quality": {
@@ -524,7 +529,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: time proxy (scan_dates): chain 60 of 60 traced lines (ran 60); novelty proxy (journal dup kind): chain 60 of 60 traced lines (ran 60); code: live_trace.py:149"
+    "ev": "newest run runs-e2e-101: time proxy (scan_dates): chain 464 of 464 traced lines (ran 464); novelty proxy (journal dup kind): chain 464 of 464 traced lines (ran 464); code: live_trace.py:149"
    },
    "runs_in": "chain",
    "quality": {
@@ -555,7 +560,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: decider: chain 60 of 60 traced lines (ran 60); code: live_trace.py:273"
+    "ev": "newest run runs-e2e-101: decider: chain 464 of 464 traced lines (ran 464); code: live_trace.py:273"
    },
    "runs_in": "chain",
    "quality": {
@@ -565,7 +570,7 @@
      "decider.check_against_lean"
     ],
     "state": "met",
-    "note": "change and traits are hard-coded 'not run' on 60 of 60 traced lines (live_trace.py:262)"
+    "note": "change and traits are hard-coded 'not run' on 464 of 464 traced lines (live_trace.py:262)"
    }
   },
   {
@@ -582,11 +587,11 @@
    },
    "implemented": {
     "s": "part",
-    "ev": "knowledge_pipeline/simulation/g4-align.py; knowledge_pipeline/runs/g4/store.jsonl; limits: wrong merges 1/61 = 1.6% after the ident-v2 rules, 4 correct merges lost (L2900); alias errors (L2796)"
+    "ev": "knowledge_pipeline/simulation/g4-align.py; knowledge_pipeline/runs/g4/archive/store.jsonl-1795341821; limits: wrong merges 1/61 = 1.6% after the ident-v2 rules, 4 correct merges lost (L2900); alias errors (L2796)"
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: identity_g4: chain stage never ran on 60 traced lines (deferred 60); identity_g4: slow.jsonl 60 of 60 lines (ran 60); code: live_trace.py:6; flag LT_V4_IDENTITY default off (live_trace_v4.py:13); the newest run (runs-e2e-4) was traced with this flag off"
+    "ev": "newest run runs-e2e-101: identity_g4: chain stage never ran on 464 traced lines (deferred 464); identity_g4: slow.jsonl 464 of 464 lines (ran 464); code: live_trace.py:6; flag LT_V4_IDENTITY default off (live_trace_v4.py:13); the newest run (runs-e2e-101) was traced with this flag off"
    },
    "runs_in": "slow",
    "quality": {
@@ -618,11 +623,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: contradictions: chain stage never ran on 60 traced lines (deferred 60); contradictions: slow.jsonl 60 of 60 lines (empty 60); code: live_trace.py:6; flag LT_V4_CONTRADICTIONS default off (live_trace_v4.py:13); the newest run (runs-e2e-4) was traced with this flag off"
+    "ev": "newest run runs-e2e-101: contradictions: chain stage never ran on 464 traced lines (deferred 464); contradictions: slow.jsonl 464 of 464 lines (empty 463, ran 1); code: live_trace.py:6; flag LT_V4_CONTRADICTIONS default off (live_trace_v4.py:13); the newest run (runs-e2e-101) was traced with this flag off"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "time-ordered status rule proven on a synthetic control (check-knowledge K8 d: care->die 0 edges, die->care 1 edge); real pairs: c1 0, mix 0",
+    "score": "time-ordered status rule proven on a synthetic control (check-knowledge K8 d: care->die 0 edges, die->care 1 edge); real pairs: c1 0, mix 7",
     "bar": "none recorded",
     "src": [
      "L2955",
@@ -651,7 +656,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: structure_pack (terms): chain 60 of 60 traced lines (ran 60); entity linking (identity_g4): chain stage never ran on 60 traced lines (deferred 60); entity linking (identity_g4): slow.jsonl 60 of 60 lines (ran 60); code: live_trace.py:258"
+    "ev": "newest run runs-e2e-101: structure_pack (terms): chain 464 of 464 traced lines (ran 464); entity linking (identity_g4): chain stage never ran on 464 traced lines (deferred 464); entity linking (identity_g4): slow.jsonl 464 of 464 lines (ran 464); code: live_trace.py:258"
    },
    "runs_in": "chain+slow",
    "quality": {
@@ -682,7 +687,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: evolve (RESIDUAL nodes): slow_consolidate/evolved.json sha d73d26a30eea PROVISIONAL; code: slow_consolidate.py:2"
+    "ev": "newest run runs-e2e-101: evolve (RESIDUAL nodes): slow_consolidate/evolved.json sha c2197e419681 PROVISIONAL; code: slow_consolidate.py:2"
    },
    "runs_in": "slow",
    "quality": {
@@ -713,7 +718,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: educate index: slow_consolidate/educate_index.json sha 0ce0f4f1261e PROVISIONAL; code: slow_consolidate.py:12"
+    "ev": "newest run runs-e2e-101: educate index: slow_consolidate/educate_index.json sha 36697f3be5a9 PROVISIONAL; code: slow_consolidate.py:12"
    },
    "runs_in": "slow",
    "quality": {
@@ -744,7 +749,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: journal_durable: chain 60 of 60 traced lines (ran 60); code: live_trace.py:19; flag LT_V4_JOURNAL default on (live_trace_v4.py:13)"
+    "ev": "newest run runs-e2e-101: journal_durable: chain 464 of 464 traced lines (ran 464); code: live_trace.py:19; flag LT_V4_JOURNAL default on (live_trace_v4.py:13)"
    },
    "runs_in": "chain",
    "quality": {
@@ -803,7 +808,7 @@
    },
    "used": {
     "s": "part",
-    "ev": "newest run runs-e2e-4: topic re-ranker (frozen): chain 33 of 60 traced lines (ran 33); code: live_trace.py:91; only the topic re-ranker is a retrained head in the chain; function, factuality, time, novelty heads are not retrained there"
+    "ev": "newest run runs-e2e-101: topic re-ranker (frozen): chain 267 of 464 traced lines (ran 267); code: live_trace.py:91; only the topic re-ranker is a retrained head in the chain; function, factuality, time, novelty heads are not retrained there"
    },
    "runs_in": "chain",
    "quality": {
@@ -832,7 +837,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: resource state: slow_consolidate/resource_state.json sha bfd8432b0296 ; code: slow_consolidate.py:10"
+    "ev": "newest run runs-e2e-101: resource state: slow_consolidate/resource_state.json sha 0541bce3517e ; code: slow_consolidate.py:10"
    },
    "runs_in": "slow",
    "quality": {
@@ -861,7 +866,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: truth snapshot: slow_consolidate/truth.json sha b85a6a5e28c1 PROVISIONAL; code: slow_clock.py:114"
+    "ev": "newest run runs-e2e-101: truth snapshot: slow_consolidate/truth.json sha d546ac713628 PROVISIONAL; code: slow_clock.py:114"
    },
    "runs_in": "slow",
    "quality": {
@@ -890,11 +895,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "newest run runs-e2e-4: consolidated.json: slow_consolidate/consolidated.json sha c5d5c9cbd5e1 PROVISIONAL; code: slow_consolidate.py:1"
+    "ev": "newest run runs-e2e-101: consolidated.json: slow_consolidate/consolidated.json sha 65f121d1d467 PROVISIONAL; code: slow_consolidate.py:1"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "check-consolidate 22 of 22 structural checks pass; strengths now: c1 reinforced 38/562; mix reinforced 41/754 (slow_consolidate knowledge.json funnel)",
+    "score": "check-consolidate 22 of 22 structural checks pass; strengths now: c1 reinforced 38/562; mix reinforced 40/753 (slow_consolidate knowledge.json funnel)",
     "bar": "none recorded",
     "src": [
      "L2859",
@@ -923,11 +928,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 83a355be55b7 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "ECB+ test fixture F1 0.5133 (recomputed now: fact_join.py --eval ecbplus-join.json P 0.460 R 0.581 F1 0.5133 thr 0.53 (20.9 s))",
+    "score": "ECB+ test fixture F1 0.5133 (recomputed now: fact_join.py --eval ecbplus-join.json P 0.460 R 0.581 F1 0.5133 thr 0.53 (17.3 s))",
     "bar": "F1 >= 0.49 (check-knowledge K8)",
     "src": [
      "L2956",
@@ -958,7 +963,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 83a355be55b7 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
@@ -993,11 +998,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 83a355be55b7 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "c1 128/136 = 94.1%, 7 wrong-agent statements; mix 67/72 = 93.1%, 0 wrong-agent statements",
+    "score": "c1 128/136 = 94.1%, 7 wrong-agent statements; mix 66/71 = 93.0%, 0 wrong-agent statements",
     "bar": "agent grounding >= 90% on every area and 0 wrong-agent statements on the auto answers",
     "src": [
      "L2962",
@@ -1005,7 +1010,7 @@
     ],
     "state": "PROVISIONAL",
     "note": "agent grounding (check-agent-grounding.py): the stored subject's name or identity alias must sit in the sentence's subject span (before the verb, same clause), per supporting fragment of each reinforced edge; no human labels. Fixed T158 r1: a pronoun in a reported clause took the nearest earlier ORG (it -> Houthi); remaining misses are appositives ('Sanaa, the capital' stored as capital|be|Sanaa) and cross-sentence pronouns",
-    "value": 0.9306,
+    "value": 0.9296,
     "higher_is_better": true
    }
   },
@@ -1027,11 +1032,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 83a355be55b7 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "c1 36 of 38 sampled unflagged = 94.7% (38 reinforced edges); mix 35 of 40 sampled unflagged = 87.5% (41 reinforced edges) (heuristic flags)",
+    "score": "c1 36 of 38 sampled unflagged = 94.7% (38 reinforced edges); mix 35 of 40 sampled unflagged = 87.5% (40 reinforced edges) (heuristic flags)",
     "bar": ">= 80% unflagged on 40 sampled reinforced edges per area (fixed seed 158)",
     "src": [
      "L2962",
@@ -1061,11 +1066,11 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 83a355be55b7 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
-    "score": "true contested pairs on mix: 0 (c1 0)",
+    "score": "true contested pairs on mix: 7 (c1 0)",
     "bar": ">= 1 true pair on mix, 0 false",
     "src": [
      "L2955",
@@ -1073,7 +1078,7 @@
     ],
     "state": "PROVISIONAL",
     "note": "rule proven on a synthetic control only (K8 d); mix has a real dispute that needs attribution slots (L2962)",
-    "value": 0,
+    "value": 7,
     "higher_is_better": true
    }
   },
@@ -1095,7 +1100,7 @@
    },
    "used": {
     "s": "yes",
-    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 130823b5dae2 as_of 2026-11-21"
+    "ev": "staged area stores: demo/mockups/structure-live/area-c1/trace/slow_consolidate/knowledge.json sha 8a72c17ac32d as_of 2026-11-21; demo/mockups/structure-live/area-mix/trace/slow_consolidate/knowledge.json sha 83a355be55b7 as_of 2026-11-21"
    },
    "runs_in": "slow",
    "quality": {
@@ -1186,7 +1191,7 @@
    "PASS ledger: per-day shares are written and sum to 1 per (country, day) within 1e-4 (6-decimal rounding) 394 (day, country) cells, 23 days",
    "PASS ledger: the seed is marked PROVISIONAL and all rows say so seed 26 rows, ['draft v2 (guess)']"
   ],
-  "when": "2026-11-22T02:03:37",
+  "when": "2026-11-22T05:36:06",
   "cmd": "check-durable.py --no-g4"
  },
  "plan": {
@@ -1509,5 +1514,13 @@
  "sections": {
   "knowledge": "Knowledge (§2 G4-G6, staged areas)"
  },
- "regressions": []
+ "regressions": [
+  {
+   "row": "knowledge|Who-did-it correctness (auto answers)",
+   "field": "value",
+   "was": 0.9306,
+   "now": 0.9296,
+   "higher_is_better": true
+  }
+ ]
 }

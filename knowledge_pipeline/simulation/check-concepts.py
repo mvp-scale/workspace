@@ -7,6 +7,8 @@ Reads the two staged area windows (demo/mockups/structure-live/area-c1, area-mix
   C5 triage      verdict counts per area, every verdict in the enum, a concept id from the graph or null
   C6 deep        deep on the focus concept < 120 s, card_fill_after >= card_fill_before, 5 open questions, depth L2|L3; a second call is cached; a concept with history in another window shows history rows
   C7 seeded      5 synthetic changed facts injected into a scratch copy (6 edges, 5 new articles): triage never labels them 'known' (hidden changes = 0)
+  C9 v1 slots    directions cite edges and quote a fragment sentence; drivers quote sentences that exist in the cited edges' fragments; no stoplisted generic concept (WordNet rule + named list); every non-known triage row has change_text that is a real fragment sentence of its cited edge;
+                 process concepts have >= 3 owners and part_of links from their actors; subconcepts are graph concepts or appear in >= 2 facts with the parent
   C8 determinism two builds equal; module has no network import
     /workspace/models/embed-zs/.venv/bin/python simulation/check-concepts.py [--area c1,mix] [--keep]"""
 import sys, os, json, time, shutil, tempfile, importlib.util, collections, re
@@ -24,7 +26,10 @@ def ids_of_build(B):
     for c in B["concepts"]:
         out += c["edge_ids"] + [x for d in c["card"]["drivers"] for x in d["edge_ids"]] + [x for r in c["card"]["resources"] for x in r["edge_ids"]]
     for l in B["links"]: out += l["edge_ids"]
-    for t in B["triage"]: out += t.get("edge_ids") or []
+    for t in B["triage"]: out += (t.get("edge_ids") or []) + (t.get("change_edge_ids") or [])
+    for c in B["concepts"]:
+        cd = c["card"]
+        out += [x for d in c.get("directions", []) for x in d["edge_ids"]] + [x for k in ("did", "allies", "opponents", "effect", "disputed", "new") for it in cd.get(k, []) for x in it.get("edge_ids", [])] + ((cd.get("role") or {}).get("edge_ids") or [])
     return out
 def ids_of_deep(d):
     out = [r["edge_id"] for r in d["timeline"]] + [x for a in d["accounts"] for x in a.get("edge_ids", [])] + [x for q in d["open_questions"] for x in q["edge_ids"]] + [x for s in d["subconcepts"] for x in s.get("edge_ids", [])]
@@ -89,6 +94,48 @@ for a in AREAS:
             p = [pp for w, pp in CV._windows(td) if w == h["window"]]
             if not p or h["edge_id"] not in {e["id"] for e in CV._hist_edges(p[0])}: hmiss += 1
     ok("C6 history %s" % a, hmiss == 0, "%d history rows over the first 6 place concepts, %d unresolved (history = other windows' own consolidated.json, no network)" % (hn, hmiss))
+    # C9 v1 slots
+    allsent = collections.defaultdict(list)
+    for e in C["edges"]:
+        for f in e.get("fragments") or []:
+            if f.get("sent"): allsent[e["id"]].append(f["sent"])
+    quoted = lambda sent, ids: bool(sent) and any(sent in x for i in ids for x in allsent.get(i, []))
+    bad = []; nd = nobj = 0
+    for c in B["concepts"]:
+        for d in c["directions"]:
+            nd += 1; nobj += 1 if d["object"] else 0
+            if not d["edge_ids"] or not quoted(d["sentence"], d["edge_ids"]) or d["dir"] not in ("up", "down"): bad.append("dir:%s" % c["id"])
+        for d in c["card"]["drivers"]:
+            if not d["edge_ids"] or not quoted(d["sentence"], d["edge_ids"]) or not d.get("rule") or (d.get("marker") not in ("causes",) and d["marker"] not in d["sentence"].lower() and d["marker"] not in d["text"].lower()): bad.append("driver:%s" % c["id"])
+        for k in ("did", "allies", "opponents", "effect"):
+            for it in c["card"][k]:
+                if not it.get("edge_ids"): bad.append("%s:%s" % (k, c["id"]))
+        if c["card"]["role"] and not c["card"]["role"].get("basis"): bad.append("role:" + c["id"])
+        for k in c["card"]["new"]:
+            if not quoted(k["change_text"], k["edge_ids"]): bad.append("new:" + c["id"])
+        if c["kind"] == "process":
+            pl = [l for l in B["links"] if l["b"] == c["id"] and l["rel"] == "part_of"]
+            if c["owners"] < 3 or not pl: bad.append("process:" + c["id"])
+    GEN = {"kingdom", "capital", "attack", "government", "conflict", "strike", "people", "statement", "war", "group", "threat", "price"}
+    gen = [c["label"] for c in B["concepts"] if c["kind"] == "concept" and (c["label"].lower().split()[-1] in GEN or CV.generic_why(c["label"].split()[-1].lower(), 0.0))]
+    nonk = [t for t in B["triage"] if t["verdict"] != "known"]; noct = [t["art"][:8] for t in nonk if not t.get("change_text") or t["change_kind"] not in ("conflict", "update", "new_link", "new_concept") or not quoted(t["change_text"], t["change_edge_ids"])]
+    mset = {c["id"] for c in B["concepts"]}; dsub = 0
+    for c in B["concepts"][:12]:
+        for sc in CV.deep(td, a, c["id"])["subconcepts"]:
+            if sc["id"] not in mset and sc["facts"] < 2: dsub += 1
+    pr = [c for c in B["concepts"] if c["kind"] == "process"]
+    ok("C9 v1 slots %s" % a, not bad and not gen and not noct and not dsub, "directions %d (%d with an object), drivers %d concepts filled, generic concepts kept %s, dropped %d, non-known rows %d without a quoted change_text %s, process concepts %s, weak subconcepts %d, problems %s" % (nd, nobj, sum(1 for c in B["concepts"] if c["card"]["drivers"]), gen, len(B["dropped"]), len(noct), noct[:3], [p_["label"] for p_ in pr], dsub, bad[:5]))
+    # C10 v2 triage (T158 triage v1): incremental membership, unmapped never known, 'known' = every fact a repeat, per-concept 'New' only from a fact where the concept is subject or object
+    Dx = CV.load(td); cn = CV.make_canon(Dx["ents"], None); EBx = {e["id"]: e for e in Dx["C"]["edges"]}; cm = {c["id"]: c for c in B["concepts"]}; bad10 = []; gb = [t["graph_before"] for t in B["triage"]]
+    if gb != sorted(gb): bad10.append("graph_before not monotone")
+    for t in B["triage"]:
+        if t["verdict"] == "known" and (t["unmapped"] or any(k != "known" for k in t["counts"])): bad10.append("known:%s" % t["art"][:8])
+        if t["unmapped"] and t["verdict"] == "known": bad10.append("unmapped known:%s" % t["art"][:8])
+        if t["concept"] and cm[t["concept"]]["in_graph_from_seq"] is not None and cm[t["concept"]]["in_graph_from_seq"] > t["seq"]: bad10.append("concept before entry:%s" % t["art"][:8])
+        for cid, ch in t["concept_changes"].items():
+            e = EBx.get(ch["edge_ids"][0]); ends = {cn((e or {}).get("anchor") or (e or {}).get("subj")), cn((e or {}).get("obj"))} if e else set()
+            if cid not in ends: bad10.append("touch:%s:%s" % (cid, t["art"][:8]))
+    ok("C10 v2 triage %s" % a, not bad10, "graph_before %d -> %d over %d articles; unmapped-only rows %d; known rows %d; problems %s" % (gb[0] if gb else 0, gb[-1] if gb else 0, len(gb), sum(1 for t in B["triage"] if t["verdict"] == "new_concept" and t["counts"].get("new_concept") == t["unmapped"]), sum(1 for t in B["triage"] if t["verdict"] == "known"), bad10[:4]))
 src = open(os.path.join(WS, "concepts_v0.py")).read(); ok("C8 no network import", not re.search(r"^\s*(import|from)\s+(urllib|requests|socket|http|httpx|aiohttp)", src, re.M))
 # raw-units wrapper
 try:
@@ -126,7 +173,22 @@ for a in BS:
         S = CV.build(tt, a); tri = {t["art"]: t for t in S["triage"]}; got = {i: (tri.get("seedart%02d" % i) or {}).get("verdict") for i in expect}
         hidden = sum(1 for v in got.values() if v in ("known", None)); match = sum(1 for i, v in got.items() if v == expect[i] or (i == 3 and v == "conflict"))
         base_known = collections.Counter(t["verdict"] for t in BS[a]["triage"])["known"]
-        ok("C7 seeded %s" % a, hidden == 0, "hidden changes %d of 5 (labelled known); verdicts %s; exactly as designed %d of 5; the unseeded replay still has %d known article(s)" % (hidden, {"seed%d" % i: v for i, v in got.items()}, match, base_known))
+        sct = sum(1 for i in expect if (tri.get("seedart%02d" % i) or {}).get("change_text"))
+        ok("C7 seeded %s" % a, hidden == 0 and sct == 5, "hidden changes %d of 5 (labelled known); verdicts %s; exactly as designed %d of 5; change_text on %d of 5 seeded rows; the unseeded replay still has %d known article(s)" % (hidden, {"seed%d" % i: v for i, v in got.items()}, match, sct, base_known))
     finally:
         if not KEEP: shutil.rmtree(tmp, ignore_errors=True)
+# C11 coverage rules (T158 round 4, PROVISIONAL): unit cases on a synthetic identity store, then fact coverage on the staged areas against the pre-round numbers
+def _E(cid, canon, aliases=(), arts=2): return {"id": cid, "type": cid.split(":")[0], "canon": canon, "aliases": {a: 1 for a in (canon,) + tuple(aliases)}, "arts": {"a%d" % i: "P%d" % i for i in range(arts)}}
+_ents = {e["id"]: e for e in [_E("iso:US", "United States", ("US",)), _E("iso:IR", "Iran"), _E("iso:TR", "Turkey"), _E("place:chelsea", "Chelsea"), _E("person:joe mazzulla", "Joe Mazzulla"), _E("org:state government", "State Government")]}
+_cn = CV.make_canon(_ents, None)
+ok("C11 coord split", _cn.all("place:united states and iran") == ["iso:US", "iso:IR"] and _cn.rule("place:united states and iran") == "coord" and _cn("place:united states and iran") == "iso:US", "%s" % _cn.all("place:united states and iran"))
+ok("C11 np-name", _cn.all("concept:celtics coach joe mazzulla") == ["person:joe mazzulla"] and _cn.rule("concept:celtics coach joe mazzulla") == "np-name", "longest typed name inside a noun phrase")
+ok("C11 np-demonym", _cn.all("concept:iranian drone attacks") == ["iso:IR"] and _cn.rule("concept:iranian drone attacks") == "np-demonym")
+ok("C11 np guards", all(_cn.all(x) == [x] for x in ("concept:who that is here in iran", "concept:coach chelsea cunningham", "concept:frozen turkey", "concept:the state government", "concept:orders of 9 iran")), "clause words, one-word name inside a phrase, ambiguous common word, all-common-word org, number: no mapping")
+ok("C11 no invented labels", all(_cn.rule(x) is None and _cn.all(x) == [x] for x in ("concept:random plain noun", "iso:IR", "person:joe mazzulla")))
+BEFORE_COV = {"c1": 36.3, "mix": 42.0}
+for a in BS:
+    Dx = CV.load(td_of(a)); cnx = CV.make_canon(Dx["ents"], None); MSx = {c["id"] for c in BS[a]["concepts"]}; EBx = [e for e in Dx["C"]["edges"] if e.get("kind") == "assertion"]
+    mp = sum(1 for e in EBx if (set(cnx.all(e.get("anchor") or e.get("subj"))) | set(cnx.all(e.get("obj")))) & MSx); cov = round(100.0 * mp / max(1, len(EBx)), 1)
+    ok("C11 fact coverage %s" % a, cov >= BEFORE_COV.get(a, 0), "%s%% of %d facts have a subject or object that is a graph concept (before this round %s%%)" % (cov, len(EBx), BEFORE_COV.get(a)))
 n = sum(res); print("\n%d / %d checks passed in %.1f s (PROVISIONAL)" % (n, len(res), time.time() - t_all)); sys.exit(0 if res and n == len(res) else 1)

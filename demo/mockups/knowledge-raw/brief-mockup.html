@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge Ladder Mockup</title>
+<style>
+:root{--bg:#f7f7f5;--panel:#fff;--text:#1d1d1b;--text-2:#55554f;--text-3:#8a8a82;--border:#e2e2dc;--accent:#2f6fde;
+--est:#1f8a4c;--rep:#3d7bd9;--one:#b7791f;--dis:#c2410c;--not:#8a8a82;--chip:#efefea;--hl:#fff7d6;--gap:#fdecec;
+--k:#2f6fde;--f:#7c4dce;--e:#0f8a83}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--panel:#1b1b1a;--text:#ecece8;--text-2:#b4b4ac;--text-3:#83837c;--border:#2e2e2b;--accent:#6ea0ff;
+--est:#3fbf74;--rep:#6ea0ff;--one:#e0a43c;--dis:#ff7a45;--not:#83837c;--chip:#262624;--hl:#2d2a1a;--gap:#3a2020;--k:#6ea0ff;--f:#b08cff;--e:#3cc7bd}}
+:root[data-theme="dark"]{--bg:#121212;--panel:#1b1b1a;--text:#ecece8;--text-2:#b4b4ac;--text-3:#83837c;--border:#2e2e2b;--accent:#6ea0ff;
+--est:#3fbf74;--rep:#6ea0ff;--one:#e0a43c;--dis:#ff7a45;--not:#83837c;--chip:#262624;--hl:#2d2a1a;--gap:#3a2020;--k:#6ea0ff;--f:#b08cff;--e:#3cc7bd}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:16px;border-bottom:1px solid var(--border);background:var(--panel)}
+h1{margin:0 0 4px;font-size:18px}
+.sub{color:var(--text-2);font-size:13px;max-width:900px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+nav button{border:1px solid var(--border);background:var(--chip);color:var(--text);padding:6px 10px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px}
+nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.card h2{margin:0 0 2px;font-size:17px}
+.card h3{margin:0 0 6px;font-size:15px}
+.meta{color:var(--text-3);font-size:12px}
+.row{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-top:1px dashed var(--border)}
+.row:first-child{border-top:0}
+.day{flex:0 0 86px;color:var(--text-2);font-variant-numeric:tabular-nums;font-size:13px}
+.txt{flex:1;min-width:0}
+.src{flex:0 0 auto;color:var(--text-3);font-size:12px;text-align:right;max-width:40%}
+q{quotes:"\201C" "\201D";font-style:italic}
+.st{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid currentColor;margin-right:6px;white-space:nowrap}
+.est{color:var(--est)}.rep{color:var(--rep)}.one{color:var(--one)}.dis{color:var(--dis)}.not{color:var(--not)}
+.cw{font-weight:700;margin-right:4px}
+.cw.after{color:var(--text-2)}.cw.but{color:var(--dis)}.cw.because{color:var(--f)}
+.rung{display:grid;grid-template-columns:120px minmax(0,1fr) 230px;gap:14px;padding:12px 0;border-top:1px solid var(--border)}
+.rung:first-of-type{border-top:0}
+@media (max-width:860px){.rung{grid-template-columns:1fr}}
+.rname{font-weight:700;letter-spacing:.04em}
+.rname small{display:block;font-weight:400;letter-spacing:0;color:var(--text-3);font-size:12px}
+.rK .rname{color:var(--k)}.rF .rname{color:var(--f)}.rE .rname{color:var(--e)}
+.goal{font-size:12px;color:var(--text-2);background:var(--chip);border-radius:8px;padding:8px 10px;align-self:start}
+.goal b{color:var(--text)}
+.rung.dim .rbody{opacity:.6}
+.reached{font-size:11px;border-radius:4px;padding:0 5px;margin-left:4px;border:1px solid currentColor}
+.next{background:var(--hl);border-radius:8px;padding:8px 12px;margin-top:10px}
+.next b{margin-right:6px}
+.since{border:1px dashed var(--border);border-radius:8px;padding:8px 12px;margin-top:10px;color:var(--text-2)}
+.gapnote{background:var(--gap);border-radius:6px;padding:4px 8px;font-size:12px;margin-top:4px}
+.grey{color:var(--text-3)}
+.cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;margin:6px 0}
+.side{border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.side .who{font-weight:600;font-size:13px}
+.vs{align-self:center;color:var(--dis);font-weight:700}
+@media (max-width:600px){.cmp{grid-template-columns:1fr}.vs{text-align:center}}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:6px 8px;border-top:1px solid var(--border);font-size:13px;vertical-align:top}
+th{color:var(--text-3);font-weight:600;font-size:12px;border-top:0}
+tr.pick{cursor:pointer}
+tr.pick:hover td{background:var(--chip)}
+tr.sel td{background:var(--hl)}
+.fr{font-weight:700;font-size:12px}
+.fr.K{color:var(--k)}.fr.F{color:var(--f)}.fr.E{color:var(--e)}.fr.N{color:var(--text-3)}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.steps.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:860px){.steps,.steps.three{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.steps,.steps.three{grid-template-columns:1fr}}
+.step{border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.step h4{margin:0 0 4px;font-size:14px}
+.step .q{font-style:italic;color:var(--text-2);margin-bottom:6px}
+.step ul{margin:6px 0 0;padding-left:18px;font-size:13px}
+.k4{border-top:4px solid var(--k)}.f4{border-top:4px solid var(--f)}.e4{border-top:4px solid var(--e)}.v4{border-top:4px solid var(--text-3)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text-2)}
+.note{font-size:12px;color:var(--text-2);background:var(--chip);border-radius:8px;padding:8px 10px;margin-top:10px}
+.hide{display:none}
+.walk{font-size:13px;color:var(--text-2);margin-bottom:8px}
+.walk b{color:var(--text)}
+td.hit{font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>Knowledge ladder: mock-up</h1>
+  <div class="sub">Static mock-up, not wired. Each concept climbs three steps, <b>KNOW → FOLLOW → EXPECT</b>, with evidence under every line. The page shows the highest step reached, the next open question and what changed since your last look. Every quote comes from the staged data (c1 Fiona, mix Gulf) as measured in <code>ladder-review.md</code>. No line is model-written.</div>
+  <nav id="tabs">
+    <button data-v="why" class="on">0 · Why a ladder</button>
+    <button data-v="area">1 · Walk down: Gulf area → Iran</button>
+    <button data-v="fiona">2 · Settled: Fiona</button>
+    <button data-v="kuwait">3 · Thin: Kuwait</button>
+    <button data-v="grow">4 · Watch it grow + gaps</button>
+  </nav>
+</header>
+<main>
+
+<div class="card">
+  <div class="legend">
+    <b>Certainty word, on every line:</b>
+    <span><span class="st est">established</span>3+ independent outlets</span>
+    <span><span class="st rep">reported</span>2 outlets</span>
+    <span><span class="st one">single source</span>1 outlet</span>
+    <span><span class="st dis">disputed</span>two named speakers disagree</span>
+    <span><span class="st not">not read</span>we looked; nothing in the data</span>
+  </div>
+  <div class="legend" style="margin-top:6px">
+    <b>Linking words, fixed rules:</b>
+    <span><span class="cw after">after</span>time order only, never cause</span>
+    <span><span class="cw because">because</span>a cause someone stated, attributed</span>
+    <span><span class="cw but">but</span>a named speaker contradicts</span>
+  </div>
+</div>
+
+<!-- 0 WHY -->
+<section data-v="why">
+  <div class="card">
+    <h2>Why a ladder instead of fixed cards</h2>
+    <p>The old card had fixed slots (role, did, because, allies, opponents, effect). It filled them the same way whether we'd seen a name once or followed it for four days. The reader couldn't tell <b>how much we actually know</b>, <b>what that knowledge rests on</b>, or <b>what's still missing</b>.</p>
+    <p>Knowledge builds up in order. First you know what something is and what it did. Then you follow how it unfolds. Only then can you say what to expect. The ladder puts each concept on the step it has actually reached and names the next question. When a new article arrives, you can see whether it moved something up a step or only repeated what we had.</p>
+    <p class="grey">Why three steps, not five: we measured five on the real data (<code>measure-ladder.py</code>). A separate "why" step would read "not read" for 97–100% of concepts. Disputes and stated causes also turn up in the first article, before there's any storyline. So "why" and "disputed" are kinds of line inside FOLLOW, not steps of their own.</p>
+  </div>
+
+  <div class="card">
+    <h2>The steps, and the goal of each</h2>
+    <div class="steps">
+      <div class="step k4">
+        <h4 style="color:var(--k)">1 · KNOW</h4>
+        <div class="q">What is it, and what did it do?</div>
+        <div><b>Goal:</b> one fact you can remember. The name, its kind, and two or three things it did, each with a date and how many outlets.</div>
+        <ul>
+          <li><b>Retention:</b> what a reader should be able to rebuild from memory.</li>
+          <li><b>Built from:</b> type, outside definition (Wikidata) if we have one, quoted action sentences.</li>
+          <li><b>Reached by:</b> c1 68%, mix 45% of concepts.</li>
+        </ul>
+      </div>
+      <div class="step f4">
+        <h4 style="color:var(--f)">2 · FOLLOW</h4>
+        <div class="q">How is it unfolding, why, and who disagrees?</div>
+        <div><b>Goal:</b> the story in order. Dated steps joined by <span class="cw after">after</span>, <span class="cw because">because</span> and <span class="cw but">but</span>.</div>
+        <ul>
+          <li><b>Retention:</b> what a reader re-reads when they come back.</li>
+          <li><b>Built from:</b> deep timeline grouped by day, stated causes, speaker-pair disputes.</li>
+          <li><b>Reached by:</b> c1 55%, mix 26% (steps on 2+ days).</li>
+        </ul>
+      </div>
+      <div class="step e4">
+        <h4 style="color:var(--e)">3 · EXPECT</h4>
+        <div class="q">What comes next, and what should I watch?</div>
+        <div><b>Goal:</b> a forward statement from a named speaker that a later article can confirm or contradict. If there is none, the concept reads as <i>settled</i>.</div>
+        <ul>
+          <li><b>Growth:</b> the line tomorrow's news tests.</li>
+          <li><b>Built from:</b> future-tense sentences with a speaker.</li>
+          <li><b>Reached by:</b> c1 8%, mix 6% attributed. Thin, so it's kept as its own step and its empty state is shown honestly.</li>
+        </ul>
+      </div>
+      <div class="step v4">
+        <h4 style="color:var(--text-2)">Evidence (go deep)</h4>
+        <div class="q">Show me where that came from.</div>
+        <div><b>Goal:</b> trust. Every line above opens its sentences, with publisher, day and fact id.</div>
+        <ul>
+          <li>Not a step: every line points here.</li>
+          <li><b>Built from:</b> deep timeline (100% coverage).</li>
+          <li>Left out on purpose: "accounts" and "history" (noise, see gaps).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><b>Two more parts on every concept:</b> <b>Next question</b>, the first step whose test is still empty, so you know what to look for. <b>Since your last look</b>, which steps or certainty words changed; repeats collapse to a count.<br>
+    <b>Steps never drop.</b> If a denial arrives, the line changes its word (<span class="st est">established</span> → <span class="st dis">disputed</span>) and is marked "changed since your last look". No banner.</div>
+  </div>
+
+  <div class="card">
+    <h2>Walking down: topic → concept → evidence</h2>
+    <div class="steps three">
+      <div class="step"><h4>Area</h4><div class="q">What's in this topic, and how far along is each part?</div>One row per concept: its highest step, its certainty word, and changes since your last look. Today the topic is the staged interest area.</div>
+      <div class="step"><h4>Concept ladder</h4><div class="q">What do we know about this one, and what's next?</div>KNOW, FOLLOW and EXPECT, then the next question and since your last look. The ladder sits on the concept for now and moves to storylines when R1 adds them.</div>
+      <div class="step"><h4>Evidence</h4><div class="q">Can I trust this line?</div>The sentences behind the line, by day and publisher.</div>
+    </div>
+    <div class="note">Hub concepts such as <b>United States</b> (c1: Fiona, a Palestinian case and Africa all mixed together) show "mixed stories, split pending" instead of a merged FOLLOW. That keeps "US → wife, children, AP" off the page.</div>
+  </div>
+</section>
+
+<!-- 1 AREA -> IRAN -->
+<section data-v="area" class="hide">
+  <div class="card">
+    <div class="walk"><b>Area</b> › Gulf strikes + energy (mix) › Iran</div>
+    <h2>Gulf strikes + energy</h2>
+    <div class="meta">40 articles · 13 outlets · Nov 18–21 · since your last look: 3 changes, 9 repeats hidden</div>
+    <div class="meta" style="margin:4px 0 8px">How far each concept has climbed: <span class="fr E">EXPECT 4</span> · <span class="fr F">FOLLOW 19</span> · <span class="fr K">KNOW 13</span> · <span class="fr N">name only 9</span> · plus 20 resource rows</div>
+    <div class="tw"><table>
+      <thead><tr><th>Concept</th><th>Highest step</th><th>Certainty</th><th>Since last look</th></tr></thead>
+      <tbody>
+        <tr class="pick sel" data-c="iran"><td><b>Iran</b></td><td><span class="fr E">EXPECT</span></td><td><span class="st dis">disputed</span></td><td>2 repeats, no step change</td></tr>
+        <tr class="pick" data-c="kuwait"><td><b>Kuwait</b> ›</td><td><span class="fr K">KNOW</span> + disputed line</td><td><span class="st dis">disputed</span></td><td>—</td></tr>
+        <tr><td>Saudi Arabia</td><td><span class="fr E">EXPECT</span></td><td><span class="st dis">disputed</span></td><td class="grey">not mocked</td></tr>
+        <tr><td>Bahrain</td><td><span class="fr E">EXPECT</span></td><td><span class="st dis">disputed</span></td><td class="grey">not mocked</td></tr>
+        <tr><td>Yemen</td><td><span class="fr F">FOLLOW</span></td><td><span class="st est">established</span></td><td class="grey">not mocked</td></tr>
+        <tr><td>United States</td><td><span class="fr F">FOLLOW</span></td><td><span class="st dis">disputed</span></td><td class="grey">mixed stories, split pending</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note">Goal of this view: see the whole topic in one screen and how far along each part is, then pick one to go down into. Iran is open below; Kuwait opens tab 3.</div>
+  </div>
+
+  <div class="card">
+    <h2>Iran</h2>
+    <div class="meta">highest step <span class="fr E">EXPECT</span> (unattributed) · 10 outlets · 56 facts · 4 days</div>
+
+    <div class="rung rK">
+      <div class="rname">KNOW <span class="reached" style="color:var(--k)">reached</span><small>what is it, what did it do</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day">kind</div><div class="txt">place · country in Western Asia <span class="grey">(Wikidata Q794)</span></div></div>
+        <div class="row"><div class="day">Nov 18</div><div class="txt"><span class="st est">established</span>targeted United States, Bahrain</div><div class="src">3 outlets</div></div>
+        <div class="row"><div class="day">Nov 18</div><div class="txt"><span class="st one">single source</span>attacked US bases in Gulf countries</div><div class="src">Daily Maverick</div></div>
+        <div class="row"><div class="day">Nov 19</div><div class="txt"><span class="st one">single source</span>blockading the Strait of Hormuz</div><div class="src">Straits Times</div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> the one fact to remember. Here: Iran struck at US-linked targets on Nov 18, which 3 outlets confirm. Everything else rests on one source.</div>
+    </div>
+
+    <div class="rung rF">
+      <div class="rname">FOLLOW <span class="reached" style="color:var(--f)">reached</span><small>how it unfolds, why, who disagrees</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day">Nov 18</div><div class="txt"><span class="cw after">after</span>US strikes on Qeshm Island <span class="grey">(order only)</span></div><div class="src">Straits Times, Al Jazeera</div></div>
+        <div class="row"><div class="day">Nov 18</div><div class="txt"><span class="cw but">but</span><span class="st dis">disputed</span> what the strikes hit:
+          <div class="cmp">
+            <div class="side"><div class="who">Iran says</div><q>it hit US-linked military targets in Kuwait and Bahrain</q><div class="meta">Straits Times</div></div>
+            <div class="vs">vs</div>
+            <div class="side"><div class="who">Bahrain's military says</div><q>intercepted and destroyed several Iranian aerial attacks</q><div class="meta">BBC World</div>
+              <div class="who" style="margin-top:6px">Kuwait's military says</div><q>intercepted drone attacks and didn't immediately report any damage</q><div class="meta">Boston Globe</div></div>
+          </div>
+        </div></div>
+        <div class="row"><div class="day">Nov 19</div><div class="txt"><span class="st one">single source</span><q>the Iran war cut off the Strait of Hormuz</q></div><div class="src">Straits Times</div></div>
+        <div class="row"><div class="day">Nov 20–21</div><div class="txt">Houthi / coalition exchange <span class="grey">→ see Saudi Arabia, Yemen</span></div></div>
+        <div class="row"><div class="day">why</div><div class="txt"><span class="st not">not read</span>no cause on Iran's card
+          <div class="gapnote">Gap 1: the US official's "in response to Iranian aggression" (3 outlets) is attached to the United States card.</div></div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> the story in order, and where it's contested. Here the dispute is the story: Iran says hit, the targets say intercepted. That's 1 outlet per side, all on one day.</div>
+    </div>
+
+    <div class="rung rE">
+      <div class="rname">EXPECT <span class="reached" style="color:var(--e)">weak</span><small>what next, what to watch</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day">Nov 18</div><div class="txt grey"><q>a deal to end the wider Iran war could see the Yemen conflict draw down</q> · no speaker named, shown grey</div><div class="src">Straits Times</div></div>
+        <div class="row"><div class="day"></div><div class="txt"><span class="st not">not read</span>no forward statement with a named speaker in 40 articles</div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> give tomorrow's news something to test. An unattributed "could" doesn't count, so it's shown, but greyed.</div>
+    </div>
+
+    <div class="next"><b>Next question</b>Does any non-Iranian source say the strikes on Kuwait and Bahrain hit? <span class="grey">(0 of 40 articles)</span></div>
+    <div class="since"><b>Since your last look</b> (articles 36 → 39): 2 updates on Nov 21 (Al Jazeera, France 24). No step change. The dispute is unchanged since Nov 18.</div>
+    <div class="note">↓ <b>Evidence:</b> 56 timeline lines by day, each with publisher and fact id. The existing Evidence view, unchanged.</div>
+  </div>
+</section>
+
+<!-- 2 FIONA -->
+<section data-v="fiona" class="hide">
+  <div class="card">
+    <div class="walk"><b>Area</b> › Fiona the hippo (c1) › Fiona</div>
+    <h2>Fiona</h2>
+    <div class="meta">highest step <span class="fr F">FOLLOW</span> · 13 outlets · 42 facts · 4 days · no disputes in 34 articles</div>
+
+    <div class="rung rK">
+      <div class="rname">KNOW <span class="reached" style="color:var(--k)">reached</span><small>what is it, what did it do</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day">kind</div><div class="txt">person <span class="gapnote" style="display:inline">wrong type: an animal</span> · no outside definition · in-graph: <i>is a</i> Hippo <span class="grey">(1 outlet)</span></div></div>
+        <div class="row"><div class="day">Nov 18–19</div><div class="txt"><span class="st est">established</span>undergoing care</div><div class="src">5 outlets</div></div>
+        <div class="row"><div class="day">Nov 20</div><div class="txt"><span class="st est">established</span>died</div><div class="src">3 outlets</div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> the one fact to remember. Here: a hippo was under care for two days, then died on Nov 20. Both are established.</div>
+    </div>
+
+    <div class="rung rF">
+      <div class="rname">FOLLOW <span class="reached" style="color:var(--f)">reached</span><small>how it unfolds, why, who disagrees</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day">Nov 18–19</div><div class="txt">under care <span class="cw after">after</span><q>eating a hat that got into enclosure</q></div><div class="src">Straits Times +4</div></div>
+        <div class="row"><div class="day">Nov 19</div><div class="txt"><q>hopes a little shake will help Fiona the hippo pass a swallowed hat</q></div><div class="src">Phys.org, Boston Globe</div></div>
+        <div class="row"><div class="day">Nov 20</div><div class="txt"><q>has died, days after ingesting a visitor's hat</q></div><div class="src">NBC Boston, CBC, BBC World</div></div>
+        <div class="row"><div class="day">Nov 21</div><div class="txt"><q>Fiona the hippo's death was tragic</q></div><div class="src">Guardian US</div></div>
+        <div class="row"><div class="day">why</div><div class="txt"><span class="st not">not read</span>no cause on Fiona's card
+          <div class="gapnote">Gap 1: the necropsy line (3 outlets) is attached to Cincinnati Zoo, not Fiona.</div></div></div>
+        <div class="row"><div class="day">disputed</div><div class="txt"><span class="st not">none</span>0 disputed pairs in 34 articles</div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> the story in order. Here it's four days: care, hope, death, reaction. "after" only orders events; the hat is not claimed as the cause until someone states it.</div>
+    </div>
+
+    <div class="rung rE dim">
+      <div class="rname">EXPECT <span class="reached" style="color:var(--text-3)">settled</span><small>what next, what to watch</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day">Nov 19</div><div class="txt">hope <q>could pass the hat</q> → <b>resolved Nov 20: died</b></div><div class="src">Boston Globe</div></div>
+        <div class="row"><div class="day"></div><div class="txt">No open forward statement, so this is <b>settled</b>.</div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> show what tomorrow could change. Here, nothing: the one forward line was answered by the death. "Settled" is itself knowledge.</div>
+    </div>
+
+    <div class="next"><b>Next question</b>What is Fiona, from an outside source? <span class="grey">(no definition cached)</span></div>
+    <div class="since"><b>Since your last look</b> (articles 29 → 33): 3 updates, 0 step changes. They're repeats, collapsed.</div>
+  </div>
+</section>
+
+<!-- 3 KUWAIT -->
+<section data-v="kuwait" class="hide">
+  <div class="card">
+    <div class="walk"><b>Area</b> › Gulf strikes + energy (mix) › Kuwait</div>
+    <h2>Kuwait</h2>
+    <div class="meta">highest step <span class="fr K">KNOW</span> + a disputed line · 4 outlets · 8 facts · 1 day</div>
+
+    <div class="rung rK">
+      <div class="rname">KNOW <span class="reached" style="color:var(--k)">reached</span><small>what is it, what did it do</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day">kind</div><div class="txt">place · <span class="st not">not read</span>no outside definition</div></div>
+        <div class="row"><div class="day">Nov 18</div><div class="txt"><span class="st one">single source</span><q>repelled first Iranian attack in two months</q></div><div class="src">BBC World</div></div>
+        <div class="row"><div class="day">Nov 18</div><div class="txt"><span class="st one">single source</span><q>activated its air defences to counter drone strikes</q></div><div class="src">Al Jazeera</div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> the one fact to remember, with its weakness shown: Kuwait says it defended itself on Nov 18, and each line has one source.</div>
+    </div>
+
+    <div class="rung rF dim">
+      <div class="rname">FOLLOW <span class="reached" style="color:var(--text-3)">not yet</span><small>how it unfolds, why, who disagrees</small></div>
+      <div class="rbody">
+        <div class="row"><div class="day"></div><div class="txt"><span class="st not">not read</span>no series yet: all 8 facts are from Nov 18</div></div>
+        <div class="row"><div class="day">Nov 18</div><div class="txt"><span class="cw but">but</span><span class="st dis">disputed</span> Iran says it hit; Kuwait's military says intercepted, no damage reported <span class="grey">(1 outlet each side)</span></div></div>
+      </div>
+      <div class="goal"><b>Goal:</b> a disputed line can arrive before any storyline. It's shown inside FOLLOW, but the step isn't counted as reached until there's a second day.</div>
+    </div>
+
+    <div class="rung rE dim">
+      <div class="rname">EXPECT <span class="reached" style="color:var(--text-3)">not yet</span><small>what next, what to watch</small></div>
+      <div class="rbody"><div class="row"><div class="txt"><span class="st not">not read</span>no forward statement with a named speaker</div></div></div>
+      <div class="goal"><b>Goal:</b> say plainly that there is nothing to watch yet, rather than fill the space.</div>
+    </div>
+
+    <div class="next"><b>Next question</b>A second day of reporting, or a second outlet on either side of the dispute.</div>
+    <div class="note">Why this case matters: most concepts look like this (mix: 13 at KNOW, 9 name only). A thin ladder must still read honestly, with short lines, clear weak spots and one next question.</div>
+  </div>
+</section>
+
+<!-- 4 GROW -->
+<section data-v="grow" class="hide">
+  <div class="card">
+    <h2>Watch it grow: the article where each step was first reached</h2>
+    <div class="meta">From <code>trajectories.py</code>. Article = its position in the area's stream (0 = first).</div>
+    <div class="tw"><table style="margin-top:8px">
+      <thead><tr><th>Concept</th><th>KNOW</th><th>established (3 owners)</th><th>FOLLOW (2nd day)</th><th>dispute / cause line</th><th>EXPECT line</th></tr></thead>
+      <tbody>
+        <tr><td><b>Fiona</b> (c1)</td><td class="hit">0 · "undergoing care after eating a hat"</td><td>2 (CBC)</td><td class="hit">3 · "on 24hr medical watch"</td><td class="grey">— (cause on Zoo card)</td><td class="hit">8 · "hopes a little shake will help" → resolved at the death</td></tr>
+        <tr><td><b>Iran</b> (mix)</td><td class="hit">0</td><td>2</td><td class="hit">18</td><td class="hit">8 · dispute (BBC World)</td><td>0 (unattributed)</td></tr>
+        <tr><td><b>Kuwait</b> (mix)</td><td class="hit">0</td><td>13</td><td class="grey">never (one day)</td><td class="hit">8 · dispute</td><td>8 (weak)</td></tr>
+        <tr><td><b>Saudi Arabia</b> (mix)</td><td class="hit">6</td><td>13</td><td class="hit">18</td><td>32 · Houthi threat read as "because"</td><td class="hit">32 · "would target a power station at Shuqaiq" (Saree)</td></tr>
+        <tr><td><b>Harambe</b> (c1)</td><td class="hit">10</td><td class="grey">— (2 owners)</td><td class="hit">25</td><td>25 · "in response to a boy falling into his exhibit"</td><td class="grey">—</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note"><b>What this shows about growth:</b> steps move early. The certainty word climbs from single source to established within the first 3 articles. After that, most articles are repeats: 29 of Fiona's 34 moved no step. So "since your last look" should collapse repeats and show only step and word changes. <b>Disputes arrive before storylines</b> (Iran: dispute at article 8, storyline at article 18), which is why "disputed" is a line, not a step above FOLLOW.</div>
+    <div class="note"><b>What this shows about retention:</b> a reader who can say <i>"Fiona: under care Nov 18–19, died Nov 20, 13 outlets, cause not on her card"</i> holds KNOW and FOLLOW. Every word of that is already in the data.</div>
+  </div>
+
+  <div class="card">
+    <h3>Gaps: what the ladder needs that we don't have yet</h3>
+    <div class="row"><div class="day">1</div><div class="txt"><b>Cause goes to the wrong concept.</b> The necropsy result sits on Cincinnati Zoo, not Fiona. "causing/caused" isn't detected. Some "because" clauses attach to the wrong concept. <span class="grey">Cheapest real fix.</span></div></div>
+    <div class="row"><div class="day">2</div><div class="txt"><b>Disputes quote the wrong text.</b> They should use each side's own quote. A speaker contradicting itself (Saudi "respond") isn't a dispute.</div></div>
+    <div class="row"><div class="day">3</div><div class="txt"><b>EXPECT needs a speaker and a future verb</b> (will, would, plans to). The speaker field already exists on 48 (c1) and 28 (mix) facts.</div></div>
+    <div class="row"><div class="day">4</div><div class="txt"><b>The "did" text is often broken</b> ("carry out Yemen"). Show the quoted sentence until the line-vs-source check (R1/R2) passes.</div></div>
+    <div class="row"><div class="day">5</div><div class="txt"><b>The deep "accounts" and "history" sections are noise.</b> Use the deep timeline only. "Direction" is effectively empty, so it isn't a step.</div></div>
+    <div class="row"><div class="day">6</div><div class="txt"><b>No storylines yet.</b> The ladder lives on the concept until R1 splits hubs into storylines.</div></div>
+  </div>
+</section>
+
+</main>
+<script>
+(function(){
+  var tabs=document.querySelectorAll('#tabs button'), secs=document.querySelectorAll('main section');
+  function show(v){
+    tabs.forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
+    secs.forEach(function(s){s.classList.toggle('hide',s.dataset.v!==v)});
+    try{localStorage.setItem('ladder-tab',v)}catch(e){}
+  }
+  tabs.forEach(function(b){b.addEventListener('click',function(){show(b.dataset.v)})});
+  var saved=null; try{saved=localStorage.getItem('ladder-tab')}catch(e){}
+  if(saved && document.querySelector('section[data-v="'+saved+'"]')) show(saved);
+  document.querySelectorAll('tr.pick').forEach(function(r){
+    r.addEventListener('click',function(){ if(r.dataset.c==='kuwait') show('kuwait'); });
+  });
+})();
+</script>
+</body>
+</html>
